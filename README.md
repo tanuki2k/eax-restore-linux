@@ -6,24 +6,26 @@ Older Windows games often rely on DirectSound3D and EAX for surround sound and e
 
 ## Features
 
-* **Universal Compatibility:** Works with both Steam prefixes (via Protontricks) and Heroic/GOG custom prefixes (via Winetricks).
-* **Automated Downloads:** Fetches the latest continuous master build directly from the official DSOAL GitHub repository.
-* **Dependency Handling:** Automatically installs the required core `openal` Windows dependencies into the game's prefix.
-* **Architecture Smart:** Defaults to 32-bit DLLs, which are required by 99% of legacy EAX titles.
-* **HRTF Support:** Includes an option to automatically generate an `alsoft.ini` configuration file to enable Head-Related Transfer Function for realistic 3D spatial audio on headphones.
+* **Centralized Caching:** Downloads DSOAL to `~/.local/share/dsoal` just once to save bandwidth and disk space.
+* **Smart Updater:** Checks the GitHub API to ensure your cached version is always up-to-date.
+* **Hybrid Installation:** Symlinks the core DLLs for instant global updates across all your games, but copies the `alsoft.ini` file so every game retains its own independent audio settings.
+* **Auto-Dependencies:** Detects your Linux distribution and automatically installs required tools (`curl`, `unzip`, `file`, `protontricks`, `winetricks`).
+* **Universal Compatibility:** Works seamlessly with both Steam and GOG (Heroic) prefixes.
+* **Uninstall Option:** Safely checks for and removes the audio fix from a specific game directory if needed.
 
 ## Prerequisites
 
-Before running the script, ensure you have the following installed on your system:
+If you choose not to let the script install them automatically, ensure you have the following installed on your system:
 
-* `curl` (for downloading the archive)
-* `unzip` (for extracting the files)
+* `curl`
+* `unzip`
+* `file`
 * `protontricks` (Required if installing for Steam games)
-* `winetricks` (Required if installing for Heroic/GOG games)
+* `winetricks` (Required if installing for GOG (Heroic) games)
 
 ## Installation and Usage
 
-1. Download the script or clone the repository to your local machine:
+1. Clone the repository to your local machine:
    ```bash
-   git clone [https://github.com/YOUR_USERNAME/YOUR_REPOSITORY_NAME.git](https://github.com/YOUR_USERNAME/YOUR_REPOSITORY_NAME.git)
-   cd YOUR_REPOSITORY_NAME
+   git clone [https://github.com/tanuki2k/eax-steam-proton.git](https://github.com/tanuki2k/eax-steam-proton.git)
+   cd eax-steam-proton
