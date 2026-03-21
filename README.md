@@ -20,7 +20,7 @@ You can download and run the installer script directly using the following comma
 
 1.  **Download the script:**
     ```bash
-    curl -LO [https://raw.githubusercontent.com/tanuki2k/eax-steam-proton/main/install_dsoal.sh](https://raw.githubusercontent.com/tanuki2k/eax-steam-proton/main/install_dsoal.sh)
+curl -LO https://github.com/tanuki2k/eax-steam-proton/raw/refs/heads/main/eax-restore-linux.sh
     ```
 
 2.  **Make the script executable:**
