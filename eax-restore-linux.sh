@@ -9,11 +9,11 @@
 #
 # --- Features ---
 # * Full Stack: Links DSOAL and OpenAL Soft directly to the game.
-# * Engine Choice: Toggle between bundled DSOAL driver or latest OpenAL Soft.
+# * Engine Choice: Toggle between Community, Standard, or Modern editions.
 # * Two-Action Menu: Install or Uninstall.
 # * Smart Detection: Auto-detects Steam/GOG based on path, auto-finds AppID.
 # * Bulletproof: Validates paths, pauses for missing prefixes politely.
-# * Centralized Caching: Automatically downloads files to ~/.local/share.
+# * Centralized Caching: Automatically downloads files to ~/.local/share/eax-restore-linux.
 #
 # --- License ---
 # MIT License
@@ -30,13 +30,19 @@ BOLD='\033[1m'
 NC='\033[0m'
 
 # Paths
-DSOAL_SHARE="$HOME/.local/share/dsoal"
+BASE_SHARE="$HOME/.local/share/eax-restore-linux"
+
+DSOAL_SHARE="$BASE_SHARE/dsoal"
 DSOAL_EXTRACT="$DSOAL_SHARE/extracted"
 URL="https://github.com/kcat/dsoal/releases/download/latest-master/DSOAL.zip"
 API_URL="https://api.github.com/repos/kcat/dsoal/releases/tags/latest-master"
 
-OPENAL_SHARE="$HOME/.local/share/openal-soft"
+OPENAL_SHARE="$BASE_SHARE/openal-soft"
 OPENAL_EXTRACT="$OPENAL_SHARE/extracted"
+
+# Option 1 Paths (Community Edition)
+COMMUNITY_URL="https://github.com/ThreeDeeJay/dsoal/releases/download/0.9.6/DSOAL+HRTF.zip"
+COMMUNITY_EXTRACT="$DSOAL_SHARE/community_extracted"
 
 # ==============================================================================
 # FUNCTION: UPDATE LOCAL CACHE
@@ -90,7 +96,7 @@ update_local_cache() {
             exit 1
          fi
     elif [ "$OAL_TAG" != "$LOCAL_OAL_TAG" ] || [ ! -d "$OPENAL_EXTRACT" ]; then
-        echo -e "${CYAN}Downloading latest OpenAL Soft (${OAL_TAG})...${NC}"
+        echo -e "${CYAN}Downloading latest OpenAL Soft...${NC}"
         OAL_URL="https://github.com/kcat/openal-soft/releases/download/${OAL_TAG}/openal-soft-${OAL_TAG}-bin.zip"
 
         rm -rf "$OPENAL_EXTRACT"
@@ -107,6 +113,21 @@ update_local_cache() {
         fi
     else
         echo -e "${GREEN}OpenAL Soft cache is ready.${NC}"
+    fi
+
+    # --- 3. Fetch DSOAL (Community Edition Build) ---
+    if [ ! -d "$COMMUNITY_EXTRACT" ]; then
+        echo -e "${CYAN}Downloading Community Edition Build...${NC}"
+        mkdir -p "$COMMUNITY_EXTRACT"
+        if curl -L -# "$COMMUNITY_URL" -o "$DSOAL_SHARE/community.zip"; then
+            unzip -q "$DSOAL_SHARE/community.zip" -d "$COMMUNITY_EXTRACT"
+            rm -f "$DSOAL_SHARE/community.zip"
+            echo -e "${GREEN}Community Edition cache updated!${NC}"
+        else
+            echo -e "${YELLOW}Warning: Community Edition Download failed. Option 1 will be unavailable.${NC}"
+        fi
+    else
+        echo -e "${GREEN}Community Edition cache is ready.${NC}"
     fi
 }
 
@@ -156,6 +177,7 @@ if [ "$SCRIPT_ACTION" == "2" ]; then
     [ -L "$GAME_DIR/dsound.dll" ] || [ -f "$GAME_DIR/dsound.dll" ] && FILES_TO_REMOVE+=("$GAME_DIR/dsound.dll")
     [ -L "$GAME_DIR/dsoal-aldrv.dll" ] || [ -f "$GAME_DIR/dsoal-aldrv.dll" ] && FILES_TO_REMOVE+=("$GAME_DIR/dsoal-aldrv.dll")
     [ -f "$GAME_DIR/alsoft.ini" ] && FILES_TO_REMOVE+=("$GAME_DIR/alsoft.ini")
+    [ -d "$GAME_DIR/OpenAL" ] && FILES_TO_REMOVE+=("$GAME_DIR/OpenAL")
 
     if [ ${#FILES_TO_REMOVE[@]} -eq 0 ]; then
         echo -e "${YELLOW}No EAX files found in $GAME_DIR.${NC}"; exit 0
@@ -167,7 +189,7 @@ if [ "$SCRIPT_ACTION" == "2" ]; then
     read -r CONFIRM_UNINSTALL
 
     if [[ ! "$CONFIRM_UNINSTALL" =~ ^[Nn]$ ]]; then
-        for f in "${FILES_TO_REMOVE[@]}"; do rm -f "$f"; done
+        for f in "${FILES_TO_REMOVE[@]}"; do rm -rf "$f"; done
         echo -e "${GREEN}EAX Fix removed from $GAME_DIR${NC}"
     fi
     exit 0
@@ -283,16 +305,17 @@ if [ "$SCRIPT_ACTION" == "1" ]; then
 
     # 3. Engine Selection
     echo -e "\n${CYAN}3. Audio Engine Selection${NC}"
-    echo "1) Bundled DSOAL Driver (Stable/Legacy - Best for older games)"
-    echo "2) Latest OpenAL Soft Engine (Modern/Updated - Best for modern HRTF)"
+    echo "1) Community Edition - Maximum compatibility for retro games"
+    echo "2) Standard Edition  - Official stable fallback"
+    echo "3) Modern Edition    - Bleeding-edge audio features"
 
     while true; do
-        echo -e -n "${YELLOW}Selection (1 or 2): ${NC}"
+        echo -e -n "${YELLOW}Selection (1, 2, or 3): ${NC}"
         read -r ENGINE_CHOICE
-        if [[ "$ENGINE_CHOICE" == "1" || "$ENGINE_CHOICE" == "2" ]]; then
+        if [[ "$ENGINE_CHOICE" == "1" || "$ENGINE_CHOICE" == "2" || "$ENGINE_CHOICE" == "3" ]]; then
             break
         else
-            echo -e "${RED}Invalid selection. Please type 1 or 2.${NC}"
+            echo -e "${RED}Invalid selection. Please type 1, 2, or 3.${NC}"
         fi
     done
 
@@ -370,33 +393,62 @@ if [ "$SCRIPT_ACTION" == "1" ]; then
     fi
 
     # 3. Final File Placement
-    TARGET_DSOAL=$(find "$DSOAL_EXTRACT" -type d -ipath "*/${BASE_FOLDER}/${ARCH_FOLDER}" | head -n 1)
-    TARGET_OAL=$(find "$OPENAL_EXTRACT" -type d -ipath "*/bin/${ARCH_FOLDER}" | head -n 1)
 
-    if [[ -n "$TARGET_DSOAL" && -n "$TARGET_OAL" ]]; then
-        # Link DSOAL wrapper
-        ln -sf "$TARGET_DSOAL/dsound.dll" "$GAME_DIR/dsound.dll"
-
-        # Link Engine
-        if [ "$ENGINE_CHOICE" == "1" ]; then
-            if [ -f "$TARGET_DSOAL/dsoal-aldrv.dll" ]; then
-                ln -sf "$TARGET_DSOAL/dsoal-aldrv.dll" "$GAME_DIR/dsoal-aldrv.dll"
-                echo -e "${GREEN}Linked Bundled DSOAL driver.${NC}"
-            else
-                echo -e "${YELLOW}Warning: Bundled driver missing from cache. Falling back to OpenAL Soft.${NC}"
-                ln -sf "$TARGET_OAL/soft_oal.dll" "$GAME_DIR/dsoal-aldrv.dll"
-            fi
-        else
-            ln -sf "$TARGET_OAL/soft_oal.dll" "$GAME_DIR/dsoal-aldrv.dll"
-            echo -e "${GREEN}Linked Latest OpenAL Soft engine.${NC}"
+    # --- Option 1: Community Edition Download Integration ---
+    if [ "$ENGINE_CHOICE" == "1" ]; then
+        if [ ! -d "$COMMUNITY_EXTRACT" ]; then
+             echo -e "${RED}Error: Community Edition cache is missing. Check your internet connection.${NC}"
+             exit 1
         fi
 
-        # Copy config
-        [ -f "$TARGET_DSOAL/alsoft.ini" ] && cp -f "$TARGET_DSOAL/alsoft.ini" "$GAME_DIR/alsoft.ini"
+        TARGET_COMMUNITY=$(find "$COMMUNITY_EXTRACT" -type d -ipath "*/${ARCH_FOLDER}" | head -n 1)
 
-        echo -e "${GREEN}Success! Files deployed to game folder.${NC}"
+        if [ -n "$TARGET_COMMUNITY" ]; then
+            ln -sf "$TARGET_COMMUNITY/dsound.dll" "$GAME_DIR/dsound.dll"
+            ln -sf "$TARGET_COMMUNITY/dsoal-aldrv.dll" "$GAME_DIR/dsoal-aldrv.dll"
+            [ -f "$TARGET_COMMUNITY/alsoft.ini" ] && cp -f "$TARGET_COMMUNITY/alsoft.ini" "$GAME_DIR/alsoft.ini"
+
+            if [ -d "$COMMUNITY_EXTRACT/HRTF" ]; then
+                mkdir -p "$GAME_DIR/OpenAL/HRTF"
+                ln -sf "$COMMUNITY_EXTRACT/HRTF/"* "$GAME_DIR/OpenAL/HRTF/"
+            fi
+
+            echo -e "${GREEN}Successfully linked Community Edition.${NC}"
+        else
+             echo -e "${RED}Error: Could not find target architecture inside the cache.${NC}"
+             exit 1
+        fi
+
+    # --- Options 2 & 3: Cached GitHub Repository Placement ---
     else
-        echo -e "${RED}Error: Target files missing from local cache.${NC}"; exit 1
+        TARGET_DSOAL=$(find "$DSOAL_EXTRACT" -type d -ipath "*/${BASE_FOLDER}/${ARCH_FOLDER}" | head -n 1)
+        TARGET_OAL=$(find "$OPENAL_EXTRACT" -type d -ipath "*/bin/${ARCH_FOLDER}" | head -n 1)
+
+        if [[ -n "$TARGET_DSOAL" && -n "$TARGET_OAL" ]]; then
+            # Link DSOAL wrapper
+            ln -sf "$TARGET_DSOAL/dsound.dll" "$GAME_DIR/dsound.dll"
+
+            # Link Engine
+            if [ "$ENGINE_CHOICE" == "2" ]; then
+                if [ -f "$TARGET_DSOAL/dsoal-aldrv.dll" ]; then
+                    ln -sf "$TARGET_DSOAL/dsoal-aldrv.dll" "$GAME_DIR/dsoal-aldrv.dll"
+                    echo -e "${GREEN}Linked Standard Edition.${NC}"
+                else
+                    echo -e "${YELLOW}Warning: Standard Edition missing from cache. Falling back to Modern Edition.${NC}"
+                    ln -sf "$TARGET_OAL/soft_oal.dll" "$GAME_DIR/dsoal-aldrv.dll"
+                fi
+            else
+                ln -sf "$TARGET_OAL/soft_oal.dll" "$GAME_DIR/dsoal-aldrv.dll"
+                echo -e "${GREEN}Linked Modern Edition (Latest OpenAL Soft).${NC}"
+            fi
+
+            # Copy config
+            [ -f "$TARGET_DSOAL/alsoft.ini" ] && cp -f "$TARGET_DSOAL/alsoft.ini" "$GAME_DIR/alsoft.ini"
+
+            echo -e "${GREEN}Success! Files deployed to game folder.${NC}"
+        else
+            echo -e "${RED}Error: Target files missing from local cache.${NC}"; exit 1
+        fi
     fi
 
     echo -e "\n${GREEN}${BOLD}==========================================================${NC}"
