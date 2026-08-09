@@ -381,21 +381,29 @@ detect_heroic_prefix_verbose() {
     echo -e " -> Searching installed.json for matching game path..." >&2
     while IFS= read -r json_file; do
         [ -z "$json_file" ] && continue
-        if grep -Fiq "$target_dir" "$json_file"; then
-            app_name=$(awk -v path="$target_dir" 'BEGIN { RS="}"; FS="," } index($0, path) > 0 { for (i=1; i<=NF; i++) { if ($i ~ /"app_name"|"appName"/) { split($i, a, "\""); print a[4]; exit; } } }' "$json_file")
-            if [ -n "$app_name" ]; then
-                echo -e " -> Game found! Internal ID: ${BOLD}$app_name${NC}" >&2
-                echo -e " -> Parsing GamesConfig/$app_name.json for custom prefix paths..." >&2
-                local config_jsons
-                config_jsons=$(find "$HOME/.config/heroic" "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic" -type f -path "*/GamesConfig/$app_name.json" 2>/dev/null)
-                while IFS= read -r conf_file; do
-                    [ -z "$conf_file" ] && continue
-                    auto_prefix=$(grep '"winePrefix"' "$conf_file" | awk -F '"' '{print $4}')
-                    [ -n "$auto_prefix" ] && break
-                done <<< "$config_jsons"
+        app_name=""
+        # Match by install_path rather than a raw substring search, since the
+        # user-supplied GAME_DIR may point at a subfolder of the actual
+        # install (e.g. GameName/bin/x64) rather than the install root itself.
+        while IFS=$'\t' read -r install_path record_app_name; do
+            [ -z "$install_path" ] && continue
+            if [ "$target_dir" == "$install_path" ] || [[ "$target_dir" == "$install_path"/* ]]; then
+                app_name="$record_app_name"
             fi
-            [ -n "$auto_prefix" ] && break
+        done < <(awk 'BEGIN { RS="}"; FS="," } { ip=""; an=""; for (i=1; i<=NF; i++) { if ($i ~ /"install_path"|"installPath"/) { split($i, a, "\""); ip=a[4] } if ($i ~ /"app_name"|"appName"/) { split($i, b, "\""); an=b[4] } } if (ip != "") print ip "\t" an }' "$json_file")
+
+        if [ -n "$app_name" ]; then
+            echo -e " -> Game found! Internal ID: ${BOLD}$app_name${NC}" >&2
+            echo -e " -> Parsing GamesConfig/$app_name.json for custom prefix paths..." >&2
+            local config_jsons
+            config_jsons=$(find "$HOME/.config/heroic" "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic" -type f -path "*/GamesConfig/$app_name.json" 2>/dev/null)
+            while IFS= read -r conf_file; do
+                [ -z "$conf_file" ] && continue
+                auto_prefix=$(grep '"winePrefix"' "$conf_file" | awk -F '"' '{print $4}')
+                [ -n "$auto_prefix" ] && break
+            done <<< "$config_jsons"
         fi
+        [ -n "$auto_prefix" ] && break
     done <<< "$installed_jsons"
 
     if [ -n "$app_name" ] && [ -z "$auto_prefix" ]; then
