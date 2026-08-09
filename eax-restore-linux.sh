@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ==============================================================================
-# DSOAL & OpenAL Soft Universal Installer for Linux (Dual-Copy Architecture)
+# DSOAL & OpenAL Soft Universal Installer for Linux
 # ==============================================================================
 #
 # A streamlined Bash script designed to automate the restoration of EAX 3D
@@ -322,7 +322,7 @@ prompt_recent_game() {
 get_game_directory() {
     GAME_DIR=""
 
-    if prompt_recent_game; then
+    if [ "$SCRIPT_ACTION" == "u" ] && prompt_recent_game; then
         echo -e "\n${GREEN}Using: $GAME_DIR${NC}"
         record_recent_game "$GAME_DIR"
         return
@@ -1710,7 +1710,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         ENGINE_CHOICE=3
         echo -e "${GREEN}EAX_RESTORE_DSOAL_OFFICIAL is set — using kcat DSOAL + OpenAL Soft.${NC}"
     else
-        echo -e "${YELLOW}Selection (1, 2, or 3) [Default: 1]: ${NC}"
+        echo -e "${YELLOW}Selection (1, 2, or 3) [Default: 3]: ${NC}"
         echo -e "\n 1) ThreeDeeJay Community DSOAL [v1.31a]"
         echo -e " 2) PCGamingWiki Community DSOAL (self-hosted mirror) [v1.4]"
         echo -e " 3) kcat DSOAL + OpenAL Soft    [DSOAL: $DSOAL_VER | OAL: $OAL_VER]"
@@ -1718,7 +1718,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         while true; do
             echo -e -n "\n> "
             read -r ENGINE_CHOICE
-            ENGINE_CHOICE="${ENGINE_CHOICE:-1}"
+            ENGINE_CHOICE="${ENGINE_CHOICE:-3}"
             if [[ "$ENGINE_CHOICE" =~ ^[123]$ ]]; then break; else echo -e "${YELLOW}${BOLD}Invalid selection. Please type 1, 2, or 3.${NC}"; fi
         done
     fi
