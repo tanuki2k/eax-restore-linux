@@ -8,7 +8,7 @@ Because modern operating systems and Proton/Wine don't natively support this old
 
 **Disclaimer:** I've tested this script heavily across various games and launchers, but please use it at your own risk. If you find any bugs, please report them on the issue tracker and I'll do my best to fix them!
 
-**A Personal Note:** While installing DSOAL manually is a known process, it's a tedious, multi-step task involving file hunting and registry edits, inspired by kevinlekiller's project **[reshade-steam-proton](https://github.com/kevinlekiller/reshade-steam-proton)** I wanted a way to streamline the procress. Since I'm not a coder, I built this tool with the assistance of Google Gemini.
+**A Personal Note:** While installing DSOAL manually is a known process, it's a tedious, multi-step task involving file hunting and registry edits, inspired by kevinlekiller's project **[reshade-steam-proton](https://github.com/kevinlekiller/reshade-steam-proton)** I wanted a way to streamline the procress. Since I'm not a coder, I built this tool with the assistance of Google Gemini, and it's continued to evolve since with the help of Claude.
 
 ## Features
 
