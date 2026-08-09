@@ -1,0 +1,9 @@
+#!/usr/bin/env xdg-open
+[Desktop Entry]
+Name=Install EAX Restore
+Comment=Restore EAX 3D audio (DSOAL/OpenAL Soft) for classic Windows games on Proton/Wine
+Exec=sh -c 'rm -f "$HOME/eax-restore-linux.sh"; if curl -S -s -L -O --output-dir "$HOME/" --connect-timeout 60 https://github.com/tanuki2k/eax-restore-linux/raw/refs/heads/main/eax-restore-linux.sh; then chmod +x "$HOME/eax-restore-linux.sh"; bash "$HOME/eax-restore-linux.sh"; else echo "Something went wrong downloading the script. Please check your internet connection, or report this if it persists."; read -r; fi'
+Icon=audio-x-generic
+Terminal=true
+Type=Application
+StartupNotify=false

@@ -94,8 +94,8 @@
 # ==============================================================================
 
 # --- Build Info ---
-SCRIPT_VERSION="0.27"
-SCRIPT_DATE="2026-08-07"
+SCRIPT_VERSION="0.28"
+SCRIPT_DATE="2026-08-09"
 
 # --- Colour Definitions ---
 GREEN='\033[0;32m'

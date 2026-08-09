@@ -63,6 +63,16 @@ chmod +x eax-restore-linux.sh
 **4. Follow the prompts:**
 Choose to install or uninstall, provide the game directory, and select your preferred audio configuration.
 
+### Steam Deck Quick Install (Desktop Mode)
+
+As an alternative to the terminal steps above, [`eax-restore-linux.desktop`](eax-restore-linux.desktop) is a double-click launcher for Desktop Mode:
+
+1. Switch to **Desktop Mode** and download [`eax-restore-linux.desktop`](https://github.com/tanuki2k/eax-restore-linux/raw/refs/heads/main/eax-restore-linux.desktop) (e.g. to your Desktop or Downloads folder).
+2. In Dolphin, right-click it and enable **Allow Executing File as Program** (Properties → Permissions), since Plasma won't run it otherwise.
+3. Double-click it and select **Execute**. It fetches the latest script into your home folder (`~/eax-restore-linux.sh`, overwriting any previous copy) and runs it in a terminal — nothing is installed until you follow the prompts, same as running the script manually. The downloaded copy is left behind afterward, so you can re-run it later (e.g. for uninstalls, or another game) without launching the `.desktop` file again.
+
+Since the script itself refuses to run in Gaming Mode, this only works from Desktop Mode.
+
 ### Uninstallation
 Run the script, select **(u)ninstall**, and provide the game directory. The script will remove the EAX files, restore original backups, remove the registry overrides, and optionally remove the VC++ runtime it installed.
 
