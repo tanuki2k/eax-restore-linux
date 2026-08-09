@@ -12,18 +12,19 @@ Because modern operating systems and Proton/Wine don't natively support this old
 
 ## Features
 
-* **Full Audio Stack Deployment:** Automatically links the correct DSOAL and OpenAL Soft `.dll` files directly to your game executable, bypassing the need for manual extraction.
-* **Engine Choice:** Toggle between the "plug-and-play" ThreeDeeJay community fork (great for older titles) or the official kcat baseline builds.
+* **Dual-Copy Deployment:** Deploys DSOAL/OpenAL files to both your local game folder *and* the Wine/Proton prefix's system folders, with conflict backups on both — not just the game folder.
+* **Engine Choice:** Toggle between the "plug-and-play" ThreeDeeJay Community fork, the PCGamingWiki Community fork (self-hosted mirror), or kcat's official DSOAL + OpenAL Soft baseline.
 * **Dynamic HRTF Integration:** Automatically generates optimized `alsoft.ini` configurations and deploys headphone profiles for incredible 3D binaural audio.
 * **Smart Architecture Scanner:** Automatically detects whether the game executable is 32-bit or 64-bit and grabs the exact right dependencies so the game doesn't crash on launch.
-* **Intelligent Prefix Routing:** Opt-in auto-detection for Steam AppIDs and Heroic Prefix paths, making it easy to find where your game is actually installed.
+* **Intelligent Prefix Routing:** Opt-in auto-detection for Steam AppIDs and Heroic Prefix paths, making it easy to find where your game is actually installed. Recently used game folders are remembered and offered as a quick pick on future runs.
 * **Deep Prefix Validation:** Verifies Steam AppIDs via Protontricks and ensures Heroic prefixes are fully initialized before touching any files.
-* **Cache & Offline Mode:** Smart GitHub API downloading with local caching, so if you install the fix to multiple games, it only downloads the files once.
-* **Safe File Management:** Interactive conflict resolution safely backs up pre-existing files with timestamps so you never lose original game data.
+* **Cache & Offline Mode:** Smart GitHub API downloading with local caching, so if you install the fix to multiple games, it only downloads the files once. Pinned/live checksum verification guards against corrupt or tampered downloads.
+* **Safe File Management:** Interactive conflict resolution safely backs up pre-existing files with timestamps so you never lose original game data. Every install writes a manifest of exactly what it deployed, so uninstall only ever removes what this script actually put there and restores your backups automatically.
 * **COM Registry Injection:** Optional routing of DirectSound CLSIDs directly in the Wine registry. This fixes the stubbornly grayed-out EAX menus in games like *Grand Theft Auto: San Andreas* or *Halo: Combat Evolved*.
-* **Legacy 90s Support:** Optional safe injection of `dsound.vxd` dummy files to bypass driver checks from the Windows 95/98 era.
-* **Advanced Engine Tweaks:** Optional EAX Unified dummy files and expanded audio limits to fix stuttering in chaotic, high-channel games like *F.E.A.R.*
-* **Native Auto-Overrides:** Injects `WINEDLLOVERRIDES="dsound=n"` natively into the Wine registry so you don't have to clutter up your Steam launch options.
+* **Advanced Engine Tweaks:** Optional EAX Unified dummy files (`eax.dll`/`eaxunified.dll`) and expanded audio limits to fix stuttering in chaotic, high-channel games like *F.E.A.R.*
+* **Native Auto-Overrides:** Injects the `dsound` override natively into the Wine registry so you don't have to clutter up your Steam launch options.
+* **VC++ Runtime Handling:** Detects and installs the Microsoft VC++ 2022 Redistributable when the kcat engine needs it, falling back to a direct Microsoft download if winetricks/protontricks fails, and verifying the actual DLLs on disk rather than trusting exit codes.
+* **Safety Guards:** Refuses to run as root or from Steam's Gaming Mode, and won't auto-modify SteamOS's immutable filesystem.
 
 ## Prerequisites
 
@@ -34,13 +35,16 @@ The script checks for these dependencies and offers to install them if they are 
 * **Steam Games:** Requires `protontricks`.
 * **Heroic/GOG Games:** Requires `winetricks`.
 
+**Optional:**
+* `jq` — enables checksum verification for kcat's official builds. The script still works without it, just with a manual confirmation prompt instead of automatic verification.
+
 ## Usage
 
 **1. Download the script:**
 Open your terminal and run:
 
 ```bash
-curl -LO https://github.com/tanuki2k/eax-steam-proton/raw/refs/heads/main/eax-restore-linux.sh
+curl -LO https://github.com/tanuki2k/eax-restore-linux/raw/refs/heads/main/eax-restore-linux.sh
 ```
 
 **2. Make it executable:**
@@ -60,7 +64,21 @@ chmod +x eax-restore-linux.sh
 Choose to install or uninstall, provide the game directory, and select your preferred audio configuration.
 
 ### Uninstallation
-Run the script, select **(u)ninstall**, and provide the game directory. The script will remove the EAX files, restore original backups, and remove the registry overrides.
+Run the script, select **(u)ninstall**, and provide the game directory. The script will remove the EAX files, restore original backups, remove the registry overrides, and optionally remove the VC++ runtime it installed.
+
+### Environment Variables
+
+For repeat runs or scripting, these can be set to skip prompts:
+
+| Variable | Effect |
+| --- | --- |
+| `EAX_RESTORE_SKIP_PREFLIGHT=1` | Skips the pre-flight tool scan, trusting that `curl`, `unzip`, `file`, `protontricks`, `winetricks`, and `wine` are already available. |
+| `EAX_RESTORE_DSOAL_COMMUNITY_V13=1` | Pre-selects the ThreeDeeJay Community engine and jumps straight to install. |
+| `EAX_RESTORE_DSOAL_COMMUNITY_V14=1` | Pre-selects the PCGamingWiki Community engine (self-hosted mirror) and jumps straight to install. |
+| `EAX_RESTORE_DSOAL_OFFICIAL=1` | Pre-selects kcat's official DSOAL + OpenAL Soft engine and jumps straight to install. |
+| `EAX_RESTORE_VCRUN_ONLY=1` | Skips the full install/uninstall flow and just (re)installs the MS VC++ 2022 Redistributable into a game's prefix. |
+
+Only set one `EAX_RESTORE_DSOAL_*` variable at a time.
 
 ## Credits & Upstream Sources
 
@@ -68,6 +86,7 @@ This script automates the deployment of the following projects:
 
 * **kcat (Christopher Robinson)** - [DSOAL](https://github.com/kcat/dsoal) and [OpenAL Soft](https://github.com/kcat/openal-soft).
 * **ThreeDeeJay** - [DSOAL Community Fork](https://github.com/ThreeDeeJay/dsoal).
+* **PCGamingWiki** - DSOAL v1.4 Community Fork, re-hosted here as a self-hosted mirror since PCGamingWiki blocks automated downloads.
 
 ## License
 This script is provided under the [MIT License](LICENSE).
