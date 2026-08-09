@@ -26,6 +26,10 @@
 # * Deep Validation: Confirms Heroic/GOG prefixes are initialised via drive_c,
 #   and points you to launch the game first if the prefix isn't ready yet.
 #
+# * Architecture Detection: Scans the game's .exe files for 32-bit vs 64-bit
+#   PE headers to auto-select the matching wrapper build, with a manual
+#   fallback if detection is inconclusive.
+#
 # * Interactive Conflicts: Existing files are backed up (timestamped) before
 #   being overwritten, and restored automatically on uninstall.
 #
@@ -41,6 +45,11 @@
 # * Hardened Downloads: Fails loudly on bad HTTP responses, verifies zip
 #   integrity before extracting, and preserves the existing cache instead of
 #   wiping it on a failed download.
+#
+# * Pre-Flight Dependency Check: Verifies curl, unzip, file, protontricks,
+#   winetricks, wine, and jq are available before touching the cache, and
+#   offers to auto-install anything missing via your distro's package
+#   manager (skipped in favour of Discover on SteamOS, per Safety Guards).
 #
 # * Advanced Tweaks: Optional EAX Unified dummies, COM registry routing,
 #   expanded audio limits, and HRTF headphone profiles.
