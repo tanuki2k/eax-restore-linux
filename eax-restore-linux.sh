@@ -1731,7 +1731,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         echo -e "${CYAN}5. VC++ Runtime Dependencies${NC}"
         print_line
         echo -e "\n${WHITE}The modern kcat engine needs genuine Microsoft C++ runtime libraries. Older Proton/Wine"
-        echo -e "builds (e.g. GE-Proton 9) tend to be missing them more often than newer ones — but rather"
+        echo -e "builds (9 and below) tend to be missing them more often than newer ones — but rather"
         echo -e "than guess from a version number, this can check the prefix directly.${NC}"
         echo -e "\n${YELLOW}Check this prefix for existing VC++ runtime files? (Y/n): ${NC}"
         echo -e -n "> "
@@ -1758,10 +1758,10 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
             else
                 echo -e "\n${WHITE}These files are missing or incomplete here. Without them, the game may crash"
                 echo -e "silently on startup when it tries to load the audio engine.${NC}"
-                echo -e "\n${YELLOW}Install genuine MS VC++ runtimes? (Y/n): ${NC}"
+                echo -e "\n${YELLOW}Install genuine MS VC++ runtimes? (y/N): ${NC}"
                 echo -e -n "> "
                 read -r INSTALL_VCRUN
-                INSTALL_VCRUN="${INSTALL_VCRUN:-y}"
+                INSTALL_VCRUN="${INSTALL_VCRUN:-n}"
             fi
         fi
     fi
@@ -1769,15 +1769,87 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     # 6. Audio Configuration
     echo ""
     print_divider
-    echo -e "${CYAN}6. Headphones Configuration (HRTF)${NC}"
+    echo -e "${CYAN}6. Speaker Configuration${NC}"
     print_line
     echo ""
-    echo -e "${WHITE}Head-Related Transfer Function (HRTF) translates 3D positional audio into a binaural"
-    echo -e "format specifically designed for standard stereo headphones. Turning this on will"
-    echo -e "allow you to hear exactly whether a sound is coming from above, below, or behind you.${NC}\n"
-    echo -e "${YELLOW}Do you want to enable HRTF for headphones? (y/N): ${NC}"
-    echo -e -n "> "
-    read -r ENABLE_HRTF
+    echo -e "${WHITE}What kind of audio output are you using?${NC}\n"
+    echo -e " 1) Stereo (headphones or 2-speaker setup)"
+    echo -e " 2) Surround Sound (4.0/5.1/6.1/7.1 speaker setup)"
+    echo -e " 3) Matrix Encoding (stereo output decoded to surround by a receiver/soundbar)\n"
+
+    while true; do
+        echo -e "${YELLOW}Selection [1-3, Default: 1]: ${NC}"
+        echo -e -n "> "
+        read -r OUTPUT_MODE_CHOICE
+        OUTPUT_MODE_CHOICE="${OUTPUT_MODE_CHOICE:-1}"
+        if [[ "$OUTPUT_MODE_CHOICE" =~ ^[123]$ ]]; then break; else echo -e "${YELLOW}${BOLD}Invalid selection. Please type 1, 2, or 3.${NC}"; fi
+    done
+
+    ENABLE_HRTF=""
+    SURROUND_CHANNELS=""
+
+    if [ "$OUTPUT_MODE_CHOICE" == "1" ]; then
+        OUTPUT_MODE="stereo"
+
+        echo ""
+        echo -e "${WHITE}What are you listening on?${NC}\n"
+        echo -e " 1) Auto (let OpenAL Soft decide)"
+        echo -e " 2) Speakers"
+        echo -e " 3) Headphones\n"
+
+        while true; do
+            echo -e "${YELLOW}Selection [1-3, Default: 1]: ${NC}"
+            echo -e -n "> "
+            read -r STEREO_MODE_CHOICE
+            STEREO_MODE_CHOICE="${STEREO_MODE_CHOICE:-1}"
+            if [[ "$STEREO_MODE_CHOICE" =~ ^[123]$ ]]; then break; else echo -e "${YELLOW}${BOLD}Invalid selection. Please type 1, 2, or 3.${NC}"; fi
+        done
+
+        case "$STEREO_MODE_CHOICE" in
+            1) STEREO_MODE="auto" ;;
+            2) STEREO_MODE="speakers" ;;
+            3) STEREO_MODE="headphones" ;;
+        esac
+
+        if [ "$STEREO_MODE_CHOICE" == "2" ]; then
+            # HRTF is a headphone-only binaural technique — meaningless (and
+            # actively harmful to positional accuracy) over real speakers.
+            ENABLE_HRTF="n"
+        else
+            echo ""
+            echo -e "${CYAN}Headphones Configuration (HRTF)${NC}\n"
+            echo -e "${WHITE}Head-Related Transfer Function (HRTF) translates 3D positional audio into a binaural"
+            echo -e "format specifically designed for standard stereo headphones. Turning this on will"
+            echo -e "allow you to hear exactly whether a sound is coming from above, below, or behind you.${NC}\n"
+            echo -e "${YELLOW}Do you want to enable HRTF for headphones? (y/N): ${NC}"
+            echo -e -n "> "
+            read -r ENABLE_HRTF
+        fi
+    elif [ "$OUTPUT_MODE_CHOICE" == "2" ]; then
+        OUTPUT_MODE="surround"
+
+        echo ""
+        echo -e "${WHITE}Select your speaker channel configuration:${NC}\n"
+        echo -e " 1) Quad       (4.0)"
+        echo -e " 2) Surround51 (5.1)"
+        echo -e " 3) Surround61 (6.1)"
+        echo -e " 4) Surround71 (7.1)\n"
+
+        while true; do
+            echo -e "${YELLOW}Selection [1-4]: ${NC}"
+            echo -e -n "> "
+            read -r SURROUND_CHOICE
+            case "$SURROUND_CHOICE" in
+                1) SURROUND_CHANNELS="quad"; break ;;
+                2) SURROUND_CHANNELS="surround51"; break ;;
+                3) SURROUND_CHANNELS="surround61"; break ;;
+                4) SURROUND_CHANNELS="surround71"; break ;;
+                *) echo -e "${YELLOW}${BOLD}Invalid selection. Please type 1, 2, 3, or 4.${NC}" ;;
+            esac
+        done
+    else
+        OUTPUT_MODE="matrix"
+    fi
 
     # 7. Advanced Compatibility Tweaks
     echo ""
@@ -1987,14 +2059,37 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
 
     if handle_conflict "$GAME_DIR/alsoft.ini"; then
         echo "$GAME_DIR/alsoft.ini" >> "$INSTALL_MANIFEST"
-        if [[ "$ENABLE_HRTF" =~ ^[Yy]$ ]]; then
-            CHANNELS_CONF="channels = stereo"
-            STEREO_MODE="headphones"
-            STEREO_ENCODING="hrtf"
-        else
-            CHANNELS_CONF="channels ="
+        if [ "$OUTPUT_MODE" == "surround" ]; then
+            # Surround speaker setups bypass HRTF (headphone-only binaural
+            # processing) and stereo-only encodings entirely.
+            channels="$SURROUND_CHANNELS"
             STEREO_MODE="auto"
             STEREO_ENCODING="basic"
+            HRTF_MODE=""
+        elif [ "$OUTPUT_MODE" == "matrix" ]; then
+            # Matrix-encoded stereo output also bypasses HRTF — the
+            # matrix decoder (tsme) needs an unprocessed stereo signal.
+            channels="stereo"
+            STEREO_MODE="auto"
+            STEREO_ENCODING="tsme"
+            HRTF_MODE=""
+        elif [[ "$ENABLE_HRTF" =~ ^[Yy]$ ]]; then
+            channels="stereo"
+            STEREO_ENCODING="hrtf"
+            HRTF_MODE="full"
+        else
+            channels="stereo"
+            STEREO_ENCODING="basic"
+            HRTF_MODE=""
+        fi
+
+        if [ -n "$HRTF_MODE" ]; then
+            HRTF_MODE_PREFIX=""
+            HRTF_VALUE="auto"
+        else
+            HRTF_MODE_PREFIX="# "
+            HRTF_MODE="full"
+            HRTF_VALUE="off"
         fi
 
         if [[ "$ADVANCED_LIMITS" =~ ^[Yy]$ ]]; then
@@ -2002,9 +2097,13 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
 # Auto-generated by EAX Restore Script for Linux (Advanced Tweaks)
 
 [general]
-$CHANNELS_CONF
+channels = $channels
+sample-type = float32
 stereo-mode = $STEREO_MODE
 stereo-encoding = $STEREO_ENCODING
+# hrtf is deprecated in favor of hrtf-mode, kept here for older builds
+hrtf = $HRTF_VALUE
+${HRTF_MODE_PREFIX}hrtf-mode = $HRTF_MODE
 hrtf-paths = HRTF, OpenAL/HRTF
 period_size = 1024
 periods = 3
@@ -2015,6 +2114,9 @@ frequency = 48000
 
 [decoder]
 resampler = spline
+
+[EAX]
+enable = true
 EOF
             echo -e " -> Generated: Advanced alsoft.ini with expanded channel limits"
         else
@@ -2022,15 +2124,22 @@ EOF
 # Auto-generated by EAX Restore Script for Linux
 
 [general]
-$CHANNELS_CONF
+channels = $channels
+sample-type = float32
 stereo-mode = $STEREO_MODE
 stereo-encoding = $STEREO_ENCODING
+# hrtf is deprecated in favor of hrtf-mode, kept here for older builds
+hrtf = $HRTF_VALUE
+${HRTF_MODE_PREFIX}hrtf-mode = $HRTF_MODE
 hrtf-paths = HRTF, OpenAL/HRTF
 period_size = 1024
 periods = 3
 
 [decoder]
 resampler = spline
+
+[EAX]
+enable = true
 EOF
             echo -e " -> Generated: Linux-optimised alsoft.ini"
         fi
