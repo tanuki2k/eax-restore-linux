@@ -423,7 +423,12 @@ detect_game_environment() {
 
         if [[ ! "$DO_AUTO_S" =~ ^[Nn]$ ]]; then
             echo -e "\n${CYAN}STATUS: Searching for Steam AppID...${NC}"
-            INSTALL_DIR=$(basename "$GAME_DIR")
+            # Use the top-level folder directly under steamapps/common/, not
+            # the leaf of GAME_DIR — the .exe is often nested in a subfolder
+            # (e.g. GameName/bin/x64), whose basename won't match the
+            # appmanifest's "installdir" value.
+            INSTALL_DIR="${GAME_DIR#*/steamapps/common/}"
+            INSTALL_DIR="${INSTALL_DIR%%/*}"
             echo -e " -> Scanning local appmanifest files for folder: $INSTALL_DIR"
             # Escape BRE metacharacters (folder names with brackets, dots, etc.
             # are common — e.g. "[Definitive Edition]") since this pattern
