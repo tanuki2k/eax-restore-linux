@@ -56,6 +56,139 @@
       "gog_id": 1207659240,
       "eax_impossible": [],
       "tip": "Vampire: The Masquerade - Bloodlines isn't documented (per PCGamingWiki) as having hardware EAX support — its acclaimed sound design is mostly scripted ambience, not DirectSound3D reverb zones. DSOAL may have little to no audible effect here; that's expected, not a bug."
+    },
+    {
+      "name": "Thief: Deadly Shadows",
+      "steam_appid": 6980,
+      "gog_id": 1207659036,
+      "eax_impossible": [],
+      "tip": "Thief: Deadly Shadows runs on a modified Dark Engine build. The unofficial 'Sneaky Upgrade' patch (works with both the Steam and GOG releases) fixes a well-documented multi-core CPU issue and other modern-system quirks — worth pairing alongside EAX, similar to TFix/T2Fix for the earlier Thief games."
+    },
+    {
+      "name": "Max Payne",
+      "steam_appid": 12140,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": null
+    },
+    {
+      "name": "Max Payne 2: The Fall of Max Payne",
+      "steam_appid": 12150,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": null
+    },
+    {
+      "name": "Star Wars Jedi Knight II: Jedi Outcast",
+      "steam_appid": 6030,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": null
+    },
+    {
+      "name": "Star Wars Jedi Knight: Jedi Academy",
+      "steam_appid": 6020,
+      "gog_id": 1428935726,
+      "eax_impossible": [],
+      "tip": null
+    },
+    {
+      "name": "Star Wars: Knights of the Old Republic",
+      "steam_appid": 32370,
+      "gog_id": 1207666283,
+      "eax_impossible": [],
+      "tip": null
+    },
+    {
+      "name": "Star Wars: Knights of the Old Republic II - The Sith Lords",
+      "steam_appid": 208580,
+      "gog_id": 1421404581,
+      "eax_impossible": [],
+      "tip": null
+    },
+    {
+      "name": "Star Wars: Republic Commando",
+      "steam_appid": 6000,
+      "gog_id": 1421405135,
+      "eax_impossible": [],
+      "tip": null
+    },
+    {
+      "name": "Tom Clancy's Splinter Cell: Chaos Theory",
+      "steam_appid": 13570,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": null
+    },
+    {
+      "name": "Tom Clancy's Ghost Recon",
+      "steam_appid": 15300,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": null
+    },
+    {
+      "name": "Unreal Tournament: Game of the Year Edition",
+      "steam_appid": 13240,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": null
+    },
+    {
+      "name": "Unreal Tournament 2004",
+      "steam_appid": 13230,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": null
+    },
+    {
+      "name": "Prey",
+      "steam_appid": 3970,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "This is the original 2006 Human Head Studios game, not the unrelated 2017 Arkane reboot (a different Steam AppID, 480490). Delisted from Steam's storefront in 2009 after a rights dispute, so it can't be newly purchased there anymore — but this AppID is still valid for detecting/installing on an existing owned copy."
+    },
+    {
+      "name": "DOOM 3",
+      "steam_appid": 9050,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "GOG's current 'DOOM 3' listing was renamed from 'DOOM 3: BFG Edition' rather than being a separate classic release — a different build with its own (SDL/OpenAL-based) audio path, not the original DirectSound3D-era version this script targets. Deliberately left unmapped here rather than pointed at the wrong build; the Steam AppID above is the original classic release."
+    },
+    {
+      "name": "Painkiller: Black Edition",
+      "steam_appid": 39530,
+      "gog_id": 1207658715,
+      "eax_impossible": [],
+      "tip": null
+    },
+    {
+      "name": "Serious Sam Classic: The First Encounter",
+      "steam_appid": 41050,
+      "gog_id": 1207658876,
+      "eax_impossible": [],
+      "tip": null
+    },
+    {
+      "name": "Serious Sam Classic: The Second Encounter",
+      "steam_appid": 41060,
+      "gog_id": 1207658877,
+      "eax_impossible": [],
+      "tip": null
+    },
+    {
+      "name": "Anachronox",
+      "steam_appid": 242940,
+      "gog_id": 1207659012,
+      "eax_impossible": [],
+      "tip": null
+    },
+    {
+      "name": "Mafia (2002)",
+      "steam_appid": 40990,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": null
     }
   ]
 }
