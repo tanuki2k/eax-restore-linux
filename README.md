@@ -86,7 +86,7 @@ This list is deliberately small and hand-verified — it will only ever cover a 
 
 **Retail/CD copies and other non-Steam, non-Heroic installs** (e.g. an original pre-Steam Half-Life disc, run in a Wine prefix you set up yourself) aren't covered by the scanner at all, since there's no launcher library to scan — but the script still supports them. Point it at the game's `.exe` folder and provide the Wine prefix path manually when prompted.
 
-**Contributing to the known games database:** PRs adding or correcting entries in `known-eax-games.json` are welcome. Please only add a `steam_appid`/`gog_id` you've independently verified against the storefront's own page or API — a wrong ID would point the script at someone else's prefix. See the existing entries for the expected shape (`name`, `steam_appid`, `gog_id`, `eax_impossible`, `tip`).
+**Contributing to the known games database:** PRs adding or correcting entries in `known-eax-games.json` are welcome. Please only add a `steam_appid`/`gog_id` you've independently verified against the storefront's own page or API — a wrong ID would point the script at someone else's prefix. See the existing entries for the expected shape (`name`, `steam_appid`, `gog_id`, `eax_impossible`, `tip`, `eax_versions`). `eax_versions` should only be set from a verifiable source (e.g. the game's manual/readme, an in-game audio settings menu, or a maintained compatibility database) — cite it in the PR description.
 
 ### Environment Variables
 
