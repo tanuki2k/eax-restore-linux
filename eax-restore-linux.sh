@@ -19,7 +19,8 @@
 #   as a quick pick, without giving up the option to enter a new path.
 #
 # * Smart Detection: Opt-in auto-detection for Steam AppIDs and Heroic Wine
-#   prefixes.
+#   prefixes, plus an opt-in library scan that finds known EAX games already
+#   installed via Steam or Heroic and lets you pick one instead of browsing.
 #
 # * Proton Detection: Identifies Proton runners even within Heroic environments.
 #
@@ -94,8 +95,8 @@
 # ==============================================================================
 
 # --- Build Info ---
-SCRIPT_VERSION="0.28"
-SCRIPT_DATE="2026-08-09"
+SCRIPT_VERSION="0.29"
+SCRIPT_DATE="2026-08-13"
 
 # --- Colour Definitions ---
 GREEN='\033[0;32m'
@@ -239,6 +240,24 @@ DSOAL_COMMUNITY_V13_SHA256="271db46cffb086ffc0af06956ade3ee8e645e05fb108b5b6d1f7
 DSOAL_COMMUNITY_V14_URL="https://github.com/tanuki2k/eax-restore-linux/releases/download/assets/DSOALv1.4.zip"
 DSOAL_COMMUNITY_V14_SHA256="064f600eac5637d8a8ea6b6cd0172b42202b792406530bf867c0144e722e7414"
 
+# Community-maintained database of well-known EAX games (see
+# known-eax-games.json in this repo). Powers both the install-time "Heads
+# up" tips and the opt-in library scanner. Fetched fresh each run so PRs
+# against the file take effect without users needing a new script version;
+# cached locally so a fetch failure (offline, rate-limited) degrades to the
+# last-known-good copy instead of losing the feature entirely.
+KNOWN_GAMES_URL="https://raw.githubusercontent.com/tanuki2k/eax-restore-linux/main/known-eax-games.json"
+KNOWN_GAMES_CACHE="$BASE_SHARE/known-eax-games.json"
+KNOWN_GAMES_FILE=""
+
+# Minimal hardcoded safety net for confirm_continue_if_eax_impossible, used
+# only if ensure_known_games_json can't produce a file at all (e.g. first
+# run, offline, no cache yet). Keeps the "this install is a functional
+# no-op" warning working even before the JSON database is ever reachable.
+declare -A EAX_IMPOSSIBLE_FALLBACK_STEAM=(
+    [70]=1
+)
+
 # ==============================================================================
 # CORE FUNCTIONS
 # ==============================================================================
@@ -252,6 +271,38 @@ find_local_wine() {
         fi
     done
     echo "$found_wine"
+}
+
+ensure_known_games_json() {
+    # Usage: ensure_known_games_json
+    # Fetches known-eax-games.json fresh into a temp file, validates it's
+    # well-formed JSON, then promotes it over the cached copy — never
+    # overwrites a good cache with a truncated/bad response. Falls back to
+    # the last-good cache if the fetch or validation fails, and to nothing
+    # (KNOWN_GAMES_FILE stays empty, return 1) if there's no usable cache
+    # either. Memoized per run via KNOWN_GAMES_FILE.
+    [ -n "$KNOWN_GAMES_FILE" ] && return 0
+    command -v jq &> /dev/null || return 1
+
+    local tmp
+    tmp=$(mktemp 2>/dev/null)
+    if [ -n "$tmp" ] && curl -fsSL --max-time 10 "$KNOWN_GAMES_URL" -o "$tmp" 2>/dev/null && jq empty "$tmp" 2>/dev/null; then
+        mkdir -p "$BASE_SHARE" 2>/dev/null
+        mv "$tmp" "$KNOWN_GAMES_CACHE"
+        KNOWN_GAMES_FILE="$KNOWN_GAMES_CACHE"
+        return 0
+    fi
+    rm -f "$tmp" 2>/dev/null
+
+    if [ -s "$KNOWN_GAMES_CACHE" ] && jq empty "$KNOWN_GAMES_CACHE" 2>/dev/null; then
+        KNOWN_GAMES_FILE="$KNOWN_GAMES_CACHE"
+        echo -e "${YELLOW} -> Couldn't refresh the known-EAX-games database (offline?) — using the last cached copy.${NC}" >&2
+        return 0
+    fi
+
+    echo -e "${YELLOW} -> Couldn't fetch the known-EAX-games database, and no cached copy exists yet.${NC}" >&2
+    echo -e "${YELLOW}    Game tips and library scanning are unavailable this run.${NC}" >&2
+    return 1
 }
 
 record_recent_game() {
@@ -319,8 +370,22 @@ prompt_recent_game() {
     return 1
 }
 
+pick_directory_gui() {
+    # Usage: pick_directory_gui
+    # Opens a native folder-picker dialog via zenity (GNOME/GTK desktops) or
+    # kdialog (KDE Plasma), whichever is available — covers the popular
+    # desktop environments without pulling in a new dependency by default.
+    # Prints the chosen path (empty if cancelled/unavailable/failed).
+    if command -v zenity &>/dev/null; then
+        zenity --file-selection --directory --title="Select the game's .exe folder" 2>/dev/null
+    elif command -v kdialog &>/dev/null; then
+        kdialog --getexistingdirectory "$HOME" --title "Select the game's .exe folder" 2>/dev/null
+    fi
+}
+
 get_game_directory() {
     GAME_DIR=""
+    SCANNED_APPID=""
 
     if [ "$SCRIPT_ACTION" == "u" ] && prompt_recent_game; then
         echo -e "\n${GREEN}Using: $GAME_DIR${NC}"
@@ -328,19 +393,59 @@ get_game_directory() {
         return
     fi
 
+    if [ "$SCRIPT_ACTION" == "i" ]; then
+        echo -e "${YELLOW}Scan your Steam/Heroic library for known EAX games instead of browsing manually? (y/N): ${NC}"
+        echo -e -n "> "
+        local DO_SCAN
+        read -r DO_SCAN
+        if [[ "$DO_SCAN" =~ ^[Yy]$ ]]; then
+            if scan_game_libraries; then
+                echo -e "\n${GREEN}Using: $GAME_DIR${NC}"
+                record_recent_game "$GAME_DIR"
+                return
+            fi
+            echo ""
+        fi
+    fi
+
     echo -e "${WHITE}Common game locations:${NC}"
     echo -e "${WHITE} Linux Desktop (Steam): ~/.local/share/Steam/steamapps/common/[Game]${NC}"
     echo -e "${WHITE} Steam Deck (SD Card):  /run/media/mmcblk0p1/steamapps/common/[Game]${NC}"
-    echo -e "${WHITE} Heroic / GOG:          ~/Games/Heroic/[Game]${NC}\n"
+    echo -e "${WHITE} Heroic / GOG:          ~/Games/Heroic/[Game]${NC}"
+    echo -e "${WHITE} Other (retail/CD, or a manually created Wine prefix): point this at wherever"
+    echo -e "  the game's .exe lives, and enter its Wine prefix path when asked next — these"
+    echo -e "  installs aren't covered by the library scanner above, but work fine here.${NC}\n"
 
-    echo -e "${YELLOW}Enter the full path to the game's .exe folder:${NC}"
+    local have_gui_picker=0
+    if command -v zenity &>/dev/null || command -v kdialog &>/dev/null; then
+        have_gui_picker=1
+    fi
 
     while [ -z "$GAME_DIR" ]; do
-        echo -e -n "> "
-        read -r GAME_DIR
+        if [ "$have_gui_picker" -eq 1 ]; then
+            echo -e "${YELLOW}Browse for the folder using a graphical file picker? (Y/n): ${NC}"
+            echo -e -n "> "
+            read -r USE_GUI_PICKER
+            if [[ ! "$USE_GUI_PICKER" =~ ^[Nn]$ ]]; then
+                echo -e "${WHITE} Tip: Steam's default path (~/.local/share/Steam/...) is inside a hidden folder —"
+                echo -e " press Ctrl+H in the file picker if you don't see it.${NC}"
+                GAME_DIR=$(pick_directory_gui)
+                GAME_DIR="${GAME_DIR%/}"
+                if [ -z "$GAME_DIR" ]; then
+                    echo -e "\n${YELLOW}No folder selected.${NC}\n"
+                    continue
+                fi
+            fi
+        fi
 
-        GAME_DIR="${GAME_DIR//\'/}"; GAME_DIR="${GAME_DIR//\"/}"; GAME_DIR="${GAME_DIR%/}"
-        GAME_DIR="${GAME_DIR/#\~/$HOME}"
+        if [ -z "$GAME_DIR" ]; then
+            echo -e "${YELLOW}Enter the full path to the game's .exe folder:${NC}"
+            echo -e -n "> "
+            read -r GAME_DIR
+
+            GAME_DIR="${GAME_DIR//\'/}"; GAME_DIR="${GAME_DIR//\"/}"; GAME_DIR="${GAME_DIR%/}"
+            GAME_DIR="${GAME_DIR/#\~/$HOME}"
+        fi
 
         if [ -d "$GAME_DIR" ]; then
             if [ "$SCRIPT_ACTION" == "i" ]; then
@@ -352,7 +457,6 @@ get_game_directory() {
                     read -r FORCE_DIR
                     if [[ "$FORCE_DIR" =~ ^[Yy]$ ]]; then break; fi
                     GAME_DIR=""
-                    echo -e "\n${YELLOW}Enter the full path to the game's .exe folder:${NC}"
                 else
                     break
                 fi
@@ -362,7 +466,6 @@ get_game_directory() {
         else
             echo -e "${YELLOW}${BOLD}Error: Directory not found. Please check the path and try again.${NC}"
             GAME_DIR=""
-            echo -e "\n${YELLOW}Enter the full path to the game's .exe folder:${NC}"
         fi
     done
 
@@ -413,7 +516,236 @@ detect_heroic_prefix_verbose() {
         fi
     fi
 
-    if [ -n "$auto_prefix" ]; then echo "$auto_prefix"; else echo -e " -> ${YELLOW}Search complete. No prefix found.${NC}" >&2; fi
+    if [ -n "$auto_prefix" ]; then printf '%s\t%s\n' "$auto_prefix" "$app_name"; else echo -e " -> ${YELLOW}Search complete. No prefix found.${NC}" >&2; fi
+}
+
+resolve_exe_folder() {
+    # Usage: resolve_exe_folder <install_root>
+    # A scanned install root isn't always the .exe folder — many titles nest
+    # it (e.g. GameName/bin/x64), and get_game_directory's own detection
+    # comment notes exactly this. Finds where the .exe(s) actually live and
+    # sets GAME_DIR accordingly, prompting if more than one candidate folder
+    # exists. Returns 1 (GAME_DIR left empty) if no .exe was found anywhere
+    # and the user declines to use the root as-is.
+    local root="$1"
+    GAME_DIR=""
+
+    if find "$root" -maxdepth 1 -type f -iname "*.exe" -print -quit 2>/dev/null | grep -q .; then
+        GAME_DIR="$root"
+        return 0
+    fi
+
+    local dirs=()
+    while IFS= read -r d; do dirs+=("$d"); done < <(find "$root" -mindepth 1 -maxdepth 4 -type f -iname "*.exe" -printf '%h\n' 2>/dev/null | sort -u)
+
+    if [ ${#dirs[@]} -eq 1 ]; then
+        GAME_DIR="${dirs[0]}"
+        echo -e " -> ${GREEN}Found the game executable in:${NC} $GAME_DIR"
+        return 0
+    elif [ ${#dirs[@]} -gt 1 ]; then
+        echo -e "\n${WHITE}Multiple folders with .exe files were found under this install — pick the one"
+        echo -e "with the game's main executable:${NC}"
+        local i
+        for i in "${!dirs[@]}"; do
+            echo -e "${WHITE} $((i + 1))) ${dirs[$i]}${NC}"
+        done
+        echo -e "\n${YELLOW}Selection [1-${#dirs[@]}]: ${NC}"
+        echo -e -n "> "
+        local choice
+        read -r choice
+        if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#dirs[@]} ]; then
+            GAME_DIR="${dirs[$((choice - 1))]}"
+            return 0
+        fi
+        return 1
+    else
+        echo -e "\n${YELLOW}${BOLD}Warning: No .exe files were found anywhere under this install.${NC}"
+        echo -e "\n${YELLOW}Use the install root anyway? (y/N): ${NC}"
+        echo -e -n "> "
+        local force
+        read -r force
+        if [[ "$force" =~ ^[Yy]$ ]]; then GAME_DIR="$root"; return 0; fi
+        return 1
+    fi
+}
+
+scan_game_libraries() {
+    # Usage: scan_game_libraries
+    # Opt-in alternative to browsing/typing a path: scans Steam and Heroic
+    # libraries for games present in known-eax-games.json, lists the
+    # matches, and resolves the pick's actual .exe folder (via
+    # resolve_exe_folder) into GAME_DIR. Also sets SCANNED_APPID so
+    # detect_game_environment's Steam branch can skip its own redundant
+    # AppID search/confirmation. Returns 1 (GAME_DIR left empty) if nothing
+    # was found or picked, so get_game_directory falls through to its
+    # normal manual/GUI-picker flow.
+    GAME_DIR=""
+    SCANNED_APPID=""
+
+    if ! ensure_known_games_json; then
+        echo -e "${YELLOW}Library scanning needs the known-EAX-games database, which couldn't be loaded.${NC}"
+        return 1
+    fi
+
+    echo -e "\n${CYAN}STATUS: Scanning Steam and Heroic libraries for known EAX games...${NC}"
+
+    local names=() paths=() stores=() ids=()
+
+    # --- Steam ---
+    local steam_ids
+    steam_ids=$(jq -r '.games[] | select(.steam_appid != null) | .steam_appid' "$KNOWN_GAMES_FILE" 2>/dev/null)
+    if [ -n "$steam_ids" ]; then
+        local steam_roots=("$HOME/.local/share/Steam" "$HOME/.var/app/com.valvesoftware.Steam/.local/share/Steam")
+        local -A lib_seen=()
+        local libs=()
+        local root vdf extra
+        for root in "${steam_roots[@]}"; do
+            if [ -d "$root/steamapps" ] && [ -z "${lib_seen["$root/steamapps"]:-}" ]; then
+                libs+=("$root/steamapps"); lib_seen["$root/steamapps"]=1
+            fi
+            vdf="$root/steamapps/libraryfolders.vdf"
+            [ -f "$vdf" ] || continue
+            while IFS= read -r extra; do
+                [ -n "$extra" ] || continue
+                if [ -d "$extra/steamapps" ] && [ -z "${lib_seen["$extra/steamapps"]:-}" ]; then
+                    libs+=("$extra/steamapps"); lib_seen["$extra/steamapps"]=1
+                fi
+            done < <(sed -n 's/^[[:space:]]*"path"[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$vdf" 2>/dev/null)
+        done
+
+        local lib acf appid installdir name
+        for lib in "${libs[@]}"; do
+            for acf in "$lib"/appmanifest_*.acf; do
+                [ -f "$acf" ] || continue
+                appid=$(basename "$acf" | tr -dc '0-9')
+                [ -z "$appid" ] && continue
+                echo "$steam_ids" | grep -qx "$appid" || continue
+                installdir=$(sed -n 's/^[[:space:]]*"installdir"[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$acf" 2>/dev/null | head -n 1)
+                [ -n "$installdir" ] && [ -d "$lib/common/$installdir" ] || continue
+                name=$(jq -r --arg id "$appid" '.games[] | select((.steam_appid | tostring) == $id) | .name' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+                [ -z "$name" ] && name="AppID $appid"
+                names+=("$name (Steam)")
+                paths+=("$lib/common/$installdir")
+                stores+=("steam")
+                ids+=("$appid")
+            done
+        done
+    fi
+
+    # --- Heroic ---
+    local gog_ids
+    gog_ids=$(jq -r '.games[] | select(.gog_id != null) | .gog_id' "$KNOWN_GAMES_FILE" 2>/dev/null)
+    if [ -n "$gog_ids" ]; then
+        local installed_jsons
+        installed_jsons=$(find "$HOME/.config/heroic" "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic" -type f -name "installed.json" 2>/dev/null)
+        local json_file install_path app_name name
+        while IFS= read -r json_file; do
+            [ -z "$json_file" ] && continue
+            while IFS=$'\t' read -r install_path app_name; do
+                [ -z "$install_path" ] || [ -z "$app_name" ] && continue
+                echo "$gog_ids" | grep -qx "$app_name" || continue
+                [ -d "$install_path" ] || continue
+                name=$(jq -r --arg id "$app_name" '.games[] | select((.gog_id | tostring) == $id) | .name' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+                [ -z "$name" ] && name="GOG ID $app_name"
+                names+=("$name (GOG/Heroic)")
+                paths+=("$install_path")
+                stores+=("gog")
+                ids+=("$app_name")
+            done < <(awk 'BEGIN { RS="}"; FS="," } { ip=""; an=""; for (i=1; i<=NF; i++) { if ($i ~ /"install_path"|"installPath"/) { split($i, a, "\""); ip=a[4] } if ($i ~ /"app_name"|"appName"/) { split($i, b, "\""); an=b[4] } } if (ip != "") print ip "\t" an }' "$json_file")
+        done <<< "$installed_jsons"
+    fi
+
+    if [ ${#names[@]} -eq 0 ]; then
+        echo -e "${YELLOW}No known EAX games were found in your Steam or Heroic libraries.${NC}"
+        echo -e "${WHITE}This only checks the community-maintained known-games list, which currently"
+        echo -e "covers a small, hand-verified set of titles — it will grow over time. A game"
+        echo -e "you own may still support EAX even if it's not listed yet.${NC}"
+        return 1
+    fi
+
+    echo -e "\n${WHITE}Known EAX games found in your libraries:${NC}"
+    local i
+    for i in "${!names[@]}"; do
+        echo -e "${WHITE} $((i + 1))) ${names[$i]} — ${paths[$i]}${NC}"
+    done
+    echo -e "${WHITE} 0) None of these / enter a path manually${NC}\n"
+
+    echo -e "${YELLOW}Selection [0-${#names[@]}]: ${NC}"
+    echo -e -n "> "
+    local choice
+    read -r choice
+    if ! [[ "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt ${#names[@]} ]; then
+        return 1
+    fi
+
+    local idx=$((choice - 1))
+    resolve_exe_folder "${paths[$idx]}" || return 1
+
+    [ "${stores[$idx]}" == "steam" ] && SCANNED_APPID="${ids[$idx]}"
+    return 0
+}
+
+# Per-game tips and EAX-impossible flags now live in the community-
+# maintained known-eax-games.json (see ensure_known_games_json above and
+# known-eax-games.json in this repo) rather than hardcoded here, so entries
+# can be added/corrected via PR without touching this script. Entries are
+# still only added when independently verified against the storefront's
+# own API — a wrong/stale ID would misdirect users to the wrong game.
+
+show_known_game_tip() {
+    # Usage: show_known_game_tip <id> <steam|gog>
+    # Best-effort, install-only heads-up for well-known EAX titles, sourced
+    # from known-eax-games.json. Tips are stored as a single unwrapped line
+    # for easy editing, then word-wrapped to the script's usual prose width
+    # at display time.
+    [ "$SCRIPT_ACTION" == "i" ] || return
+    [ -z "$1" ] && return
+    ensure_known_games_json || return
+
+    local tip
+    if [ "$2" == "gog" ]; then
+        tip=$(jq -r --arg id "$1" '.games[] | select((.gog_id // "") | tostring == $id) | .tip // empty' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+    else
+        tip=$(jq -r --arg id "$1" '.games[] | select((.steam_appid // "") | tostring == $id) | .tip // empty' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+    fi
+    [ -z "$tip" ] && return
+    echo -e "\n${CYAN}Heads up:${NC}"
+    echo -e "${WHITE}$(printf '%s' "$tip" | fold -s -w 76)${NC}"
+}
+
+confirm_continue_if_eax_impossible() {
+    # Usage: confirm_continue_if_eax_impossible <id> <steam|gog>
+    # "eax_impossible" means EAX support was documented as removed from the
+    # shipped game code entirely, not just hard to reach — installing DSOAL
+    # is a functional no-op for the common (unmodified) case. Kept as a
+    # confirmable warning rather than a hard block, since some users
+    # deliberately downgrade builds via old depot manifests specifically to
+    # restore this — something the script has no way to detect from the ID
+    # alone.
+    [ "$SCRIPT_ACTION" == "i" ] || return
+    [ -z "$1" ] && return
+
+    local impossible=""
+    if ensure_known_games_json; then
+        local store="steam"
+        [ "$2" == "gog" ] && store="gog"
+        if [ "$store" == "gog" ]; then
+            impossible=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.gog_id // "") | tostring == $id) | ((.eax_impossible // []) | index($store)) // empty' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+        else
+            impossible=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.steam_appid // "") | tostring == $id) | ((.eax_impossible // []) | index($store)) // empty' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+        fi
+    elif [ "$2" != "gog" ] && [ -n "${EAX_IMPOSSIBLE_FALLBACK_STEAM[$1]:-}" ]; then
+        impossible=1
+    fi
+    [ -z "$impossible" ] && return
+
+    echo -e "\n${YELLOW}Continue installing anyway? (y/N): ${NC}"
+    echo -e -n "> "
+    read -r CONTINUE_ANYWAY
+    if [[ ! "$CONTINUE_ANYWAY" =~ ^[Yy]$ ]]; then
+        echo -e "\n${WHITE}Install cancelled.${NC}"
+        exit 0
+    fi
 }
 
 detect_game_environment() {
@@ -425,35 +757,44 @@ detect_game_environment() {
         LAUNCHER_TYPE="1"
         IS_PROTON=1
         echo -e "${GREEN}Steam installation detected!${NC}"
-        echo -e "\n${YELLOW}Would you like the script to attempt to automatically find your Proton prefix? (Y/n): ${NC}"
-        echo -e -n "> "
-        read -r DO_AUTO_S
 
-        if [[ ! "$DO_AUTO_S" =~ ^[Nn]$ ]]; then
-            echo -e "\n${CYAN}STATUS: Searching for Steam AppID...${NC}"
-            # Use the top-level folder directly under steamapps/common/, not
-            # the leaf of GAME_DIR — the .exe is often nested in a subfolder
-            # (e.g. GameName/bin/x64), whose basename won't match the
-            # appmanifest's "installdir" value.
-            INSTALL_DIR="${GAME_DIR#*/steamapps/common/}"
-            INSTALL_DIR="${INSTALL_DIR%%/*}"
-            echo -e " -> Scanning local appmanifest files for folder: $INSTALL_DIR"
-            # Escape BRE metacharacters (folder names with brackets, dots, etc.
-            # are common — e.g. "[Definitive Edition]") since this pattern
-            # also relies on \s as a wildcard, which -F would otherwise take
-            # away by disabling regex interpretation entirely.
-            INSTALL_DIR_ESCAPED=$(printf '%s' "$INSTALL_DIR" | sed 's/[][\.*^$]/\\&/g')
-            MANIFEST_FILE=$(grep -il "\"installdir\"\s*\"$INSTALL_DIR_ESCAPED\"" "${GAME_DIR%/common/*}"/appmanifest_*.acf 2>/dev/null | head -n 1)
+        if [ -n "$SCANNED_APPID" ]; then
+            # Already known from the library scanner in get_game_directory —
+            # skip the redundant search/confirmation and go straight to
+            # prefix verification below.
+            APPID="$SCANNED_APPID"
+            echo -e " -> Using AppID ${BOLD}$APPID${NC} from the library scan."
+        else
+            echo -e "\n${YELLOW}Would you like the script to attempt to automatically find your Proton prefix? (Y/n): ${NC}"
+            echo -e -n "> "
+            read -r DO_AUTO_S
 
-            if [ -n "$MANIFEST_FILE" ]; then
-                AUTO_APPID=$(basename "$MANIFEST_FILE" | tr -dc '0-9')
-                echo -e " -> Found AppID: ${BOLD}$AUTO_APPID${NC}"
-                echo -e "\n${YELLOW}Use this detected Steam AppID? (Y/n): ${NC}"
-                echo -e -n "> "
-                read -r C_AUTO
-                if [[ ! "$C_AUTO" =~ ^[Nn]$ ]]; then APPID="$AUTO_APPID"; fi
-            else
-                echo -e " -> ${YELLOW}Search complete. No matching AppID found.${NC}"
+            if [[ ! "$DO_AUTO_S" =~ ^[Nn]$ ]]; then
+                echo -e "\n${CYAN}STATUS: Searching for Steam AppID...${NC}"
+                # Use the top-level folder directly under steamapps/common/, not
+                # the leaf of GAME_DIR — the .exe is often nested in a subfolder
+                # (e.g. GameName/bin/x64), whose basename won't match the
+                # appmanifest's "installdir" value.
+                INSTALL_DIR="${GAME_DIR#*/steamapps/common/}"
+                INSTALL_DIR="${INSTALL_DIR%%/*}"
+                echo -e " -> Scanning local appmanifest files for folder: $INSTALL_DIR"
+                # Escape BRE metacharacters (folder names with brackets, dots, etc.
+                # are common — e.g. "[Definitive Edition]") since this pattern
+                # also relies on \s as a wildcard, which -F would otherwise take
+                # away by disabling regex interpretation entirely.
+                INSTALL_DIR_ESCAPED=$(printf '%s' "$INSTALL_DIR" | sed 's/[][\.*^$]/\\&/g')
+                MANIFEST_FILE=$(grep -il "\"installdir\"\s*\"$INSTALL_DIR_ESCAPED\"" "${GAME_DIR%/common/*}"/appmanifest_*.acf 2>/dev/null | head -n 1)
+
+                if [ -n "$MANIFEST_FILE" ]; then
+                    AUTO_APPID=$(basename "$MANIFEST_FILE" | tr -dc '0-9')
+                    echo -e " -> Found AppID: ${BOLD}$AUTO_APPID${NC}"
+                    echo -e "\n${YELLOW}Use this detected Steam AppID? (Y/n): ${NC}"
+                    echo -e -n "> "
+                    read -r C_AUTO
+                    if [[ ! "$C_AUTO" =~ ^[Nn]$ ]]; then APPID="$AUTO_APPID"; fi
+                else
+                    echo -e " -> ${YELLOW}Search complete. No matching AppID found.${NC}"
+                fi
             fi
         fi
 
@@ -473,6 +814,8 @@ detect_game_environment() {
 
             if [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH" ]; then
                 echo -e " -> ${GREEN}Prefix verified!${NC}"
+                show_known_game_tip "$APPID" "steam"
+                confirm_continue_if_eax_impossible "$APPID" "steam"
                 break
             else
                 echo -e "\n${YELLOW}${BOLD}Error: Proton prefix not found for AppID ${APPID}.${NC}"
@@ -486,19 +829,23 @@ detect_game_environment() {
         done
     else
         LAUNCHER_TYPE="2"
-        echo -e "${GREEN}Non-Steam (Heroic/GOG) installation detected!${NC}"
+        echo -e "${GREEN}Non-Steam installation detected (Heroic/GOG, or a manually created Wine prefix)!${NC}"
         echo -e "\n${YELLOW}Would you like the script to attempt to automatically find your Wine prefix? (Y/n): ${NC}"
         echo -e -n "> "
         read -r DO_AUTO_H
 
+        HEROIC_APP_NAME=""
         if [[ ! "$DO_AUTO_H" =~ ^[Nn]$ ]]; then
-            DETECTED_PREFIX=$(detect_heroic_prefix_verbose "$GAME_DIR")
+            IFS=$'\t' read -r DETECTED_PREFIX DETECTED_APP_NAME <<< "$(detect_heroic_prefix_verbose "$GAME_DIR")"
             if [ -n "$DETECTED_PREFIX" ]; then
                 echo -e " -> ${GREEN}Detected Prefix:${NC} $DETECTED_PREFIX"
                 echo -e "\n${YELLOW}Use this detected prefix? (Y/n): ${NC}"
                 echo -e -n "> "
                 read -r C_AUTO
-                if [[ ! "$C_AUTO" =~ ^[Nn]$ ]]; then PREFIX_PATH="$DETECTED_PREFIX"; fi
+                if [[ ! "$C_AUTO" =~ ^[Nn]$ ]]; then
+                    PREFIX_PATH="$DETECTED_PREFIX"
+                    HEROIC_APP_NAME="$DETECTED_APP_NAME"
+                fi
             fi
         fi
 
@@ -515,6 +862,8 @@ detect_game_environment() {
 
             if [ -d "$PREFIX_PATH/drive_c" ]; then
                 echo -e " -> ${GREEN}Prefix verified!${NC}"
+                show_known_game_tip "$HEROIC_APP_NAME" "gog"
+                confirm_continue_if_eax_impossible "$HEROIC_APP_NAME" "gog"
                 break
             else
                 echo -e "\n${YELLOW}${BOLD}Error: Initialised Wine prefix not found at that location.${NC}"
@@ -1187,7 +1536,7 @@ print_line
 EAX_RESTORE_SKIP_PREFLIGHT="${EAX_RESTORE_SKIP_PREFLIGHT:-}"
 if is_truthy "$EAX_RESTORE_SKIP_PREFLIGHT"; then
     echo -e "\n${YELLOW}EAX_RESTORE_SKIP_PREFLIGHT is set — skipping the tool scan and trusting that curl,"
-    echo -e "unzip, file, protontricks, winetricks, and wine are already available.${NC}"
+    echo -e "unzip, file, protontricks, winetricks, wine, and jq are already available.${NC}"
 
     # Still needed by the rest of the script, just done quietly: the
     # protontricks Flatpak fallback function, and WINE_CMD.
@@ -1234,11 +1583,12 @@ else
         else echo -e "${YELLOW}MISSING (Registry patches for non-Steam games will be skipped)${NC}"; WINE_CMD=""; fi
     fi
 
-    echo -n -e " -> Checking for ${YELLOW}jq${NC} (optional)... "
+    echo -n -e " -> Checking for ${YELLOW}jq${NC}... "
     if command -v jq &> /dev/null; then
         echo -e "${GREEN}FOUND${NC}"
     else
-        echo -e "${YELLOW}MISSING (checksum verification for the kcat official builds will be skipped)${NC}"
+        echo -e "${YELLOW}MISSING (required for checksum verification and the known-EAX-games database)${NC}"
+        MISSING_BASE_PKGS+=("jq")
     fi
 
     if [ ${#MISSING_BASE_PKGS[@]} -gt 0 ]; then

@@ -1,0 +1,61 @@
+{
+  "_comment": "Community-maintained database of well-known EAX-era games, matched by this script's library scanner and used for the install-time 'Heads up' tips. Contributions welcome via PR — see README.md's 'Contributing to the Known Games Database' section for the rules before adding an entry.",
+  "games": [
+    {
+      "name": "Deus Ex",
+      "steam_appid": 6910,
+      "gog_id": 1207658995,
+      "eax_impossible": [],
+      "tip": "Deus Ex defaults to the Galaxy audio driver, which DSOAL can't add reverb to (open upstream bug: kcat/dsoal#79). If EAX sounds silent, try the community 'ALAudio for Deus Ex' mod instead — a separate, native-OpenAL audio path for this Unreal Engine 1 title, set via AudioDevice=ALAudio.ALAudioSubsystem in DeusEx.ini."
+    },
+    {
+      "name": "Thief Gold",
+      "steam_appid": 211600,
+      "gog_id": 1207658997,
+      "eax_impossible": [],
+      "tip": "Thief Gold runs on the Dark Engine. Pairing this with TFix (built on the NewDark engine patch) is worth considering for broader compatibility fixes alongside EAX."
+    },
+    {
+      "name": "Thief II: The Metal Age",
+      "steam_appid": 211740,
+      "gog_id": 1207659001,
+      "eax_impossible": [],
+      "tip": "Thief II: The Metal Age runs on the Dark Engine. Pairing this with T2Fix (built on the NewDark engine patch) is worth considering for broader compatibility fixes alongside EAX."
+    },
+    {
+      "name": "System Shock 2",
+      "steam_appid": 238210,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "System Shock 2 ships pre-patched with NewDark, which has its own OpenAL Soft 'Hardware Acceleration' option in the in-game Audio menu — a separate native path from this script's DSOAL install. Worth trying if EAX doesn't sound right. The System Shock 2 Community Patch (SCP) is also worth pairing, though it's a general bugfix/polish patch, not an audio-specific one. Note: System Shock 2's GOG listing is the 25th Anniversary Remaster, a different build, so it's deliberately left unmapped here rather than pointed at the wrong game."
+    },
+    {
+      "name": "F.E.A.R.",
+      "steam_appid": 21090,
+      "gog_id": 1423058413,
+      "eax_impossible": [],
+      "tip": "If EAX audio drops out during large firefights, try this script's 'Expand Audio Limits' Advanced Compatibility Tweak (256 simultaneous sources, 48kHz) — that's exactly what it's for. A separate, older report (kcat/dsoal#67) described DSOAL failing to load under Wine for one user, but that's not universal — if EAX already works, you likely don't need any advanced tweaks."
+    },
+    {
+      "name": "Half-Life",
+      "steam_appid": 70,
+      "gog_id": null,
+      "eax_impossible": ["steam"],
+      "tip": "Half-Life's Steam release had A3D and EAX removed from the game code entirely in the January 2013 update, and the 2023 25th Anniversary Update didn't restore them. This isn't a DSOAL problem — the game simply no longer makes those calls, so this script's install has nothing to translate on the current Steam build. For genuine EAX/A3D-style reverb and HRTF, look into MetaAudio instead (github.com/LAGonauta/MetaAudio, requires MetaHookSv). If you still have the original pre-2013 CD/retail release installed outside Steam, that copy's EAX calls are intact — point this script at that install folder via a manual Wine prefix (it isn't in this library scanner, since it has no Steam/GOG entry to detect) and DSOAL should work normally there."
+    },
+    {
+      "name": "Grand Theft Auto: San Andreas",
+      "steam_appid": 12120,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "Grand Theft Auto: San Andreas needs its DirectSound CLSIDs registered directly in the Wine registry to unlock EAX. Make sure to opt into this script's Advanced Compatibility Tweaks (COM Registry Injection) during install."
+    },
+    {
+      "name": "Vampire: The Masquerade - Bloodlines",
+      "steam_appid": 2600,
+      "gog_id": 1207659240,
+      "eax_impossible": [],
+      "tip": "Vampire: The Masquerade - Bloodlines isn't documented (per PCGamingWiki) as having hardware EAX support — its acclaimed sound design is mostly scripted ambience, not DirectSound3D reverb zones. DSOAL may have little to no audible effect here; that's expected, not a bug."
+    }
+  ]
+}

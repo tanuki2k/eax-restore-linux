@@ -17,6 +17,7 @@ Because modern operating systems and Proton/Wine don't natively support this old
 * **Dynamic HRTF Integration:** Automatically generates optimized `alsoft.ini` configurations and deploys headphone profiles for incredible 3D binaural audio.
 * **Smart Architecture Scanner:** Automatically detects whether the game executable is 32-bit or 64-bit and grabs the exact right dependencies so the game doesn't crash on launch.
 * **Intelligent Prefix Routing:** Opt-in auto-detection for Steam AppIDs and Heroic Prefix paths, making it easy to find where your game is actually installed. Recently used game folders are remembered and offered as a quick pick on future runs.
+* **Library Scanning:** Opt-in scan of your Steam and Heroic libraries against a community-maintained list of known EAX games — pick a match from the list instead of hunting down the install folder yourself.
 * **Deep Prefix Validation:** Verifies Steam AppIDs via Protontricks and ensures Heroic prefixes are fully initialized before touching any files.
 * **Cache & Offline Mode:** Smart GitHub API downloading with local caching, so if you install the fix to multiple games, it only downloads the files once. Pinned/live checksum verification guards against corrupt or tampered downloads.
 * **Safe File Management:** Interactive conflict resolution safely backs up pre-existing files with timestamps so you never lose original game data. Every install writes a manifest of exactly what it deployed, so uninstall only ever removes what this script actually put there and restores your backups automatically.
@@ -29,16 +30,17 @@ Because modern operating systems and Proton/Wine don't natively support this old
 ## Prerequisites
 
 The script checks for these dependencies and offers to install them if they are missing:
-* `curl`, `unzip`, `file`, `grep`, `awk`
+* `curl`, `unzip`, `file`, `grep`, `awk`, `jq`
 
 **Launcher Dependencies:**
 * **Steam Games:** Requires `protontricks`.
 * **Heroic/GOG Games:** Requires `winetricks`.
 
-**Optional:**
-* `jq` — enables checksum verification for kcat's official builds. The script still works without it, just with a manual confirmation prompt instead of automatic verification.
+`jq` powers checksum verification for kcat's official builds, as well as the known-EAX-games database used for install-time tips and library scanning (see below).
 
 ## Usage
+
+> Prefer a manual download? Grab the script and the Steam Deck `.desktop` launcher from the [latest release](https://github.com/tanuki2k/eax-restore-linux/releases/latest) instead of the steps below.
 
 **1. Download the script:**
 Open your terminal and run:
@@ -67,7 +69,7 @@ Choose to install or uninstall, provide the game directory, and select your pref
 
 As an alternative to the terminal steps above, [`eax-restore-linux.desktop`](eax-restore-linux.desktop) is a double-click launcher for Desktop Mode:
 
-1. Switch to **Desktop Mode** and download [`eax-restore-linux.desktop`](https://github.com/tanuki2k/eax-restore-linux/raw/refs/heads/main/eax-restore-linux.desktop) (e.g. to your Desktop or Downloads folder).
+1. Switch to **Desktop Mode** and download [`eax-restore-linux.desktop`](https://github.com/tanuki2k/eax-restore-linux/releases/latest/download/eax-restore-linux.desktop) from the [latest release](https://github.com/tanuki2k/eax-restore-linux/releases/latest) (e.g. to your Desktop or Downloads folder).
 2. In Dolphin, right-click it and enable **Allow Executing File as Program** (Properties → Permissions), since Plasma won't run it otherwise.
 3. Double-click it and select **Execute**. It fetches the latest script into your home folder (`~/eax-restore-linux.sh`, overwriting any previous copy) and runs it in a terminal — nothing is installed until you follow the prompts, same as running the script manually. The downloaded copy is left behind afterward, so you can re-run it later (e.g. for uninstalls, or another game) without launching the `.desktop` file again.
 
@@ -75,6 +77,16 @@ Since the script itself refuses to run in Gaming Mode, this only works from Desk
 
 ### Uninstallation
 Run the script, select **(u)ninstall**, and provide the game directory. The script will remove the EAX files, restore original backups, remove the registry overrides, and optionally remove the VC++ runtime it installed.
+
+### Library Scanning & the Known Games Database
+
+During install, the script can optionally scan your Steam and Heroic libraries for titles it recognises, so you can pick a game from a list instead of browsing to its folder manually. Matches are checked against [`known-eax-games.json`](known-eax-games.json), a community-maintained file in this repo that's fetched fresh on every run (and cached locally so a later offline run still works). The same file also drives the install-time "Heads up" tips and the "this install would be a no-op" warnings for specific titles.
+
+This list is deliberately small and hand-verified — it will only ever cover a fraction of EAX-capable games. If your game isn't found by the scanner, that's expected; just provide the folder manually as usual.
+
+**Retail/CD copies and other non-Steam, non-Heroic installs** (e.g. an original pre-Steam Half-Life disc, run in a Wine prefix you set up yourself) aren't covered by the scanner at all, since there's no launcher library to scan — but the script still supports them. Point it at the game's `.exe` folder and provide the Wine prefix path manually when prompted.
+
+**Contributing to the known games database:** PRs adding or correcting entries in `known-eax-games.json` are welcome. Please only add a `steam_appid`/`gog_id` you've independently verified against the storefront's own page or API — a wrong ID would point the script at someone else's prefix. See the existing entries for the expected shape (`name`, `steam_appid`, `gog_id`, `eax_impossible`, `tip`).
 
 ### Environment Variables
 
