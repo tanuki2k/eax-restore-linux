@@ -92,7 +92,7 @@
       "steam_appid": 6980,
       "gog_id": 1207659036,
       "eax_impossible": [],
-      "tip": "Thief: Deadly Shadows runs on a modified Dark Engine build. The unofficial 'Sneaky Upgrade' patch (works with both the Steam and GOG releases) fixes a well-documented multi-core CPU issue and other modern-system quirks — worth pairing alongside EAX, similar to TFix/T2Fix for the earlier Thief games. Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
+      "tip": "Thief: Deadly Shadows runs on a modified Dark Engine build. The unofficial 'Sneaky Upgrade' patch (works with both the Steam and GOG releases) fixes a well-documented multi-core CPU issue and other modern-system quirks — worth pairing alongside EAX, similar to TFix/T2Fix for the earlier Thief games. Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak. EAX isn't on by default: in-game, go to Options, scroll to the bottom, and enable 'Audio Hardware Mixing', 'EAX ADVANCED HD', and 'EAX Multiple Environments' (per Creative's own setup guide for the game).",
       "eax_versions": [
         "3.0",
         "4.0"
@@ -127,7 +127,7 @@
       "steam_appid": 6020,
       "gog_id": 1428935726,
       "eax_impossible": [],
-      "tip": "This title's own EAX support is implemented via a bundled OpenAL library rather than DirectSound3D — how that interacts with DSOAL hasn't been independently verified here.",
+      "tip": "This title's own EAX support is implemented via a bundled OpenAL library rather than DirectSound3D — how that interacts with DSOAL hasn't been independently verified here. Full EAX 4.0 ('Multi-Environment'/'Environment Panning') historically required a separate official patch beyond the base install, per Creative's own writeup — likely already included in the current Steam/GOG build, but worth checking the patch/build version if EAX seems limited to a single reverb zone.",
       "eax_versions": [
         "1.0",
         "2.0",
@@ -201,7 +201,7 @@
       "steam_appid": 13240,
       "gog_id": null,
       "eax_impossible": [],
-      "tip": null,
+      "tip": "The base install only has basic EAX 1.0/A3D support built into its levels. Full EAX 2.0 reverb/occlusion for the original Deathmatch and Capture the Flag maps needs Creative's separate official 'EAX Library Patch' (three files: uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip), historically mirrored at patches-scrolls.com — verify the mirror is still live and the files intact before installing.",
       "eax_versions": [
         "1.0",
         "2.0"
@@ -212,7 +212,7 @@
       "steam_appid": 13230,
       "gog_id": null,
       "eax_impossible": [],
-      "tip": "This title's own EAX support is implemented via a bundled OpenAL library rather than DirectSound3D — how that interacts with DSOAL hasn't been independently verified here.",
+      "tip": "This title's own EAX support is implemented via a bundled OpenAL library rather than DirectSound3D — how that interacts with DSOAL hasn't been independently verified here. If EAX seems inactive, check the in-game Audio settings: Audio Mode should be 'H/W 3D + EAX', with Low Sound Detail, System Driver, and Reverse Stereo all unchecked (per Creative's own setup notes for this game).",
       "eax_versions": [
         "3.0",
         "5.0"
@@ -298,7 +298,7 @@
       "steam_appid": 13250,
       "gog_id": 1207658679,
       "eax_impossible": [],
-      "tip": "Delisted from Steam's storefront (Epic pulled the original Unreal-series titles from sale), so it can't be newly purchased there anymore — but this AppID is still valid for detecting/installing on an existing owned copy. The GOG release is the actively available option for new purchases. Unreal (1998) was the first game to ever implement EAX support.",
+      "tip": "Delisted from Steam's storefront (Epic pulled the original Unreal-series titles from sale), so it can't be newly purchased there anymore — but this AppID is still valid for detecting/installing on an existing owned copy. The GOG release is the actively available option for new purchases. Unreal (1998) was the first game to ever implement EAX support. If hardware 3D audio doesn't seem to engage, check Unreal.ini for UseSpatial=True, UseReverb=True, and Use3dHardware=True under the audio section — these gate whether the engine attempts hardware-accelerated 3D audio at all (documented in an Aureal A3D context, but the flags are generic to the engine's audio subsystem, not vendor-specific).",
       "eax_versions": [
         "1.0"
       ]
