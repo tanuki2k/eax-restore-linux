@@ -67,6 +67,28 @@
       ]
     },
     {
+      "name": "Grand Theft Auto III",
+      "steam_appid": 12100,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "Delisted from Steam's storefront (Rockstar replaced it with 2021's separate 'Definitive Edition' remaster, a different engine without DirectSound3D EAX) — but this AppID is still valid for detecting/installing on an existing owned copy. If EAX doesn't engage, this script's Advanced Compatibility Tweaks (COM Registry Injection) may help, as it does for Grand Theft Auto: San Andreas on the same RenderWare-derived engine — not independently confirmed for this title specifically.",
+      "eax_versions": [
+        "1.0",
+        "3.0"
+      ]
+    },
+    {
+      "name": "Grand Theft Auto: Vice City",
+      "steam_appid": 12110,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "Delisted from Steam's storefront (Rockstar replaced it with 2021's separate 'Definitive Edition' remaster, a different engine without DirectSound3D EAX) — but this AppID is still valid for detecting/installing on an existing owned copy. Also supports A3D 2.0 via a manual edit of the settings file, per the Vogons Wiki's citation for this title. If EAX doesn't engage, this script's Advanced Compatibility Tweaks (COM Registry Injection) may help, as it does for Grand Theft Auto: San Andreas on the same RenderWare-derived engine — not independently confirmed for this title specifically.",
+      "eax_versions": [
+        "1.0",
+        "3.0"
+      ]
+    },
+    {
       "name": "Grand Theft Auto: San Andreas",
       "steam_appid": 12120,
       "gog_id": null,
