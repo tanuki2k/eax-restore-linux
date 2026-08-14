@@ -107,6 +107,14 @@ BOLD='\033[1m'
 DIM='\033[2m'
 NC='\033[0m'
 
+# --- Yes/No Input Matching ---
+# Used unquoted against =~ so bash treats these as regexes, not literal
+# strings. Matches "y"/"yes" and "n"/"no" (any case) instead of just a bare
+# single letter, so typing the full word doesn't silently fall through to
+# whichever branch a lone "y" or "n" wasn't handling.
+YES_RE='^[Yy]([Ee][Ss])?$'
+NO_RE='^[Nn][Oo]?$'
+
 # ==============================================================================
 # VISUAL HELPERS
 # ==============================================================================
@@ -399,7 +407,7 @@ get_game_directory() {
         echo -e -n "> "
         local DO_SCAN
         read -r DO_SCAN
-        if [[ "$DO_SCAN" =~ ^[Yy]$ ]]; then
+        if [[ "$DO_SCAN" =~ $YES_RE ]]; then
             if scan_game_libraries; then
                 echo -e "\n${GREEN}Using: $GAME_DIR${NC}"
                 record_recent_game "$GAME_DIR"
@@ -427,7 +435,7 @@ get_game_directory() {
             echo -e "${YELLOW}Browse for the folder using a graphical file picker? (Y/n): ${NC}"
             echo -e -n "> "
             read -r USE_GUI_PICKER
-            if [[ ! "$USE_GUI_PICKER" =~ ^[Nn]$ ]]; then
+            if [[ ! "$USE_GUI_PICKER" =~ $NO_RE ]]; then
                 echo -e "${WHITE} Tip: Steam's default path (~/.local/share/Steam/...) is inside a hidden folder —"
                 echo -e " press Ctrl+H in the file picker if you don't see it.${NC}"
                 GAME_DIR=$(pick_directory_gui)
@@ -456,7 +464,7 @@ get_game_directory() {
                     echo -e "\n${YELLOW}Are you absolutely sure this is the correct game folder? (y/N): ${NC}"
                     echo -e -n "> "
                     read -r FORCE_DIR
-                    if [[ "$FORCE_DIR" =~ ^[Yy]$ ]]; then break; fi
+                    if [[ "$FORCE_DIR" =~ $YES_RE ]]; then break; fi
                     GAME_DIR=""
                 else
                     break
@@ -565,7 +573,7 @@ resolve_exe_folder() {
         echo -e -n "> "
         local force
         read -r force
-        if [[ "$force" =~ ^[Yy]$ ]]; then GAME_DIR="$root"; return 0; fi
+        if [[ "$force" =~ $YES_RE ]]; then GAME_DIR="$root"; return 0; fi
         return 1
     fi
 }
@@ -743,7 +751,7 @@ confirm_continue_if_eax_impossible() {
     echo -e "\n${YELLOW}Continue installing anyway? (y/N): ${NC}"
     echo -e -n "> "
     read -r CONTINUE_ANYWAY
-    if [[ ! "$CONTINUE_ANYWAY" =~ ^[Yy]$ ]]; then
+    if [[ ! "$CONTINUE_ANYWAY" =~ $YES_RE ]]; then
         echo -e "\n${WHITE}Install cancelled.${NC}"
         exit 0
     fi
@@ -770,7 +778,7 @@ detect_game_environment() {
             echo -e -n "> "
             read -r DO_AUTO_S
 
-            if [[ ! "$DO_AUTO_S" =~ ^[Nn]$ ]]; then
+            if [[ ! "$DO_AUTO_S" =~ $NO_RE ]]; then
                 echo -e "\n${CYAN}STATUS: Searching for Steam AppID...${NC}"
                 # Use the top-level folder directly under steamapps/common/, not
                 # the leaf of GAME_DIR — the .exe is often nested in a subfolder
@@ -792,7 +800,7 @@ detect_game_environment() {
                     echo -e "\n${YELLOW}Use this detected Steam AppID? (Y/n): ${NC}"
                     echo -e -n "> "
                     read -r C_AUTO
-                    if [[ ! "$C_AUTO" =~ ^[Nn]$ ]]; then APPID="$AUTO_APPID"; fi
+                    if [[ ! "$C_AUTO" =~ $NO_RE ]]; then APPID="$AUTO_APPID"; fi
                 else
                     echo -e " -> ${YELLOW}Search complete. No matching AppID found.${NC}"
                 fi
@@ -825,7 +833,7 @@ detect_game_environment() {
                 echo -e "\n${YELLOW}Check this AppID again? (Y/n): ${NC}"
                 echo -e -n "> "
                 read -r RET
-                if [[ "$RET" =~ ^[Nn]$ ]]; then APPID=""; fi
+                if [[ "$RET" =~ $NO_RE ]]; then APPID=""; fi
             fi
         done
     else
@@ -836,14 +844,14 @@ detect_game_environment() {
         read -r DO_AUTO_H
 
         HEROIC_APP_NAME=""
-        if [[ ! "$DO_AUTO_H" =~ ^[Nn]$ ]]; then
+        if [[ ! "$DO_AUTO_H" =~ $NO_RE ]]; then
             IFS=$'\t' read -r DETECTED_PREFIX DETECTED_APP_NAME <<< "$(detect_heroic_prefix_verbose "$GAME_DIR")"
             if [ -n "$DETECTED_PREFIX" ]; then
                 echo -e " -> ${GREEN}Detected Prefix:${NC} $DETECTED_PREFIX"
                 echo -e "\n${YELLOW}Use this detected prefix? (Y/n): ${NC}"
                 echo -e -n "> "
                 read -r C_AUTO
-                if [[ ! "$C_AUTO" =~ ^[Nn]$ ]]; then
+                if [[ ! "$C_AUTO" =~ $NO_RE ]]; then
                     PREFIX_PATH="$DETECTED_PREFIX"
                     HEROIC_APP_NAME="$DETECTED_APP_NAME"
                 fi
@@ -874,7 +882,7 @@ detect_game_environment() {
                 echo -e "\n${YELLOW}Check this path again? (Y/n): ${NC}"
                 echo -e -n "> "
                 read -r RET
-                if [[ "$RET" =~ ^[Nn]$ ]]; then PREFIX_PATH=""; fi
+                if [[ "$RET" =~ $NO_RE ]]; then PREFIX_PATH=""; fi
             fi
         done
 
@@ -924,7 +932,7 @@ select_architecture() {
         echo -e "${YELLOW}Attempt to auto-detect 32/64-bit architecture? (Y/n): ${NC}"
         echo -e -n "> "
         read -r DO_AUTO
-        if [[ ! "$DO_AUTO" =~ ^[Nn]$ ]]; then
+        if [[ ! "$DO_AUTO" =~ $NO_RE ]]; then
             A32=0; A64=0
             while IFS= read -r -d '' exe; do
                 [[ $(file "$exe") == *"PE32+"* ]] && ((A64++)) || ((A32++))
@@ -940,7 +948,7 @@ select_architecture() {
                 echo -e "\n${GREEN}Detected ${DETECTED}-bit. Correct? (Y/n): ${NC}"
                 echo -e -n "> "
                 read -r CONF
-                if [[ ! "$CONF" =~ ^[Nn]$ ]]; then ARCH="$DETECTED"; fi
+                if [[ ! "$CONF" =~ $NO_RE ]]; then ARCH="$DETECTED"; fi
             fi
         fi
     fi
@@ -1334,7 +1342,7 @@ confirm_unverified_download() {
     echo -e "    ${YELLOW}Install it anyway? (Y/n): ${NC}"
     echo -n "    > "
     read -r CONFIRM_UNVERIFIED
-    [[ ! "$CONFIRM_UNVERIFIED" =~ ^[Nn]$ ]]
+    [[ ! "$CONFIRM_UNVERIFIED" =~ $NO_RE ]]
 }
 
 verify_or_confirm() {
@@ -1600,7 +1608,7 @@ else
         else
             echo -e -n "${YELLOW}Auto-install these dependencies now? (Requires sudo) (Y/n): ${NC}"
             read -r AUTO_INSTALL_BASE
-            if [[ ! "$AUTO_INSTALL_BASE" =~ ^[Nn]$ ]]; then
+            if [[ ! "$AUTO_INSTALL_BASE" =~ $NO_RE ]]; then
                 echo -e "\n${CYAN}STATUS: Installing missing packages...${NC}"
                 source /etc/os-release
                 OS_FLAVOR="${ID_LIKE:-$ID}"
@@ -1660,7 +1668,7 @@ if is_truthy "$EAX_RESTORE_VCRUN_ONLY"; then
     echo -e "\n${YELLOW}Proceed? (Y/n): ${NC}"
     echo -e -n "> "
     read -r CONFIRM_VCRUN_ONLY
-    if [[ "$CONFIRM_VCRUN_ONLY" =~ ^[Nn]$ ]]; then
+    if [[ "$CONFIRM_VCRUN_ONLY" =~ $NO_RE ]]; then
         echo -e "\n${YELLOW}Aborted. No changes made.${NC}"
         exit 0
     fi
@@ -1838,7 +1846,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         echo -e -n "> "
         read -r CONFIRM_UNINSTALL
 
-        if [[ "$CONFIRM_UNINSTALL" =~ ^[Nn]$ ]]; then
+        if [[ "$CONFIRM_UNINSTALL" =~ $NO_RE ]]; then
             FILES_DECLINED="1"
         else
             parse_selection "${#FILES_TO_REMOVE[@]}" "$CONFIRM_UNINSTALL"
@@ -1926,10 +1934,10 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         echo -e "\n${YELLOW}Do you want to remove Override/COM keys from the Wine registry? (y/N): ${NC}"
         echo -e -n "> "
         read -r REMOVE_REG
-        if [[ "$REMOVE_REG" =~ ^[Yy]$ ]]; then REG_HAS_COM="y"; REG_HAS_OVERRIDE="y"; fi
+        if [[ "$REMOVE_REG" =~ $YES_RE ]]; then REG_HAS_COM="y"; REG_HAS_OVERRIDE="y"; fi
     fi
 
-    if [[ "$REMOVE_REG" =~ ^[Yy]$ ]]; then
+    if [[ "$REMOVE_REG" =~ $YES_RE ]]; then
         if [ -n "$APPID" ] || [ -d "$PREFIX_PATH/drive_c" ]; then
             REG_FILE="$GAME_DIR/dsoal_registry_clean_$$.reg"
             echo "Windows Registry Editor Version 5.00" > "$REG_FILE"
@@ -1972,7 +1980,7 @@ EOF
         echo -e "\n${YELLOW}Also remove the VC++ 2022 Redistributable from this prefix? (y/N): ${NC}"
         echo -e -n "> "
         read -r REMOVE_VCRUN
-        if [[ "$REMOVE_VCRUN" =~ ^[Yy]$ ]]; then
+        if [[ "$REMOVE_VCRUN" =~ $YES_RE ]]; then
             uninstall_vcrun_dependencies
         fi
     else
@@ -2088,7 +2096,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         echo -e -n "> "
         read -r DO_VCRUN_CHECK
 
-        if [[ "$DO_VCRUN_CHECK" =~ ^[Nn]$ ]]; then
+        if [[ "$DO_VCRUN_CHECK" =~ $NO_RE ]]; then
             echo -e "\n${WHITE}Skipping. You can revisit this later with EAX_RESTORE_VCRUN_ONLY=1 without redoing"
             echo -e "the rest of the install.${NC}"
         else
@@ -2219,7 +2227,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     ADVANCED_LIMITS="n"
     ADVANCED_COM="n"
 
-    if [[ "$SHOW_ADVANCED" =~ ^[Yy]$ ]]; then
+    if [[ "$SHOW_ADVANCED" =~ $YES_RE ]]; then
         echo -e "\n${CYAN}${BOLD}Tweak A: EAX Unified Dummy Files${NC}"
         echo -e "${WHITE}Tricks certain games (like KOTOR, Max Payne, and early Unreal Engine titles)"
         echo -e "into unlocking the EAX menu option by creating harmless, empty eax.dll and eaxunified.dll files.${NC}"
@@ -2266,7 +2274,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     print_line
     echo -e "\n${CYAN}${BOLD}Configuration finished!${NC}"
     echo -e -n "${CYAN}Ready to deploy the audio files to your game and system prefix. Proceed? (Y/n): ${NC}"; read -r CONFIRM_FIN
-    if [[ "$CONFIRM_FIN" =~ ^[Nn]$ ]]; then echo -e "${YELLOW}Installation aborted.${NC}"; exit 0; fi
+    if [[ "$CONFIRM_FIN" =~ $NO_RE ]]; then echo -e "${YELLOW}Installation aborted.${NC}"; exit 0; fi
 
     echo -e "\n${CYAN}STATUS: Executing system verbs via $( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" ) (Silent Mode)...${NC}"
     echo -e " -> Applying core package: openal"
@@ -2285,7 +2293,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     fi
 
    VCRUN_INSTALLED_THIS_RUN="0"
-   if [[ "$INSTALL_VCRUN" =~ ^[Yy]$ ]]; then
+   if [[ "$INSTALL_VCRUN" =~ $YES_RE ]]; then
         install_vcrun_dependencies && VCRUN_INSTALLED_THIS_RUN="1"
     fi
 
@@ -2397,7 +2405,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
 
     echo -e "\n${CYAN}STATUS: Applying configurations and tweaks...${NC}"
 
-    if [[ "$ADVANCED_DUMMY" =~ ^[Yy]$ ]]; then
+    if [[ "$ADVANCED_DUMMY" =~ $YES_RE ]]; then
         if handle_conflict "$GAME_DIR/eax.dll"; then
             touch "$GAME_DIR/eax.dll"; echo "$GAME_DIR/eax.dll" >> "$INSTALL_MANIFEST"
             echo -e " -> Created: eax.dll dummy"
@@ -2424,7 +2432,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
             STEREO_MODE="auto"
             STEREO_ENCODING="tsme"
             HRTF_MODE=""
-        elif [[ "$ENABLE_HRTF" =~ ^[Yy]$ ]]; then
+        elif [[ "$ENABLE_HRTF" =~ $YES_RE ]]; then
             channels="stereo"
             STEREO_ENCODING="hrtf"
             HRTF_MODE="full"
@@ -2443,7 +2451,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
             HRTF_VALUE="off"
         fi
 
-        if [[ "$ADVANCED_LIMITS" =~ ^[Yy]$ ]]; then
+        if [[ "$ADVANCED_LIMITS" =~ $YES_RE ]]; then
             cat <<EOF > "$GAME_DIR/alsoft.ini"
 # Auto-generated by EAX Restore Script for Linux (Advanced Tweaks)
 
@@ -2496,12 +2504,12 @@ EOF
         fi
     fi
 
-    if [[ "$ADVANCED_COM" =~ ^[Yy]$ ]] || [[ "$AUTO_OVERRIDE" =~ ^[Yy]$ ]]; then
+    if [[ "$ADVANCED_COM" =~ $YES_RE ]] || [[ "$AUTO_OVERRIDE" =~ $YES_RE ]]; then
         REG_FILE="$GAME_DIR/dsoal_master_patch_$$.reg"
         echo "Windows Registry Editor Version 5.00" > "$REG_FILE"
         echo "" >> "$REG_FILE"
 
-        if [[ "$ADVANCED_COM" =~ ^[Yy]$ ]]; then
+        if [[ "$ADVANCED_COM" =~ $YES_RE ]]; then
             cat <<EOF >> "$REG_FILE"
 [HKEY_CURRENT_USER\Software\Classes\CLSID\{3901CC3F-84B5-4FA4-BA35-AA8172B8A09B}\InprocServer32]
 @="dsound.dll"
@@ -2518,7 +2526,7 @@ EOF
 EOF
         fi
 
-        if [[ "$AUTO_OVERRIDE" =~ ^[Yy]$ ]]; then
+        if [[ "$AUTO_OVERRIDE" =~ $YES_RE ]]; then
             cat <<EOF >> "$REG_FILE"
 [HKEY_CURRENT_USER\Software\Wine\DllOverrides]
 "dsound"="native,builtin"
@@ -2529,8 +2537,8 @@ EOF
         apply_registry_patch "$REG_FILE"
         rm -f "$REG_FILE"
 
-        [[ "$ADVANCED_COM" =~ ^[Yy]$ ]] && echo "REGISTRY:COM" >> "$INSTALL_MANIFEST" && echo -e " -> Injected: COM Registry Routing"
-        [[ "$AUTO_OVERRIDE" =~ ^[Yy]$ ]] && echo "REGISTRY:OVERRIDE" >> "$INSTALL_MANIFEST" && echo -e " -> Injected: WINEDLLOVERRIDES (native,builtin) into registry"
+        [[ "$ADVANCED_COM" =~ $YES_RE ]] && echo "REGISTRY:COM" >> "$INSTALL_MANIFEST" && echo -e " -> Injected: COM Registry Routing"
+        [[ "$AUTO_OVERRIDE" =~ $YES_RE ]] && echo "REGISTRY:OVERRIDE" >> "$INSTALL_MANIFEST" && echo -e " -> Injected: WINEDLLOVERRIDES (native,builtin) into registry"
     fi
 
     echo ""
@@ -2538,7 +2546,7 @@ EOF
     echo -e "${GREEN}${BOLD}--- INSTALLATION COMPLETE! ---${NC}"
     print_line
 
-    if [[ "$AUTO_OVERRIDE" =~ ^[Yy]$ ]]; then
+    if [[ "$AUTO_OVERRIDE" =~ $YES_RE ]]; then
         echo -e "\n${YELLOW}${BOLD}Final Steps to activate EAX:${NC}"
         echo -e " 1. ${YELLOW}${BOLD}Launch the game:${NC} ${WHITE}The DLL Override was handled automatically! Just hit Play.${NC}"
         echo -e " 2. ${YELLOW}${BOLD}In-Game Settings:${NC} ${WHITE}Go to Audio settings and enable 'EAX', '3D Sound', or 'Hardware Acceleration'.${NC}\n"
