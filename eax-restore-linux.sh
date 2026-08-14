@@ -421,9 +421,7 @@ get_game_directory() {
     echo -e "${WHITE} Linux Desktop (Steam): ~/.local/share/Steam/steamapps/common/[Game]${NC}"
     echo -e "${WHITE} Steam Deck (SD Card):  /run/media/mmcblk0p1/steamapps/common/[Game]${NC}"
     echo -e "${WHITE} Heroic / GOG:          ~/Games/Heroic/[Game]${NC}"
-    echo -e "${WHITE} Other (retail/CD, or a manually created Wine prefix): point this at wherever"
-    echo -e "  the game's .exe lives, and enter its Wine prefix path when asked next — these"
-    echo -e "  installs aren't covered by the library scanner above, but work fine here.${NC}\n"
+    echo -e "${WHITE} Other (retail/CD, manual Wine prefix): point this at the game's install folder${NC}\n"
 
     local have_gui_picker=0
     if command -v zenity &>/dev/null || command -v kdialog &>/dev/null; then
