@@ -2,6 +2,33 @@
   "_comment": "Community-maintained database of well-known EAX-era games, matched by this script's library scanner and used for the install-time 'Heads up' tips. Contributions welcome via PR — see README.md's 'Contributing to the Known Games Database' section for the rules before adding an entry.",
   "games": [
     {
+      "name": "Baldur's Gate: Enhanced Edition",
+      "steam_appid": 228280,
+      "gog_id": 1207666353,
+      "eax_impossible": [
+        "steam",
+        "gog"
+      ],
+      "tip": "The Enhanced Edition itself runs on a from-scratch OpenAL audio engine (added for its native Linux/macOS ports), not DirectSound3D — DSOAL has nothing to intercept on the default install. GOG's purchase does still include the original 1998 classic release as bonus content, downloadable from the product page's 'Extras' section (marketed as 'Baldur's Gate 1 - Complete'); that copy's DirectSound3D EAX calls are intact, so installing it separately and pointing this script at that install folder via a manual Wine prefix should work normally. It isn't in this library scanner itself, since it has no separate Steam/GOG library entry to detect.",
+      "eax_versions": [
+        "1.0"
+      ]
+    },
+    {
+      "name": "Baldur's Gate II: Enhanced Edition",
+      "steam_appid": 257350,
+      "gog_id": 1207666373,
+      "eax_impossible": [
+        "steam",
+        "gog"
+      ],
+      "tip": "The Enhanced Edition itself runs on a from-scratch OpenAL audio engine (added for its native Linux/macOS ports), not DirectSound3D — DSOAL has nothing to intercept on the default install. GOG's purchase does still include the original 2000 classic release as bonus content, downloadable from the product page's 'Extras' section (marketed as 'Baldur's Gate 2 - Complete'); that copy's DirectSound3D EAX calls are intact (its EAX 2.0 environmental occlusion historically needed VxD drivers under Windows 9x, per the Vogons Wiki's citation for this title — likely moot under Wine), so installing it separately and pointing this script at that install folder via a manual Wine prefix should work normally. It isn't in this library scanner itself, since it has no separate Steam/GOG library entry to detect.",
+      "eax_versions": [
+        "1.0",
+        "2.0"
+      ]
+    },
+    {
       "name": "Deus Ex",
       "steam_appid": 6910,
       "gog_id": 1207658995,
