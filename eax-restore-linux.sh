@@ -104,6 +104,7 @@ YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
 WHITE='\033[1;37m'
 BOLD='\033[1m'
+DIM='\033[2m'
 NC='\033[0m'
 
 # ==============================================================================
@@ -666,7 +667,7 @@ scan_game_libraries() {
     echo -e "\n${WHITE}Known EAX games found in your libraries:${NC}"
     local i
     for i in "${!names[@]}"; do
-        echo -e "${WHITE} $((i + 1))) ${names[$i]} — ${paths[$i]}${NC}"
+        echo -e " ${BOLD}${WHITE}$((i + 1))) ${names[$i]}${NC}${DIM} — ${paths[$i]}${NC}"
     done
     echo -e "${WHITE} 0) None of these / enter a path manually${NC}\n"
 
