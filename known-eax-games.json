@@ -397,6 +397,117 @@
         "3.0",
         "4.0"
       ]
+    },
+    {
+      "name": "Half-Life: Opposing Force",
+      "steam_appid": 50,
+      "gog_id": null,
+      "eax_impossible": [
+        "steam"
+      ],
+      "tip": "Like the base game, Opposing Force had EAX removed from the Steam build in the January 2013 update — this isn't a DSOAL problem, the game simply no longer makes those calls on the current Steam build. If you still have the original pre-2013 retail/CD release installed outside Steam, that copy's EAX calls are intact and DSOAL should work normally there.",
+      "eax_versions": [
+        "1.0"
+      ]
+    },
+    {
+      "name": "Half-Life: Blue Shift",
+      "steam_appid": 130,
+      "gog_id": null,
+      "eax_impossible": [
+        "steam"
+      ],
+      "tip": "Like the base game, Blue Shift had EAX removed from the Steam build in the January 2013 update — this isn't a DSOAL problem, the game simply no longer makes those calls on the current Steam build. If you still have the original pre-2013 retail/CD release installed outside Steam, that copy's EAX calls are intact and DSOAL should work normally there.",
+      "eax_versions": [
+        "1.0"
+      ]
+    },
+    {
+      "name": "Icewind Dale II",
+      "steam_appid": null,
+      "gog_id": 1207658891,
+      "eax_impossible": [],
+      "tip": "Not sold on Steam — only available on GOG, as 'Icewind Dale 2 Complete'. Unlike Baldur's Gate, Baldur's Gate II, Icewind Dale, Planescape: Torment, and Neverwinter Nights (all rewritten by Beamdog as OpenAL-native 'Enhanced Editions' with EAX support gone, which is why none of those appear in this database), Icewind Dale II never got that treatment and is still the original DirectSound3D-EAX-era Infinity Engine build.",
+      "eax_versions": [
+        "1.0"
+      ]
+    },
+    {
+      "name": "Neverwinter Nights 2",
+      "steam_appid": null,
+      "gog_id": 1207659162,
+      "eax_impossible": [],
+      "tip": "Steam only sells 2025's 'Enhanced Edition' rewrite (a different, OpenAL-native build) — GOG's 'Neverwinter Nights 2 Complete' is still the original 2006 Obsidian/Electron Engine build with DirectSound3D EAX intact, which is why only a gog_id is set here. For 5.1 surround, set Speaker Type=4 in nwn2.ini.",
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0"
+      ]
+    },
+    {
+      "name": "Medal of Honor: Allied Assault",
+      "steam_appid": null,
+      "gog_id": 1207659126,
+      "eax_impossible": [],
+      "tip": "Not currently sold on Steam — only available on GOG, as the 'War Chest' edition bundling the base game with the Spearhead and Breakthrough expansions.",
+      "eax_versions": [
+        "1.0",
+        "2.0"
+      ]
+    },
+    {
+      "name": "Rome: Total War",
+      "steam_appid": 4760,
+      "gog_id": 1343806495,
+      "eax_impossible": [],
+      "tip": "EAX is set via the in-game Options > Sound menu, not on by default — per the Vogons Wiki's own citation for this title.",
+      "eax_versions": [
+        "2.0",
+        "3.0"
+      ]
+    },
+    {
+      "name": "Stronghold",
+      "steam_appid": null,
+      "gog_id": 1207658712,
+      "eax_impossible": [],
+      "tip": "Not currently sold on Steam (delisted in favor of the 2023 'Definitive Edition' remaster, a different engine without DirectSound3D EAX) — GOG's 'Stronghold HD' is the original 2001 Firefly Studios build with EAX support intact.",
+      "eax_versions": [
+        "1.0"
+      ]
+    },
+    {
+      "name": "The Witcher",
+      "steam_appid": 20900,
+      "gog_id": 1207658924,
+      "eax_impossible": [],
+      "tip": "Only EAX 4.0 is supported. The game's own readme.rtf ('Known Issues' section) and CD Projekt's forums document EAX/Creative X-Fi Alchemy caveats worth checking if audio isn't right.",
+      "eax_versions": [
+        "4.0"
+      ]
+    },
+    {
+      "name": "Rune Classic",
+      "steam_appid": 210950,
+      "gog_id": 1207660013,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "2.0"
+      ]
+    },
+    {
+      "name": "Star Wars: Battlefront II (Classic, 2005)",
+      "steam_appid": 6060,
+      "gog_id": 1421404701,
+      "eax_impossible": [],
+      "tip": "Uses EAX Unified (eax.dll version 4.0.1.0) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0",
+        "4.0"
+      ]
     }
   ]
 }
