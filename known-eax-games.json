@@ -557,6 +557,154 @@
         "3.0",
         "4.0"
       ]
+    },
+    {
+      "name": "Assassin's Creed",
+      "steam_appid": null,
+      "gog_id": 1207659023,
+      "eax_impossible": [],
+      "tip": "Not sold on Steam — Ubisoft never released the original 2007 game there (its first Steam appearance was Assassin's Creed II). Only available via GOG's 'Director's Cut' edition. Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0",
+        "4.0"
+      ]
+    },
+    {
+      "name": "BloodRayne",
+      "steam_appid": 3810,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "Steam sells this as 'BloodRayne (Legacy)' to distinguish it from the 2021 'Terminal Cut' remaster — install the Legacy build if EAX support matters, since Terminal Cut's audio engine hasn't been verified here.",
+      "eax_versions": [
+        "3.0"
+      ]
+    },
+    {
+      "name": "Call of Duty",
+      "steam_appid": 1938090,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "Full EAX 2.0/3.0 support needs patch 1.3, per the Vogons Wiki's citation for this title — worth checking the installed build/patch version if audio seems limited to basic EAX 1.0.",
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0"
+      ]
+    },
+    {
+      "name": "Dungeon Keeper II",
+      "steam_appid": 2616460,
+      "gog_id": 1207658959,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "1.0"
+      ]
+    },
+    {
+      "name": "Dungeon Siege II",
+      "steam_appid": 39200,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0",
+        "4.0"
+      ]
+    },
+    {
+      "name": "Hidden & Dangerous 2",
+      "steam_appid": 703320,
+      "gog_id": 1576810170,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "3.0"
+      ]
+    },
+    {
+      "name": "Kane & Lynch: Dead Men",
+      "steam_appid": 8080,
+      "gog_id": 1721096025,
+      "eax_impossible": [],
+      "tip": "This title's own EAX support is implemented via a bundled OpenAL library rather than DirectSound3D — how that interacts with DSOAL hasn't been independently verified here.",
+      "eax_versions": [
+        "2.0",
+        "3.0",
+        "4.0",
+        "5.0"
+      ]
+    },
+    {
+      "name": "Mass Effect",
+      "steam_appid": 17460,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "This is the original 2007 game, distinct from the 2021 'Legendary Edition' remaster — its own EAX support is implemented via a bundled OpenAL library rather than DirectSound3D, so how that interacts with DSOAL hasn't been independently verified here.",
+      "eax_versions": [
+        "3.0",
+        "4.0",
+        "5.0"
+      ]
+    },
+    {
+      "name": "Sacred 2",
+      "steam_appid": 225640,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "Steam sells this as 'Sacred 2 Gold' (base game plus the Ice & Blood expansion) to distinguish it from a newer remaster — GOG only carries the remaster, so no gog_id is set here.",
+      "eax_versions": [
+        "5.0"
+      ]
+    },
+    {
+      "name": "SiN",
+      "steam_appid": null,
+      "gog_id": 1207660343,
+      "eax_impossible": [],
+      "tip": "Not sold on Steam (only the unrelated 2006 episodic sequel 'SiN Episodes: Emergence' is) — the original 1998 Ritual Entertainment game is only available via GOG, as 'SiN Gold'.",
+      "eax_versions": [
+        "1.0"
+      ]
+    },
+    {
+      "name": "Soldier of Fortune II: Double Helix",
+      "steam_appid": null,
+      "gog_id": 1228964594,
+      "eax_impossible": [],
+      "tip": "Not sold on Steam — only available via GOG, as the 'Gold Edition'.",
+      "eax_versions": [
+        "3.0"
+      ]
+    },
+    {
+      "name": "SWAT 4",
+      "steam_appid": null,
+      "gog_id": 1409964317,
+      "eax_impossible": [],
+      "tip": "Not sold on Steam — only available via GOG, as 'SWAT 4: Gold Edition'. This title's own EAX support is implemented via a bundled OpenAL library rather than DirectSound3D — how that interacts with DSOAL hasn't been independently verified here.",
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0"
+      ]
+    },
+    {
+      "name": "Titan Quest Anniversary Edition",
+      "steam_appid": 475150,
+      "gog_id": 1196955511,
+      "eax_impossible": [],
+      "tip": "Both stores now sell only this 2016 Anniversary Edition — no separate classic 2006 listing remains to compare against, and whether its audio path changed from the original hasn't been independently verified here.",
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0",
+        "4.0"
+      ]
     }
   ]
 }
