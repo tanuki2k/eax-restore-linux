@@ -705,6 +705,218 @@
         "3.0",
         "4.0"
       ]
+    },
+    {
+      "name": "Aliens versus Predator Classic 2000",
+      "steam_appid": 3730,
+      "gog_id": 1207665883,
+      "eax_impossible": [],
+      "tip": "Both stores label this 'Classic 2000' to distinguish it from 2010's Aliens vs. Predator, an unrelated later game by a different developer.",
+      "eax_versions": [
+        "1.0"
+      ]
+    },
+    {
+      "name": "Alpha Centauri",
+      "steam_appid": 2204130,
+      "gog_id": 1207658936,
+      "eax_impossible": [],
+      "tip": "EAX support was added in the version 2.0 patch, per the game's own readme.txt — make sure the installed build is patched. Both stores sell this as the 'Planetary Pack', bundling the Alien Crossfire expansion.",
+      "eax_versions": [
+        "1.0"
+      ]
+    },
+    {
+      "name": "BioShock",
+      "steam_appid": 7670,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "This is the original 2007 game, distinct from 2016's 'BioShock Remastered' — GOG only sells the Remastered version, so no gog_id is set here. Its own EAX support is implemented via a bundled OpenAL library rather than DirectSound3D — how that interacts with DSOAL hasn't been independently verified here.",
+      "eax_versions": [
+        "4.0",
+        "5.0"
+      ]
+    },
+    {
+      "name": "Beyond Good & Evil",
+      "steam_appid": null,
+      "gog_id": 1207658746,
+      "eax_impossible": [],
+      "tip": "Not sold on Steam — only the 2023 '20th Anniversary Edition' remaster is, which hasn't been verified for EAX support and isn't what this entry targets. GOG still sells the original 2003 release. Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak, per the game's own readme.txt Sound compatibility section.",
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0"
+      ]
+    },
+    {
+      "name": "Brothers in Arms: Road to Hill 30",
+      "steam_appid": 15190,
+      "gog_id": 1993805983,
+      "eax_impossible": [],
+      "tip": "This title's own EAX support is implemented via a bundled OpenAL library rather than DirectSound3D — how that interacts with DSOAL hasn't been independently verified here.",
+      "eax_versions": [
+        "2.0",
+        "3.0",
+        "4.0"
+      ]
+    },
+    {
+      "name": "Call of Duty 2",
+      "steam_appid": 2630,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0"
+      ]
+    },
+    {
+      "name": "Civilization IV",
+      "steam_appid": 3900,
+      "gog_id": 1760534591,
+      "eax_impossible": [],
+      "tip": "GOG sells this as 'The Complete Edition' (base game plus the Warlords and Beyond the Sword expansions).",
+      "eax_versions": [
+        "2.0",
+        "3.0",
+        "4.0"
+      ]
+    },
+    {
+      "name": "Clive Barker's Undying",
+      "steam_appid": null,
+      "gog_id": 1207659191,
+      "eax_impossible": [],
+      "tip": "Not sold on Steam — only available via GOG. Enable the 'Enable 3D Hardware' audio option in-game; the game logs whether EAX/A3D activated to Undying.log, useful for confirming it's working, per the Vogons Wiki's citation for this title.",
+      "eax_versions": [
+        "1.0"
+      ]
+    },
+    {
+      "name": "Company of Heroes",
+      "steam_appid": 228200,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "Not sold on GOG. A 'Definitive Edition' remaster is announced but not yet released — this classic 2006 build is still the only Steam listing, worth rechecking this entry once that ships.",
+      "eax_versions": [
+        "2.0",
+        "3.0",
+        "4.0"
+      ]
+    },
+    {
+      "name": "Counter-Strike",
+      "steam_appid": 10,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "2.0"
+      ]
+    },
+    {
+      "name": "Crysis",
+      "steam_appid": 17300,
+      "gog_id": 1809223221,
+      "eax_impossible": [],
+      "tip": "Not all sounds get reverb even when EAX is working — dialogue plays dry by design, per the Vogons Wiki's citation for this title, so don't mistake that for a broken install. Distinct from Crysis Warhead and the 2021 'Crysis Remastered' — both stores still sell this original build separately.",
+      "eax_versions": []
+    },
+    {
+      "name": "Daikatana",
+      "steam_appid": 242980,
+      "gog_id": 1207659168,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": []
+    },
+    {
+      "name": "Day of Defeat",
+      "steam_appid": 30,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "Distinct from 'Day of Defeat: Source', which runs on the Source engine rather than GoldSrc and isn't covered by this entry.",
+      "eax_versions": [
+        "2.0"
+      ]
+    },
+    {
+      "name": "Descent 3",
+      "steam_appid": 273590,
+      "gog_id": 1207658657,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "2.0"
+      ]
+    },
+    {
+      "name": "Dungeon Siege",
+      "steam_appid": 39190,
+      "gog_id": 1142020247,
+      "eax_impossible": [],
+      "tip": "GOG sells this as the 'Dungeon Siege Collection' (base game plus both expansions).",
+      "eax_versions": [
+        "1.0"
+      ]
+    },
+    {
+      "name": "Fallout Tactics: Brotherhood of Steel",
+      "steam_appid": 38420,
+      "gog_id": 1440163405,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "1.0",
+        "2.0"
+      ]
+    },
+    {
+      "name": "Far Cry",
+      "steam_appid": 13520,
+      "gog_id": 1207658750,
+      "eax_impossible": [],
+      "tip": "EAX is set via the in-game audio settings, not on by default — per the Vogons Wiki's citation for this title.",
+      "eax_versions": [
+        "2.0"
+      ]
+    },
+    {
+      "name": "Far Cry 2",
+      "steam_appid": 19900,
+      "gog_id": 1207659042,
+      "eax_impossible": [],
+      "tip": "Uses EAX Unified (eax.dll version 3.0.6.2) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak. GOG sells this as 'Far Cry 2: Fortune's Edition' (bundling bonus content).",
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0"
+      ]
+    },
+    {
+      "name": "Final Fantasy VIII",
+      "steam_appid": 39150,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "This is the original 2013 PC port, distinct from 2019's 'FINAL FANTASY VIII - REMASTERED' — GOG only sells the Remastered version, so no gog_id is set here. Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
+      "eax_versions": [
+        "1.0",
+        "2.0"
+      ]
+    },
+    {
+      "name": "Freedom Force",
+      "steam_appid": 8880,
+      "gog_id": 1445250806,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "1.0",
+        "2.0"
+      ]
     }
   ]
 }
