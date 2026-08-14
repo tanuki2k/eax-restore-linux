@@ -1925,10 +1925,8 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
             REMOVE_REG="n"
         fi
     else
-        echo -e "\n${WHITE}This removes the WINEDLLOVERRIDES rule and the COM CLSID routing keys that were"
-        echo -e "written into the Wine prefix registry during install (if you enabled those options)."
-        echo -e "No manifest was found to confirm which of these were applied, so this is a manual choice —"
-        echo -e "skip it if you never opted into 'Automatic DLL Override' or 'COM Registry Routing'.${NC}"
+        echo -e "\n${WHITE}Removes the Wine registry tweaks this script can add (DLL override, COM routing) —"
+        echo -e "skip if you never enabled those during install. No manifest was found to check automatically.${NC}"
         echo -e "\n${YELLOW}Do you want to remove Override/COM keys from the Wine registry? (y/N): ${NC}"
         echo -e -n "> "
         read -r REMOVE_REG
@@ -1971,10 +1969,8 @@ EOF
     print_line
 
     if [ "$VCRUN_PRESENT" == "y" ]; then
-        echo -e "\n${WHITE}This prefix has the MS VC++ 2022 Redistributable installed (added for the kcat engine)."
-        echo -e "A Wine prefix can be shared by multiple games or apps, so removing this could affect"
-        echo -e "other software using the same prefix — only remove it if you're sure nothing else here"
-        echo -e "needs it.${NC}"
+        echo -e "\n${WHITE}This prefix has the MS VC++ 2022 Redistributable installed. Only remove it if"
+        echo -e "nothing else sharing this prefix needs it.${NC}"
         echo -e "\n${YELLOW}Also remove the VC++ 2022 Redistributable from this prefix? (y/N): ${NC}"
         echo -e -n "> "
         read -r REMOVE_VCRUN
