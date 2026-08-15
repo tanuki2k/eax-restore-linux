@@ -89,6 +89,12 @@
 #   Useful if you skipped that step during a normal install and want to go
 #   back for it without redoing everything else.
 #
+# * EAX_RESTORE_SKIP_CACHE_CHECK=1  Skips the REPOSITORY CACHE CHECK step
+#   (the GitHub update check/download for DSOAL and OpenAL Soft), trusting
+#   whatever's already in the local cache. Speeds up repeat runs on a
+#   machine with a cache you know is current; if a needed engine build
+#   isn't cached yet, deployment will fail later with nothing to install.
+#
 # --- License ---
 # MIT License
 # Copyright (c) 2026 Tanuki2k
@@ -2095,7 +2101,13 @@ fi
 # ACTION: INSTALL (PHASE 1: CONFIGURATION)
 # ==============================================================================
 if [ "$SCRIPT_ACTION" == "i" ]; then
-    update_local_cache
+    EAX_RESTORE_SKIP_CACHE_CHECK="${EAX_RESTORE_SKIP_CACHE_CHECK:-}"
+    if is_truthy "$EAX_RESTORE_SKIP_CACHE_CHECK"; then
+        echo -e "\n${YELLOW}EAX_RESTORE_SKIP_CACHE_CHECK is set — skipping the REPOSITORY CACHE CHECK"
+        echo -e "and trusting whatever DSOAL/OpenAL Soft builds are already cached.${NC}"
+    else
+        update_local_cache
+    fi
 
     echo ""
     print_divider
