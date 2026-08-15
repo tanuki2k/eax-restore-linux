@@ -926,13 +926,20 @@ detect_game_environment() {
             fi
 
             echo -e " -> Querying Protontricks database for AppID ${APPID}..."
-            PREFIX_PATH=$(protontricks -c 'echo $WINEPREFIX' "$APPID" 2>/dev/null | grep "/pfx" | tail -n 1 | tr -d '\r')
+            DETECTED_STEAM_PREFIX=$(protontricks -c 'echo $WINEPREFIX' "$APPID" 2>/dev/null | grep "/pfx" | tail -n 1 | tr -d '\r')
 
-            if [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH" ]; then
-                echo -e " -> ${GREEN}Prefix verified!${NC}"
-                show_known_game_tip "$APPID" "steam"
-                confirm_continue_if_eax_impossible "$APPID" "steam"
-                break
+            if [ -n "$DETECTED_STEAM_PREFIX" ] && [ -d "$DETECTED_STEAM_PREFIX" ]; then
+                echo -e " -> ${GREEN}Detected Prefix:${NC} $DETECTED_STEAM_PREFIX"
+                echo -e "\n${YELLOW}Use this detected prefix? (Y/n): ${NC}"
+                echo -e -n "> "
+                read -r C_AUTO_S
+                if [[ ! "$C_AUTO_S" =~ $NO_RE ]]; then
+                    PREFIX_PATH="$DETECTED_STEAM_PREFIX"
+                    show_known_game_tip "$APPID" "steam"
+                    confirm_continue_if_eax_impossible "$APPID" "steam"
+                    break
+                fi
+                APPID=""
             else
                 echo -e "\n${YELLOW}${BOLD}Error: Proton prefix not found for AppID ${APPID}.${NC}"
                 echo -e "${WHITE}If you just installed this game, Proton has not generated the prefix yet."
@@ -2220,9 +2227,10 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
 
             if [ "$VCRUN_SUCCESS" -eq 1 ]; then
                 echo -e "\n${GREEN}Core VC++ runtime files are already present.${NC}"
-                echo -e "${WHITE}Applying the DLL overrides so Wine actually loads them (file presence alone doesn't"
-                echo -e "guarantee that), then skipping the install step itself.${NC}"
-                apply_vcrun_dll_overrides
+                echo -e "${WHITE}This will set the DLL overrides so Wine actually loads them (file presence alone"
+                echo -e "doesn't guarantee that) once you confirm and deploy below, and skip the install step"
+                echo -e "itself.${NC}"
+                APPLY_VCRUN_OVERRIDES_NEEDED=1
             else
                 echo -e "\n${WHITE}These files are missing or incomplete here. Without them, the game may crash"
                 echo -e "silently on startup when it tries to load the audio engine.${NC}"
@@ -2404,6 +2412,12 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
    VCRUN_INSTALLED_THIS_RUN="0"
    if [[ "$INSTALL_VCRUN" =~ $YES_RE ]]; then
         install_vcrun_dependencies && VCRUN_INSTALLED_THIS_RUN="1"
+    elif [ -n "${APPLY_VCRUN_OVERRIDES_NEEDED:-}" ]; then
+        # Deferred from step 5: the runtime was already present, so this just
+        # sets the DLL overrides, only now that the user has confirmed and
+        # this is actually happening (not back during configuration).
+        apply_vcrun_dll_overrides
+        VCRUN_INSTALLED_THIS_RUN="1"
     fi
 
     # Engine-specific paths
