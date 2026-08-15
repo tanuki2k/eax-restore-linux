@@ -573,7 +573,7 @@ resolve_exe_folder() {
     # filter -- "Launcher" or "bin" folders legitimately hold real game
     # exes for some titles too -- so this blocks by the installer/utility's
     # own distinctive basename instead, wherever it's nested.
-    local junk_exe_re='^(unins(t(all)?)?[0-9]*|vc_?redist.*|(dx|directx)?setup|dxsetup|dxwebsetup|dx[0-9]+ger|dx[0-9]+ntger|dotnetfx.*|ndp[0-9].*|windowsdesktop-runtime.*|oalinst|physx.*|easyanticheat.*|eac_?setup.*|eaclauncher|be(service|daisy|launcher|_ex)[a-z0-9_]*|battleye.*|unitycrashhandler.*|crashreport(er|client)?|crash_?handler|crashpad_handler|bugsplat.*|epiconlineservices(installer)?|epicwebhelper.*|rockstar-games-launcher|social-club-setup|vulkanrt.*installer.*|gamingrepair(tool)?|registrationreminder|overlayinjector|cleanup|touchup|driverversionchecker|layerschecker|supporttool|dowser)\.exe$'
+    local junk_exe_re='^(unins(t(all)?)?[0-9]*|vc_?redist.*|(dx|directx)?setup|dxsetup|dxwebsetup|dx[0-9]+ger|dx[0-9]+ntger|dotnetfx.*|ndp[0-9].*|windowsdesktop-runtime.*|oalinst|physx.*|easyanticheat.*|eac_?setup.*|eaclauncher|be(service|daisy|launcher|_ex)[a-z0-9_]*|battleye.*|unitycrashhandler.*|crashreport(er|client)?|crash_?handler|crashpad_handler|bugsplat.*|epiconlineservices(installer)?|epicwebhelper.*|rockstar-games-launcher|social-club-setup|vulkanrt.*installer.*|gamingrepair(tool)?|registrationreminder|overlayinjector|cleanup|touchup|driverversionchecker|layerschecker|supporttool|dowser|iscopyfiles|ue3?redist.*|unrealfrontend|unrealconsole|uescriptprofiler|cookersync|testapp|.*oshelper)\.exe$'
 
     if find "$root" -maxdepth 1 -type f -iname "*.exe" -print -quit 2>/dev/null | grep -q .; then
         # Pick a representative exe name to show: prefer one whose name
@@ -687,7 +687,8 @@ resolve_exe_folder() {
         for i in "${!dirs[@]}"; do
             echo -e "${WHITE} $((i + 1))) ${BOLD}${dir_exe_name[${dirs[$i]}]}${NC}${DIM} in ${dirs[$i]}${NC}"
         done
-        echo -e "\n${YELLOW}Selection [1-${#dirs[@]}]: ${NC}"
+        echo -e "${WHITE} 0) None of these / enter a path manually${NC}"
+        echo -e "\n${YELLOW}Selection [0-${#dirs[@]}]: ${NC}"
         echo -e -n "> "
         local choice
         read -r choice
