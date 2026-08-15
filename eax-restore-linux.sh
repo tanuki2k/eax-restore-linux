@@ -526,6 +526,26 @@ detect_heroic_prefix_verbose() {
     if [ -n "$auto_prefix" ]; then printf '%s\t%s\n' "$auto_prefix" "$app_name"; else echo -e " -> ${YELLOW}Search complete. No prefix found.${NC}" >&2; fi
 }
 
+normalize_game_name() {
+    # Usage: normalize_game_name <string>
+    # Lowercases, converts standalone (word-bounded) roman numerals II-IX to
+    # arabic digits, then strips everything but letters/digits. Used to
+    # compare a game's folder name against candidate .exe basenames despite
+    # "Gothic II" vs "Gothic2.exe"-style numeral-style mismatches. Bare I/V/X
+    # are deliberately NOT converted -- unlike II-IX they're also ordinary
+    # standalone words/initials (e.g. "X-COM", "I Am Alive"), and converting
+    # those would corrupt the comparison instead of fixing it.
+    echo "$1" | tr '[:upper:]' '[:lower:]' | sed -E \
+        -e 's/(^|[^a-z0-9])viii([^a-z0-9]|$)/\1 8 \2/g' \
+        -e 's/(^|[^a-z0-9])vii([^a-z0-9]|$)/\1 7 \2/g' \
+        -e 's/(^|[^a-z0-9])vi([^a-z0-9]|$)/\1 6 \2/g' \
+        -e 's/(^|[^a-z0-9])iv([^a-z0-9]|$)/\1 4 \2/g' \
+        -e 's/(^|[^a-z0-9])ix([^a-z0-9]|$)/\1 9 \2/g' \
+        -e 's/(^|[^a-z0-9])iii([^a-z0-9]|$)/\1 3 \2/g' \
+        -e 's/(^|[^a-z0-9])ii([^a-z0-9]|$)/\1 2 \2/g' \
+        | tr -dc '[:alnum:]'
+}
+
 resolve_exe_folder() {
     # Usage: resolve_exe_folder <install_root>
     # A scanned install root isn't always the .exe folder — many titles nest
@@ -542,8 +562,69 @@ resolve_exe_folder() {
         return 0
     fi
 
-    local dirs=()
-    while IFS= read -r d; do dirs+=("$d"); done < <(find "$root" -mindepth 1 -maxdepth 4 -type f -iname "*.exe" -printf '%h\n' 2>/dev/null | sort -u)
+    # Nested installs often bundle third-party installers/utilities
+    # alongside the real game .exe (redistributables, anti-cheat setup,
+    # crash handlers, uninstallers). Folder name alone isn't a reliable
+    # filter -- "Launcher" or "bin" folders legitimately hold real game
+    # exes for some titles too -- so this blocks by the installer/utility's
+    # own distinctive basename instead, wherever it's nested.
+    local junk_exe_re='^(unins(t(all)?)?[0-9]*|vc_?redist.*|(dx|directx)?setup|dxsetup|dxwebsetup|dx[0-9]+ger|dx[0-9]+ntger|dotnetfx.*|ndp[0-9].*|windowsdesktop-runtime.*|oalinst|physx.*|easyanticheat.*|eac_?setup.*|eaclauncher|be(service|daisy|launcher|_ex)[a-z0-9_]*|battleye.*|unitycrashhandler.*|crashreport(er|client)?|crash_?handler|crashpad_handler|bugsplat.*|epiconlineservices(installer)?|epicwebhelper.*|rockstar-games-launcher|social-club-setup|vulkanrt.*installer.*|gamingrepair(tool)?|registrationreminder|overlayinjector|cleanup|touchup|driverversionchecker|layerschecker|supporttool|dowser)\.exe$'
+
+    local all_exes=()
+    while IFS= read -r f; do all_exes+=("$f"); done < <(find "$root" -mindepth 1 -maxdepth 4 -type f -iname "*.exe" 2>/dev/null)
+
+    local candidates=() f base
+    for f in "${all_exes[@]}"; do
+        base="$(basename "$f" | tr '[:upper:]' '[:lower:]')"
+        [[ "$base" =~ $junk_exe_re ]] && continue
+        candidates+=("$f")
+    done
+    # If every .exe found happened to match the junk list, fall back to the
+    # unfiltered set rather than wrongly reporting none were found at all.
+    [ ${#candidates[@]} -eq 0 ] && candidates=("${all_exes[@]}")
+
+    # Rank folders whose .exe name resembles the game's own folder name
+    # first -- e.g. a "Half-Life" install's real exe is more likely
+    # hl.exe/Half-Life.exe than something sharing a folder with unrelated
+    # bundled tools. Roman numerals are converted to arabic first (word-
+    # bounded, so it only touches standalone numeral tokens) since sequel
+    # titles are commonly "Gothic II" but "Gothic2.exe"/"gothic 2" in
+    # practice -- a plain substring match would miss that pairing.
+    local root_norm
+    root_norm="$(normalize_game_name "$(basename "$root")")"
+
+    local -A dir_seen=()
+    local ordered_dirs=() f d
+    for f in "${candidates[@]}"; do
+        d="$(dirname "$f")"
+        if [ -z "${dir_seen[$d]:-}" ]; then
+            dir_seen["$d"]=1
+            ordered_dirs+=("$d")
+        fi
+    done
+
+    # A directory counts as a name match if ANY .exe inside it matches --
+    # not just whichever one find() happens to list first, since a real
+    # launcher/helper .exe often sits right next to the actual game .exe
+    # in the same folder.
+    local dirs=() dirs_matched=() exe_norm dir_is_match
+    for d in "${ordered_dirs[@]}"; do
+        dir_is_match=""
+        for f in "${candidates[@]}"; do
+            [ "$(dirname "$f")" = "$d" ] || continue
+            exe_norm="$(normalize_game_name "$(basename "$f" .exe)")"
+            if [ -n "$root_norm" ] && { [[ "$exe_norm" == *"$root_norm"* ]] || [[ "$root_norm" == *"$exe_norm"* ]]; }; then
+                dir_is_match=1
+                break
+            fi
+        done
+        if [ -n "$dir_is_match" ]; then
+            dirs_matched+=("$d")
+        else
+            dirs+=("$d")
+        fi
+    done
+    dirs=("${dirs_matched[@]}" "${dirs[@]}")
 
     if [ ${#dirs[@]} -eq 1 ]; then
         GAME_DIR="${dirs[0]}"
