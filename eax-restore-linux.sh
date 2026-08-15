@@ -442,6 +442,10 @@ get_game_directory() {
             if [[ ! "$USE_GUI_PICKER" =~ $NO_RE ]]; then
                 echo -e "${WHITE} Tip: Steam's default path (~/.local/share/Steam/...) is inside a hidden folder —"
                 echo -e " press Ctrl+H in the file picker if you don't see it.${NC}"
+                echo -e "\n${YELLOW}Press Enter to open the file picker: ${NC}"
+                echo -e -n "> "
+                local _ack
+                read -r _ack
                 GAME_DIR=$(pick_directory_gui)
                 GAME_DIR="${GAME_DIR%/}"
                 if [ -z "$GAME_DIR" ]; then
