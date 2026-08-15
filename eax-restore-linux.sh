@@ -103,8 +103,6 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
 WHITE='\033[1;37m'
-BLUE='\033[1;34m'
-PURPLE='\033[1;35m'
 BOLD='\033[1m'
 DIM='\033[2m'
 NC='\033[0m'
@@ -673,11 +671,11 @@ scan_game_libraries() {
     fi
 
     echo -e "\n${WHITE}Known EAX games found in your libraries:${NC}"
-    local i store_label store_color
+    local i store_label
     for i in "${!names[@]}"; do
-        store_label="Steam"; store_color="$BLUE"
-        [ "${stores[$i]}" == "gog" ] && store_label="GOG" && store_color="$PURPLE"
-        echo -e " ${BOLD}${store_color}$((i + 1))) ${names[$i]}${NC}${DIM} (${store_label})${NC}"
+        store_label="Steam"
+        [ "${stores[$i]}" == "gog" ] && store_label="GOG"
+        echo -e " ${BOLD}${WHITE}$((i + 1))) ${names[$i]}${NC}${DIM} (${store_label})${NC}"
     done
     echo -e "${WHITE} 0) None of these / enter a path manually${NC}\n"
 
