@@ -570,7 +570,7 @@ resolve_exe_folder() {
 
     if find "$root" -maxdepth 1 -type f -iname "*.exe" -print -quit 2>/dev/null | grep -q .; then
         echo -e " -> ${GREEN}Found the game executable in:${NC} $root"
-        echo -e "${YELLOW}Use this location? (Y/n): ${NC}"
+        echo -e "\n${YELLOW}Use this location? (Y/n): ${NC}"
         echo -e -n "> "
         local confirm_root
         read -r confirm_root
@@ -647,7 +647,7 @@ resolve_exe_folder() {
 
     if [ ${#dirs[@]} -eq 1 ]; then
         echo -e " -> ${GREEN}Found the game executable in:${NC} ${dirs[0]}"
-        echo -e "${YELLOW}Use this location? (Y/n): ${NC}"
+        echo -e "\n${YELLOW}Use this location? (Y/n): ${NC}"
         echo -e -n "> "
         local confirm_single
         read -r confirm_single
