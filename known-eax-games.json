@@ -1052,7 +1052,7 @@
       "steam_appid": 46420,
       "gog_id": null,
       "eax_impossible": [],
-      "tip": "Delisted from Steam's storefront — but this AppID is still valid for detecting/installing on an existing owned copy. Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
+      "tip": "Store page fully removed (redirects to Steam's homepage, not itself) — this AppID is SteamDB's confirmed historical record for this game, but hasn't been checked against a real local install. Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
         "2.0",
@@ -1064,7 +1064,7 @@
       "steam_appid": 46430,
       "gog_id": null,
       "eax_impossible": [],
-      "tip": "Delisted from Steam's storefront — but this AppID is still valid for detecting/installing on an existing owned copy. Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
+      "tip": "Store page fully removed (redirects to Steam's homepage, not itself) — this AppID is SteamDB's confirmed historical record for this game, but hasn't been checked against a real local install. Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
         "2.0",
@@ -1076,7 +1076,7 @@
       "steam_appid": 6820,
       "gog_id": null,
       "eax_impossible": [],
-      "tip": "Delisted from Steam's storefront — but this AppID is still valid for detecting/installing on an existing owned copy.",
+      "tip": "Store page fully removed (redirects to Steam's homepage, not itself) — this AppID is SteamDB's confirmed historical record for this game, but hasn't been checked against a real local install.",
       "eax_versions": [
         "3.0"
       ]
@@ -1110,30 +1110,6 @@
       "eax_impossible": [],
       "tip": null,
       "eax_versions": [
-        "3.0",
-        "4.0"
-      ]
-    },
-    {
-      "name": "F.E.A.R.: Extraction Point",
-      "steam_appid": 21110,
-      "gog_id": null,
-      "eax_impossible": [],
-      "tip": "No longer sold as a standalone Steam listing — the store page now redirects to the base F.E.A.R.'s — but this AppID is still valid for detecting/installing on an existing owned copy. Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
-      "eax_versions": [
-        "2.0",
-        "3.0",
-        "4.0"
-      ]
-    },
-    {
-      "name": "F.E.A.R.: Perseus Mandate",
-      "steam_appid": 21120,
-      "gog_id": null,
-      "eax_impossible": [],
-      "tip": "No longer sold as a standalone Steam listing — the store page now redirects to the base F.E.A.R.'s — but this AppID is still valid for detecting/installing on an existing owned copy. Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
-      "eax_versions": [
-        "2.0",
         "3.0",
         "4.0"
       ]
@@ -1286,7 +1262,7 @@
       "steam_appid": 7060,
       "gog_id": null,
       "eax_impossible": [],
-      "tip": "Delisted from Steam's storefront — but this AppID is still valid for detecting/installing on an existing owned copy. Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
+      "tip": "Store page fully removed (redirects to Steam's homepage, not itself) — this AppID is SteamDB's confirmed historical record for this game, but hasn't been checked against a real local install. Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
         "2.0",
@@ -1485,7 +1461,7 @@
       "steam_appid": 4550,
       "gog_id": null,
       "eax_impossible": [],
-      "tip": "Delisted from Steam's storefront — but this AppID is still valid for detecting/installing on an existing owned copy.",
+      "tip": "Store page fully removed (redirects to Steam's homepage, not itself) — this AppID is SteamDB's confirmed historical record for this game, but hasn't been checked against a real local install. Superseded for new purchases by Titan Quest Anniversary Edition, already a separate entry in this file.",
       "eax_versions": [
         "1.0",
         "2.0",
