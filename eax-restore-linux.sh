@@ -403,11 +403,11 @@ get_game_directory() {
     fi
 
     if [ "$SCRIPT_ACTION" == "i" ]; then
-        echo -e "${YELLOW}Scan your Steam/Heroic library for known EAX games instead of browsing manually? (y/N): ${NC}"
+        echo -e "${YELLOW}Scan your Steam/Heroic library for known EAX games instead of browsing manually? (Y/n): ${NC}"
         echo -e -n "> "
         local DO_SCAN
         read -r DO_SCAN
-        if [[ "$DO_SCAN" =~ $YES_RE ]]; then
+        if [[ ! "$DO_SCAN" =~ $NO_RE ]]; then
             if scan_game_libraries; then
                 echo -e "\n${GREEN}Using: $GAME_DIR${NC}"
                 record_recent_game "$GAME_DIR"
