@@ -550,16 +550,25 @@ resolve_exe_folder() {
     # Usage: resolve_exe_folder <install_root>
     # A scanned install root isn't always the .exe folder — many titles nest
     # it (e.g. GameName/bin/x64), and get_game_directory's own detection
-    # comment notes exactly this. Finds where the .exe(s) actually live and
-    # sets GAME_DIR accordingly, prompting if more than one candidate folder
-    # exists. Returns 1 (GAME_DIR left empty) if no .exe was found anywhere
-    # and the user declines to use the root as-is.
+    # comment notes exactly this. Finds where the .exe(s) actually live,
+    # always asks the user to confirm before setting GAME_DIR (a detected
+    # location is a guess, not an action taken on the user's behalf), and
+    # prompts to pick between candidates when more than one folder qualifies.
+    # Returns 1 (GAME_DIR left empty) if the user declines at any point.
     local root="$1"
     GAME_DIR=""
 
     if find "$root" -maxdepth 1 -type f -iname "*.exe" -print -quit 2>/dev/null | grep -q .; then
-        GAME_DIR="$root"
-        return 0
+        echo -e " -> ${GREEN}Found the game executable in:${NC} $root"
+        echo -e "${YELLOW}Use this location? (Y/n): ${NC}"
+        echo -e -n "> "
+        local confirm_root
+        read -r confirm_root
+        if [[ ! "$confirm_root" =~ $NO_RE ]]; then
+            GAME_DIR="$root"
+            return 0
+        fi
+        return 1
     fi
 
     # Nested installs often bundle third-party installers/utilities
@@ -627,9 +636,16 @@ resolve_exe_folder() {
     dirs=("${dirs_matched[@]}" "${dirs[@]}")
 
     if [ ${#dirs[@]} -eq 1 ]; then
-        GAME_DIR="${dirs[0]}"
-        echo -e " -> ${GREEN}Found the game executable in:${NC} $GAME_DIR"
-        return 0
+        echo -e " -> ${GREEN}Found the game executable in:${NC} ${dirs[0]}"
+        echo -e "${YELLOW}Use this location? (Y/n): ${NC}"
+        echo -e -n "> "
+        local confirm_single
+        read -r confirm_single
+        if [[ ! "$confirm_single" =~ $NO_RE ]]; then
+            GAME_DIR="${dirs[0]}"
+            return 0
+        fi
+        return 1
     elif [ ${#dirs[@]} -gt 1 ]; then
         echo -e "\n${WHITE}Multiple folders with .exe files were found under this install — pick the one"
         echo -e "with the game's main executable:${NC}"
