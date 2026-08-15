@@ -1819,6 +1819,50 @@
       "eax_versions": [
         "1.0"
       ]
+    },
+    {
+      "name": "EverQuest",
+      "steam_appid": 205710,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "1.0"
+      ]
+    },
+    {
+      "name": "EverQuest II",
+      "steam_appid": 201230,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0",
+        "4.0"
+      ]
+    },
+    {
+      "name": "Sacrifice",
+      "steam_appid": null,
+      "gog_id": 1207658651,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "1.0"
+      ]
+    },
+    {
+      "name": "Serious Sam II",
+      "steam_appid": 204340,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "2.0",
+        "3.0"
+      ]
     }
   ]
 }
