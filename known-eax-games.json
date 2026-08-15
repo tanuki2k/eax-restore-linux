@@ -1190,6 +1190,26 @@
       ]
     },
     {
+      "name": "Gothic",
+      "steam_appid": 65540,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "2.0"
+      ]
+    },
+    {
+      "name": "Gothic II: Gold Edition",
+      "steam_appid": 39510,
+      "gog_id": 1207658718,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "2.0"
+      ]
+    },
+    {
       "name": "Race Driver: GRID",
       "steam_appid": null,
       "gog_id": 1207659233,
