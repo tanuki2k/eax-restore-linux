@@ -928,6 +928,17 @@
       ]
     },
     {
+      "name": "Fallout Tactics Classic",
+      "steam_appid": null,
+      "gog_id": 3,
+      "eax_impossible": [],
+      "tip": "GOG relisted this game at some point — this is the older \"Classic\" product ID some existing owners' libraries still show, distinct from this file's other 'Fallout Tactics: Brotherhood of Steel' entry (gog_id 1440163405). Same game, same EAX support.",
+      "eax_versions": [
+        "1.0",
+        "2.0"
+      ]
+    },
+    {
       "name": "Far Cry",
       "steam_appid": 13520,
       "gog_id": 1207658750,
