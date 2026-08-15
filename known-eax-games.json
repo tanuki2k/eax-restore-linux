@@ -1863,6 +1863,17 @@
         "2.0",
         "3.0"
       ]
+    },
+    {
+      "name": "Unreal Tournament 3",
+      "steam_appid": 13210,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "Delisted from Steam's storefront (December 2022, alongside the rest of the Unreal series) — but this AppID is still valid for detecting/installing on an existing owned copy.",
+      "eax_versions": [
+        "4.0",
+        "5.0"
+      ]
     }
   ]
 }
