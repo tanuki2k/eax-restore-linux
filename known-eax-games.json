@@ -303,7 +303,7 @@
       "steam_appid": 13240,
       "gog_id": null,
       "eax_impossible": [],
-      "tip": "The base install only has basic EAX 1.0/A3D support built into its levels. Full EAX 2.0 reverb/occlusion for the original Deathmatch and Capture the Flag maps needs Creative's separate official 'EAX Library Patch' (three files: uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip), historically mirrored at patches-scrolls.com — verify the mirror is still live and the files intact before installing.",
+      "tip": "The base install only has basic EAX 1.0/A3D support built into its levels. Full EAX 2.0 reverb/occlusion for the original Deathmatch and Capture the Flag maps needs Creative's separate official 'EAX Library Patch' (three files: uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip), historically mirrored at patches-scrolls.com — verify the mirror is still live and the files intact before installing. If you don't own this on Steam, OldUnreal (oldunreal.com) now distributes a free full-game installer with Epic's permission — check whether their patched build still uses the classic Windows engine (compatible with this script) before assuming it does.",
       "eax_versions": [
         "1.0",
         "2.0"
@@ -314,7 +314,7 @@
       "steam_appid": 13230,
       "gog_id": null,
       "eax_impossible": [],
-      "tip": "This title's own EAX support is implemented via a bundled OpenAL library rather than DirectSound3D — how that interacts with DSOAL hasn't been independently verified here. If EAX seems inactive, check the in-game Audio settings: Audio Mode should be 'H/W 3D + EAX', with Low Sound Detail, System Driver, and Reverse Stereo all unchecked (per Creative's own setup notes for this game).",
+      "tip": "This title's own EAX support is implemented via a bundled OpenAL library rather than DirectSound3D — how that interacts with DSOAL hasn't been independently verified here. If EAX seems inactive, check the in-game Audio settings: Audio Mode should be 'H/W 3D + EAX', with Low Sound Detail, System Driver, and Reverse Stereo all unchecked (per Creative's own setup notes for this game). If you don't own this on Steam, OldUnreal (oldunreal.com) now distributes a free full-game installer with Epic's permission — check whether their patched build still uses the classic Windows engine (compatible with this script) before assuming it does; Flathub's launcher for this game is a separate, actively-changing package, not necessarily the same build.",
       "eax_versions": [
         "3.0",
         "5.0"
@@ -400,7 +400,7 @@
       "steam_appid": 13250,
       "gog_id": 1207658679,
       "eax_impossible": [],
-      "tip": "Delisted from Steam's storefront (Epic pulled the original Unreal-series titles from sale), so it can't be newly purchased there anymore — but this AppID is still valid for detecting/installing on an existing owned copy. The GOG release is the actively available option for new purchases. Unreal (1998) was the first game to ever implement EAX support. If hardware 3D audio doesn't seem to engage, check Unreal.ini for UseSpatial=True, UseReverb=True, and Use3dHardware=True under the audio section — these gate whether the engine attempts hardware-accelerated 3D audio at all (documented in an Aureal A3D context, but the flags are generic to the engine's audio subsystem, not vendor-specific).",
+      "tip": "Delisted from Steam's storefront (Epic pulled the original Unreal-series titles from sale), so it can't be newly purchased there anymore — but this AppID is still valid for detecting/installing on an existing owned copy. The GOG release is the actively available option for new purchases. OldUnreal (oldunreal.com) also now distributes a free full-game installer with Epic's permission — check whether their patched build still uses the classic Windows engine (compatible with this script) before assuming it does. Unreal (1998) was the first game to ever implement EAX support. If hardware 3D audio doesn't seem to engage, check Unreal.ini for UseSpatial=True, UseReverb=True, and Use3dHardware=True under the audio section — these gate whether the engine attempts hardware-accelerated 3D audio at all (documented in an Aureal A3D context, but the flags are generic to the engine's audio subsystem, not vendor-specific).",
       "eax_versions": [
         "1.0"
       ]
