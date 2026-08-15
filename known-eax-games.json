@@ -970,6 +970,642 @@
         "1.0",
         "2.0"
       ]
+    },
+    {
+      "name": "Alpha Prime",
+      "steam_appid": 2590,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "4.0"
+      ]
+    },
+    {
+      "name": "AquaNox",
+      "steam_appid": 39630,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "1.0",
+        "2.0"
+      ]
+    },
+    {
+      "name": "Arx Fatalis",
+      "steam_appid": 1700,
+      "gog_id": 1207658680,
+      "eax_impossible": [],
+      "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
+      "eax_versions": [
+        "1.0",
+        "2.0"
+      ]
+    },
+    {
+      "name": "Battlestations: Midway",
+      "steam_appid": 6870,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "3.0",
+        "4.0"
+      ]
+    },
+    {
+      "name": "Brothers in Arms: Hell's Highway",
+      "steam_appid": 15390,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "4.0",
+        "5.0"
+      ]
+    },
+    {
+      "name": "Call of Juarez",
+      "steam_appid": 3020,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0"
+      ]
+    },
+    {
+      "name": "Chaser",
+      "steam_appid": null,
+      "gog_id": 1207658894,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "3.0"
+      ]
+    },
+    {
+      "name": "Chrome",
+      "steam_appid": 46420,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "Delisted from Steam's storefront — but this AppID is still valid for detecting/installing on an existing owned copy. Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0"
+      ]
+    },
+    {
+      "name": "Chrome: SpecForce",
+      "steam_appid": 46430,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "Delisted from Steam's storefront — but this AppID is still valid for detecting/installing on an existing owned copy. Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0"
+      ]
+    },
+    {
+      "name": "Commandos: Strike Force",
+      "steam_appid": 6820,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "Delisted from Steam's storefront — but this AppID is still valid for detecting/installing on an existing owned copy.",
+      "eax_versions": [
+        "3.0"
+      ]
+    },
+    {
+      "name": "Condemned: Criminal Origins",
+      "steam_appid": 4720,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
+      "eax_versions": [
+        "2.0",
+        "3.0",
+        "4.0"
+      ]
+    },
+    {
+      "name": "Crime Cities",
+      "steam_appid": null,
+      "gog_id": 1485600994,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "1.0"
+      ]
+    },
+    {
+      "name": "Dreamfall: The Longest Journey",
+      "steam_appid": 6300,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "3.0",
+        "4.0"
+      ]
+    },
+    {
+      "name": "F.E.A.R.: Extraction Point",
+      "steam_appid": 21110,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "No longer sold as a standalone Steam listing — the store page now redirects to the base F.E.A.R.'s — but this AppID is still valid for detecting/installing on an existing owned copy. Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
+      "eax_versions": [
+        "2.0",
+        "3.0",
+        "4.0"
+      ]
+    },
+    {
+      "name": "F.E.A.R.: Perseus Mandate",
+      "steam_appid": 21120,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "No longer sold as a standalone Steam listing — the store page now redirects to the base F.E.A.R.'s — but this AppID is still valid for detecting/installing on an existing owned copy. Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
+      "eax_versions": [
+        "2.0",
+        "3.0",
+        "4.0"
+      ]
+    },
+    {
+      "name": "Freedom Fighters",
+      "steam_appid": 1347780,
+      "gog_id": 1756362098,
+      "eax_impossible": [],
+      "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0"
+      ]
+    },
+    {
+      "name": "Freedom Force vs. the Third Reich",
+      "steam_appid": 8890,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "1.0",
+        "2.0"
+      ]
+    },
+    {
+      "name": "Freespace 2",
+      "steam_appid": null,
+      "gog_id": 5,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "1.0"
+      ]
+    },
+    {
+      "name": "Full Spectrum Warrior",
+      "steam_appid": 4520,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "3.0",
+        "4.0"
+      ]
+    },
+    {
+      "name": "Full Spectrum Warrior: Ten Hammers",
+      "steam_appid": 4530,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "5.0"
+      ]
+    },
+    {
+      "name": "Ghost Master",
+      "steam_appid": 6200,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "3.0"
+      ]
+    },
+    {
+      "name": "Giants: Citizen Kabuto",
+      "steam_appid": null,
+      "gog_id": 1207658650,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "1.0",
+        "2.0"
+      ]
+    },
+    {
+      "name": "Race Driver: GRID",
+      "steam_appid": null,
+      "gog_id": 1207659233,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "5.0"
+      ]
+    },
+    {
+      "name": "Hitman: Codename 47",
+      "steam_appid": 6900,
+      "gog_id": 1207658996,
+      "eax_impossible": [],
+      "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
+      "eax_versions": [
+        "1.0",
+        "2.0"
+      ]
+    },
+    {
+      "name": "Hitman 2: Silent Assassin",
+      "steam_appid": 6850,
+      "gog_id": 1207659002,
+      "eax_impossible": [],
+      "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0"
+      ]
+    },
+    {
+      "name": "Hitman: Contracts",
+      "steam_appid": 247430,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0"
+      ]
+    },
+    {
+      "name": "Hitman: Blood Money",
+      "steam_appid": 6860,
+      "gog_id": 1942346586,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "2.0",
+        "3.0",
+        "4.0"
+      ]
+    },
+    {
+      "name": "Incoming Forces",
+      "steam_appid": null,
+      "gog_id": 1207663873,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "2.0",
+        "3.0"
+      ]
+    },
+    {
+      "name": "Infernal",
+      "steam_appid": 7060,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "Delisted from Steam's storefront — but this AppID is still valid for detecting/installing on an existing owned copy. Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0",
+        "4.0"
+      ]
+    },
+    {
+      "name": "Killing Floor",
+      "steam_appid": 1250,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "3.0"
+      ]
+    },
+    {
+      "name": "Messiah",
+      "steam_appid": null,
+      "gog_id": 7,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "2.0"
+      ]
+    },
+    {
+      "name": "Prince of Persia: The Sands of Time",
+      "steam_appid": 13600,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0"
+      ]
+    },
+    {
+      "name": "Prince of Persia: Warrior Within",
+      "steam_appid": 13500,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0"
+      ]
+    },
+    {
+      "name": "Prince of Persia: The Two Thrones",
+      "steam_appid": 13530,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0"
+      ]
+    },
+    {
+      "name": "Project Eden",
+      "steam_appid": null,
+      "gog_id": 1207659235,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "1.0"
+      ]
+    },
+    {
+      "name": "Red Faction",
+      "steam_appid": 20530,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
+      "eax_versions": [
+        "1.0",
+        "2.0"
+      ]
+    },
+    {
+      "name": "Requiem: Avenging Angel",
+      "steam_appid": null,
+      "gog_id": 1449581489,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "1.0"
+      ]
+    },
+    {
+      "name": "Resident Evil 2",
+      "steam_appid": null,
+      "gog_id": 1534123252,
+      "eax_impossible": [],
+      "tip": "GOG only — Steam sells only the 2019 RE Engine remake (a different, unrelated game with no DirectSound3D EAX support), not the classic 1998 build this entry covers.",
+      "eax_versions": [
+        "1.0"
+      ]
+    },
+    {
+      "name": "S.T.A.L.K.E.R.: Shadow of Chernobyl",
+      "steam_appid": 4500,
+      "gog_id": 1207660573,
+      "eax_impossible": [],
+      "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak. The Vogons Wiki specifically warns not to pair it with Creative's ALchemy wrapper.",
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0"
+      ]
+    },
+    {
+      "name": "S.T.A.L.K.E.R.: Clear Sky",
+      "steam_appid": 20510,
+      "gog_id": 1207660603,
+      "eax_impossible": [],
+      "tip": "Distinct from 'S.T.A.L.K.E.R.: Clear Sky - Enhanced Edition', a separate Steam/GOG listing not covered by this entry. Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak. The Vogons Wiki specifically warns not to pair it with Creative's ALchemy wrapper.",
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0"
+      ]
+    },
+    {
+      "name": "S.T.A.L.K.E.R.: Call of Pripyat",
+      "steam_appid": 41700,
+      "gog_id": 1207660583,
+      "eax_impossible": [],
+      "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak. The Vogons Wiki specifically warns not to pair it with Creative's ALchemy wrapper.",
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0"
+      ]
+    },
+    {
+      "name": "Shogo: Mobile Armor Division",
+      "steam_appid": null,
+      "gog_id": 1207658659,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "1.0"
+      ]
+    },
+    {
+      "name": "Sid Meier's Pirates!",
+      "steam_appid": 3920,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0"
+      ]
+    },
+    {
+      "name": "Stubbs the Zombie in Rebel Without a Pulse",
+      "steam_appid": 7800,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "4.0"
+      ]
+    },
+    {
+      "name": "The Wheel of Time",
+      "steam_appid": null,
+      "gog_id": 1584652180,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "1.0"
+      ]
+    },
+    {
+      "name": "TimeShift",
+      "steam_appid": 10130,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "4.0",
+        "5.0"
+      ]
+    },
+    {
+      "name": "Titan Quest: Immortal Throne",
+      "steam_appid": 4550,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "Delisted from Steam's storefront — but this AppID is still valid for detecting/installing on an existing owned copy.",
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0",
+        "4.0"
+      ]
+    },
+    {
+      "name": "Tom Clancy's Rainbow Six: Vegas",
+      "steam_appid": 13540,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0"
+      ]
+    },
+    {
+      "name": "Tom Clancy's Rainbow Six: Vegas 2",
+      "steam_appid": 15120,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0",
+        "4.0"
+      ]
+    },
+    {
+      "name": "Tom Clancy's Splinter Cell: Double Agent",
+      "steam_appid": 13580,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0",
+        "4.0"
+      ]
+    },
+    {
+      "name": "TRON 2.0",
+      "steam_appid": null,
+      "gog_id": 1655444396,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "2.0",
+        "3.0"
+      ]
+    },
+    {
+      "name": "UFO: Aftermath",
+      "steam_appid": null,
+      "gog_id": 1207658815,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0"
+      ]
+    },
+    {
+      "name": "UFO: Aftershock",
+      "steam_appid": null,
+      "gog_id": 1207658816,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "2.0",
+        "3.0",
+        "4.0"
+      ]
+    },
+    {
+      "name": "Vampire: The Masquerade - Redemption",
+      "steam_appid": null,
+      "gog_id": 1207658831,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "1.0",
+        "2.0"
+      ]
+    },
+    {
+      "name": "Warhammer 40,000: Fire Warrior",
+      "steam_appid": null,
+      "gog_id": 1394528466,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "3.0"
+      ]
+    },
+    {
+      "name": "X2: The Threat",
+      "steam_appid": 2800,
+      "gog_id": 1441032629,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "1.0"
+      ]
+    },
+    {
+      "name": "X-COM: Enforcer",
+      "steam_appid": 7770,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "1.0"
+      ]
     }
   ]
 }
