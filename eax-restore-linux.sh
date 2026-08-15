@@ -456,7 +456,7 @@ get_game_directory() {
         fi
 
         if [ -z "$GAME_DIR" ]; then
-            echo -e "${YELLOW}Enter the full path to the game's .exe folder:${NC}"
+            echo -e "\n${YELLOW}Enter the full path to the game's .exe folder:${NC}"
             echo -e -n "> "
             read -r GAME_DIR
 
@@ -1457,7 +1457,7 @@ confirm_unverified_download() {
     echo -e " -> ${YELLOW}Could not obtain a checksum for $label (requires 'jq', or GitHub hasn't published one yet).${NC}"
     echo -e "    ${WHITE}This file is downloaded directly from kcat's official GitHub repository, so it should"
     echo -e "    be safe — but without a checksum, the script can't independently confirm that.${NC}"
-    echo -e "    ${YELLOW}Install it anyway? (Y/n): ${NC}"
+    echo -e "\n    ${YELLOW}Install it anyway? (Y/n): ${NC}"
     echo -n "    > "
     read -r CONFIRM_UNVERIFIED
     [[ ! "$CONFIRM_UNVERIFIED" =~ $NO_RE ]]
@@ -1724,7 +1724,7 @@ else
             echo -e "\n${YELLOW}SteamOS detected. To protect your immutable filesystem, please install missing tools via the Discover software centre.${NC}"
             echo -e "${YELLOW}${BOLD}Cannot proceed without base dependencies. Exiting.${NC}"; exit 1
         else
-            echo -e -n "${YELLOW}Auto-install these dependencies now? (Requires sudo) (Y/n): ${NC}"
+            echo -e -n "\n${YELLOW}Auto-install these dependencies now? (Requires sudo) (Y/n): ${NC}"
             read -r AUTO_INSTALL_BASE
             if [[ ! "$AUTO_INSTALL_BASE" =~ $NO_RE ]]; then
                 echo -e "\n${CYAN}STATUS: Installing missing packages...${NC}"
