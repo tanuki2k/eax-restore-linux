@@ -1613,6 +1613,212 @@
       "eax_versions": [
         "1.0"
       ]
+    },
+    {
+      "name": "Avencast: Rise of the Mage",
+      "steam_appid": null,
+      "gog_id": 1731734113,
+      "eax_impossible": [],
+      "tip": "Routes EAX through OpenAL natively rather than DirectSound3D, per the Vogons Wiki's citation for this title. This script's dsound.dll swap targets DirectSound3D specifically, so it may not be the relevant install path here — unconfirmed whether this game's own OpenAL implementation is OpenAL Soft (which would pick up this script's alsoft.ini) or something else. Worth testing before assuming either way.",
+      "eax_versions": [
+        "2.0",
+        "3.0",
+        "4.0",
+        "5.0"
+      ]
+    },
+    {
+      "name": "Brothers in Arms: Earned in Blood",
+      "steam_appid": 19800,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "Routes EAX through OpenAL natively rather than DirectSound3D, per the Vogons Wiki's citation for this title. This script's dsound.dll swap targets DirectSound3D specifically, so it may not be the relevant install path here — unconfirmed whether this game's own OpenAL implementation is OpenAL Soft (which would pick up this script's alsoft.ini) or something else. Worth testing before assuming either way.",
+      "eax_versions": [
+        "2.0",
+        "3.0",
+        "4.0"
+      ]
+    },
+    {
+      "name": "Dungeons & Dragons: Dragonshard",
+      "steam_appid": null,
+      "gog_id": 1207658928,
+      "eax_impossible": [],
+      "tip": "The Vogons Wiki confirms a \"Creative EAX\" toggle exists in this game's Audio Settings, but doesn't document which EAX version(s) it supports.",
+      "eax_versions": []
+    },
+    {
+      "name": "Frontlines: Fuel of War",
+      "steam_appid": 9460,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "Routes EAX through OpenAL natively rather than DirectSound3D, per the Vogons Wiki's citation for this title. This script's dsound.dll swap targets DirectSound3D specifically, so it may not be the relevant install path here — unconfirmed whether this game's own OpenAL implementation is OpenAL Soft (which would pick up this script's alsoft.ini) or something else. Worth testing before assuming either way.",
+      "eax_versions": [
+        "3.0",
+        "4.0",
+        "5.0"
+      ]
+    },
+    {
+      "name": "Mafia",
+      "steam_appid": null,
+      "gog_id": 1595659240,
+      "eax_impossible": [],
+      "tip": "Own the 2020 remake ('Mafia: Definitive Edition') instead? That's a different, from-scratch Hangar 13 game with no relation to this classic 2002 build's EAX support — deliberately not mapped here. Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0"
+      ]
+    },
+    {
+      "name": "Outcast",
+      "steam_appid": 336610,
+      "gog_id": 1207658853,
+      "eax_impossible": [],
+      "tip": "This is the \"Outcast 1.1\" listing — a 2014 official update to the classic 1999 build, same engine. Distinct from 2017's 'Outcast: Second Contact' and 2024's 'Outcast: A New Beginning' remakes, neither of which is mapped here.",
+      "eax_versions": [
+        "1.0"
+      ]
+    },
+    {
+      "name": "Painkiller: Gold Edition",
+      "steam_appid": 3200,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "Store page fully removed (redirects to Steam's homepage, not itself) — but this AppID is confirmed from a real owned/installed copy in a user's own Steam library, not just a storefront record. Same original 2004 engine as the base game, not a remaster.",
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0"
+      ]
+    },
+    {
+      "name": "Populous: The Beginning",
+      "steam_appid": null,
+      "gog_id": 1207659027,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "1.0"
+      ]
+    },
+    {
+      "name": "Project I.G.I.-2: Covert Strike",
+      "steam_appid": null,
+      "gog_id": 1207658666,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0"
+      ]
+    },
+    {
+      "name": "Psychonauts",
+      "steam_appid": 3830,
+      "gog_id": 1207658807,
+      "eax_impossible": [],
+      "tip": "Routes EAX through OpenAL natively rather than DirectSound3D, per the Vogons Wiki's citation for this title. This script's dsound.dll swap targets DirectSound3D specifically, so it may not be the relevant install path here — unconfirmed whether this game's own OpenAL implementation is OpenAL Soft (which would pick up this script's alsoft.ini) or something else. Worth testing before assuming either way.",
+      "eax_versions": [
+        "2.0",
+        "3.0",
+        "4.0"
+      ]
+    },
+    {
+      "name": "Quake 4",
+      "steam_appid": 2210,
+      "gog_id": 1836059896,
+      "eax_impossible": [],
+      "tip": "Routes EAX through OpenAL natively rather than DirectSound3D, per the Vogons Wiki's citation for this title. This script's dsound.dll swap targets DirectSound3D specifically, so it may not be the relevant install path here — unconfirmed whether this game's own OpenAL implementation is OpenAL Soft (which would pick up this script's alsoft.ini) or something else. Worth testing before assuming either way.",
+      "eax_versions": [
+        "4.0",
+        "5.0"
+      ]
+    },
+    {
+      "name": "RollerCoaster Tycoon 3: Complete Edition",
+      "steam_appid": null,
+      "gog_id": 1207659032,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "3.0"
+      ]
+    },
+    {
+      "name": "SimCity 3000: Unlimited",
+      "steam_appid": null,
+      "gog_id": 2086050016,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "1.0"
+      ]
+    },
+    {
+      "name": "Star Trek: Bridge Commander",
+      "steam_appid": null,
+      "gog_id": 1478736295,
+      "eax_impossible": [],
+      "tip": "Also supports A3D, per the Vogons Wiki's citation for this title.",
+      "eax_versions": [
+        "1.0",
+        "2.0"
+      ]
+    },
+    {
+      "name": "Star Trek: Elite Force II",
+      "steam_appid": null,
+      "gog_id": 2125201406,
+      "eax_impossible": [],
+      "tip": "Also supports A3D, per the Vogons Wiki's citation for this title.",
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0"
+      ]
+    },
+    {
+      "name": "The Suffering",
+      "steam_appid": null,
+      "gog_id": 1268478205,
+      "eax_impossible": [],
+      "tip": "The Vogons Wiki confirms an \"Enable EAX\" option exists in this game's configuration utility, but doesn't document which EAX version(s) it supports.",
+      "eax_versions": []
+    },
+    {
+      "name": "The Suffering: Ties That Bind",
+      "steam_appid": null,
+      "gog_id": 1578481504,
+      "eax_impossible": [],
+      "tip": "The Vogons Wiki confirms an \"Enable EAX\" option exists in this game's configuration utility, but doesn't document which EAX version(s) it supports.",
+      "eax_versions": []
+    },
+    {
+      "name": "Tom Clancy's Ghost Recon: Advanced Warfighter 2",
+      "steam_appid": 13510,
+      "gog_id": null,
+      "eax_impossible": [],
+      "tip": "Routes EAX through OpenAL natively rather than DirectSound3D, per the Vogons Wiki's citation for this title. This script's dsound.dll swap targets DirectSound3D specifically, so it may not be the relevant install path here — unconfirmed whether this game's own OpenAL implementation is OpenAL Soft (which would pick up this script's alsoft.ini) or something else. Worth testing before assuming either way.",
+      "eax_versions": [
+        "1.0",
+        "2.0",
+        "3.0",
+        "4.0"
+      ]
+    },
+    {
+      "name": "Ultima 9: Ascension",
+      "steam_appid": null,
+      "gog_id": 1207659093,
+      "eax_impossible": [],
+      "tip": null,
+      "eax_versions": [
+        "1.0"
+      ]
     }
   ]
 }
