@@ -311,11 +311,11 @@ ensure_known_games_json() {
 
     if [ -s "$KNOWN_GAMES_CACHE" ] && jq empty "$KNOWN_GAMES_CACHE" 2>/dev/null; then
         KNOWN_GAMES_FILE="$KNOWN_GAMES_CACHE"
-        echo -e "${YELLOW} -> Couldn't refresh the known-EAX-games database (offline?) — using the last cached copy.${NC}" >&2
+        echo -e "\n${YELLOW} -> Couldn't refresh the known-EAX-games database (offline?) — using the last cached copy.${NC}" >&2
         return 0
     fi
 
-    echo -e "${YELLOW} -> Couldn't fetch the known-EAX-games database, and no cached copy exists yet.${NC}" >&2
+    echo -e "\n${YELLOW} -> Couldn't fetch the known-EAX-games database, and no cached copy exists yet.${NC}" >&2
     echo -e "${YELLOW}    Game tips and library scanning are unavailable this run.${NC}" >&2
     return 1
 }
@@ -568,8 +568,34 @@ resolve_exe_folder() {
     local root="$1"
     GAME_DIR=""
 
+    # Nested installs often bundle third-party installers/utilities
+    # alongside the real game .exe (redistributables, anti-cheat setup,
+    # crash handlers, uninstallers). Folder name alone isn't a reliable
+    # filter -- "Launcher" or "bin" folders legitimately hold real game
+    # exes for some titles too -- so this blocks by the installer/utility's
+    # own distinctive basename instead, wherever it's nested.
+    local junk_exe_re='^(unins(t(all)?)?[0-9]*|vc_?redist.*|(dx|directx)?setup|dxsetup|dxwebsetup|dx[0-9]+ger|dx[0-9]+ntger|dotnetfx.*|ndp[0-9].*|windowsdesktop-runtime.*|oalinst|physx.*|easyanticheat.*|eac_?setup.*|eaclauncher|be(service|daisy|launcher|_ex)[a-z0-9_]*|battleye.*|unitycrashhandler.*|crashreport(er|client)?|crash_?handler|crashpad_handler|bugsplat.*|epiconlineservices(installer)?|epicwebhelper.*|rockstar-games-launcher|social-club-setup|vulkanrt.*installer.*|gamingrepair(tool)?|registrationreminder|overlayinjector|cleanup|touchup|driverversionchecker|layerschecker|supporttool|dowser)\.exe$'
+
     if find "$root" -maxdepth 1 -type f -iname "*.exe" -print -quit 2>/dev/null | grep -q .; then
-        echo -e " -> ${GREEN}Found the game executable in:${NC} $root"
+        # Pick a representative exe name to show: prefer one whose name
+        # isn't on the junk list and resembles the folder's own name,
+        # falling back to whatever's there so this never reports nothing.
+        local root_exes=() f base root_norm exe_norm root_exe_name=""
+        while IFS= read -r f; do root_exes+=("$f"); done < <(find "$root" -maxdepth 1 -type f -iname "*.exe" 2>/dev/null)
+        root_norm="$(normalize_game_name "$(basename "$root")")"
+        for f in "${root_exes[@]}"; do
+            base="$(basename "$f" | tr '[:upper:]' '[:lower:]')"
+            [[ "$base" =~ $junk_exe_re ]] && continue
+            [ -z "$root_exe_name" ] && root_exe_name="$(basename "$f")"
+            exe_norm="$(normalize_game_name "$(basename "$f" .exe)")"
+            if [ -n "$root_norm" ] && { [[ "$exe_norm" == *"$root_norm"* ]] || [[ "$root_norm" == *"$exe_norm"* ]]; }; then
+                root_exe_name="$(basename "$f")"
+                break
+            fi
+        done
+        [ -z "$root_exe_name" ] && root_exe_name="$(basename "${root_exes[0]}")"
+
+        echo -e " -> ${GREEN}Found the game executable:${NC} $root_exe_name ${DIM}in $root${NC}"
         echo -e "\n${YELLOW}Use this location? (Y/n): ${NC}"
         echo -e -n "> "
         local confirm_root
@@ -580,14 +606,6 @@ resolve_exe_folder() {
         fi
         return 1
     fi
-
-    # Nested installs often bundle third-party installers/utilities
-    # alongside the real game .exe (redistributables, anti-cheat setup,
-    # crash handlers, uninstallers). Folder name alone isn't a reliable
-    # filter -- "Launcher" or "bin" folders legitimately hold real game
-    # exes for some titles too -- so this blocks by the installer/utility's
-    # own distinctive basename instead, wherever it's nested.
-    local junk_exe_re='^(unins(t(all)?)?[0-9]*|vc_?redist.*|(dx|directx)?setup|dxsetup|dxwebsetup|dx[0-9]+ger|dx[0-9]+ntger|dotnetfx.*|ndp[0-9].*|windowsdesktop-runtime.*|oalinst|physx.*|easyanticheat.*|eac_?setup.*|eaclauncher|be(service|daisy|launcher|_ex)[a-z0-9_]*|battleye.*|unitycrashhandler.*|crashreport(er|client)?|crash_?handler|crashpad_handler|bugsplat.*|epiconlineservices(installer)?|epicwebhelper.*|rockstar-games-launcher|social-club-setup|vulkanrt.*installer.*|gamingrepair(tool)?|registrationreminder|overlayinjector|cleanup|touchup|driverversionchecker|layerschecker|supporttool|dowser)\.exe$'
 
     local all_exes=()
     while IFS= read -r f; do all_exes+=("$f"); done < <(find "$root" -mindepth 1 -maxdepth 4 -type f -iname "*.exe" 2>/dev/null)
@@ -626,14 +644,21 @@ resolve_exe_folder() {
     # not just whichever one find() happens to list first, since a real
     # launcher/helper .exe often sits right next to the actual game .exe
     # in the same folder.
+    # Also remembers a representative .exe name per folder to show the user
+    # (the name-matching one if there is one, otherwise whichever candidate
+    # came first) -- knowing the location isn't as reassuring as seeing the
+    # actual filename that's about to be treated as the game's executable.
+    local -A dir_exe_name=()
     local dirs=() dirs_matched=() exe_norm dir_is_match
     for d in "${ordered_dirs[@]}"; do
         dir_is_match=""
         for f in "${candidates[@]}"; do
             [ "$(dirname "$f")" = "$d" ] || continue
+            [ -z "${dir_exe_name[$d]:-}" ] && dir_exe_name["$d"]="$(basename "$f")"
             exe_norm="$(normalize_game_name "$(basename "$f" .exe)")"
             if [ -n "$root_norm" ] && { [[ "$exe_norm" == *"$root_norm"* ]] || [[ "$root_norm" == *"$exe_norm"* ]]; }; then
                 dir_is_match=1
+                dir_exe_name["$d"]="$(basename "$f")"
                 break
             fi
         done
@@ -646,7 +671,7 @@ resolve_exe_folder() {
     dirs=("${dirs_matched[@]}" "${dirs[@]}")
 
     if [ ${#dirs[@]} -eq 1 ]; then
-        echo -e " -> ${GREEN}Found the game executable in:${NC} ${dirs[0]}"
+        echo -e " -> ${GREEN}Found the game executable:${NC} ${dir_exe_name[${dirs[0]}]} ${DIM}in ${dirs[0]}${NC}"
         echo -e "\n${YELLOW}Use this location? (Y/n): ${NC}"
         echo -e -n "> "
         local confirm_single
@@ -661,7 +686,7 @@ resolve_exe_folder() {
         echo -e "with the game's main executable:${NC}"
         local i
         for i in "${!dirs[@]}"; do
-            echo -e "${WHITE} $((i + 1))) ${dirs[$i]}${NC}"
+            echo -e "${WHITE} $((i + 1))) ${BOLD}${dir_exe_name[${dirs[$i]}]}${NC}${DIM} in ${dirs[$i]}${NC}"
         done
         echo -e "\n${YELLOW}Selection [1-${#dirs[@]}]: ${NC}"
         echo -e -n "> "
