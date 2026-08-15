@@ -419,11 +419,10 @@ get_game_directory() {
                 record_recent_game "$GAME_DIR"
                 return
             fi
-            echo ""
         fi
     fi
 
-    echo -e "${WHITE}Common game locations:${NC}"
+    echo -e "\n${WHITE}Common game locations:${NC}"
     echo -e "${WHITE} Linux Desktop (Steam): ~/.local/share/Steam/steamapps/common/[Game]${NC}"
     echo -e "${WHITE} Steam Deck (SD Card):  /run/media/mmcblk0p1/steamapps/common/[Game]${NC}"
     echo -e "${WHITE} Heroic / GOG:          ~/Games/Heroic/[Game]${NC}"
@@ -440,7 +439,7 @@ get_game_directory() {
             echo -e -n "> "
             read -r USE_GUI_PICKER
             if [[ ! "$USE_GUI_PICKER" =~ $NO_RE ]]; then
-                echo -e "${WHITE} Tip: Steam's default path (~/.local/share/Steam/...) is inside a hidden folder —"
+                echo -e "\n${WHITE} Tip: Steam's default path (~/.local/share/Steam/...) is inside a hidden folder —"
                 echo -e " press Ctrl+H in the file picker if you don't see it.${NC}"
                 echo -e "\n${YELLOW}Press Enter to open the file picker: ${NC}"
                 echo -e -n "> "
@@ -481,7 +480,7 @@ get_game_directory() {
                 break
             fi
         else
-            echo -e "${YELLOW}${BOLD}Error: Directory not found. Please check the path and try again.${NC}"
+            echo -e "\n${YELLOW}${BOLD}Error: Directory not found. Please check the path and try again.${NC}"
             GAME_DIR=""
         fi
     done
@@ -595,7 +594,7 @@ resolve_exe_folder() {
         done
         [ -z "$root_exe_name" ] && root_exe_name="$(basename "${root_exes[0]}")"
 
-        echo -e " -> ${GREEN}Found the game executable:${NC} $root_exe_name ${DIM}in $root${NC}"
+        echo -e "\n -> ${GREEN}Found the game executable:${NC} $root_exe_name ${DIM}in $root${NC}"
         echo -e "\n${YELLOW}Use this location? (Y/n): ${NC}"
         echo -e -n "> "
         local confirm_root
@@ -671,7 +670,7 @@ resolve_exe_folder() {
     dirs=("${dirs_matched[@]}" "${dirs[@]}")
 
     if [ ${#dirs[@]} -eq 1 ]; then
-        echo -e " -> ${GREEN}Found the game executable:${NC} ${dir_exe_name[${dirs[0]}]} ${DIM}in ${dirs[0]}${NC}"
+        echo -e "\n -> ${GREEN}Found the game executable:${NC} ${dir_exe_name[${dirs[0]}]} ${DIM}in ${dirs[0]}${NC}"
         echo -e "\n${YELLOW}Use this location? (Y/n): ${NC}"
         echo -e -n "> "
         local confirm_single
@@ -954,7 +953,7 @@ detect_game_environment() {
                 [ -z "$APPID" ] && break
             fi
 
-            echo -e " -> Querying Protontricks database for AppID ${APPID}..."
+            echo -e "\n -> Querying Protontricks database for AppID ${APPID}..."
             DETECTED_STEAM_PREFIX=$(protontricks -c 'echo $WINEPREFIX' "$APPID" 2>/dev/null | grep "/pfx" | tail -n 1 | tr -d '\r')
 
             if [ -n "$DETECTED_STEAM_PREFIX" ] && [ -d "$DETECTED_STEAM_PREFIX" ]; then
@@ -1013,7 +1012,7 @@ detect_game_environment() {
             fi
 
             if [ -d "$PREFIX_PATH/drive_c" ]; then
-                echo -e " -> ${GREEN}Prefix verified!${NC}"
+                echo -e "\n -> ${GREEN}Prefix verified!${NC}"
                 show_known_game_tip "$HEROIC_APP_NAME" "gog"
                 confirm_continue_if_eax_impossible "$HEROIC_APP_NAME" "gog"
                 break
@@ -1101,7 +1100,7 @@ select_architecture() {
             echo -e -n "> "
             read -r ARCH
             if [[ "$ARCH" == "32" || "$ARCH" == "64" ]]; then break
-            else echo -e "${YELLOW}${BOLD}Invalid selection. Please type 32 or 64.${NC}"; fi
+            else echo -e "\n${YELLOW}${BOLD}Invalid selection. Please type 32 or 64.${NC}"; fi
         done
     fi
     ARCH_FOLDER=$([ "$ARCH" == "64" ] && echo "Win64" || echo "Win32")
@@ -1342,7 +1341,7 @@ uninstall_vcrun_dependencies() {
     # 64-bit by checking which runtime is actually present, same as
     # verify_vcrun_files.
     if [ -z "$PREFIX_PATH" ] || [ ! -d "$PREFIX_PATH/drive_c/windows" ]; then
-        echo -e " -> ${YELLOW}Prefix not found, skipping VC++ removal.${NC}"
+        echo -e "\n -> ${YELLOW}Prefix not found, skipping VC++ removal.${NC}"
         return
     fi
 
@@ -1357,7 +1356,7 @@ uninstall_vcrun_dependencies() {
     fi
 
     if [ -z "$target_dir" ]; then
-        echo -e " -> ${YELLOW}No VC++ runtime files found in this prefix, nothing to remove.${NC}"
+        echo -e "\n -> ${YELLOW}No VC++ runtime files found in this prefix, nothing to remove.${NC}"
         return
     fi
 
@@ -1485,6 +1484,7 @@ confirm_unverified_download() {
     echo -e "\n    ${YELLOW}Install it anyway? (Y/n): ${NC}"
     echo -n "    > "
     read -r CONFIRM_UNVERIFIED
+    echo ""
     [[ ! "$CONFIRM_UNVERIFIED" =~ $NO_RE ]]
 }
 
@@ -1640,10 +1640,10 @@ handle_conflict() {
                 b)
                     TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
                     mv "$target_file" "${target_file}.bak.${TIMESTAMP}"
-                    echo -e " -> Backed up original to $(basename "$target_file").bak.${TIMESTAMP}"
+                    echo -e "\n -> Backed up original to $(basename "$target_file").bak.${TIMESTAMP}"
                     return 0 ;;
-                s) echo -e " -> Skipped $(basename "$target_file")."; return 1 ;;
-                *) echo -e "${YELLOW}${BOLD}Invalid choice. Type o, b, or s.${NC}" ;;
+                s) echo -e "\n -> Skipped $(basename "$target_file")."; return 1 ;;
+                *) echo -e "\n${YELLOW}${BOLD}Invalid choice. Type o, b, or s.${NC}" ;;
             esac
         done
     fi
@@ -1850,7 +1850,7 @@ else
         read -r SCRIPT_ACTION
         SCRIPT_ACTION="${SCRIPT_ACTION,,}"
         if [[ "$SCRIPT_ACTION" == "i" || "$SCRIPT_ACTION" == "u" ]]; then break
-        else echo -e "${YELLOW}${BOLD}Invalid selection. Please type 'i' or 'u'.${NC}"; fi
+        else echo -e "\n${YELLOW}${BOLD}Invalid selection. Please type 'i' or 'u'.${NC}"; fi
     done
 fi
 
@@ -2019,6 +2019,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
                 echo -e "\n${YELLOW}Nothing selected, nothing removed.${NC}"
                 FILES_DECLINED="1"
             else
+                echo ""
                 for f in "${FINAL_REMOVE[@]}"; do rm -rf "$f"; done
                 for i in "${!FINAL_RESTORE_TARGETS[@]}"; do
                     mv "${FINAL_RESTORE_SOURCES[$i]}" "${FINAL_RESTORE_TARGETS[$i]}" \
@@ -2107,7 +2108,7 @@ EOF
             apply_registry_patch "$REG_FILE"
             rm -f "$REG_FILE"
             echo -e " -> ${GREEN}Registry keys safely removed.${NC}"
-        else echo -e "${YELLOW}${BOLD}Prefix/AppID not found, skipping registry cleanup.${NC}"; fi
+        else echo -e "\n${YELLOW}${BOLD}Prefix/AppID not found, skipping registry cleanup.${NC}"; fi
     fi
 
     echo ""
@@ -2226,7 +2227,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
             echo -e -n "\n> "
             read -r ENGINE_CHOICE
             ENGINE_CHOICE="${ENGINE_CHOICE:-3}"
-            if [[ "$ENGINE_CHOICE" =~ ^[123]$ ]]; then break; else echo -e "${YELLOW}${BOLD}Invalid selection. Please type 1, 2, or 3.${NC}"; fi
+            if [[ "$ENGINE_CHOICE" =~ ^[123]$ ]]; then break; else echo -e "\n${YELLOW}${BOLD}Invalid selection. Please type 1, 2, or 3.${NC}"; fi
         done
     fi
 
@@ -2290,7 +2291,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         echo -e -n "> "
         read -r OUTPUT_MODE_CHOICE
         OUTPUT_MODE_CHOICE="${OUTPUT_MODE_CHOICE:-1}"
-        if [[ "$OUTPUT_MODE_CHOICE" =~ ^[123]$ ]]; then break; else echo -e "${YELLOW}${BOLD}Invalid selection. Please type 1, 2, or 3.${NC}"; fi
+        if [[ "$OUTPUT_MODE_CHOICE" =~ ^[123]$ ]]; then break; else echo -e "\n${YELLOW}${BOLD}Invalid selection. Please type 1, 2, or 3.${NC}"; fi
     done
 
     ENABLE_HRTF=""
@@ -2310,7 +2311,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
             echo -e -n "> "
             read -r STEREO_MODE_CHOICE
             STEREO_MODE_CHOICE="${STEREO_MODE_CHOICE:-1}"
-            if [[ "$STEREO_MODE_CHOICE" =~ ^[123]$ ]]; then break; else echo -e "${YELLOW}${BOLD}Invalid selection. Please type 1, 2, or 3.${NC}"; fi
+            if [[ "$STEREO_MODE_CHOICE" =~ ^[123]$ ]]; then break; else echo -e "\n${YELLOW}${BOLD}Invalid selection. Please type 1, 2, or 3.${NC}"; fi
         done
 
         case "$STEREO_MODE_CHOICE" in
@@ -2352,7 +2353,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
                 2) SURROUND_CHANNELS="surround51"; break ;;
                 3) SURROUND_CHANNELS="surround61"; break ;;
                 4) SURROUND_CHANNELS="surround71"; break ;;
-                *) echo -e "${YELLOW}${BOLD}Invalid selection. Please type 1, 2, 3, or 4.${NC}" ;;
+                *) echo -e "\n${YELLOW}${BOLD}Invalid selection. Please type 1, 2, 3, or 4.${NC}" ;;
             esac
         done
     else
@@ -2423,7 +2424,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     print_line
     echo -e "\n${CYAN}${BOLD}Configuration finished!${NC}"
     echo -e -n "${CYAN}Ready to deploy the audio files to your game and system prefix. Proceed? (Y/n): ${NC}"; read -r CONFIRM_FIN
-    if [[ "$CONFIRM_FIN" =~ $NO_RE ]]; then echo -e "${YELLOW}Installation aborted.${NC}"; exit 0; fi
+    if [[ "$CONFIRM_FIN" =~ $NO_RE ]]; then echo -e "\n${YELLOW}Installation aborted.${NC}"; exit 0; fi
 
     echo -e "\n${CYAN}STATUS: Executing system verbs via $( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" ) (Silent Mode)...${NC}"
     echo -e " -> Applying core package: openal"
