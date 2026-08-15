@@ -500,7 +500,7 @@ detect_heroic_prefix_verbose() {
             if [ "$target_dir" == "$install_path" ] || [[ "$target_dir" == "$install_path"/* ]]; then
                 app_name="$record_app_name"
             fi
-        done < <(awk 'BEGIN { RS="}"; FS="," } { ip=""; an=""; for (i=1; i<=NF; i++) { if ($i ~ /"install_path"|"installPath"/) { split($i, a, "\""); ip=a[4] } if ($i ~ /"app_name"|"appName"/) { split($i, b, "\""); an=b[4] } } if (ip != "") print ip "\t" an }' "$json_file")
+        done < <(awk 'BEGIN { RS="}"; FS="," } { ip=""; an=""; for (i=1; i<=NF; i++) { if ($i ~ /"(install_path|installPath)"/) { line=$i; sub(/^.*"(install_path|installPath)"[ \t]*:[ \t]*"/, "", line); sub(/".*$/, "", line); ip=line } if ($i ~ /"(app_name|appName)"/) { line=$i; sub(/^.*"(app_name|appName)"[ \t]*:[ \t]*"/, "", line); sub(/".*$/, "", line); an=line } } if (ip != "") print ip "\t" an }' "$json_file")
 
         if [ -n "$app_name" ]; then
             echo -e " -> Game found! Internal ID: ${BOLD}$app_name${NC}" >&2
@@ -658,7 +658,7 @@ scan_game_libraries() {
                 paths+=("$install_path")
                 stores+=("gog")
                 ids+=("$app_name")
-            done < <(awk 'BEGIN { RS="}"; FS="," } { ip=""; an=""; for (i=1; i<=NF; i++) { if ($i ~ /"install_path"|"installPath"/) { split($i, a, "\""); ip=a[4] } if ($i ~ /"app_name"|"appName"/) { split($i, b, "\""); an=b[4] } } if (ip != "") print ip "\t" an }' "$json_file")
+            done < <(awk 'BEGIN { RS="}"; FS="," } { ip=""; an=""; for (i=1; i<=NF; i++) { if ($i ~ /"(install_path|installPath)"/) { line=$i; sub(/^.*"(install_path|installPath)"[ \t]*:[ \t]*"/, "", line); sub(/".*$/, "", line); ip=line } if ($i ~ /"(app_name|appName)"/) { line=$i; sub(/^.*"(app_name|appName)"[ \t]*:[ \t]*"/, "", line); sub(/".*$/, "", line); an=line } } if (ip != "") print ip "\t" an }' "$json_file")
         done <<< "$installed_jsons"
     fi
 
