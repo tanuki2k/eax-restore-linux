@@ -1765,6 +1765,7 @@ if is_truthy "$EAX_RESTORE_VCRUN_ONLY"; then
     print_divider
     echo -e "${CYAN}1. Game Location${NC}"
     print_line
+    echo ""
     get_game_directory ""
 
     echo ""
@@ -1841,6 +1842,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     print_divider
     echo -e "${CYAN}1. Game Location${NC}"
     print_line
+    echo ""
     get_game_directory ""
 
     echo ""
@@ -2130,6 +2132,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     print_divider
     echo -e "${CYAN}1. Game Location${NC}"
     print_line
+    echo ""
     get_game_directory ""
 
     # 2. Game Identification & Launcher Auto-Detect
