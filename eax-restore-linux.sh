@@ -817,6 +817,10 @@ show_known_game_tip() {
     [ -z "$tip" ] && return
     echo -e "\n${CYAN}Heads up:${NC}"
     echo -e "${WHITE}$(printf '%s' "$tip" | fold -s -w 76)${NC}"
+    echo -e "\n${YELLOW}Press Enter once you've read this to continue: ${NC}"
+    echo -e -n "> "
+    local _ack
+    read -r _ack
 }
 
 confirm_continue_if_eax_impossible() {
