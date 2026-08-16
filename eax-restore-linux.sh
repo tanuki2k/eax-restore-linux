@@ -257,7 +257,7 @@ DSOAL_COMMUNITY_V14_SHA256="064f600eac5637d8a8ea6b6cd0172b42202b792406530bf867c0
 
 # Community-maintained database of well-known EAX games (see
 # known-eax-games.json in this repo). Powers both the install-time "Heads
-# up" tips and the opt-in library scanner. Fetched fresh each run so PRs
+# up" notes and the opt-in library scanner. Fetched fresh each run so PRs
 # against the file take effect without users needing a new script version;
 # cached locally so a fetch failure (offline, rate-limited) degrades to the
 # last-known-good copy instead of losing the feature entirely.
@@ -316,7 +316,7 @@ ensure_known_games_json() {
     fi
 
     echo -e "\n${YELLOW} -> Couldn't fetch the known-EAX-games database, and no cached copy exists yet.${NC}" >&2
-    echo -e "${YELLOW}    Game tips and library scanning are unavailable this run.${NC}" >&2
+    echo -e "${YELLOW}    Game notes and library scanning are unavailable this run.${NC}" >&2
     return 1
 }
 
@@ -401,8 +401,9 @@ pick_directory_gui() {
 get_game_directory() {
     GAME_DIR=""
     SCANNED_APPID=""
-    SCANNED_TIP_SHOWN=""
+    SCANNED_NOTES_SHOWN=""
     OPENAL_NATIVE_MODE=""
+    SCANNED_OPENAL_CHECKED=""
 
     if [ "$SCRIPT_ACTION" == "u" ] && prompt_recent_game; then
         echo -e "\n${GREEN}Using: $GAME_DIR${NC}"
@@ -725,8 +726,9 @@ scan_game_libraries() {
     # normal manual/GUI-picker flow.
     GAME_DIR=""
     SCANNED_APPID=""
-    SCANNED_TIP_SHOWN=""
+    SCANNED_NOTES_SHOWN=""
     OPENAL_NATIVE_MODE=""
+    SCANNED_OPENAL_CHECKED=""
 
     if ! ensure_known_games_json; then
         echo -e "${YELLOW}Library scanning needs the known-EAX-games database, which couldn't be loaded.${NC}"
@@ -851,12 +853,13 @@ scan_game_libraries() {
     echo -e " -> ${YELLOW}Location${NC}:  ${DIM}${paths[$idx]}${NC}"
     echo -e " -> ${YELLOW}EAX Support${NC}: ${GREEN}${BOLD}$eax_versions${NC}"
 
-    show_known_game_tip "${ids[$idx]}" "${stores[$idx]}"
-    SCANNED_TIP_SHOWN=1
+    show_known_game_notes "${ids[$idx]}" "${stores[$idx]}"
+    SCANNED_NOTES_SHOWN=1
 
     print_line
 
     confirm_continue_if_openal_native "${ids[$idx]}" "${stores[$idx]}"
+    SCANNED_OPENAL_CHECKED=1
 
     resolve_exe_folder "${paths[$idx]}" || return 1
 
@@ -864,32 +867,32 @@ scan_game_libraries() {
     return 0
 }
 
-# Per-game tips and EAX-impossible flags now live in the community-
+# Per-game notes and EAX-impossible flags now live in the community-
 # maintained known-eax-games.json (see ensure_known_games_json above and
 # known-eax-games.json in this repo) rather than hardcoded here, so entries
 # can be added/corrected via PR without touching this script. Entries are
 # still only added when independently verified against the storefront's
 # own API — a wrong/stale ID would misdirect users to the wrong game.
 
-show_known_game_tip() {
-    # Usage: show_known_game_tip <id> <steam|gog>
+show_known_game_notes() {
+    # Usage: show_known_game_notes <id> <steam|gog>
     # Best-effort, install-only heads-up for well-known EAX titles, sourced
-    # from known-eax-games.json. Tips are stored as a single unwrapped line
+    # from known-eax-games.json. Notes are stored as a single unwrapped line
     # for easy editing, then word-wrapped to the script's usual prose width
     # at display time.
     [ "$SCRIPT_ACTION" == "i" ] || return
     [ -z "$1" ] && return
     ensure_known_games_json || return
 
-    local tip
+    local notes
     if [ "$2" == "gog" ]; then
-        tip=$(jq -r --arg id "$1" '.games[] | select((.gog_id // "") | tostring == $id) | .tip // empty' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+        notes=$(jq -r --arg id "$1" '.games[] | select((.gog_id // "") | tostring == $id) | .notes // empty' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
     else
-        tip=$(jq -r --arg id "$1" '.games[] | select((.steam_appid // "") | tostring == $id) | .tip // empty' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+        notes=$(jq -r --arg id "$1" '.games[] | select((.steam_appid // "") | tostring == $id) | .notes // empty' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
     fi
-    [ -z "$tip" ] && return
+    [ -z "$notes" ] && return
     echo -e "\n${WHITE}  Notes:${NC}"
-    echo -e "${WHITE}$(printf '%s' "$tip" | fold -s -w 76 | sed 's/^/  /')${NC}"
+    echo -e "${WHITE}$(printf '%s' "$notes" | fold -s -w 76 | sed 's/^/  /')${NC}"
 }
 
 confirm_continue_if_eax_impossible() {
@@ -947,11 +950,12 @@ confirm_continue_if_openal_native() {
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
     [ "$compatible" != "false" ] && return
 
-    echo -e "\n${YELLOW}${BOLD}This game's own EAX support routes through OpenAL directly, not DirectSound3D.${NC}"
-    echo -e "${WHITE}This script's usual dsound.dll swap has nothing to intercept for this title. Instead,"
-    echo -e "it can deploy kcat's OpenAL Soft directly as this game's OpenAL32.dll (with the same"
-    echo -e "alsoft.ini tuning), which may or may not be enough on its own to restore EAX — this"
-    echo -e "depends on how the game's own EAX implementation behaves, which hasn't been verified here.${NC}"
+    echo -e "\n${YELLOW}${BOLD}This title routes EAX through OpenAL rather than DirectSound3D, so the${NC}"
+    echo -e "${YELLOW}${BOLD}script's usual dsound.dll swap won't apply here.${NC}"
+    echo -e "${WHITE}It can instead deploy kcat's OpenAL Soft directly as OpenAL32.dll (with the same"
+    echo -e "alsoft.ini tuning) — but whether this game's own OpenAL implementation is OpenAL Soft"
+    echo -e "(which would pick this up) or something else entirely hasn't been independently verified,"
+    echo -e "so this may or may not actually restore EAX.${NC}"
     echo -e "\n${YELLOW}Continue with the direct OpenAL Soft deployment instead? (y/N): ${NC}"
     echo -e -n "> "
     read -r CONTINUE_OPENAL_NATIVE
@@ -1033,8 +1037,9 @@ detect_game_environment() {
                 read -r C_AUTO_S
                 if [[ ! "$C_AUTO_S" =~ $NO_RE ]]; then
                     PREFIX_PATH="$DETECTED_STEAM_PREFIX"
-                    [ -z "$SCANNED_TIP_SHOWN" ] && show_known_game_tip "$APPID" "steam"
+                    [ -z "$SCANNED_NOTES_SHOWN" ] && show_known_game_notes "$APPID" "steam"
                     confirm_continue_if_eax_impossible "$APPID" "steam"
+                    [ -z "$SCANNED_OPENAL_CHECKED" ] && confirm_continue_if_openal_native "$APPID" "steam"
                     break
                 fi
                 APPID=""
@@ -1083,8 +1088,9 @@ detect_game_environment() {
 
             if [ -d "$PREFIX_PATH/drive_c" ]; then
                 echo -e "\n -> ${GREEN}Prefix verified!${NC}"
-                [ -z "$SCANNED_TIP_SHOWN" ] && show_known_game_tip "$HEROIC_APP_NAME" "gog"
+                [ -z "$SCANNED_NOTES_SHOWN" ] && show_known_game_notes "$HEROIC_APP_NAME" "gog"
                 confirm_continue_if_eax_impossible "$HEROIC_APP_NAME" "gog"
+                [ -z "$SCANNED_OPENAL_CHECKED" ] && confirm_continue_if_openal_native "$HEROIC_APP_NAME" "gog"
                 break
             else
                 echo -e "\n${YELLOW}${BOLD}Error: Initialised Wine prefix not found at that location.${NC}"
