@@ -9,6 +9,7 @@
         "steam",
         "gog"
       ],
+      "dsound_compatible": true,
       "tip": "The Enhanced Edition itself runs on a from-scratch OpenAL audio engine (added for its native Linux/macOS ports), not DirectSound3D — DSOAL has nothing to intercept on this install. If you own the classic build too, it's a separate, independently detectable GOG product — see this file's 'Baldur's Gate: The Original Saga' entry (gog_id 1207658886) instead, which has real DirectSound3D EAX and isn't flagged impossible.",
       "eax_versions": [
         "1.0"
@@ -22,6 +23,7 @@
         "steam",
         "gog"
       ],
+      "dsound_compatible": true,
       "tip": "The Enhanced Edition itself runs on a from-scratch OpenAL audio engine (added for its native Linux/macOS ports), not DirectSound3D — DSOAL has nothing to intercept on this install. If you own the classic build too, it's a separate, independently detectable GOG product — see this file's 'Baldur's Gate 2 Complete' entry (gog_id 1207658893) instead, which has real DirectSound3D EAX and isn't flagged impossible.",
       "eax_versions": [
         "1.0",
@@ -33,6 +35,7 @@
       "steam_appid": null,
       "gog_id": 1207658886,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "This is the classic pre-2012 build, sold by GOG as a standalone product distinct from 'Baldur's Gate: Enhanced Edition' — GOG's own catalog search doesn't surface it (it's effectively delisted from browsing), but the product page and existing owners' libraries still resolve normally. Real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite.",
       "eax_versions": [
         "1.0"
@@ -43,6 +46,7 @@
       "steam_appid": null,
       "gog_id": 1207658893,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "This is the classic pre-2013 build, sold by GOG as a standalone product distinct from 'Baldur's Gate II: Enhanced Edition' — GOG's own catalog search doesn't surface it (it's effectively delisted from browsing), but the product page and existing owners' libraries still resolve normally. Real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite. Its EAX 2.0 environmental occlusion historically needed VxD drivers under Windows 9x, per the Vogons Wiki's citation for this title — likely moot under Wine.",
       "eax_versions": [
         "1.0",
@@ -54,6 +58,7 @@
       "steam_appid": null,
       "gog_id": 1207658888,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "This is the classic pre-2014 build, sold by GOG as a standalone product distinct from 'Icewind Dale: Enhanced Edition'. GOG's own catalog search doesn't surface it (it's effectively delisted from browsing), but the product page and existing owners' libraries still resolve normally. Real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite — this corrects an earlier version of this file, which wrongly concluded no non-Enhanced-Edition build of Icewind Dale was purchasable anywhere.",
       "eax_versions": [
         "1.0"
@@ -64,6 +69,7 @@
       "steam_appid": null,
       "gog_id": 1207658887,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "This is the classic pre-2017 build, sold by GOG as a standalone product distinct from 'Planescape: Torment: Enhanced Edition'. GOG's own catalog search doesn't surface it (it's effectively delisted from browsing), but the product page and existing owners' libraries still resolve normally. Real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite — this corrects an earlier version of this file, which wrongly excluded Planescape: Torment entirely.",
       "eax_versions": [
         "1.0"
@@ -74,6 +80,7 @@
       "steam_appid": null,
       "gog_id": 1207658890,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "This is the classic build (base game plus all three official expansions), sold by GOG as a standalone product distinct from 'Neverwinter Nights: Enhanced Edition'. GOG's own catalog search doesn't surface it (it's effectively delisted from browsing), but the product page and existing owners' libraries still resolve normally. Real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite — this corrects an earlier version of this file, which wrongly excluded Neverwinter Nights (2002) entirely.",
       "eax_versions": [
         "1.0",
@@ -86,6 +93,7 @@
       "steam_appid": 6910,
       "gog_id": 1207658995,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Deus Ex defaults to the Galaxy audio driver, which DSOAL can't add reverb to (open upstream bug: kcat/dsoal#79). If EAX sounds silent, try the community 'ALAudio for Deus Ex' mod instead — a separate, native-OpenAL audio path for this Unreal Engine 1 title, set via AudioDevice=ALAudio.ALAudioSubsystem in DeusEx.ini.",
       "eax_versions": [
         "1.0"
@@ -96,6 +104,7 @@
       "steam_appid": 211600,
       "gog_id": 1207658997,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Thief Gold runs on the Dark Engine. Pairing this with TFix (built on the NewDark engine patch) is worth considering for broader compatibility fixes alongside EAX.",
       "eax_versions": [
         "1.0"
@@ -106,6 +115,7 @@
       "steam_appid": 211740,
       "gog_id": 1207659001,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Thief II: The Metal Age runs on the Dark Engine. Pairing this with T2Fix (built on the NewDark engine patch) is worth considering for broader compatibility fixes alongside EAX.",
       "eax_versions": [
         "1.0",
@@ -117,6 +127,7 @@
       "steam_appid": 238210,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "System Shock 2 ships pre-patched with NewDark, which has its own OpenAL Soft 'Hardware Acceleration' option in the in-game Audio menu — a separate native path from this script's DSOAL install. Worth trying if EAX doesn't sound right. The System Shock 2 Community Patch (SCP) is also worth pairing, though it's a general bugfix/polish patch, not an audio-specific one. Note: System Shock 2's GOG listing is the 25th Anniversary Remaster, a different build, so it's deliberately left unmapped here rather than pointed at the wrong game.",
       "eax_versions": [
         "1.0"
@@ -127,6 +138,7 @@
       "steam_appid": 21090,
       "gog_id": 1423058413,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "If EAX audio drops out during large firefights, try this script's 'Expand Audio Limits' Advanced Compatibility Tweak (256 simultaneous sources, 48kHz) — that's exactly what it's for. A separate, older report (kcat/dsoal#67) described DSOAL failing to load under Wine for one user, but that's not universal — if EAX already works, you likely don't need any advanced tweaks. Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "2.0",
@@ -141,6 +153,7 @@
       "eax_impossible": [
         "steam"
       ],
+      "dsound_compatible": true,
       "tip": "Half-Life's Steam release had A3D and EAX removed from the game code entirely in the January 2013 update, and the 2023 25th Anniversary Update didn't restore them. This isn't a DSOAL problem — the game simply no longer makes those calls, so this script's install has nothing to translate on the current Steam build. For genuine EAX/A3D-style reverb and HRTF, look into MetaAudio instead (github.com/LAGonauta/MetaAudio, requires MetaHookSv). If you still have the original pre-2013 CD/retail release installed outside Steam, that copy's EAX calls are intact — point this script at that install folder via a manual Wine prefix (it isn't in this library scanner, since it has no Steam/GOG entry to detect) and DSOAL should work normally there.",
       "eax_versions": [
         "1.0"
@@ -151,6 +164,7 @@
       "steam_appid": 12100,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Delisted from Steam's storefront (Rockstar replaced it with 2021's separate 'Definitive Edition' remaster, a different engine without DirectSound3D EAX) — but this AppID is still valid for detecting/installing on an existing owned copy. If EAX doesn't engage, this script's Advanced Compatibility Tweaks (COM Registry Injection) may help, as it does for Grand Theft Auto: San Andreas on the same RenderWare-derived engine — not independently confirmed for this title specifically.",
       "eax_versions": [
         "1.0",
@@ -162,6 +176,7 @@
       "steam_appid": 12110,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Delisted from Steam's storefront (Rockstar replaced it with 2021's separate 'Definitive Edition' remaster, a different engine without DirectSound3D EAX) — but this AppID is still valid for detecting/installing on an existing owned copy. Also supports A3D 2.0 via a manual edit of the settings file, per the Vogons Wiki's citation for this title. If EAX doesn't engage, this script's Advanced Compatibility Tweaks (COM Registry Injection) may help, as it does for Grand Theft Auto: San Andreas on the same RenderWare-derived engine — not independently confirmed for this title specifically.",
       "eax_versions": [
         "1.0",
@@ -173,6 +188,7 @@
       "steam_appid": 12120,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Grand Theft Auto: San Andreas needs its DirectSound CLSIDs registered directly in the Wine registry to unlock EAX. Make sure to opt into this script's Advanced Compatibility Tweaks (COM Registry Injection) during install. Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
@@ -186,6 +202,7 @@
       "steam_appid": 2600,
       "gog_id": 1207659240,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Vampire: The Masquerade - Bloodlines isn't documented (per PCGamingWiki) as having hardware EAX support — its acclaimed sound design is mostly scripted ambience, not DirectSound3D reverb zones. DSOAL may have little to no audible effect here; that's expected, not a bug. The 'List of games with EAX support' community database corroborates this: it lists a separate, earlier game, Vampire: The Masquerade – Redemption (2000), as EAX 1.0/2.0-capable, but does not list Bloodlines at all.",
       "eax_versions": []
     },
@@ -194,6 +211,7 @@
       "steam_appid": 6980,
       "gog_id": 1207659036,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Thief: Deadly Shadows runs on a modified Dark Engine build. The unofficial 'Sneaky Upgrade' patch (works with both the Steam and GOG releases) fixes a well-documented multi-core CPU issue and other modern-system quirks — worth pairing alongside EAX, similar to TFix/T2Fix for the earlier Thief games. Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak. EAX isn't on by default: in-game, go to Options, scroll to the bottom, and enable 'Audio Hardware Mixing', 'EAX ADVANCED HD', and 'EAX Multiple Environments' (per Creative's own setup guide for the game).",
       "eax_versions": [
         "3.0",
@@ -205,6 +223,7 @@
       "steam_appid": 12150,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
@@ -217,6 +236,7 @@
       "steam_appid": 6030,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": false,
       "tip": "This title's own EAX support is implemented via a bundled OpenAL library rather than DirectSound3D — how that interacts with DSOAL hasn't been independently verified here. Per the same source, EAX support was only added in patch 1.03, so make sure the install is patched to at least that version.",
       "eax_versions": [
         "1.0",
@@ -229,6 +249,7 @@
       "steam_appid": 6020,
       "gog_id": 1428935726,
       "eax_impossible": [],
+      "dsound_compatible": false,
       "tip": "This title's own EAX support is implemented via a bundled OpenAL library rather than DirectSound3D — how that interacts with DSOAL hasn't been independently verified here. Full EAX 4.0 ('Multi-Environment'/'Environment Panning') historically required a separate official patch beyond the base install, per Creative's own writeup — likely already included in the current Steam/GOG build, but worth checking the patch/build version if EAX seems limited to a single reverb zone.",
       "eax_versions": [
         "1.0",
@@ -242,6 +263,7 @@
       "steam_appid": 32370,
       "gog_id": 1207666283,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "1.0",
@@ -257,6 +279,7 @@
         "steam",
         "gog"
       ],
+      "dsound_compatible": true,
       "tip": "Aspyr's 2015 patch removed EAX/A3D environmental audio from the default Steam and GOG builds (confirmed via PCGamingWiki's talk page and Steam Community reports on app/208580) — installing DSOAL is a functional no-op on the current default build. There is a real fix, unlike Half-Life: on Steam, right-click the game -> Properties -> Betas, and select the 'legacypc' branch to revert to the pre-Aspyr build with EAX intact, then run this script against that install.",
       "eax_versions": [
         "1.0",
@@ -269,6 +292,7 @@
       "steam_appid": 6000,
       "gog_id": 1421405135,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "2.0",
@@ -280,6 +304,7 @@
       "steam_appid": 13570,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
@@ -292,6 +317,7 @@
       "steam_appid": 15300,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
@@ -303,6 +329,7 @@
       "steam_appid": 13240,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "The base install only has basic EAX 1.0/A3D support built into its levels. Full EAX 2.0 reverb/occlusion for the original Deathmatch and Capture the Flag maps needs Creative's separate official 'EAX Library Patch' (three files: uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip), historically mirrored at patches-scrolls.com — verify the mirror is still live and the files intact before installing. If you don't own this on Steam, OldUnreal (oldunreal.com) now distributes a free full-game installer with Epic's permission. Their patches add a selectable OpenAL-based 'ALAudio' renderer with its own reverb/EFX presets — this is a separate, modern reimplementation of environmental audio, not the original EAX calls, and picking it bypasses DirectSound3D entirely (nothing for this script's DSOAL to intercept). Select the original DirectSound3D-based audio renderer instead if you want this script's classic EAX restoration to apply.",
       "eax_versions": [
         "1.0",
@@ -314,6 +341,7 @@
       "steam_appid": 13230,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": false,
       "tip": "This title's own EAX support is implemented via a bundled OpenAL library rather than DirectSound3D — how that interacts with DSOAL hasn't been independently verified here. If EAX seems inactive, check the in-game Audio settings: Audio Mode should be 'H/W 3D + EAX', with Low Sound Detail, System Driver, and Reverse Stereo all unchecked (per Creative's own setup notes for this game). If you don't own this on Steam, OldUnreal (oldunreal.com) now distributes a free full-game installer with Epic's permission. Their patches also add a selectable OpenAL-based 'ALAudio' renderer with its own reverb/EFX presets — a separate, modern reimplementation of environmental audio, not the original EAX calls; picking it bypasses DirectSound3D entirely (nothing for this script's DSOAL to intercept). Flathub's launcher for this game is a separate, actively-changing package, not necessarily the same build.",
       "eax_versions": [
         "3.0",
@@ -325,6 +353,7 @@
       "steam_appid": 3970,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": false,
       "tip": "This is the original 2006 Human Head Studios game, not the unrelated 2017 Arkane reboot (a different Steam AppID, 480490). Delisted from Steam's storefront in 2009 after a rights dispute, so it can't be newly purchased there anymore — but this AppID is still valid for detecting/installing on an existing owned copy. This title's own EAX support is implemented via a bundled OpenAL library rather than DirectSound3D — how that interacts with DSOAL hasn't been independently verified here.",
       "eax_versions": [
         "4.0",
@@ -336,6 +365,7 @@
       "steam_appid": 9050,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": false,
       "tip": "GOG's current 'DOOM 3' listing was renamed from 'DOOM 3: BFG Edition' rather than being a separate classic release — a different build with its own (SDL/OpenAL-based) audio path, not the original DirectSound3D-era version this script targets. Deliberately left unmapped here rather than pointed at the wrong build; the Steam AppID above is the original classic release. This title's own EAX support is implemented via a bundled OpenAL library rather than DirectSound3D — how that interacts with DSOAL hasn't been independently verified here. Per the same source, EAX support was only added in patch 1.3, so make sure the install is patched to at least that version.",
       "eax_versions": [
         "4.0"
@@ -346,6 +376,7 @@
       "steam_appid": 39530,
       "gog_id": 1207658715,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "1.0",
@@ -358,6 +389,7 @@
       "steam_appid": 41050,
       "gog_id": 1207658876,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "2.0"
@@ -368,6 +400,7 @@
       "steam_appid": 41060,
       "gog_id": 1207658877,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "2.0"
@@ -378,6 +411,7 @@
       "steam_appid": 242940,
       "gog_id": 1207659012,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "1.0"
@@ -388,6 +422,7 @@
       "steam_appid": 40990,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
@@ -400,6 +435,7 @@
       "steam_appid": 13250,
       "gog_id": 1207658679,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Delisted from Steam's storefront (Epic pulled the original Unreal-series titles from sale), so it can't be newly purchased there anymore — but this AppID is still valid for detecting/installing on an existing owned copy. The GOG release is the actively available option for new purchases. OldUnreal (oldunreal.com) also now distributes a free full-game installer with Epic's permission. Their v227 patch adds a selectable OpenAL-based 'ALAudio' renderer offering its own reverb/EFX presets — per OldUnreal's own manual, this is explicitly 'not the old original model, but some replacement for it', not a restoration of the original EAX calls, and picking it bypasses DirectSound3D entirely (nothing for this script's DSOAL to intercept). v227 still offers the original DirectSound3D-based renderer as a selectable alternative if you want this script's classic EAX restoration to apply. Unreal (1998) was the first game to ever implement EAX support. If hardware 3D audio doesn't seem to engage, check Unreal.ini for UseSpatial=True, UseReverb=True, and Use3dHardware=True under the audio section — these gate whether the engine attempts hardware-accelerated 3D audio at all (documented in an Aureal A3D context, but the flags are generic to the engine's audio subsystem, not vendor-specific).",
       "eax_versions": [
         "1.0"
@@ -410,6 +446,7 @@
       "steam_appid": 13200,
       "gog_id": 1207658677,
       "eax_impossible": [],
+      "dsound_compatible": false,
       "tip": "This title's own EAX support is implemented via a bundled OpenAL library rather than DirectSound3D — how that interacts with DSOAL hasn't been independently verified here.",
       "eax_versions": [
         "1.0",
@@ -422,6 +459,7 @@
       "steam_appid": 13560,
       "gog_id": 1207659034,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
@@ -434,6 +472,7 @@
       "steam_appid": 19830,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
@@ -446,6 +485,7 @@
       "steam_appid": 2229890,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "This Steam AppID is the 2024 re-release bundled into Command & Conquer: The Ultimate Collection, not a standalone classic-era listing — worth knowing if you're expecting the original 2002 retail install layout.",
       "eax_versions": [
         "1.0",
@@ -457,6 +497,7 @@
       "steam_appid": 1058020,
       "gog_id": 1668107107,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
@@ -470,6 +511,7 @@
       "steam_appid": 223470,
       "gog_id": 1207658755,
       "eax_impossible": [],
+      "dsound_compatible": false,
       "tip": "This title's own EAX support is implemented via a bundled OpenAL library rather than DirectSound3D — how that interacts with DSOAL hasn't been independently verified here.",
       "eax_versions": [
         "1.0",
@@ -482,6 +524,7 @@
       "steam_appid": 12130,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Not sold on Steam in several regions (Germany, Austria, Australia, New Zealand, Japan, Russia, Singapore, per its store listing) due to content restrictions — this AppID still detects/installs correctly for owners elsewhere.",
       "eax_versions": [
         "3.0"
@@ -492,6 +535,7 @@
       "steam_appid": 225020,
       "gog_id": 1207659089,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
@@ -507,6 +551,7 @@
       "eax_impossible": [
         "steam"
       ],
+      "dsound_compatible": true,
       "tip": "Like the base game, Opposing Force had EAX removed from the Steam build in the January 2013 update — this isn't a DSOAL problem, the game simply no longer makes those calls on the current Steam build. If you still have the original pre-2013 retail/CD release installed outside Steam, that copy's EAX calls are intact and DSOAL should work normally there.",
       "eax_versions": [
         "1.0"
@@ -519,6 +564,7 @@
       "eax_impossible": [
         "steam"
       ],
+      "dsound_compatible": true,
       "tip": "Like the base game, Blue Shift had EAX removed from the Steam build in the January 2013 update — this isn't a DSOAL problem, the game simply no longer makes those calls on the current Steam build. If you still have the original pre-2013 retail/CD release installed outside Steam, that copy's EAX calls are intact and DSOAL should work normally there.",
       "eax_versions": [
         "1.0"
@@ -529,6 +575,7 @@
       "steam_appid": null,
       "gog_id": 1207658891,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Not sold on Steam — only available on GOG, as 'Icewind Dale 2 Complete'. Unlike Baldur's Gate, Baldur's Gate II, Icewind Dale, Planescape: Torment, and Neverwinter Nights (all rewritten by Beamdog as OpenAL-native 'Enhanced Editions' with EAX support gone, which is why none of those appear in this database), Icewind Dale II never got that treatment and is still the original DirectSound3D-EAX-era Infinity Engine build.",
       "eax_versions": [
         "1.0"
@@ -539,6 +586,7 @@
       "steam_appid": null,
       "gog_id": 1207659162,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Steam only sells 2025's 'Enhanced Edition' rewrite (a different, OpenAL-native build) — GOG's 'Neverwinter Nights 2 Complete' is still the original 2006 Obsidian/Electron Engine build with DirectSound3D EAX intact, which is why only a gog_id is set here. For 5.1 surround, set Speaker Type=4 in nwn2.ini.",
       "eax_versions": [
         "1.0",
@@ -551,6 +599,7 @@
       "steam_appid": null,
       "gog_id": 1207659126,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Not currently sold on Steam — only available on GOG, as the 'War Chest' edition bundling the base game with the Spearhead and Breakthrough expansions.",
       "eax_versions": [
         "1.0",
@@ -562,6 +611,7 @@
       "steam_appid": 4760,
       "gog_id": 1343806495,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "EAX is set via the in-game Options > Sound menu, not on by default — per the Vogons Wiki's own citation for this title.",
       "eax_versions": [
         "2.0",
@@ -573,6 +623,7 @@
       "steam_appid": null,
       "gog_id": 1207658712,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Not currently sold on Steam (delisted in favor of the 2023 'Definitive Edition' remaster, a different engine without DirectSound3D EAX) — GOG's 'Stronghold HD' is the original 2001 Firefly Studios build with EAX support intact.",
       "eax_versions": [
         "1.0"
@@ -583,6 +634,7 @@
       "steam_appid": 20900,
       "gog_id": 1207658924,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Only EAX 4.0 is supported. The game's own readme.rtf ('Known Issues' section) and CD Projekt's forums document EAX/Creative X-Fi Alchemy caveats worth checking if audio isn't right.",
       "eax_versions": [
         "4.0"
@@ -593,6 +645,7 @@
       "steam_appid": 210950,
       "gog_id": 1207660013,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "2.0"
@@ -603,6 +656,7 @@
       "steam_appid": 6060,
       "gog_id": 1421404701,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Uses EAX Unified (eax.dll version 4.0.1.0) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
@@ -616,6 +670,7 @@
       "steam_appid": null,
       "gog_id": 1207659023,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Not sold on Steam — Ubisoft never released the original 2007 game there (its first Steam appearance was Assassin's Creed II). Only available via GOG's 'Director's Cut' edition. Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
@@ -629,6 +684,7 @@
       "steam_appid": 3810,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Steam sells this as 'BloodRayne (Legacy)' to distinguish it from the 2021 'Terminal Cut' remaster — install the Legacy build if EAX support matters, since Terminal Cut's audio engine hasn't been verified here.",
       "eax_versions": [
         "3.0"
@@ -639,6 +695,7 @@
       "steam_appid": 1938090,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Full EAX 2.0/3.0 support needs patch 1.3, per the Vogons Wiki's citation for this title — worth checking the installed build/patch version if audio seems limited to basic EAX 1.0.",
       "eax_versions": [
         "1.0",
@@ -651,6 +708,7 @@
       "steam_appid": 2616460,
       "gog_id": 1207658959,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "1.0"
@@ -661,6 +719,7 @@
       "steam_appid": 39200,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "1.0",
@@ -674,6 +733,7 @@
       "steam_appid": 703320,
       "gog_id": 1576810170,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "3.0"
@@ -684,6 +744,7 @@
       "steam_appid": 8080,
       "gog_id": 1721096025,
       "eax_impossible": [],
+      "dsound_compatible": false,
       "tip": "This title's own EAX support is implemented via a bundled OpenAL library rather than DirectSound3D — how that interacts with DSOAL hasn't been independently verified here.",
       "eax_versions": [
         "2.0",
@@ -697,6 +758,7 @@
       "steam_appid": 17460,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": false,
       "tip": "This is the original 2007 game, distinct from the 2021 'Legendary Edition' remaster — its own EAX support is implemented via a bundled OpenAL library rather than DirectSound3D, so how that interacts with DSOAL hasn't been independently verified here.",
       "eax_versions": [
         "3.0",
@@ -709,6 +771,7 @@
       "steam_appid": 225640,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Steam sells this as 'Sacred 2 Gold' (base game plus the Ice & Blood expansion) to distinguish it from a newer remaster — GOG only carries the remaster, so no gog_id is set here.",
       "eax_versions": [
         "5.0"
@@ -719,6 +782,7 @@
       "steam_appid": null,
       "gog_id": 1207660343,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Not sold on Steam (only the unrelated 2006 episodic sequel 'SiN Episodes: Emergence' is) — the original 1998 Ritual Entertainment game is only available via GOG, as 'SiN Gold'.",
       "eax_versions": [
         "1.0"
@@ -729,6 +793,7 @@
       "steam_appid": null,
       "gog_id": 1228964594,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Not sold on Steam — only available via GOG, as the 'Gold Edition'.",
       "eax_versions": [
         "3.0"
@@ -739,6 +804,7 @@
       "steam_appid": null,
       "gog_id": 1409964317,
       "eax_impossible": [],
+      "dsound_compatible": false,
       "tip": "Not sold on Steam — only available via GOG, as 'SWAT 4: Gold Edition'. This title's own EAX support is implemented via a bundled OpenAL library rather than DirectSound3D — how that interacts with DSOAL hasn't been independently verified here.",
       "eax_versions": [
         "1.0",
@@ -751,6 +817,7 @@
       "steam_appid": 475150,
       "gog_id": 1196955511,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Both stores now sell only this 2016 Anniversary Edition — no separate classic 2006 listing remains to compare against, and whether its audio path changed from the original hasn't been independently verified here.",
       "eax_versions": [
         "1.0",
@@ -764,6 +831,7 @@
       "steam_appid": 3730,
       "gog_id": 1207665883,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Both stores label this 'Classic 2000' to distinguish it from 2010's Aliens vs. Predator, an unrelated later game by a different developer.",
       "eax_versions": [
         "1.0"
@@ -774,6 +842,7 @@
       "steam_appid": 2204130,
       "gog_id": 1207658936,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "EAX support was added in the version 2.0 patch, per the game's own readme.txt — make sure the installed build is patched. Both stores sell this as the 'Planetary Pack', bundling the Alien Crossfire expansion.",
       "eax_versions": [
         "1.0"
@@ -784,6 +853,7 @@
       "steam_appid": 7670,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": false,
       "tip": "This is the original 2007 game, distinct from 2016's 'BioShock Remastered' — GOG only sells the Remastered version, so no gog_id is set here. Its own EAX support is implemented via a bundled OpenAL library rather than DirectSound3D — how that interacts with DSOAL hasn't been independently verified here.",
       "eax_versions": [
         "4.0",
@@ -795,6 +865,7 @@
       "steam_appid": null,
       "gog_id": 1207658746,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Not sold on Steam — only the 2023 '20th Anniversary Edition' remaster is, which hasn't been verified for EAX support and isn't what this entry targets. GOG still sells the original 2003 release. Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak, per the game's own readme.txt Sound compatibility section.",
       "eax_versions": [
         "1.0",
@@ -807,6 +878,7 @@
       "steam_appid": 15190,
       "gog_id": 1993805983,
       "eax_impossible": [],
+      "dsound_compatible": false,
       "tip": "This title's own EAX support is implemented via a bundled OpenAL library rather than DirectSound3D — how that interacts with DSOAL hasn't been independently verified here.",
       "eax_versions": [
         "2.0",
@@ -819,6 +891,7 @@
       "steam_appid": 2630,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "1.0",
@@ -831,6 +904,7 @@
       "steam_appid": 3900,
       "gog_id": 1760534591,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "GOG sells this as 'The Complete Edition' (base game plus the Warlords and Beyond the Sword expansions).",
       "eax_versions": [
         "2.0",
@@ -843,6 +917,7 @@
       "steam_appid": null,
       "gog_id": 1207659191,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Not sold on Steam — only available via GOG. Enable the 'Enable 3D Hardware' audio option in-game; the game logs whether EAX/A3D activated to Undying.log, useful for confirming it's working, per the Vogons Wiki's citation for this title.",
       "eax_versions": [
         "1.0"
@@ -853,6 +928,7 @@
       "steam_appid": 228200,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Not sold on GOG. A 'Definitive Edition' remaster is announced but not yet released — this classic 2006 build is still the only Steam listing, worth rechecking this entry once that ships.",
       "eax_versions": [
         "2.0",
@@ -865,6 +941,7 @@
       "steam_appid": 10,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "2.0"
@@ -875,6 +952,7 @@
       "steam_appid": 17300,
       "gog_id": 1809223221,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Not all sounds get reverb even when EAX is working — dialogue plays dry by design, per the Vogons Wiki's citation for this title, so don't mistake that for a broken install. Distinct from Crysis Warhead and the 2021 'Crysis Remastered' — both stores still sell this original build separately.",
       "eax_versions": []
     },
@@ -883,6 +961,7 @@
       "steam_appid": 242980,
       "gog_id": 1207659168,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": []
     },
@@ -891,6 +970,7 @@
       "steam_appid": 30,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Distinct from 'Day of Defeat: Source', which runs on the Source engine rather than GoldSrc and isn't covered by this entry.",
       "eax_versions": [
         "2.0"
@@ -901,6 +981,7 @@
       "steam_appid": 273590,
       "gog_id": 1207658657,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "2.0"
@@ -911,6 +992,7 @@
       "steam_appid": 39190,
       "gog_id": 1142020247,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "GOG sells this as the 'Dungeon Siege Collection' (base game plus both expansions).",
       "eax_versions": [
         "1.0"
@@ -921,6 +1003,7 @@
       "steam_appid": 38420,
       "gog_id": 1440163405,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "1.0",
@@ -932,6 +1015,7 @@
       "steam_appid": null,
       "gog_id": 3,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "GOG relisted this game at some point — this is the older \"Classic\" product ID some existing owners' libraries still show, distinct from this file's other 'Fallout Tactics: Brotherhood of Steel' entry (gog_id 1440163405). Same game, same EAX support.",
       "eax_versions": [
         "1.0",
@@ -943,6 +1027,7 @@
       "steam_appid": 13520,
       "gog_id": 1207658750,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "EAX is set via the in-game audio settings, not on by default — per the Vogons Wiki's citation for this title.",
       "eax_versions": [
         "2.0"
@@ -953,6 +1038,7 @@
       "steam_appid": 19900,
       "gog_id": 1207659042,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Uses EAX Unified (eax.dll version 3.0.6.2) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak. GOG sells this as 'Far Cry 2: Fortune's Edition' (bundling bonus content).",
       "eax_versions": [
         "1.0",
@@ -965,6 +1051,7 @@
       "steam_appid": 39150,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "This is the original 2013 PC port, distinct from 2019's 'FINAL FANTASY VIII - REMASTERED' — GOG only sells the Remastered version, so no gog_id is set here. Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
@@ -976,6 +1063,7 @@
       "steam_appid": 8880,
       "gog_id": 1445250806,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "1.0",
@@ -987,6 +1075,7 @@
       "steam_appid": 2590,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "4.0"
@@ -997,6 +1086,7 @@
       "steam_appid": 39630,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "1.0",
@@ -1008,6 +1098,7 @@
       "steam_appid": 1700,
       "gog_id": 1207658680,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
@@ -1019,6 +1110,7 @@
       "steam_appid": 6870,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "3.0",
@@ -1030,6 +1122,7 @@
       "steam_appid": 15390,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "4.0",
@@ -1041,6 +1134,7 @@
       "steam_appid": 3020,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
@@ -1053,6 +1147,7 @@
       "steam_appid": null,
       "gog_id": 1207658894,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "3.0"
@@ -1063,6 +1158,7 @@
       "steam_appid": 46420,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Store page fully removed (redirects to Steam's homepage, not itself) — this AppID is SteamDB's confirmed historical record for this game, but hasn't been checked against a real local install. Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
@@ -1075,6 +1171,7 @@
       "steam_appid": 46430,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Store page fully removed (redirects to Steam's homepage, not itself) — this AppID is SteamDB's confirmed historical record for this game, but hasn't been checked against a real local install. Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
@@ -1087,6 +1184,7 @@
       "steam_appid": 6820,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Store page fully removed (redirects to Steam's homepage, not itself) — this AppID is SteamDB's confirmed historical record for this game, but hasn't been checked against a real local install.",
       "eax_versions": [
         "3.0"
@@ -1097,6 +1195,7 @@
       "steam_appid": 4720,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "2.0",
@@ -1109,6 +1208,7 @@
       "steam_appid": null,
       "gog_id": 1485600994,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "1.0"
@@ -1119,6 +1219,7 @@
       "steam_appid": 6300,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "3.0",
@@ -1130,6 +1231,7 @@
       "steam_appid": 1347780,
       "gog_id": 1756362098,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
@@ -1142,6 +1244,7 @@
       "steam_appid": 8890,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "1.0",
@@ -1153,6 +1256,7 @@
       "steam_appid": null,
       "gog_id": 5,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "1.0"
@@ -1163,6 +1267,7 @@
       "steam_appid": 4520,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "3.0",
@@ -1174,6 +1279,7 @@
       "steam_appid": 4530,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "5.0"
@@ -1184,6 +1290,7 @@
       "steam_appid": 6200,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "3.0"
@@ -1194,6 +1301,7 @@
       "steam_appid": null,
       "gog_id": 1207658650,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "1.0",
@@ -1205,6 +1313,7 @@
       "steam_appid": 65540,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "2.0"
@@ -1215,6 +1324,7 @@
       "steam_appid": 39510,
       "gog_id": 1207658718,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "2.0"
@@ -1225,6 +1335,7 @@
       "steam_appid": null,
       "gog_id": 1207659233,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "5.0"
@@ -1235,6 +1346,7 @@
       "steam_appid": 6900,
       "gog_id": 1207658996,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
@@ -1246,6 +1358,7 @@
       "steam_appid": 6850,
       "gog_id": 1207659002,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
@@ -1258,6 +1371,7 @@
       "steam_appid": 247430,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
@@ -1270,6 +1384,7 @@
       "steam_appid": 6860,
       "gog_id": 1942346586,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "2.0",
@@ -1282,6 +1397,7 @@
       "steam_appid": null,
       "gog_id": 1207663873,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "2.0",
@@ -1293,6 +1409,7 @@
       "steam_appid": 7060,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Store page fully removed (redirects to Steam's homepage, not itself) — this AppID is SteamDB's confirmed historical record for this game, but hasn't been checked against a real local install. Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
@@ -1306,6 +1423,7 @@
       "steam_appid": 1250,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "3.0"
@@ -1316,6 +1434,7 @@
       "steam_appid": null,
       "gog_id": 7,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "2.0"
@@ -1326,6 +1445,7 @@
       "steam_appid": 13600,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
@@ -1338,6 +1458,7 @@
       "steam_appid": 13500,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
@@ -1350,6 +1471,7 @@
       "steam_appid": 13530,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
@@ -1362,6 +1484,7 @@
       "steam_appid": null,
       "gog_id": 1207659235,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "1.0"
@@ -1372,6 +1495,7 @@
       "steam_appid": 20530,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
@@ -1383,6 +1507,7 @@
       "steam_appid": null,
       "gog_id": 1449581489,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "1.0"
@@ -1393,6 +1518,7 @@
       "steam_appid": null,
       "gog_id": 1534123252,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "GOG only — Steam sells only the 2019 RE Engine remake (a different, unrelated game with no DirectSound3D EAX support), not the classic 1998 build this entry covers.",
       "eax_versions": [
         "1.0"
@@ -1403,6 +1529,7 @@
       "steam_appid": 4500,
       "gog_id": 1207660573,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak. The Vogons Wiki specifically warns not to pair it with Creative's ALchemy wrapper.",
       "eax_versions": [
         "1.0",
@@ -1415,6 +1542,7 @@
       "steam_appid": 20510,
       "gog_id": 1207660603,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Distinct from 'S.T.A.L.K.E.R.: Clear Sky - Enhanced Edition', a separate Steam/GOG listing not covered by this entry. Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak. The Vogons Wiki specifically warns not to pair it with Creative's ALchemy wrapper.",
       "eax_versions": [
         "1.0",
@@ -1427,6 +1555,7 @@
       "steam_appid": 41700,
       "gog_id": 1207660583,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak. The Vogons Wiki specifically warns not to pair it with Creative's ALchemy wrapper.",
       "eax_versions": [
         "1.0",
@@ -1439,6 +1568,7 @@
       "steam_appid": null,
       "gog_id": 1207658659,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "1.0"
@@ -1449,6 +1579,7 @@
       "steam_appid": 3920,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "1.0",
@@ -1461,6 +1592,7 @@
       "steam_appid": 7800,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "4.0"
@@ -1471,6 +1603,7 @@
       "steam_appid": null,
       "gog_id": 1584652180,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "1.0"
@@ -1481,6 +1614,7 @@
       "steam_appid": 10130,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "4.0",
@@ -1492,6 +1626,7 @@
       "steam_appid": 4550,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Store page fully removed (redirects to Steam's homepage, not itself) — this AppID is SteamDB's confirmed historical record for this game, but hasn't been checked against a real local install. Superseded for new purchases by Titan Quest Anniversary Edition, already a separate entry in this file.",
       "eax_versions": [
         "1.0",
@@ -1505,6 +1640,7 @@
       "steam_appid": 13540,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
@@ -1517,6 +1653,7 @@
       "steam_appid": 15120,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
@@ -1530,6 +1667,7 @@
       "steam_appid": 13580,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
@@ -1543,6 +1681,7 @@
       "steam_appid": null,
       "gog_id": 1655444396,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "2.0",
@@ -1554,6 +1693,7 @@
       "steam_appid": null,
       "gog_id": 1207658815,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "1.0",
@@ -1566,6 +1706,7 @@
       "steam_appid": null,
       "gog_id": 1207658816,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "2.0",
@@ -1578,6 +1719,7 @@
       "steam_appid": null,
       "gog_id": 1207658831,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "1.0",
@@ -1589,6 +1731,7 @@
       "steam_appid": null,
       "gog_id": 1394528466,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "3.0"
@@ -1599,6 +1742,7 @@
       "steam_appid": 2800,
       "gog_id": 1441032629,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "1.0"
@@ -1609,6 +1753,7 @@
       "steam_appid": 7770,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "1.0"
@@ -1619,6 +1764,7 @@
       "steam_appid": null,
       "gog_id": 1731734113,
       "eax_impossible": [],
+      "dsound_compatible": false,
       "tip": "Routes EAX through OpenAL natively rather than DirectSound3D, per the Vogons Wiki's citation for this title. This script's dsound.dll swap targets DirectSound3D specifically, so it may not be the relevant install path here — unconfirmed whether this game's own OpenAL implementation is OpenAL Soft (which would pick up this script's alsoft.ini) or something else. Worth testing before assuming either way.",
       "eax_versions": [
         "2.0",
@@ -1632,6 +1778,7 @@
       "steam_appid": 19800,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": false,
       "tip": "Routes EAX through OpenAL natively rather than DirectSound3D, per the Vogons Wiki's citation for this title. This script's dsound.dll swap targets DirectSound3D specifically, so it may not be the relevant install path here — unconfirmed whether this game's own OpenAL implementation is OpenAL Soft (which would pick up this script's alsoft.ini) or something else. Worth testing before assuming either way.",
       "eax_versions": [
         "2.0",
@@ -1644,6 +1791,7 @@
       "steam_appid": null,
       "gog_id": 1207658928,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "The Vogons Wiki confirms a \"Creative EAX\" toggle exists in this game's Audio Settings, but doesn't document which EAX version(s) it supports.",
       "eax_versions": []
     },
@@ -1652,6 +1800,7 @@
       "steam_appid": 9460,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": false,
       "tip": "Routes EAX through OpenAL natively rather than DirectSound3D, per the Vogons Wiki's citation for this title. This script's dsound.dll swap targets DirectSound3D specifically, so it may not be the relevant install path here — unconfirmed whether this game's own OpenAL implementation is OpenAL Soft (which would pick up this script's alsoft.ini) or something else. Worth testing before assuming either way.",
       "eax_versions": [
         "3.0",
@@ -1664,6 +1813,7 @@
       "steam_appid": null,
       "gog_id": 1595659240,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Own the 2020 remake ('Mafia: Definitive Edition') instead? That's a different, from-scratch Hangar 13 game with no relation to this classic 2002 build's EAX support — deliberately not mapped here. Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
@@ -1676,6 +1826,7 @@
       "steam_appid": 336610,
       "gog_id": 1207658853,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "This is the \"Outcast 1.1\" listing — a 2014 official update to the classic 1999 build, same engine. Distinct from 2017's 'Outcast: Second Contact' and 2024's 'Outcast: A New Beginning' remakes, neither of which is mapped here.",
       "eax_versions": [
         "1.0"
@@ -1686,6 +1837,7 @@
       "steam_appid": 3200,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Store page fully removed (redirects to Steam's homepage, not itself) — but this AppID is confirmed from a real owned/installed copy in a user's own Steam library, not just a storefront record. Same original 2004 engine as the base game, not a remaster.",
       "eax_versions": [
         "1.0",
@@ -1698,6 +1850,7 @@
       "steam_appid": null,
       "gog_id": 1207659027,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "1.0"
@@ -1708,6 +1861,7 @@
       "steam_appid": null,
       "gog_id": 1207658666,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "1.0",
@@ -1720,6 +1874,7 @@
       "steam_appid": 3830,
       "gog_id": 1207658807,
       "eax_impossible": [],
+      "dsound_compatible": false,
       "tip": "Routes EAX through OpenAL natively rather than DirectSound3D, per the Vogons Wiki's citation for this title. This script's dsound.dll swap targets DirectSound3D specifically, so it may not be the relevant install path here — unconfirmed whether this game's own OpenAL implementation is OpenAL Soft (which would pick up this script's alsoft.ini) or something else. Worth testing before assuming either way.",
       "eax_versions": [
         "2.0",
@@ -1732,6 +1887,7 @@
       "steam_appid": 2210,
       "gog_id": 1836059896,
       "eax_impossible": [],
+      "dsound_compatible": false,
       "tip": "Routes EAX through OpenAL natively rather than DirectSound3D, per the Vogons Wiki's citation for this title. This script's dsound.dll swap targets DirectSound3D specifically, so it may not be the relevant install path here — unconfirmed whether this game's own OpenAL implementation is OpenAL Soft (which would pick up this script's alsoft.ini) or something else. Worth testing before assuming either way.",
       "eax_versions": [
         "4.0",
@@ -1743,6 +1899,7 @@
       "steam_appid": null,
       "gog_id": 1207659032,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "3.0"
@@ -1753,6 +1910,7 @@
       "steam_appid": null,
       "gog_id": 2086050016,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "1.0"
@@ -1763,6 +1921,7 @@
       "steam_appid": null,
       "gog_id": 1478736295,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Also supports A3D, per the Vogons Wiki's citation for this title.",
       "eax_versions": [
         "1.0",
@@ -1774,6 +1933,7 @@
       "steam_appid": null,
       "gog_id": 2125201406,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Also supports A3D, per the Vogons Wiki's citation for this title.",
       "eax_versions": [
         "1.0",
@@ -1786,6 +1946,7 @@
       "steam_appid": null,
       "gog_id": 1268478205,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "The Vogons Wiki confirms an \"Enable EAX\" option exists in this game's configuration utility, but doesn't document which EAX version(s) it supports.",
       "eax_versions": []
     },
@@ -1794,6 +1955,7 @@
       "steam_appid": null,
       "gog_id": 1578481504,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "The Vogons Wiki confirms an \"Enable EAX\" option exists in this game's configuration utility, but doesn't document which EAX version(s) it supports.",
       "eax_versions": []
     },
@@ -1802,6 +1964,7 @@
       "steam_appid": 13510,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": false,
       "tip": "Routes EAX through OpenAL natively rather than DirectSound3D, per the Vogons Wiki's citation for this title. This script's dsound.dll swap targets DirectSound3D specifically, so it may not be the relevant install path here — unconfirmed whether this game's own OpenAL implementation is OpenAL Soft (which would pick up this script's alsoft.ini) or something else. Worth testing before assuming either way.",
       "eax_versions": [
         "1.0",
@@ -1815,6 +1978,7 @@
       "steam_appid": null,
       "gog_id": 1207659093,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "1.0"
@@ -1825,6 +1989,7 @@
       "steam_appid": 205710,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "1.0"
@@ -1835,6 +2000,7 @@
       "steam_appid": 201230,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "1.0",
@@ -1848,6 +2014,7 @@
       "steam_appid": null,
       "gog_id": 1207658651,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "1.0"
@@ -1858,6 +2025,7 @@
       "steam_appid": 204340,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": null,
       "eax_versions": [
         "2.0",
@@ -1869,6 +2037,7 @@
       "steam_appid": 13210,
       "gog_id": null,
       "eax_impossible": [],
+      "dsound_compatible": true,
       "tip": "Delisted from Steam's storefront (December 2022, alongside the rest of the Unreal series) — but this AppID is still valid for detecting/installing on an existing owned copy.",
       "eax_versions": [
         "4.0",
