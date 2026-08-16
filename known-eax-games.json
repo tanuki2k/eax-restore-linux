@@ -363,10 +363,10 @@
     {
       "name": "DOOM 3",
       "steam_appid": 9050,
-      "gog_id": 1733124578,
+      "gog_id": 1492054092,
       "eax_impossible": [],
       "dsound_compatible": false,
-      "notes": "GOG's 'DOOM 3' listing is a pack containing both the original classic 2004 release (with Resurrection of Evil) and the 2012 remaster, DOOM 3: BFG Edition — verified against GOG's own catalog API. The install folder will contain both builds; pick the classic build's subfolder/exe, not BFG Edition's (a different, SDL/OpenAL-based audio path unrelated to this game's original DirectSound3D-era EAX support). EAX support was only added in patch 1.3, so make sure the classic build is patched to at least that version.",
+      "notes": "GOG sells this bundled with the 2012 remaster, DOOM 3: BFG Edition, but Heroic installs them as two separate library entries with their own install paths — this gog_id matches only the classic build's own entry (confirmed against a real Heroic installed.json: appName 1492054092, install path ending '.../DOOM 3'). BFG Edition installs separately (appName 1135892318, path ending '.../DOOM 3 BFG') and isn't mapped here — it's a different, SDL/OpenAL-based audio path unrelated to this game's original DirectSound3D-era EAX support. EAX support was only added in patch 1.3, so make sure the classic build is patched to at least that version.",
       "eax_versions": [
         "4.0"
       ]
