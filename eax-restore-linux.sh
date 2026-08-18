@@ -444,6 +444,22 @@ pick_directory_gui() {
     fi
 }
 
+show_hidden_folder_tip_popup() {
+    # Usage: show_hidden_folder_tip_popup
+    # A printed terminal tip is easy to miss once the GUI file picker steals
+    # focus, so this shows it as a native popup instead, right before
+    # pick_directory_gui opens the picker — the popup's own dismiss click
+    # also serves as the "ready to open the picker" acknowledgement a
+    # terminal prompt would otherwise need. Only called when have_gui_picker
+    # is set, so zenity or kdialog is already known to be present.
+    local msg="Steam's default install path (~/.local/share/Steam/...) is inside a hidden folder.\n\nPress Ctrl+H in the file picker if you don't see it."
+    if command -v zenity &>/dev/null; then
+        zenity --info --title="Tip" --text="$msg" --width=350 2>/dev/null
+    elif command -v kdialog &>/dev/null; then
+        kdialog --msgbox "$msg" --title "Tip" 2>/dev/null
+    fi
+}
+
 get_game_directory() {
     GAME_DIR=""
     GAME_NAME=""
@@ -457,21 +473,12 @@ get_game_directory() {
         return
     fi
 
+    local can_scan=0
     if [ "$SCRIPT_ACTION" == "i" ] && ensure_known_games_json; then
         echo -e "${WHITE}Note: the known-EAX-games list is a small, hand-verified, work-in-progress"
         echo -e "set — it doesn't cover every EAX game. A game you own may still support EAX"
         echo -e "even if it's not (yet) listed.${NC}"
-        echo -e "\n${YELLOW}Scan your Steam/Heroic library for known EAX games instead of browsing manually? (Y/n): ${NC}"
-        echo -e -n "> "
-        local DO_SCAN
-        read -r DO_SCAN
-        if [[ ! "$DO_SCAN" =~ $NO_RE ]]; then
-            if scan_game_libraries; then
-                echo -e "\n${GREEN}Using: $GAME_DIR${NC}"
-                record_recent_game "$GAME_DIR"
-                return
-            fi
-        fi
+        can_scan=1
     elif [ "$SCRIPT_ACTION" == "i" ]; then
         echo -e "${YELLOW}Library scanning needs the known-EAX-games database, which isn't available this${NC}"
         echo -e "${WHITE}run — skipping straight to manual entry.${NC}"
@@ -489,34 +496,66 @@ get_game_directory() {
     fi
 
     while [ -z "$GAME_DIR" ]; do
+        # Build the menu fresh each pass: which options apply can shrink
+        # (e.g. a scan that just came up empty stays offered — the user
+        # might pick something else next time), and skipping straight to
+        # the one available action avoids asking a one-choice "choice".
+        local -a menu_actions=()
+        if [ "$can_scan" -eq 1 ]; then
+            echo -e "${WHITE} $((${#menu_actions[@]} + 1))) Scan your Steam/Heroic library for known EAX games${NC}"
+            menu_actions+=("scan")
+        fi
         if [ "$have_gui_picker" -eq 1 ]; then
-            echo -e "${YELLOW}Browse for the folder using a graphical file picker? (Y/n): ${NC}"
-            echo -e -n "> "
-            read -r USE_GUI_PICKER
-            if [[ ! "$USE_GUI_PICKER" =~ $NO_RE ]]; then
-                echo -e "\n${WHITE} Tip: Steam's default path (~/.local/share/Steam/...) is inside a hidden folder —"
-                echo -e " press Ctrl+H in the file picker if you don't see it.${NC}"
-                echo -e "\n${YELLOW}Press Enter to open the file picker: ${NC}"
+            echo -e "${WHITE} $((${#menu_actions[@]} + 1))) Browse for the folder using a graphical file picker${NC}"
+            menu_actions+=("gui")
+        fi
+        echo -e "${WHITE} $((${#menu_actions[@]} + 1))) Enter the path manually${NC}"
+        menu_actions+=("manual")
+
+        local action
+        if [ "${#menu_actions[@]}" -eq 1 ]; then
+            action="${menu_actions[0]}"
+        else
+            local choice
+            while true; do
+                echo -e "\n${YELLOW}How would you like to locate the game? [1-${#menu_actions[@]}]: ${NC}"
                 echo -e -n "> "
-                local _ack
-                read -r _ack
+                read -r choice
+                if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#menu_actions[@]}" ]; then
+                    break
+                fi
+                echo -e "\n${YELLOW}${BOLD}Invalid selection. Please enter a number 1-${#menu_actions[@]}.${NC}"
+            done
+            action="${menu_actions[$((choice - 1))]}"
+        fi
+
+        case "$action" in
+            scan)
+                if scan_game_libraries; then
+                    echo -e "\n${GREEN}Using: $GAME_DIR${NC}"
+                    record_recent_game "$GAME_DIR"
+                    return
+                fi
+                continue
+                ;;
+            gui)
+                show_hidden_folder_tip_popup
                 GAME_DIR=$(pick_directory_gui)
                 GAME_DIR="${GAME_DIR%/}"
                 if [ -z "$GAME_DIR" ]; then
-                    echo -e "\n${YELLOW}No folder selected.${NC}\n"
+                    echo -e "\n${YELLOW}No folder selected.${NC}"
                     continue
                 fi
-            fi
-        fi
+                ;;
+            manual)
+                echo -e "\n${YELLOW}Enter the full path to the game's .exe folder:${NC}"
+                echo -e -n "> "
+                read -r GAME_DIR
 
-        if [ -z "$GAME_DIR" ]; then
-            echo -e "\n${YELLOW}Enter the full path to the game's .exe folder:${NC}"
-            echo -e -n "> "
-            read -r GAME_DIR
-
-            GAME_DIR="${GAME_DIR//\'/}"; GAME_DIR="${GAME_DIR//\"/}"; GAME_DIR="${GAME_DIR%/}"
-            GAME_DIR="${GAME_DIR/#\~/$HOME}"
-        fi
+                GAME_DIR="${GAME_DIR//\'/}"; GAME_DIR="${GAME_DIR//\"/}"; GAME_DIR="${GAME_DIR%/}"
+                GAME_DIR="${GAME_DIR/#\~/$HOME}"
+                ;;
+        esac
 
         if [ -d "$GAME_DIR" ]; then
             if [ "$SCRIPT_ACTION" == "i" ]; then
@@ -917,22 +956,42 @@ scan_game_libraries() {
     store_label="Steam"
     [ "${stores[$idx]}" == "gog" ] && store_label="GOG"
 
-    local eax_versions eax_id_field="steam_appid"
-    [ "${stores[$idx]}" == "gog" ] && eax_id_field="gog_id"
+    local eax_id_field="steam_appid" listing_field="steam_listing"
+    [ "${stores[$idx]}" == "gog" ] && eax_id_field="gog_id" && listing_field="gog_listing"
+
+    local eax_versions edition api listing
     eax_versions=$(jq -r --arg id "${ids[$idx]}" --arg field "$eax_id_field" \
         '.games[] | select((.[$field] // "") | tostring == $id) | .eax_versions // [] | join(", ")' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
     [ -z "$eax_versions" ] && eax_versions="Unknown"
+    edition=$(jq -r --arg id "${ids[$idx]}" --arg field "$eax_id_field" \
+        '.games[] | select((.[$field] // "") | tostring == $id) | .edition // empty' \
+        "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+    api=$(jq -r --arg id "${ids[$idx]}" --arg field "$eax_id_field" \
+        '.games[] | select((.[$field] // "") | tostring == $id) | .api // "directsound3d"' \
+        "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+    listing=$(jq -r --arg id "${ids[$idx]}" --arg id_field "$eax_id_field" --arg listing_field "$listing_field" \
+        '.games[] | select((.[$id_field] // "") | tostring == $id) | .[$listing_field] // empty' \
+        "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
 
     echo ""
     echo -e "${GREEN}${BOLD}--- GAME DETAILS ---${NC}"
     print_line
     echo -e " -> ${YELLOW}Name${NC}:      ${BOLD}${names[$idx]}${NC}"
+    [ -n "$edition" ] && echo -e " -> ${YELLOW}Edition${NC}:   ${WHITE}${edition^}${NC}"
     echo -e " -> ${YELLOW}Platform${NC}:  ${GREEN}$store_label${NC}"
+    if [ "$listing" == "delisted" ]; then
+        echo -e " -> ${YELLOW}Availability${NC}: ${WHITE}Delisted from $store_label ${DIM}(existing owners keep access)${NC}"
+    fi
     echo -e " -> ${YELLOW}Location${NC}:  ${DIM}${paths[$idx]}${NC}"
     echo -e " -> ${YELLOW}EAX Support${NC}: ${GREEN}${BOLD}$eax_versions${NC}"
+    if [ "$api" == "openal" ]; then
+        echo -e " -> ${YELLOW}Audio API${NC}: ${WHITE}OpenAL (native)${NC}"
+    else
+        echo -e " -> ${YELLOW}Audio API${NC}: ${WHITE}DirectSound3D ${DIM}(needs DSOAL)${NC}"
+    fi
 
-    show_known_game_notes "${ids[$idx]}" "${stores[$idx]}"
+    show_known_game_notes "${ids[$idx]}" "${stores[$idx]}" 1
     SCANNED_NOTES_SHOWN=1
 
     print_line
@@ -953,14 +1012,15 @@ scan_game_libraries() {
 # own API — a wrong/stale ID would misdirect users to the wrong game.
 
 show_known_game_notes() {
-    # Usage: show_known_game_notes <id> <steam|gog>
+    # Usage: show_known_game_notes <id> <steam|gog> [skip_availability]
     # Best-effort, install-only heads-up for well-known EAX titles, sourced
     # from known-eax-games.json. Notes are stored as a single unwrapped line
     # for easy editing, then word-wrapped to the script's usual prose width
-    # at display time. Also surfaces steam_listing/gog_listing when the
-    # specific store this game was found on is "delisted" — purely
-    # informational (existing owners keep access; it just can't be newly
-    # purchased there anymore), never a blocker.
+    # at display time. steam_listing/gog_listing ("delisted") is shown as an
+    # Availability line here too, EXCEPT when the caller already surfaced it
+    # in a GAME DETAILS block (scan_game_libraries passes skip_availability=1
+    # to avoid printing it twice) — the manual-entry call sites below have no
+    # such block, so they still need this fallback.
     [ "$SCRIPT_ACTION" == "i" ] || return
     [ -z "$1" ] && return
     ensure_known_games_json || return
@@ -972,11 +1032,13 @@ show_known_game_notes() {
 
     local notes listing
     notes=$(jq -r --arg id "$1" --arg field "$id_field" '.games[] | select((.[$field] // "") | tostring == $id) | .notes // empty' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
-    listing=$(jq -r --arg id "$1" --arg id_field "$id_field" --arg listing_field "$listing_field" '.games[] | select((.[$id_field] // "") | tostring == $id) | .[$listing_field] // empty' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
 
-    if [ "$listing" == "delisted" ]; then
-        echo -e "\n${WHITE}  Note: this game is currently delisted from ${store_label}'s storefront —"
-        echo -e "  existing owners keep access, but it can't be newly purchased there anymore.${NC}"
+    if [ -z "$3" ]; then
+        listing=$(jq -r --arg id "$1" --arg id_field "$id_field" --arg listing_field "$listing_field" '.games[] | select((.[$id_field] // "") | tostring == $id) | .[$listing_field] // empty' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+        if [ "$listing" == "delisted" ]; then
+            echo -e "\n${WHITE}  Note: this game is currently delisted from ${store_label}'s storefront —"
+            echo -e "  existing owners keep access, but it can't be newly purchased there anymore.${NC}"
+        fi
     fi
 
     [ -z "$notes" ] && return
@@ -1129,7 +1191,7 @@ confirm_continue_if_openal_native() {
         fi
         echo -e "${WHITE}It can instead deploy kcat's OpenAL Soft directly as OpenAL32.dll (with the same"
         echo -e "alsoft.ini tuning).${NC}"
-        echo -e "\n${YELLOW}Continue with the direct OpenAL Soft deployment instead? (Y/n): ${NC}"
+        echo -e "\n${YELLOW}Continue with OpenAL Soft deployment? (Y/n): ${NC}"
         echo -e -n "> "
         read -r CONTINUE_OPENAL_NATIVE
         if [[ "$CONTINUE_OPENAL_NATIVE" =~ $NO_RE ]]; then

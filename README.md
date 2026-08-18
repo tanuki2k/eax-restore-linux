@@ -91,7 +91,7 @@ This list is deliberately small and hand-verified — it will only ever cover a 
 - `name` — display name.
 - `steam_appid` / `gog_id` — nullable per-store IDs used for library-scan matching.
 - `steam_listing` / `gog_listing` — `"available"` or `"delisted"` (pulled from sale, existing owners keep access), `null` when that entry has no ID for that store. Availability only, not discount pricing.
-- `edition` — `"original"` or `"remaster"`, plain descriptive metadata.
+- `edition` — `"original"` or `"remaster"`, shown as a field in the scanner's game details display.
 - `api` — `"directsound3d"` or `"openal"`. Only meaningful when `eax_status` is `"supported"`; drives the Audio API Detection step's remediation choice.
 - `eax_status` — `"supported"`, `"removed_by_patch"` (a software update stripped EAX/A3D from the current default build; an alternate build/branch may restore it), or `"not_implemented"` (a remaster/rewrite that never had EAX at all — no build-level fix exists).
 - `eax_restore_hint` — short text pointing at a known fix for a `"removed_by_patch"` entry (e.g. a Steam beta branch name), `null` if none exists.
@@ -109,6 +109,7 @@ For repeat runs or scripting, these can be set to skip prompts:
 | `EAX_RESTORE_DSOAL_COMMUNITY_V14=1` | Pre-selects the PCGamingWiki Community engine (self-hosted mirror) and jumps straight to install. |
 | `EAX_RESTORE_DSOAL_OFFICIAL=1` | Pre-selects kcat's official DSOAL + OpenAL Soft engine and jumps straight to install. |
 | `EAX_RESTORE_VCRUN_ONLY=1` | Skips the full install/uninstall flow and just (re)installs the MS VC++ 2022 Redistributable into a game's prefix. |
+| `EAX_RESTORE_SKIP_CACHE_CHECK=1` | Skips the repository cache check (the GitHub update check/download for DSOAL and OpenAL Soft), trusting whatever's already in the local cache. |
 | `EAX_RESTORE_KNOWN_GAMES_FILE=/path/to/known-eax-games.json` | Uses a local file instead of fetching `known-eax-games.json` — mainly for testing edits to the database itself before they're pushed. |
 
 Only set one `EAX_RESTORE_DSOAL_*` variable at a time.

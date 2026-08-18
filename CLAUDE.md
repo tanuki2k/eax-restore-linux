@@ -17,8 +17,8 @@ drives library scanning and install-time compatibility notes for specific titles
 the known games database" section for the JSON schema.
 
 There are no other source files, no build step, and no package manifest — the repo is
-the script, the JSON database, and their docs (`README.md`, `CONTRIBUTING.md`,
-`.github/`).
+the script, the JSON database, and their docs and metadata (`README.md`,
+`CONTRIBUTING.md`, `LICENSE`, `.github/`, the `.desktop` launcher).
 
 ## Commands
 
@@ -39,22 +39,28 @@ the script, the JSON database, and their docs (`README.md`, `CONTRIBUTING.md`,
 ## Architecture
 
 The script is a linear, banner-delimited sequence of sections (search for
-`# ====...====` dividers), roughly:
+`# ====...====` dividers — there are more than a dozen banners in practice; grouped
+below by role, roughly in execution order):
 
 1. **Header comment block** (top of file) — features list and the authoritative list
    of `EAX_RESTORE_*` env vars. Keep this in sync with `README.md`'s Environment
-   Variables table whenever a var is added/changed — every existing var is documented
-   in both places.
-2. **Constants & globals** — `BASE_SHARE` and friends (`DSOAL_SHARE`, `OPENAL_SHARE`,
+   Variables table whenever a var is added/changed — every existing var should be
+   documented in both places.
+2. **Guards** — refuses root / Steam Gaming Mode, run first, before most constants are
+   even needed.
+3. **Constants & globals** — `BASE_SHARE` and friends (`DSOAL_SHARE`, `OPENAL_SHARE`,
    `KNOWN_GAMES_*`), pinned download URLs/SHA256s, colour vars, `print_divider`/
    `print_line`/`is_truthy` helpers.
-3. **Function definitions** — detection (Steam AppID, Heroic prefix, architecture),
+4. **Function definitions** — detection (Steam AppID, Heroic prefix, architecture),
    verification (`verify_checksum`, `verify_or_confirm`, `get_asset_digest`), the
-   `update_local_cache` repository-cache step, install/uninstall logic, and the
+   `update_local_cache` repository-cache step, install/uninstall logic, the standalone
+   VC++ runtime installer (`verify_vcrun_files`, `install_vcrun_dependencies`,
+   `uninstall_vcrun_dependencies`, etc. — independently triggerable via
+   `EAX_RESTORE_VCRUN_ONLY`, with its own `"VCRUN"` manifest entries), and the
    `known-eax-games.json` helpers (`ensure_known_games_json`, `scan_game_libraries`,
    `show_known_game_notes`, `confirm_continue_if_eax_impossible`, etc.).
-4. **Top-level script flow** — safety guards (refuses root / Steam Gaming Mode),
-   pre-flight dependency check, `ACTION: INSTALL` / `ACTION: UNINSTALL` phases.
+5. **Top-level script flow** — pre-flight dependency check, `ACTION: INSTALL` /
+   `ACTION: UNINSTALL` phases.
 
 **Caching model:** `update_local_cache()` (the `--- REPOSITORY CACHE CHECK ---` step)
 owns fetch/verify/cache for the DSOAL and OpenAL Soft binary bundles: check remote
@@ -70,13 +76,17 @@ unlike the large versioned binary bundles; a fetch failure falls back to the las
 cached copy.
 
 **Manifest-driven uninstall:** installs write a manifest of every file/registry key
-they touched; uninstall only ever removes what's in that manifest and restores the
-timestamped backups made at install time — it never guesses by filename.
+they touched; when a manifest exists, uninstall only ever removes what's in it and
+restores the timestamped backups made at install time. If no manifest is found (e.g.
+an install predating this mechanism), uninstall falls back to a best-effort scan for
+known filenames (`dsound.dll`, `dsoal-aldrv.dll`, `OpenAL32.dll`, etc.) — a last resort
+that's less precise than the manifest path, so avoid removing/renaming the manifest
+mechanism itself.
 
 ## Text/output style conventions
 
 All user-facing output goes through `echo -e` with the colour vars defined near the
-top of the script (`GREEN`, `YELLOW`, `CYAN`, `WHITE`, `BOLD`, reset via `NC`) —
+top of the script (`GREEN`, `YELLOW`, `CYAN`, `WHITE`, `BOLD`, `DIM`, reset via `NC`) —
 there's no other formatting mechanism (no `tput`, no external color library). Match
 existing usage rather than introducing new colors or styles:
 
@@ -85,6 +95,8 @@ existing usage rather than introducing new colors or styles:
 - `YELLOW` (often with `BOLD`) — warnings and recoverable errors; plain `YELLOW` for
   softer advisory notes.
 - `WHITE` — general prose/body text and prompts.
+- `DIM` — secondary/de-emphasized text, e.g. supplementary detail alongside a primary
+  status line.
 - Section banners use `print_divider` + a `${GREEN}${BOLD}--- LABEL ---${NC}` line +
   `print_line`, matching the existing `--- REPOSITORY CACHE CHECK ---`,
   `--- PHASE 1: CONFIGURATION ---`, etc.

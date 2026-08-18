@@ -42,7 +42,7 @@
       "api": "directsound3d",
       "eax_status": "supported",
       "eax_restore_hint": null,
-      "notes": "This is the classic pre-2012 build, sold by GOG as a standalone product distinct from 'Baldur's Gate: Enhanced Edition' — GOG's own catalog search doesn't surface it (it's effectively delisted from browsing), but the product page and existing owners' libraries still resolve normally. Real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite.",
+      "notes": "This is the classic pre-2012 build, sold by GOG as a standalone product distinct from 'Baldur's Gate: Enhanced Edition'. Not surfaced by GOG's catalog search, but the product page and existing owners' libraries resolve normally. Real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite.",
       "eax_versions": [
         "1.0"
       ]
@@ -57,7 +57,7 @@
       "api": "directsound3d",
       "eax_status": "supported",
       "eax_restore_hint": null,
-      "notes": "This is the classic pre-2013 build, sold by GOG as a standalone product distinct from 'Baldur's Gate II: Enhanced Edition' — GOG's own catalog search doesn't surface it (it's effectively delisted from browsing), but the product page and existing owners' libraries still resolve normally. Real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite. Its EAX 2.0 environmental occlusion historically needed VxD drivers under Windows 9x, per the Vogons Wiki's citation for this title — likely moot under Wine.",
+      "notes": "This is the classic pre-2013 build, sold by GOG as a standalone product distinct from 'Baldur's Gate II: Enhanced Edition'. Not surfaced by GOG's catalog search, but the product page and existing owners' libraries resolve normally. Real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite. Its EAX 2.0 environmental occlusion historically needed VxD drivers under Windows 9x, per the Vogons Wiki's citation for this title — likely moot under Wine.",
       "eax_versions": [
         "1.0",
         "2.0"
@@ -73,7 +73,7 @@
       "api": "directsound3d",
       "eax_status": "supported",
       "eax_restore_hint": null,
-      "notes": "This is the classic pre-2014 build, sold by GOG as a standalone product distinct from 'Icewind Dale: Enhanced Edition'. GOG's own catalog search doesn't surface it (it's effectively delisted from browsing), but the product page and existing owners' libraries still resolve normally. Real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite — this corrects an earlier version of this file, which wrongly concluded no non-Enhanced-Edition build of Icewind Dale was purchasable anywhere.",
+      "notes": "This is the classic pre-2014 build, sold by GOG as a standalone product distinct from 'Icewind Dale: Enhanced Edition'. Not surfaced by GOG's catalog search, but the product page and existing owners' libraries resolve normally. Real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite.",
       "eax_versions": [
         "1.0"
       ]
@@ -88,7 +88,7 @@
       "api": "directsound3d",
       "eax_status": "supported",
       "eax_restore_hint": null,
-      "notes": "This is the classic pre-2017 build, sold by GOG as a standalone product distinct from 'Planescape: Torment: Enhanced Edition'. GOG's own catalog search doesn't surface it (it's effectively delisted from browsing), but the product page and existing owners' libraries still resolve normally. Real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite — this corrects an earlier version of this file, which wrongly excluded Planescape: Torment entirely.",
+      "notes": "This is the classic pre-2017 build, sold by GOG as a standalone product distinct from 'Planescape: Torment: Enhanced Edition'. Not surfaced by GOG's catalog search, but the product page and existing owners' libraries resolve normally. Real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite.",
       "eax_versions": [
         "1.0"
       ]
@@ -103,7 +103,7 @@
       "api": "directsound3d",
       "eax_status": "supported",
       "eax_restore_hint": null,
-      "notes": "This is the classic build (base game plus all three official expansions), sold by GOG as a standalone product distinct from 'Neverwinter Nights: Enhanced Edition'. GOG's own catalog search doesn't surface it (it's effectively delisted from browsing), but the product page and existing owners' libraries still resolve normally. Real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite — this corrects an earlier version of this file, which wrongly excluded Neverwinter Nights (2002) entirely.",
+      "notes": "This is the classic build (base game plus all three official expansions), sold by GOG as a standalone product distinct from 'Neverwinter Nights: Enhanced Edition'. Not surfaced by GOG's catalog search, but the product page and existing owners' libraries resolve normally. Real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite.",
       "eax_versions": [
         "1.0",
         "2.0",
@@ -197,8 +197,8 @@
       "edition": "original",
       "api": "directsound3d",
       "eax_status": "removed_by_patch",
-      "eax_restore_hint": null,
-      "notes": "Half-Life's Steam release had A3D and EAX removed from the game code entirely in the January 2013 update, and the 2023 25th Anniversary Update didn't restore them. This isn't a DSOAL problem — the game simply no longer makes those calls, so this script's install has nothing to translate on the current Steam build. For genuine EAX/A3D-style reverb and HRTF, look into MetaAudio instead (github.com/LAGonauta/MetaAudio, requires MetaHookSv). If you still have the original pre-2013 CD/retail release installed outside Steam, that copy's EAX calls are intact — point this script at that install folder via a manual Wine prefix (it isn't in this library scanner, since it has no Steam/GOG entry to detect) and DSOAL should work normally there.",
+      "eax_restore_hint": "If you still have the original pre-2013 CD/retail release installed outside Steam, its EAX calls are intact — point this script at that install folder via a manual Wine prefix (not in this library scanner, since it has no Steam/GOG entry) and DSOAL should work normally there. For genuine EAX/A3D-style reverb and HRTF on the current Steam build instead, look into MetaAudio (github.com/LAGonauta/MetaAudio, requires MetaHookSv).",
+      "notes": null,
       "eax_versions": [
         "1.0"
       ]
@@ -213,7 +213,7 @@
       "api": "directsound3d",
       "eax_status": "supported",
       "eax_restore_hint": null,
-      "notes": "Delisted from Steam's storefront (Rockstar replaced it with 2021's separate 'Definitive Edition' remaster, a different engine without DirectSound3D EAX) — but this AppID is still valid for detecting/installing on an existing owned copy. If EAX doesn't engage, this script's Advanced Compatibility Tweaks (COM Registry Injection) may help, as it does for Grand Theft Auto: San Andreas on the same RenderWare-derived engine — not independently confirmed for this title specifically.",
+      "notes": "Replaced on Steam by 2021's separate 'Definitive Edition' remaster (a different engine without DirectSound3D EAX). If EAX doesn't engage, this script's Advanced Compatibility Tweaks (COM Registry Injection) may help, as it does for Grand Theft Auto: San Andreas on the same RenderWare-derived engine — not independently confirmed for this title specifically.",
       "eax_versions": [
         "1.0",
         "3.0"
@@ -229,7 +229,7 @@
       "api": "directsound3d",
       "eax_status": "supported",
       "eax_restore_hint": null,
-      "notes": "Delisted from Steam's storefront (Rockstar replaced it with 2021's separate 'Definitive Edition' remaster, a different engine without DirectSound3D EAX) — but this AppID is still valid for detecting/installing on an existing owned copy. Also supports A3D 2.0 via a manual edit of the settings file, per the Vogons Wiki's citation for this title. If EAX doesn't engage, this script's Advanced Compatibility Tweaks (COM Registry Injection) may help, as it does for Grand Theft Auto: San Andreas on the same RenderWare-derived engine — not independently confirmed for this title specifically.",
+      "notes": "Replaced on Steam by 2021's separate 'Definitive Edition' remaster (a different engine without DirectSound3D EAX). Also supports A3D 2.0 via a manual edit of the settings file, per the Vogons Wiki's citation for this title. If EAX doesn't engage, this script's Advanced Compatibility Tweaks (COM Registry Injection) may help, as it does for Grand Theft Auto: San Andreas on the same RenderWare-derived engine — not independently confirmed for this title specifically.",
       "eax_versions": [
         "1.0",
         "3.0"
@@ -361,7 +361,7 @@
       "api": "directsound3d",
       "eax_status": "removed_by_patch",
       "eax_restore_hint": "Steam beta branch 'legacypc' reverts to the pre-patch build with EAX intact (right-click the game -> Properties -> Betas).",
-      "notes": "Aspyr's 2015 patch removed EAX/A3D environmental audio from the default Steam and GOG builds (confirmed via PCGamingWiki's talk page and Steam Community reports on app/208580) — installing DSOAL is a functional no-op on the current default build. There is a real fix, unlike Half-Life: on Steam, right-click the game -> Properties -> Betas, and select the 'legacypc' branch to revert to the pre-Aspyr build with EAX intact, then run this script against that install.",
+      "notes": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -459,7 +459,7 @@
       "api": "openal",
       "eax_status": "supported",
       "eax_restore_hint": null,
-      "notes": "This is the original 2006 Human Head Studios game, not the unrelated 2017 Arkane reboot (a different Steam AppID, 480490). Delisted from Steam's storefront in 2009 after a rights dispute, so it can't be newly purchased there anymore — but this AppID is still valid for detecting/installing on an existing owned copy.",
+      "notes": "This is the original 2006 Human Head Studios game, not the unrelated 2017 Arkane reboot (a different Steam AppID, 480490). Delisted from Steam in 2009 after a rights dispute.",
       "eax_versions": [
         "4.0",
         "5.0"
@@ -569,7 +569,7 @@
       "api": "directsound3d",
       "eax_status": "supported",
       "eax_restore_hint": null,
-      "notes": "Delisted from Steam's storefront (Epic pulled the original Unreal-series titles from sale), so it can't be newly purchased there anymore — but this AppID is still valid for detecting/installing on an existing owned copy. The GOG release is the actively available option for new purchases. OldUnreal (oldunreal.com) also now distributes a free full-game installer with Epic's permission. Their v227 patch adds a selectable OpenAL-based 'ALAudio' renderer offering its own reverb/EFX presets — per OldUnreal's own manual, this is explicitly 'not the old original model, but some replacement for it', not a restoration of the original EAX calls, and picking it bypasses DirectSound3D entirely (nothing for this script's DSOAL to intercept). v227 still offers the original DirectSound3D-based renderer as a selectable alternative if you want this script's classic EAX restoration to apply. Unreal (1998) was the first game to ever implement EAX support. If hardware 3D audio doesn't seem to engage, check Unreal.ini for UseSpatial=True, UseReverb=True, and Use3dHardware=True under the audio section — these gate whether the engine attempts hardware-accelerated 3D audio at all (documented in an Aureal A3D context, but the flags are generic to the engine's audio subsystem, not vendor-specific).",
+      "notes": "Epic pulled the original Unreal-series titles from Steam's sale (GOG remains the actively available option for new purchases). OldUnreal (oldunreal.com) also distributes a free full-game installer with Epic's permission; its v227 patch adds a selectable OpenAL-based 'ALAudio' renderer with its own reverb/EFX presets — per OldUnreal's own manual this is 'not the old original model, but some replacement for it', not a restoration of the original EAX calls, and picking it bypasses DirectSound3D entirely (nothing for DSOAL to intercept). Select v227's original DirectSound3D-based renderer instead for this script's classic EAX restoration to apply. If hardware 3D audio doesn't seem to engage, check Unreal.ini for UseSpatial=True, UseReverb=True, and Use3dHardware=True under the audio section.",
       "eax_versions": [
         "1.0"
       ]
@@ -718,8 +718,8 @@
       "edition": "original",
       "api": "directsound3d",
       "eax_status": "removed_by_patch",
-      "eax_restore_hint": null,
-      "notes": "Like the base game, Opposing Force had EAX removed from the Steam build in the January 2013 update — this isn't a DSOAL problem, the game simply no longer makes those calls on the current Steam build. If you still have the original pre-2013 retail/CD release installed outside Steam, that copy's EAX calls are intact and DSOAL should work normally there.",
+      "eax_restore_hint": "If you still have the original pre-2013 retail/CD release installed outside Steam, its EAX calls are intact and DSOAL should work normally there.",
+      "notes": null,
       "eax_versions": [
         "1.0"
       ]
@@ -733,8 +733,8 @@
       "edition": "original",
       "api": "directsound3d",
       "eax_status": "removed_by_patch",
-      "eax_restore_hint": null,
-      "notes": "Like the base game, Blue Shift had EAX removed from the Steam build in the January 2013 update — this isn't a DSOAL problem, the game simply no longer makes those calls on the current Steam build. If you still have the original pre-2013 retail/CD release installed outside Steam, that copy's EAX calls are intact and DSOAL should work normally there.",
+      "eax_restore_hint": "If you still have the original pre-2013 retail/CD release installed outside Steam, its EAX calls are intact and DSOAL should work normally there.",
+      "notes": null,
       "eax_versions": [
         "1.0"
       ]
@@ -2699,7 +2699,7 @@
       "api": "directsound3d",
       "eax_status": "supported",
       "eax_restore_hint": null,
-      "notes": "Delisted from Steam's storefront (December 2022, alongside the rest of the Unreal series) — but this AppID is still valid for detecting/installing on an existing owned copy.",
+      "notes": "Delisted from Steam in December 2022, alongside the rest of the Unreal series.",
       "eax_versions": [
         "4.0",
         "5.0"
