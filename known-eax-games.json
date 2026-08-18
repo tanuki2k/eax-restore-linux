@@ -204,38 +204,6 @@
       ]
     },
     {
-      "name": "Grand Theft Auto III",
-      "steam_appid": 12100,
-      "gog_id": null,
-      "steam_listing": "delisted",
-      "gog_listing": null,
-      "edition": "original",
-      "api": "directsound3d",
-      "eax_status": "supported",
-      "eax_restore_hint": null,
-      "notes": "Replaced on Steam by 2021's separate 'Definitive Edition' remaster (a different engine without DirectSound3D EAX). If EAX doesn't engage, this script's Advanced Compatibility Tweaks (COM Registry Injection) may help, as it does for Grand Theft Auto: San Andreas on the same RenderWare-derived engine — not independently confirmed for this title specifically.",
-      "eax_versions": [
-        "1.0",
-        "3.0"
-      ]
-    },
-    {
-      "name": "Grand Theft Auto: Vice City",
-      "steam_appid": 12110,
-      "gog_id": null,
-      "steam_listing": "delisted",
-      "gog_listing": null,
-      "edition": "original",
-      "api": "directsound3d",
-      "eax_status": "supported",
-      "eax_restore_hint": null,
-      "notes": "Replaced on Steam by 2021's separate 'Definitive Edition' remaster (a different engine without DirectSound3D EAX). Also supports A3D 2.0 via a manual edit of the settings file, per the Vogons Wiki's citation for this title. If EAX doesn't engage, this script's Advanced Compatibility Tweaks (COM Registry Injection) may help, as it does for Grand Theft Auto: San Andreas on the same RenderWare-derived engine — not independently confirmed for this title specifically.",
-      "eax_versions": [
-        "1.0",
-        "3.0"
-      ]
-    },
-    {
       "name": "Grand Theft Auto: San Andreas",
       "steam_appid": 12120,
       "gog_id": null,
@@ -402,22 +370,6 @@
       ]
     },
     {
-      "name": "Tom Clancy's Ghost Recon",
-      "steam_appid": 15300,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
-      "api": "directsound3d",
-      "eax_status": "supported",
-      "eax_restore_hint": null,
-      "notes": "Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
-      "eax_versions": [
-        "1.0",
-        "2.0"
-      ]
-    },
-    {
       "name": "Unreal Tournament: Game of the Year Edition",
       "steam_appid": 13240,
       "gog_id": null,
@@ -450,22 +402,6 @@
       ]
     },
     {
-      "name": "Prey",
-      "steam_appid": 3970,
-      "gog_id": null,
-      "steam_listing": "delisted",
-      "gog_listing": null,
-      "edition": "original",
-      "api": "openal",
-      "eax_status": "supported",
-      "eax_restore_hint": null,
-      "notes": "This is the original 2006 Human Head Studios game, not the unrelated 2017 Arkane reboot (a different Steam AppID, 480490). Delisted from Steam in 2009 after a rights dispute.",
-      "eax_versions": [
-        "4.0",
-        "5.0"
-      ]
-    },
-    {
       "name": "DOOM 3",
       "steam_appid": 9050,
       "gog_id": 1492054092,
@@ -478,23 +414,6 @@
       "notes": "GOG sells this bundled with the 2012 remaster, DOOM 3: BFG Edition, but Heroic installs them as two separate library entries with their own install paths — this gog_id matches only the classic build's own entry (confirmed against a real Heroic installed.json: appName 1492054092, install path ending '.../DOOM 3'). BFG Edition installs separately (appName 1135892318, path ending '.../DOOM 3 BFG') and isn't mapped here — it's a different, SDL/OpenAL-based audio path unrelated to this game's original DirectSound3D-era EAX support. EAX support was only added in patch 1.3, so make sure the classic build is patched to at least that version.",
       "eax_versions": [
         "4.0"
-      ]
-    },
-    {
-      "name": "Painkiller: Black Edition",
-      "steam_appid": 39530,
-      "gog_id": 1207658715,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
-      "api": "directsound3d",
-      "eax_status": "supported",
-      "eax_restore_hint": null,
-      "notes": null,
-      "eax_versions": [
-        "1.0",
-        "2.0",
-        "3.0"
       ]
     },
     {
@@ -540,23 +459,6 @@
       "notes": null,
       "eax_versions": [
         "1.0"
-      ]
-    },
-    {
-      "name": "Mafia (2002)",
-      "steam_appid": 40990,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
-      "api": "directsound3d",
-      "eax_status": "supported",
-      "eax_restore_hint": null,
-      "notes": "Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
-      "eax_versions": [
-        "1.0",
-        "2.0",
-        "3.0"
       ]
     },
     {
@@ -609,57 +511,6 @@
       ]
     },
     {
-      "name": "Tom Clancy's Rainbow Six 3: Gold Edition",
-      "steam_appid": 19830,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
-      "api": "directsound3d",
-      "eax_status": "supported",
-      "eax_restore_hint": null,
-      "notes": "Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
-      "eax_versions": [
-        "1.0",
-        "2.0",
-        "3.0"
-      ]
-    },
-    {
-      "name": "Command & Conquer: Renegade",
-      "steam_appid": 2229890,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
-      "api": "directsound3d",
-      "eax_status": "supported",
-      "eax_restore_hint": null,
-      "notes": "This Steam AppID is the 2024 re-release bundled into Command & Conquer: The Ultimate Collection, not a standalone classic-era listing — worth knowing if you're expecting the original 2002 retail install layout.",
-      "eax_versions": [
-        "1.0",
-        "2.0"
-      ]
-    },
-    {
-      "name": "Star Wars: Battlefront (Classic, 2004)",
-      "steam_appid": 1058020,
-      "gog_id": 1668107107,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
-      "api": "directsound3d",
-      "eax_status": "supported",
-      "eax_restore_hint": null,
-      "notes": "Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
-      "eax_versions": [
-        "1.0",
-        "2.0",
-        "3.0",
-        "4.0"
-      ]
-    },
-    {
       "name": "Postal 2",
       "steam_appid": 223470,
       "gog_id": 1207658755,
@@ -673,21 +524,6 @@
       "eax_versions": [
         "1.0",
         "2.0",
-        "3.0"
-      ]
-    },
-    {
-      "name": "Manhunt",
-      "steam_appid": 12130,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
-      "api": "directsound3d",
-      "eax_status": "supported",
-      "eax_restore_hint": null,
-      "notes": "Not sold on Steam in several regions (Germany, Austria, Australia, New Zealand, Japan, Russia, Singapore, per its store listing) due to content restrictions — this AppID still detects/installs correctly for owners elsewhere.",
-      "eax_versions": [
         "3.0"
       ]
     },
@@ -788,22 +624,6 @@
       ]
     },
     {
-      "name": "Rome: Total War",
-      "steam_appid": 4760,
-      "gog_id": 1343806495,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
-      "api": "directsound3d",
-      "eax_status": "supported",
-      "eax_restore_hint": null,
-      "notes": "EAX is set via the in-game Options > Sound menu, not on by default — per the Vogons Wiki's own citation for this title.",
-      "eax_versions": [
-        "2.0",
-        "3.0"
-      ]
-    },
-    {
       "name": "Stronghold",
       "steam_appid": null,
       "gog_id": 1207658712,
@@ -868,52 +688,20 @@
     },
     {
       "name": "Assassin's Creed",
-      "steam_appid": null,
+      "steam_appid": 15100,
       "gog_id": 1207659023,
-      "steam_listing": null,
+      "steam_listing": "available",
       "gog_listing": "available",
       "edition": "original",
       "api": "directsound3d",
       "eax_status": "supported",
       "eax_restore_hint": null,
-      "notes": "Not sold on Steam — Ubisoft never released the original 2007 game there (its first Steam appearance was Assassin's Creed II). Only available via GOG's 'Director's Cut' edition. Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
+      "notes": "Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak. The PC 'Director's Cut Edition' (the version sold on both Steam and GOG) isn't a remaster — it's the original 2008 PC port of the 2007 console game, with four PC-exclusive bonus missions and DirectX 10 support added on top.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0",
         "4.0"
-      ]
-    },
-    {
-      "name": "BloodRayne",
-      "steam_appid": 3810,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
-      "api": "directsound3d",
-      "eax_status": "supported",
-      "eax_restore_hint": null,
-      "notes": "Steam sells this as 'BloodRayne (Legacy)' to distinguish it from the 2021 'Terminal Cut' remaster — install the Legacy build if EAX support matters, since Terminal Cut's audio engine hasn't been verified here.",
-      "eax_versions": [
-        "3.0"
-      ]
-    },
-    {
-      "name": "Call of Duty",
-      "steam_appid": 1938090,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
-      "api": "directsound3d",
-      "eax_status": "supported",
-      "eax_restore_hint": null,
-      "notes": "Full EAX 2.0/3.0 support needs patch 1.3, per the Vogons Wiki's citation for this title — worth checking the installed build/patch version if audio seems limited to basic EAX 1.0.",
-      "eax_versions": [
-        "1.0",
-        "2.0",
-        "3.0"
       ]
     },
     {
@@ -980,53 +768,6 @@
         "3.0",
         "4.0",
         "5.0"
-      ]
-    },
-    {
-      "name": "Mass Effect",
-      "steam_appid": 17460,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
-      "api": "openal",
-      "eax_status": "supported",
-      "eax_restore_hint": null,
-      "notes": "This is the original 2007 game, distinct from the 2021 'Legendary Edition' remaster.",
-      "eax_versions": [
-        "3.0",
-        "4.0",
-        "5.0"
-      ]
-    },
-    {
-      "name": "Sacred 2",
-      "steam_appid": 225640,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
-      "api": "directsound3d",
-      "eax_status": "supported",
-      "eax_restore_hint": null,
-      "notes": "Steam sells this as 'Sacred 2 Gold' (base game plus the Ice & Blood expansion) to distinguish it from a newer remaster — GOG only carries the remaster, so no gog_id is set here.",
-      "eax_versions": [
-        "5.0"
-      ]
-    },
-    {
-      "name": "SiN",
-      "steam_appid": null,
-      "gog_id": 1207660343,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
-      "api": "directsound3d",
-      "eax_status": "supported",
-      "eax_restore_hint": null,
-      "notes": "Not sold on Steam (only the unrelated 2006 episodic sequel 'SiN Episodes: Emergence' is) — the original 1998 Ritual Entertainment game is only available via GOG, as 'SiN Gold'.",
-      "eax_versions": [
-        "1.0"
       ]
     },
     {
@@ -1126,23 +867,6 @@
       ]
     },
     {
-      "name": "Beyond Good & Evil",
-      "steam_appid": null,
-      "gog_id": 1207658746,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
-      "api": "directsound3d",
-      "eax_status": "supported",
-      "eax_restore_hint": null,
-      "notes": "Not sold on Steam — only the 2023 '20th Anniversary Edition' remaster is, which hasn't been verified for EAX support and isn't what this entry targets. GOG still sells the original 2003 release. Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak, per the game's own readme.txt Sound compatibility section.",
-      "eax_versions": [
-        "1.0",
-        "2.0",
-        "3.0"
-      ]
-    },
-    {
       "name": "Brothers in Arms: Road to Hill 30",
       "steam_appid": 15190,
       "gog_id": 1993805983,
@@ -1153,40 +877,6 @@
       "eax_status": "supported",
       "eax_restore_hint": null,
       "notes": "",
-      "eax_versions": [
-        "2.0",
-        "3.0",
-        "4.0"
-      ]
-    },
-    {
-      "name": "Call of Duty 2",
-      "steam_appid": 2630,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
-      "api": "directsound3d",
-      "eax_status": "supported",
-      "eax_restore_hint": null,
-      "notes": null,
-      "eax_versions": [
-        "1.0",
-        "2.0",
-        "3.0"
-      ]
-    },
-    {
-      "name": "Civilization IV",
-      "steam_appid": 3900,
-      "gog_id": 1760534591,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
-      "api": "directsound3d",
-      "eax_status": "supported",
-      "eax_restore_hint": null,
-      "notes": "GOG sells this as 'The Complete Edition' (base game plus the Warlords and Beyond the Sword expansions).",
       "eax_versions": [
         "2.0",
         "3.0",
@@ -1226,34 +916,6 @@
       ]
     },
     {
-      "name": "Counter-Strike",
-      "steam_appid": 10,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
-      "api": "directsound3d",
-      "eax_status": "supported",
-      "eax_restore_hint": null,
-      "notes": null,
-      "eax_versions": [
-        "2.0"
-      ]
-    },
-    {
-      "name": "Crysis",
-      "steam_appid": 17300,
-      "gog_id": 1809223221,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
-      "api": "directsound3d",
-      "eax_status": "supported",
-      "eax_restore_hint": null,
-      "notes": "Not all sounds get reverb even when EAX is working — dialogue plays dry by design, per the Vogons Wiki's citation for this title, so don't mistake that for a broken install. Distinct from Crysis Warhead and the 2021 'Crysis Remastered' — both stores still sell this original build separately.",
-      "eax_versions": []
-    },
-    {
       "name": "Daikatana",
       "steam_appid": 242980,
       "gog_id": 1207659168,
@@ -1265,21 +927,6 @@
       "eax_restore_hint": null,
       "notes": null,
       "eax_versions": []
-    },
-    {
-      "name": "Day of Defeat",
-      "steam_appid": 30,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
-      "api": "directsound3d",
-      "eax_status": "supported",
-      "eax_restore_hint": null,
-      "notes": "Distinct from 'Day of Defeat: Source', which runs on the Source engine rather than GoldSrc and isn't covered by this entry.",
-      "eax_versions": [
-        "2.0"
-      ]
     },
     {
       "name": "Descent 3",
@@ -1340,21 +987,6 @@
       "notes": "GOG relisted this game at some point — this is the older \"Classic\" product ID some existing owners' libraries still show, distinct from this file's other 'Fallout Tactics: Brotherhood of Steel' entry (gog_id 1440163405). Same game, same EAX support.",
       "eax_versions": [
         "1.0",
-        "2.0"
-      ]
-    },
-    {
-      "name": "Far Cry",
-      "steam_appid": 13520,
-      "gog_id": 1207658750,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
-      "api": "directsound3d",
-      "eax_status": "supported",
-      "eax_restore_hint": null,
-      "notes": "EAX is set via the in-game audio settings, not on by default — per the Vogons Wiki's citation for this title.",
-      "eax_versions": [
         "2.0"
       ]
     },
@@ -2623,70 +2255,6 @@
       "notes": null,
       "eax_versions": [
         "1.0"
-      ]
-    },
-    {
-      "name": "EverQuest",
-      "steam_appid": 205710,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
-      "api": "directsound3d",
-      "eax_status": "supported",
-      "eax_restore_hint": null,
-      "notes": null,
-      "eax_versions": [
-        "1.0"
-      ]
-    },
-    {
-      "name": "EverQuest II",
-      "steam_appid": 201230,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
-      "api": "directsound3d",
-      "eax_status": "supported",
-      "eax_restore_hint": null,
-      "notes": null,
-      "eax_versions": [
-        "1.0",
-        "2.0",
-        "3.0",
-        "4.0"
-      ]
-    },
-    {
-      "name": "Sacrifice",
-      "steam_appid": null,
-      "gog_id": 1207658651,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
-      "api": "directsound3d",
-      "eax_status": "supported",
-      "eax_restore_hint": null,
-      "notes": null,
-      "eax_versions": [
-        "1.0"
-      ]
-    },
-    {
-      "name": "Serious Sam II",
-      "steam_appid": 204340,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
-      "api": "directsound3d",
-      "eax_status": "supported",
-      "eax_restore_hint": null,
-      "notes": null,
-      "eax_versions": [
-        "2.0",
-        "3.0"
       ]
     },
     {
