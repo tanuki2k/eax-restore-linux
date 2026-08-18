@@ -991,6 +991,7 @@ scan_game_libraries() {
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
 
     echo ""
+    print_divider
     echo -e "${GREEN}${BOLD}--- GAME DETAILS ---${NC}"
     print_line
     echo -e " -> ${YELLOW}Name${NC}:      ${BOLD}${names[$idx]}${NC}"
