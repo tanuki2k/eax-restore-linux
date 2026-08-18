@@ -319,7 +319,7 @@ ensure_known_games_json() {
     if [ -n "${EAX_RESTORE_KNOWN_GAMES_FILE:-}" ]; then
         if [ -s "$EAX_RESTORE_KNOWN_GAMES_FILE" ] && jq empty "$EAX_RESTORE_KNOWN_GAMES_FILE" 2>/dev/null; then
             KNOWN_GAMES_FILE="$EAX_RESTORE_KNOWN_GAMES_FILE"
-            echo -e "\n${YELLOW}EAX_RESTORE_KNOWN_GAMES_FILE is set — using $EAX_RESTORE_KNOWN_GAMES_FILE instead of fetching.${NC}" >&2
+            echo -e "\n${YELLOW}EAX_RESTORE_KNOWN_GAMES_FILE is set — using $EAX_RESTORE_KNOWN_GAMES_FILE instead of fetching.${NC}\n" >&2
         else
             echo -e "\n${YELLOW}${BOLD}Error: EAX_RESTORE_KNOWN_GAMES_FILE is set but the file is missing or not valid JSON.${NC}" >&2
             return 1
@@ -475,20 +475,16 @@ get_game_directory() {
 
     local can_scan=0
     if [ "$SCRIPT_ACTION" == "i" ] && ensure_known_games_json; then
-        echo -e "${WHITE}Note: the known-EAX-games list is a small, hand-verified, work-in-progress"
-        echo -e "set — it doesn't cover every EAX game. A game you own may still support EAX"
-        echo -e "even if it's not (yet) listed.${NC}"
         can_scan=1
     elif [ "$SCRIPT_ACTION" == "i" ]; then
         echo -e "${YELLOW}Library scanning needs the known-EAX-games database, which isn't available this${NC}"
         echo -e "${WHITE}run — skipping straight to manual entry.${NC}"
     fi
 
-    echo -e "\n${WHITE}Common game locations:${NC}"
+    echo -e "\n${WHITE}Common game locations:${NC}\n"
     echo -e "${WHITE} Linux Desktop (Steam): ~/.local/share/Steam/steamapps/common/[Game]${NC}"
     echo -e "${WHITE} Steam Deck (SD Card):  /run/media/mmcblk0p1/steamapps/common/[Game]${NC}"
-    echo -e "${WHITE} Heroic / GOG:          ~/Games/Heroic/[Game]${NC}"
-    echo -e "${WHITE} Other (retail/CD, manual Wine prefix): point this at the game's install folder${NC}\n"
+    echo -e "${WHITE} Heroic / GOG:          ~/Games/Heroic/[Game]${NC}\n"
 
     local have_gui_picker=0
     if command -v zenity &>/dev/null || command -v kdialog &>/dev/null; then
@@ -531,6 +527,16 @@ get_game_directory() {
 
         case "$action" in
             scan)
+                echo -e "\n${WHITE}Note: the known-EAX-games list is a small, hand-verified, work-in-progress"
+                echo -e "set — it doesn't cover every EAX game. A game you own may still support EAX"
+                echo -e "even if it's not (yet) listed.${NC}"
+                echo -e "\n${YELLOW}Continue with the scan? (Y/n): ${NC}"
+                echo -e -n "> "
+                local DO_SCAN_CONFIRM
+                read -r DO_SCAN_CONFIRM
+                if [[ "$DO_SCAN_CONFIRM" =~ $NO_RE ]]; then
+                    continue
+                fi
                 if scan_game_libraries; then
                     echo -e "\n${GREEN}Using: $GAME_DIR${NC}"
                     record_recent_game "$GAME_DIR"
@@ -1138,6 +1144,9 @@ confirm_continue_if_openal_native() {
     # DirectSound3D in either case. Every outcome prints a line explaining
     # what was checked and what was concluded; this step should never end
     # in total silence, which reads as broken rather than "nothing to do."
+    # A confirmed known-games match still gets a (Y/n) before continuing,
+    # same as the openal/binary-scan branches below it — it's still an
+    # auto-detected value driving what the script does next.
     # Sets OPENAL_NATIVE_MODE, which the "Audio Engine Selection" step alone
     # consumes to pick ENGINE_CHOICE=4.
     OPENAL_NATIVE_MODE=""
@@ -1204,6 +1213,13 @@ confirm_continue_if_openal_native() {
 
     if [ "$matched" -eq 1 ]; then
         echo -e "${GREEN} -> $game_name uses DirectSound3D — the standard EAX path this script already handles.${NC}"
+        echo -e "\n${YELLOW}Continue with the DSOAL/DirectSound3D install? (Y/n): ${NC}"
+        echo -e -n "> "
+        read -r CONTINUE_DS3D
+        if [[ "$CONTINUE_DS3D" =~ $NO_RE ]]; then
+            echo -e "\n${WHITE}Install cancelled.${NC}"
+            exit 0
+        fi
     elif [ "$scanned" -eq 1 ]; then
         echo -e "${YELLOW} -> Found no clear OpenAL32.dll signal — assuming standard DirectSound3D.${NC}"
     elif [ "$declined" -eq 1 ]; then
