@@ -10,8 +10,9 @@
       "edition": "remaster",
       "api": "directsound3d",
       "eax_status": "not_implemented",
+      "eax_status_notes": "The Enhanced Edition runs on a from-scratch OpenAL engine, built for its native Linux and macOS ports. It never had DirectSound3D EAX to begin with, so DSOAL has nothing to intercept here.",
       "eax_restore_hint": null,
-      "notes": "The Enhanced Edition itself runs on a from-scratch OpenAL audio engine (added for its native Linux/macOS ports), not DirectSound3D — DSOAL has nothing to intercept on this install. If you own the classic build too, it's a separate, independently detectable GOG product — see this file's 'Baldur's Gate: The Original Saga' entry (gog_id 1207658886) instead, which has real DirectSound3D EAX and isn't flagged impossible.",
+      "notes": "If you own the classic build too, it's a separate, independently detectable GOG product. See this file's 'Baldur's Gate: The Original Saga' entry (gog_id 1207658886) instead, which has real DirectSound3D EAX and isn't flagged impossible.",
       "eax_versions": [
         "1.0"
       ]
@@ -25,8 +26,9 @@
       "edition": "remaster",
       "api": "directsound3d",
       "eax_status": "not_implemented",
+      "eax_status_notes": "The Enhanced Edition runs on a from-scratch OpenAL engine, built for its native Linux and macOS ports. It never had DirectSound3D EAX to begin with, so DSOAL has nothing to intercept here.",
       "eax_restore_hint": null,
-      "notes": "The Enhanced Edition itself runs on a from-scratch OpenAL audio engine (added for its native Linux/macOS ports), not DirectSound3D — DSOAL has nothing to intercept on this install. If you own the classic build too, it's a separate, independently detectable GOG product — see this file's 'Baldur's Gate 2 Complete' entry (gog_id 1207658893) instead, which has real DirectSound3D EAX and isn't flagged impossible.",
+      "notes": "If you own the classic build too, it's a separate, independently detectable GOG product. See this file's 'Baldur's Gate 2 Complete' entry (gog_id 1207658893) instead, which has real DirectSound3D EAX and isn't flagged impossible.",
       "eax_versions": [
         "1.0",
         "2.0"
@@ -197,7 +199,8 @@
       "edition": "original",
       "api": "directsound3d",
       "eax_status": "removed_by_patch",
-      "eax_restore_hint": "If you still have the original pre-2013 CD/retail release installed outside Steam, its EAX calls are intact — point this script at that install folder via a manual Wine prefix (not in this library scanner, since it has no Steam/GOG entry) and DSOAL should work normally there. For genuine EAX/A3D-style reverb and HRTF on the current Steam build instead, look into MetaAudio (github.com/LAGonauta/MetaAudio, requires MetaHookSv).",
+      "eax_status_notes": "The original release used DirectSound3D, but a 2013 update replaced it with a newer audio engine that dropped EAX entirely.",
+      "eax_restore_hint": "If you still have the original pre-2013 CD/retail release installed outside Steam, its EAX calls are intact. Point this script at that install folder via a manual Wine prefix (not in this library scanner, since it has no Steam/GOG entry) and DSOAL should work normally there. For genuine EAX/A3D-style reverb and HRTF on the current Steam build instead, look into MetaAudio (github.com/LAGonauta/MetaAudio, requires MetaHookSv).",
       "notes": null,
       "eax_versions": [
         "1.0"
@@ -328,6 +331,7 @@
       "edition": "original",
       "api": "directsound3d",
       "eax_status": "removed_by_patch",
+      "eax_status_notes": "The original release used DirectSound3D, but a later patch replaced it with a newer audio engine that dropped EAX entirely.",
       "eax_restore_hint": "Steam beta branch 'legacypc' reverts to the pre-patch build with EAX intact (right-click the game -> Properties -> Betas).",
       "notes": null,
       "eax_versions": [
@@ -554,6 +558,7 @@
       "edition": "original",
       "api": "directsound3d",
       "eax_status": "removed_by_patch",
+      "eax_status_notes": "The original release used DirectSound3D, but a 2013 update replaced it with a newer audio engine that dropped EAX entirely.",
       "eax_restore_hint": "If you still have the original pre-2013 retail/CD release installed outside Steam, its EAX calls are intact and DSOAL should work normally there.",
       "notes": null,
       "eax_versions": [
@@ -569,6 +574,7 @@
       "edition": "original",
       "api": "directsound3d",
       "eax_status": "removed_by_patch",
+      "eax_status_notes": "The original release used DirectSound3D, but a 2013 update replaced it with a newer audio engine that dropped EAX entirely.",
       "eax_restore_hint": "If you still have the original pre-2013 retail/CD release installed outside Steam, its EAX calls are intact and DSOAL should work normally there.",
       "notes": null,
       "eax_versions": [

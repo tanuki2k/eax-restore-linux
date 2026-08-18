@@ -481,7 +481,7 @@ get_game_directory() {
         echo -e "${WHITE}run — skipping straight to manual entry.${NC}"
     fi
 
-    echo -e "\n${WHITE}Common game locations:${NC}\n"
+    echo -e "${WHITE}Common game locations:${NC}\n"
     echo -e "${WHITE} Linux Desktop (Steam): ~/.local/share/Steam/steamapps/common/[Game]${NC}"
     echo -e "${WHITE} Steam Deck (SD Card):  /run/media/mmcblk0p1/steamapps/common/[Game]${NC}"
     echo -e "${WHITE} Heroic / GOG:          ~/Games/Heroic/[Game]${NC}\n"
@@ -965,7 +965,7 @@ scan_game_libraries() {
     local eax_id_field="steam_appid" listing_field="steam_listing"
     [ "${stores[$idx]}" == "gog" ] && eax_id_field="gog_id" && listing_field="gog_listing"
 
-    local eax_versions edition api listing
+    local eax_versions edition api listing eax_status eax_status_notes eax_restore_hint
     eax_versions=$(jq -r --arg id "${ids[$idx]}" --arg field "$eax_id_field" \
         '.games[] | select((.[$field] // "") | tostring == $id) | .eax_versions // [] | join(", ")' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
@@ -979,6 +979,16 @@ scan_game_libraries() {
     listing=$(jq -r --arg id "${ids[$idx]}" --arg id_field "$eax_id_field" --arg listing_field "$listing_field" \
         '.games[] | select((.[$id_field] // "") | tostring == $id) | .[$listing_field] // empty' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+    eax_status=$(jq -r --arg id "${ids[$idx]}" --arg field "$eax_id_field" \
+        '.games[] | select((.[$field] // "") | tostring == $id) | .eax_status // "supported"' \
+        "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+    [ -z "$eax_status" ] && eax_status="supported"
+    eax_status_notes=$(jq -r --arg id "${ids[$idx]}" --arg field "$eax_id_field" \
+        '.games[] | select((.[$field] // "") | tostring == $id) | .eax_status_notes // empty' \
+        "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+    eax_restore_hint=$(jq -r --arg id "${ids[$idx]}" --arg field "$eax_id_field" \
+        '.games[] | select((.[$field] // "") | tostring == $id) | .eax_restore_hint // empty' \
+        "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
 
     echo ""
     echo -e "${GREEN}${BOLD}--- GAME DETAILS ---${NC}"
@@ -990,11 +1000,36 @@ scan_game_libraries() {
         echo -e " -> ${YELLOW}Availability${NC}: ${WHITE}Delisted from $store_label ${DIM}(existing owners keep access)${NC}"
     fi
     echo -e " -> ${YELLOW}Location${NC}:  ${DIM}${paths[$idx]}${NC}"
-    echo -e " -> ${YELLOW}EAX Support${NC}: ${GREEN}${BOLD}$eax_versions${NC}"
+    # The headline reflects whether DSOAL/OpenAL Soft can actually restore EAX on
+    # this build, not the historical eax_versions spec — a stale "1.0" here would
+    # repeat the same misleading impression a delisted-EAX storefront page gives.
+    if [ "$eax_status" == "supported" ]; then
+        echo -e " -> ${YELLOW}EAX Support${NC}: ${GREEN}${BOLD}$eax_versions${NC}"
+    else
+        echo -e " -> ${YELLOW}EAX Support${NC}: ${YELLOW}${BOLD}No${NC}"
+    fi
     if [ "$api" == "openal" ]; then
         echo -e " -> ${YELLOW}Audio API${NC}: ${WHITE}OpenAL (native)${NC}"
     else
         echo -e " -> ${YELLOW}Audio API${NC}: ${WHITE}DirectSound3D ${DIM}(needs DSOAL)${NC}"
+    fi
+
+    if [ -n "$eax_status_notes" ]; then
+        echo ""
+        echo -e "${YELLOW}${BOLD}--- EAX STATUS ---${NC}"
+        print_line
+        if [ "$eax_status" == "removed_by_patch" ]; then
+            echo -e " -> ${YELLOW}Reason${NC}: ${YELLOW}${BOLD}Removed by a later patch${NC} ${DIM}(originally supported EAX $eax_versions)${NC}"
+        elif [ "$eax_status" == "not_implemented" ]; then
+            echo -e " -> ${YELLOW}Reason${NC}: ${YELLOW}${BOLD}Never implemented in this edition${NC}"
+        fi
+        echo -e "\n${WHITE}  Details:${NC}"
+        echo -e "${WHITE}$(printf '%s' "$eax_status_notes" | fold -s -w 76 | sed 's/^/  /')${NC}"
+        if [ -n "$eax_restore_hint" ]; then
+            echo -e "\n${WHITE}  Fix:${NC}"
+            echo -e "${WHITE}$(printf '%s' "$eax_restore_hint" | fold -s -w 76 | sed 's/^/  /')${NC}"
+        fi
+        print_line
     fi
 
     show_known_game_notes "${ids[$idx]}" "${stores[$idx]}" 1

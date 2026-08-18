@@ -94,8 +94,9 @@ This list is deliberately small and hand-verified — it will only ever cover a 
 - `edition` — `"original"` or `"remaster"`, shown as a field in the scanner's game details display.
 - `api` — `"directsound3d"` or `"openal"`. Only meaningful when `eax_status` is `"supported"`; drives the Audio API Detection step's remediation choice.
 - `eax_status` — `"supported"`, `"removed_by_patch"` (a software update stripped EAX/A3D from the current default build; an alternate build/branch may restore it), or `"not_implemented"` (a remaster/rewrite that never had EAX at all — no build-level fix exists).
-- `eax_restore_hint` — short text pointing at a known fix for a `"removed_by_patch"` entry (e.g. a Steam beta branch name), `null` if none exists.
-- `notes` — free-text prose caveats, shown at install time.
+- `eax_status_notes` — free-text prose explaining *why* the current build is in the state `eax_status` describes, shown in the scanner's EAX STATUS block. Use it for the story behind the status: a remaster's rewritten audio engine, the patch that dropped EAX, a launcher setting that gates EAX on an otherwise-supported build, or a source port that later added native OpenAL. `null` when `eax_status` is `"supported"` and there's nothing worth explaining.
+- `eax_restore_hint` — short text pointing at a known fix for a `"removed_by_patch"` entry (e.g. a Steam beta branch name), `null` if none exists. This is the "how to fix it" pointer; `eax_status_notes` is the "why it's like this" context.
+- `notes` — free-text prose caveats unrelated to EAX status (multiplayer quirks, controller issues, mod conflicts, library-matching gotchas), shown at install time.
 - `eax_versions` — array of supported EAX version strings; only set from a verifiable source (the game's manual/readme, an in-game audio settings menu, or a maintained compatibility database) — cite it in the PR description.
 
 ### Environment Variables
