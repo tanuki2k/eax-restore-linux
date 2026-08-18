@@ -80,13 +80,23 @@ Run the script, select **(u)ninstall**, and provide the game directory. The scri
 
 ### Library Scanning & the Known Games Database
 
-During install, the script can optionally scan your Steam and Heroic libraries for titles it recognises, so you can pick a game from a list instead of browsing to its folder manually. Matches are checked against [`known-eax-games.json`](known-eax-games.json), a community-maintained file in this repo that's fetched fresh on every run (and cached locally so a later offline run still works). The same file also drives the install-time "Heads up" notes, the "this install would be a no-op" warnings, and the OpenAL-vs-DirectSound3D compatibility check for specific titles.
+During install, the script can optionally scan your Steam and Heroic libraries for titles it recognises, so you can pick a game from a list instead of browsing to its folder manually. Matches are checked against [`known-eax-games.json`](known-eax-games.json), a community-maintained file in this repo that's fetched fresh on every run (and cached locally so a later offline run still works). The same file also drives the install-time "Heads up" notes, the "this install would be a no-op" warnings, the delisted-storefront notice, and the OpenAL-vs-DirectSound3D compatibility check ("Audio API Detection") for specific titles.
 
-This list is deliberately small and hand-verified — it will only ever cover a fraction of EAX-capable games. If your game isn't found by the scanner, that's expected; just provide the folder manually as usual.
+This list is deliberately small and hand-verified — it will only ever cover a fraction of EAX-capable games. If your game isn't in it, the OpenAL-vs-DirectSound3D check falls back to scanning the game's own `.exe`/`.dll` files for `OpenAL32.dll`/`dsound.dll` references — a lower-confidence guess, clearly flagged as such when it applies, rather than silently assuming DirectSound3D.
 
 **Retail/CD copies and other non-Steam, non-Heroic installs** (e.g. an original pre-Steam Half-Life disc, run in a Wine prefix you set up yourself) aren't covered by the scanner at all, since there's no launcher library to scan — but the script still supports them. Point it at the game's `.exe` folder and provide the Wine prefix path manually when prompted.
 
-**Contributing to the known games database:** PRs adding or correcting entries in `known-eax-games.json` are welcome. Please only add a `steam_appid`/`gog_id` you've independently verified against the storefront's own page or API — a wrong ID would point the script at someone else's prefix. See the existing entries for the expected shape (`name`, `steam_appid`, `gog_id`, `eax_impossible`, `dsound_compatible`, `notes`, `eax_versions`). `eax_versions` should only be set from a verifiable source (e.g. the game's manual/readme, an in-game audio settings menu, or a maintained compatibility database) — cite it in the PR description.
+**Contributing to the known games database:** PRs adding or correcting entries in `known-eax-games.json` are welcome. Please only add a `steam_appid`/`gog_id` you've independently verified against the storefront's own page or API — a wrong ID would point the script at someone else's prefix. See the existing entries for the expected shape:
+
+- `name` — display name.
+- `steam_appid` / `gog_id` — nullable per-store IDs used for library-scan matching.
+- `steam_listing` / `gog_listing` — `"available"` or `"delisted"` (pulled from sale, existing owners keep access), `null` when that entry has no ID for that store. Availability only, not discount pricing.
+- `edition` — `"original"` or `"remaster"`, plain descriptive metadata.
+- `api` — `"directsound3d"` or `"openal"`. Only meaningful when `eax_status` is `"supported"`; drives the Audio API Detection step's remediation choice.
+- `eax_status` — `"supported"`, `"removed_by_patch"` (a software update stripped EAX/A3D from the current default build; an alternate build/branch may restore it), or `"not_implemented"` (a remaster/rewrite that never had EAX at all — no build-level fix exists).
+- `eax_restore_hint` — short text pointing at a known fix for a `"removed_by_patch"` entry (e.g. a Steam beta branch name), `null` if none exists.
+- `notes` — free-text prose caveats, shown at install time.
+- `eax_versions` — array of supported EAX version strings; only set from a verifiable source (the game's manual/readme, an in-game audio settings menu, or a maintained compatibility database) — cite it in the PR description.
 
 ### Environment Variables
 
@@ -99,6 +109,7 @@ For repeat runs or scripting, these can be set to skip prompts:
 | `EAX_RESTORE_DSOAL_COMMUNITY_V14=1` | Pre-selects the PCGamingWiki Community engine (self-hosted mirror) and jumps straight to install. |
 | `EAX_RESTORE_DSOAL_OFFICIAL=1` | Pre-selects kcat's official DSOAL + OpenAL Soft engine and jumps straight to install. |
 | `EAX_RESTORE_VCRUN_ONLY=1` | Skips the full install/uninstall flow and just (re)installs the MS VC++ 2022 Redistributable into a game's prefix. |
+| `EAX_RESTORE_KNOWN_GAMES_FILE=/path/to/known-eax-games.json` | Uses a local file instead of fetching `known-eax-games.json` — mainly for testing edits to the database itself before they're pushed. |
 
 Only set one `EAX_RESTORE_DSOAL_*` variable at a time.
 

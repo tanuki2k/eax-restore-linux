@@ -95,6 +95,11 @@
 #   machine with a cache you know is current; if a needed engine build
 #   isn't cached yet, deployment will fail later with nothing to install.
 #
+# * EAX_RESTORE_KNOWN_GAMES_FILE=/path/to/file.json  Uses a local file instead
+#   of fetching known-eax-games.json from GitHub. For testing schema/data
+#   edits to the database before they've been pushed to the branch it's
+#   normally fetched from.
+#
 # --- License ---
 # MIT License
 # Copyright (c) 2026 Tanuki2k
@@ -264,6 +269,7 @@ DSOAL_COMMUNITY_V14_SHA256="064f600eac5637d8a8ea6b6cd0172b42202b792406530bf867c0
 KNOWN_GAMES_URL="https://raw.githubusercontent.com/tanuki2k/eax-restore-linux/main/known-eax-games.json"
 KNOWN_GAMES_CACHE="$BASE_SHARE/known-eax-games.json"
 KNOWN_GAMES_FILE=""
+KNOWN_GAMES_ATTEMPTED=""
 
 # Minimal hardcoded safety net for confirm_continue_if_eax_impossible, used
 # only if ensure_known_games_json can't produce a file at all (e.g. first
@@ -295,29 +301,69 @@ ensure_known_games_json() {
     # overwrites a good cache with a truncated/bad response. Falls back to
     # the last-good cache if the fetch or validation fails, and to nothing
     # (KNOWN_GAMES_FILE stays empty, return 1) if there's no usable cache
-    # either. Memoized per run via KNOWN_GAMES_FILE.
+    # either. Memoized per run via KNOWN_GAMES_FILE on success — but this
+    # function is called several times per install (notes, no-op warning,
+    # Audio API Detection), so a *failure* is memoized too via
+    # KNOWN_GAMES_ATTEMPTED, otherwise a genuinely offline run retries the
+    # full fetch (10s timeout each) and reprints the same failure message
+    # on every single call instead of once.
+    #
+    # EAX_RESTORE_KNOWN_GAMES_FILE points this at a local file instead of
+    # fetching — for testing schema/data edits to known-eax-games.json
+    # before they've been pushed to the branch KNOWN_GAMES_URL fetches from.
     [ -n "$KNOWN_GAMES_FILE" ] && return 0
+    [ -n "$KNOWN_GAMES_ATTEMPTED" ] && return 1
+    KNOWN_GAMES_ATTEMPTED=1
     command -v jq &> /dev/null || return 1
 
-    local tmp
-    tmp=$(mktemp 2>/dev/null)
-    if [ -n "$tmp" ] && curl -fsSL --max-time 10 "$KNOWN_GAMES_URL" -o "$tmp" 2>/dev/null && jq empty "$tmp" 2>/dev/null; then
-        mkdir -p "$BASE_SHARE" 2>/dev/null
-        mv "$tmp" "$KNOWN_GAMES_CACHE"
-        KNOWN_GAMES_FILE="$KNOWN_GAMES_CACHE"
-        return 0
+    if [ -n "${EAX_RESTORE_KNOWN_GAMES_FILE:-}" ]; then
+        if [ -s "$EAX_RESTORE_KNOWN_GAMES_FILE" ] && jq empty "$EAX_RESTORE_KNOWN_GAMES_FILE" 2>/dev/null; then
+            KNOWN_GAMES_FILE="$EAX_RESTORE_KNOWN_GAMES_FILE"
+            echo -e "\n${YELLOW}EAX_RESTORE_KNOWN_GAMES_FILE is set — using $EAX_RESTORE_KNOWN_GAMES_FILE instead of fetching.${NC}" >&2
+        else
+            echo -e "\n${YELLOW}${BOLD}Error: EAX_RESTORE_KNOWN_GAMES_FILE is set but the file is missing or not valid JSON.${NC}" >&2
+            return 1
+        fi
+    else
+        local tmp
+        tmp=$(mktemp 2>/dev/null)
+        if [ -n "$tmp" ] && curl -fsSL --max-time 10 "$KNOWN_GAMES_URL" -o "$tmp" 2>/dev/null && jq empty "$tmp" 2>/dev/null; then
+            mkdir -p "$BASE_SHARE" 2>/dev/null
+            mv "$tmp" "$KNOWN_GAMES_CACHE"
+            KNOWN_GAMES_FILE="$KNOWN_GAMES_CACHE"
+        else
+            rm -f "$tmp" 2>/dev/null
+            if [ -s "$KNOWN_GAMES_CACHE" ] && jq empty "$KNOWN_GAMES_CACHE" 2>/dev/null; then
+                KNOWN_GAMES_FILE="$KNOWN_GAMES_CACHE"
+                echo -e "\n${YELLOW} -> Couldn't refresh the known-EAX-games database (offline?) — using the last cached copy.${NC}" >&2
+            else
+                # No message here — every caller that has something
+                # meaningful to say about a missing database says it
+                # itself, in its own context (scan_game_libraries has its
+                # own explicit notice; confirm_continue_if_openal_native
+                # explains it right under the Audio API Detection header).
+                # A generic message from here would surface wherever this
+                # function happens to be called first, disconnected from
+                # whichever step the user is actually looking at.
+                return 1
+            fi
+        fi
     fi
-    rm -f "$tmp" 2>/dev/null
 
-    if [ -s "$KNOWN_GAMES_CACHE" ] && jq empty "$KNOWN_GAMES_CACHE" 2>/dev/null; then
-        KNOWN_GAMES_FILE="$KNOWN_GAMES_CACHE"
-        echo -e "\n${YELLOW} -> Couldn't refresh the known-EAX-games database (offline?) — using the last cached copy.${NC}" >&2
-        return 0
+    # The database schema evolves alongside this script. If the loaded copy
+    # predates a field this version expects (served from a branch that
+    # hasn't merged a schema change yet, or a stale offline cache), several
+    # checks below silently fall back to a default instead of erroring —
+    # jq's `//` can't tell "key legitimately absent" from "key doesn't
+    # exist in this schema yet" apart. Warn once so that's visible instead
+    # of a checkbox that quietly never fires.
+    if ! jq -e '.games | any(has("api"))' "$KNOWN_GAMES_FILE" >/dev/null 2>&1; then
+        echo -e "\n${YELLOW} -> Warning: $KNOWN_GAMES_FILE doesn't have the 'api'/'eax_status' fields this" >&2
+        echo -e "${YELLOW}    script version expects — it looks like an older database schema. Audio API" >&2
+        echo -e "${YELLOW}    Detection and some install-time warnings won't work correctly until it updates.${NC}" >&2
     fi
 
-    echo -e "\n${YELLOW} -> Couldn't fetch the known-EAX-games database, and no cached copy exists yet.${NC}" >&2
-    echo -e "${YELLOW}    Game notes and library scanning are unavailable this run.${NC}" >&2
-    return 1
+    return 0
 }
 
 record_recent_game() {
@@ -400,10 +446,10 @@ pick_directory_gui() {
 
 get_game_directory() {
     GAME_DIR=""
+    GAME_NAME=""
     SCANNED_APPID=""
     SCANNED_NOTES_SHOWN=""
     OPENAL_NATIVE_MODE=""
-    SCANNED_OPENAL_CHECKED=""
 
     if [ "$SCRIPT_ACTION" == "u" ] && prompt_recent_game; then
         echo -e "\n${GREEN}Using: $GAME_DIR${NC}"
@@ -411,7 +457,7 @@ get_game_directory() {
         return
     fi
 
-    if [ "$SCRIPT_ACTION" == "i" ]; then
+    if [ "$SCRIPT_ACTION" == "i" ] && ensure_known_games_json; then
         echo -e "${WHITE}Note: the known-EAX-games list is a small, hand-verified, work-in-progress"
         echo -e "set — it doesn't cover every EAX game. A game you own may still support EAX"
         echo -e "even if it's not (yet) listed.${NC}"
@@ -426,6 +472,9 @@ get_game_directory() {
                 return
             fi
         fi
+    elif [ "$SCRIPT_ACTION" == "i" ]; then
+        echo -e "${YELLOW}Library scanning needs the known-EAX-games database, which isn't available this${NC}"
+        echo -e "${WHITE}run — skipping straight to manual entry.${NC}"
     fi
 
     echo -e "\n${WHITE}Common game locations:${NC}"
@@ -539,6 +588,24 @@ detect_heroic_prefix_verbose() {
     fi
 
     if [ -n "$auto_prefix" ]; then printf '%s\t%s\n' "$auto_prefix" "$app_name"; else echo -e " -> ${YELLOW}Search complete. No prefix found.${NC}" >&2; fi
+}
+
+find_heroic_install_path() {
+    # Usage: find_heroic_install_path <gog_app_name_id>
+    # Looks up a Heroic-tracked GOG game's install_path by its (confusingly
+    # named) numeric app_name/appName ID. detect_heroic_prefix_verbose above
+    # discovers this same install_path internally too, but only while
+    # matching FROM a target directory, and doesn't expose it back to its
+    # caller — this is for callers that already have the ID (e.g. from a
+    # confirmed prefix) and just need the folder, to read the game's real
+    # name off its own install metadata rather than the curated JSON.
+    local want="$1"
+    [ -z "$want" ] && return
+    local json_file
+    find "$HOME/.config/heroic" "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic" -type f -name "installed.json" 2>/dev/null | while IFS= read -r json_file; do
+        [ -z "$json_file" ] && continue
+        awk -v want="$want" 'BEGIN { RS="}"; FS="," } { ip=""; an=""; for (i=1; i<=NF; i++) { if ($i ~ /"(install_path|installPath)"/) { line=$i; sub(/^.*"(install_path|installPath)"[ \t]*:[ \t]*"/, "", line); sub(/".*$/, "", line); ip=line } if ($i ~ /"(app_name|appName)"/) { line=$i; sub(/^.*"(app_name|appName)"[ \t]*:[ \t]*"/, "", line); sub(/".*$/, "", line); an=line } } if (an == want && ip != "") { print ip; exit } }' "$json_file"
+    done | head -n 1
 }
 
 normalize_game_name() {
@@ -725,10 +792,10 @@ scan_game_libraries() {
     # was found or picked, so get_game_directory falls through to its
     # normal manual/GUI-picker flow.
     GAME_DIR=""
+    GAME_NAME=""
     SCANNED_APPID=""
     SCANNED_NOTES_SHOWN=""
     OPENAL_NATIVE_MODE=""
-    SCANNED_OPENAL_CHECKED=""
 
     if ! ensure_known_games_json; then
         echo -e "${YELLOW}Library scanning needs the known-EAX-games database, which couldn't be loaded.${NC}"
@@ -737,7 +804,13 @@ scan_game_libraries() {
 
     echo -e "\n${CYAN}STATUS: Scanning Steam and Heroic libraries for known EAX games...${NC}"
 
-    local names=() paths=() stores=() ids=()
+    # names[] is the curated known-eax-games.json display name, used only for
+    # the pick-list menu below. meta_names[] is the name as reported by the
+    # game's OWN install metadata (the Steam appmanifest's "name" key, or the
+    # GOG/Heroic install folder itself) — sourced the same way appid/gog_id
+    # already are, independent of the JSON — and becomes GAME_NAME once a
+    # pick is made, for use in prompts that need the actual game's name.
+    local names=() meta_names=() paths=() stores=() ids=()
 
     # --- Steam ---
     local steam_ids
@@ -761,7 +834,7 @@ scan_game_libraries() {
             done < <(sed -n 's/^[[:space:]]*"path"[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$vdf" 2>/dev/null)
         done
 
-        local lib acf appid installdir name
+        local lib acf appid installdir name meta_name
         for lib in "${libs[@]}"; do
             for acf in "$lib"/appmanifest_*.acf; do
                 [ -f "$acf" ] || continue
@@ -772,7 +845,10 @@ scan_game_libraries() {
                 [ -n "$installdir" ] && [ -d "$lib/common/$installdir" ] || continue
                 name=$(jq -r --arg id "$appid" '.games[] | select((.steam_appid | tostring) == $id) | .name' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
                 [ -z "$name" ] && name="AppID $appid"
+                meta_name=$(sed -n 's/^[[:space:]]*"name"[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$acf" 2>/dev/null | head -n 1)
+                [ -z "$meta_name" ] && meta_name="AppID $appid"
                 names+=("$name")
+                meta_names+=("$meta_name")
                 paths+=("$lib/common/$installdir")
                 stores+=("steam")
                 ids+=("$appid")
@@ -786,7 +862,7 @@ scan_game_libraries() {
     if [ -n "$gog_ids" ]; then
         local installed_jsons
         installed_jsons=$(find "$HOME/.config/heroic" "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic" -type f -name "installed.json" 2>/dev/null)
-        local json_file install_path app_name name
+        local json_file install_path app_name name meta_name
         while IFS= read -r json_file; do
             [ -z "$json_file" ] && continue
             while IFS=$'\t' read -r install_path app_name; do
@@ -795,7 +871,10 @@ scan_game_libraries() {
                 [ -d "$install_path" ] || continue
                 name=$(jq -r --arg id "$app_name" '.games[] | select((.gog_id | tostring) == $id) | .name' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
                 [ -z "$name" ] && name="GOG ID $app_name"
+                meta_name="$(basename "$install_path")"
+                [ -z "$meta_name" ] && meta_name="GOG ID $app_name"
                 names+=("$name")
+                meta_names+=("$meta_name")
                 paths+=("$install_path")
                 stores+=("gog")
                 ids+=("$app_name")
@@ -858,8 +937,7 @@ scan_game_libraries() {
 
     print_line
 
-    confirm_continue_if_openal_native "${ids[$idx]}" "${stores[$idx]}"
-    SCANNED_OPENAL_CHECKED=1
+    GAME_NAME="${meta_names[$idx]}"
 
     resolve_exe_folder "${paths[$idx]}" || return 1
 
@@ -879,17 +957,28 @@ show_known_game_notes() {
     # Best-effort, install-only heads-up for well-known EAX titles, sourced
     # from known-eax-games.json. Notes are stored as a single unwrapped line
     # for easy editing, then word-wrapped to the script's usual prose width
-    # at display time.
+    # at display time. Also surfaces steam_listing/gog_listing when the
+    # specific store this game was found on is "delisted" — purely
+    # informational (existing owners keep access; it just can't be newly
+    # purchased there anymore), never a blocker.
     [ "$SCRIPT_ACTION" == "i" ] || return
     [ -z "$1" ] && return
     ensure_known_games_json || return
 
-    local notes
+    local id_field="steam_appid" listing_field="steam_listing" store_label="Steam"
     if [ "$2" == "gog" ]; then
-        notes=$(jq -r --arg id "$1" '.games[] | select((.gog_id // "") | tostring == $id) | .notes // empty' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
-    else
-        notes=$(jq -r --arg id "$1" '.games[] | select((.steam_appid // "") | tostring == $id) | .notes // empty' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+        id_field="gog_id"; listing_field="gog_listing"; store_label="GOG"
     fi
+
+    local notes listing
+    notes=$(jq -r --arg id "$1" --arg field "$id_field" '.games[] | select((.[$field] // "") | tostring == $id) | .notes // empty' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+    listing=$(jq -r --arg id "$1" --arg id_field "$id_field" --arg listing_field "$listing_field" '.games[] | select((.[$id_field] // "") | tostring == $id) | .[$listing_field] // empty' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+
+    if [ "$listing" == "delisted" ]; then
+        echo -e "\n${WHITE}  Note: this game is currently delisted from ${store_label}'s storefront —"
+        echo -e "  existing owners keep access, but it can't be newly purchased there anymore.${NC}"
+    fi
+
     [ -z "$notes" ] && return
     echo -e "\n${WHITE}  Notes:${NC}"
     echo -e "${WHITE}$(printf '%s' "$notes" | fold -s -w 76 | sed 's/^/  /')${NC}"
@@ -897,29 +986,40 @@ show_known_game_notes() {
 
 confirm_continue_if_eax_impossible() {
     # Usage: confirm_continue_if_eax_impossible <id> <steam|gog>
-    # "eax_impossible" means EAX support was documented as removed from the
-    # shipped game code entirely, not just hard to reach — installing DSOAL
-    # is a functional no-op for the common (unmodified) case. Kept as a
-    # confirmable warning rather than a hard block, since some users
-    # deliberately downgrade builds via old depot manifests specifically to
-    # restore this — something the script has no way to detect from the ID
-    # alone.
+    # eax_status distinguishes two reasons a build won't actually restore
+    # EAX even after installing DSOAL: "removed_by_patch" (a software update
+    # stripped EAX/A3D calls from an otherwise-DirectSound3D game — some
+    # users deliberately downgrade builds via old depot manifests, or a
+    # known alternate build/branch exists, specifically to work around
+    # this) vs. "not_implemented" (a remaster/rewrite that never had EAX in
+    # the first place — no build-level fix exists). Kept as a confirmable
+    # warning rather than a hard block either way, since the script has no
+    # way to verify which exact build the user has from the ID alone.
     [ "$SCRIPT_ACTION" == "i" ] || return
     [ -z "$1" ] && return
 
-    local impossible=""
+    local field="steam_appid"
+    [ "$2" == "gog" ] && field="gog_id"
+
+    local status="" hint=""
     if ensure_known_games_json; then
-        local store="steam"
-        [ "$2" == "gog" ] && store="gog"
-        if [ "$store" == "gog" ]; then
-            impossible=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.gog_id // "") | tostring == $id) | ((.eax_impossible // []) | index($store)) // empty' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
-        else
-            impossible=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.steam_appid // "") | tostring == $id) | ((.eax_impossible // []) | index($store)) // empty' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
-        fi
+        status=$(jq -r --arg id "$1" --arg field "$field" '.games[] | select((.[$field] // "") | tostring == $id) | .eax_status // "supported"' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+        hint=$(jq -r --arg id "$1" --arg field "$field" '.games[] | select((.[$field] // "") | tostring == $id) | .eax_restore_hint // empty' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
     elif [ "$2" != "gog" ] && [ -n "${EAX_IMPOSSIBLE_FALLBACK_STEAM[$1]:-}" ]; then
-        impossible=1
+        status="removed_by_patch"
     fi
-    [ -z "$impossible" ] && return
+    if [ -z "$status" ] || [ "$status" == "supported" ]; then
+        return
+    fi
+
+    if [ "$status" == "not_implemented" ]; then
+        echo -e "\n${YELLOW}${BOLD}This edition never implemented EAX/environmental audio in the first place —"
+        echo -e "installing DSOAL here is a functional no-op.${NC}"
+    else
+        echo -e "\n${YELLOW}${BOLD}EAX/A3D support was removed from this build by a software update —"
+        echo -e "installing DSOAL here is a functional no-op on the current default build.${NC}"
+        [ -n "$hint" ] && echo -e "${WHITE}$hint${NC}"
+    fi
 
     echo -e "\n${YELLOW}Continue installing anyway? (y/N): ${NC}"
     echo -e -n "> "
@@ -930,40 +1030,131 @@ confirm_continue_if_eax_impossible() {
     fi
 }
 
+detect_api_from_binary() {
+    # Usage: detect_api_from_binary <game_dir>
+    # Fallback heuristic for games with no known-eax-games.json entry: greps
+    # the game's own .exe/.dll files for the literal ASCII import-table
+    # strings "OpenAL32.dll" / "dsound.dll" — the same signature-grepping
+    # trick is_genuine_dll() uses on PE binaries, and the same `file`-based
+    # PE inspection select_architecture uses to walk GAME_DIR. Prints
+    # "openal" or "directsound3d" on stdout, or nothing if inconclusive.
+    # Not certain: a dynamically-LoadLibrary'd audio backend won't show up
+    # in the import table at all, and an engine that supports multiple
+    # backends may reference both. On a reinstall, this script's own
+    # previously-deployed dsound.dll/dsoal-aldrv.dll/OpenAL32.dll would
+    # otherwise sit right here and get read back as if they were evidence
+    # about the game itself — excluded by name.
+    local dir="$1"
+    local has_openal=0 has_dsound=0
+    local f
+    while IFS= read -r -d '' f; do
+        case "$(basename "$f")" in
+            dsound.dll|dsoal-aldrv.dll|OpenAL32.dll) continue ;;
+        esac
+        grep -qa "OpenAL32\.dll" "$f" 2>/dev/null && has_openal=1
+        grep -qa "dsound\.dll" "$f" 2>/dev/null && has_dsound=1
+    done < <(find "$dir" -maxdepth 2 -type f \( -iname "*.exe" -o -iname "*.dll" \) -print0 2>/dev/null)
+
+    if [ "$has_openal" -eq 1 ] && [ "$has_dsound" -eq 0 ]; then
+        echo "openal"
+    elif [ "$has_dsound" -eq 1 ]; then
+        echo "directsound3d"
+    fi
+}
+
 confirm_continue_if_openal_native() {
-    # Usage: confirm_continue_if_openal_native <id> <steam|gog>
-    # dsound_compatible == false means this game's own EAX implementation
-    # routes through OpenAL natively rather than DirectSound3D — the
+    # Usage: confirm_continue_if_openal_native <id> <steam|gog> <game_name>
+    # api == "openal" means this game's own EAX implementation routes
+    # through OpenAL natively rather than DirectSound3D — the
     # dsound.dll/DSOAL swap has nothing to intercept here. Offers a distinct
     # remediation (direct OpenAL32.dll + alsoft.ini deployment) instead of a
-    # hard stop. Sets OPENAL_NATIVE_MODE for the install phase to pick up.
+    # hard stop. Falls back to detect_api_from_binary()'s lower-confidence
+    # filesystem guess whenever there's no authoritative JSON answer to go
+    # on — either the game isn't in known-eax-games.json, OR the database
+    # itself couldn't be loaded at all (offline, not yet merged to the
+    # branch it's fetched from, etc.) — rather than silently assuming
+    # DirectSound3D in either case. Every outcome prints a line explaining
+    # what was checked and what was concluded; this step should never end
+    # in total silence, which reads as broken rather than "nothing to do."
+    # Sets OPENAL_NATIVE_MODE, which the "Audio Engine Selection" step alone
+    # consumes to pick ENGINE_CHOICE=4.
     OPENAL_NATIVE_MODE=""
     [ "$SCRIPT_ACTION" == "i" ] || return
     [ -z "$1" ] && return
-    ensure_known_games_json || return
 
-    local compat_field="steam_appid"
-    [ "$2" == "gog" ] && compat_field="gog_id"
-    local compatible
-    compatible=$(jq -r --arg id "$1" --arg field "$compat_field" \
-        '.games[] | select((.[$field] // "") | tostring == $id) | (if .dsound_compatible == false then false else true end)' \
-        "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
-    [ "$compatible" != "false" ] && return
+    local field="steam_appid"
+    [ "$2" == "gog" ] && field="gog_id"
+    local game_name="${3:-this game}"
 
-    echo -e "\n${YELLOW}${BOLD}This title routes EAX through OpenAL rather than DirectSound3D, so the${NC}"
-    echo -e "${YELLOW}${BOLD}script's usual dsound.dll swap won't apply here.${NC}"
-    echo -e "${WHITE}It can instead deploy kcat's OpenAL Soft directly as OpenAL32.dll (with the same"
-    echo -e "alsoft.ini tuning) — but whether this game's own OpenAL implementation is OpenAL Soft"
-    echo -e "(which would pick this up) or something else entirely hasn't been independently verified,"
-    echo -e "so this may or may not actually restore EAX.${NC}"
-    echo -e "\n${YELLOW}Continue with the direct OpenAL Soft deployment instead? (y/N): ${NC}"
-    echo -e -n "> "
-    read -r CONTINUE_OPENAL_NATIVE
-    if [[ ! "$CONTINUE_OPENAL_NATIVE" =~ $YES_RE ]]; then
-        echo -e "\n${WHITE}Install cancelled.${NC}"
-        exit 0
+    local json_available=0
+    ensure_known_games_json && json_available=1
+
+    local match_count=0
+    if [ "$json_available" -eq 1 ]; then
+        match_count=$(jq -r --arg id "$1" --arg field "$field" '[.games[] | select((.[$field] // "") | tostring == $id)] | length' "$KNOWN_GAMES_FILE" 2>/dev/null)
     fi
-    OPENAL_NATIVE_MODE=1
+
+    local api="" matched=0 scanned=0 declined=0
+    if [ "$json_available" -eq 1 ] && [ "${match_count:-0}" -gt 0 ]; then
+        api=$(jq -r --arg id "$1" --arg field "$field" '.games[] | select((.[$field] // "") | tostring == $id) | .api // "directsound3d"' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+        matched=1
+    elif [ -n "$GAME_DIR" ] && [ -d "$GAME_DIR" ]; then
+        if [ "$json_available" -eq 0 ]; then
+            echo -e "${YELLOW}known-eax-games.json isn't available this run.${NC}"
+        else
+            echo -e "${YELLOW}$game_name isn't in the known-games database.${NC}"
+        fi
+        echo -e "${YELLOW}Would you like the script to attempt to detect whether $game_name uses OpenAL or"
+        echo -e "DirectSound3D? (Y/n): ${NC}"
+        echo -e -n "> "
+        read -r DO_BINARY_SCAN
+        if [[ "$DO_BINARY_SCAN" =~ $NO_RE ]]; then
+            declined=1
+        else
+            api=$(detect_api_from_binary "$GAME_DIR")
+            scanned=1
+        fi
+    fi
+
+    if [ "$api" == "openal" ]; then
+        if [ "$scanned" -eq 1 ]; then
+            echo -e "${YELLOW}${BOLD}That scan found an OpenAL32.dll reference and no dsound.dll reference in${NC}"
+            echo -e "${YELLOW}${BOLD}$game_name's files${NC}${WHITE} — a sign, not a certainty, that it routes EAX through OpenAL"
+            echo -e "rather than DirectSound3D. This wasn't confirmed by the curated database like a"
+            echo -e "known-game match would be: some engines load their audio backend dynamically and"
+            echo -e "won't show up in this scan at all, so treat it as a guess.${NC}"
+        else
+            echo -e "${YELLOW}${BOLD}$game_name routes EAX through OpenAL rather than DirectSound3D, so the${NC}"
+            echo -e "${YELLOW}${BOLD}script's usual dsound.dll swap won't apply here.${NC}"
+        fi
+        echo -e "${WHITE}It can instead deploy kcat's OpenAL Soft directly as OpenAL32.dll (with the same"
+        echo -e "alsoft.ini tuning).${NC}"
+        echo -e "\n${YELLOW}Continue with the direct OpenAL Soft deployment instead? (Y/n): ${NC}"
+        echo -e -n "> "
+        read -r CONTINUE_OPENAL_NATIVE
+        if [[ "$CONTINUE_OPENAL_NATIVE" =~ $NO_RE ]]; then
+            echo -e "\n${WHITE}Install cancelled.${NC}"
+            exit 0
+        fi
+        OPENAL_NATIVE_MODE=1
+        return
+    fi
+
+    if [ "$matched" -eq 1 ]; then
+        echo -e "${GREEN} -> $game_name uses DirectSound3D — the standard EAX path this script already handles.${NC}"
+    elif [ "$scanned" -eq 1 ]; then
+        echo -e "${YELLOW} -> Found no clear OpenAL32.dll signal — assuming standard DirectSound3D.${NC}"
+    elif [ "$declined" -eq 1 ]; then
+        echo -e "${WHITE} -> Skipped the file scan — assuming standard DirectSound3D.${NC}"
+    else
+        if [ "$json_available" -eq 0 ]; then
+            echo -e "${YELLOW} -> known-eax-games.json isn't available this run, and $game_name's files couldn't"
+            echo -e "    be scanned either — assuming standard DirectSound3D.${NC}"
+        else
+            echo -e "${YELLOW} -> $game_name isn't in the known-games database, and its files couldn't be scanned"
+            echo -e "    either — assuming standard DirectSound3D.${NC}"
+        fi
+    fi
 }
 
 detect_game_environment() {
@@ -1039,7 +1230,13 @@ detect_game_environment() {
                     PREFIX_PATH="$DETECTED_STEAM_PREFIX"
                     [ -z "$SCANNED_NOTES_SHOWN" ] && show_known_game_notes "$APPID" "steam"
                     confirm_continue_if_eax_impossible "$APPID" "steam"
-                    [ -z "$SCANNED_OPENAL_CHECKED" ] && confirm_continue_if_openal_native "$APPID" "steam"
+                    if [ -z "$GAME_NAME" ]; then
+                        # Same source appid/gog_id already come from, not the
+                        # curated JSON — the appmanifest's own "name" key.
+                        ACF_FILE="${GAME_DIR%/common/*}/appmanifest_${APPID}.acf"
+                        [ -f "$ACF_FILE" ] && GAME_NAME=$(sed -n 's/^[[:space:]]*"name"[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$ACF_FILE" 2>/dev/null | head -n 1)
+                        [ -z "$GAME_NAME" ] && GAME_NAME="AppID $APPID"
+                    fi
                     break
                 fi
                 APPID=""
@@ -1090,7 +1287,13 @@ detect_game_environment() {
                 echo -e "\n -> ${GREEN}Prefix verified!${NC}"
                 [ -z "$SCANNED_NOTES_SHOWN" ] && show_known_game_notes "$HEROIC_APP_NAME" "gog"
                 confirm_continue_if_eax_impossible "$HEROIC_APP_NAME" "gog"
-                [ -z "$SCANNED_OPENAL_CHECKED" ] && confirm_continue_if_openal_native "$HEROIC_APP_NAME" "gog"
+                if [ -z "$GAME_NAME" ] && [ -n "$HEROIC_APP_NAME" ]; then
+                    # Same source the GOG ID already comes from, not the
+                    # curated JSON — Heroic's own install folder name.
+                    HEROIC_INSTALL_PATH=$(find_heroic_install_path "$HEROIC_APP_NAME")
+                    [ -n "$HEROIC_INSTALL_PATH" ] && GAME_NAME="$(basename "$HEROIC_INSTALL_PATH")"
+                    [ -z "$GAME_NAME" ] && GAME_NAME="GOG ID $HEROIC_APP_NAME"
+                fi
                 break
             else
                 echo -e "\n${YELLOW}${BOLD}Error: Initialised Wine prefix not found at that location.${NC}"
@@ -1132,13 +1335,17 @@ apply_registry_patch() {
 }
 
 select_architecture() {
+    # Usage: select_architecture [step_number]
     # Sets ARCH ("32" or "64") and ARCH_FOLDER ("Win32" or "Win64") based on
     # the game's executable(s) in GAME_DIR, either via auto-detection or a
     # manual prompt. Shared by the normal install flow and any standalone
-    # flow that needs to know the game's architecture (e.g. VC++-only mode).
+    # flow that needs to know the game's architecture (e.g. VC++-only mode) —
+    # each caller has its own step sequence, so the displayed step number is
+    # a parameter rather than hardcoded.
+    local step="${1:-3}"
     echo ""
     print_divider
-    echo -e "${CYAN}3. Architecture Selection${NC}"
+    echo -e "${CYAN}${step}. Architecture Selection${NC}"
     print_line
     echo ""
     echo -e "${WHITE}This step determines whether the game executable is 32-bit or 64-bit so the script"
@@ -1691,6 +1898,14 @@ update_local_cache() {
             echo -e " -> ${YELLOW}${BOLD}Error: Download failed or file was corrupt. This engine will be unavailable this run.${NC}"
         fi
     else echo -e " -> ${GREEN}Available in cache.${NC}"; fi
+
+    echo -e "\n${CYAN}Checking known EAX games database...${NC}"
+    if ensure_known_games_json; then
+        GAME_COUNT=$(jq '.games | length' "$KNOWN_GAMES_FILE" 2>/dev/null)
+        echo -e " -> ${GREEN}Loaded (${GAME_COUNT:-0} games).${NC}"
+    else
+        echo -e " -> ${YELLOW}${BOLD}Error: Download failed or file was corrupt. Game database will be unavailable this run.${NC}"
+    fi
 }
 
 handle_conflict() {
@@ -1774,7 +1989,7 @@ if is_truthy "$EAX_RESTORE_SKIP_PREFLIGHT"; then
     WINE_CMD="wine"
     command -v wine &> /dev/null || WINE_CMD=$(find_local_wine)
 else
-    echo -e "\n${CYAN}Verifying required base tools before accessing cache...${NC}"
+    echo -e "\n${CYAN}Verifying required base tools before accessing cache...${NC}\n"
 
     REQUIRED_BASE_PKGS=("curl" "unzip" "file" "grep" "awk")
     MISSING_BASE_PKGS=()
@@ -1840,7 +2055,7 @@ else
                 echo -e " -> ${GREEN}Dependencies installed successfully.${NC}"
             else echo -e "\n${YELLOW}${BOLD}Cannot proceed without base dependencies. Exiting.${NC}"; exit 1; fi
         fi
-    else echo -e " -> ${GREEN}All base requirements met.${NC}"; fi
+    else echo -e "\n${GREEN}All base requirements met.${NC}"; fi
 fi
 
 # ==============================================================================
@@ -2260,18 +2475,30 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     echo ""
     detect_game_environment
 
-    # 3. Architecture Scan
-    select_architecture
-
-    # 4. Engine Selection
+    # 3. Audio API Detection
     echo ""
     print_divider
-    echo -e "${CYAN}4. Audio Engine Selection${NC}"
+    echo -e "${CYAN}3. Audio API Detection${NC}"
+    print_line
+    echo ""
+    if [ "$LAUNCHER_TYPE" == "1" ]; then
+        confirm_continue_if_openal_native "$APPID" "steam" "$GAME_NAME"
+    else
+        confirm_continue_if_openal_native "$HEROIC_APP_NAME" "gog" "$GAME_NAME"
+    fi
+
+    # 4. Architecture Scan
+    select_architecture 4
+
+    # 5. Engine Selection
+    echo ""
+    print_divider
+    echo -e "${CYAN}5. Audio Engine Selection${NC}"
     print_line
     echo ""
 
     if [ -n "$OPENAL_NATIVE_MODE" ]; then
-        ENGINE_CHOICE=3
+        ENGINE_CHOICE=4
         echo -e "${WHITE}This game routes EAX through OpenAL natively, so only kcat's OpenAL Soft build applies"
         echo -e "here (it's the only bundle that ships a standalone OpenAL32.dll) — using it automatically.${NC}"
     else
@@ -2329,12 +2556,28 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     fi
     fi
 
-    # 5. VC++ Runtime Dependencies
+    # The Wine DLL override this install ultimately needs — dsound.dll for
+    # engines 1-3 (DSOAL intercepts DirectSound3D), OpenAL32.dll for engine 4
+    # (OpenAL Soft deployed directly, nothing for DSOAL to intercept). Set
+    # once here so every later step (override wording, registry, deployment,
+    # final launch instructions) reads the same value instead of each
+    # re-deriving it from ENGINE_CHOICE or OPENAL_NATIVE_MODE separately.
+    # PRIMARY_DLL_NAME is the lowercase WINEDLLOVERRIDES key; PRIMARY_DLL_FILENAME
+    # is the on-disk filename (Wine treats overrides case-insensitively, but
+    # the actual deployed file is written with its conventional casing).
+    PRIMARY_DLL_NAME="dsound"
+    PRIMARY_DLL_FILENAME="dsound.dll"
+    if [ "$ENGINE_CHOICE" == "4" ]; then
+        PRIMARY_DLL_NAME="openal32"
+        PRIMARY_DLL_FILENAME="OpenAL32.dll"
+    fi
+
+    # 6. VC++ Runtime Dependencies
     INSTALL_VCRUN="n"
-    if [ "$ENGINE_CHOICE" == "3" ]; then
+    if [ "$ENGINE_CHOICE" == "3" ] || [ "$ENGINE_CHOICE" == "4" ]; then
         echo ""
         print_divider
-        echo -e "${CYAN}5. VC++ Runtime Dependencies${NC}"
+        echo -e "${CYAN}6. VC++ Runtime Dependencies${NC}"
         print_line
         echo -e "\n${WHITE}The modern kcat engine needs genuine Microsoft C++ runtime libraries. Older Proton/Wine"
         echo -e "builds (9 and below) tend to be missing them more often than newer ones — but rather"
@@ -2373,10 +2616,10 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         fi
     fi
 
-    # 6. Audio Configuration
+    # 7. Audio Configuration
     echo ""
     print_divider
-    echo -e "${CYAN}6. Speaker Configuration${NC}"
+    echo -e "${CYAN}7. Speaker Configuration${NC}"
     print_line
     echo ""
     echo -e "${WHITE}What kind of audio output are you using?${NC}\n"
@@ -2458,10 +2701,10 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         OUTPUT_MODE="matrix"
     fi
 
-    # 7. Advanced Compatibility Tweaks
+    # 8. Advanced Compatibility Tweaks
     echo ""
     print_divider
-    echo -e "${CYAN}7. Advanced Compatibility Tweaks${NC}"
+    echo -e "${CYAN}8. Advanced Compatibility Tweaks${NC}"
     print_line
     echo ""
     echo -e "${WHITE}These optional workarounds are designed for extremely stubborn games"
@@ -2471,11 +2714,20 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     ADVANCED_LIMITS="n"
     ADVANCED_COM="n"
 
-    if [ -n "$OPENAL_NATIVE_MODE" ]; then
-        echo -e "${WHITE}Skipping Tweaks A and C — both target DirectSound3D specifically (the EAX Unified"
-        echo -e "menu gate and dsound.dll COM routing), which don't apply to a direct OpenAL32.dll swap.${NC}"
+    # Tweaks A (EAX Unified dummy files) and C (COM registry routing) both
+    # target DirectSound3D specifically and have nothing to attach to on a
+    # direct OpenAL32.dll swap — so engine 4 only ever offers Tweak B.
+    TWEAK_A_APPLICABLE=1
+    TWEAK_C_APPLICABLE=1
+    if [ "$ENGINE_CHOICE" == "4" ]; then
+        TWEAK_A_APPLICABLE=0
+        TWEAK_C_APPLICABLE=0
+    fi
 
-        echo ""
+    if [ "$TWEAK_A_APPLICABLE" -eq 0 ] && [ "$TWEAK_C_APPLICABLE" -eq 0 ]; then
+        echo -e "${WHITE}Tweaks A and C target DirectSound3D specifically (the EAX Unified menu gate and"
+        echo -e "dsound.dll COM routing), which don't apply to a direct OpenAL32.dll swap — only Tweak B applies here.${NC}\n"
+
         echo -e "${CYAN}${BOLD}Tweak B: Expand Audio Limits${NC}"
         echo -e "${WHITE}Forces the engine to handle 256 simultaneous sounds and locks the sample rate to 48kHz."
         echo -e "Fixes audio dropping out in chaotic games (like F.E.A.R. or Thief), but uses more CPU.${NC}"
@@ -2483,53 +2735,50 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         echo -e -n "> "
         read -r ADVANCED_LIMITS
     else
-    echo -e "${YELLOW}Would you like to view and opt-in to these advanced tweaks? (y/N): ${NC}"
-    echo -e -n "> "
-    read -r SHOW_ADVANCED
-
-    if [[ "$SHOW_ADVANCED" =~ $YES_RE ]]; then
-        echo -e "\n${CYAN}${BOLD}Tweak A: EAX Unified Dummy Files${NC}"
-        echo -e "${WHITE}Tricks certain games (like KOTOR, Max Payne, and early Unreal Engine titles)"
-        echo -e "into unlocking the EAX menu option by creating harmless, empty eax.dll and eaxunified.dll files.${NC}"
-        echo -e "\n${YELLOW}Inject EAX Unified dummy files? (y/N): ${NC}"
+        echo -e "${YELLOW}Would you like to view and opt-in to these advanced tweaks? (y/N): ${NC}"
         echo -e -n "> "
-        read -r ADVANCED_DUMMY
+        read -r SHOW_ADVANCED
 
-        echo ""
-        echo -e "${CYAN}${BOLD}Tweak B: Expand Audio Limits${NC}"
-        echo -e "${WHITE}Forces the engine to handle 256 simultaneous sounds and locks the sample rate to 48kHz."
-        echo -e "Fixes audio dropping out in chaotic games (like F.E.A.R. or Thief), but uses more CPU.${NC}"
-        echo -e "\n${YELLOW}Expand OpenAL audio limits? (y/N): ${NC}"
-        echo -e -n "> "
-        read -r ADVANCED_LIMITS
+        if [[ "$SHOW_ADVANCED" =~ $YES_RE ]]; then
+            if [ "$TWEAK_A_APPLICABLE" -eq 1 ]; then
+                echo -e "\n${CYAN}${BOLD}Tweak A: EAX Unified Dummy Files${NC}"
+                echo -e "${WHITE}Tricks certain games (like KOTOR, Max Payne, and early Unreal Engine titles)"
+                echo -e "into unlocking the EAX menu option by creating harmless, empty eax.dll and eaxunified.dll files.${NC}"
+                echo -e "\n${YELLOW}Inject EAX Unified dummy files? (y/N): ${NC}"
+                echo -e -n "> "
+                read -r ADVANCED_DUMMY
+                echo ""
+            fi
 
-        echo ""
-        echo -e "${CYAN}${BOLD}Tweak C: COM Registry Routing${NC}"
-        echo -e "${WHITE}Explicitly forces the Windows registry to point directly to our custom dsound.dll."
-        echo -e "Beneficial for stubborn late-90s and early-2000s games that actively ignore local DLL files.${NC}"
-        echo -e "\n${YELLOW}Inject COM registry routing? (y/N): ${NC}"
-        echo -e -n "> "
-        read -r ADVANCED_COM
+            echo -e "${CYAN}${BOLD}Tweak B: Expand Audio Limits${NC}"
+            echo -e "${WHITE}Forces the engine to handle 256 simultaneous sounds and locks the sample rate to 48kHz."
+            echo -e "Fixes audio dropping out in chaotic games (like F.E.A.R. or Thief), but uses more CPU.${NC}"
+            echo -e "\n${YELLOW}Expand OpenAL audio limits? (y/N): ${NC}"
+            echo -e -n "> "
+            read -r ADVANCED_LIMITS
+
+            if [ "$TWEAK_C_APPLICABLE" -eq 1 ]; then
+                echo ""
+                echo -e "${CYAN}${BOLD}Tweak C: COM Registry Routing${NC}"
+                echo -e "${WHITE}Explicitly forces the Windows registry to point directly to our custom dsound.dll."
+                echo -e "Beneficial for stubborn late-90s and early-2000s games that actively ignore local DLL files.${NC}"
+                echo -e "\n${YELLOW}Inject COM registry routing? (y/N): ${NC}"
+                echo -e -n "> "
+                read -r ADVANCED_COM
+            fi
+        fi
     fi
-    fi
 
-    # 8. Automatic DLL Override
+    # 9. Automatic DLL Override
     echo ""
     print_divider
-    echo -e "${CYAN}8. Automatic DLL Override${NC}"
+    echo -e "${CYAN}9. Automatic DLL Override${NC}"
     print_line
     echo ""
-    if [ -n "$OPENAL_NATIVE_MODE" ]; then
-        echo -e "${WHITE}Wine needs to be told to use the new OpenAL32.dll file instead of its built-in one."
-        echo -e "We can inject this rule directly into the Wine prefix registry so you don't have to"
-        echo -e "manually type WINEDLLOVERRIDES=\"openal32=n,b\" %command% into your launcher.${NC}"
-        echo -e "\n${YELLOW}Automatically set OpenAL32.dll override in Wine registry? (y/N): ${NC}"
-    else
-        echo -e "${WHITE}Wine needs to be told to use the new dsound.dll file instead of its built-in one."
-        echo -e "We can inject this rule directly into the Wine prefix registry so you don't have to"
-        echo -e "manually type WINEDLLOVERRIDES=\"dsound=n,b\" %command% into your launcher.${NC}"
-        echo -e "\n${YELLOW}Automatically set dsound.dll override in Wine registry? (y/N): ${NC}"
-    fi
+    echo -e "${WHITE}Wine needs to be told to use the new ${PRIMARY_DLL_FILENAME} file instead of its built-in one."
+    echo -e "We can inject this rule directly into the Wine prefix registry so you don't have to"
+    echo -e "manually type WINEDLLOVERRIDES=\"${PRIMARY_DLL_NAME}=n,b\" %command% into your launcher.${NC}"
+    echo -e "\n${YELLOW}Automatically set ${PRIMARY_DLL_FILENAME} override in Wine registry? (y/N): ${NC}"
     echo -e -n "> "
     read -r AUTO_OVERRIDE
 
@@ -2572,25 +2821,30 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     fi
 
     # Engine-specific paths
-    if [ -n "$OPENAL_NATIVE_MODE" ]; then
-        TARGET_OAL=$(find "$OPENAL_OFFICIAL" -type d -ipath "*/bin/${ARCH_FOLDER}" | head -n 1)
-        OPENAL_SRC="$TARGET_OAL/soft_oal.dll"
-    elif [ "$ENGINE_CHOICE" == "1" ]; then
-        TARGET_COMMUNITY=$(find "$DSOAL_COMMUNITY_V13" -type d -ipath "*/${ARCH_FOLDER}" | head -n 1)
-        DSOUND_SRC="$TARGET_COMMUNITY/dsound.dll"
-        DSOAL_SRC="$TARGET_COMMUNITY/dsoal-aldrv.dll"
-    elif [ "$ENGINE_CHOICE" == "2" ]; then
-        TARGET_V14=$(find "$DSOAL_COMMUNITY_V14" -type d -ipath "*/${ARCH_FOLDER}" | head -n 1)
-        DSOUND_SRC="$TARGET_V14/dsound.dll"
-        DSOAL_SRC="$TARGET_V14/dsoal-aldrv.dll"
-    elif [ "$ENGINE_CHOICE" == "3" ]; then
-        TARGET_DSOAL=$(find "$DSOAL_OFFICIAL" -type d -ipath "*/${ARCH_FOLDER}" | head -n 1)
-        TARGET_OAL=$(find "$OPENAL_OFFICIAL" -type d -ipath "*/bin/${ARCH_FOLDER}" | head -n 1)
-        DSOUND_SRC="$TARGET_DSOAL/dsound.dll"
-        DSOAL_SRC="$TARGET_OAL/soft_oal.dll"
-    fi
+    case "$ENGINE_CHOICE" in
+        1)
+            TARGET_COMMUNITY=$(find "$DSOAL_COMMUNITY_V13" -type d -ipath "*/${ARCH_FOLDER}" | head -n 1)
+            DSOUND_SRC="$TARGET_COMMUNITY/dsound.dll"
+            DSOAL_SRC="$TARGET_COMMUNITY/dsoal-aldrv.dll"
+            ;;
+        2)
+            TARGET_V14=$(find "$DSOAL_COMMUNITY_V14" -type d -ipath "*/${ARCH_FOLDER}" | head -n 1)
+            DSOUND_SRC="$TARGET_V14/dsound.dll"
+            DSOAL_SRC="$TARGET_V14/dsoal-aldrv.dll"
+            ;;
+        3)
+            TARGET_DSOAL=$(find "$DSOAL_OFFICIAL" -type d -ipath "*/${ARCH_FOLDER}" | head -n 1)
+            TARGET_OAL=$(find "$OPENAL_OFFICIAL" -type d -ipath "*/bin/${ARCH_FOLDER}" | head -n 1)
+            DSOUND_SRC="$TARGET_DSOAL/dsound.dll"
+            DSOAL_SRC="$TARGET_OAL/soft_oal.dll"
+            ;;
+        4)
+            TARGET_OAL=$(find "$OPENAL_OFFICIAL" -type d -ipath "*/bin/${ARCH_FOLDER}" | head -n 1)
+            OPENAL_SRC="$TARGET_OAL/soft_oal.dll"
+            ;;
+    esac
 
-    if [ -n "$OPENAL_NATIVE_MODE" ]; then
+    if [ "$ENGINE_CHOICE" == "4" ]; then
         if [ ! -f "$OPENAL_SRC" ]; then
             echo -e "\n${YELLOW}${BOLD}Error: Required OpenAL Soft source file was not found in the cache.${NC}"
             echo -e "${WHITE}This usually means the download failed or was incomplete earlier in this run"
@@ -2630,25 +2884,29 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
 
     echo -e "\n${CYAN}STATUS: Deploying files to local game folder...${NC}"
 
-    if [ -n "$OPENAL_NATIVE_MODE" ]; then
-        if handle_conflict "$GAME_DIR/OpenAL32.dll"; then
-            cp -f "$OPENAL_SRC" "$GAME_DIR/OpenAL32.dll"
-            echo "$GAME_DIR/OpenAL32.dll" >> "$INSTALL_MANIFEST"
-            echo -e " -> Copied: OpenAL32.dll to $(basename "$GAME_DIR")"
-        fi
+    # DEPLOY_SRC/DEPLOY_DEST_NAME[0] is always the "primary" override DLL
+    # (dsound.dll for engines 1-3, OpenAL32.dll for engine 4) — the one Wine
+    # gets told to override. Any further entries are secondary implementation
+    # files DSOAL itself needs (dsoal-aldrv.dll) that aren't overridden
+    # directly. One shared list/loop serves all 4 engine choices instead of
+    # a separate copy-block per engine.
+    DEPLOY_SRC=(); DEPLOY_DEST_NAME=()
+    if [ "$ENGINE_CHOICE" == "4" ]; then
+        DEPLOY_SRC=("$OPENAL_SRC")
+        DEPLOY_DEST_NAME=("OpenAL32.dll")
     else
-    if handle_conflict "$GAME_DIR/dsound.dll"; then
-        cp -f "$DSOUND_SRC" "$GAME_DIR/dsound.dll"
-        echo "$GAME_DIR/dsound.dll" >> "$INSTALL_MANIFEST"
-        echo -e " -> Copied: dsound.dll to $(basename "$GAME_DIR")"
+        DEPLOY_SRC=("$DSOUND_SRC" "$DSOAL_SRC")
+        DEPLOY_DEST_NAME=("dsound.dll" "dsoal-aldrv.dll")
     fi
 
-    if handle_conflict "$GAME_DIR/dsoal-aldrv.dll"; then
-        cp -f "$DSOAL_SRC" "$GAME_DIR/dsoal-aldrv.dll"
-        echo "$GAME_DIR/dsoal-aldrv.dll" >> "$INSTALL_MANIFEST"
-        echo -e " -> Copied: dsoal-aldrv.dll to $(basename "$GAME_DIR")"
-    fi
-    fi
+    for i in "${!DEPLOY_SRC[@]}"; do
+        DEPLOY_DEST="$GAME_DIR/${DEPLOY_DEST_NAME[$i]}"
+        if handle_conflict "$DEPLOY_DEST"; then
+            cp -f "${DEPLOY_SRC[$i]}" "$DEPLOY_DEST"
+            echo "$DEPLOY_DEST" >> "$INSTALL_MANIFEST"
+            echo -e " -> Copied: ${DEPLOY_DEST_NAME[$i]} to $(basename "$GAME_DIR")"
+        fi
+    done
 
     # V14 is the only bundle with genuine curated HRTF profiles (V13 has
     # none, despite its zip's name — see engine descriptions above). Since
@@ -2684,23 +2942,24 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
             PREFIX_TARGET_DIR="$PREFIX_PATH/drive_c/windows/system32"
         fi
 
-        if [ -n "$OPENAL_NATIVE_MODE" ]; then
-            auto_backup_and_overwrite "$PREFIX_TARGET_DIR/OpenAL32.dll"
-            cp -f "$OPENAL_SRC" "$PREFIX_TARGET_DIR/OpenAL32.dll"
-            echo "$PREFIX_TARGET_DIR/OpenAL32.dll" >> "$INSTALL_MANIFEST"
-            echo -e " -> Duplicated: OpenAL32.dll to $(basename "$PREFIX_TARGET_DIR")"
-        else
-        auto_backup_and_overwrite "$PREFIX_TARGET_DIR/dsound.dll"
-        cp -f "$DSOUND_SRC" "$PREFIX_TARGET_DIR/dsound.dll"
-        echo "$PREFIX_TARGET_DIR/dsound.dll" >> "$INSTALL_MANIFEST"
-        echo -e " -> Duplicated: dsound.dll to $(basename "$PREFIX_TARGET_DIR")"
-
-        if handle_conflict "$PREFIX_TARGET_DIR/dsoal-aldrv.dll"; then
-            cp -f "$DSOAL_SRC" "$PREFIX_TARGET_DIR/dsoal-aldrv.dll"
-            echo "$PREFIX_TARGET_DIR/dsoal-aldrv.dll" >> "$INSTALL_MANIFEST"
-            echo -e " -> Duplicated: dsoal-aldrv.dll to $(basename "$PREFIX_TARGET_DIR")"
-        fi
-        fi
+        # Index 0 (the primary override DLL) is unconditionally backed up
+        # and overwritten — it's the one file Wine is being told to
+        # override anyway. Any secondary files (dsoal-aldrv.dll) go through
+        # the interactive conflict prompt instead, same as the game-dir copy
+        # above, since a pre-existing file of that exact name is unusual.
+        for i in "${!DEPLOY_SRC[@]}"; do
+            DEPLOY_DEST="$PREFIX_TARGET_DIR/${DEPLOY_DEST_NAME[$i]}"
+            if [ "$i" -eq 0 ]; then
+                auto_backup_and_overwrite "$DEPLOY_DEST"
+                cp -f "${DEPLOY_SRC[$i]}" "$DEPLOY_DEST"
+                echo "$DEPLOY_DEST" >> "$INSTALL_MANIFEST"
+                echo -e " -> Duplicated: ${DEPLOY_DEST_NAME[$i]} to $(basename "$PREFIX_TARGET_DIR")"
+            elif handle_conflict "$DEPLOY_DEST"; then
+                cp -f "${DEPLOY_SRC[$i]}" "$DEPLOY_DEST"
+                echo "$DEPLOY_DEST" >> "$INSTALL_MANIFEST"
+                echo -e " -> Duplicated: ${DEPLOY_DEST_NAME[$i]} to $(basename "$PREFIX_TARGET_DIR")"
+            fi
+        done
     fi
 
     echo -e "\n${CYAN}STATUS: Applying configurations and tweaks...${NC}"
@@ -2827,19 +3086,11 @@ EOF
         fi
 
         if [[ "$AUTO_OVERRIDE" =~ $YES_RE ]]; then
-            if [ -n "$OPENAL_NATIVE_MODE" ]; then
-                cat <<EOF >> "$REG_FILE"
+            cat <<EOF >> "$REG_FILE"
 [HKEY_CURRENT_USER\Software\Wine\DllOverrides]
-"openal32"="native,builtin"
+"${PRIMARY_DLL_NAME}"="native,builtin"
 
 EOF
-            else
-                cat <<EOF >> "$REG_FILE"
-[HKEY_CURRENT_USER\Software\Wine\DllOverrides]
-"dsound"="native,builtin"
-
-EOF
-            fi
         fi
 
         apply_registry_patch "$REG_FILE"
@@ -2847,11 +3098,7 @@ EOF
 
         [[ "$ADVANCED_COM" =~ $YES_RE ]] && echo "REGISTRY:COM" >> "$INSTALL_MANIFEST" && echo -e " -> Injected: COM Registry Routing"
         if [[ "$AUTO_OVERRIDE" =~ $YES_RE ]]; then
-            if [ -n "$OPENAL_NATIVE_MODE" ]; then
-                echo "REGISTRY:OVERRIDE:openal32" >> "$INSTALL_MANIFEST"
-            else
-                echo "REGISTRY:OVERRIDE:dsound" >> "$INSTALL_MANIFEST"
-            fi
+            echo "REGISTRY:OVERRIDE:${PRIMARY_DLL_NAME}" >> "$INSTALL_MANIFEST"
             echo -e " -> Injected: WINEDLLOVERRIDES (native,builtin) into registry"
         fi
     fi
@@ -2871,8 +3118,7 @@ EOF
         echo -e " 2. ${YELLOW}${BOLD}Launch the game:${NC} ${WHITE}Start the game as you normally would.${NC}"
         echo -e " 3. ${YELLOW}${BOLD}In-Game Settings:${NC} ${WHITE}Go to Audio settings and enable 'EAX', '3D Sound', or 'Hardware Acceleration'.${NC}\n"
 
-        OVERRIDE_VALUE="dsound=n,b"
-        [ -n "$OPENAL_NATIVE_MODE" ] && OVERRIDE_VALUE="openal32=n,b"
+        OVERRIDE_VALUE="${PRIMARY_DLL_NAME}=n,b"
         if [ "$LAUNCHER_TYPE" == "1" ]; then
             echo -e "${BOLD}Steam Launch Options:${NC}"
             echo -e "${CYAN}WINEDLLOVERRIDES=\"$OVERRIDE_VALUE\" %command%${NC}"
