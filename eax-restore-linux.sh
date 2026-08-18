@@ -1009,9 +1009,9 @@ scan_game_libraries() {
         echo -e " -> ${YELLOW}EAX Support${NC}: ${YELLOW}${BOLD}No${NC}"
     fi
     if [ "$api" == "openal" ]; then
-        echo -e " -> ${YELLOW}Audio API${NC}: ${WHITE}OpenAL (native)${NC}"
+        echo -e " -> ${YELLOW}Audio API${NC}: ${WHITE}OpenAL${NC}"
     else
-        echo -e " -> ${YELLOW}Audio API${NC}: ${WHITE}DirectSound3D ${DIM}(needs DSOAL)${NC}"
+        echo -e " -> ${YELLOW}Audio API${NC}: ${WHITE}DirectSound3D${NC}"
     fi
 
     if [ -n "$eax_status_notes" ]; then
