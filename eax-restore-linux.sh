@@ -994,6 +994,7 @@ scan_game_libraries() {
     print_divider
     echo -e "${GREEN}${BOLD}--- GAME DETAILS ---${NC}"
     print_line
+    echo ""
     echo -e " -> ${YELLOW}Name${NC}:      ${BOLD}${names[$idx]}${NC}"
     [ -n "$edition" ] && echo -e " -> ${YELLOW}Edition${NC}:   ${WHITE}${edition^}${NC}"
     echo -e " -> ${YELLOW}Platform${NC}:  ${GREEN}$store_label${NC}"
@@ -1036,6 +1037,7 @@ scan_game_libraries() {
     show_known_game_notes "${ids[$idx]}" "${stores[$idx]}" 1
     SCANNED_NOTES_SHOWN=1
 
+    echo ""
     print_line
 
     echo -e "\n${YELLOW}Continue with this game? (Y/n): ${NC}"
