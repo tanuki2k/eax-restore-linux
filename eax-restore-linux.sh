@@ -1037,6 +1037,14 @@ scan_game_libraries() {
 
     print_line
 
+    echo -e "\n${YELLOW}Continue with this game? (Y/n): ${NC}"
+    echo -e -n "> "
+    local CONTINUE_SCAN_PICK
+    read -r CONTINUE_SCAN_PICK
+    if [[ "$CONTINUE_SCAN_PICK" =~ $NO_RE ]]; then
+        return 1
+    fi
+
     GAME_NAME="${meta_names[$idx]}"
 
     resolve_exe_folder "${paths[$idx]}" || return 1
