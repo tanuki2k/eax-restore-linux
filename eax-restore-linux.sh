@@ -477,8 +477,8 @@ get_game_directory() {
     if [ "$SCRIPT_ACTION" == "i" ] && ensure_known_games_json; then
         can_scan=1
     elif [ "$SCRIPT_ACTION" == "i" ]; then
-        echo -e "${YELLOW}Note: library scanning needs the known-EAX-games database, which isn't"
-        echo -e "available this run — skipping straight to manual entry.${NC}"
+        echo -e "\n${YELLOW}Note: library scanning needs the known-EAX-games database, which isn't"
+        echo -e "available this run — skipping straight to manual entry.${NC}\n"
     fi
 
     echo -e "${WHITE}Common game locations:${NC}\n"
@@ -843,7 +843,7 @@ scan_game_libraries() {
     OPENAL_NATIVE_MODE=""
 
     if ! ensure_known_games_json; then
-        echo -e "${YELLOW}Note: library scanning needs the known-EAX-games database, which isn't available this run.${NC}"
+        echo -e "\n${YELLOW}Note: library scanning needs the known-EAX-games database, which isn't available this run.${NC}\n"
         return 1
     fi
 
@@ -928,10 +928,10 @@ scan_game_libraries() {
     fi
 
     if [ ${#names[@]} -eq 0 ]; then
-        echo -e "${YELLOW}Note: no known EAX games were found in your Steam or Heroic libraries.${NC}"
-        echo -e "${WHITE}This only checks the community-maintained known-games list, which currently"
+        echo -e "\n${YELLOW}Note: no known EAX games were found in your Steam or Heroic libraries.${NC}"
+        echo -e "\n${WHITE}This only checks the community-maintained known-games list, which currently"
         echo -e "covers a small, hand-verified set of titles — it will grow over time. A game"
-        echo -e "you own may still support EAX even if it's not listed yet.${NC}"
+        echo -e "you own may still support EAX even if it's not listed yet.${NC}\n"
         return 1
     fi
 
@@ -1243,11 +1243,11 @@ confirm_continue_if_openal_native() {
         matched=1
     elif [ -n "$GAME_DIR" ] && [ -d "$GAME_DIR" ]; then
         if [ "$json_available" -eq 0 ]; then
-            echo -e "${YELLOW}Note: known-eax-games.json isn't available this run.${NC}"
+            echo -e "\n${YELLOW}Note: known-eax-games.json isn't available this run.${NC}"
         else
-            echo -e "${YELLOW}Note: $game_name isn't in the known-games database.${NC}"
+            echo -e "\n${YELLOW}Note: $game_name isn't in the known-games database.${NC}"
         fi
-        echo -e "${YELLOW}Would you like the script to attempt to detect whether $game_name uses OpenAL or"
+        echo -e "\n${YELLOW}Would you like the script to attempt to detect whether $game_name uses OpenAL or"
         echo -e "DirectSound3D? (Y/n): ${NC}"
         echo -e -n "> "
         read -r DO_BINARY_SCAN
