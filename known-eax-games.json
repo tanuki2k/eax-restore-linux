@@ -161,14 +161,14 @@
     {
       "name": "System Shock 2",
       "steam_appid": 238210,
-      "gog_id": null,
+      "gog_id": 1207659172,
       "steam_listing": "available",
-      "gog_listing": null,
+      "gog_listing": "delisted",
       "edition": "original",
       "api": "directsound3d",
       "eax_status": "supported",
       "eax_restore_hint": null,
-      "notes": "System Shock 2 ships pre-patched with NewDark, which has its own OpenAL Soft 'Hardware Acceleration' option in the in-game Audio menu — a separate native path from this script's DSOAL install. Worth trying if EAX doesn't sound right. The System Shock 2 Community Patch (SCP) is also worth pairing, though it's a general bugfix/polish patch, not an audio-specific one. Note: System Shock 2's GOG listing is the 25th Anniversary Remaster, a different build, so it's deliberately left unmapped here rather than pointed at the wrong game.",
+      "notes": "System Shock 2 ships pre-patched with NewDark, which has its own OpenAL Soft 'Hardware Acceleration' option in the in-game Audio menu — a separate native path from this script's DSOAL install. Worth trying if EAX doesn't sound right. The System Shock 2 Community Patch (SCP) is also worth pairing, though it's a general bugfix/polish patch, not an audio-specific one. Note: the original 1999 build's own GOG listing is delisted — GOG now only sells the 25th Anniversary Remaster, a different build that's deliberately left unmapped here — but existing owners of the classic build keep access to it.",
       "eax_versions": [
         "1.0"
       ]
