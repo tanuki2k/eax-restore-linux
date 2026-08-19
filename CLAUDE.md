@@ -86,24 +86,33 @@ mechanism itself.
 ## Text/output style conventions
 
 All user-facing output goes through `echo -e` with the colour vars defined near the
-top of the script (`GREEN`, `YELLOW`, `CYAN`, `WHITE`, `BOLD`, `DIM`, reset via `NC`) —
-there's no other formatting mechanism (no `tput`, no external color library). Match
-existing usage rather than introducing new colors or styles:
+top of the script (`GREEN`, `YELLOW`, `CYAN`, `WHITE`, `BOLD`, `DIM`, `NOTE`, reset via
+`NC`) — there's no other formatting mechanism (no `tput`, no external color library).
+Match existing usage rather than introducing new colors or styles:
 
 - `CYAN` — section headers and "in progress" status lines (e.g. `Checking ...`).
 - `GREEN` — success (`Done.`, `Up to date [...]`, `Loaded (...)`.).
-- `YELLOW` (often with `BOLD`) — warnings and recoverable errors; plain `YELLOW` for
-  softer advisory notes.
-- `Error: ` (bold `YELLOW`) prefixes a message where something the script tried
-  genuinely failed and there's no further fallback left for that capability this run
-  (a required download/verification fails with no usable cache, a hard dependency is
-  missing, etc.).
-- `Note: ` (plain `YELLOW`, not bold) prefixes a routine "the preferred path wasn't
-  available, here's the automatic fallback" notice — distinct from `Warning:`
-  (recoverable but worth flagging) and from `Error:` (see above): nothing is broken,
+- `YELLOW` (always bold — the var itself carries `\033[1;33m`) — warnings, errors, and
+  every `(Y/n)`/`(y/N)` prompt. Reserved for things that want the user's attention;
+  don't use it for routine/expected branching (that's `NOTE`, below).
+- `Error: ` (`YELLOW`) prefixes a message where something the script tried genuinely
+  failed and there's no further fallback left for that capability this run (a required
+  download/verification fails with no usable cache, a hard dependency is missing,
+  etc.).
+- `Warning: ` is `YELLOW` when it's a standalone paragraph-level message that gates a
+  following `(y/N)`/`(Y/n)` prompt (e.g. "No .exe files were found..."), and `YELLOW`
+  without the surrounding paragraph spacing when it's an inline ` -> `-prefixed
+  sub-step result line with no prompt following it — match whichever of the two shapes
+  the new `Warning:` line is.
+- `Note: ` (`NOTE`, a dedicated bright-blue, non-bold color — deliberately not in the
+  `YELLOW` family) prefixes a routine "the preferred path wasn't available, here's the
+  automatic fallback" notice — distinct from `Warning:`/`Error:` (something to flag or
+  that failed) and from the `YELLOW` `(Y/n)` prompts themselves: nothing is broken,
   this is expected, ordinary branching (e.g. the known-games database being
   unavailable and falling back to manual entry, or reusing a stale cache while
-  offline).
+  offline). Keeping `Note:` out of the yellow family entirely is intentional — it
+  previously shared `YELLOW` with prompts and warnings, which made advisory notices
+  visually indistinguishable from things that actually needed attention.
 - `WHITE` — general prose/body text and prompts.
 - `DIM` — secondary/de-emphasized text, e.g. supplementary detail alongside a primary
   status line.
