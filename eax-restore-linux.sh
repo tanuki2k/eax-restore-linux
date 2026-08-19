@@ -959,34 +959,117 @@ scan_game_libraries() {
     fi
 
     local idx=$((choice - 1))
-    store_label="Steam"
-    [ "${stores[$idx]}" == "gog" ] && store_label="GOG"
 
-    local eax_id_field="steam_appid" listing_field="steam_listing"
-    [ "${stores[$idx]}" == "gog" ] && eax_id_field="gog_id" && listing_field="gog_listing"
+    show_game_details_block "${ids[$idx]}" "${stores[$idx]}" "${paths[$idx]}"
 
-    local eax_versions edition api listing eax_status eax_status_notes eax_restore_hint
-    eax_versions=$(jq -r --arg id "${ids[$idx]}" --arg field "$eax_id_field" \
+    echo -e "\n${YELLOW}Continue with this game? (Y/n): ${NC}"
+    echo -e -n "> "
+    local CONTINUE_SCAN_PICK
+    read -r CONTINUE_SCAN_PICK
+    if [[ "$CONTINUE_SCAN_PICK" =~ $NO_RE ]]; then
+        return 1
+    fi
+
+    GAME_NAME="${meta_names[$idx]}"
+
+    resolve_exe_folder "${paths[$idx]}" || return 1
+
+    [ "${stores[$idx]}" == "steam" ] && SCANNED_APPID="${ids[$idx]}"
+    return 0
+}
+
+# Per-game notes and EAX-impossible flags now live in the community-
+# maintained known-eax-games.json (see ensure_known_games_json above and
+# known-eax-games.json in this repo) rather than hardcoded here, so entries
+# can be added/corrected via PR without touching this script. Entries are
+# still only added when independently verified against the storefront's
+# own API — a wrong/stale ID would misdirect users to the wrong game.
+
+show_known_game_notes() {
+    # Usage: show_known_game_notes <id> <steam|gog> [skip_availability]
+    # Best-effort, install-only heads-up for well-known EAX titles, sourced
+    # from known-eax-games.json. Notes are stored as a single unwrapped line
+    # for easy editing, then word-wrapped to the script's usual prose width
+    # at display time. steam_listing/gog_listing ("delisted") is shown as an
+    # Availability line here too, EXCEPT when the caller already surfaced it
+    # in a GAME DETAILS block (show_game_details_block passes
+    # skip_availability=1 to avoid printing it twice) — call sites that don't
+    # go through a GAME DETAILS block (e.g. an unmatched manual entry) still
+    # need this fallback.
+    [ "$SCRIPT_ACTION" == "i" ] || return
+    [ -z "$1" ] && return
+    ensure_known_games_json || return
+
+    local id_field="steam_appid" listing_field="steam_listing" store_label="Steam"
+    if [ "$2" == "gog" ]; then
+        id_field="gog_id"; listing_field="gog_listing"; store_label="GOG"
+    fi
+
+    local notes listing
+    notes=$(jq -r --arg id "$1" --arg field "$id_field" '.games[] | select((.[$field] // "") | tostring == $id) | .notes // empty' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+
+    if [ -z "$3" ]; then
+        listing=$(jq -r --arg id "$1" --arg id_field "$id_field" --arg listing_field "$listing_field" '.games[] | select((.[$id_field] // "") | tostring == $id) | .[$listing_field] // empty' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+        if [ "$listing" == "delisted" ]; then
+            echo -e "\n${WHITE}  Note: this game is currently delisted from ${store_label}'s storefront —"
+            echo -e "  existing owners keep access, but it can't be newly purchased there anymore.${NC}"
+        fi
+    fi
+
+    [ -z "$notes" ] && return
+    echo -e "\n${WHITE}  Notes:${NC}"
+    echo -e "${WHITE}$(printf '%s' "$notes" | fold -s -w 76 | sed 's/^/  /')${NC}"
+}
+
+show_game_details_block() {
+    # Usage: show_game_details_block <id> <steam|gog> <location>
+    # The richer "--- GAME DETAILS ---" banner scan_game_libraries shows when
+    # a game is picked from a library scan, factored out so the manual/GUI
+    # path can show the same thing once detect_game_environment has confirmed
+    # a prefix and therefore knows the id to look this up by. Only prints
+    # when known-eax-games.json actually has a matching entry — an unmatched
+    # manual pick has nothing to show, same as before this existed.
+    local id="$1" store="$2" location="$3"
+    [ "$SCRIPT_ACTION" == "i" ] || return
+    [ -z "$id" ] && return
+    ensure_known_games_json || return
+
+    local eax_id_field="steam_appid" listing_field="steam_listing" store_label="Steam"
+    if [ "$store" == "gog" ]; then
+        eax_id_field="gog_id"; listing_field="gog_listing"; store_label="GOG"
+    fi
+
+    local match_count
+    match_count=$(jq -r --arg id "$id" --arg field "$eax_id_field" \
+        '[.games[] | select((.[$field] // "") | tostring == $id)] | length' \
+        "$KNOWN_GAMES_FILE" 2>/dev/null)
+    [ "${match_count:-0}" -gt 0 ] || return
+
+    local name eax_versions edition api listing eax_status eax_status_notes eax_restore_hint
+    name=$(jq -r --arg id "$id" --arg field "$eax_id_field" \
+        '.games[] | select((.[$field] // "") | tostring == $id) | .name' \
+        "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+    eax_versions=$(jq -r --arg id "$id" --arg field "$eax_id_field" \
         '.games[] | select((.[$field] // "") | tostring == $id) | .eax_versions // [] | join(", ")' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
     [ -z "$eax_versions" ] && eax_versions="Unknown"
-    edition=$(jq -r --arg id "${ids[$idx]}" --arg field "$eax_id_field" \
+    edition=$(jq -r --arg id "$id" --arg field "$eax_id_field" \
         '.games[] | select((.[$field] // "") | tostring == $id) | .edition // empty' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
-    api=$(jq -r --arg id "${ids[$idx]}" --arg field "$eax_id_field" \
+    api=$(jq -r --arg id "$id" --arg field "$eax_id_field" \
         '.games[] | select((.[$field] // "") | tostring == $id) | .api // "directsound3d"' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
-    listing=$(jq -r --arg id "${ids[$idx]}" --arg id_field "$eax_id_field" --arg listing_field "$listing_field" \
+    listing=$(jq -r --arg id "$id" --arg id_field "$eax_id_field" --arg listing_field "$listing_field" \
         '.games[] | select((.[$id_field] // "") | tostring == $id) | .[$listing_field] // empty' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
-    eax_status=$(jq -r --arg id "${ids[$idx]}" --arg field "$eax_id_field" \
+    eax_status=$(jq -r --arg id "$id" --arg field "$eax_id_field" \
         '.games[] | select((.[$field] // "") | tostring == $id) | .eax_status // "supported"' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
     [ -z "$eax_status" ] && eax_status="supported"
-    eax_status_notes=$(jq -r --arg id "${ids[$idx]}" --arg field "$eax_id_field" \
+    eax_status_notes=$(jq -r --arg id "$id" --arg field "$eax_id_field" \
         '.games[] | select((.[$field] // "") | tostring == $id) | .eax_status_notes // empty' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
-    eax_restore_hint=$(jq -r --arg id "${ids[$idx]}" --arg field "$eax_id_field" \
+    eax_restore_hint=$(jq -r --arg id "$id" --arg field "$eax_id_field" \
         '.games[] | select((.[$field] // "") | tostring == $id) | .eax_restore_hint // empty' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
 
@@ -995,13 +1078,13 @@ scan_game_libraries() {
     echo -e "${GREEN}${BOLD}--- GAME DETAILS ---${NC}"
     print_line
     echo ""
-    echo -e " -> ${YELLOW}Name${NC}:      ${BOLD}${names[$idx]}${NC}"
+    echo -e " -> ${YELLOW}Name${NC}:      ${BOLD}${name}${NC}"
     [ -n "$edition" ] && echo -e " -> ${YELLOW}Edition${NC}:   ${WHITE}${edition^}${NC}"
     echo -e " -> ${YELLOW}Platform${NC}:  ${GREEN}$store_label${NC}"
     if [ "$listing" == "delisted" ]; then
         echo -e " -> ${YELLOW}Availability${NC}: ${WHITE}Delisted from $store_label ${DIM}(existing owners keep access)${NC}"
     fi
-    echo -e " -> ${YELLOW}Location${NC}:  ${DIM}${paths[$idx]}${NC}"
+    echo -e " -> ${YELLOW}Location${NC}:  ${DIM}${location}${NC}"
     # The headline reflects whether DSOAL/OpenAL Soft can actually restore EAX on
     # this build, not the historical eax_versions spec — a stale "1.0" here would
     # repeat the same misleading impression a delisted-EAX storefront page gives.
@@ -1034,68 +1117,11 @@ scan_game_libraries() {
         print_line
     fi
 
-    show_known_game_notes "${ids[$idx]}" "${stores[$idx]}" 1
+    show_known_game_notes "$id" "$store" 1
     SCANNED_NOTES_SHOWN=1
 
     echo ""
     print_line
-
-    echo -e "\n${YELLOW}Continue with this game? (Y/n): ${NC}"
-    echo -e -n "> "
-    local CONTINUE_SCAN_PICK
-    read -r CONTINUE_SCAN_PICK
-    if [[ "$CONTINUE_SCAN_PICK" =~ $NO_RE ]]; then
-        return 1
-    fi
-
-    GAME_NAME="${meta_names[$idx]}"
-
-    resolve_exe_folder "${paths[$idx]}" || return 1
-
-    [ "${stores[$idx]}" == "steam" ] && SCANNED_APPID="${ids[$idx]}"
-    return 0
-}
-
-# Per-game notes and EAX-impossible flags now live in the community-
-# maintained known-eax-games.json (see ensure_known_games_json above and
-# known-eax-games.json in this repo) rather than hardcoded here, so entries
-# can be added/corrected via PR without touching this script. Entries are
-# still only added when independently verified against the storefront's
-# own API — a wrong/stale ID would misdirect users to the wrong game.
-
-show_known_game_notes() {
-    # Usage: show_known_game_notes <id> <steam|gog> [skip_availability]
-    # Best-effort, install-only heads-up for well-known EAX titles, sourced
-    # from known-eax-games.json. Notes are stored as a single unwrapped line
-    # for easy editing, then word-wrapped to the script's usual prose width
-    # at display time. steam_listing/gog_listing ("delisted") is shown as an
-    # Availability line here too, EXCEPT when the caller already surfaced it
-    # in a GAME DETAILS block (scan_game_libraries passes skip_availability=1
-    # to avoid printing it twice) — the manual-entry call sites below have no
-    # such block, so they still need this fallback.
-    [ "$SCRIPT_ACTION" == "i" ] || return
-    [ -z "$1" ] && return
-    ensure_known_games_json || return
-
-    local id_field="steam_appid" listing_field="steam_listing" store_label="Steam"
-    if [ "$2" == "gog" ]; then
-        id_field="gog_id"; listing_field="gog_listing"; store_label="GOG"
-    fi
-
-    local notes listing
-    notes=$(jq -r --arg id "$1" --arg field "$id_field" '.games[] | select((.[$field] // "") | tostring == $id) | .notes // empty' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
-
-    if [ -z "$3" ]; then
-        listing=$(jq -r --arg id "$1" --arg id_field "$id_field" --arg listing_field "$listing_field" '.games[] | select((.[$id_field] // "") | tostring == $id) | .[$listing_field] // empty' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
-        if [ "$listing" == "delisted" ]; then
-            echo -e "\n${WHITE}  Note: this game is currently delisted from ${store_label}'s storefront —"
-            echo -e "  existing owners keep access, but it can't be newly purchased there anymore.${NC}"
-        fi
-    fi
-
-    [ -z "$notes" ] && return
-    echo -e "\n${WHITE}  Notes:${NC}"
-    echo -e "${WHITE}$(printf '%s' "$notes" | fold -s -w 76 | sed 's/^/  /')${NC}"
 }
 
 confirm_continue_if_eax_impossible() {
@@ -1268,6 +1294,13 @@ confirm_continue_if_openal_native() {
         fi
     elif [ "$scanned" -eq 1 ]; then
         echo -e "${YELLOW} -> Found no clear OpenAL32.dll signal — assuming standard DirectSound3D.${NC}"
+        echo -e "\n${YELLOW}Continue with the DSOAL/DirectSound3D install? (Y/n): ${NC}"
+        echo -e -n "> "
+        read -r CONTINUE_DS3D
+        if [[ "$CONTINUE_DS3D" =~ $NO_RE ]]; then
+            echo -e "\n${WHITE}Install cancelled.${NC}"
+            exit 0
+        fi
     elif [ "$declined" -eq 1 ]; then
         echo -e "${WHITE} -> Skipped the file scan — assuming standard DirectSound3D.${NC}"
     else
@@ -1352,7 +1385,7 @@ detect_game_environment() {
                 read -r C_AUTO_S
                 if [[ ! "$C_AUTO_S" =~ $NO_RE ]]; then
                     PREFIX_PATH="$DETECTED_STEAM_PREFIX"
-                    [ -z "$SCANNED_NOTES_SHOWN" ] && show_known_game_notes "$APPID" "steam"
+                    [ -z "$SCANNED_NOTES_SHOWN" ] && show_game_details_block "$APPID" "steam" "$GAME_DIR"
                     confirm_continue_if_eax_impossible "$APPID" "steam"
                     if [ -z "$GAME_NAME" ]; then
                         # Same source appid/gog_id already come from, not the
@@ -1409,7 +1442,7 @@ detect_game_environment() {
 
             if [ -d "$PREFIX_PATH/drive_c" ]; then
                 echo -e "\n -> ${GREEN}Prefix verified!${NC}"
-                [ -z "$SCANNED_NOTES_SHOWN" ] && show_known_game_notes "$HEROIC_APP_NAME" "gog"
+                [ -z "$SCANNED_NOTES_SHOWN" ] && show_game_details_block "$HEROIC_APP_NAME" "gog" "$GAME_DIR"
                 confirm_continue_if_eax_impossible "$HEROIC_APP_NAME" "gog"
                 if [ -z "$GAME_NAME" ] && [ -n "$HEROIC_APP_NAME" ]; then
                     # Same source the GOG ID already comes from, not the
