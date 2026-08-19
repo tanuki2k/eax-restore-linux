@@ -16,16 +16,33 @@ drives library scanning and install-time compatibility notes for specific titles
 `README.md` for the full feature list and user-facing docs, and its "Contributing to
 the known games database" section for the JSON schema.
 
-There are no other source files, no build step, and no package manifest — the repo is
-the script, the JSON database, and their docs and metadata (`README.md`,
-`CONTRIBUTING.md`, `LICENSE`, `.github/`, the `.desktop` launcher).
+`eax-restore-linux.sh` is **not committed to the repo** — it's a generated build
+artifact. Its source lives split across `src/*.sh` (one file per functional group);
+`build.sh` concatenates them, in the order listed in its `COMPONENTS` array, into
+`dist/eax-restore-linux.sh` (`dist/` is gitignored). Edit the relevant `src/*.sh`
+file and re-run `./build.sh` to regenerate it — never hand-edit
+`dist/eax-restore-linux.sh` directly. There's no other build tooling and no package
+manifest — the repo is the split source, the JSON database, and their docs and
+metadata (`README.md`, `CONTRIBUTING.md`, `LICENSE`, `.github/`, the `.desktop`
+launcher).
+
+End users get the script from a **GitHub Release asset**, not the repo directly —
+`README.md`'s `curl` command and `eax-restore-linux.desktop`'s launcher both fetch
+`.../releases/latest/download/eax-restore-linux.sh`. Cutting a release is a manual
+step (no CI automation exists for it yet): bump `SCRIPT_VERSION`/`SCRIPT_DATE` in
+`src/globals.sh`, run `./build.sh`, and create a GitHub release tagged `vX.Y` with
+`dist/eax-restore-linux.sh` and `eax-restore-linux.desktop` attached as assets
+(matching the existing `v0.28` release) — mark it as the latest release so the
+`releases/latest/download/` URLs resolve to it.
 
 ## Commands
 
-- **Syntax-check after any edit:** `bash -n eax-restore-linux.sh`
-- **Shellcheck (if installed):** `shellcheck eax-restore-linux.sh`
+- **Rebuild after editing anything in `src/`:** `./build.sh` (writes
+  `dist/eax-restore-linux.sh`)
+- **Syntax-check after any edit:** `bash -n dist/eax-restore-linux.sh`
+- **Shellcheck (if installed):** `shellcheck dist/eax-restore-linux.sh`
 - **Validate the JSON database after editing it:** `jq empty known-eax-games.json`
-- **Run the script:** `./eax-restore-linux.sh` (interactive; requires `curl`, `unzip`,
+- **Run the script:** `./dist/eax-restore-linux.sh` (interactive; requires `curl`, `unzip`,
   `file`, `jq`, plus `protontricks` for Steam games or `winetricks` for Heroic/GOG
   games — the script's own pre-flight check offers to install missing ones).
   `EAX_RESTORE_SKIP_PREFLIGHT=1`, `EAX_RESTORE_SKIP_CACHE_CHECK=1`, and
@@ -38,29 +55,43 @@ the script, the JSON database, and their docs and metadata (`README.md`,
 
 ## Architecture
 
-The script is a linear, banner-delimited sequence of sections (search for
-`# ====...====` dividers — there are more than a dozen banners in practice; grouped
-below by role, roughly in execution order):
+The source is split across `src/*.sh`, one file per functional group, listed here in
+the order `build.sh` concatenates them into `dist/eax-restore-linux.sh` (which is also
+their execution order in the assembled script):
 
-1. **Header comment block** (top of file) — features list and the authoritative list
-   of `EAX_RESTORE_*` env vars. Keep this in sync with `README.md`'s Environment
-   Variables table whenever a var is added/changed — every existing var should be
-   documented in both places.
-2. **Guards** — refuses root / Steam Gaming Mode, run first, before most constants are
-   even needed.
-3. **Constants & globals** — `BASE_SHARE` and friends (`DSOAL_SHARE`, `OPENAL_SHARE`,
-   `KNOWN_GAMES_*`), pinned download URLs/SHA256s, colour vars, `print_divider`/
-   `print_line`/`is_truthy` helpers.
-4. **Function definitions** — detection (Steam AppID, Heroic prefix, architecture),
-   verification (`verify_checksum`, `verify_or_confirm`, `get_asset_digest`), the
-   `update_local_cache` repository-cache step, install/uninstall logic, the standalone
-   VC++ runtime installer (`verify_vcrun_files`, `install_vcrun_dependencies`,
-   `uninstall_vcrun_dependencies`, etc. — independently triggerable via
-   `EAX_RESTORE_VCRUN_ONLY`, with its own `"VCRUN"` manifest entries), and the
-   `known-eax-games.json` helpers (`ensure_known_games_json`, `scan_game_libraries`,
-   `show_known_game_notes`, `confirm_continue_if_eax_impossible`, etc.).
-5. **Top-level script flow** — pre-flight dependency check, `ACTION: INSTALL` /
-   `ACTION: UNINSTALL` phases.
+1. **`header.sh`** — shebang + top header comment block: features list and the
+   authoritative list of `EAX_RESTORE_*` env vars. Keep this in sync with
+   `README.md`'s Environment Variables table whenever a var is added/changed — every
+   existing var should be documented in both places.
+2. **`globals.sh`** — `SCRIPT_VERSION`, colour vars, `BASE_SHARE` and friends
+   (`DSOAL_SHARE`, `OPENAL_SHARE`, `KNOWN_GAMES_*`), pinned download URLs/SHA256s,
+   `VCRUN_DLL_NAMES`, `EAX_IMPOSSIBLE_FALLBACK_STEAM`. Pure variable/array
+   assignments only — safe to source before the guards run.
+3. **`common.sh`** — small helpers used throughout every other file:
+   `print_divider`/`print_line`/`is_truthy`, `is_genuine_dll`, `parse_selection`.
+4. **`guards.sh`** — refuses root / Steam Gaming Mode, runs before any real work
+   starts.
+5. **`detection.sh`** — Steam AppID / Heroic prefix / architecture detection,
+   `get_game_directory`, `detect_game_environment`, `select_architecture`, etc.
+6. **`known-games.sh`** — the `known-eax-games.json` helpers:
+   `ensure_known_games_json`, `scan_game_libraries`, `show_known_game_notes`,
+   `confirm_continue_if_eax_impossible`, etc.
+7. **`vcrun.sh`** — the standalone VC++ runtime installer: `verify_vcrun_files`,
+   `install_vcrun_dependencies`, `uninstall_vcrun_dependencies`, etc. —
+   independently triggerable via `EAX_RESTORE_VCRUN_ONLY`, with its own `"VCRUN"`
+   manifest entries.
+8. **`verify.sh`** — download verification: `verify_checksum`, `verify_or_confirm`,
+   `get_asset_digest`, `confirm_unverified_download`.
+9. **`cache.sh`** — `update_local_cache` (the repository-cache step), plus
+   `handle_conflict` and `auto_backup_and_overwrite`.
+10. **`preflight.sh`** through **`install-flow.sh`** — top-level script flow:
+    pre-flight dependency check, the `EAX_RESTORE_VCRUN_ONLY` early-exit path,
+    `ACTION: UNINSTALL`, `ACTION: INSTALL`.
+
+All of the above communicate via shared globals (from `globals.sh`, or set by one
+function and read by another) rather than function parameters/return values — that
+convention is unchanged from before the split and spans file boundaries same as it
+previously spanned banner sections within the one file.
 
 **Caching model:** `update_local_cache()` (the `--- REPOSITORY CACHE CHECK ---` step)
 owns fetch/verify/cache for the DSOAL and OpenAL Soft binary bundles: check remote

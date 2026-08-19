@@ -46,7 +46,7 @@ The script checks for these dependencies and offers to install them if they are 
 Open your terminal and run:
 
 ```bash
-curl -LO https://github.com/tanuki2k/eax-restore-linux/raw/refs/heads/main/eax-restore-linux.sh
+curl -LO https://github.com/tanuki2k/eax-restore-linux/releases/latest/download/eax-restore-linux.sh
 ```
 
 **2. Make it executable:**
