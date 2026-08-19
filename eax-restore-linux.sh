@@ -477,7 +477,7 @@ get_game_directory() {
     if [ "$SCRIPT_ACTION" == "i" ] && ensure_known_games_json; then
         can_scan=1
     elif [ "$SCRIPT_ACTION" == "i" ]; then
-        echo -e "\n${YELLOW}Note: library scanning needs the known-EAX-games database, which isn't"
+        echo -e "${YELLOW}Note: library scanning needs the known-EAX-games database, which isn't"
         echo -e "available this run — skipping straight to manual entry.${NC}\n"
     fi
 
@@ -1243,9 +1243,9 @@ confirm_continue_if_openal_native() {
         matched=1
     elif [ -n "$GAME_DIR" ] && [ -d "$GAME_DIR" ]; then
         if [ "$json_available" -eq 0 ]; then
-            echo -e "\n${YELLOW}Note: known-eax-games.json isn't available this run.${NC}"
+            echo -e "${YELLOW}Note: known-eax-games.json isn't available this run.${NC}"
         else
-            echo -e "\n${YELLOW}Note: $game_name isn't in the known-games database.${NC}"
+            echo -e "${YELLOW}Note: $game_name isn't in the known-games database.${NC}"
         fi
         echo -e "\n${YELLOW}Would you like the script to attempt to detect whether $game_name uses OpenAL or"
         echo -e "DirectSound3D? (Y/n): ${NC}"
