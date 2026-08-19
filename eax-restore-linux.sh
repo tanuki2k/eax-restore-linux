@@ -321,7 +321,7 @@ ensure_known_games_json() {
             KNOWN_GAMES_FILE="$EAX_RESTORE_KNOWN_GAMES_FILE"
             echo -e "\n${YELLOW}Note: EAX_RESTORE_KNOWN_GAMES_FILE is set — using $EAX_RESTORE_KNOWN_GAMES_FILE instead of fetching.${NC}\n" >&2
         else
-            echo -e "\n${YELLOW}${BOLD}Error: EAX_RESTORE_KNOWN_GAMES_FILE is set but the file is missing or not valid JSON.${NC}" >&2
+            echo -e "\n${YELLOW}${BOLD}Error: EAX_RESTORE_KNOWN_GAMES_FILE is set but the file is missing or not valid JSON.${NC}\n" >&2
             return 1
         fi
     else
@@ -477,8 +477,8 @@ get_game_directory() {
     if [ "$SCRIPT_ACTION" == "i" ] && ensure_known_games_json; then
         can_scan=1
     elif [ "$SCRIPT_ACTION" == "i" ]; then
-        echo -e "${YELLOW}Note: library scanning needs the known-EAX-games database, which isn't${NC}"
-        echo -e "${WHITE}available this run — skipping straight to manual entry.${NC}"
+        echo -e "${YELLOW}Note: library scanning needs the known-EAX-games database, which isn't"
+        echo -e "available this run — skipping straight to manual entry.${NC}"
     fi
 
     echo -e "${WHITE}Common game locations:${NC}\n"
@@ -580,7 +580,7 @@ get_game_directory() {
                 break
             fi
         else
-            echo -e "\n${YELLOW}${BOLD}Error: Directory not found. Please check the path and try again.${NC}"
+            echo -e "\n${YELLOW}${BOLD}Error: Directory not found. Please check the path and try again.${NC}\n"
             GAME_DIR=""
         fi
     done
@@ -1399,7 +1399,7 @@ detect_game_environment() {
                 APPID=""
             else
                 echo -e "\n${YELLOW}${BOLD}Error: Proton prefix not found for AppID ${APPID}.${NC}"
-                echo -e "${WHITE}If you just installed this game, Proton has not generated the prefix yet."
+                echo -e "\n${WHITE}If you just installed this game, Proton has not generated the prefix yet."
                 echo -e "Please launch the game at least once, close it, and try again.${NC}"
                 echo -e "\n${YELLOW}Check this AppID again? (Y/n): ${NC}"
                 echo -e -n "> "
@@ -1454,7 +1454,7 @@ detect_game_environment() {
                 break
             else
                 echo -e "\n${YELLOW}${BOLD}Error: Initialised Wine prefix not found at that location.${NC}"
-                echo -e "${WHITE}If you just installed this game, the launcher has not generated the prefix yet."
+                echo -e "\n${WHITE}If you just installed this game, the launcher has not generated the prefix yet."
                 echo -e "Please run the game at least once, close it, and try again.${NC}"
 
                 echo -e "\n${YELLOW}Check this path again? (Y/n): ${NC}"
@@ -2207,7 +2207,7 @@ else
                     *debian*|*ubuntu*) sudo apt-get update && sudo apt-get install -y "${MISSING_BASE_PKGS[@]}" ;;
                     *arch*) sudo pacman -Sy --noconfirm "${MISSING_BASE_PKGS[@]}" ;;
                     *fedora*) sudo dnf install -y "${MISSING_BASE_PKGS[@]}" ;;
-                    *) echo -e "${YELLOW}${BOLD}Error: manual install required: ${MISSING_BASE_PKGS[*]}${NC}"; exit 1 ;;
+                    *) echo -e "\n${YELLOW}${BOLD}Error: manual install required: ${MISSING_BASE_PKGS[*]}${NC}"; exit 1 ;;
                 esac
                 echo -e " -> ${GREEN}Dependencies installed successfully.${NC}"
             else echo -e "\n${YELLOW}${BOLD}Cannot proceed without base dependencies. Exiting.${NC}"; exit 1; fi
@@ -2685,7 +2685,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     is_truthy "$EAX_RESTORE_DSOAL_OFFICIAL" && ((ENGINE_ENV_SET++))
 
     if [ "$ENGINE_ENV_SET" -gt 1 ]; then
-        echo -e "${YELLOW}${BOLD}Error: More than one EAX_RESTORE_DSOAL_* variable is set. Set only one and re-run.${NC}"
+        echo -e "\n${YELLOW}${BOLD}Error: More than one EAX_RESTORE_DSOAL_* variable is set. Set only one and re-run.${NC}"
         exit 1
     fi
 
@@ -3004,14 +3004,14 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     if [ "$ENGINE_CHOICE" == "4" ]; then
         if [ ! -f "$OPENAL_SRC" ]; then
             echo -e "\n${YELLOW}${BOLD}Error: Required OpenAL Soft source file was not found in the cache.${NC}"
-            echo -e "${WHITE}This usually means the download failed or was incomplete earlier in this run"
+            echo -e "\n${WHITE}This usually means the download failed or was incomplete earlier in this run"
             echo -e "(check the REPOSITORY CACHE CHECK output above), or the ${ARCH_FOLDER} build isn't present in it."
             echo -e "Re-run the script to retry the download.${NC}"
             exit 1
         fi
     elif [ ! -f "$DSOUND_SRC" ] || [ ! -f "$DSOAL_SRC" ]; then
         echo -e "\n${YELLOW}${BOLD}Error: Required source files for the selected engine were not found in the cache.${NC}"
-        echo -e "${WHITE}This usually means the download for this engine failed or was incomplete earlier in this run"
+        echo -e "\n${WHITE}This usually means the download for this engine failed or was incomplete earlier in this run"
         echo -e "(check the REPOSITORY CACHE CHECK output above), or the ${ARCH_FOLDER} build isn't present in it."
         echo -e "Re-run the script to retry the download, or choose a different engine.${NC}"
         exit 1
