@@ -94,6 +94,16 @@ existing usage rather than introducing new colors or styles:
 - `GREEN` — success (`Done.`, `Up to date [...]`, `Loaded (...)`.).
 - `YELLOW` (often with `BOLD`) — warnings and recoverable errors; plain `YELLOW` for
   softer advisory notes.
+- `Error: ` (bold `YELLOW`) prefixes a message where something the script tried
+  genuinely failed and there's no further fallback left for that capability this run
+  (a required download/verification fails with no usable cache, a hard dependency is
+  missing, etc.).
+- `Note: ` (plain `YELLOW`, not bold) prefixes a routine "the preferred path wasn't
+  available, here's the automatic fallback" notice — distinct from `Warning:`
+  (recoverable but worth flagging) and from `Error:` (see above): nothing is broken,
+  this is expected, ordinary branching (e.g. the known-games database being
+  unavailable and falling back to manual entry, or reusing a stale cache while
+  offline).
 - `WHITE` — general prose/body text and prompts.
 - `DIM` — secondary/de-emphasized text, e.g. supplementary detail alongside a primary
   status line.

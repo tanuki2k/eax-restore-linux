@@ -319,7 +319,7 @@ ensure_known_games_json() {
     if [ -n "${EAX_RESTORE_KNOWN_GAMES_FILE:-}" ]; then
         if [ -s "$EAX_RESTORE_KNOWN_GAMES_FILE" ] && jq empty "$EAX_RESTORE_KNOWN_GAMES_FILE" 2>/dev/null; then
             KNOWN_GAMES_FILE="$EAX_RESTORE_KNOWN_GAMES_FILE"
-            echo -e "\n${YELLOW}EAX_RESTORE_KNOWN_GAMES_FILE is set — using $EAX_RESTORE_KNOWN_GAMES_FILE instead of fetching.${NC}\n" >&2
+            echo -e "\n${YELLOW}Note: EAX_RESTORE_KNOWN_GAMES_FILE is set — using $EAX_RESTORE_KNOWN_GAMES_FILE instead of fetching.${NC}\n" >&2
         else
             echo -e "\n${YELLOW}${BOLD}Error: EAX_RESTORE_KNOWN_GAMES_FILE is set but the file is missing or not valid JSON.${NC}" >&2
             return 1
@@ -477,8 +477,8 @@ get_game_directory() {
     if [ "$SCRIPT_ACTION" == "i" ] && ensure_known_games_json; then
         can_scan=1
     elif [ "$SCRIPT_ACTION" == "i" ]; then
-        echo -e "${YELLOW}Library scanning needs the known-EAX-games database, which isn't available this${NC}"
-        echo -e "${WHITE}run — skipping straight to manual entry.${NC}"
+        echo -e "${YELLOW}Note: library scanning needs the known-EAX-games database, which isn't${NC}"
+        echo -e "${WHITE}available this run — skipping straight to manual entry.${NC}"
     fi
 
     echo -e "${WHITE}Common game locations:${NC}\n"
@@ -843,7 +843,7 @@ scan_game_libraries() {
     OPENAL_NATIVE_MODE=""
 
     if ! ensure_known_games_json; then
-        echo -e "${YELLOW}Library scanning needs the known-EAX-games database, which couldn't be loaded.${NC}"
+        echo -e "${YELLOW}Note: library scanning needs the known-EAX-games database, which isn't available this run.${NC}"
         return 1
     fi
 
@@ -928,7 +928,7 @@ scan_game_libraries() {
     fi
 
     if [ ${#names[@]} -eq 0 ]; then
-        echo -e "${YELLOW}No known EAX games were found in your Steam or Heroic libraries.${NC}"
+        echo -e "${YELLOW}Note: no known EAX games were found in your Steam or Heroic libraries.${NC}"
         echo -e "${WHITE}This only checks the community-maintained known-games list, which currently"
         echo -e "covers a small, hand-verified set of titles — it will grow over time. A game"
         echo -e "you own may still support EAX even if it's not listed yet.${NC}"
@@ -1243,9 +1243,9 @@ confirm_continue_if_openal_native() {
         matched=1
     elif [ -n "$GAME_DIR" ] && [ -d "$GAME_DIR" ]; then
         if [ "$json_available" -eq 0 ]; then
-            echo -e "${YELLOW}known-eax-games.json isn't available this run.${NC}"
+            echo -e "${YELLOW}Note: known-eax-games.json isn't available this run.${NC}"
         else
-            echo -e "${YELLOW}$game_name isn't in the known-games database.${NC}"
+            echo -e "${YELLOW}Note: $game_name isn't in the known-games database.${NC}"
         fi
         echo -e "${YELLOW}Would you like the script to attempt to detect whether $game_name uses OpenAL or"
         echo -e "DirectSound3D? (Y/n): ${NC}"
@@ -1293,7 +1293,7 @@ confirm_continue_if_openal_native() {
             exit 0
         fi
     elif [ "$scanned" -eq 1 ]; then
-        echo -e "${YELLOW} -> Found no clear OpenAL32.dll signal — assuming standard DirectSound3D.${NC}"
+        echo -e "${YELLOW} -> Note: found no clear OpenAL32.dll signal — assuming standard DirectSound3D.${NC}"
         echo -e "\n${YELLOW}Continue with the DSOAL/DirectSound3D install? (Y/n): ${NC}"
         echo -e -n "> "
         read -r CONTINUE_DS3D
@@ -1305,11 +1305,11 @@ confirm_continue_if_openal_native() {
         echo -e "${WHITE} -> Skipped the file scan — assuming standard DirectSound3D.${NC}"
     else
         if [ "$json_available" -eq 0 ]; then
-            echo -e "${YELLOW} -> known-eax-games.json isn't available this run, and $game_name's files couldn't"
-            echo -e "    be scanned either — assuming standard DirectSound3D.${NC}"
+            echo -e "${YELLOW} -> Note: known-eax-games.json isn't available this run, and $game_name's files"
+            echo -e "    couldn't be scanned either — assuming standard DirectSound3D.${NC}"
         else
-            echo -e "${YELLOW} -> $game_name isn't in the known-games database, and its files couldn't be scanned"
-            echo -e "    either — assuming standard DirectSound3D.${NC}"
+            echo -e "${YELLOW} -> Note: $game_name isn't in the known-games database, and its files couldn't be"
+            echo -e "    scanned either — assuming standard DirectSound3D.${NC}"
         fi
     fi
 }
@@ -1686,7 +1686,7 @@ install_vcrun_dependencies() {
         return 0
     fi
 
-    echo -e " -> ${YELLOW}Package manager failed (core files missing). Falling back to direct download...${NC}"
+    echo -e " -> ${YELLOW}Note: package manager didn't provide the core files — falling back to direct download...${NC}"
 
     if [ "$ARCH" == "64" ]; then
         VCRUN_URL="https://aka.ms/vs/17/release/vc_redist.x64.exe"
@@ -1781,7 +1781,7 @@ uninstall_vcrun_dependencies() {
     # 64-bit by checking which runtime is actually present, same as
     # verify_vcrun_files.
     if [ -z "$PREFIX_PATH" ] || [ ! -d "$PREFIX_PATH/drive_c/windows" ]; then
-        echo -e "\n -> ${YELLOW}Prefix not found, skipping VC++ removal.${NC}"
+        echo -e "\n -> ${YELLOW}Note: prefix not found, skipping VC++ removal.${NC}"
         return
     fi
 
@@ -1796,7 +1796,7 @@ uninstall_vcrun_dependencies() {
     fi
 
     if [ -z "$target_dir" ]; then
-        echo -e "\n -> ${YELLOW}No VC++ runtime files found in this prefix, nothing to remove.${NC}"
+        echo -e "\n -> ${YELLOW}Note: no VC++ runtime files found in this prefix, nothing to remove.${NC}"
         return
     fi
 
@@ -1827,7 +1827,7 @@ uninstall_vcrun_dependencies() {
             WINEPREFIX="$PREFIX_PATH" "$WINE_CMD" "$vcrun_share/$vcrun_exe" /uninstall /q /norestart &>/dev/null
         fi
     else
-        echo -e " -> Could not fetch the official uninstaller, skipping straight to direct cleanup."
+        echo -e " -> ${YELLOW}Note: could not fetch the official uninstaller — skipping straight to direct cleanup.${NC}"
     fi
 
     # 2. Direct removal — the reliable part. Matches VCRUN_DLL_NAMES (every
@@ -1881,7 +1881,7 @@ verify_checksum() {
     local actual
     actual=$(sha256sum "$file" | awk '{print $1}')
     if [ "$expected" != "$actual" ]; then
-        echo -e " -> ${YELLOW}${BOLD}Checksum mismatch! Expected $expected, got $actual.${NC}"
+        echo -e " -> ${YELLOW}${BOLD}Error: checksum mismatch — expected $expected, got $actual.${NC}"
         return 1
     fi
 
@@ -1918,7 +1918,7 @@ confirm_unverified_download() {
     # Returns 0 to proceed, 1 to decline.
     local label="$1"
 
-    echo -e " -> ${YELLOW}Could not obtain a checksum for $label (requires 'jq', or GitHub hasn't published one yet).${NC}"
+    echo -e " -> ${YELLOW}Note: could not obtain a checksum for $label (requires 'jq', or GitHub hasn't published one yet).${NC}"
     echo -e "    ${WHITE}This file is downloaded directly from kcat's official GitHub repository, so it should"
     echo -e "    be safe — but without a checksum, the script can't independently confirm that.${NC}"
     echo -e "\n    ${YELLOW}Install it anyway? (Y/n): ${NC}"
@@ -1957,7 +1957,7 @@ update_local_cache() {
     LATEST_DATE=$(echo "$DSOAL_OFFICIAL_JSON" | grep -m 1 '"updated_at"' | cut -d '"' -f 4)
     LOCAL_DATE=$(cat "$DSOAL_SHARE/updated_at.txt" 2>/dev/null)
     if [ -z "$LATEST_DATE" ]; then
-        if [ -d "$DSOAL_OFFICIAL" ] && [ "$(ls -A "$DSOAL_OFFICIAL")" ]; then echo -e " -> ${YELLOW}Offline. Using cached version [${LOCAL_DATE%%T*}]${NC}"
+        if [ -d "$DSOAL_OFFICIAL" ] && [ "$(ls -A "$DSOAL_OFFICIAL")" ]; then echo -e " -> ${YELLOW}Note: offline. Using cached version [${LOCAL_DATE%%T*}]${NC}"
         else echo -e " -> ${YELLOW}${BOLD}Error: Offline and no cache found.${NC}"; print_offline_instructions; exit 1; fi
     elif [ "$LATEST_DATE" != "$LOCAL_DATE" ] || [ ! -d "$DSOAL_OFFICIAL" ]; then
         echo -e " -> ${CYAN}Updates found! Downloading latest build...${NC}"
@@ -1991,7 +1991,7 @@ update_local_cache() {
     OAL_TAG=$(curl -sI https://github.com/kcat/openal-soft/releases/latest | grep -i "^location:" | awk -F '/' '{print $NF}' | tr -d '\r')
     LOCAL_OAL_TAG=$(cat "$OPENAL_SHARE/updated_at.txt" 2>/dev/null)
     if [ -z "$OAL_TAG" ]; then
-        if [ -d "$OPENAL_OFFICIAL" ]; then echo -e " -> ${YELLOW}Offline. Using cached version [${LOCAL_OAL_TAG}]${NC}"
+        if [ -d "$OPENAL_OFFICIAL" ]; then echo -e " -> ${YELLOW}Note: offline. Using cached version [${LOCAL_OAL_TAG}]${NC}"
         else echo -e " -> ${YELLOW}${BOLD}Error: OpenAL cache missing.${NC}"; exit 1; fi
     elif [ "$OAL_TAG" != "$LOCAL_OAL_TAG" ] || [ ! -d "$OPENAL_OFFICIAL" ]; then
         echo -e " -> ${CYAN}Updates found! Downloading OpenAL Soft [${OAL_TAG}]...${NC}"
@@ -2031,7 +2031,7 @@ update_local_cache() {
                 unzip -q "$DSOAL_SHARE/community.zip" -d "$DSOAL_COMMUNITY_V13"; rm -f "$DSOAL_SHARE/community.zip"; echo -e " -> ${GREEN}Done.${NC}"
             else
                 rm -f "$DSOAL_SHARE/community.zip"; rmdir "$DSOAL_COMMUNITY_V13" 2>/dev/null
-                echo -e " -> ${YELLOW}${BOLD}Aborting: downloaded file failed checksum verification. This engine will be unavailable this run.${NC}"
+                echo -e " -> ${YELLOW}${BOLD}Error: downloaded file failed checksum verification. This engine will be unavailable this run.${NC}"
             fi
         else
             rm -f "$DSOAL_SHARE/community.zip"; rmdir "$DSOAL_COMMUNITY_V13" 2>/dev/null
@@ -2048,7 +2048,7 @@ update_local_cache() {
                 unzip -q "$DSOAL_SHARE/v1.4.zip" -d "$DSOAL_COMMUNITY_V14"; rm -f "$DSOAL_SHARE/v1.4.zip"; echo -e " -> ${GREEN}Done.${NC}"
             else
                 rm -f "$DSOAL_SHARE/v1.4.zip"; rmdir "$DSOAL_COMMUNITY_V14" 2>/dev/null
-                echo -e " -> ${YELLOW}${BOLD}Aborting: downloaded file failed checksum verification. This engine will be unavailable this run.${NC}"
+                echo -e " -> ${YELLOW}${BOLD}Error: downloaded file failed checksum verification. This engine will be unavailable this run.${NC}"
             fi
         else
             rm -f "$DSOAL_SHARE/v1.4.zip"; rmdir "$DSOAL_COMMUNITY_V14" 2>/dev/null
@@ -2135,7 +2135,7 @@ print_line
 
 EAX_RESTORE_SKIP_PREFLIGHT="${EAX_RESTORE_SKIP_PREFLIGHT:-}"
 if is_truthy "$EAX_RESTORE_SKIP_PREFLIGHT"; then
-    echo -e "\n${YELLOW}EAX_RESTORE_SKIP_PREFLIGHT is set — skipping the tool scan and trusting that curl,"
+    echo -e "\n${YELLOW}Note: EAX_RESTORE_SKIP_PREFLIGHT is set — skipping the tool scan and trusting that curl,"
     echo -e "unzip, file, protontricks, winetricks, wine, and jq are already available.${NC}"
 
     # Still needed by the rest of the script, just done quietly: the
@@ -2192,7 +2192,7 @@ else
     fi
 
     if [ ${#MISSING_BASE_PKGS[@]} -gt 0 ]; then
-        echo -e "\n${YELLOW}The script is missing essential tools to function: ${MISSING_BASE_PKGS[*]}${NC}"
+        echo -e "\n${YELLOW}${BOLD}Error: the script is missing essential tools to function: ${MISSING_BASE_PKGS[*]}${NC}"
         if grep -q "ID=steamos" /etc/os-release 2>/dev/null; then
             echo -e "\n${YELLOW}SteamOS detected. To protect your immutable filesystem, please install missing tools via the Discover software centre.${NC}"
             echo -e "${YELLOW}${BOLD}Cannot proceed without base dependencies. Exiting.${NC}"; exit 1
@@ -2207,7 +2207,7 @@ else
                     *debian*|*ubuntu*) sudo apt-get update && sudo apt-get install -y "${MISSING_BASE_PKGS[@]}" ;;
                     *arch*) sudo pacman -Sy --noconfirm "${MISSING_BASE_PKGS[@]}" ;;
                     *fedora*) sudo dnf install -y "${MISSING_BASE_PKGS[@]}" ;;
-                    *) echo -e "${YELLOW}${BOLD}Manual install required: ${MISSING_BASE_PKGS[*]}${NC}"; exit 1 ;;
+                    *) echo -e "${YELLOW}${BOLD}Error: manual install required: ${MISSING_BASE_PKGS[*]}${NC}"; exit 1 ;;
                 esac
                 echo -e " -> ${GREEN}Dependencies installed successfully.${NC}"
             else echo -e "\n${YELLOW}${BOLD}Cannot proceed without base dependencies. Exiting.${NC}"; exit 1; fi
@@ -2398,7 +2398,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     fi
 
     if [ ${#FILES_TO_REMOVE[@]} -eq 0 ] && [ "$REG_HAS_COM" == "n" ] && [ "$REG_HAS_OVERRIDE" == "n" ] && [ "$VCRUN_PRESENT" == "n" ]; then
-        echo -e "\n${YELLOW}No EAX files found in $GAME_DIR or the system prefix.${NC}"; exit 0
+        echo -e "\n${YELLOW}Note: no EAX files found in $GAME_DIR or the system prefix.${NC}"; exit 0
     fi
 
     echo ""
@@ -2571,7 +2571,7 @@ EOF
             apply_registry_patch "$REG_FILE"
             rm -f "$REG_FILE"
             echo -e " -> ${GREEN}Registry keys safely removed.${NC}"
-        else echo -e "\n${YELLOW}${BOLD}Prefix/AppID not found, skipping registry cleanup.${NC}"; fi
+        else echo -e "\n${YELLOW}Note: prefix/AppID not found, skipping registry cleanup.${NC}"; fi
     fi
 
     echo ""
@@ -2605,7 +2605,7 @@ fi
 if [ "$SCRIPT_ACTION" == "i" ]; then
     EAX_RESTORE_SKIP_CACHE_CHECK="${EAX_RESTORE_SKIP_CACHE_CHECK:-}"
     if is_truthy "$EAX_RESTORE_SKIP_CACHE_CHECK"; then
-        echo -e "\n${YELLOW}EAX_RESTORE_SKIP_CACHE_CHECK is set — skipping the REPOSITORY CACHE CHECK"
+        echo -e "\n${YELLOW}Note: EAX_RESTORE_SKIP_CACHE_CHECK is set — skipping the REPOSITORY CACHE CHECK"
         echo -e "and trusting whatever DSOAL/OpenAL Soft builds are already cached.${NC}"
     else
         update_local_cache
