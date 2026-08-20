@@ -65,6 +65,10 @@ apply_vcrun_dll_overrides() {
     # and never touches this, which is exactly what caused a game to crash
     # on an "unimplemented function" despite every file being verified
     # present on disk.
+    # Written into GAME_DIR rather than a temp dir: apply_registry_patch
+    # (detection.sh) runs `protontricks -c` for Steam games, which executes
+    # inside a Steam Runtime container that may not have /tmp bind-mounted —
+    # the game's own library folder is guaranteed to be visible instead.
     local reg_file="$GAME_DIR/vcrun_overrides_$$.reg"
     print_status "Setting DLL overrides so Wine loads the native runtime instead of its own builtin..."
     echo "Windows Registry Editor Version 5.00" > "$reg_file"
@@ -83,6 +87,8 @@ remove_vcrun_dll_overrides() {
     # so a prefix that's had VC++ uninstalled doesn't keep telling Wine to
     # prefer "native" versions of DLLs that no longer exist (harmless in
     # practice — Wine falls back to builtin — but leaves a clean prefix).
+    # See apply_vcrun_dll_overrides above for why this lives in GAME_DIR
+    # instead of a temp dir.
     local reg_file="$GAME_DIR/vcrun_overrides_clean_$$.reg"
     print_status "Removing DLL overrides..."
     echo "Windows Registry Editor Version 5.00" > "$reg_file"

@@ -63,6 +63,9 @@ KNOWN_GAMES_ATTEMPTED=""
 # only if ensure_known_games_json can't produce a file at all (e.g. first
 # run, offline, no cache yet). Keeps the "this install is a functional
 # no-op" warning working even before the JSON database is ever reachable.
+# AppID 70 is Half-Life, whose original DirectSound3D/EAX audio was
+# permanently removed by a 2013 engine update — a safe, well-known example
+# to seed the safety net with.
 declare -A EAX_IMPOSSIBLE_FALLBACK_STEAM=(
     [70]=1
 )

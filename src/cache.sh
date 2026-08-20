@@ -16,6 +16,9 @@ update_local_cache() {
             if verify_or_confirm "$DSOAL_SHARE/dsoal.zip" "$DSOAL_OFFICIAL_DIGEST" "kcat Official DSOAL"; then
                 rm -rf "$DSOAL_OFFICIAL"; mkdir -p "$DSOAL_OFFICIAL"
                 unzip -q "$DSOAL_SHARE/dsoal.zip" -d "$DSOAL_OFFICIAL"
+                # kcat's DSOAL.zip release asset sometimes wraps its real
+                # contents in a further nested DSOAL_*.zip, so a second
+                # extraction pass is needed to actually reach the DLLs.
                 NESTED=$(find "$DSOAL_OFFICIAL" -maxdepth 1 -name "DSOAL_*.zip" | head -n 1)
                 if [ -n "$NESTED" ] && unzip -tq "$NESTED" &>/dev/null; then unzip -q "$NESTED" -d "$DSOAL_OFFICIAL"; fi
                 echo "$LATEST_DATE" > "$DSOAL_SHARE/updated_at.txt"; rm -f "$DSOAL_SHARE/dsoal.zip"; print_status "Done." "$GREEN"
@@ -38,6 +41,12 @@ update_local_cache() {
     else print_status "Up to date [${LOCAL_DATE%%T*}]" "$GREEN"; fi
 
     echo -e "\n${CYAN}Checking kcat OpenAL Soft repository...${NC}"
+    # Unlike DSOAL_OFFICIAL_API_URL above, this resolves the tag via the
+    # /releases/latest redirect rather than the Releases API. DSOAL is
+    # pinned to the rolling "latest-master" tag (not a real "latest
+    # release"), so the redirect trick can't resolve it there and the API
+    # must be queried by tag name directly. OpenAL Soft does publish normal
+    # dated releases, so the cheaper redirect trick works here.
     OAL_TAG=$(curl -sI https://github.com/kcat/openal-soft/releases/latest | grep -i "^location:" | awk -F '/' '{print $NF}' | tr -d '\r')
     LOCAL_OAL_TAG=$(cat "$OPENAL_SHARE/updated_at.txt" 2>/dev/null)
     if [ -z "$OAL_TAG" ]; then
@@ -77,6 +86,11 @@ update_local_cache() {
         print_status "Cache missing. Downloading stable build [v1.31a]..."
         mkdir -p "$DSOAL_COMMUNITY_V13"
         if curl -fL -# "$DSOAL_COMMUNITY_V13_URL" -o "$DSOAL_SHARE/community.zip" && unzip -tq "$DSOAL_SHARE/community.zip" &>/dev/null; then
+            # Hard-fails on mismatch, unlike verify_or_confirm's softer
+            # handling of kcat's own downloads (see confirm_unverified_download
+            # in verify.sh) — this build comes from a third-party mirror, not
+            # kcat's own repo, so there's no "it's from the official source"
+            # trust signal to fall back on if the checksum doesn't match.
             if verify_checksum "$DSOAL_SHARE/community.zip" "$DSOAL_COMMUNITY_V13_SHA256"; then
                 unzip -q "$DSOAL_SHARE/community.zip" -d "$DSOAL_COMMUNITY_V13"; rm -f "$DSOAL_SHARE/community.zip"; print_status "Done." "$GREEN"
             else
@@ -94,6 +108,8 @@ update_local_cache() {
         print_status "Cache missing. Downloading v1.4 build..."
         mkdir -p "$DSOAL_COMMUNITY_V14"
         if curl -fL -# "$DSOAL_COMMUNITY_V14_URL" -o "$DSOAL_SHARE/v1.4.zip" && unzip -tq "$DSOAL_SHARE/v1.4.zip" &>/dev/null; then
+            # Same hard-fail-on-mismatch reasoning as the ThreeDeeJay build
+            # above: a self-hosted mirror, not kcat's own repo.
             if verify_checksum "$DSOAL_SHARE/v1.4.zip" "$DSOAL_COMMUNITY_V14_SHA256"; then
                 unzip -q "$DSOAL_SHARE/v1.4.zip" -d "$DSOAL_COMMUNITY_V14"; rm -f "$DSOAL_SHARE/v1.4.zip"; print_status "Done." "$GREEN"
             else

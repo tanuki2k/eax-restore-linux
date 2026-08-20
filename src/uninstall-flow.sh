@@ -38,6 +38,11 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
             [ -z "$manifest_entry" ] && continue
             case "$manifest_entry" in
                 "REGISTRY:COM") REG_HAS_COM="y"; continue ;;
+                # Bare "REGISTRY:OVERRIDE" (no DLL suffix) is only ever read,
+                # never written, by this version of the script — it's kept
+                # for backward compatibility with manifests written by older
+                # versions, from before the DLL name was appended (when
+                # dsound was the only possible override).
                 "REGISTRY:OVERRIDE") REG_HAS_OVERRIDE="y"; REG_OVERRIDE_DLL="dsound"; continue ;;
                 "REGISTRY:OVERRIDE:dsound") REG_HAS_OVERRIDE="y"; REG_OVERRIDE_DLL="dsound"; continue ;;
                 "REGISTRY:OVERRIDE:openal32") REG_HAS_OVERRIDE="y"; REG_OVERRIDE_DLL="openal32"; continue ;;
@@ -211,6 +216,11 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
 
     if [[ "$REMOVE_REG" =~ $YES_RE ]]; then
         if [ -n "$APPID" ] || [ -d "$PREFIX_PATH/drive_c" ]; then
+            # Written into GAME_DIR rather than a temp dir: apply_registry_patch
+            # (detection.sh) runs `protontricks -c` for Steam games, which
+            # executes inside a Steam Runtime container that may not have
+            # /tmp bind-mounted — the game's own library folder is
+            # guaranteed to be visible instead.
             REG_FILE="$GAME_DIR/dsoal_registry_clean_$$.reg"
             echo "Windows Registry Editor Version 5.00" > "$REG_FILE"
             echo "" >> "$REG_FILE"
