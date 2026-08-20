@@ -2,29 +2,15 @@
 # ACTION: UNINSTALL FROM GAME
 # ==============================================================================
 if [ "$SCRIPT_ACTION" == "u" ]; then
-    echo ""
-    print_divider
-    echo -e "${GREEN}${BOLD}--- UNINSTALL EAX FIX ---${NC}"
-    print_line
+    print_banner "UNINSTALL EAX FIX"
 
-    echo ""
-    print_divider
-    echo -e "${CYAN}1. Game Location${NC}"
-    print_line
-    echo ""
+    print_step 1 "Game Location"
     get_game_directory ""
 
-    echo ""
-    print_divider
-    echo -e "${CYAN}2. Launcher Identification${NC}"
-    print_line
-    echo ""
+    print_step 2 "Launcher Identification"
     detect_game_environment
 
-    echo ""
-    print_divider
-    echo -e "${CYAN}3. Scanning For Installed Files${NC}"
-    print_line
+    print_step 3 "Scanning For Installed Files"
 
     FILES_TO_REMOVE=()
     INSTALL_MANIFEST="$GAME_DIR/.eax-restore-manifest.txt"
@@ -94,13 +80,10 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     fi
 
     if [ ${#FILES_TO_REMOVE[@]} -eq 0 ] && [ "$REG_HAS_COM" == "n" ] && [ "$REG_HAS_OVERRIDE" == "n" ] && [ "$VCRUN_PRESENT" == "n" ]; then
-        echo -e "\n${NOTE}Note: no EAX files found in $GAME_DIR or the system prefix.${NC}"; exit 0
+        print_note "no EAX files found in $GAME_DIR or the system prefix."; exit 0
     fi
 
-    echo ""
-    print_divider
-    echo -e "${CYAN}4. Game Files${NC}"
-    print_line
+    print_step 4 "Game Files"
 
     FILES_DECLINED="0"
     if [ ${#FILES_TO_REMOVE[@]} -gt 0 ]; then
@@ -170,7 +153,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
                 for f in "${FINAL_REMOVE[@]}"; do rm -rf "$f"; done
                 for i in "${!FINAL_RESTORE_TARGETS[@]}"; do
                     mv "${FINAL_RESTORE_SOURCES[$i]}" "${FINAL_RESTORE_TARGETS[$i]}" \
-                        && echo -e " -> Restored original $(basename "${FINAL_RESTORE_TARGETS[$i]}") in $(dirname "${FINAL_RESTORE_TARGETS[$i]}")"
+                        && print_status "Restored original $(basename "${FINAL_RESTORE_TARGETS[$i]}") in $(dirname "${FINAL_RESTORE_TARGETS[$i]}")"
                     # Any other .bak* files still sitting around for this
                     # same target are leftover junk — most likely backups
                     # of our own prior output from before reinstalls were
@@ -178,7 +161,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
                     # so there's nothing left worth keeping them for.
                     rm -f "${FINAL_RESTORE_TARGETS[$i]}".bak* 2>/dev/null
                 done
-                echo -e "\n${GREEN}Selected files removed successfully.${NC}"
+                print_status "Selected files removed successfully." "$GREEN"
                 # A partial removal means some tracked files are still
                 # genuinely there — the "fully uninstalled" sentinel below
                 # must not be written in that case, same as a full decline.
@@ -202,10 +185,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         echo "# EAX Restore: uninstalled on $(date -u +"%Y-%m-%dT%H:%M:%SZ"). Nothing left to remove." > "$INSTALL_MANIFEST"
     fi
 
-    echo ""
-    print_divider
-    echo -e "${CYAN}5. Registry Cleanup${NC}"
-    print_line
+    print_step 5 "Registry Cleanup"
 
     if [ "$MANIFEST_FOUND" -eq 1 ]; then
         if [[ "$REG_HAS_COM" == "y" || "$REG_HAS_OVERRIDE" == "y" ]]; then
@@ -222,10 +202,11 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     else
         echo -e "\n${WHITE}Removes the Wine registry tweaks this script can add (DLL override, COM routing) —"
         echo -e "skip if you never enabled those during install. No manifest was found to check automatically.${NC}"
-        echo -e "\n${YELLOW}Do you want to remove Override/COM keys from the Wine registry? (y/N): ${NC}"
-        echo -e -n "> "
-        read -r REMOVE_REG
-        if [[ "$REMOVE_REG" =~ $YES_RE ]]; then REG_HAS_COM="y"; REG_HAS_OVERRIDE="y"; fi
+        if confirm "Do you want to remove Override/COM keys from the Wine registry?" N; then
+            REG_HAS_COM="y"; REG_HAS_OVERRIDE="y"; REMOVE_REG="y"
+        else
+            REMOVE_REG="n"
+        fi
     fi
 
     if [[ "$REMOVE_REG" =~ $YES_RE ]]; then
@@ -266,31 +247,25 @@ EOF
             echo -e "\n${CYAN}STATUS: Cleaning registry...${NC}"
             apply_registry_patch "$REG_FILE"
             rm -f "$REG_FILE"
-            echo -e " -> ${GREEN}Registry keys safely removed.${NC}"
-        else echo -e "\n${NOTE}Note: prefix/AppID not found, skipping registry cleanup.${NC}"; fi
+            print_status "Registry keys safely removed." "$GREEN"
+        else
+            echo ""
+            print_note_arrow "prefix/AppID not found, skipping registry cleanup."
+        fi
     fi
 
-    echo ""
-    print_divider
-    echo -e "${CYAN}6. VC++ Runtime${NC}"
-    print_line
+    print_step 6 "VC++ Runtime"
 
     if [ "$VCRUN_PRESENT" == "y" ]; then
         echo -e "\n${WHITE}This prefix has the MS VC++ 2022 Redistributable installed. Only remove it if"
         echo -e "nothing else sharing this prefix needs it.${NC}"
-        echo -e "\n${YELLOW}Also remove the VC++ 2022 Redistributable from this prefix? (y/N): ${NC}"
-        echo -e -n "> "
-        read -r REMOVE_VCRUN
-        if [[ "$REMOVE_VCRUN" =~ $YES_RE ]]; then
+        if confirm "Also remove the VC++ 2022 Redistributable from this prefix?" N; then
             uninstall_vcrun_dependencies
         fi
     else
         echo -e "\n${WHITE}No VC++ runtime recorded or detected in this prefix — nothing to do here.${NC}"
     fi
 
-    echo ""
-    print_divider
-    echo -e "${GREEN}${BOLD}--- UNINSTALL COMPLETE! ---${NC}"
-    print_line
+    print_banner "UNINSTALL COMPLETE!"
     exit 0
 fi

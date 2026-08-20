@@ -1,8 +1,5 @@
 update_local_cache() {
-    echo ""
-    print_divider
-    echo -e "${GREEN}${BOLD}--- REPOSITORY CACHE CHECK ---${NC}"
-    print_line
+    print_banner "REPOSITORY CACHE CHECK"
     mkdir -p "$DSOAL_SHARE" "$OPENAL_SHARE"
 
     echo -e "\n${CYAN}Checking kcat Official DSOAL repository...${NC}"
@@ -10,10 +7,10 @@ update_local_cache() {
     LATEST_DATE=$(echo "$DSOAL_OFFICIAL_JSON" | grep -m 1 '"updated_at"' | cut -d '"' -f 4)
     LOCAL_DATE=$(cat "$DSOAL_SHARE/updated_at.txt" 2>/dev/null)
     if [ -z "$LATEST_DATE" ]; then
-        if [ -d "$DSOAL_OFFICIAL" ] && [ "$(ls -A "$DSOAL_OFFICIAL")" ]; then echo -e " -> ${NOTE}Note: offline. Using cached version [${LOCAL_DATE%%T*}]${NC}"
-        else echo -e " -> ${YELLOW}${BOLD}Error: Offline and no cache found.${NC}"; print_offline_instructions; exit 1; fi
+        if [ -d "$DSOAL_OFFICIAL" ] && [ "$(ls -A "$DSOAL_OFFICIAL")" ]; then print_note_arrow "offline. Using cached version [${LOCAL_DATE%%T*}]"
+        else print_error_arrow "Offline and no cache found."; print_offline_instructions; exit 1; fi
     elif [ "$LATEST_DATE" != "$LOCAL_DATE" ] || [ ! -d "$DSOAL_OFFICIAL" ]; then
-        echo -e " -> ${CYAN}Updates found! Downloading latest build...${NC}"
+        print_status "Updates found! Downloading latest build..."
         if curl -fL -# "$DSOAL_OFFICIAL_URL" -o "$DSOAL_SHARE/dsoal.zip" && unzip -tq "$DSOAL_SHARE/dsoal.zip" &>/dev/null; then
             DSOAL_OFFICIAL_DIGEST=$(get_asset_digest "$DSOAL_OFFICIAL_JSON" "DSOAL.zip")
             if verify_or_confirm "$DSOAL_SHARE/dsoal.zip" "$DSOAL_OFFICIAL_DIGEST" "kcat Official DSOAL"; then
@@ -21,33 +18,33 @@ update_local_cache() {
                 unzip -q "$DSOAL_SHARE/dsoal.zip" -d "$DSOAL_OFFICIAL"
                 NESTED=$(find "$DSOAL_OFFICIAL" -maxdepth 1 -name "DSOAL_*.zip" | head -n 1)
                 if [ -n "$NESTED" ] && unzip -tq "$NESTED" &>/dev/null; then unzip -q "$NESTED" -d "$DSOAL_OFFICIAL"; fi
-                echo "$LATEST_DATE" > "$DSOAL_SHARE/updated_at.txt"; rm -f "$DSOAL_SHARE/dsoal.zip"; echo -e " -> ${GREEN}Done.${NC}"
+                echo "$LATEST_DATE" > "$DSOAL_SHARE/updated_at.txt"; rm -f "$DSOAL_SHARE/dsoal.zip"; print_status "Done." "$GREEN"
             else
                 rm -f "$DSOAL_SHARE/dsoal.zip"
                 if [ -d "$DSOAL_OFFICIAL" ] && [ "$(ls -A "$DSOAL_OFFICIAL" 2>/dev/null)" ]; then
-                    echo -e " -> ${YELLOW}${BOLD}Skipping this download. Keeping existing cache [${LOCAL_DATE%%T*}].${NC}"
+                    print_warning_arrow "Skipping this download. Keeping existing cache [${LOCAL_DATE%%T*}]."
                 else
-                    echo -e " -> ${YELLOW}${BOLD}Error: Could not verify or confirm this download, and no usable cache exists.${NC}"; print_offline_instructions; exit 1
+                    print_error_arrow "Could not verify or confirm this download, and no usable cache exists."; print_offline_instructions; exit 1
                 fi
             fi
         else
             rm -f "$DSOAL_SHARE/dsoal.zip"
             if [ -d "$DSOAL_OFFICIAL" ] && [ "$(ls -A "$DSOAL_OFFICIAL" 2>/dev/null)" ]; then
-                echo -e " -> ${YELLOW}${BOLD}Download failed or file was corrupt. Keeping existing cache [${LOCAL_DATE%%T*}].${NC}"
+                print_warning_arrow "Download failed or file was corrupt. Keeping existing cache [${LOCAL_DATE%%T*}]."
             else
-                echo -e " -> ${YELLOW}${BOLD}Error: Download failed and no usable cache exists.${NC}"; print_offline_instructions; exit 1
+                print_error_arrow "Download failed and no usable cache exists."; print_offline_instructions; exit 1
             fi
         fi
-    else echo -e " -> ${GREEN}Up to date [${LOCAL_DATE%%T*}]${NC}"; fi
+    else print_status "Up to date [${LOCAL_DATE%%T*}]" "$GREEN"; fi
 
     echo -e "\n${CYAN}Checking kcat OpenAL Soft repository...${NC}"
     OAL_TAG=$(curl -sI https://github.com/kcat/openal-soft/releases/latest | grep -i "^location:" | awk -F '/' '{print $NF}' | tr -d '\r')
     LOCAL_OAL_TAG=$(cat "$OPENAL_SHARE/updated_at.txt" 2>/dev/null)
     if [ -z "$OAL_TAG" ]; then
-        if [ -d "$OPENAL_OFFICIAL" ]; then echo -e " -> ${NOTE}Note: offline. Using cached version [${LOCAL_OAL_TAG}]${NC}"
-        else echo -e " -> ${YELLOW}${BOLD}Error: OpenAL cache missing.${NC}"; exit 1; fi
+        if [ -d "$OPENAL_OFFICIAL" ]; then print_note_arrow "offline. Using cached version [${LOCAL_OAL_TAG}]"
+        else print_error_arrow "OpenAL cache missing."; exit 1; fi
     elif [ "$OAL_TAG" != "$LOCAL_OAL_TAG" ] || [ ! -d "$OPENAL_OFFICIAL" ]; then
-        echo -e " -> ${CYAN}Updates found! Downloading OpenAL Soft [${OAL_TAG}]...${NC}"
+        print_status "Updates found! Downloading OpenAL Soft [${OAL_TAG}]..."
         OAL_ASSET_NAME="openal-soft-${OAL_TAG}-bin.zip"
         OAL_URL="https://github.com/kcat/openal-soft/releases/download/${OAL_TAG}/${OAL_ASSET_NAME}"
         if curl -fL -# "$OAL_URL" -o "$OPENAL_SHARE/openal.zip" && unzip -tq "$OPENAL_SHARE/openal.zip" &>/dev/null; then
@@ -56,65 +53,65 @@ update_local_cache() {
             if verify_or_confirm "$OPENAL_SHARE/openal.zip" "$OAL_DIGEST" "kcat OpenAL Soft [$OAL_TAG]"; then
                 rm -rf "$OPENAL_OFFICIAL"; mkdir -p "$OPENAL_OFFICIAL"
                 unzip -q "$OPENAL_SHARE/openal.zip" -d "$OPENAL_OFFICIAL"
-                echo "$OAL_TAG" > "$OPENAL_SHARE/updated_at.txt"; rm -f "$OPENAL_SHARE/openal.zip"; echo -e " -> ${GREEN}Done.${NC}"
+                echo "$OAL_TAG" > "$OPENAL_SHARE/updated_at.txt"; rm -f "$OPENAL_SHARE/openal.zip"; print_status "Done." "$GREEN"
             else
                 rm -f "$OPENAL_SHARE/openal.zip"
                 if [ -d "$OPENAL_OFFICIAL" ] && [ "$(ls -A "$OPENAL_OFFICIAL" 2>/dev/null)" ]; then
-                    echo -e " -> ${YELLOW}${BOLD}Skipping this download. Keeping existing cache [${LOCAL_OAL_TAG}].${NC}"
+                    print_warning_arrow "Skipping this download. Keeping existing cache [${LOCAL_OAL_TAG}]."
                 else
-                    echo -e " -> ${YELLOW}${BOLD}Error: Could not verify or confirm this download, and no usable cache exists.${NC}"; exit 1
+                    print_error_arrow "Could not verify or confirm this download, and no usable cache exists."; exit 1
                 fi
             fi
         else
             rm -f "$OPENAL_SHARE/openal.zip"
             if [ -d "$OPENAL_OFFICIAL" ] && [ "$(ls -A "$OPENAL_OFFICIAL" 2>/dev/null)" ]; then
-                echo -e " -> ${YELLOW}${BOLD}Download failed or file was corrupt. Keeping existing cache [${LOCAL_OAL_TAG}].${NC}"
+                print_warning_arrow "Download failed or file was corrupt. Keeping existing cache [${LOCAL_OAL_TAG}]."
             else
-                echo -e " -> ${YELLOW}${BOLD}Error: Download failed and no usable cache exists.${NC}"; exit 1
+                print_error_arrow "Download failed and no usable cache exists."; exit 1
             fi
         fi
-    else echo -e " -> ${GREEN}Up to date [${LOCAL_OAL_TAG}]${NC}"; fi
+    else print_status "Up to date [${LOCAL_OAL_TAG}]" "$GREEN"; fi
 
     echo -e "\n${CYAN}Checking ThreeDeeJay Community DSOAL...${NC}"
     if [ ! -d "$DSOAL_COMMUNITY_V13" ]; then
-        echo -e " -> ${CYAN}Cache missing. Downloading stable build [v1.31a]...${NC}"
+        print_status "Cache missing. Downloading stable build [v1.31a]..."
         mkdir -p "$DSOAL_COMMUNITY_V13"
         if curl -fL -# "$DSOAL_COMMUNITY_V13_URL" -o "$DSOAL_SHARE/community.zip" && unzip -tq "$DSOAL_SHARE/community.zip" &>/dev/null; then
             if verify_checksum "$DSOAL_SHARE/community.zip" "$DSOAL_COMMUNITY_V13_SHA256"; then
-                unzip -q "$DSOAL_SHARE/community.zip" -d "$DSOAL_COMMUNITY_V13"; rm -f "$DSOAL_SHARE/community.zip"; echo -e " -> ${GREEN}Done.${NC}"
+                unzip -q "$DSOAL_SHARE/community.zip" -d "$DSOAL_COMMUNITY_V13"; rm -f "$DSOAL_SHARE/community.zip"; print_status "Done." "$GREEN"
             else
                 rm -f "$DSOAL_SHARE/community.zip"; rmdir "$DSOAL_COMMUNITY_V13" 2>/dev/null
-                echo -e " -> ${YELLOW}${BOLD}Error: downloaded file failed checksum verification. This engine will be unavailable this run.${NC}"
+                print_error_arrow "downloaded file failed checksum verification. This engine will be unavailable this run."
             fi
         else
             rm -f "$DSOAL_SHARE/community.zip"; rmdir "$DSOAL_COMMUNITY_V13" 2>/dev/null
-            echo -e " -> ${YELLOW}${BOLD}Error: Download failed or file was corrupt. This engine will be unavailable this run.${NC}"
+            print_error_arrow "Download failed or file was corrupt. This engine will be unavailable this run."
         fi
-    else echo -e " -> ${GREEN}Available in cache.${NC}"; fi
+    else print_status "Available in cache." "$GREEN"; fi
 
     echo -e "\n${CYAN}Checking PCGamingWiki Community DSOAL (self-hosted mirror)...${NC}"
     if [ ! -d "$DSOAL_COMMUNITY_V14" ]; then
-        echo -e " -> ${CYAN}Cache missing. Downloading v1.4 build...${NC}"
+        print_status "Cache missing. Downloading v1.4 build..."
         mkdir -p "$DSOAL_COMMUNITY_V14"
         if curl -fL -# "$DSOAL_COMMUNITY_V14_URL" -o "$DSOAL_SHARE/v1.4.zip" && unzip -tq "$DSOAL_SHARE/v1.4.zip" &>/dev/null; then
             if verify_checksum "$DSOAL_SHARE/v1.4.zip" "$DSOAL_COMMUNITY_V14_SHA256"; then
-                unzip -q "$DSOAL_SHARE/v1.4.zip" -d "$DSOAL_COMMUNITY_V14"; rm -f "$DSOAL_SHARE/v1.4.zip"; echo -e " -> ${GREEN}Done.${NC}"
+                unzip -q "$DSOAL_SHARE/v1.4.zip" -d "$DSOAL_COMMUNITY_V14"; rm -f "$DSOAL_SHARE/v1.4.zip"; print_status "Done." "$GREEN"
             else
                 rm -f "$DSOAL_SHARE/v1.4.zip"; rmdir "$DSOAL_COMMUNITY_V14" 2>/dev/null
-                echo -e " -> ${YELLOW}${BOLD}Error: downloaded file failed checksum verification. This engine will be unavailable this run.${NC}"
+                print_error_arrow "downloaded file failed checksum verification. This engine will be unavailable this run."
             fi
         else
             rm -f "$DSOAL_SHARE/v1.4.zip"; rmdir "$DSOAL_COMMUNITY_V14" 2>/dev/null
-            echo -e " -> ${YELLOW}${BOLD}Error: Download failed or file was corrupt. This engine will be unavailable this run.${NC}"
+            print_error_arrow "Download failed or file was corrupt. This engine will be unavailable this run."
         fi
-    else echo -e " -> ${GREEN}Available in cache.${NC}"; fi
+    else print_status "Available in cache." "$GREEN"; fi
 
     echo -e "\n${CYAN}Checking known EAX games database...${NC}"
     if ensure_known_games_json; then
         GAME_COUNT=$(jq '.games | length' "$KNOWN_GAMES_FILE" 2>/dev/null)
-        echo -e " -> ${GREEN}Loaded (${GAME_COUNT:-0} games).${NC}"
+        print_status "Loaded (${GAME_COUNT:-0} games)." "$GREEN"
     else
-        echo -e " -> ${YELLOW}${BOLD}Error: Download failed or file was corrupt. Game database will be unavailable this run.${NC}"
+        print_error_arrow "Download failed or file was corrupt. Game database will be unavailable this run."
     fi
 }
 
@@ -141,10 +138,11 @@ handle_conflict() {
                 b)
                     TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
                     mv "$target_file" "${target_file}.bak.${TIMESTAMP}"
-                    echo -e "\n -> Backed up original to $(basename "$target_file").bak.${TIMESTAMP}"
+                    echo ""
+                    print_status "Backed up original to $(basename "$target_file").bak.${TIMESTAMP}"
                     return 0 ;;
-                s) echo -e "\n -> Skipped $(basename "$target_file")."; return 1 ;;
-                *) echo -e "\n${YELLOW}${BOLD}Invalid choice. Type o, b, or s.${NC}" ;;
+                s) echo ""; print_status "Skipped $(basename "$target_file")."; return 1 ;;
+                *) print_warning "Invalid choice. Type o, b, or s." ;;
             esac
         done
     fi
@@ -167,7 +165,7 @@ auto_backup_and_overwrite() {
         fi
         TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
         mv "$target_file" "${target_file}.bak.${TIMESTAMP}"
-        echo -e " -> Backed up existing $(basename "$target_file") to $(basename "$target_file").bak.${TIMESTAMP}"
+        print_status "Backed up existing $(basename "$target_file") to $(basename "$target_file").bak.${TIMESTAMP}"
     fi
     return 0
 }

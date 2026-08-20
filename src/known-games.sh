@@ -23,9 +23,9 @@ ensure_known_games_json() {
     if [ -n "${EAX_RESTORE_KNOWN_GAMES_FILE:-}" ]; then
         if [ -s "$EAX_RESTORE_KNOWN_GAMES_FILE" ] && jq empty "$EAX_RESTORE_KNOWN_GAMES_FILE" 2>/dev/null; then
             KNOWN_GAMES_FILE="$EAX_RESTORE_KNOWN_GAMES_FILE"
-            echo -e "\n${NOTE}Note: EAX_RESTORE_KNOWN_GAMES_FILE is set — using $EAX_RESTORE_KNOWN_GAMES_FILE instead of fetching.${NC}\n" >&2
+            { print_note "EAX_RESTORE_KNOWN_GAMES_FILE is set — using $EAX_RESTORE_KNOWN_GAMES_FILE instead of fetching."; echo ""; } >&2
         else
-            echo -e "\n${YELLOW}${BOLD}Error: EAX_RESTORE_KNOWN_GAMES_FILE is set but the file is missing or not valid JSON.${NC}\n" >&2
+            { print_error "EAX_RESTORE_KNOWN_GAMES_FILE is set but the file is missing or not valid JSON."; echo ""; } >&2
             return 1
         fi
     else
@@ -39,7 +39,7 @@ ensure_known_games_json() {
             rm -f "$tmp" 2>/dev/null
             if [ -s "$KNOWN_GAMES_CACHE" ] && jq empty "$KNOWN_GAMES_CACHE" 2>/dev/null; then
                 KNOWN_GAMES_FILE="$KNOWN_GAMES_CACHE"
-                echo -e "\n${YELLOW} -> Couldn't refresh the known-EAX-games database (offline?) — using the last cached copy.${NC}" >&2
+                { echo ""; print_note_arrow "couldn't refresh the known-EAX-games database (offline?) — using the last cached copy."; } >&2
             else
                 # No message here — every caller that has something
                 # meaningful to say about a missing database says it
@@ -62,9 +62,9 @@ ensure_known_games_json() {
     # exist in this schema yet" apart. Warn once so that's visible instead
     # of a checkbox that quietly never fires.
     if ! jq -e '.games | any(has("api"))' "$KNOWN_GAMES_FILE" >/dev/null 2>&1; then
-        echo -e "\n${YELLOW} -> Warning: $KNOWN_GAMES_FILE doesn't have the 'api'/'eax_status' fields this" >&2
-        echo -e "${YELLOW}    script version expects — it looks like an older database schema. Audio API" >&2
-        echo -e "${YELLOW}    Detection and some install-time warnings won't work correctly until it updates.${NC}" >&2
+        { echo ""; print_warning_arrow "$KNOWN_GAMES_FILE doesn't have the 'api'/'eax_status' fields this" \
+            "script version expects — it looks like an older database schema. Audio API" \
+            "Detection and some install-time warnings won't work correctly until it updates."; } >&2
     fi
 
     return 0
@@ -152,7 +152,8 @@ scan_game_libraries() {
     OPENAL_NATIVE_MODE=""
 
     if ! ensure_known_games_json; then
-        echo -e "\n${NOTE}Note: library scanning needs the known-EAX-games database, which isn't available this run.${NC}\n"
+        print_note "library scanning needs the known-EAX-games database, which isn't available this run."
+        echo ""
         return 1
     fi
 
@@ -261,7 +262,8 @@ scan_game_libraries() {
         if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 0 ] && [ "$choice" -le ${#names[@]} ]; then
             break
         fi
-        echo -e "\n${YELLOW}${BOLD}Invalid selection. Please enter a number 0-${#names[@]}.${NC}\n"
+        print_warning "Invalid selection. Please enter a number 0-${#names[@]}."
+        echo ""
     done
     if [ "$choice" -eq 0 ]; then
         return 1
@@ -271,13 +273,7 @@ scan_game_libraries() {
 
     show_game_details_block "${ids[$idx]}" "${stores[$idx]}" "${paths[$idx]}"
 
-    echo -e "\n${YELLOW}Continue with this game? (Y/n): ${NC}"
-    echo -e -n "> "
-    local CONTINUE_SCAN_PICK
-    read -r CONTINUE_SCAN_PICK
-    if [[ "$CONTINUE_SCAN_PICK" =~ $NO_RE ]]; then
-        return 1
-    fi
+    confirm "Continue with this game?" || return 1
 
     GAME_NAME="${meta_names[$idx]}"
 
@@ -326,8 +322,8 @@ show_known_game_notes() {
     fi
 
     [ -z "$notes" ] && return
-    echo -e "\n${WHITE}  Notes:${NC}"
-    echo -e "${WHITE}$(printf '%s' "$notes" | fold -s -w 76 | sed 's/^/  /')${NC}"
+    echo -e "\n${NOTE}  Notes:${NC}"
+    print_wrapped "$notes"
 }
 
 show_game_details_block() {
@@ -382,11 +378,7 @@ show_game_details_block() {
         '.games[] | select((.[$field] // "") | tostring == $id) | .eax_restore_hint // empty' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
 
-    echo ""
-    print_divider
-    echo -e "${GREEN}${BOLD}--- GAME DETAILS ---${NC}"
-    print_line
-    echo ""
+    print_banner "GAME DETAILS"
     echo -e " -> ${YELLOW}Name${NC}:      ${BOLD}${name}${NC}"
     [ -n "$edition" ] && echo -e " -> ${YELLOW}Edition${NC}:   ${WHITE}${edition^}${NC}"
     echo -e " -> ${YELLOW}Platform${NC}:  ${GREEN}$store_label${NC}"
@@ -415,11 +407,11 @@ show_game_details_block() {
         elif [ "$eax_status" == "not_implemented" ]; then
             echo -e " ${YELLOW}${BOLD}Never implemented in this edition${NC}"
         fi
-        echo -e "\n${WHITE}  Details:${NC}"
-        echo -e "${WHITE}$(printf '%s' "$eax_status_notes" | fold -s -w 76 | sed 's/^/  /')${NC}"
+        echo -e "\n${NOTE}  Details:${NC}"
+        print_wrapped "$eax_status_notes"
         if [ -n "$eax_restore_hint" ]; then
-            echo -e "\n${WHITE}  Fix:${NC}"
-            echo -e "${WHITE}$(printf '%s' "$eax_restore_hint" | fold -s -w 76 | sed 's/^/  /')${NC}"
+            echo -e "\n${NOTE}  Fix:${NC}"
+            print_wrapped "$eax_restore_hint"
         fi
     fi
     show_known_game_notes "$id" "$store" 1
@@ -456,18 +448,15 @@ confirm_continue_if_eax_impossible() {
     fi
 
     if [ "$status" == "not_implemented" ]; then
-        echo -e "\n${YELLOW}${BOLD}This edition never implemented EAX/environmental audio in the first place —"
-        echo -e "installing DSOAL here is a functional no-op.${NC}"
+        print_warning "This edition never implemented EAX/environmental audio in the first place —" \
+            "installing DSOAL here is a functional no-op."
     else
-        echo -e "\n${YELLOW}${BOLD}EAX/A3D support was removed from this build by a software update —"
-        echo -e "installing DSOAL here is a functional no-op on the current default build.${NC}"
+        print_warning "EAX/A3D support was removed from this build by a software update —" \
+            "installing DSOAL here is a functional no-op on the current default build."
         [ -n "$hint" ] && echo -e "${WHITE}$hint${NC}"
     fi
 
-    echo -e "\n${YELLOW}Continue installing anyway? (y/N): ${NC}"
-    echo -e -n "> "
-    read -r CONTINUE_ANYWAY
-    if [[ ! "$CONTINUE_ANYWAY" =~ $YES_RE ]]; then
+    if ! confirm "Continue installing anyway?" N; then
         echo -e "\n${WHITE}Install cancelled.${NC}"
         exit 0
     fi

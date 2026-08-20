@@ -4,39 +4,24 @@
 if [ "$SCRIPT_ACTION" == "i" ]; then
     EAX_RESTORE_SKIP_CACHE_CHECK="${EAX_RESTORE_SKIP_CACHE_CHECK:-}"
     if is_truthy "$EAX_RESTORE_SKIP_CACHE_CHECK"; then
-        echo -e "\n${NOTE}Note: EAX_RESTORE_SKIP_CACHE_CHECK is set — skipping the REPOSITORY CACHE CHECK"
-        echo -e "and trusting whatever DSOAL/OpenAL Soft builds are already cached.${NC}"
+        print_note "EAX_RESTORE_SKIP_CACHE_CHECK is set — skipping the REPOSITORY CACHE CHECK" \
+            "and trusting whatever DSOAL/OpenAL Soft builds are already cached."
     else
         update_local_cache
     fi
 
-    echo ""
-    print_divider
-    echo -e "${GREEN}${BOLD}--- PHASE 1: CONFIGURATION ---${NC}"
-    print_line
+    print_banner "PHASE 1: CONFIGURATION"
 
     # 1. Game Location
-    echo ""
-    print_divider
-    echo -e "${CYAN}1. Game Location${NC}"
-    print_line
-    echo ""
+    print_step 1 "Game Location"
     get_game_directory ""
 
     # 2. Game Identification & Launcher Auto-Detect
-    echo ""
-    print_divider
-    echo -e "${CYAN}2. Launcher Identification${NC}"
-    print_line
-    echo ""
+    print_step 2 "Launcher Identification"
     detect_game_environment
 
     # 3. Audio API Detection
-    echo ""
-    print_divider
-    echo -e "${CYAN}3. Audio API Detection${NC}"
-    print_line
-    echo ""
+    print_step 3 "Audio API Detection"
     if [ "$LAUNCHER_TYPE" == "1" ]; then
         confirm_continue_if_openal_native "$APPID" "steam" "$GAME_NAME"
     else
@@ -47,11 +32,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     select_architecture 4
 
     # 5. Engine Selection
-    echo ""
-    print_divider
-    echo -e "${CYAN}5. Audio Engine Selection${NC}"
-    print_line
-    echo ""
+    print_step 5 "Audio Engine Selection"
 
     if [ -n "$OPENAL_NATIVE_MODE" ]; then
         ENGINE_CHOICE=4
@@ -84,7 +65,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     is_truthy "$EAX_RESTORE_DSOAL_OFFICIAL" && ((ENGINE_ENV_SET++))
 
     if [ "$ENGINE_ENV_SET" -gt 1 ]; then
-        echo -e "\n${YELLOW}${BOLD}Error: More than one EAX_RESTORE_DSOAL_* variable is set. Set only one and re-run.${NC}"
+        print_error "More than one EAX_RESTORE_DSOAL_* variable is set. Set only one and re-run."
         exit 1
     fi
 
@@ -107,7 +88,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
             echo -e -n "\n> "
             read -r ENGINE_CHOICE
             ENGINE_CHOICE="${ENGINE_CHOICE:-3}"
-            if [[ "$ENGINE_CHOICE" =~ ^[123]$ ]]; then break; else echo -e "\n${YELLOW}${BOLD}Invalid selection. Please type 1, 2, or 3.${NC}"; fi
+            if [[ "$ENGINE_CHOICE" =~ ^[123]$ ]]; then break; else print_warning "Invalid selection. Please type 1, 2, or 3."; fi
         done
     fi
     fi
@@ -131,32 +112,23 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     # 6. VC++ Runtime Dependencies
     INSTALL_VCRUN="n"
     if [ "$ENGINE_CHOICE" == "3" ] || [ "$ENGINE_CHOICE" == "4" ]; then
-        echo ""
-        print_divider
-        echo -e "${CYAN}6. VC++ Runtime Dependencies${NC}"
-        print_line
-        echo -e "\n${WHITE}The modern kcat engine needs genuine Microsoft C++ runtime libraries. Older Proton/Wine"
+        print_step 6 "VC++ Runtime Dependencies"
+        echo -e "${WHITE}The modern kcat engine needs genuine Microsoft C++ runtime libraries. Older Proton/Wine"
         echo -e "builds (9 and below) tend to be missing them more often than newer ones — but rather"
         echo -e "than guess from a version number, this can check the prefix directly.${NC}"
-        echo -e "\n${YELLOW}Check this prefix for existing VC++ runtime files? (Y/n): ${NC}"
-        echo -e -n "> "
-        read -r DO_VCRUN_CHECK
 
-        if [[ "$DO_VCRUN_CHECK" =~ $NO_RE ]]; then
-            echo -e "\n${WHITE}Skipping. You can revisit this later with EAX_RESTORE_VCRUN_ONLY=1 without redoing"
-            echo -e "the rest of the install.${NC}"
-        else
+        if confirm "Check this prefix for existing VC++ runtime files?"; then
             echo -e "\n${CYAN}STATUS: Checking prefix for existing VC++ runtime files...${NC}"
 
             if [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows" ]; then
                 verify_vcrun_files
             else
                 VCRUN_SUCCESS=0
-                echo -e " -> ${YELLOW}Prefix not resolved yet, can't check. Defaulting to asking below.${NC}"
+                print_status "Prefix not resolved yet, can't check. Defaulting to asking below." "$YELLOW"
             fi
 
             if [ "$VCRUN_SUCCESS" -eq 1 ]; then
-                echo -e "\n${GREEN}Core VC++ runtime files are already present.${NC}"
+                print_status "Core VC++ runtime files are already present." "$GREEN"
                 echo -e "${WHITE}This will set the DLL overrides so Wine actually loads them (file presence alone"
                 echo -e "doesn't guarantee that) once you confirm and deploy below, and skip the install step"
                 echo -e "itself.${NC}"
@@ -164,20 +136,16 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
             else
                 echo -e "\n${WHITE}These files are missing or incomplete here. Without them, the game may crash"
                 echo -e "silently on startup when it tries to load the audio engine.${NC}"
-                echo -e "\n${YELLOW}Install genuine MS VC++ runtimes? (y/N): ${NC}"
-                echo -e -n "> "
-                read -r INSTALL_VCRUN
-                INSTALL_VCRUN="${INSTALL_VCRUN:-n}"
+                if confirm "Install genuine MS VC++ runtimes?" N; then INSTALL_VCRUN="y"; else INSTALL_VCRUN="n"; fi
             fi
+        else
+            echo -e "\n${WHITE}Skipping. You can revisit this later with EAX_RESTORE_VCRUN_ONLY=1 without redoing"
+            echo -e "the rest of the install.${NC}"
         fi
     fi
 
     # 7. Audio Configuration
-    echo ""
-    print_divider
-    echo -e "${CYAN}7. Speaker Configuration${NC}"
-    print_line
-    echo ""
+    print_step 7 "Speaker Configuration"
     echo -e "${WHITE}What kind of audio output are you using?${NC}\n"
     echo -e " 1) Stereo (headphones or 2-speaker setup)"
     echo -e " 2) Surround Sound (4.0/5.1/6.1/7.1 speaker setup)"
@@ -188,7 +156,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         echo -e -n "> "
         read -r OUTPUT_MODE_CHOICE
         OUTPUT_MODE_CHOICE="${OUTPUT_MODE_CHOICE:-1}"
-        if [[ "$OUTPUT_MODE_CHOICE" =~ ^[123]$ ]]; then break; else echo -e "\n${YELLOW}${BOLD}Invalid selection. Please type 1, 2, or 3.${NC}"; fi
+        if [[ "$OUTPUT_MODE_CHOICE" =~ ^[123]$ ]]; then break; else print_warning "Invalid selection. Please type 1, 2, or 3."; fi
     done
 
     ENABLE_HRTF=""
@@ -208,7 +176,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
             echo -e -n "> "
             read -r STEREO_MODE_CHOICE
             STEREO_MODE_CHOICE="${STEREO_MODE_CHOICE:-1}"
-            if [[ "$STEREO_MODE_CHOICE" =~ ^[123]$ ]]; then break; else echo -e "\n${YELLOW}${BOLD}Invalid selection. Please type 1, 2, or 3.${NC}"; fi
+            if [[ "$STEREO_MODE_CHOICE" =~ ^[123]$ ]]; then break; else print_warning "Invalid selection. Please type 1, 2, or 3."; fi
         done
 
         case "$STEREO_MODE_CHOICE" in
@@ -250,7 +218,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
                 2) SURROUND_CHANNELS="surround51"; break ;;
                 3) SURROUND_CHANNELS="surround61"; break ;;
                 4) SURROUND_CHANNELS="surround71"; break ;;
-                *) echo -e "\n${YELLOW}${BOLD}Invalid selection. Please type 1, 2, 3, or 4.${NC}" ;;
+                *) print_warning "Invalid selection. Please type 1, 2, 3, or 4." ;;
             esac
         done
     else
@@ -258,11 +226,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     fi
 
     # 8. Advanced Compatibility Tweaks
-    echo ""
-    print_divider
-    echo -e "${CYAN}8. Advanced Compatibility Tweaks${NC}"
-    print_line
-    echo ""
+    print_step 8 "Advanced Compatibility Tweaks"
     echo -e "${WHITE}These optional workarounds are designed for extremely stubborn games"
     echo -e "that refuse to load EAX normally. In 90% of cases, you do not need these.${NC}\n"
 
@@ -326,11 +290,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     fi
 
     # 9. Automatic DLL Override
-    echo ""
-    print_divider
-    echo -e "${CYAN}9. Automatic DLL Override${NC}"
-    print_line
-    echo ""
+    print_step 9 "Automatic DLL Override"
     echo -e "${WHITE}Wine needs to be told to use the new ${PRIMARY_DLL_FILENAME} file instead of its built-in one."
     echo -e "We can inject this rule directly into the Wine prefix registry so you don't have to"
     echo -e "manually type WINEDLLOVERRIDES=\"${PRIMARY_DLL_NAME}=n,b\" %command% into your launcher.${NC}"
@@ -341,27 +301,24 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     # ==============================================================================
     # PHASE 2: EXECUTION
     # ==============================================================================
-    echo ""
-    print_divider
-    echo -e "${GREEN}${BOLD}--- PHASE 2: EXECUTION ---${NC}"
-    print_line
+    print_banner "PHASE 2: EXECUTION"
     echo -e "\n${CYAN}${BOLD}Configuration finished!${NC}"
     echo -e -n "${CYAN}Ready to deploy the audio files to your game and system prefix. Proceed? (Y/n): ${NC}"; read -r CONFIRM_FIN
     if [[ "$CONFIRM_FIN" =~ $NO_RE ]]; then echo -e "\n${YELLOW}Installation aborted.${NC}"; exit 0; fi
 
     echo -e "\n${CYAN}STATUS: Executing system verbs via $( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" ) (Silent Mode)...${NC}"
-    echo -e " -> Applying core package: openal"
+    print_status "Applying core package: openal"
 
     if [ "$LAUNCHER_TYPE" == "1" ]; then
         protontricks "$APPID" -q openal 2>/dev/null
-        echo -e " -> ${GREEN}Core package (openal) applied successfully.${NC}"
+        print_status "Core package (openal) applied successfully." "$GREEN"
     else
         if [ -n "$WINE_CMD" ]; then
             # Using --force to bypass winetricks safety blocks in Heroic
             WINEPREFIX="$PREFIX_PATH" WINE="$WINE_CMD" winetricks --force -q openal 2>/dev/null
-            echo -e " -> ${GREEN}Core package (openal) applied successfully.${NC}"
+            print_status "Core package (openal) applied successfully." "$GREEN"
         else
-            echo -e " -> ${YELLOW}Warning: No local Wine binary found. Skipping core package.${NC}"
+            print_warning_arrow "No local Wine binary found. Skipping core package."
         fi
     fi
 
@@ -402,14 +359,14 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
 
     if [ "$ENGINE_CHOICE" == "4" ]; then
         if [ ! -f "$OPENAL_SRC" ]; then
-            echo -e "\n${YELLOW}${BOLD}Error: Required OpenAL Soft source file was not found in the cache.${NC}"
+            print_error "Required OpenAL Soft source file was not found in the cache."
             echo -e "\n${WHITE}This usually means the download failed or was incomplete earlier in this run"
             echo -e "(check the REPOSITORY CACHE CHECK output above), or the ${ARCH_FOLDER} build isn't present in it."
             echo -e "Re-run the script to retry the download.${NC}"
             exit 1
         fi
     elif [ ! -f "$DSOUND_SRC" ] || [ ! -f "$DSOAL_SRC" ]; then
-        echo -e "\n${YELLOW}${BOLD}Error: Required source files for the selected engine were not found in the cache.${NC}"
+        print_error "Required source files for the selected engine were not found in the cache."
         echo -e "\n${WHITE}This usually means the download for this engine failed or was incomplete earlier in this run"
         echo -e "(check the REPOSITORY CACHE CHECK output above), or the ${ARCH_FOLDER} build isn't present in it."
         echo -e "Re-run the script to retry the download, or choose a different engine.${NC}"
@@ -460,7 +417,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         if handle_conflict "$DEPLOY_DEST"; then
             cp -f "${DEPLOY_SRC[$i]}" "$DEPLOY_DEST"
             echo "$DEPLOY_DEST" >> "$INSTALL_MANIFEST"
-            echo -e " -> Copied: ${DEPLOY_DEST_NAME[$i]} to $(basename "$GAME_DIR")"
+            print_status "Copied: ${DEPLOY_DEST_NAME[$i]} to $(basename "$GAME_DIR")"
         fi
     done
 
@@ -487,7 +444,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         else
             echo "$GAME_DIR/OpenAL" >> "$INSTALL_MANIFEST"
         fi
-        echo -e " -> Deployed: HRTF profile directory to $(basename "$GAME_DIR")"
+        print_status "Deployed: HRTF profile directory to $(basename "$GAME_DIR")"
     fi
 
     if [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows" ]; then
@@ -509,11 +466,11 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
                 auto_backup_and_overwrite "$DEPLOY_DEST"
                 cp -f "${DEPLOY_SRC[$i]}" "$DEPLOY_DEST"
                 echo "$DEPLOY_DEST" >> "$INSTALL_MANIFEST"
-                echo -e " -> Duplicated: ${DEPLOY_DEST_NAME[$i]} to $(basename "$PREFIX_TARGET_DIR")"
+                print_status "Duplicated: ${DEPLOY_DEST_NAME[$i]} to $(basename "$PREFIX_TARGET_DIR")"
             elif handle_conflict "$DEPLOY_DEST"; then
                 cp -f "${DEPLOY_SRC[$i]}" "$DEPLOY_DEST"
                 echo "$DEPLOY_DEST" >> "$INSTALL_MANIFEST"
-                echo -e " -> Duplicated: ${DEPLOY_DEST_NAME[$i]} to $(basename "$PREFIX_TARGET_DIR")"
+                print_status "Duplicated: ${DEPLOY_DEST_NAME[$i]} to $(basename "$PREFIX_TARGET_DIR")"
             fi
         done
     fi
@@ -523,11 +480,11 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     if [[ "$ADVANCED_DUMMY" =~ $YES_RE ]]; then
         if handle_conflict "$GAME_DIR/eax.dll"; then
             touch "$GAME_DIR/eax.dll"; echo "$GAME_DIR/eax.dll" >> "$INSTALL_MANIFEST"
-            echo -e " -> Created: eax.dll dummy"
+            print_status "Created: eax.dll dummy"
         fi
         if handle_conflict "$GAME_DIR/eaxunified.dll"; then
             touch "$GAME_DIR/eaxunified.dll"; echo "$GAME_DIR/eaxunified.dll" >> "$INSTALL_MANIFEST"
-            echo -e " -> Created: eaxunified.dll dummy"
+            print_status "Created: eaxunified.dll dummy"
         fi
     fi
 
@@ -592,7 +549,7 @@ resampler = spline
 [EAX]
 enable = true
 EOF
-            echo -e " -> Generated: Advanced alsoft.ini with expanded channel limits"
+            print_status "Generated: Advanced alsoft.ini with expanded channel limits"
         else
             cat <<EOF > "$GAME_DIR/alsoft.ini"
 # Auto-generated by EAX Restore Script for Linux
@@ -615,7 +572,7 @@ resampler = spline
 [EAX]
 enable = true
 EOF
-            echo -e " -> Generated: Linux-optimised alsoft.ini"
+            print_status "Generated: Linux-optimised alsoft.ini"
         fi
     fi
 
@@ -652,17 +609,14 @@ EOF
         apply_registry_patch "$REG_FILE"
         rm -f "$REG_FILE"
 
-        [[ "$ADVANCED_COM" =~ $YES_RE ]] && echo "REGISTRY:COM" >> "$INSTALL_MANIFEST" && echo -e " -> Injected: COM Registry Routing"
+        [[ "$ADVANCED_COM" =~ $YES_RE ]] && echo "REGISTRY:COM" >> "$INSTALL_MANIFEST" && print_status "Injected: COM Registry Routing"
         if [[ "$AUTO_OVERRIDE" =~ $YES_RE ]]; then
             echo "REGISTRY:OVERRIDE:${PRIMARY_DLL_NAME}" >> "$INSTALL_MANIFEST"
-            echo -e " -> Injected: WINEDLLOVERRIDES (native,builtin) into registry"
+            print_status "Injected: WINEDLLOVERRIDES (native,builtin) into registry"
         fi
     fi
 
-    echo ""
-    print_divider
-    echo -e "${GREEN}${BOLD}--- INSTALLATION COMPLETE! ---${NC}"
-    print_line
+    print_banner "INSTALLATION COMPLETE!"
 
     if [[ "$AUTO_OVERRIDE" =~ $YES_RE ]]; then
         echo -e "\n${YELLOW}${BOLD}Final Steps to activate EAX:${NC}"

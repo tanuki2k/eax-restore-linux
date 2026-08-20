@@ -16,6 +16,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 COMPONENTS=(
     header.sh
     globals.sh
+    ui.sh
     common.sh
     guards.sh
     detection.sh

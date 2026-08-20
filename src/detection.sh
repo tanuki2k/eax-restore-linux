@@ -60,6 +60,9 @@ get_game_directory() {
     if [ "$SCRIPT_ACTION" == "i" ] && ensure_known_games_json; then
         can_scan=1
     elif [ "$SCRIPT_ACTION" == "i" ]; then
+        # No leading blank: print_step's own trailing blank line already
+        # separates this from the banner above, so print_note's default
+        # leading newline would double it up.
         echo -e "${NOTE}Note: library scanning needs the known-EAX-games database, which isn't"
         echo -e "available this run — skipping straight to manual entry.${NC}\n"
     fi
@@ -103,21 +106,17 @@ get_game_directory() {
                 if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#menu_actions[@]}" ]; then
                     break
                 fi
-                echo -e "\n${YELLOW}${BOLD}Invalid selection. Please enter a number 1-${#menu_actions[@]}.${NC}"
+                print_warning "Invalid selection. Please enter a number 1-${#menu_actions[@]}."
             done
             action="${menu_actions[$((choice - 1))]}"
         fi
 
         case "$action" in
             scan)
-                echo -e "\n${NOTE}Note: the known-EAX-games list is a small, hand-verified, work-in-progress"
-                echo -e "set — it doesn't cover every EAX game. A game you own may still support EAX"
-                echo -e "even if it's not (yet) listed.${NC}"
-                echo -e "\n${YELLOW}Continue with the scan? (Y/n): ${NC}"
-                echo -e -n "> "
-                local DO_SCAN_CONFIRM
-                read -r DO_SCAN_CONFIRM
-                if [[ "$DO_SCAN_CONFIRM" =~ $NO_RE ]]; then
+                print_note "the known-EAX-games list is a small, hand-verified, work-in-progress" \
+                    "set — it doesn't cover every EAX game. A game you own may still support EAX" \
+                    "even if it's not (yet) listed."
+                if ! confirm "Continue with the scan?"; then
                     continue
                 fi
                 if scan_game_libraries; then
@@ -132,7 +131,7 @@ get_game_directory() {
                 GAME_DIR=$(pick_directory_gui)
                 GAME_DIR="${GAME_DIR%/}"
                 if [ -z "$GAME_DIR" ]; then
-                    echo -e "\n${YELLOW}No folder selected.${NC}"
+                    print_warning "No folder selected."
                     continue
                 fi
                 ;;
@@ -150,11 +149,8 @@ get_game_directory() {
             if [ "$SCRIPT_ACTION" == "i" ]; then
                 EXE_COUNT=$(find "$GAME_DIR" -maxdepth 2 -type f -iname "*.exe" | wc -l)
                 if [ "$EXE_COUNT" -eq 0 ]; then
-                    echo -e "\n${YELLOW}${BOLD}Warning: No .exe files were found in this directory or its immediate subfolders.${NC}"
-                    echo -e "\n${YELLOW}Are you absolutely sure this is the correct game folder? (y/N): ${NC}"
-                    echo -e -n "> "
-                    read -r FORCE_DIR
-                    if [[ "$FORCE_DIR" =~ $YES_RE ]]; then break; fi
+                    print_warning "No .exe files were found in this directory or its immediate subfolders."
+                    if confirm "Are you absolutely sure this is the correct game folder?" N; then break; fi
                     GAME_DIR=""
                 else
                     break
@@ -163,7 +159,8 @@ get_game_directory() {
                 break
             fi
         else
-            echo -e "\n${YELLOW}${BOLD}Error: Directory not found. Please check the path and try again.${NC}\n"
+            print_error "Directory not found. Please check the path and try again."
+            echo ""
             GAME_DIR=""
         fi
     done
@@ -180,7 +177,7 @@ detect_heroic_prefix_verbose() {
     local installed_jsons
     installed_jsons=$(find "$HOME/.config/heroic" "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic" -type f -name "installed.json" 2>/dev/null)
 
-    echo -e " -> Searching installed.json for matching game path..." >&2
+    print_status "Searching installed.json for matching game path..." >&2
     while IFS= read -r json_file; do
         [ -z "$json_file" ] && continue
         app_name=""
@@ -195,8 +192,8 @@ detect_heroic_prefix_verbose() {
         done < <(awk 'BEGIN { RS="}"; FS="," } { ip=""; an=""; for (i=1; i<=NF; i++) { if ($i ~ /"(install_path|installPath)"/) { line=$i; sub(/^.*"(install_path|installPath)"[ \t]*:[ \t]*"/, "", line); sub(/".*$/, "", line); ip=line } if ($i ~ /"(app_name|appName)"/) { line=$i; sub(/^.*"(app_name|appName)"[ \t]*:[ \t]*"/, "", line); sub(/".*$/, "", line); an=line } } if (ip != "") print ip "\t" an }' "$json_file")
 
         if [ -n "$app_name" ]; then
-            echo -e " -> Game found! Internal ID: ${BOLD}$app_name${NC}" >&2
-            echo -e " -> Parsing GamesConfig/$app_name.json for custom prefix paths..." >&2
+            print_status "Game found! Internal ID: ${BOLD}$app_name${NC}" >&2
+            print_status "Parsing GamesConfig/$app_name.json for custom prefix paths..." >&2
             local config_jsons
             config_jsons=$(find "$HOME/.config/heroic" "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic" -type f -path "*/GamesConfig/$app_name.json" 2>/dev/null)
             while IFS= read -r conf_file; do
@@ -209,7 +206,7 @@ detect_heroic_prefix_verbose() {
     done <<< "$installed_jsons"
 
     if [ -n "$app_name" ] && [ -z "$auto_prefix" ]; then
-        echo -e " -> No custom prefix defined. Checking default Heroic locations..." >&2
+        print_status "No custom prefix defined. Checking default Heroic locations..." >&2
         if [ -d "$HOME/Games/Heroic/Prefixes/$app_name" ]; then auto_prefix="$HOME/Games/Heroic/Prefixes/$app_name"
         elif [ -d "$HOME/Games/Heroic/Prefixes/default/$app_name" ]; then auto_prefix="$HOME/Games/Heroic/Prefixes/default/$app_name"
         fi
@@ -296,11 +293,7 @@ resolve_exe_folder() {
         [ -z "$root_exe_name" ] && root_exe_name="$(basename "${root_exes[0]}")"
 
         echo -e "\n -> ${GREEN}Found the game executable:${NC} $root_exe_name ${DIM}in $root${NC}"
-        echo -e "\n${YELLOW}Use this location? (Y/n): ${NC}"
-        echo -e -n "> "
-        local confirm_root
-        read -r confirm_root
-        if [[ ! "$confirm_root" =~ $NO_RE ]]; then
+        if confirm "Use this location?"; then
             GAME_DIR="$root"
             return 0
         fi
@@ -372,11 +365,7 @@ resolve_exe_folder() {
 
     if [ ${#dirs[@]} -eq 1 ]; then
         echo -e "\n -> ${GREEN}Found the game executable:${NC} ${dir_exe_name[${dirs[0]}]} ${DIM}in ${dirs[0]}${NC}"
-        echo -e "\n${YELLOW}Use this location? (Y/n): ${NC}"
-        echo -e -n "> "
-        local confirm_single
-        read -r confirm_single
-        if [[ ! "$confirm_single" =~ $NO_RE ]]; then
+        if confirm "Use this location?"; then
             GAME_DIR="${dirs[0]}"
             return 0
         fi
@@ -399,12 +388,8 @@ resolve_exe_folder() {
         fi
         return 1
     else
-        echo -e "\n${YELLOW}${BOLD}Warning: No .exe files were found anywhere under this install.${NC}"
-        echo -e "\n${YELLOW}Use the install root anyway? (y/N): ${NC}"
-        echo -e -n "> "
-        local force
-        read -r force
-        if [[ "$force" =~ $YES_RE ]]; then GAME_DIR="$root"; return 0; fi
+        print_warning "No .exe files were found anywhere under this install."
+        if confirm "Use the install root anyway?" N; then GAME_DIR="$root"; return 0; fi
         return 1
     fi
 }
@@ -482,23 +467,19 @@ confirm_continue_if_openal_native() {
     if [ "$json_available" -eq 1 ] && [ "${match_count:-0}" -gt 0 ]; then
         api=$(jq -r --arg id "$1" --arg field "$field" '.games[] | select((.[$field] // "") | tostring == $id) | .api // "directsound3d"' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
         matched=1
-        echo -e " -> ${GREEN}Found $game_name in the known-games database — audio API: $api.${NC}"
+        print_status "Found $game_name in the known-games database — audio API: $api." "$GREEN"
     elif [ -n "$GAME_DIR" ] && [ -d "$GAME_DIR" ]; then
         if [ "$json_available" -eq 0 ]; then
-            echo -e "${NOTE}Note: known-eax-games.json isn't available this run.${NC}"
+            print_note "known-eax-games.json isn't available this run."
         else
-            echo -e "${NOTE}Note: $game_name isn't in the known-games database.${NC}"
+            print_note "$game_name isn't in the known-games database."
         fi
-        echo -e "\n${YELLOW}Would you like the script to attempt to detect whether $game_name uses OpenAL or"
-        echo -e "DirectSound3D? (Y/n): ${NC}"
-        echo -e -n "> "
-        read -r DO_BINARY_SCAN
-        if [[ "$DO_BINARY_SCAN" =~ $NO_RE ]]; then
-            declined=1
-        else
-            echo -e "\n -> Scanning $game_name's .exe/.dll files for OpenAL32.dll/dsound.dll references..."
+        if confirm "Would you like the script to attempt to detect whether $game_name uses OpenAL or DirectSound3D?"; then
+            print_status "Scanning $game_name's .exe/.dll files for OpenAL32.dll/dsound.dll references..."
             api=$(detect_api_from_binary "$GAME_DIR")
             scanned=1
+        else
+            declined=1
         fi
     fi
 
@@ -515,10 +496,7 @@ confirm_continue_if_openal_native() {
         fi
         echo -e "${WHITE}It can instead deploy kcat's OpenAL Soft directly as OpenAL32.dll (with the same"
         echo -e "alsoft.ini tuning).${NC}"
-        echo -e "\n${YELLOW}Continue with OpenAL Soft deployment? (Y/n): ${NC}"
-        echo -e -n "> "
-        read -r CONTINUE_OPENAL_NATIVE
-        if [[ "$CONTINUE_OPENAL_NATIVE" =~ $NO_RE ]]; then
+        if ! confirm "Continue with OpenAL Soft deployment?"; then
             echo -e "\n${WHITE}Install cancelled.${NC}"
             exit 0
         fi
@@ -527,32 +505,26 @@ confirm_continue_if_openal_native() {
     fi
 
     if [ "$matched" -eq 1 ]; then
-        echo -e "${GREEN} -> $game_name uses DirectSound3D — the standard EAX path this script already handles.${NC}"
-        echo -e "\n${YELLOW}Continue with the DSOAL/DirectSound3D install? (Y/n): ${NC}"
-        echo -e -n "> "
-        read -r CONTINUE_DS3D
-        if [[ "$CONTINUE_DS3D" =~ $NO_RE ]]; then
+        print_status "$game_name uses DirectSound3D — the standard EAX path this script already handles." "$GREEN"
+        if ! confirm "Continue with the DSOAL/DirectSound3D install?"; then
             echo -e "\n${WHITE}Install cancelled.${NC}"
             exit 0
         fi
     elif [ "$scanned" -eq 1 ]; then
-        echo -e "${YELLOW} -> Found no clear OpenAL32.dll signal — assuming standard DirectSound3D.${NC}"
-        echo -e "\n${YELLOW}Continue with the DSOAL/DirectSound3D install? (Y/n): ${NC}"
-        echo -e -n "> "
-        read -r CONTINUE_DS3D
-        if [[ "$CONTINUE_DS3D" =~ $NO_RE ]]; then
+        print_status "Found no clear OpenAL32.dll signal — assuming standard DirectSound3D." "$YELLOW"
+        if ! confirm "Continue with the DSOAL/DirectSound3D install?"; then
             echo -e "\n${WHITE}Install cancelled.${NC}"
             exit 0
         fi
     elif [ "$declined" -eq 1 ]; then
-        echo -e "${WHITE} -> Skipped the file scan — assuming standard DirectSound3D.${NC}"
+        print_status "Skipped the file scan — assuming standard DirectSound3D." "$WHITE"
     else
         if [ "$json_available" -eq 0 ]; then
-            echo -e "${NOTE} -> Note: known-eax-games.json isn't available this run, and $game_name's files"
-            echo -e "    couldn't be scanned either — assuming standard DirectSound3D.${NC}"
+            print_note_arrow "known-eax-games.json isn't available this run, and $game_name's files" \
+                "couldn't be scanned either — assuming standard DirectSound3D."
         else
-            echo -e "${NOTE} -> Note: $game_name isn't in the known-games database, and its files couldn't be"
-            echo -e "    scanned either — assuming standard DirectSound3D.${NC}"
+            print_note_arrow "$game_name isn't in the known-games database, and its files couldn't be" \
+                "scanned either — assuming standard DirectSound3D."
         fi
     fi
 }
@@ -570,13 +542,9 @@ detect_game_environment() {
             # skip the redundant search/confirmation and go straight to
             # prefix verification below.
             APPID="$SCANNED_APPID"
-            echo -e " -> Using AppID ${BOLD}$APPID${NC} from the library scan."
+            print_status "Using AppID ${BOLD}$APPID${NC} from the library scan."
         else
-            echo -e "\n${YELLOW}Would you like the script to attempt to automatically find your Proton prefix? (Y/n): ${NC}"
-            echo -e -n "> "
-            read -r DO_AUTO_S
-
-            if [[ ! "$DO_AUTO_S" =~ $NO_RE ]]; then
+            if confirm "Would you like the script to attempt to automatically find your Proton prefix?"; then
                 echo -e "\n${CYAN}STATUS: Searching for Steam AppID...${NC}"
                 # Use the top-level folder directly under steamapps/common/, not
                 # the leaf of GAME_DIR — the .exe is often nested in a subfolder
@@ -584,7 +552,7 @@ detect_game_environment() {
                 # appmanifest's "installdir" value.
                 INSTALL_DIR="${GAME_DIR#*/steamapps/common/}"
                 INSTALL_DIR="${INSTALL_DIR%%/*}"
-                echo -e " -> Scanning local appmanifest files for folder: $INSTALL_DIR"
+                print_status "Scanning local appmanifest files for folder: $INSTALL_DIR"
                 # Escape BRE metacharacters (folder names with brackets, dots, etc.
                 # are common — e.g. "[Definitive Edition]") since this pattern
                 # also relies on \s as a wildcard, which -F would otherwise take
@@ -594,13 +562,10 @@ detect_game_environment() {
 
                 if [ -n "$MANIFEST_FILE" ]; then
                     AUTO_APPID=$(basename "$MANIFEST_FILE" | tr -dc '0-9')
-                    echo -e " -> Found AppID: ${BOLD}$AUTO_APPID${NC}"
-                    echo -e "\n${YELLOW}Use this detected Steam AppID? (Y/n): ${NC}"
-                    echo -e -n "> "
-                    read -r C_AUTO
-                    if [[ ! "$C_AUTO" =~ $NO_RE ]]; then APPID="$AUTO_APPID"; fi
+                    print_status "Found AppID: ${BOLD}$AUTO_APPID${NC}"
+                    if confirm "Use this detected Steam AppID?"; then APPID="$AUTO_APPID"; fi
                 else
-                    echo -e " -> ${YELLOW}Search complete. No matching AppID found.${NC}"
+                    print_status "Search complete. No matching AppID found." "$YELLOW"
                 fi
             fi
         fi
@@ -616,15 +581,12 @@ detect_game_environment() {
                 [ -z "$APPID" ] && break
             fi
 
-            echo -e "\n -> Querying Protontricks database for AppID ${APPID}..."
+            print_status "Querying Protontricks database for AppID ${APPID}..."
             DETECTED_STEAM_PREFIX=$(protontricks -c 'echo $WINEPREFIX' "$APPID" 2>/dev/null | grep "/pfx" | tail -n 1 | tr -d '\r')
 
             if [ -n "$DETECTED_STEAM_PREFIX" ] && [ -d "$DETECTED_STEAM_PREFIX" ]; then
                 echo -e " -> ${GREEN}Detected Prefix:${NC} $DETECTED_STEAM_PREFIX"
-                echo -e "\n${YELLOW}Use this detected prefix? (Y/n): ${NC}"
-                echo -e -n "> "
-                read -r C_AUTO_S
-                if [[ ! "$C_AUTO_S" =~ $NO_RE ]]; then
+                if confirm "Use this detected prefix?"; then
                     PREFIX_PATH="$DETECTED_STEAM_PREFIX"
                     [ -z "$SCANNED_NOTES_SHOWN" ] && show_game_details_block "$APPID" "steam" "$GAME_DIR"
                     confirm_continue_if_eax_impossible "$APPID" "steam"
@@ -639,31 +601,21 @@ detect_game_environment() {
                 fi
                 APPID=""
             else
-                echo -e "\n${YELLOW}${BOLD}Error: Proton prefix not found for AppID ${APPID}.${NC}"
+                print_error "Proton prefix not found for AppID ${APPID}."
                 echo -e "\n${WHITE}If you just installed this game, Proton has not generated the prefix yet."
                 echo -e "Please launch the game at least once, close it, and try again.${NC}"
-                echo -e "\n${YELLOW}Check this AppID again? (Y/n): ${NC}"
-                echo -e -n "> "
-                read -r RET
-                if [[ "$RET" =~ $NO_RE ]]; then APPID=""; fi
+                if ! confirm "Check this AppID again?"; then APPID=""; fi
             fi
         done
     else
         LAUNCHER_TYPE="2"
         echo -e "${GREEN}Non-Steam installation detected (Heroic/GOG, or a manually created Wine prefix)!${NC}"
-        echo -e "\n${YELLOW}Would you like the script to attempt to automatically find your Wine prefix? (Y/n): ${NC}"
-        echo -e -n "> "
-        read -r DO_AUTO_H
-
         HEROIC_APP_NAME=""
-        if [[ ! "$DO_AUTO_H" =~ $NO_RE ]]; then
+        if confirm "Would you like the script to attempt to automatically find your Wine prefix?"; then
             IFS=$'\t' read -r DETECTED_PREFIX DETECTED_APP_NAME <<< "$(detect_heroic_prefix_verbose "$GAME_DIR")"
             if [ -n "$DETECTED_PREFIX" ]; then
                 echo -e " -> ${GREEN}Detected Prefix:${NC} $DETECTED_PREFIX"
-                echo -e "\n${YELLOW}Use this detected prefix? (Y/n): ${NC}"
-                echo -e -n "> "
-                read -r C_AUTO
-                if [[ ! "$C_AUTO" =~ $NO_RE ]]; then
+                if confirm "Use this detected prefix?"; then
                     PREFIX_PATH="$DETECTED_PREFIX"
                     HEROIC_APP_NAME="$DETECTED_APP_NAME"
                 fi
@@ -682,7 +634,7 @@ detect_game_environment() {
             fi
 
             if [ -d "$PREFIX_PATH/drive_c" ]; then
-                echo -e "\n -> ${GREEN}Prefix verified!${NC}"
+                print_status "Prefix verified!" "$GREEN"
                 [ -z "$SCANNED_NOTES_SHOWN" ] && show_game_details_block "$HEROIC_APP_NAME" "gog" "$GAME_DIR"
                 confirm_continue_if_eax_impossible "$HEROIC_APP_NAME" "gog"
                 if [ -z "$GAME_NAME" ] && [ -n "$HEROIC_APP_NAME" ]; then
@@ -694,14 +646,11 @@ detect_game_environment() {
                 fi
                 break
             else
-                echo -e "\n${YELLOW}${BOLD}Error: Initialised Wine prefix not found at that location.${NC}"
+                print_error "Initialised Wine prefix not found at that location."
                 echo -e "\n${WHITE}If you just installed this game, the launcher has not generated the prefix yet."
                 echo -e "Please run the game at least once, close it, and try again.${NC}"
 
-                echo -e "\n${YELLOW}Check this path again? (Y/n): ${NC}"
-                echo -e -n "> "
-                read -r RET
-                if [[ "$RET" =~ $NO_RE ]]; then PREFIX_PATH=""; fi
+                if ! confirm "Check this path again?"; then PREFIX_PATH=""; fi
             fi
         done
 
@@ -711,9 +660,9 @@ detect_game_environment() {
 
             if [ -n "$HEROIC_JSON" ]; then
                 if grep -iq '"type": "proton"\|"name": ".*proton' "$HEROIC_JSON"; then
-                    echo -e " -> ${YELLOW}Proton runner detected within Heroic configuration.${NC}"
+                    print_status "Proton runner detected within Heroic configuration." "$YELLOW"
                 else
-                    echo -e " -> ${GREEN}Standard Wine runner detected.${NC}"
+                    print_status "Standard Wine runner detected." "$GREEN"
                 fi
             fi
         fi
@@ -740,21 +689,14 @@ select_architecture() {
     # each caller has its own step sequence, so the displayed step number is
     # a parameter rather than hardcoded.
     local step="${1:-3}"
-    echo ""
-    print_divider
-    echo -e "${CYAN}${step}. Architecture Selection${NC}"
-    print_line
-    echo ""
+    print_step "$step" "Architecture Selection"
     echo -e "${WHITE}This step determines whether the game executable is 32-bit or 64-bit so the script"
     echo -e "can deploy the correct architecture for the audio wrapper files. If the wrong version"
     echo -e "is selected, the game will silently fail to load the custom audio engine.${NC}\n"
 
     ARCH="MANUAL"
     if command -v file &> /dev/null; then
-        echo -e "${YELLOW}Attempt to auto-detect 32/64-bit architecture? (Y/n): ${NC}"
-        echo -e -n "> "
-        read -r DO_AUTO
-        if [[ ! "$DO_AUTO" =~ $NO_RE ]]; then
+        if confirm "Attempt to auto-detect 32/64-bit architecture?"; then
             A32=0; A64=0
             while IFS= read -r -d '' exe; do
                 [[ $(file "$exe") == *"PE32+"* ]] && ((A64++)) || ((A32++))
@@ -767,10 +709,7 @@ select_architecture() {
                 DETECTED="UNKNOWN"
             fi
             if [ "$DETECTED" != "UNKNOWN" ]; then
-                echo -e "\n${GREEN}Detected ${DETECTED}-bit. Correct? (Y/n): ${NC}"
-                echo -e -n "> "
-                read -r CONF
-                if [[ ! "$CONF" =~ $NO_RE ]]; then ARCH="$DETECTED"; fi
+                if confirm "Detected ${DETECTED}-bit. Correct?"; then ARCH="$DETECTED"; fi
             fi
         fi
     fi
@@ -780,7 +719,7 @@ select_architecture() {
             echo -e -n "> "
             read -r ARCH
             if [[ "$ARCH" == "32" || "$ARCH" == "64" ]]; then break
-            else echo -e "\n${YELLOW}${BOLD}Invalid selection. Please type 32 or 64.${NC}"; fi
+            else print_warning "Invalid selection. Please type 32 or 64."; fi
         done
     fi
     ARCH_FOLDER=$([ "$ARCH" == "64" ] && echo "Win64" || echo "Win32")

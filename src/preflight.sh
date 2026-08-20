@@ -7,15 +7,12 @@ echo -e "${CYAN}${BOLD}   DSOAL & OpenAL Soft Universal Installer               
 echo -e "${CYAN}${BOLD}   v${SCRIPT_VERSION}  (${SCRIPT_DATE})${NC}"
 echo -e "${CYAN}${BOLD}==========================================================${NC}"
 
-echo ""
-print_divider
-echo -e "${GREEN}${BOLD}--- PRE-FLIGHT SYSTEM CHECK ---${NC}"
-print_line
+print_banner "PRE-FLIGHT SYSTEM CHECK"
 
 EAX_RESTORE_SKIP_PREFLIGHT="${EAX_RESTORE_SKIP_PREFLIGHT:-}"
 if is_truthy "$EAX_RESTORE_SKIP_PREFLIGHT"; then
-    echo -e "\n${NOTE}Note: EAX_RESTORE_SKIP_PREFLIGHT is set — skipping the tool scan and trusting that curl,"
-    echo -e "unzip, file, protontricks, winetricks, wine, and jq are already available.${NC}"
+    print_note "EAX_RESTORE_SKIP_PREFLIGHT is set — skipping the tool scan and trusting that curl," \
+        "unzip, file, protontricks, winetricks, wine, and jq are already available."
 
     # Still needed by the rest of the script, just done quietly: the
     # protontricks Flatpak fallback function, and WINE_CMD.
@@ -71,14 +68,13 @@ else
     fi
 
     if [ ${#MISSING_BASE_PKGS[@]} -gt 0 ]; then
-        echo -e "\n${YELLOW}${BOLD}Error: the script is missing essential tools to function: ${MISSING_BASE_PKGS[*]}${NC}"
+        print_error "the script is missing essential tools to function: ${MISSING_BASE_PKGS[*]}"
         if grep -q "ID=steamos" /etc/os-release 2>/dev/null; then
-            echo -e "\n${YELLOW}SteamOS detected. To protect your immutable filesystem, please install missing tools via the Discover software centre.${NC}"
-            echo -e "${YELLOW}${BOLD}Cannot proceed without base dependencies. Exiting.${NC}"; exit 1
+            print_warning "SteamOS detected. To protect your immutable filesystem, please install missing" \
+                "tools via the Discover software centre."
+            print_error "Cannot proceed without base dependencies. Exiting."; exit 1
         else
-            echo -e -n "\n${YELLOW}Auto-install these dependencies now? (Requires sudo) (Y/n): ${NC}"
-            read -r AUTO_INSTALL_BASE
-            if [[ ! "$AUTO_INSTALL_BASE" =~ $NO_RE ]]; then
+            if confirm "Auto-install these dependencies now? (Requires sudo)"; then
                 echo -e "\n${CYAN}STATUS: Installing missing packages...${NC}"
                 source /etc/os-release
                 OS_FLAVOR="${ID_LIKE:-$ID}"
@@ -86,10 +82,10 @@ else
                     *debian*|*ubuntu*) sudo apt-get update && sudo apt-get install -y "${MISSING_BASE_PKGS[@]}" ;;
                     *arch*) sudo pacman -Sy --noconfirm "${MISSING_BASE_PKGS[@]}" ;;
                     *fedora*) sudo dnf install -y "${MISSING_BASE_PKGS[@]}" ;;
-                    *) echo -e "\n${YELLOW}${BOLD}Error: manual install required: ${MISSING_BASE_PKGS[*]}${NC}"; exit 1 ;;
+                    *) print_error "manual install required: ${MISSING_BASE_PKGS[*]}"; exit 1 ;;
                 esac
-                echo -e " -> ${GREEN}Dependencies installed successfully.${NC}"
-            else echo -e "\n${YELLOW}${BOLD}Cannot proceed without base dependencies. Exiting.${NC}"; exit 1; fi
+                print_status "Dependencies installed successfully." "$GREEN"
+            else print_error "Cannot proceed without base dependencies. Exiting."; exit 1; fi
         fi
-    else echo -e "\n${GREEN}All base requirements met.${NC}"; fi
+    else print_status "All base requirements met." "$GREEN"; fi
 fi

@@ -1,8 +1,5 @@
 print_offline_instructions() {
-    echo ""
-    print_divider
-    echo -e "${YELLOW}${BOLD}--- OFFLINE MODE INSTRUCTIONS ---${NC}"
-    print_line
+    print_banner "OFFLINE MODE INSTRUCTIONS" "$YELLOW"
     echo -e "${WHITE}GitHub is unreachable and no local cache was found.${NC}"
     echo -e "${WHITE}Manually extract release .zips into these folders:${NC}\n"
     echo -e "${CYAN}1. kcat Official DSOAL:${NC} ${GREEN}$DSOAL_OFFICIAL${NC}"
@@ -21,18 +18,18 @@ verify_checksum() {
     local expected="$2"
 
     if ! command -v sha256sum &> /dev/null; then
-        echo -e " -> ${YELLOW}sha256sum not available, skipping checksum verification.${NC}"
+        print_note_arrow "sha256sum not available, skipping checksum verification."
         return 0
     fi
 
     local actual
     actual=$(sha256sum "$file" | awk '{print $1}')
     if [ "$expected" != "$actual" ]; then
-        echo -e " -> ${YELLOW}${BOLD}Error: checksum mismatch — expected $expected, got $actual.${NC}"
+        print_error_arrow "checksum mismatch — expected $expected, got $actual."
         return 1
     fi
 
-    echo -e " -> ${GREEN}Checksum verified.${NC}"
+    print_status "Checksum verified." "$GREEN"
     return 0
 }
 

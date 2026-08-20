@@ -28,7 +28,7 @@ verify_vcrun_files() {
     local extra_files=("vcomp140.dll" "concrt140.dll")
     [ "$ARCH" == "64" ] && extra_files+=("vcruntime140_1.dll")
 
-    echo -e " -> Verifying VC++ runtime files in $(basename "$target_dir"):"
+    print_status "Verifying VC++ runtime files in $(basename "$target_dir"):"
 
     local core_ok=1
     local f
@@ -66,7 +66,7 @@ apply_vcrun_dll_overrides() {
     # on an "unimplemented function" despite every file being verified
     # present on disk.
     local reg_file="$GAME_DIR/vcrun_overrides_$$.reg"
-    echo -e " -> Setting DLL overrides so Wine loads the native runtime instead of its own builtin..."
+    print_status "Setting DLL overrides so Wine loads the native runtime instead of its own builtin..."
     echo "Windows Registry Editor Version 5.00" > "$reg_file"
     echo "" >> "$reg_file"
     echo "[HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides]" >> "$reg_file"
@@ -84,7 +84,7 @@ remove_vcrun_dll_overrides() {
     # prefer "native" versions of DLLs that no longer exist (harmless in
     # practice — Wine falls back to builtin — but leaves a clean prefix).
     local reg_file="$GAME_DIR/vcrun_overrides_clean_$$.reg"
-    echo -e " -> Removing DLL overrides..."
+    print_status "Removing DLL overrides..."
     echo "Windows Registry Editor Version 5.00" > "$reg_file"
     echo "" >> "$reg_file"
     echo "[HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides]" >> "$reg_file"
@@ -114,7 +114,7 @@ install_vcrun_dependencies() {
     VCRUN_LOG="$VCRUN_SHARE/install.log"
     : > "$VCRUN_LOG"
 
-    echo -e " -> Attempting installation via package manager..."
+    print_status "Attempting installation via package manager..."
 
     # 1. Run the package manager
     # --force bypasses winetricks' own checksum check for vc_redist.exe: it
@@ -134,12 +134,12 @@ install_vcrun_dependencies() {
 
     # 3. Handle the outcome
     if [ "$VCRUN_SUCCESS" -eq 1 ]; then
-        echo -e " -> ${GREEN}Package manager installation successful (core DLLs verified).${NC}"
+        print_status "Package manager installation successful (core DLLs verified)." "$GREEN"
         apply_vcrun_dll_overrides
         return 0
     fi
 
-    echo -e " -> ${NOTE}Note: package manager didn't provide the core files — falling back to direct download...${NC}"
+    print_note_arrow "package manager didn't provide the core files — falling back to direct download..."
 
     if [ "$ARCH" == "64" ]; then
         VCRUN_URL="https://aka.ms/vs/17/release/vc_redist.x64.exe"
@@ -150,13 +150,13 @@ install_vcrun_dependencies() {
     fi
 
     if [ ! -s "$VCRUN_SHARE/$VCRUN_EXE" ]; then
-        echo -e " -> Downloading $VCRUN_EXE from Microsoft..."
+        print_status "Downloading $VCRUN_EXE from Microsoft..."
         curl -fL -# "$VCRUN_URL" -o "$VCRUN_SHARE/$VCRUN_EXE"
     else
-        echo -e " -> Using cached $VCRUN_EXE"
+        print_status "Using cached $VCRUN_EXE"
     fi
 
-    echo -e " -> Running silent installer in prefix..."
+    print_status "Running silent installer in prefix..."
     if [ "$LAUNCHER_TYPE" == "1" ]; then
         protontricks -c "wine \"$VCRUN_SHARE/$VCRUN_EXE\" /q /norestart" "$APPID" &>> "$VCRUN_LOG"
     else
@@ -166,12 +166,12 @@ install_vcrun_dependencies() {
     # Final verification
     verify_vcrun_files
     if [ "$VCRUN_SUCCESS" -eq 1 ]; then
-        echo -e " -> ${GREEN}VC++ Redistributable installed successfully via fallback.${NC}"
+        print_status "VC++ Redistributable installed successfully via fallback." "$GREEN"
         apply_vcrun_dll_overrides
         return 0
     else
-        echo -e " -> ${YELLOW}Warning: Direct installation completed, but core DLLs could not be verified.${NC}"
-        echo -e " -> ${WHITE}Full installer output saved to: $VCRUN_LOG${NC}"
+        print_warning_arrow "Direct installation completed, but core DLLs could not be verified."
+        print_status "Full installer output saved to: $VCRUN_LOG" "$WHITE"
         return 1
     fi
 }
@@ -217,9 +217,9 @@ remove_vcrun_msi_registration() {
     done
 
     if [ "$removed_any" -eq 1 ]; then
-        echo -e " -> Removed leftover Programs and Features registry entries."
+        print_status "Removed leftover Programs and Features registry entries."
     else
-        echo -e " -> No leftover Programs and Features entries found."
+        print_status "No leftover Programs and Features entries found."
     fi
 }
 
@@ -238,7 +238,8 @@ uninstall_vcrun_dependencies() {
     # 64-bit by checking which runtime is actually present, same as
     # verify_vcrun_files.
     if [ -z "$PREFIX_PATH" ] || [ ! -d "$PREFIX_PATH/drive_c/windows" ]; then
-        echo -e "\n -> ${NOTE}Note: prefix not found, skipping VC++ removal.${NC}"
+        echo ""
+        print_note_arrow "prefix not found, skipping VC++ removal."
         return
     fi
 
@@ -253,7 +254,8 @@ uninstall_vcrun_dependencies() {
     fi
 
     if [ -z "$target_dir" ]; then
-        echo -e "\n -> ${NOTE}Note: no VC++ runtime files found in this prefix, nothing to remove.${NC}"
+        echo ""
+        print_note_arrow "no VC++ runtime files found in this prefix, nothing to remove."
         return
     fi
 
@@ -273,18 +275,18 @@ uninstall_vcrun_dependencies() {
         vcrun_exe="vc_redist.x86.exe"
     fi
     if [ ! -s "$vcrun_share/$vcrun_exe" ]; then
-        echo -e " -> Fetching the official uninstaller (best-effort)..."
+        print_status "Fetching the official uninstaller (best-effort)..."
         curl -fL -# "$vcrun_url" -o "$vcrun_share/$vcrun_exe" 2>/dev/null
     fi
     if [ -s "$vcrun_share/$vcrun_exe" ]; then
-        echo -e " -> Running the official uninstaller (best-effort; direct cleanup follows regardless)..."
+        print_status "Running the official uninstaller (best-effort; direct cleanup follows regardless)..."
         if [ "$LAUNCHER_TYPE" == "1" ]; then
             protontricks -c "wine \"$vcrun_share/$vcrun_exe\" /uninstall /q /norestart" "$APPID" &>/dev/null
         else
             WINEPREFIX="$PREFIX_PATH" "$WINE_CMD" "$vcrun_share/$vcrun_exe" /uninstall /q /norestart &>/dev/null
         fi
     else
-        echo -e " -> ${NOTE}Note: could not fetch the official uninstaller — skipping straight to direct cleanup.${NC}"
+        print_note_arrow "could not fetch the official uninstaller — skipping straight to direct cleanup."
     fi
 
     # 2. Direct removal — the reliable part. Matches VCRUN_DLL_NAMES (every
@@ -294,7 +296,7 @@ uninstall_vcrun_dependencies() {
         f="$target_dir/${dll}.dll"
         if [ -f "$f" ]; then
             rm -f "$f"
-            echo -e " -> Removed ${dll}.dll"
+            print_status "Removed ${dll}.dll"
         fi
     done
 
@@ -302,8 +304,8 @@ uninstall_vcrun_dependencies() {
     remove_vcrun_dll_overrides
 
     if [ -f "$target_dir/vcruntime140.dll" ] || [ -f "$target_dir/msvcp140.dll" ]; then
-        echo -e " -> ${YELLOW}Warning: some core VC++ runtime files are still present.${NC}"
+        print_warning_arrow "some core VC++ runtime files are still present."
     else
-        echo -e " -> ${GREEN}VC++ Redistributable removed successfully.${NC}"
+        print_status "VC++ Redistributable removed successfully." "$GREEN"
     fi
 }

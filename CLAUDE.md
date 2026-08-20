@@ -67,24 +67,29 @@ their execution order in the assembled script):
    (`DSOAL_SHARE`, `OPENAL_SHARE`, `KNOWN_GAMES_*`), pinned download URLs/SHA256s,
    `VCRUN_DLL_NAMES`, `EAX_IMPOSSIBLE_FALLBACK_STEAM`. Pure variable/array
    assignments only — safe to source before the guards run.
-3. **`common.sh`** — small helpers used throughout every other file:
-   `print_divider`/`print_line`/`is_truthy`, `is_genuine_dll`, `parse_selection`.
-4. **`guards.sh`** — refuses root / Steam Gaming Mode, runs before any real work
+3. **`ui.sh`** — the text/output styling helpers (`print_banner`, `print_step`,
+   `print_status`, `print_note`/`print_warning`/`print_error` and their `_arrow`
+   variants, `print_wrapped`, `confirm`, plus `print_divider`/`print_line`). Sourced
+   right after `globals.sh` since every helper depends on the colour vars defined
+   there. See "Text/output style conventions" below.
+4. **`common.sh`** — small helpers used throughout every other file: `is_truthy`,
+   `is_genuine_dll`, `parse_selection`.
+5. **`guards.sh`** — refuses root / Steam Gaming Mode, runs before any real work
    starts.
-5. **`detection.sh`** — Steam AppID / Heroic prefix / architecture detection,
+6. **`detection.sh`** — Steam AppID / Heroic prefix / architecture detection,
    `get_game_directory`, `detect_game_environment`, `select_architecture`, etc.
-6. **`known-games.sh`** — the `known-eax-games.json` helpers:
+7. **`known-games.sh`** — the `known-eax-games.json` helpers:
    `ensure_known_games_json`, `scan_game_libraries`, `show_known_game_notes`,
    `confirm_continue_if_eax_impossible`, etc.
-7. **`vcrun.sh`** — the standalone VC++ runtime installer: `verify_vcrun_files`,
+8. **`vcrun.sh`** — the standalone VC++ runtime installer: `verify_vcrun_files`,
    `install_vcrun_dependencies`, `uninstall_vcrun_dependencies`, etc. —
    independently triggerable via `EAX_RESTORE_VCRUN_ONLY`, with its own `"VCRUN"`
    manifest entries.
-8. **`verify.sh`** — download verification: `verify_checksum`, `verify_or_confirm`,
+9. **`verify.sh`** — download verification: `verify_checksum`, `verify_or_confirm`,
    `get_asset_digest`, `confirm_unverified_download`.
-9. **`cache.sh`** — `update_local_cache` (the repository-cache step), plus
-   `handle_conflict` and `auto_backup_and_overwrite`.
-10. **`preflight.sh`** through **`install-flow.sh`** — top-level script flow:
+10. **`cache.sh`** — `update_local_cache` (the repository-cache step), plus
+    `handle_conflict` and `auto_backup_and_overwrite`.
+11. **`preflight.sh`** through **`install-flow.sh`** — top-level script flow:
     pre-flight dependency check, the `EAX_RESTORE_VCRUN_ONLY` early-exit path,
     `ACTION: UNINSTALL`, `ACTION: INSTALL`.
 
@@ -116,10 +121,48 @@ mechanism itself.
 
 ## Text/output style conventions
 
-All user-facing output goes through `echo -e` with the colour vars defined near the
-top of the script (`GREEN`, `YELLOW`, `CYAN`, `WHITE`, `BOLD`, `DIM`, `NOTE`, reset via
+All user-facing output goes through `echo -e` with the colour vars defined in
+`globals.sh` (`GREEN`, `YELLOW`, `CYAN`, `WHITE`, `BOLD`, `DIM`, `NOTE`, reset via
 `NC`) — there's no other formatting mechanism (no `tput`, no external color library).
-Match existing usage rather than introducing new colors or styles:
+The recurring shapes built from those vars — banners, prompts, arrow sub-steps,
+Note:/Warning:/Error: messages, wrapped prose — are centralized as helper functions in
+`ui.sh`; **use the helper for any of the shapes below instead of hand-rolling the
+`echo -e` sequence.** Preflight through the Stage 2 "Launcher Identification" step
+(`preflight.sh`, `install-flow.sh` Phase 1 header/steps, `get_game_directory`/
+`detect_game_environment` in `detection.sh`) is the canonical example of the helpers
+in use — match its look when extending any of these flows. The rest of the script is
+still being migrated onto these helpers incrementally; a raw `echo -e "...${COLOR}"`
+call site elsewhere in `src/` is a pre-migration leftover, not a second sanctioned
+style — convert it to the matching helper when you touch it, rather than copying it
+for a new call site.
+
+- `print_banner "LABEL" [COLOR=GREEN]` — the `--- LABEL ---` section banner (blank
+  line, divider, bold label, divider, blank line), e.g. `--- PHASE 1: CONFIGURATION ---`,
+  `--- GAME DETAILS ---`.
+- `print_step N "Label"` — the same banner wrapper for a numbered, non-dashed,
+  non-bold CYAN sub-step header, e.g. `2. Launcher Identification`.
+- `print_status "text" [COLOR=CYAN]` — an ` -> ` arrow sub-step/result line.
+- `print_note "text" ["more text" ...]` / `print_warning "..."` / `print_error "..."`
+  — standalone-paragraph `Note:`/`Warning:`/`Error:` messages (each argument is one
+  already-wrapped physical line; the helper colors and joins them without
+  reflowing). `print_note_arrow`/`print_warning_arrow`/`print_error_arrow` are the
+  ` -> `-prefixed inline sub-step forms of the same three. These standalone forms
+  always emit their own leading blank line — a message that immediately follows a
+  `print_banner`/`print_step` call (whose own trailing blank line already provides
+  that separation) should stay a raw `echo -e` instead, to avoid a doubled blank line
+  (see the exception at the top of `detection.sh`'s `get_game_directory`, whose
+  "known-games database unavailable" note prints immediately after `1. Game
+  Location`'s step header).
+- `confirm "Question?" [default=Y|N]` — the two-line `(Y/n)`/`(y/N)` prompt (question
+  line, then a separate `"> "` read line), returns 0/1. Only for actual yes/no
+  confirms — a prompt that needs the raw typed value (menu numbers, free-text paths)
+  still hand-rolls its own `echo -e` + `echo -e -n "> "` + `read -r`.
+- `print_wrapped "free text"` — wraps data-sourced prose (e.g. the `notes` field in
+  `known-eax-games.json`, not already hand-wrapped script text) at 76 columns and
+  indents it, in WHITE. Don't hardcode line breaks into stored data; wrap at render
+  time instead.
+
+Color meaning, unchanged by the helpers:
 
 - `CYAN` — section headers and "in progress" status lines (e.g. `Checking ...`).
 - `GREEN` — success (`Done.`, `Up to date [...]`, `Loaded (...)`.).
@@ -130,33 +173,26 @@ Match existing usage rather than introducing new colors or styles:
   failed and there's no further fallback left for that capability this run (a required
   download/verification fails with no usable cache, a hard dependency is missing,
   etc.).
-- `Warning: ` is `YELLOW` when it's a standalone paragraph-level message that gates a
-  following `(y/N)`/`(Y/n)` prompt (e.g. "No .exe files were found..."), and `YELLOW`
-  without the surrounding paragraph spacing when it's an inline ` -> `-prefixed
-  sub-step result line with no prompt following it — match whichever of the two shapes
-  the new `Warning:` line is.
+- `Warning: ` is always bold YELLOW, in both its standalone-paragraph form (gating a
+  following `(y/N)`/`(Y/n)` prompt, e.g. "No .exe files were found...") and its
+  inline ` -> `-prefixed arrow sub-step form — `print_warning`/`print_warning_arrow`
+  keep the two visually identical on purpose.
 - `Note: ` (`NOTE`, a dedicated bright-blue, non-bold color — deliberately not in the
   `YELLOW` family) prefixes a routine "the preferred path wasn't available, here's the
   automatic fallback" notice — distinct from `Warning:`/`Error:` (something to flag or
   that failed) and from the `YELLOW` `(Y/n)` prompts themselves: nothing is broken,
   this is expected, ordinary branching (e.g. the known-games database being
   unavailable and falling back to manual entry, or reusing a stale cache while
-  offline). Keeping `Note:` out of the yellow family entirely is intentional — it
-  previously shared `YELLOW` with prompts and warnings, which made advisory notices
-  visually indistinguishable from things that actually needed attention.
+  offline).
 - `WHITE` — general prose/body text and prompts.
 - `DIM` — secondary/de-emphasized text, e.g. supplementary detail alongside a primary
   status line.
-- Section banners use `print_divider` + a `${GREEN}${BOLD}--- LABEL ---${NC}` line +
-  `print_line`, matching the existing `--- REPOSITORY CACHE CHECK ---`,
-  `--- PHASE 1: CONFIGURATION ---`, etc.
-- Sub-step results use the ` -> ` arrow prefix (e.g. `" -> ${GREEN}Done.${NC}"`).
 - Diagnostic/warning output that shouldn't pollute stdout capture is sent to stderr
-  (`>&2`) — used throughout `ensure_known_games_json` and similar helper functions.
-- Free-text prose sourced from data (e.g. the `notes` field in
-  `known-eax-games.json`) is word-wrapped at display time to 76 columns via
-  `fold -s -w 76`, then indented — see `show_known_game_notes`. Don't hardcode
-  line breaks into stored data; wrap at render time instead.
+  by redirecting the call site itself (`print_status "..." >&2`, or a raw
+  `echo -e ... >&2`) — used throughout `ensure_known_games_json`,
+  `detect_heroic_prefix_verbose`, and similar functions whose own stdout is captured
+  via `$(...)`. The helpers themselves always write to stdout; there's no separate
+  `_err` helper family.
 - Inline comments favor explaining *why* a non-obvious choice was made (e.g. why a
   cache is preserved on failure, why a check is memoized) over restating *what* the
   next line does — follow that tone when adding comments.
