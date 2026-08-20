@@ -379,7 +379,7 @@ show_game_details_block() {
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
 
     print_banner "GAME DETAILS"
-    echo -e " -> ${YELLOW}Name${NC}:      ${BOLD}${name}${NC}"
+    echo -e "\n -> ${YELLOW}Name${NC}:      ${BOLD}${name}${NC}"
     [ -n "$edition" ] && echo -e " -> ${YELLOW}Edition${NC}:   ${WHITE}${edition^}${NC}"
     echo -e " -> ${YELLOW}Platform${NC}:  ${GREEN}$store_label${NC}"
     if [ "$listing" == "delisted" ]; then

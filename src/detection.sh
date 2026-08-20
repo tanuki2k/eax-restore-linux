@@ -63,6 +63,11 @@ get_game_directory() {
     elif [ "$SCRIPT_ACTION" == "i" ]; then
         echo -e "${NOTE}Note: library scanning needs the known-EAX-games database, which isn't"
         echo -e "available this run — skipping straight to manual entry.${NC}\n"
+    else
+        # SCRIPT_ACTION == "u" reaching here (prompt_recent_game found no
+        # match) — neither branch above ran, so nothing has separated this
+        # from print_step's divider yet.
+        echo ""
     fi
 
     echo -e "${WHITE}Common game locations:${NC}\n"

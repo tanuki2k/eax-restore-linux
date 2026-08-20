@@ -16,9 +16,11 @@ print_divider() { echo -e "${CYAN}----------------------------------------------
 print_line() { print_divider; }
 
 # Usage: print_banner "LABEL" [COLOR=GREEN]
-# Emits the "--- LABEL ---" banner block: blank line, divider, label, divider,
-# blank line. Used for both "--- PHASE N: X ---"-style banners and richer
-# blocks like "--- GAME DETAILS ---".
+# Emits the "--- LABEL ---" banner block: blank line, divider, label, divider.
+# No trailing blank — callers provide their own leading blank before the
+# first content line (most already do via "echo -e \"\n...\""), so the
+# helper doesn't double it up. Used for both "--- PHASE N: X ---"-style
+# banners and richer blocks like "--- GAME DETAILS ---".
 print_banner() {
     local label="$1"
     local color="${2:-$GREEN}"
@@ -31,8 +33,8 @@ print_banner() {
 # Usage: print_step N "Label"
 # Emits the numbered step header ("2. Launcher Identification") used to
 # separate the sub-stages of PHASE 1: CONFIGURATION. Same blank/divider/
-# label/divider/blank wrapper as print_banner, but a plain (non-bold) CYAN
-# label with no surrounding dashes.
+# label/divider wrapper as print_banner (no trailing blank either), but a
+# plain (non-bold) CYAN label with no surrounding dashes.
 print_step() {
     local n="$1"
     local label="$2"
@@ -40,7 +42,6 @@ print_step() {
     print_divider
     echo -e "${CYAN}${n}. ${label}${NC}"
     print_line
-    echo ""
 }
 
 # Usage: print_status "text" [COLOR=CYAN]
