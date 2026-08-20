@@ -453,7 +453,7 @@ confirm_continue_if_eax_impossible() {
     else
         print_warning "EAX/A3D support was removed from this build by a software update —" \
             "installing DSOAL here is a functional no-op on the current default build."
-        [ -n "$hint" ] && echo -e "${WHITE}$hint${NC}"
+        #[ -n "$hint" ] && echo -e "${WHITE}$hint${NC}"
     fi
 
     if ! confirm "Continue installing anyway?" N; then
