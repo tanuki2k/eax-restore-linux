@@ -59,10 +59,8 @@ get_game_directory() {
     local can_scan=0
     if [ "$SCRIPT_ACTION" == "i" ] && ensure_known_games_json; then
         can_scan=1
+        echo ""
     elif [ "$SCRIPT_ACTION" == "i" ]; then
-        # No leading blank: print_step's own trailing blank line already
-        # separates this from the banner above, so print_note's default
-        # leading newline would double it up.
         echo -e "${NOTE}Note: library scanning needs the known-EAX-games database, which isn't"
         echo -e "available this run — skipping straight to manual entry.${NC}\n"
     fi

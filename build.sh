@@ -27,6 +27,7 @@ COMPONENTS=(
     preflight.sh
     vcrun-only-flow.sh
     uninstall-flow.sh
+    config-flow.sh
     install-flow.sh
 )
 

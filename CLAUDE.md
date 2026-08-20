@@ -91,7 +91,11 @@ their execution order in the assembled script):
     `handle_conflict` and `auto_backup_and_overwrite`.
 11. **`preflight.sh`** through **`install-flow.sh`** — top-level script flow:
     pre-flight dependency check, the `EAX_RESTORE_VCRUN_ONLY` early-exit path,
-    `ACTION: UNINSTALL`, `ACTION: INSTALL`.
+    `ACTION: UNINSTALL`, `ACTION: INSTALL`. The `ACTION: INSTALL` block itself
+    spans two files sharing one `if [ "$SCRIPT_ACTION" == "i" ]` — opened in
+    `config-flow.sh` (Phase 1: Configuration, all the interactive prompts)
+    and closed in `install-flow.sh` (Phase 2: Execution, actually deploying
+    files/running protontricks/winetricks).
 
 All of the above communicate via shared globals (from `globals.sh`, or set by one
 function and read by another) rather than function parameters/return values — that
@@ -128,7 +132,7 @@ The recurring shapes built from those vars — banners, prompts, arrow sub-steps
 Note:/Warning:/Error: messages, wrapped prose — are centralized as helper functions in
 `ui.sh`; **use the helper for any of the shapes below instead of hand-rolling the
 `echo -e` sequence.** Preflight through the Stage 2 "Launcher Identification" step
-(`preflight.sh`, `install-flow.sh` Phase 1 header/steps, `get_game_directory`/
+(`preflight.sh`, `config-flow.sh` header/steps, `get_game_directory`/
 `detect_game_environment` in `detection.sh`) is the canonical example of the helpers
 in use — match its look when extending any of these flows. The rest of the script is
 still being migrated onto these helpers incrementally; a raw `echo -e "...${COLOR}"`

@@ -7,7 +7,11 @@
 # helpers write to stdout; a call site whose output is captured or that needs
 # stderr (e.g. a function whose stdout is used via $(...)) redirects the call
 # itself with >&2 rather than this file growing a parallel _err() family.
-
+# ==============================================================================
+# VISUAL HELPERS
+# ==============================================================================
+# print_divider/print_line and the rest of the output-styling helpers live in
+# ui.sh, sourced right after globals.sh.
 print_divider() { echo -e "${CYAN}----------------------------------------------------------${NC}"; }
 print_line() { print_divider; }
 
@@ -22,7 +26,6 @@ print_banner() {
     print_divider
     echo -e "${color}${BOLD}--- ${label} ---${NC}"
     print_line
-    echo ""
 }
 
 # Usage: print_step N "Label"

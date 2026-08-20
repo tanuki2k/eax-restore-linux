@@ -1,8 +1,4 @@
-# ==============================================================================
-# VISUAL HELPERS
-# ==============================================================================
-# print_divider/print_line and the rest of the output-styling helpers live in
-# ui.sh, sourced right after globals.sh.
+
 is_truthy() { [[ "${1,,}" =~ ^(1|true|yes|y)$ ]]; }
 is_genuine_dll() {
     # Usage: is_genuine_dll <path>
