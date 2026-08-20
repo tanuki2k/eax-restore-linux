@@ -577,6 +577,11 @@ EOF
     fi
 
     if [[ "$ADVANCED_COM" =~ $YES_RE ]] || [[ "$AUTO_OVERRIDE" =~ $YES_RE ]]; then
+        # Written into GAME_DIR rather than a temp dir: apply_registry_patch
+        # (detection.sh) runs `protontricks -c` for Steam games, which
+        # executes inside a Steam Runtime container that may not have /tmp
+        # bind-mounted — the game's own library folder is guaranteed to be
+        # visible instead.
         REG_FILE="$GAME_DIR/dsoal_master_patch_$$.reg"
         echo "Windows Registry Editor Version 5.00" > "$REG_FILE"
         echo "" >> "$REG_FILE"
