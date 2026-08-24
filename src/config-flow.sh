@@ -36,8 +36,8 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
 
     if [ -n "$OPENAL_NATIVE_MODE" ]; then
         ENGINE_CHOICE=4
-        echo -e "${WHITE}This game routes EAX through OpenAL natively, so only kcat's OpenAL Soft build applies"
-        echo -e "here (it's the only bundle that ships a standalone OpenAL32.dll) — using it automatically.${NC}"
+        print_paragraph "This game routes EAX through OpenAL natively, so only kcat's OpenAL Soft build applies" \
+            "here (it's the only bundle that ships a standalone OpenAL32.dll) — using it automatically."
     else
     DSOAL_DATE=$(cat "$DSOAL_SHARE/updated_at.txt" 2>/dev/null)
     DSOAL_VER=${DSOAL_DATE%%T*}
@@ -45,7 +45,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     OAL_VER=$(cat "$OPENAL_SHARE/updated_at.txt" 2>/dev/null)
     [ -z "$OAL_VER" ] && OAL_VER="Unknown"
 
-    echo -e "${WHITE}Before choosing, here is a quick breakdown of the available engines:\n${NC}"
+    echo -e "\n${WHITE}Before choosing, here is a quick breakdown of the available engines:\n${NC}"
     echo -e " * ${BOLD}ThreeDeeJay Community:${NC} The best \"plug-and-play\" choice for older Windows 98/XP games."
     echo -e "   Specific compatibility tweaks curated by the retro-gaming community, though it relies on a"
     echo -e "   slightly older, locked codebase.\n"
@@ -113,9 +113,9 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     INSTALL_VCRUN="n"
     if [ "$ENGINE_CHOICE" == "3" ] || [ "$ENGINE_CHOICE" == "4" ]; then
         print_step 6 "VC++ Runtime Dependencies"
-        echo -e "${WHITE}The modern kcat engine needs genuine Microsoft C++ runtime libraries. Older Proton/Wine"
-        echo -e "builds (9 and below) tend to be missing them more often than newer ones — but rather"
-        echo -e "than guess from a version number, this can check the prefix directly.${NC}"
+        print_paragraph "The modern kcat engine needs genuine Microsoft C++ runtime libraries. Older Proton/Wine" \
+            "builds (9 and below) tend to be missing them more often than newer ones — but rather" \
+            "than guess from a version number, this can check the prefix directly."
 
         if confirm "Check this prefix for existing VC++ runtime files?"; then
             echo -e "\n${CYAN}STATUS: Checking prefix for existing VC++ runtime files...${NC}"
@@ -146,7 +146,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
 
     # 7. Audio Configuration
     print_step 7 "Speaker Configuration"
-    echo -e "${WHITE}What kind of audio output are you using?${NC}\n"
+    echo -e "\n${WHITE}What kind of audio output are you using?${NC}\n"
     echo -e " 1) Stereo (headphones or 2-speaker setup)"
     echo -e " 2) Surround Sound (4.0/5.1/6.1/7.1 speaker setup)"
     echo -e " 3) Matrix Encoding (stereo output decoded to surround by a receiver/soundbar)\n"
@@ -227,7 +227,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
 
     # 8. Advanced Compatibility Tweaks
     print_step 8 "Advanced Compatibility Tweaks"
-    echo -e "${WHITE}These optional workarounds are designed for extremely stubborn games"
+    echo -e "\n${WHITE}These optional workarounds are designed for extremely stubborn games"
     echo -e "that refuse to load EAX normally. In 90% of cases, you do not need these.${NC}\n"
 
     ADVANCED_DUMMY="n"
@@ -291,9 +291,9 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
 
     # 9. Automatic DLL Override
     print_step 9 "Automatic DLL Override"
-    echo -e "${WHITE}Wine needs to be told to use the new ${PRIMARY_DLL_FILENAME} file instead of its built-in one."
-    echo -e "We can inject this rule directly into the Wine prefix registry so you don't have to"
-    echo -e "manually type WINEDLLOVERRIDES=\"${PRIMARY_DLL_NAME}=n,b\" %command% into your launcher.${NC}"
+    print_paragraph "Wine needs to be told to use the new ${PRIMARY_DLL_FILENAME} file instead of its built-in one." \
+        "We can inject this rule directly into the Wine prefix registry so you don't have to" \
+        "manually type WINEDLLOVERRIDES=\"${PRIMARY_DLL_NAME}=n,b\" %command% into your launcher."
     echo -e "\n${YELLOW}Automatically set ${PRIMARY_DLL_FILENAME} override in Wine registry? (y/N): ${NC}"
     echo -e -n "> "
     read -r AUTO_OVERRIDE

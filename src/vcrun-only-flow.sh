@@ -52,7 +52,7 @@ print_banner "SELECT OPERATION"
 
 if is_truthy "$EAX_RESTORE_DSOAL_COMMUNITY_V13" || is_truthy "$EAX_RESTORE_DSOAL_COMMUNITY_V14" || is_truthy "$EAX_RESTORE_DSOAL_OFFICIAL"; then
     SCRIPT_ACTION="i"
-    echo -e "${GREEN}An EAX_RESTORE_DSOAL_* variable is set, so proceeding straight to install.${NC}"
+    print_result "An EAX_RESTORE_DSOAL_* variable is set, so proceeding straight to install." "$GREEN"
 else
     while true; do
         echo -e "\n${YELLOW}Would you like to (i)nstall or (u)ninstall the EAX audio fix? (i/u): ${NC}"

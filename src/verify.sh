@@ -1,6 +1,6 @@
 print_offline_instructions() {
     print_banner "OFFLINE MODE INSTRUCTIONS" "$YELLOW"
-    echo -e "${WHITE}GitHub is unreachable and no local cache was found.${NC}"
+    echo -e "\n${WHITE}GitHub is unreachable and no local cache was found.${NC}"
     echo -e "${WHITE}Manually extract release .zips into these folders:${NC}\n"
     echo -e "${CYAN}1. kcat Official DSOAL:${NC} ${GREEN}$DSOAL_OFFICIAL${NC}"
     echo -e "${CYAN}2. kcat OpenAL Soft:${NC}   ${GREEN}$OPENAL_OFFICIAL${NC}"

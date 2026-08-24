@@ -52,6 +52,33 @@ print_status() {
     echo -e " -> ${color}${text}${NC}"
 }
 
+# Usage: print_result "text" [COLOR=WHITE]
+# The first line of a new "component" of output (e.g. right after a
+# print_step/print_banner header). Always begins with its own leading blank
+# line so callers never hand-roll "\n${COLOR}text${NC}" or a standalone
+# echo "" for this purpose. Distinct from print_status's " -> " arrow
+# sub-step lines, which intentionally stack with NO blank between them.
+print_result() {
+    local text="$1"
+    local color="${2:-$WHITE}"
+    echo -e "\n${color}${text}${NC}"
+}
+
+# Usage: print_paragraph "line1" ["line2" ...]
+# A standalone WHITE paragraph — same multi-line joining as print_note/
+# print_warning/print_error but with no prefix. Always begins with its own
+# leading blank line. Only use this for a block that is fully self-contained
+# — i.e. nothing after it relies on a trailing blank this block would
+# otherwise have supplied (a block whose last line's trailing "\n" is
+# load-bearing for unrelated content further down should keep its manual
+# echo -e instead).
+print_paragraph() {
+    local body="\n${WHITE}$1"
+    shift
+    for line in "$@"; do body+="\n${line}"; done
+    echo -e "${body}${NC}"
+}
+
 # Usage: print_note "text" ["more text" ...]
 # Usage: print_note_arrow "text" ["more text" ...]
 # Standalone-paragraph and " -> " arrow-sub-step forms of a "Note: ..."
