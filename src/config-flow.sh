@@ -36,8 +36,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
 
     if [ -n "$OPENAL_NATIVE_MODE" ]; then
         ENGINE_CHOICE=4
-        print_paragraph "This game routes EAX through OpenAL natively, so only kcat's OpenAL Soft build applies" \
-            "here (it's the only bundle that ships a standalone OpenAL32.dll) — using it automatically."
+        print_paragraph "$GAME_NAME uses OpenAL natively — deploying kcat's OpenAL Soft."
     else
     DSOAL_DATE=$(cat "$DSOAL_SHARE/updated_at.txt" 2>/dev/null)
     DSOAL_VER=${DSOAL_DATE%%T*}

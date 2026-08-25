@@ -456,28 +456,36 @@ confirm_continue_if_openal_native() {
     [ "$2" == "gog" ] && field="gog_id"
     local game_name="${3:-this game}"
 
-    echo -e "\n${CYAN}STATUS: Checking known-games database for $game_name's audio API...${NC}"
+    local json_available=0 match_count=0
+    local api="" matched=0 scanned=0 json_checked=0 declined=0
 
-    local json_available=0
+    # Availability is already known by this point (the REPOSITORY CACHE CHECK
+    # step fetches/memoizes it before Phase 1 even starts), so there's nothing
+    # to ask permission for when it's simply not there — go straight to the
+    # scan gate below instead of prompting a question with a foregone answer.
     ensure_known_games_json && json_available=1
 
-    local match_count=0
-    if [ "$json_available" -eq 1 ]; then
-        match_count=$(jq -r --arg id "$1" --arg field "$field" '[.games[] | select((.[$field] // "") | tostring == $id)] | length' "$KNOWN_GAMES_FILE" 2>/dev/null)
-    fi
+    if [ "$json_available" -eq 0 ]; then
+        json_checked=1
+        print_note "known-eax-games.json isn't available this run."
+    elif confirm "Would you like the script to check the known-games database for $game_name's audio API?"; then
+        json_checked=1
+        echo ""
+        print_status "Checking known-games database for $game_name's audio API..."
 
-    local api="" matched=0 scanned=0 declined=0
-    if [ "$json_available" -eq 1 ] && [ "${match_count:-0}" -gt 0 ]; then
-        api=$(jq -r --arg id "$1" --arg field "$field" '.games[] | select((.[$field] // "") | tostring == $id) | .api // "directsound3d"' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
-        matched=1
-        print_status "Found $game_name in the known-games database — audio API: $api." "$GREEN"
-    elif [ -n "$GAME_DIR" ] && [ -d "$GAME_DIR" ]; then
-        if [ "$json_available" -eq 0 ]; then
-            print_note "known-eax-games.json isn't available this run."
+        match_count=$(jq -r --arg id "$1" --arg field "$field" '[.games[] | select((.[$field] // "") | tostring == $id)] | length' "$KNOWN_GAMES_FILE" 2>/dev/null)
+
+        if [ "${match_count:-0}" -gt 0 ]; then
+            api=$(jq -r --arg id "$1" --arg field "$field" '.games[] | select((.[$field] // "") | tostring == $id) | .api // "directsound3d"' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+            matched=1
         else
             print_note "$game_name isn't in the known-games database."
         fi
+    fi
+
+    if [ "$matched" -eq 0 ] && [ -n "$GAME_DIR" ] && [ -d "$GAME_DIR" ]; then
         if confirm "Would you like the script to attempt to detect whether $game_name uses OpenAL or DirectSound3D?"; then
+            echo ""
             print_status "Scanning $game_name's .exe/.dll files for OpenAL32.dll/dsound.dll references..."
             api=$(detect_api_from_binary "$GAME_DIR")
             scanned=1
@@ -486,19 +494,17 @@ confirm_continue_if_openal_native() {
         fi
     fi
 
+    local api_display="DirectSound3D"
+    [ "$api" == "openal" ] && api_display="OpenAL"
+
+    if [ -n "$api" ]; then
+        print_status "Detected: $api_display" "$GREEN"
+        [ "$matched" -eq 1 ] && [ -z "$SCANNED_NOTES_SHOWN" ] && show_game_details_block "$1" "$2" "$GAME_DIR"
+    fi
+
     if [ "$api" == "openal" ]; then
-        if [ "$scanned" -eq 1 ]; then
-            echo -e "${YELLOW}${BOLD}That scan found an OpenAL32.dll reference and no dsound.dll reference in${NC}"
-            echo -e "${YELLOW}${BOLD}$game_name's files${NC}${WHITE} — a sign, not a certainty, that it routes EAX through OpenAL"
-            echo -e "rather than DirectSound3D. This wasn't confirmed by the curated database like a"
-            echo -e "known-game match would be: some engines load their audio backend dynamically and"
-            echo -e "won't show up in this scan at all, so treat it as a guess.${NC}"
-        else
-            echo -e "${YELLOW}${BOLD}$game_name routes EAX through OpenAL rather than DirectSound3D, so the${NC}"
-            echo -e "${YELLOW}${BOLD}script's usual dsound.dll swap won't apply here.${NC}"
-        fi
-        echo -e "${WHITE}It can instead deploy kcat's OpenAL Soft directly as OpenAL32.dll (with the same"
-        echo -e "alsoft.ini tuning).${NC}"
+        print_note "This game routes EAX through OpenAL rather than DirectSound3D, so kcat's" \
+            "OpenAL Soft will be deployed."
         if ! confirm "Continue with OpenAL Soft deployment?"; then
             echo -e "\n${WHITE}Install cancelled.${NC}"
             exit 0
@@ -507,20 +513,16 @@ confirm_continue_if_openal_native() {
         return
     fi
 
-    if [ "$matched" -eq 1 ]; then
-        print_status "$game_name uses DirectSound3D — the standard EAX path this script already handles." "$GREEN"
-        if ! confirm "Continue with the DSOAL/DirectSound3D install?"; then
-            echo -e "\n${WHITE}Install cancelled.${NC}"
-            exit 0
-        fi
-    elif [ "$scanned" -eq 1 ]; then
-        print_status "Found no clear OpenAL32.dll signal — assuming standard DirectSound3D." "$YELLOW"
+    if [ "$matched" -eq 1 ] || [ "$scanned" -eq 1 ]; then
         if ! confirm "Continue with the DSOAL/DirectSound3D install?"; then
             echo -e "\n${WHITE}Install cancelled.${NC}"
             exit 0
         fi
     elif [ "$declined" -eq 1 ]; then
         print_status "Skipped the file scan — assuming standard DirectSound3D." "$WHITE"
+    elif [ "$json_checked" -eq 0 ]; then
+        print_note_arrow "Skipped the known-games check, and $game_name's files couldn't be" \
+            "scanned either — assuming standard DirectSound3D."
     else
         if [ "$json_available" -eq 0 ]; then
             print_note_arrow "known-eax-games.json isn't available this run, and $game_name's files" \
@@ -591,7 +593,6 @@ detect_game_environment() {
                 echo -e " -> ${GREEN}Detected Prefix:${NC} $DETECTED_STEAM_PREFIX"
                 if confirm "Use this detected prefix?"; then
                     PREFIX_PATH="$DETECTED_STEAM_PREFIX"
-                    [ -z "$SCANNED_NOTES_SHOWN" ] && show_game_details_block "$APPID" "steam" "$GAME_DIR"
                     confirm_continue_if_eax_impossible "$APPID" "steam"
                     if [ -z "$GAME_NAME" ]; then
                         # Same source appid/gog_id already come from, not the
@@ -638,7 +639,6 @@ detect_game_environment() {
 
             if [ -d "$PREFIX_PATH/drive_c" ]; then
                 print_status "Prefix verified!" "$GREEN"
-                [ -z "$SCANNED_NOTES_SHOWN" ] && show_game_details_block "$HEROIC_APP_NAME" "gog" "$GAME_DIR"
                 confirm_continue_if_eax_impossible "$HEROIC_APP_NAME" "gog"
                 if [ -z "$GAME_NAME" ] && [ -n "$HEROIC_APP_NAME" ]; then
                     # Same source the GOG ID already comes from, not the
