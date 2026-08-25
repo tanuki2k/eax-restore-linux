@@ -45,10 +45,13 @@ print_step() {
 }
 
 # Usage: print_status "text" [COLOR=CYAN]
-# The " -> text" arrow sub-step line used for progress/result output.
+# The " -> text" arrow sub-step line used for progress/result output. Pass ""
+# explicitly (not just omitting the arg) for plain/uncolored text — needed
+# when the text embeds its own ${BOLD}...${NC} highlight, since WHITE already
+# carries bold (1;37) and would swallow the contrast.
 print_status() {
     local text="$1"
-    local color="${2:-$CYAN}"
+    local color="${2-$CYAN}"
     echo -e " -> ${color}${text}${NC}"
 }
 

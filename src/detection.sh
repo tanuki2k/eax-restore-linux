@@ -180,7 +180,7 @@ detect_heroic_prefix_verbose() {
     local installed_jsons
     installed_jsons=$(find "$HOME/.config/heroic" "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic" -type f -name "installed.json" 2>/dev/null)
 
-    print_status "Searching installed.json for matching game path..." "$WHITE" >&2
+    print_status "Searching installed.json for matching game path..." "" >&2
     while IFS= read -r json_file; do
         [ -z "$json_file" ] && continue
         app_name=""
@@ -195,8 +195,8 @@ detect_heroic_prefix_verbose() {
         done < <(awk 'BEGIN { RS="}"; FS="," } { ip=""; an=""; for (i=1; i<=NF; i++) { if ($i ~ /"(install_path|installPath)"/) { line=$i; sub(/^.*"(install_path|installPath)"[ \t]*:[ \t]*"/, "", line); sub(/".*$/, "", line); ip=line } if ($i ~ /"(app_name|appName)"/) { line=$i; sub(/^.*"(app_name|appName)"[ \t]*:[ \t]*"/, "", line); sub(/".*$/, "", line); an=line } } if (ip != "") print ip "\t" an }' "$json_file")
 
         if [ -n "$app_name" ]; then
-            print_status "Game found! Internal ID: ${BOLD}$app_name${NC}" "$WHITE" >&2
-            print_status "Parsing GamesConfig/$app_name.json for custom prefix paths..." "$WHITE" >&2
+            print_status "Game found! Internal ID: ${BOLD}$app_name${NC}" "" >&2
+            print_status "Parsing GamesConfig/$app_name.json for custom prefix paths..." "" >&2
             local config_jsons
             config_jsons=$(find "$HOME/.config/heroic" "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic" -type f -path "*/GamesConfig/$app_name.json" 2>/dev/null)
             while IFS= read -r conf_file; do
@@ -209,7 +209,7 @@ detect_heroic_prefix_verbose() {
     done <<< "$installed_jsons"
 
     if [ -n "$app_name" ] && [ -z "$auto_prefix" ]; then
-        print_status "No custom prefix defined. Checking default Heroic locations..." "$WHITE" >&2
+        print_status "No custom prefix defined. Checking default Heroic locations..." "" >&2
         if [ -d "$HOME/Games/Heroic/Prefixes/$app_name" ]; then auto_prefix="$HOME/Games/Heroic/Prefixes/$app_name"
         elif [ -d "$HOME/Games/Heroic/Prefixes/default/$app_name" ]; then auto_prefix="$HOME/Games/Heroic/Prefixes/default/$app_name"
         fi
@@ -545,7 +545,7 @@ detect_game_environment() {
             # skip the redundant search/confirmation and go straight to
             # prefix verification below.
             APPID="$SCANNED_APPID"
-            print_status "Using AppID ${BOLD}$APPID${NC} from the library scan." "$WHITE"
+            print_status "Using AppID ${BOLD}$APPID${NC} from the library scan." ""
         else
             if confirm "Would you like the script to attempt to automatically find your Proton prefix?"; then
                 echo -e "\n${CYAN}STATUS: Searching for Steam AppID...${NC}"
@@ -555,7 +555,7 @@ detect_game_environment() {
                 # appmanifest's "installdir" value.
                 INSTALL_DIR="${GAME_DIR#*/steamapps/common/}"
                 INSTALL_DIR="${INSTALL_DIR%%/*}"
-                print_status "Scanning local appmanifest files for folder: $INSTALL_DIR" "$WHITE"
+                print_status "Scanning local appmanifest files for folder: $INSTALL_DIR" ""
                 # Escape BRE metacharacters (folder names with brackets, dots, etc.
                 # are common — e.g. "[Definitive Edition]") since this pattern
                 # also relies on \s as a wildcard, which -F would otherwise take
@@ -565,7 +565,7 @@ detect_game_environment() {
 
                 if [ -n "$MANIFEST_FILE" ]; then
                     AUTO_APPID=$(basename "$MANIFEST_FILE" | tr -dc '0-9')
-                    print_status "Found AppID: ${BOLD}$AUTO_APPID${NC}" "$WHITE"
+                    print_status "Found AppID: ${BOLD}$AUTO_APPID${NC}" ""
                     if confirm "Use this detected Steam AppID?"; then APPID="$AUTO_APPID"; fi
                 else
                     print_status "Search complete. No matching AppID found." "$YELLOW"
@@ -584,7 +584,7 @@ detect_game_environment() {
                 [ -z "$APPID" ] && break
             fi
 
-            print_status "Querying Protontricks database for AppID ${APPID}..." "$WHITE"
+            print_status "Querying Protontricks database for AppID ${BOLD}${APPID}${NC}..." ""
             DETECTED_STEAM_PREFIX=$(protontricks -c 'echo $WINEPREFIX' "$APPID" 2>/dev/null | grep "/pfx" | tail -n 1 | tr -d '\r')
 
             if [ -n "$DETECTED_STEAM_PREFIX" ] && [ -d "$DETECTED_STEAM_PREFIX" ]; then
