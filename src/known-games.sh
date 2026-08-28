@@ -135,6 +135,27 @@ prompt_recent_game() {
     return 1
 }
 
+block_if_eax_not_implemented() {
+    # Usage: block_if_eax_not_implemented <id> <steam|gog>
+    # Fail-fast twin of confirm_continue_if_eax_impossible's not_implemented
+    # branch — called right after the scan pick so a known-impossible game is
+    # rejected before wasting the user's time on AppID/prefix detection.
+    [ "$SCRIPT_ACTION" == "i" ] || return
+    [ -z "$1" ] && return
+    ensure_known_games_json || return
+
+    local field="steam_appid"
+    [ "$2" == "gog" ] && field="gog_id"
+    local status
+    status=$(jq -r --arg id "$1" --arg field "$field" '.games[] | select((.[$field] // "") | tostring == $id) | .eax_status // "supported"' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+
+    if [ "$status" == "not_implemented" ]; then
+        print_error "This edition never implemented EAX/environmental audio in the first place —" \
+            "installing DSOAL here would be a functional no-op. Installation cannot continue."
+        exit 1
+    fi
+}
+
 scan_game_libraries() {
     # Usage: scan_game_libraries
     # Opt-in alternative to browsing/typing a path: scans Steam and Heroic
@@ -272,6 +293,7 @@ scan_game_libraries() {
     local idx=$((choice - 1))
 
     show_game_details_block "${ids[$idx]}" "${stores[$idx]}" "${paths[$idx]}"
+    block_if_eax_not_implemented "${ids[$idx]}" "${stores[$idx]}"
 
     confirm "Continue with this game?" || return 1
 
@@ -427,9 +449,11 @@ confirm_continue_if_eax_impossible() {
     # users deliberately downgrade builds via old depot manifests, or a
     # known alternate build/branch exists, specifically to work around
     # this) vs. "not_implemented" (a remaster/rewrite that never had EAX in
-    # the first place — no build-level fix exists). Kept as a confirmable
-    # warning rather than a hard block either way, since the script has no
-    # way to verify which exact build the user has from the ID alone.
+    # the first place — no build-level fix exists). "removed_by_patch" stays
+    # a confirmable warning since the script can't verify which build the
+    # user actually has from the ID alone; "not_implemented" is an
+    # unconditional no-op with no build-level workaround, so it hard-blocks
+    # the install instead.
     [ "$SCRIPT_ACTION" == "i" ] || return
     [ -z "$1" ] && return
 
@@ -448,13 +472,14 @@ confirm_continue_if_eax_impossible() {
     fi
 
     if [ "$status" == "not_implemented" ]; then
-        print_warning "This edition never implemented EAX/environmental audio in the first place —" \
-            "installing DSOAL here is a functional no-op."
-    else
-        print_warning "EAX/A3D support was removed from this build by a software update —" \
-            "installing DSOAL here is a functional no-op on the current default build."
-        #[ -n "$hint" ] && echo -e "${WHITE}$hint${NC}"
+        print_error "This edition never implemented EAX/environmental audio in the first place —" \
+            "installing DSOAL here would be a functional no-op. Installation cannot continue."
+        exit 1
     fi
+
+    print_warning "EAX/A3D support was removed from this build by a software update —" \
+        "installing DSOAL here is a functional no-op on the current default build."
+    #[ -n "$hint" ] && echo -e "${WHITE}$hint${NC}"
 
     if ! confirm "Continue installing anyway?" N; then
         echo -e "\n${WHITE}Install cancelled.${NC}"
