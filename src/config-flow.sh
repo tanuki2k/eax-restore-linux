@@ -112,11 +112,10 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     INSTALL_VCRUN="n"
     if [ "$ENGINE_CHOICE" == "3" ] || [ "$ENGINE_CHOICE" == "4" ]; then
         print_step 6 "VC++ Runtime Dependencies"
-        print_paragraph "The modern kcat engine needs genuine Microsoft C++ runtime libraries. Older Proton/Wine" \
-            "builds (9 and below) tend to be missing them more often than newer ones — but rather" \
-            "than guess from a version number, this can check the prefix directly."
+        print_paragraph "Genuine Microsoft C++ runtime libraries are needed for older Proton/Wine" \
+            "builds (9 and below) when using kcat's DSOAL or OpenAL Soft."
 
-        if confirm "Check this prefix for existing VC++ runtime files?"; then
+        if confirm "Check $GAME_NAME's prefix for existing VC++ runtime files?"; then
             echo -e "\n${CYAN}STATUS: Checking prefix for existing VC++ runtime files...${NC}"
 
             if [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows" ]; then

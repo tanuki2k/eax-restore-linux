@@ -485,8 +485,8 @@ confirm_continue_if_openal_native() {
 
     if [ "$matched" -eq 0 ] && [ -n "$GAME_DIR" ] && [ -d "$GAME_DIR" ]; then
         if confirm "Would you like the script to attempt to detect whether $game_name uses OpenAL or DirectSound3D?"; then
-            echo ""
-            print_status "Scanning $game_name's .exe/.dll files for OpenAL32.dll/dsound.dll references..."
+            echo -e "\n${CYAN}STATUS: Searching for Audio APIs...${NC}"
+            print_status "Scanning $game_name's .exe/.dll files for OpenAL32.dll/dsound.dll references..."  ""
             api=$(detect_api_from_binary "$GAME_DIR")
             scanned=1
         else
@@ -498,7 +498,7 @@ confirm_continue_if_openal_native() {
     [ "$api" == "openal" ] && api_display="OpenAL"
 
     if [ -n "$api" ]; then
-        print_status "Detected: $api_display" "$GREEN"
+        print_status "Detected: ${BOLD}$api_display${NC}" ""
         [ "$matched" -eq 1 ] && [ -z "$SCANNED_NOTES_SHOWN" ] && show_game_details_block "$1" "$2" "$GAME_DIR"
     fi
 
@@ -519,6 +519,7 @@ confirm_continue_if_openal_native() {
             exit 0
         fi
     elif [ "$declined" -eq 1 ]; then
+        echo ""
         print_status "Skipped the file scan — assuming standard DirectSound3D." "$WHITE"
     elif [ "$json_checked" -eq 0 ]; then
         print_note_arrow "Skipped the known-games check, and $game_name's files couldn't be" \
@@ -575,7 +576,7 @@ detect_game_environment() {
             fi
         fi
 
-        echo -e "\n${CYAN}Verifying Wine Prefix...${NC}"
+        echo -e "\n${CYAN}STATUS: Verifying Wine Prefix...${NC}"
         while true; do
             if [ -z "$APPID" ]; then
                 echo -e "\n${YELLOW}Enter the Steam AppID manually (or press Enter to skip): ${NC}"
@@ -693,9 +694,8 @@ select_architecture() {
     # a parameter rather than hardcoded.
     local step="${1:-3}"
     print_step "$step" "Architecture Selection"
-    print_paragraph "This step determines whether the game executable is 32-bit or 64-bit so the script" \
-        "can deploy the correct architecture for the audio wrapper files. If the wrong version" \
-        "is selected, the game will silently fail to load the custom audio engine."
+    print_paragraph "This step determines whether the game executable is 32-bit or 64-bit." \
+        "If the wrong version is selected, the game will crash without showing an error message."
 
     ARCH="MANUAL"
     if command -v file &> /dev/null; then
