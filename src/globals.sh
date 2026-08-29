@@ -64,6 +64,13 @@ KNOWN_GAMES_CACHE="$BASE_SHARE/known-eax-games.json"
 KNOWN_GAMES_FILE=""
 KNOWN_GAMES_ATTEMPTED=""
 
+# Set by prompt_restart_or_quit when the user, at an EAX-impossible dead end,
+# chooses to go back and pick a different game rather than quit. The config
+# flow's Steps 1-2 loop and the functions between it and the check
+# (get_game_directory / scan_game_libraries / detect_game_environment) unwind
+# on this instead of the script exiting.
+RESTART_REQUESTED=""
+
 # Minimal hardcoded safety net for confirm_continue_if_eax_impossible, used
 # only if ensure_known_games_json can't produce a file at all (e.g. first
 # run, offline, no cache yet). Keeps the "this install is a functional

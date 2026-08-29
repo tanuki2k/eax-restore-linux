@@ -14,11 +14,21 @@ if is_truthy "$EAX_RESTORE_VCRUN_ONLY"; then
 
     SCRIPT_ACTION="i"
 
-    print_step 1 "Game Location"
-    get_game_directory ""
+    # Steps 1-2 loop, same as the normal install flow: an EAX-impossible game
+    # still lets the user pick a different one instead of exiting (see
+    # prompt_restart_or_quit).
+    while true; do
+        RESTART_REQUESTED=""
 
-    print_step 2 "Launcher Identification"
-    detect_game_environment
+        print_step 1 "Game Location"
+        get_game_directory ""
+
+        print_step 2 "Launcher Identification"
+        detect_game_environment
+        [ -n "$RESTART_REQUESTED" ] && continue
+
+        break
+    done
 
     select_architecture
 

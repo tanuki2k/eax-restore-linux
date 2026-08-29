@@ -127,6 +127,11 @@ get_game_directory() {
                     record_recent_game "$GAME_DIR"
                     return
                 fi
+                # A scan that bailed (nothing picked, or an EAX-impossible
+                # pick where the user chose "different game") drops back to
+                # this menu on its own — clear the restart flag so it can't
+                # leak past a later successful pick into the Step 1-2 loop.
+                RESTART_REQUESTED=""
                 continue
                 ;;
             gui)
@@ -595,6 +600,9 @@ detect_game_environment() {
                 if confirm "Use this detected prefix?"; then
                     PREFIX_PATH="$DETECTED_STEAM_PREFIX"
                     confirm_continue_if_eax_impossible "$APPID" "steam"
+                    # User chose to go back and pick a different game — unwind
+                    # to the config flow's Step 1-2 loop.
+                    [ -n "$RESTART_REQUESTED" ] && return
                     if [ -z "$GAME_NAME" ]; then
                         # Same source appid/gog_id already come from, not the
                         # curated JSON — the appmanifest's own "name" key.
@@ -641,6 +649,9 @@ detect_game_environment() {
             if [ -d "$PREFIX_PATH/drive_c" ]; then
                 print_status "Prefix verified!" "$GREEN"
                 confirm_continue_if_eax_impossible "$HEROIC_APP_NAME" "gog"
+                # User chose to go back and pick a different game — unwind to
+                # the config flow's Step 1-2 loop.
+                [ -n "$RESTART_REQUESTED" ] && return
                 if [ -z "$GAME_NAME" ] && [ -n "$HEROIC_APP_NAME" ]; then
                     # Same source the GOG ID already comes from, not the
                     # curated JSON — Heroic's own install folder name.

@@ -12,13 +12,26 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
 
     print_banner "PHASE 1: CONFIGURATION"
 
-    # 1. Game Location
-    print_step 1 "Game Location"
-    get_game_directory ""
+    # Steps 1-2 loop: at an EAX-impossible dead end (see prompt_restart_or_quit)
+    # the user can choose to go back and pick a different game instead of the
+    # script exiting. get_game_directory / scan_game_libraries /
+    # detect_game_environment all unwind on RESTART_REQUESTED; this re-runs
+    # them from the top with a clean slate (get_game_directory resets the
+    # per-game globals on entry).
+    while true; do
+        RESTART_REQUESTED=""
 
-    # 2. Game Identification & Launcher Auto-Detect
-    print_step 2 "Launcher Identification"
-    detect_game_environment
+        # 1. Game Location
+        print_step 1 "Game Location"
+        get_game_directory ""
+
+        # 2. Game Identification & Launcher Auto-Detect
+        print_step 2 "Launcher Identification"
+        detect_game_environment
+        [ -n "$RESTART_REQUESTED" ] && continue
+
+        break
+    done
 
     # 3. Audio API Detection
     print_step 3 "Audio API Detection"

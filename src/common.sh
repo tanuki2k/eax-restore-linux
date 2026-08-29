@@ -1,5 +1,23 @@
 
 is_truthy() { [[ "${1,,}" =~ ^(1|true|yes|y)$ ]]; }
+prompt_restart_or_quit() {
+    # Usage: prompt_restart_or_quit [quit_exit_code]
+    # Shared handler for the "this game can't benefit from EAX" dead ends (a
+    # remaster that never implemented it, or a build a patch stripped it
+    # from). Rather than ending the script outright, offer to go back to game
+    # selection: sets RESTART_REQUESTED so the caller chain unwinds to the
+    # config flow's Step 1 loop. On a "quit" answer it exits with the given
+    # code (default 0) — passed as 1 by the not_implemented hard-blocks so
+    # they keep their non-zero status. Defaults to "no" so an exhausted /
+    # non-interactive stdin quits instead of looping forever on a flow that
+    # deploys files.
+    if confirm "Would you like to go back and choose a different game?" N; then
+        RESTART_REQUESTED=1
+    else
+        echo -e "\n${WHITE}Exiting.${NC}"
+        exit "${1:-0}"
+    fi
+}
 is_genuine_dll() {
     # Usage: is_genuine_dll <path>
     # Wine creates a "fake DLL" placeholder file with the real DLL's name in

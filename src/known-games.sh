@@ -137,9 +137,11 @@ prompt_recent_game() {
 
 block_if_eax_not_implemented() {
     # Usage: block_if_eax_not_implemented <id> <steam|gog> <game_name>
-    # Fail-fast twin of confirm_continue_if_eax_impossible's not_implemented
+    # Early twin of confirm_continue_if_eax_impossible's not_implemented
     # branch — called right after the scan pick so a known-impossible game is
-    # rejected before wasting the user's time on AppID/prefix detection.
+    # caught before wasting the user's time on AppID/prefix detection. On a
+    # match it hands off to prompt_restart_or_quit, which either exits or sets
+    # RESTART_REQUESTED for scan_game_libraries to unwind on.
     [ "$SCRIPT_ACTION" == "i" ] || return
     [ -z "$1" ] && return
     ensure_known_games_json || return
@@ -151,9 +153,9 @@ block_if_eax_not_implemented() {
 
     if [ "$status" == "not_implemented" ]; then
         print_error "$3 never implemented EAX/environmental audio in the first place, so" \
-            "installing DSOAL here wouldn't do anything — there's nothing for it to hook into." \
-            "Installation can't continue."
-        exit 1
+            "installing DSOAL here wouldn't do anything — there's nothing for it to hook into."
+        prompt_restart_or_quit 1
+        return
     fi
 }
 
@@ -295,6 +297,9 @@ scan_game_libraries() {
 
     show_game_details_block "${ids[$idx]}" "${stores[$idx]}" "${paths[$idx]}"
     block_if_eax_not_implemented "${ids[$idx]}" "${stores[$idx]}" "${meta_names[$idx]}"
+    # User chose "pick a different game" at the EAX-impossible prompt — bail
+    # back to get_game_directory's menu instead of asking to continue with it.
+    [ -n "$RESTART_REQUESTED" ] && return 1
 
     confirm "Continue with this game?" || return 1
 
@@ -450,11 +455,14 @@ confirm_continue_if_eax_impossible() {
     # users deliberately downgrade builds via old depot manifests, or a
     # known alternate build/branch exists, specifically to work around
     # this) vs. "not_implemented" (a remaster/rewrite that never had EAX in
-    # the first place — no build-level fix exists). "removed_by_patch" stays
-    # a confirmable warning since the script can't verify which build the
-    # user actually has from the ID alone; "not_implemented" is an
-    # unconditional no-op with no build-level workaround, so it hard-blocks
-    # the install instead.
+    # the first place — no build-level fix exists). "removed_by_patch" is a
+    # confirmable warning (the user might be on, or willing to switch to, an
+    # older build the ID alone can't tell us about — so "install anyway"
+    # stays offered); "not_implemented" is an unconditional no-op with no
+    # build-level workaround, so it skips straight to prompt_restart_or_quit.
+    # Either way the dead end offers "pick a different game" rather than just
+    # ending the script — see prompt_restart_or_quit / the Steps 1-2 loop in
+    # config-flow.sh.
     [ "$SCRIPT_ACTION" == "i" ] || return
     [ -z "$1" ] && return
 
@@ -474,9 +482,9 @@ confirm_continue_if_eax_impossible() {
 
     if [ "$status" == "not_implemented" ]; then
         print_error "This edition never implemented EAX/environmental audio in the first place, so" \
-            "installing DSOAL here wouldn't do anything — there's nothing for it to hook into." \
-            "Installation can't continue."
-        exit 1
+            "installing DSOAL here wouldn't do anything — there's nothing for it to hook into."
+        prompt_restart_or_quit 1
+        return
     fi
 
     print_warning "EAX/A3D support was removed from this build by a software update, so installing" \
@@ -484,7 +492,7 @@ confirm_continue_if_eax_impossible() {
     #[ -n "$hint" ] && echo -e "${WHITE}$hint${NC}"
 
     if ! confirm "Continue installing anyway?" N; then
-        echo -e "\n${WHITE}Install cancelled.${NC}"
-        exit 0
+        prompt_restart_or_quit 0
+        return
     fi
 }
