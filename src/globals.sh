@@ -1,4 +1,9 @@
 # --- Build Info ---
+# build.sh stamps these in the assembled dist/ output from the git checkout
+# (branch -> -dev suffix, HEAD commit date -> SCRIPT_DATE). The values here are
+# the fallback used only when building without git (e.g. a source tarball):
+# SCRIPT_VERSION is the release base, SCRIPT_DATE just needs to stay roughly
+# current.
 SCRIPT_VERSION="0.29"
 SCRIPT_DATE="2026-08-13"
 

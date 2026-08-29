@@ -20,16 +20,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Compute dev stamp
+      - name: Build
+        run: ./build.sh
+
+      - name: Read stamp from build
         id: stamp
         run: |
-          base=$(sed -nE 's/^SCRIPT_VERSION="([^"]+)".*/\1/p' src/globals.sh)
-          sha=$(git rev-parse --short HEAD)
-          echo "version=${base}-dev"                     >> "$GITHUB_OUTPUT"
-          echo "date=$(date -u +%Y-%m-%d) build g${sha}" >> "$GITHUB_OUTPUT"
-
-      - name: Build
-        run: BUILD_VERSION='${{ steps.stamp.outputs.version }}' BUILD_DATE='${{ steps.stamp.outputs.date }}' ./build.sh
+          # build.sh stamps the version itself from the branch (GITHUB_REF_NAME
+          # is "dev" here); read it back out for the release title/notes.
+          sed -nE 's/^SCRIPT_VERSION="([^"]+)".*/version=\1/p' dist/eax-restore-linux.sh >> "$GITHUB_OUTPUT"
+          sed -nE 's/^SCRIPT_DATE="([^"]+)".*/date=\1/p'       dist/eax-restore-linux.sh >> "$GITHUB_OUTPUT"
 
       - name: Syntax check
         run: bash -n dist/eax-restore-linux.sh

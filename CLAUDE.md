@@ -29,16 +29,22 @@ launcher).
 End users get the script from a **GitHub Release asset**, not the repo directly —
 `README.md`'s `curl` command and `eax-restore-linux.desktop`'s launcher both fetch
 `.../releases/latest/download/eax-restore-linux.sh`. Cutting the **stable** release is
-a manual step: bump `SCRIPT_VERSION`/`SCRIPT_DATE` in `src/globals.sh`, run
+a manual step: bump `SCRIPT_VERSION` in `src/globals.sh`, run
 `./build.sh`, and create a GitHub release tagged `vX.Y` with
 `dist/eax-restore-linux.sh` and `eax-restore-linux.desktop` attached as assets
 (matching the existing `v0.28` release) — mark it as the latest release so the
-`releases/latest/download/` URLs resolve to it.
+`releases/latest/download/` URLs resolve to it. `SCRIPT_DATE` is **not** bumped by
+hand: `build.sh` derives it from the HEAD commit date (`git show -s --format=%cs`)
+at build time — a plain `vX.Y` checkout gets that tag's commit date. The
+`SCRIPT_DATE="..."` literal in `src/globals.sh` is only the fallback for a build
+with no git available (e.g. a source tarball); refresh it opportunistically so
+those stay roughly current.
 
 Every push to `dev` (and manual `workflow_dispatch`) instead auto-publishes a rolling
-**`dev` prerelease** via `.github/workflows/dev-release.yml`: it rebuilds with the
-version stamped `<base>-dev` (base read from `src/globals.sh`) and the build
-date/commit in the date field, then updates the single `dev`-tagged release in place
+**`dev` prerelease** via `.github/workflows/dev-release.yml`: `build.sh` itself
+stamps the version `<base>-dev` (base from `src/globals.sh`, triggered by
+`GITHUB_REF_NAME=dev`) and puts the commit date + short SHA in the date field, then
+the workflow updates the single `dev`-tagged release in place
 with `dist/eax-restore-linux.sh` attached. It's marked `--prerelease` so
 `releases/latest` keeps resolving to the stable `vX.Y`, and the workflow fails if that
 ever stops holding. The `dev` prerelease never carries the `.desktop` launcher (the
@@ -47,10 +53,14 @@ launcher hardcodes `releases/latest`).
 ## Commands
 
 - **Rebuild after editing anything in `src/`:** `./build.sh` (writes
-  `dist/eax-restore-linux.sh`). Setting `BUILD_VERSION=` and/or `BUILD_DATE=` in the
-  environment patches those values into the assembled output only (not
-  `src/globals.sh`) — used by the `dev` release workflow to stamp `<base>-dev` builds;
-  handy locally too.
+  `dist/eax-restore-linux.sh`). By default it stamps the assembled output's
+  `SCRIPT_VERSION`/`SCRIPT_DATE` from the checkout: a `dev`/feature branch gets
+  `<base>-dev` + `<commit-date> build g<sha>` (`-dirty` appended when the tree has
+  uncommitted changes), `main` or a `vX.Y` tag gets the clean base version +
+  `<commit-date>`, and a git-less checkout leaves the `src/globals.sh` literals
+  untouched. Setting `BUILD_VERSION=` and/or `BUILD_DATE=` in the environment
+  overrides the corresponding stamp (assembled output only, never
+  `src/globals.sh`) — handy locally; the `dev` workflow no longer needs them.
 - **Syntax-check after any edit:** `bash -n dist/eax-restore-linux.sh`
 - **Shellcheck (if installed):** `shellcheck dist/eax-restore-linux.sh`
 - **Validate the JSON database after editing it:** `jq empty known-eax-games.json`
