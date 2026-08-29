@@ -15,12 +15,12 @@
         protontricks "$APPID" -q openal 2>/dev/null
         print_status "OpenAL was installed successfully." "$GREEN"
     else
-        if [ -n "$WINE_CMD" ]; then
+        if [ -n "$WINE_CMD" ] && [ -n "$PREFIX_PATH" ]; then
             # Using --force to bypass winetricks safety blocks in Heroic
             WINEPREFIX="$PREFIX_PATH" WINE="$WINE_CMD" winetricks --force -q openal 2>/dev/null
             print_status "OpenAL was installed successfully." "$GREEN"
         else
-            print_warning_arrow "No local Wine binary was found, so this step is being skipped."
+            print_warning_arrow "No local Wine binary or resolved prefix was found, so this step is being skipped."
         fi
     fi
 

@@ -584,12 +584,19 @@ detect_game_environment() {
         echo -e "\n${CYAN}STATUS: Verifying Wine Prefix...${NC}"
         while true; do
             if [ -z "$APPID" ]; then
-                echo -e "\n${YELLOW}Enter the Steam AppID manually (or press Enter to skip): ${NC}"
+                echo -e "\n${YELLOW}Enter the Steam AppID manually: ${NC}"
                 echo -e "${WHITE} Tip: Found on the game's Steam Store URL, or in Steam by right-clicking the game -> Properties -> Updates.${NC}"
                 echo -e -n "> "
                 read -r APPID
                 APPID=$(echo "$APPID" | tr -dc '0-9')
-                [ -z "$APPID" ] && break
+                if [ -z "$APPID" ]; then
+                    # No AppID means protontricks can't locate the prefix, and
+                    # nothing downstream works — offer game reselection / exit
+                    # rather than pressing on with a blank.
+                    print_error "A Steam AppID is required — protontricks uses it to locate the game's Proton prefix."
+                    prompt_restart_or_quit 0
+                    return
+                fi
             fi
 
             print_status "Querying Protontricks database for AppID ${BOLD}${APPID}${NC}..." ""
@@ -617,6 +624,8 @@ detect_game_environment() {
                 print_error "Proton prefix not found for AppID ${APPID}."
                 echo -e "\n${WHITE}If you just installed this game, Proton has not generated the prefix yet."
                 echo -e "Please launch the game at least once, close it, and try again.${NC}"
+                # "No" clears the AppID and drops back to the manual prompt for a
+                # corrected value; an empty entry there triggers restart/quit.
                 if ! confirm "Check this AppID again?"; then APPID=""; fi
             fi
         done
@@ -637,11 +646,18 @@ detect_game_environment() {
 
         while true; do
             if [ -z "$PREFIX_PATH" ]; then
-                echo -e "\n${YELLOW}Enter the Wine Prefix path manually (or press Enter to skip): ${NC}"
+                echo -e "\n${YELLOW}Enter the Wine prefix path: ${NC}"
                 echo -e "${WHITE} Example Heroic: ~/Games/Heroic/Prefixes/[Game-Name]${NC}"
                 echo -e -n "> "
                 read -r PREFIX_PATH
-                [ -z "$PREFIX_PATH" ] && break
+                if [ -z "$PREFIX_PATH" ]; then
+                    # The prefix is where the DLL override, the system32/syswow64
+                    # copy and the VC++ check all happen — nothing to fall back
+                    # on without it, so offer game reselection / exit here.
+                    print_error "A Wine prefix is required — it's where the DLL override and prefix-side files go."
+                    prompt_restart_or_quit 0
+                    return
+                fi
                 PREFIX_PATH="${PREFIX_PATH//\'/}"; PREFIX_PATH="${PREFIX_PATH//\"/}"; PREFIX_PATH="${PREFIX_PATH%/}"
                 PREFIX_PATH="${PREFIX_PATH/#\~/$HOME}"
             fi
@@ -665,6 +681,8 @@ detect_game_environment() {
                 echo -e "\n${WHITE}If you just installed this game, the launcher has not generated the prefix yet."
                 echo -e "Please run the game at least once, close it, and try again.${NC}"
 
+                # "No" clears the path and drops back to the manual prompt for a
+                # corrected value; an empty entry there triggers restart/quit.
                 if ! confirm "Check this path again?"; then PREFIX_PATH=""; fi
             fi
         done
