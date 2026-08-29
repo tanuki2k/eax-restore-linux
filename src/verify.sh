@@ -18,14 +18,14 @@ verify_checksum() {
     local expected="$2"
 
     if ! command -v sha256sum &> /dev/null; then
-        print_note_arrow "sha256sum not available, skipping checksum verification."
+        print_note_arrow "Couldn't find sha256sum on this system, so checksum verification is being skipped."
         return 0
     fi
 
     local actual
     actual=$(sha256sum "$file" | awk '{print $1}')
     if [ "$expected" != "$actual" ]; then
-        print_error_arrow "checksum mismatch — expected $expected, got $actual."
+        print_error_arrow "This file's checksum doesn't match what was expected ($expected vs. $actual) — the download may be corrupted or tampered with."
         return 1
     fi
 

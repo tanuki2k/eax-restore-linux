@@ -136,7 +136,7 @@ prompt_recent_game() {
 }
 
 block_if_eax_not_implemented() {
-    # Usage: block_if_eax_not_implemented <id> <steam|gog>
+    # Usage: block_if_eax_not_implemented <id> <steam|gog> <game_name>
     # Fail-fast twin of confirm_continue_if_eax_impossible's not_implemented
     # branch — called right after the scan pick so a known-impossible game is
     # rejected before wasting the user's time on AppID/prefix detection.
@@ -150,8 +150,9 @@ block_if_eax_not_implemented() {
     status=$(jq -r --arg id "$1" --arg field "$field" '.games[] | select((.[$field] // "") | tostring == $id) | .eax_status // "supported"' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
 
     if [ "$status" == "not_implemented" ]; then
-        print_error "This edition never implemented EAX/environmental audio in the first place —" \
-            "installing DSOAL here would be a functional no-op. Installation cannot continue."
+        print_error "$3 never implemented EAX/environmental audio in the first place, so" \
+            "installing DSOAL here wouldn't do anything — there's nothing for it to hook into." \
+            "Installation can't continue."
         exit 1
     fi
 }
@@ -283,7 +284,7 @@ scan_game_libraries() {
         if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 0 ] && [ "$choice" -le ${#names[@]} ]; then
             break
         fi
-        print_warning "Invalid selection. Please enter a number 0-${#names[@]}."
+        print_warning "That's not a valid option — please enter a number from 0-${#names[@]}."
         echo ""
     done
     if [ "$choice" -eq 0 ]; then
@@ -293,7 +294,7 @@ scan_game_libraries() {
     local idx=$((choice - 1))
 
     show_game_details_block "${ids[$idx]}" "${stores[$idx]}" "${paths[$idx]}"
-    block_if_eax_not_implemented "${ids[$idx]}" "${stores[$idx]}"
+    block_if_eax_not_implemented "${ids[$idx]}" "${stores[$idx]}" "${meta_names[$idx]}"
 
     confirm "Continue with this game?" || return 1
 
@@ -472,13 +473,14 @@ confirm_continue_if_eax_impossible() {
     fi
 
     if [ "$status" == "not_implemented" ]; then
-        print_error "This edition never implemented EAX/environmental audio in the first place —" \
-            "installing DSOAL here would be a functional no-op. Installation cannot continue."
+        print_error "This edition never implemented EAX/environmental audio in the first place, so" \
+            "installing DSOAL here wouldn't do anything — there's nothing for it to hook into." \
+            "Installation can't continue."
         exit 1
     fi
 
-    print_warning "EAX/A3D support was removed from this build by a software update —" \
-        "installing DSOAL here is a functional no-op on the current default build."
+    print_warning "EAX/A3D support was removed from this build by a software update, so installing" \
+        "DSOAL here wouldn't do anything on the current default build."
     #[ -n "$hint" ] && echo -e "${WHITE}$hint${NC}"
 
     if ! confirm "Continue installing anyway?" N; then

@@ -68,7 +68,7 @@ else
     fi
 
     if [ ${#MISSING_BASE_PKGS[@]} -gt 0 ]; then
-        print_error "the script is missing essential tools to function: ${MISSING_BASE_PKGS[*]}"
+        print_error "this script needs a few tools that aren't installed yet: ${MISSING_BASE_PKGS[*]}"
         if grep -q "ID=steamos" /etc/os-release 2>/dev/null; then
             print_warning "SteamOS detected. To protect your immutable filesystem, please install missing" \
                 "tools via the Discover software centre."
@@ -82,7 +82,7 @@ else
                     *debian*|*ubuntu*) sudo apt-get update && sudo apt-get install -y "${MISSING_BASE_PKGS[@]}" ;;
                     *arch*) sudo pacman -Sy --noconfirm "${MISSING_BASE_PKGS[@]}" ;;
                     *fedora*) sudo dnf install -y "${MISSING_BASE_PKGS[@]}" ;;
-                    *) print_error "manual install required: ${MISSING_BASE_PKGS[*]}"; exit 1 ;;
+                    *) print_error "please install these manually: ${MISSING_BASE_PKGS[*]}"; exit 1 ;;
                 esac
                 print_status "Dependencies installed successfully." "$GREEN"
             else print_error "Cannot proceed without base dependencies. Exiting."; exit 1; fi

@@ -9,18 +9,18 @@
     if [[ "$CONFIRM_FIN" =~ $NO_RE ]]; then echo -e "\n${YELLOW}Installation aborted.${NC}"; exit 0; fi
 
     echo -e "\n${CYAN}STATUS: Executing system verbs via $( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" ) (Silent Mode)...${NC}"
-    print_status "Applying core package: openal"
+    print_status "Installing the OpenAL package via $( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" )..."
 
     if [ "$LAUNCHER_TYPE" == "1" ]; then
         protontricks "$APPID" -q openal 2>/dev/null
-        print_status "Core package (openal) applied successfully." "$GREEN"
+        print_status "OpenAL was installed successfully." "$GREEN"
     else
         if [ -n "$WINE_CMD" ]; then
             # Using --force to bypass winetricks safety blocks in Heroic
             WINEPREFIX="$PREFIX_PATH" WINE="$WINE_CMD" winetricks --force -q openal 2>/dev/null
-            print_status "Core package (openal) applied successfully." "$GREEN"
+            print_status "OpenAL was installed successfully." "$GREEN"
         else
-            print_warning_arrow "No local Wine binary found. Skipping core package."
+            print_warning_arrow "No local Wine binary was found, so this step is being skipped."
         fi
     fi
 

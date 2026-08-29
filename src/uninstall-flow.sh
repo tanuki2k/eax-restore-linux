@@ -85,7 +85,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     fi
 
     if [ ${#FILES_TO_REMOVE[@]} -eq 0 ] && [ "$REG_HAS_COM" == "n" ] && [ "$REG_HAS_OVERRIDE" == "n" ] && [ "$VCRUN_PRESENT" == "n" ]; then
-        print_note "no EAX files found in $GAME_DIR or the system prefix."; exit 0
+        print_note "No EAX/DSOAL files were found in $GAME_DIR or the system prefix — nothing to remove."; exit 0
     fi
 
     print_step 4 "Game Files"
@@ -121,8 +121,8 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
             idx=$((idx + 1))
         done
 
-        echo -e "\n${YELLOW}Press Enter to remove all, or pick which to remove (e.g. \"1 2 3\", \"1-3\", \"^4\""
-        echo -e "to remove all except 4), or 'n' to cancel entirely: ${NC}"
+        echo -e "\n${YELLOW}Press Enter to remove all of these, or type the numbers of just the ones you"
+        echo -e "want (e.g. \"1 2 3\", \"1-3\", or \"^4\" to remove everything except 4), or 'n' to cancel: ${NC}"
         echo -e -n "> "
         read -r CONFIRM_UNINSTALL
 
@@ -151,7 +151,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
             done
 
             if [ ${#FINAL_REMOVE[@]} -eq 0 ]; then
-                echo -e "\n${YELLOW}Nothing selected, nothing removed.${NC}"
+                echo -e "\n${YELLOW}Nothing was selected, so nothing was removed.${NC}"
                 FILES_DECLINED="1"
             else
                 echo ""
@@ -260,7 +260,7 @@ EOF
             print_status "Registry keys safely removed." "$GREEN"
         else
             echo ""
-            print_note_arrow "prefix/AppID not found, skipping registry cleanup."
+            print_note_arrow "No prefix or AppID was found for this game, so there's nothing to clean up in the registry."
         fi
     fi
 

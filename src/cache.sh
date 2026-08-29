@@ -95,11 +95,11 @@ update_local_cache() {
                 unzip -q "$DSOAL_SHARE/community.zip" -d "$DSOAL_COMMUNITY_V13"; rm -f "$DSOAL_SHARE/community.zip"; print_status "Done." "$GREEN"
             else
                 rm -f "$DSOAL_SHARE/community.zip"; rmdir "$DSOAL_COMMUNITY_V13" 2>/dev/null
-                print_error_arrow "downloaded file failed checksum verification. This engine will be unavailable this run."
+                print_error_arrow "The downloaded file failed checksum verification, so this engine will be unavailable this run."
             fi
         else
             rm -f "$DSOAL_SHARE/community.zip"; rmdir "$DSOAL_COMMUNITY_V13" 2>/dev/null
-            print_error_arrow "Download failed or file was corrupt. This engine will be unavailable this run."
+            print_error_arrow "The download failed or the file was corrupt, so this engine will be unavailable this run."
         fi
     else print_status "Available in cache." "$GREEN"; fi
 
@@ -114,11 +114,11 @@ update_local_cache() {
                 unzip -q "$DSOAL_SHARE/v1.4.zip" -d "$DSOAL_COMMUNITY_V14"; rm -f "$DSOAL_SHARE/v1.4.zip"; print_status "Done." "$GREEN"
             else
                 rm -f "$DSOAL_SHARE/v1.4.zip"; rmdir "$DSOAL_COMMUNITY_V14" 2>/dev/null
-                print_error_arrow "downloaded file failed checksum verification. This engine will be unavailable this run."
+                print_error_arrow "The downloaded file failed checksum verification, so this engine will be unavailable this run."
             fi
         else
             rm -f "$DSOAL_SHARE/v1.4.zip"; rmdir "$DSOAL_COMMUNITY_V14" 2>/dev/null
-            print_error_arrow "Download failed or file was corrupt. This engine will be unavailable this run."
+            print_error_arrow "The download failed or the file was corrupt, so this engine will be unavailable this run."
         fi
     else print_status "Available in cache." "$GREEN"; fi
 
@@ -127,7 +127,7 @@ update_local_cache() {
         GAME_COUNT=$(jq '.games | length' "$KNOWN_GAMES_FILE" 2>/dev/null)
         print_status "Loaded (${GAME_COUNT:-0} games)." "$GREEN"
     else
-        print_error_arrow "Download failed or file was corrupt. Game database will be unavailable this run."
+        print_error_arrow "The download failed or the file was corrupt, so the game database will be unavailable this run."
     fi
 }
 
@@ -143,9 +143,9 @@ handle_conflict() {
             rm -f "$target_file"
             return 0
         fi
-        echo -e "\n${YELLOW}Conflict: $(basename "$target_file")${NC} ${WHITE}already exists at $(dirname "$target_file").${NC}"
+        echo -e "\n${YELLOW}$(basename "$target_file")${NC} ${WHITE}already exists at $(dirname "$target_file").${NC}"
         while true; do
-            echo -e "\n${YELLOW}Action - [o]verwrite, [B]ackup & overwrite (default), [s]kip: ${NC}"
+            echo -e "\n${YELLOW}What would you like to do? [o]verwrite, [b]ackup & overwrite (default), [s]kip: ${NC}"
             echo -e -n "> "
             read -r C_CHOICE
             C_CHOICE="${C_CHOICE:-b}"
@@ -158,7 +158,7 @@ handle_conflict() {
                     print_status "Backed up original to $(basename "$target_file").bak.${TIMESTAMP}"
                     return 0 ;;
                 s) echo ""; print_status "Skipped $(basename "$target_file")."; return 1 ;;
-                *) print_warning "Invalid choice. Type o, b, or s." ;;
+                *) print_warning "That's not a valid option — please type o, b, or s." ;;
             esac
         done
     fi

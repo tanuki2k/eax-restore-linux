@@ -87,7 +87,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
             echo -e -n "\n> "
             read -r ENGINE_CHOICE
             ENGINE_CHOICE="${ENGINE_CHOICE:-3}"
-            if [[ "$ENGINE_CHOICE" =~ ^[123]$ ]]; then break; else print_warning "Invalid selection. Please type 1, 2, or 3."; fi
+            if [[ "$ENGINE_CHOICE" =~ ^[123]$ ]]; then break; else print_warning "That's not a valid option — please type 1, 2, or 3."; fi
         done
     fi
     fi
@@ -154,7 +154,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         echo -e -n "> "
         read -r OUTPUT_MODE_CHOICE
         OUTPUT_MODE_CHOICE="${OUTPUT_MODE_CHOICE:-1}"
-        if [[ "$OUTPUT_MODE_CHOICE" =~ ^[123]$ ]]; then break; else print_warning "Invalid selection. Please type 1, 2, or 3."; fi
+        if [[ "$OUTPUT_MODE_CHOICE" =~ ^[123]$ ]]; then break; else print_warning "That's not a valid option — please type 1, 2, or 3."; fi
     done
 
     ENABLE_HRTF=""
@@ -174,7 +174,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
             echo -e -n "> "
             read -r STEREO_MODE_CHOICE
             STEREO_MODE_CHOICE="${STEREO_MODE_CHOICE:-1}"
-            if [[ "$STEREO_MODE_CHOICE" =~ ^[123]$ ]]; then break; else print_warning "Invalid selection. Please type 1, 2, or 3."; fi
+            if [[ "$STEREO_MODE_CHOICE" =~ ^[123]$ ]]; then break; else print_warning "That's not a valid option — please type 1, 2, or 3."; fi
         done
 
         case "$STEREO_MODE_CHOICE" in
@@ -216,7 +216,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
                 2) SURROUND_CHANNELS="surround51"; break ;;
                 3) SURROUND_CHANNELS="surround61"; break ;;
                 4) SURROUND_CHANNELS="surround71"; break ;;
-                *) print_warning "Invalid selection. Please type 1, 2, 3, or 4." ;;
+                *) print_warning "That's not a valid option — please type 1, 2, 3, or 4." ;;
             esac
         done
     else
