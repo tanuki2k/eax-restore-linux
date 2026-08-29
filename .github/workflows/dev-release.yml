@@ -1,0 +1,62 @@
+name: Dev Build
+
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dev-release
+  cancel-in-progress: true
+
+jobs:
+  dev-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute dev stamp
+        id: stamp
+        run: |
+          base=$(sed -nE 's/^SCRIPT_VERSION="([^"]+)".*/\1/p' src/globals.sh)
+          sha=$(git rev-parse --short HEAD)
+          echo "version=${base}-dev"                     >> "$GITHUB_OUTPUT"
+          echo "date=$(date -u +%Y-%m-%d) build g${sha}" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        run: BUILD_VERSION='${{ steps.stamp.outputs.version }}' BUILD_DATE='${{ steps.stamp.outputs.date }}' ./build.sh
+
+      - name: Syntax check
+        run: bash -n dist/eax-restore-linux.sh
+
+      - name: Validate known-games JSON
+        run: jq empty known-eax-games.json
+
+      - name: Publish rolling dev prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="Dev build ${{ steps.stamp.outputs.version }} (${{ steps.stamp.outputs.date }})"
+          notes="Automated build from the \`dev\` branch. **Not a stable release.** The startup banner reads \`v${{ steps.stamp.outputs.version }}  (${{ steps.stamp.outputs.date }})\`. Stable users: use the Latest release instead."
+          if gh release view dev >/dev/null 2>&1; then
+            git tag -f dev
+            git push -f origin refs/tags/dev
+            gh release edit dev --prerelease --title "$title" --notes "$notes"
+            gh release upload dev dist/eax-restore-linux.sh --clobber
+          else
+            gh release create dev --prerelease --target "$GITHUB_SHA" \
+              --title "$title" --notes "$notes" dist/eax-restore-linux.sh
+          fi
+
+      - name: Assert stable Latest release did not move
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          latest=$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" -q .tag_name)
+          echo "Latest release is: $latest"
+          [ "$latest" != "dev" ] || { echo "::error::dev became the Latest release"; exit 1; }

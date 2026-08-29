@@ -42,6 +42,8 @@ The script checks for these dependencies and offers to install them if they are 
 
 > Prefer a manual download? Grab the script and the Steam Deck `.desktop` launcher from the [latest release](https://github.com/tanuki2k/eax-restore-linux/releases/latest) instead of the steps below.
 
+> **Testing the development build?** Every change on the `dev` branch is auto-published as a pre-release. Download it from `https://github.com/tanuki2k/eax-restore-linux/releases/download/dev/eax-restore-linux.sh` — its startup banner shows a `-dev` version plus the build date and commit, so you can always tell it apart from a stable build. It's unstable and unsupported; the `.desktop` launcher always fetches the stable latest release only.
+
 **1. Download the script:**
 Open your terminal and run:
 

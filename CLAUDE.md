@@ -28,17 +28,29 @@ launcher).
 
 End users get the script from a **GitHub Release asset**, not the repo directly —
 `README.md`'s `curl` command and `eax-restore-linux.desktop`'s launcher both fetch
-`.../releases/latest/download/eax-restore-linux.sh`. Cutting a release is a manual
-step (no CI automation exists for it yet): bump `SCRIPT_VERSION`/`SCRIPT_DATE` in
-`src/globals.sh`, run `./build.sh`, and create a GitHub release tagged `vX.Y` with
+`.../releases/latest/download/eax-restore-linux.sh`. Cutting the **stable** release is
+a manual step: bump `SCRIPT_VERSION`/`SCRIPT_DATE` in `src/globals.sh`, run
+`./build.sh`, and create a GitHub release tagged `vX.Y` with
 `dist/eax-restore-linux.sh` and `eax-restore-linux.desktop` attached as assets
 (matching the existing `v0.28` release) — mark it as the latest release so the
 `releases/latest/download/` URLs resolve to it.
 
+Every push to `dev` (and manual `workflow_dispatch`) instead auto-publishes a rolling
+**`dev` prerelease** via `.github/workflows/dev-release.yml`: it rebuilds with the
+version stamped `<base>-dev` (base read from `src/globals.sh`) and the build
+date/commit in the date field, then updates the single `dev`-tagged release in place
+with `dist/eax-restore-linux.sh` attached. It's marked `--prerelease` so
+`releases/latest` keeps resolving to the stable `vX.Y`, and the workflow fails if that
+ever stops holding. The `dev` prerelease never carries the `.desktop` launcher (the
+launcher hardcodes `releases/latest`).
+
 ## Commands
 
 - **Rebuild after editing anything in `src/`:** `./build.sh` (writes
-  `dist/eax-restore-linux.sh`)
+  `dist/eax-restore-linux.sh`). Setting `BUILD_VERSION=` and/or `BUILD_DATE=` in the
+  environment patches those values into the assembled output only (not
+  `src/globals.sh`) — used by the `dev` release workflow to stamp `<base>-dev` builds;
+  handy locally too.
 - **Syntax-check after any edit:** `bash -n dist/eax-restore-linux.sh`
 - **Shellcheck (if installed):** `shellcheck dist/eax-restore-linux.sh`
 - **Validate the JSON database after editing it:** `jq empty known-eax-games.json`

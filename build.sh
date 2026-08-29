@@ -39,5 +39,23 @@ for f in "${COMPONENTS[@]}"; do
     echo "" >> "$out"
 done
 
+# Optional build-time stamp override — patches the assembled output only, never
+# src/globals.sh. Used by the dev-release workflow so a dev build's banner reads
+# unmistakably as one (e.g. "0.29-dev"); also handy for local testing. Left
+# unset, the version comes straight from src/globals.sh. Values must not contain
+# '|' or '&' (sed replacement metacharacters). The grep guard matters: a bare
+# sed exits 0 on no-match even under `set -e`, so without it a future
+# rename/indent of the assignment would silently ship an unstamped dev build.
+if [ -n "${BUILD_VERSION:-}" ]; then
+    sed -i -E "s|^SCRIPT_VERSION=.*|SCRIPT_VERSION=\"${BUILD_VERSION}\"|" "$out"
+    grep -qxF "SCRIPT_VERSION=\"${BUILD_VERSION}\"" "$out" \
+        || { echo "build.sh: SCRIPT_VERSION stamp did not apply" >&2; exit 1; }
+fi
+if [ -n "${BUILD_DATE:-}" ]; then
+    sed -i -E "s|^SCRIPT_DATE=.*|SCRIPT_DATE=\"${BUILD_DATE}\"|" "$out"
+    grep -qxF "SCRIPT_DATE=\"${BUILD_DATE}\"" "$out" \
+        || { echo "build.sh: SCRIPT_DATE stamp did not apply" >&2; exit 1; }
+fi
+
 chmod +x "$out"
 echo "Built $out from ${#COMPONENTS[@]} component files."
