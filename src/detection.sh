@@ -505,6 +505,11 @@ confirm_continue_if_openal_native() {
     if [ -n "$api" ]; then
         print_status "Detected: ${BOLD}$api_display${NC}" ""
         [ "$matched" -eq 1 ] && [ -z "$SCANNED_NOTES_SHOWN" ] && show_game_details_block "$1" "$2" "$GAME_DIR"
+    elif [ "$scanned" -eq 1 ]; then
+        # Scan ran but neither import string turned up; the (Y/n) below still
+        # fires (scanned=1), so state the conclusion here or it prompts blind.
+        print_note_arrow "No OpenAL or DirectSound3D references turned up in $game_name's files" \
+            "— assuming standard DirectSound3D."
     fi
 
     if [ "$api" == "openal" ]; then
