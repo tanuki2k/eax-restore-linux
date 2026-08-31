@@ -61,8 +61,9 @@ get_game_directory() {
         can_scan=1
         echo ""
     elif [ "$SCRIPT_ACTION" == "i" ]; then
-        echo -e "${NOTE}Note: library scanning needs the known-EAX-games database, which isn't"
-        echo -e "available this run — skipping straight to manual entry.${NC}\n"
+        print_note "Library scanning needs the known-EAX-games database," \
+            "which isn't available this run — skipping straight to manual entry."
+        echo ""
     else
         # SCRIPT_ACTION == "u" reaching here (prompt_recent_game found no
         # match) — neither branch above ran, so nothing has separated this

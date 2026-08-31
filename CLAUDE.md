@@ -173,12 +173,10 @@ for a new call site.
   already-wrapped physical line; the helper colors and joins them without
   reflowing). `print_note_arrow`/`print_warning_arrow`/`print_error_arrow` are the
   ` -> `-prefixed inline sub-step forms of the same three. These standalone forms
-  always emit their own leading blank line — a message that immediately follows a
-  `print_banner`/`print_step` call (whose own trailing blank line already provides
-  that separation) should stay a raw `echo -e` instead, to avoid a doubled blank line
-  (see the exception at the top of `detection.sh`'s `get_game_directory`, whose
-  "known-games database unavailable" note prints immediately after `1. Game
-  Location`'s step header).
+  always emit their own leading blank line, which is exactly the one blank line of
+  separation wanted after a `print_banner`/`print_step` header (those no longer emit
+  a trailing blank of their own) — so a `Note:`/`Warning:`/`Error:` message right
+  after a step header uses the helper directly, same as anywhere else.
 - `confirm "Question?" [default=Y|N]` — the two-line `(Y/n)`/`(y/N)` prompt (question
   line, then a separate `"> "` read line), returns 0/1. Only for actual yes/no
   confirms — a prompt that needs the raw typed value (menu numbers, free-text paths)
