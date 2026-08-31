@@ -444,10 +444,15 @@ confirm_continue_if_openal_native() {
     # filesystem guess whenever there's no authoritative JSON answer to go
     # on — either the game isn't in known-eax-games.json, OR the database
     # itself couldn't be loaded at all (offline, not yet merged to the
-    # branch it's fetched from, etc.) — rather than silently assuming
-    # DirectSound3D in either case. Every outcome prints a line explaining
-    # what was checked and what was concluded; this step should never end
-    # in total silence, which reads as broken rather than "nothing to do."
+    # branch it's fetched from, etc.). When even that comes back empty (scan
+    # declined, or ran but matched neither import string), it spells out what
+    # couldn't be checked and prompts a DirectSound3D-vs-OpenAL choice rather
+    # than assuming DirectSound3D — the "Audio Engine Selection" step only
+    # lists the DSOAL builds, so this is the sole route into OpenAL-native
+    # mode for a title nothing could identify. Every outcome prints a line
+    # explaining what was checked and what was concluded; this step should
+    # never end in total silence, which reads as broken rather than "nothing
+    # to do."
     # A confirmed known-games match still gets a (Y/n) before continuing,
     # same as the openal/binary-scan branches below it — it's still an
     # auto-detected value driving what the script does next.
@@ -499,49 +504,72 @@ confirm_continue_if_openal_native() {
         fi
     fi
 
-    local api_display="DirectSound3D"
-    [ "$api" == "openal" ] && api_display="OpenAL"
-
     if [ -n "$api" ]; then
+        local api_display="DirectSound3D"
+        [ "$api" == "openal" ] && api_display="OpenAL"
         print_status "Detected: ${BOLD}$api_display${NC}" ""
         [ "$matched" -eq 1 ] && [ -z "$SCANNED_NOTES_SHOWN" ] && show_game_details_block "$1" "$2" "$GAME_DIR"
-    elif [ "$scanned" -eq 1 ]; then
-        # Scan ran but neither import string turned up; the (Y/n) below still
-        # fires (scanned=1), so state the conclusion here or it prompts blind.
-        print_note_arrow "No OpenAL or DirectSound3D references turned up in $game_name's files" \
-            "— assuming standard DirectSound3D."
-    fi
 
-    if [ "$api" == "openal" ]; then
-        print_note "This game routes EAX through OpenAL rather than DirectSound3D, so kcat's" \
-            "OpenAL Soft will be deployed."
-        if ! confirm "Continue with OpenAL Soft deployment?"; then
+        if [ "$api" == "openal" ]; then
+            print_note "This game routes EAX through OpenAL rather than DirectSound3D, so kcat's" \
+                "OpenAL Soft will be deployed."
+            if ! confirm "Continue with OpenAL Soft deployment?"; then
+                echo -e "\n${WHITE}Install cancelled.${NC}"
+                exit 0
+            fi
+            OPENAL_NATIVE_MODE=1
+        elif ! confirm "Continue with the DSOAL/DirectSound3D install?"; then
             echo -e "\n${WHITE}Install cancelled.${NC}"
             exit 0
         fi
-        OPENAL_NATIVE_MODE=1
         return
     fi
 
-    if [ "$matched" -eq 1 ] || [ "$scanned" -eq 1 ]; then
-        if ! confirm "Continue with the DSOAL/DirectSound3D install?"; then
-            echo -e "\n${WHITE}Install cancelled.${NC}"
-            exit 0
-        fi
+    # Nothing authoritative to go on — no known-games entry (or the database
+    # wasn't available), and the file scan was either declined or turned up
+    # neither import string. Rather than assume DirectSound3D outright, spell
+    # out what couldn't be checked and let the user pick: the "Audio Engine
+    # Selection" step only lists the DSOAL builds, so this prompt is also the
+    # only way into OpenAL-native mode for a title the scan can't identify.
+    if [ "$scanned" -eq 1 ]; then
+        print_note_arrow "The scan found no OpenAL or DirectSound3D references in $game_name's" \
+            "files, so its audio API couldn't be confirmed."
     elif [ "$declined" -eq 1 ]; then
-        echo ""
-        print_status "Skipped the file scan — assuming standard DirectSound3D." "$WHITE"
+        print_note_arrow "The file scan was skipped, so $game_name's audio API is unconfirmed."
     elif [ "$json_checked" -eq 0 ]; then
-        print_note_arrow "Skipped the known-games check, and $game_name's files couldn't be" \
-            "scanned either — assuming standard DirectSound3D."
+        print_note_arrow "The known-games check was skipped and $game_name's files couldn't be" \
+            "scanned, so its audio API is unconfirmed."
+    elif [ "$json_available" -eq 0 ]; then
+        print_note_arrow "known-eax-games.json isn't available this run and $game_name's files" \
+            "couldn't be scanned, so its audio API is unconfirmed."
     else
-        if [ "$json_available" -eq 0 ]; then
-            print_note_arrow "known-eax-games.json isn't available this run, and $game_name's files" \
-                "couldn't be scanned either — assuming standard DirectSound3D."
-        else
-            print_note_arrow "$game_name isn't in the known-games database, and its files couldn't be" \
-                "scanned either — assuming standard DirectSound3D."
-        fi
+        print_note_arrow "$game_name isn't in the known-games database and its files couldn't be" \
+            "scanned, so its audio API is unconfirmed."
+    fi
+
+    echo -e "\n${WHITE}Almost every classic EAX title uses DirectSound3D; only a handful route"
+    echo -e "EAX through OpenAL natively. Choose DirectSound3D unless you know this"
+    echo -e "game is one of the exceptions.${NC}"
+    echo -e "\n 1) DirectSound3D / DSOAL   [default]"
+    echo -e " 2) OpenAL native           (deploy kcat's OpenAL Soft directly)"
+
+    local api_choice
+    while true; do
+        echo -e "\n${YELLOW}Selection (1 or 2) [Default: 1]: ${NC}"
+        echo -e -n "> "
+        # EOF / empty falls back to 1: DirectSound3D is the safe default for
+        # the overwhelming majority of EAX titles.
+        read -r api_choice || api_choice=1
+        api_choice="${api_choice:-1}"
+        [[ "$api_choice" =~ ^[12]$ ]] && break
+        print_warning "That's not a valid option — please type 1 or 2."
+    done
+
+    if [ "$api_choice" == "2" ]; then
+        print_status "Proceeding with kcat's OpenAL Soft." "$WHITE"
+        OPENAL_NATIVE_MODE=1
+    else
+        print_status "Proceeding with DSOAL / DirectSound3D." "$WHITE"
     fi
 }
 
