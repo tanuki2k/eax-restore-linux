@@ -163,7 +163,11 @@ confirm() {
     echo -e "\n${YELLOW}${question} ${hint}: ${NC}"
     echo -e -n "> "
     local answer
-    read -r answer
+    # EOF (closed/exhausted stdin — a non-interactive run that's out of
+    # pre-fed answers) is not an answer: decline regardless of the default,
+    # so the caller ends cleanly instead of looping on a prompt nothing will
+    # ever respond to.
+    read -r answer || return 1
 
     if [[ "${default^^}" == "N" ]]; then
         [[ "$answer" =~ $YES_RE ]]

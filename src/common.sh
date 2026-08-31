@@ -8,10 +8,12 @@ prompt_restart_or_quit() {
     # selection: sets RESTART_REQUESTED so the caller chain unwinds to the
     # config flow's Step 1 loop. On a "quit" answer it exits with the given
     # code (default 0) — passed as 1 by the not_implemented hard-blocks so
-    # they keep their non-zero status. Defaults to "no" so an exhausted /
-    # non-interactive stdin quits instead of looping forever on a flow that
-    # deploys files.
-    if confirm "Would you like to go back and choose a different game?" N; then
+    # they keep their non-zero status. Defaults to "yes" (go back to game
+    # selection): reaching this dead end almost always means the user picked
+    # the wrong build/edition and wants another try, and nothing is deployed
+    # on this path. (An exhausted / non-interactive stdin still exits here —
+    # confirm() treats EOF as "no" regardless of the default.)
+    if confirm "Would you like to go back and choose a different game?" Y; then
         RESTART_REQUESTED=1
     else
         echo -e "\n${WHITE}Exiting.${NC}"

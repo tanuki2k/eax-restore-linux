@@ -14,6 +14,22 @@ find_local_wine() {
     echo "$found_wine"
 }
 
+prompt_manual_game_dir() {
+    # Usage: prompt_manual_game_dir
+    # Prompts for a game .exe folder and cleans the entry in place — strips
+    # surrounding quotes and a trailing slash, expands a leading ~. Result
+    # in GAME_DIR (emptied on EOF or a blank line). Returns 1 on EOF/blank
+    # so a caller looping on the read can't spin on closed stdin; callers do
+    # their own directory-exists / .exe-count validation afterwards.
+    echo -e "\n${YELLOW}Enter the full path to the game's .exe folder:${NC}"
+    echo -e -n "> "
+    if ! read -r GAME_DIR; then GAME_DIR=""; return 1; fi
+    GAME_DIR="${GAME_DIR//\'/}"; GAME_DIR="${GAME_DIR//\"/}"; GAME_DIR="${GAME_DIR%/}"
+    GAME_DIR="${GAME_DIR/#\~/$HOME}"
+    [ -z "$GAME_DIR" ] && return 1
+    return 0
+}
+
 pick_directory_gui() {
     # Usage: pick_directory_gui
     # Opens a native folder-picker dialog via zenity (GNOME/GTK desktops) or
@@ -145,12 +161,7 @@ get_game_directory() {
                 fi
                 ;;
             manual)
-                echo -e "\n${YELLOW}Enter the full path to the game's .exe folder:${NC}"
-                echo -e -n "> "
-                read -r GAME_DIR
-
-                GAME_DIR="${GAME_DIR//\'/}"; GAME_DIR="${GAME_DIR//\"/}"; GAME_DIR="${GAME_DIR%/}"
-                GAME_DIR="${GAME_DIR/#\~/$HOME}"
+                prompt_manual_game_dir || true
                 ;;
         esac
 
@@ -276,11 +287,12 @@ resolve_exe_folder() {
 
     # Nested installs often bundle third-party installers/utilities
     # alongside the real game .exe (redistributables, anti-cheat setup,
-    # crash handlers, uninstallers). Folder name alone isn't a reliable
-    # filter -- "Launcher" or "bin" folders legitimately hold real game
-    # exes for some titles too -- so this blocks by the installer/utility's
-    # own distinctive basename instead, wherever it's nested.
-    local junk_exe_re='^(unins(t(all)?)?[0-9]*|vc_?redist.*|(dx|directx)?setup|dxsetup|dxwebsetup|dx[0-9]+ger|dx[0-9]+ntger|dotnetfx.*|ndp[0-9].*|windowsdesktop-runtime.*|oalinst|physx.*|easyanticheat.*|eac_?setup.*|eaclauncher|be(service|daisy|launcher|_ex)[a-z0-9_]*|battleye.*|unitycrashhandler.*|crashreport(er|client)?|crash_?handler|crashpad_handler|bugsplat.*|epiconlineservices(installer)?|epicwebhelper.*|rockstar-games-launcher|social-club-setup|vulkanrt.*installer.*|gamingrepair(tool)?|registrationreminder|overlayinjector|cleanup|touchup|driverversionchecker|layerschecker|supporttool|dowser|iscopyfiles|ue3?redist.*|unrealfrontend|unrealconsole|uescriptprofiler|cookersync|testapp|.*oshelper)\.exe$'
+    # crash handlers, uninstallers, DRM clients like TAGES). Folder name
+    # alone isn't a reliable filter -- "Launcher" or "bin" folders
+    # legitimately hold real game exes for some titles too -- so this blocks
+    # by the installer/utility's own distinctive basename instead, wherever
+    # it's nested.
+    local junk_exe_re='^(unins(t(all)?)?[0-9]*|vc_?redist.*|(dx|directx)?setup|dxsetup|dxwebsetup|dx[0-9]+ger|dx[0-9]+ntger|dotnetfx.*|ndp[0-9].*|windowsdesktop-runtime.*|oalinst|physx.*|easyanticheat.*|eac_?setup.*|eaclauncher|be(service|daisy|launcher|_ex)[a-z0-9_]*|battleye.*|unitycrashhandler.*|crashreport(er|client)?|crash_?handler|crashpad_handler|bugsplat.*|epiconlineservices(installer)?|epicwebhelper.*|rockstar-games-launcher|social-club-setup|tagesclient.*|vulkanrt.*installer.*|gamingrepair(tool)?|registrationreminder|overlayinjector|cleanup|touchup|driverversionchecker|layerschecker|supporttool|dowser|iscopyfiles|ue3?redist.*|unrealfrontend|unrealconsole|uescriptprofiler|cookersync|testapp|.*oshelper)\.exe$'
 
     if find "$root" -maxdepth 1 -type f -iname "*.exe" -print -quit 2>/dev/null | grep -q .; then
         # Pick a representative exe name to show: prefer one whose name
@@ -387,15 +399,32 @@ resolve_exe_folder() {
             echo -e "${WHITE} $((i + 1))) ${BOLD}${dir_exe_name[${dirs[$i]}]}${NC}${DIM} in ${dirs[$i]}${NC}"
         done
         echo -e "${WHITE} 0) None of these / enter a path manually${NC}"
-        echo -e "\n${YELLOW}Selection [0-${#dirs[@]}]: ${NC}"
-        echo -e -n "> "
         local choice
-        read -r choice
-        if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#dirs[@]} ]; then
-            GAME_DIR="${dirs[$((choice - 1))]}"
+        while true; do
+            echo -e "\n${YELLOW}Selection [0-${#dirs[@]}]: ${NC}"
+            echo -e -n "> "
+            read -r choice || return 1
+            if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 0 ] && [ "$choice" -le ${#dirs[@]} ]; then
+                break
+            fi
+            print_warning "That's not a valid option — please enter a number from 0-${#dirs[@]}."
+        done
+        if [ "$choice" -eq 0 ]; then
+            # Honour "enter a path manually" right here. Returning 1 instead
+            # bails all the way back to the top-level locate-the-game menu,
+            # throwing away the scanned AppID and its known-games notes when
+            # the user only wants to point at a subfolder the scan missed.
+            prompt_manual_game_dir || return 1
+            if [ ! -d "$GAME_DIR" ]; then
+                print_error "Directory not found. Please check the path and try again."
+                GAME_DIR=""
+                return 1
+            fi
+            [[ "$GAME_DIR" == "$root"* ]] || print_warning "That path is outside the scanned install — the known-game notes for this title may not apply to it."
             return 0
         fi
-        return 1
+        GAME_DIR="${dirs[$((choice - 1))]}"
+        return 0
     else
         print_warning "No .exe files were found anywhere under this install."
         if confirm "Use the install root anyway?" N; then GAME_DIR="$root"; return 0; fi
