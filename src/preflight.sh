@@ -75,7 +75,7 @@ else
             print_error "Cannot proceed without base dependencies. Exiting."; exit 1
         else
             if confirm "Auto-install these dependencies now? (Requires sudo)"; then
-                echo -e "\n${CYAN}STATUS: Installing missing packages...${NC}"
+                print_task "Installing missing packages"
                 source /etc/os-release
                 OS_FLAVOR="${ID_LIKE:-$ID}"
                 case "$OS_FLAVOR" in

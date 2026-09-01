@@ -65,8 +65,7 @@ if is_truthy "$EAX_RESTORE_DSOAL_COMMUNITY_V13" || is_truthy "$EAX_RESTORE_DSOAL
     print_result "An EAX_RESTORE_DSOAL_* variable is set, so proceeding straight to install." "$GREEN"
 else
     while true; do
-        echo -e "\n${YELLOW}Would you like to (i)nstall or (u)ninstall the EAX audio fix? (i/u): ${NC}"
-        echo -e -n "> "
+        prompt "Would you like to (i)nstall or (u)ninstall the EAX audio fix? (i/u): "
         read -r SCRIPT_ACTION
         SCRIPT_ACTION="${SCRIPT_ACTION,,}"
         if [[ "$SCRIPT_ACTION" == "i" || "$SCRIPT_ACTION" == "u" ]]; then break

@@ -113,7 +113,7 @@ install_vcrun_dependencies() {
     # failure (either path can silently "succeed" without leaving files
     # behind, e.g. if Wine's MSI engine chokes on it) is actually debuggable
     # instead of a dead end with no information.
-    echo -e "\n${CYAN}STATUS: Installing MS VC++ 2022 Redistributable...${NC}"
+    print_task "Installing MS VC++ 2022 Redistributable"
 
     VCRUN_SHARE="$BASE_SHARE/vcrun2022"
     mkdir -p "$VCRUN_SHARE"
@@ -265,7 +265,7 @@ uninstall_vcrun_dependencies() {
         return
     fi
 
-    echo -e "\n${CYAN}STATUS: Removing MS VC++ 2022 Redistributable...${NC}"
+    print_task "Removing MS VC++ 2022 Redistributable"
 
     # 1. Best-effort: the official uninstaller. Fetches the installer fresh
     # if not already cached, but never blocks on a failed download — this

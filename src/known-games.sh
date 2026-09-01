@@ -122,10 +122,8 @@ prompt_recent_game() {
         print_option "$((i + 1))" "${paths[$i]}"
     done
     print_option 0 "Enter a different path"
-    echo ""
 
-    echo -e "${YELLOW}Selection [0-${#paths[@]}]: ${NC}"
-    echo -e -n "> "
+    prompt "Selection [0-${#paths[@]}]: "
     local choice
     read -r choice
 
@@ -182,7 +180,7 @@ scan_game_libraries() {
         return 1
     fi
 
-    echo -e "\n${CYAN}STATUS: Scanning Steam and Heroic libraries for known EAX games...${NC}"
+    print_task "Scanning Steam and Heroic libraries for known EAX games"
 
     # names[] is the curated known-eax-games.json display name, used only for
     # the pick-list menu below. meta_names[] is the name as reported by the
@@ -278,12 +276,10 @@ scan_game_libraries() {
         print_option "$((i + 1))" "${names[$i]}" "(${store_label})"
     done
     print_option 0 "None of these / enter a path manually"
-    echo ""
 
     local choice
     while true; do
-        echo -e "${YELLOW}Selection [0-${#names[@]}]: ${NC}"
-        echo -e -n "> "
+        prompt "Selection [0-${#names[@]}]: "
         read -r choice
         if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 0 ] && [ "$choice" -le ${#names[@]} ]; then
             break

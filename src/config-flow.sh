@@ -130,7 +130,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
             "builds (9 and below) when using kcat's DSOAL or OpenAL Soft."
 
         if confirm "Check $GAME_NAME's prefix for existing VC++ runtime files?"; then
-            echo -e "\n${CYAN}STATUS: Checking prefix for existing VC++ runtime files...${NC}"
+            print_task "Checking prefix for existing VC++ runtime files"
 
             if [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows" ]; then
                 verify_vcrun_files
@@ -162,11 +162,9 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     print_option 1 "Stereo (headphones or 2-speaker setup)"
     print_option 2 "Surround Sound (4.0/5.1/6.1/7.1 speaker setup)"
     print_option 3 "Matrix Encoding (stereo output decoded to surround by a receiver/soundbar)"
-    echo ""
 
     while true; do
-        echo -e "${YELLOW}Selection [1-3, Default: 1]: ${NC}"
-        echo -e -n "> "
+        prompt "Selection [1-3, Default: 1]: "
         read -r OUTPUT_MODE_CHOICE
         OUTPUT_MODE_CHOICE="${OUTPUT_MODE_CHOICE:-1}"
         if [[ "$OUTPUT_MODE_CHOICE" =~ ^[123]$ ]]; then break; else print_warning "That's not a valid option — please type 1, 2, or 3."; fi
@@ -183,11 +181,9 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         print_option 1 "Auto (let OpenAL Soft decide)"
         print_option 2 "Speakers"
         print_option 3 "Headphones"
-        echo ""
 
         while true; do
-            echo -e "${YELLOW}Selection [1-3, Default: 1]: ${NC}"
-            echo -e -n "> "
+            prompt "Selection [1-3, Default: 1]: "
             read -r STEREO_MODE_CHOICE
             STEREO_MODE_CHOICE="${STEREO_MODE_CHOICE:-1}"
             if [[ "$STEREO_MODE_CHOICE" =~ ^[123]$ ]]; then break; else print_warning "That's not a valid option — please type 1, 2, or 3."; fi
@@ -222,11 +218,9 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         print_option 2 "Surround51 (5.1)"
         print_option 3 "Surround61 (6.1)"
         print_option 4 "Surround71 (7.1)"
-        echo ""
 
         while true; do
-            echo -e "${YELLOW}Selection [1-4]: ${NC}"
-            echo -e -n "> "
+            prompt "Selection [1-4]: "
             read -r SURROUND_CHOICE
             case "$SURROUND_CHOICE" in
                 1) SURROUND_CHANNELS="quad"; break ;;

@@ -10,7 +10,7 @@
         exit 0
     fi
 
-    echo -e "\n${CYAN}STATUS: Executing system verbs via $( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" ) (Silent Mode)...${NC}"
+    print_task "Executing system verbs via $( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" ) (Silent Mode)"
     print_status "Installing the OpenAL package via $( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" )..."
 
     if [ "$LAUNCHER_TYPE" == "1" ]; then
@@ -99,7 +99,7 @@
     : > "$INSTALL_MANIFEST"
     [ "$VCRUN_INSTALLED_THIS_RUN" == "1" ] && echo "VCRUN" >> "$INSTALL_MANIFEST"
 
-    echo -e "\n${CYAN}STATUS: Deploying files to local game folder...${NC}"
+    print_task "Deploying files to local game folder"
 
     # DEPLOY_SRC/DEPLOY_DEST_NAME[0] is always the "primary" override DLL
     # (dsound.dll for engines 1-3, OpenAL32.dll for engine 4) — the one Wine
@@ -152,7 +152,7 @@
     fi
 
     if [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows" ]; then
-        echo -e "\n${CYAN}STATUS: Duplicating files to Wine/Proton system prefix...${NC}"
+        print_task "Duplicating files to Wine/Proton system prefix"
         if [ "$ARCH" == "32" ] && [ -d "$PREFIX_PATH/drive_c/windows/syswow64" ]; then
             PREFIX_TARGET_DIR="$PREFIX_PATH/drive_c/windows/syswow64"
         else
@@ -179,7 +179,7 @@
         done
     fi
 
-    echo -e "\n${CYAN}STATUS: Applying configurations and tweaks...${NC}"
+    print_task "Applying configurations and tweaks"
 
     if [[ "$ADVANCED_DUMMY" =~ $YES_RE ]]; then
         if handle_conflict "$GAME_DIR/eax.dll"; then

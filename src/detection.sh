@@ -21,8 +21,7 @@ prompt_manual_game_dir() {
     # in GAME_DIR (emptied on EOF or a blank line). Returns 1 on EOF/blank
     # so a caller looping on the read can't spin on closed stdin; callers do
     # their own directory-exists / .exe-count validation afterwards.
-    echo -e "\n${YELLOW}Enter the full path to the game's .exe folder:${NC}"
-    echo -e -n "> "
+    prompt "Enter the full path to the game's .exe folder:"
     if ! read -r GAME_DIR; then GAME_DIR=""; return 1; fi
     GAME_DIR="${GAME_DIR//\'/}"; GAME_DIR="${GAME_DIR//\"/}"; GAME_DIR="${GAME_DIR%/}"
     GAME_DIR="${GAME_DIR/#\~/$HOME}"
@@ -120,8 +119,7 @@ get_game_directory() {
         else
             local choice
             while true; do
-                echo -e "\n${YELLOW}How would you like to locate the game? [1-${#menu_actions[@]}]: ${NC}"
-                echo -e -n "> "
+                prompt "How would you like to locate the game? [1-${#menu_actions[@]}]: "
                 read -r choice
                 if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#menu_actions[@]}" ]; then
                     break
@@ -193,7 +191,7 @@ detect_heroic_prefix_verbose() {
     local auto_prefix=""
     local app_name=""
 
-    echo -e "\n${CYAN}STATUS: Scanning Heroic configuration files...${NC}" >&2
+    print_task "Scanning Heroic configuration files" >&2
     local installed_jsons
     installed_jsons=$(find "$HOME/.config/heroic" "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic" -type f -name "installed.json" 2>/dev/null)
 
@@ -401,8 +399,7 @@ resolve_exe_folder() {
         print_option 0 "None of these / enter a path manually"
         local choice
         while true; do
-            echo -e "\n${YELLOW}Selection [0-${#dirs[@]}]: ${NC}"
-            echo -e -n "> "
+            prompt "Selection [0-${#dirs[@]}]: "
             read -r choice || return 1
             if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 0 ] && [ "$choice" -le ${#dirs[@]} ]; then
                 break
@@ -525,7 +522,7 @@ confirm_continue_if_openal_native() {
 
     if [ "$matched" -eq 0 ] && [ -n "$GAME_DIR" ] && [ -d "$GAME_DIR" ]; then
         if confirm "Would you like the script to attempt to detect whether $game_name uses OpenAL or DirectSound3D?"; then
-            echo -e "\n${CYAN}STATUS: Searching for Audio APIs...${NC}"
+            print_task "Searching for Audio APIs"
             print_status "Scanning $game_name's .exe/.dll files for OpenAL32.dll/dsound.dll references..."  ""
             api=$(detect_api_from_binary "$GAME_DIR")
             scanned=1
@@ -586,8 +583,7 @@ confirm_continue_if_openal_native() {
 
     local api_choice
     while true; do
-        echo -e "\n${YELLOW}Selection (1 or 2) [Default: 1]: ${NC}"
-        echo -e -n "> "
+        prompt "Selection (1 or 2) [Default: 1]: "
         # EOF / empty falls back to 1: DirectSound3D is the safe default for
         # the overwhelming majority of EAX titles.
         read -r api_choice || api_choice=1
@@ -620,7 +616,7 @@ detect_game_environment() {
             print_status "Using AppID ${BOLD}$APPID${NC} from the library scan." ""
         else
             if confirm "Would you like the script to attempt to automatically find your Proton prefix?"; then
-                echo -e "\n${CYAN}STATUS: Searching for Steam AppID...${NC}"
+                print_task "Searching for Steam AppID"
                 # Use the top-level folder directly under steamapps/common/, not
                 # the leaf of GAME_DIR — the .exe is often nested in a subfolder
                 # (e.g. GameName/bin/x64), whose basename won't match the
@@ -645,7 +641,7 @@ detect_game_environment() {
             fi
         fi
 
-        echo -e "\n${CYAN}STATUS: Verifying Wine Prefix...${NC}"
+        print_task "Verifying Wine Prefix"
         while true; do
             if [ -z "$APPID" ]; then
                 echo -e "\n${YELLOW}Enter the Steam AppID manually: ${NC}"
@@ -755,7 +751,7 @@ detect_game_environment() {
         done
 
         if [ "$SCRIPT_ACTION" == "i" ] && [ -n "$PREFIX_PATH" ]; then
-            echo -e "\n${CYAN}STATUS: Analysing Heroic runner configuration...${NC}"
+            print_task "Analysing Heroic runner configuration"
             HEROIC_JSON=$(find "$HOME/.config/heroic" "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic" -type f -path "*/GamesConfig/*.json" -exec grep -Fl "\"winePrefix\": \"$PREFIX_PATH\"" {} + 2>/dev/null | head -n 1)
 
             if [ -n "$HEROIC_JSON" ]; then
@@ -814,8 +810,7 @@ select_architecture() {
     fi
     if [ "$ARCH" == "MANUAL" ]; then
         while true; do
-            echo -e "\n${YELLOW}Architecture (32/64): ${NC}"
-            echo -e -n "> "
+            prompt "Architecture (32/64): "
             read -r ARCH
             if [[ "$ARCH" == "32" || "$ARCH" == "64" ]]; then break
             else print_warning "Invalid selection. Please type 32 or 64."; fi

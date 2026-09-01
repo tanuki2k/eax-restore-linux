@@ -1,10 +1,10 @@
 # ==============================================================================
 # TEXT/OUTPUT STYLING HELPERS
 # ==============================================================================
-# Centralizes the recurring output shapes (banners, arrow status lines,
-# Note:/Warning:/Error: messages, (Y/n) prompts, numbered menu options,
-# wrapped prose) so call sites share one implementation instead of
-# hand-copied echo -e boilerplate. All
+# Centralizes the recurring output shapes (banners, STATUS: task headers,
+# arrow status lines, Note:/Warning:/Error: messages, (Y/n) confirms and
+# free-value prompts, numbered menu options, wrapped prose) so call sites
+# share one implementation instead of hand-copied echo -e boilerplate. All
 # helpers write to stdout; a call site whose output is captured or that needs
 # stderr (e.g. a function whose stdout is used via $(...)) redirects the call
 # itself with >&2 rather than this file growing a parallel _err() family.
@@ -54,6 +54,17 @@ print_status() {
     local text="$1"
     local color="${2-$CYAN}"
     echo -e " -> ${color}${text}${NC}"
+}
+
+# Usage: print_task "text"
+# The "\n${CYAN}STATUS: text...${NC}" header that announces a chunk of work
+# about to run (a scan, a download, a deploy step). Begins with its own
+# leading blank line; the trailing "..." is added here so callers pass just
+# the phrase ("Deploying files to local game folder"). A call site whose
+# stdout is captured redirects itself — print_task "..." >&2 — the same way
+# detection.sh's Heroic scanners already do.
+print_task() {
+    echo -e "\n${CYAN}STATUS: ${1}...${NC}"
 }
 
 # Usage: print_result "text" [COLOR=WHITE]
@@ -175,6 +186,16 @@ confirm() {
     else
         [[ ! "$answer" =~ $NO_RE ]]
     fi
+}
+
+# Usage: prompt "question text: "   (caller then does its own `read -r VAR`)
+# The non-yes/no counterpart of confirm(): a leading blank line, the YELLOW
+# question line, then the separate "> " read line — but NO read, because
+# these call sites need the raw typed value (menu numbers, free-text paths)
+# and usually loop on their own validation. Use confirm() for actual y/n.
+prompt() {
+    echo -e "\n${YELLOW}${1}${NC}"
+    echo -e -n "> "
 }
 
 # Usage: print_option N "Label" ["dim detail"]

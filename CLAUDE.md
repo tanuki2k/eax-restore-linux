@@ -168,6 +168,10 @@ for a new call site.
 - `print_step N "Label"` — the same banner wrapper for a numbered, non-dashed,
   non-bold CYAN sub-step header, e.g. `2. Launcher Identification`.
 - `print_status "text" [COLOR=CYAN]` — an ` -> ` arrow sub-step/result line.
+- `print_task "text"` — the `\n${CYAN}STATUS: text...${NC}` header announcing a chunk
+  of work about to run (a scan, a download, a deploy step). Own leading blank line;
+  the trailing `...` is added by the helper, so pass just the phrase. A capturing
+  call site redirects itself (`print_task "..." >&2`).
 - `print_note "text" ["more text" ...]` / `print_warning "..."` / `print_error "..."`
   — standalone-paragraph `Note:`/`Warning:`/`Error:` messages (each argument is one
   already-wrapped physical line; the helper colors and joins them without
@@ -179,8 +183,13 @@ for a new call site.
   after a step header uses the helper directly, same as anywhere else.
 - `confirm "Question?" [default=Y|N]` — the two-line `(Y/n)`/`(y/N)` prompt (question
   line, then a separate `"> "` read line), returns 0/1. Only for actual yes/no
-  confirms — a prompt that needs the raw typed value (menu numbers, free-text paths)
-  still hand-rolls its own `echo -e` + `echo -e -n "> "` + `read -r`.
+  confirms.
+- `prompt "question text: "` — the non-yes/no counterpart of `confirm`: a leading
+  blank line, the `${YELLOW}` question line, then the separate `"> "` read line — but
+  **no `read`**, because these call sites need the raw typed value (menu numbers,
+  free-text paths) and loop on their own validation. The caller still writes its own
+  `read -r VAR` right after. (Hand-rolled `(y/N)` prompts that predate `confirm` are
+  a separate migration — leave those for a dedicated pass.)
 - `print_option N "Label" ["dim detail"]` — one ` N) Label` row of a numbered
   selection menu, plain/uncolored (the sanctioned menu-row look — don't wrap rows in
   `${WHITE}`, which renders bold). An optional third arg is appended as a

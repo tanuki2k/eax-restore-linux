@@ -265,7 +265,7 @@ EOF
 EOF
             fi
 
-            echo -e "\n${CYAN}STATUS: Cleaning registry...${NC}"
+            print_task "Cleaning registry"
             apply_registry_patch "$REG_FILE"
             rm -f "$REG_FILE"
             print_status "Registry keys safely removed." "$GREEN"
