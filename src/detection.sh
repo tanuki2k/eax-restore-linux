@@ -104,14 +104,14 @@ get_game_directory() {
         # the one available action avoids asking a one-choice "choice".
         local -a menu_actions=()
         if [ "$can_scan" -eq 1 ]; then
-            echo -e "${WHITE} $((${#menu_actions[@]} + 1))) Scan your Steam/Heroic library for known EAX games${NC}"
+            print_option "$((${#menu_actions[@]} + 1))" "Scan your Steam/Heroic library for known EAX games"
             menu_actions+=("scan")
         fi
         if [ "$have_gui_picker" -eq 1 ]; then
-            echo -e "${WHITE} $((${#menu_actions[@]} + 1))) Browse for the folder using a graphical file picker${NC}"
+            print_option "$((${#menu_actions[@]} + 1))" "Browse for the folder using a graphical file picker"
             menu_actions+=("gui")
         fi
-        echo -e "${WHITE} $((${#menu_actions[@]} + 1))) Enter the path manually${NC}"
+        print_option "$((${#menu_actions[@]} + 1))" "Enter the path manually"
         menu_actions+=("manual")
 
         local action
@@ -396,9 +396,9 @@ resolve_exe_folder() {
         echo -e "with the game's main executable:${NC}"
         local i
         for i in "${!dirs[@]}"; do
-            echo -e "${WHITE} $((i + 1))) ${BOLD}${dir_exe_name[${dirs[$i]}]}${NC}${DIM} in ${dirs[$i]}${NC}"
+            print_option "$((i + 1))" "${dir_exe_name[${dirs[$i]}]}" "in ${dirs[$i]}"
         done
-        echo -e "${WHITE} 0) None of these / enter a path manually${NC}"
+        print_option 0 "None of these / enter a path manually"
         local choice
         while true; do
             echo -e "\n${YELLOW}Selection [0-${#dirs[@]}]: ${NC}"
@@ -580,8 +580,9 @@ confirm_continue_if_openal_native() {
     echo -e "\n${WHITE}Almost every classic EAX title uses DirectSound3D; only a handful route"
     echo -e "EAX through OpenAL natively. Choose DirectSound3D unless you know this"
     echo -e "game is one of the exceptions.${NC}"
-    echo -e "\n 1) DirectSound3D / DSOAL   [default]"
-    echo -e " 2) OpenAL native           (deploy kcat's OpenAL Soft directly)"
+    echo ""
+    print_option 1 "DirectSound3D / DSOAL   [default]"
+    print_option 2 "OpenAL native           (deploy kcat's OpenAL Soft directly)"
 
     local api_choice
     while true; do

@@ -119,9 +119,10 @@ prompt_recent_game() {
     fi
     local i
     for i in "${!paths[@]}"; do
-        echo -e "${WHITE} $((i + 1))) ${paths[$i]}${NC}"
+        print_option "$((i + 1))" "${paths[$i]}"
     done
-    echo -e "${WHITE} 0) Enter a different path${NC}\n"
+    print_option 0 "Enter a different path"
+    echo ""
 
     echo -e "${YELLOW}Selection [0-${#paths[@]}]: ${NC}"
     echo -e -n "> "
@@ -274,9 +275,10 @@ scan_game_libraries() {
     for i in "${!names[@]}"; do
         store_label="Steam"
         [ "${stores[$i]}" == "gog" ] && store_label="GOG"
-        echo -e " ${BOLD}${WHITE}$((i + 1))) ${names[$i]}${NC}${DIM} (${store_label})${NC}"
+        print_option "$((i + 1))" "${names[$i]}" "(${store_label})"
     done
-    echo -e "${WHITE} 0) None of these / enter a path manually${NC}\n"
+    print_option 0 "None of these / enter a path manually"
+    echo ""
 
     local choice
     while true; do

@@ -181,6 +181,12 @@ for a new call site.
   line, then a separate `"> "` read line), returns 0/1. Only for actual yes/no
   confirms — a prompt that needs the raw typed value (menu numbers, free-text paths)
   still hand-rolls its own `echo -e` + `echo -e -n "> "` + `read -r`.
+- `print_option N "Label" ["dim detail"]` — one ` N) Label` row of a numbered
+  selection menu, plain/uncolored (the sanctioned menu-row look — don't wrap rows in
+  `${WHITE}`, which renders bold). An optional third arg is appended as a
+  de-emphasized ` detail` in `DIM` (e.g. `in /path/to/dir`, `(Steam)`). The caller
+  still owns the menu's `${WHITE}` header line, its leading/trailing blank lines, and
+  the `${YELLOW}` `Selection [...]:` prompt + `read -r` loop.
 - `print_wrapped "free text"` — wraps data-sourced prose (e.g. the `notes` field in
   `known-eax-games.json`, not already hand-wrapped script text) at 76 columns and
   indents it, in WHITE. Don't hardcode line breaks into stored data; wrap at render

@@ -92,9 +92,10 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         echo -e "${GREEN}EAX_RESTORE_DSOAL_OFFICIAL is set — using kcat DSOAL + OpenAL Soft.${NC}"
     else
         echo -e "${YELLOW}Selection (1, 2, or 3) [Default: 3]: ${NC}"
-        echo -e "\n 1) ThreeDeeJay Community DSOAL [v1.31a]"
-        echo -e " 2) PCGamingWiki Community DSOAL (self-hosted mirror) [v1.4]"
-        echo -e " 3) kcat DSOAL + OpenAL Soft    [DSOAL: $DSOAL_VER | OAL: $OAL_VER]"
+        echo ""
+        print_option 1 "ThreeDeeJay Community DSOAL [v1.31a]"
+        print_option 2 "PCGamingWiki Community DSOAL (self-hosted mirror) [v1.4]"
+        print_option 3 "kcat DSOAL + OpenAL Soft    [DSOAL: $DSOAL_VER | OAL: $OAL_VER]"
 
         while true; do
             echo -e -n "\n> "
@@ -158,9 +159,10 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     # 7. Audio Configuration
     print_step 7 "Speaker Configuration"
     echo -e "\n${WHITE}What kind of audio output are you using?${NC}\n"
-    echo -e " 1) Stereo (headphones or 2-speaker setup)"
-    echo -e " 2) Surround Sound (4.0/5.1/6.1/7.1 speaker setup)"
-    echo -e " 3) Matrix Encoding (stereo output decoded to surround by a receiver/soundbar)\n"
+    print_option 1 "Stereo (headphones or 2-speaker setup)"
+    print_option 2 "Surround Sound (4.0/5.1/6.1/7.1 speaker setup)"
+    print_option 3 "Matrix Encoding (stereo output decoded to surround by a receiver/soundbar)"
+    echo ""
 
     while true; do
         echo -e "${YELLOW}Selection [1-3, Default: 1]: ${NC}"
@@ -178,9 +180,10 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
 
         echo ""
         echo -e "${WHITE}What are you listening on?${NC}\n"
-        echo -e " 1) Auto (let OpenAL Soft decide)"
-        echo -e " 2) Speakers"
-        echo -e " 3) Headphones\n"
+        print_option 1 "Auto (let OpenAL Soft decide)"
+        print_option 2 "Speakers"
+        print_option 3 "Headphones"
+        echo ""
 
         while true; do
             echo -e "${YELLOW}Selection [1-3, Default: 1]: ${NC}"
@@ -215,10 +218,11 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
 
         echo ""
         echo -e "${WHITE}Select your speaker channel configuration:${NC}\n"
-        echo -e " 1) Quad       (4.0)"
-        echo -e " 2) Surround51 (5.1)"
-        echo -e " 3) Surround61 (6.1)"
-        echo -e " 4) Surround71 (7.1)\n"
+        print_option 1 "Quad       (4.0)"
+        print_option 2 "Surround51 (5.1)"
+        print_option 3 "Surround61 (6.1)"
+        print_option 4 "Surround71 (7.1)"
+        echo ""
 
         while true; do
             echo -e "${YELLOW}Selection [1-4]: ${NC}"

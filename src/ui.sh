@@ -2,8 +2,9 @@
 # TEXT/OUTPUT STYLING HELPERS
 # ==============================================================================
 # Centralizes the recurring output shapes (banners, arrow status lines,
-# Note:/Warning:/Error: messages, (Y/n) prompts, wrapped prose) so call sites
-# share one implementation instead of hand-copied echo -e boilerplate. All
+# Note:/Warning:/Error: messages, (Y/n) prompts, numbered menu options,
+# wrapped prose) so call sites share one implementation instead of
+# hand-copied echo -e boilerplate. All
 # helpers write to stdout; a call site whose output is captured or that needs
 # stderr (e.g. a function whose stdout is used via $(...)) redirects the call
 # itself with >&2 rather than this file growing a parallel _err() family.
@@ -173,5 +174,21 @@ confirm() {
         [[ "$answer" =~ $YES_RE ]]
     else
         [[ ! "$answer" =~ $NO_RE ]]
+    fi
+}
+
+# Usage: print_option N "Label" ["dim detail"]
+# One row of a numbered selection menu: " N) Label", plain/uncolored to match
+# the majority menu style (WHITE carries bold 1;37, so wrapping rows in it
+# made them stand out inconsistently). An optional third arg is appended as a
+# de-emphasized " detail" in DIM — e.g. "in /path/to/dir", "(Steam)". Callers
+# still own the menu's leading/trailing blank lines and the ${YELLOW}
+# "Selection [...]:" prompt + read loop.
+print_option() {
+    local n="$1" label="$2" detail="${3-}"
+    if [ -n "$detail" ]; then
+        echo -e " ${n}) ${label}${DIM} ${detail}${NC}"
+    else
+        echo -e " ${n}) ${label}"
     fi
 }
