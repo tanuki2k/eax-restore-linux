@@ -5,8 +5,10 @@
     # ==============================================================================
     print_banner "PHASE 2: EXECUTION"
     echo -e "\n${CYAN}${BOLD}Configuration finished!${NC}"
-    echo -e -n "${CYAN}Ready to deploy the audio files to your game and system prefix. Proceed? (Y/n): ${NC}"; read -r CONFIRM_FIN
-    if [[ "$CONFIRM_FIN" =~ $NO_RE ]]; then echo -e "\n${YELLOW}Installation aborted.${NC}"; exit 0; fi
+    if ! confirm "Ready to deploy the audio files to your game and system prefix. Proceed?"; then
+        echo -e "\n${YELLOW}Installation aborted.${NC}"
+        exit 0
+    fi
 
     echo -e "\n${CYAN}STATUS: Executing system verbs via $( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" ) (Silent Mode)...${NC}"
     print_status "Installing the OpenAL package via $( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" )..."
