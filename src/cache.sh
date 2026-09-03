@@ -81,46 +81,37 @@ update_local_cache() {
         fi
     else print_status "Up to date [${LOCAL_OAL_TAG}]" "$GREEN"; fi
 
-    echo -e "\n${CYAN}Checking ThreeDeeJay Community DSOAL...${NC}"
-    if [ ! -d "$DSOAL_COMMUNITY_V13" ]; then
-        print_status "Cache missing. Downloading stable build [v1.31a]..."
-        mkdir -p "$DSOAL_COMMUNITY_V13"
-        if curl -fL -# "$DSOAL_COMMUNITY_V13_URL" -o "$DSOAL_SHARE/community.zip" && unzip -tq "$DSOAL_SHARE/community.zip" &>/dev/null; then
-            # Hard-fails on mismatch, unlike verify_or_confirm's softer
-            # handling of kcat's own downloads (see confirm_unverified_download
-            # in verify.sh) — this build comes from a third-party mirror, not
-            # kcat's own repo, so there's no "it's from the official source"
-            # trust signal to fall back on if the checksum doesn't match.
-            if verify_checksum "$DSOAL_SHARE/community.zip" "$DSOAL_COMMUNITY_V13_SHA256"; then
-                unzip -q "$DSOAL_SHARE/community.zip" -d "$DSOAL_COMMUNITY_V13"; rm -f "$DSOAL_SHARE/community.zip"; print_status "Done." "$GREEN"
+    # Only fetched when the user asks for the frozen fallback build. It's a
+    # break-glass lever for when a rolling latest-master build regresses a
+    # game, so there's no reason to pull it on every run.
+    if is_truthy "$EAX_RESTORE_DSOAL_PIN"; then
+        echo -e "\n${CYAN}Checking pinned kcat DSOAL [$DSOAL_PINNED_REV]...${NC}"
+        if [ ! -d "$DSOAL_PINNED" ]; then
+            print_status "Cache missing. Downloading pinned build [$DSOAL_PINNED_REV]..."
+            mkdir -p "$DSOAL_PINNED"
+            if curl -fL -# "$DSOAL_PINNED_URL" -o "$DSOAL_SHARE/pinned.zip" && unzip -tq "$DSOAL_SHARE/pinned.zip" &>/dev/null; then
+                # Hard-fails on mismatch, unlike verify_or_confirm's softer
+                # handling of the rolling latest-master download: a frozen,
+                # already-superseded archive asset has a stable SHA256, so a
+                # mismatch here means the file is genuinely wrong, not just
+                # that GitHub hasn't published a digest yet.
+                if verify_checksum "$DSOAL_SHARE/pinned.zip" "$DSOAL_PINNED_SHA256"; then
+                    rm -rf "$DSOAL_PINNED"; mkdir -p "$DSOAL_PINNED"
+                    unzip -q "$DSOAL_SHARE/pinned.zip" -d "$DSOAL_PINNED"
+                    # Same nested DSOAL_*.zip wrapping as the latest-master asset.
+                    NESTED=$(find "$DSOAL_PINNED" -maxdepth 1 -name "DSOAL_*.zip" | head -n 1)
+                    if [ -n "$NESTED" ] && unzip -tq "$NESTED" &>/dev/null; then unzip -q "$NESTED" -d "$DSOAL_PINNED"; fi
+                    rm -f "$DSOAL_SHARE/pinned.zip"; print_status "Done." "$GREEN"
+                else
+                    rm -f "$DSOAL_SHARE/pinned.zip"; rm -rf "$DSOAL_PINNED"
+                    print_error_arrow "The pinned build failed checksum verification, so it will be unavailable this run."
+                fi
             else
-                rm -f "$DSOAL_SHARE/community.zip"; rmdir "$DSOAL_COMMUNITY_V13" 2>/dev/null
-                print_error_arrow "The downloaded file failed checksum verification, so this engine will be unavailable this run."
+                rm -f "$DSOAL_SHARE/pinned.zip"; rm -rf "$DSOAL_PINNED"
+                print_error_arrow "The pinned build download failed or the file was corrupt, so it will be unavailable this run."
             fi
-        else
-            rm -f "$DSOAL_SHARE/community.zip"; rmdir "$DSOAL_COMMUNITY_V13" 2>/dev/null
-            print_error_arrow "The download failed or the file was corrupt, so this engine will be unavailable this run."
-        fi
-    else print_status "Available in cache." "$GREEN"; fi
-
-    echo -e "\n${CYAN}Checking PCGamingWiki Community DSOAL (self-hosted mirror)...${NC}"
-    if [ ! -d "$DSOAL_COMMUNITY_V14" ]; then
-        print_status "Cache missing. Downloading v1.4 build..."
-        mkdir -p "$DSOAL_COMMUNITY_V14"
-        if curl -fL -# "$DSOAL_COMMUNITY_V14_URL" -o "$DSOAL_SHARE/v1.4.zip" && unzip -tq "$DSOAL_SHARE/v1.4.zip" &>/dev/null; then
-            # Same hard-fail-on-mismatch reasoning as the ThreeDeeJay build
-            # above: a self-hosted mirror, not kcat's own repo.
-            if verify_checksum "$DSOAL_SHARE/v1.4.zip" "$DSOAL_COMMUNITY_V14_SHA256"; then
-                unzip -q "$DSOAL_SHARE/v1.4.zip" -d "$DSOAL_COMMUNITY_V14"; rm -f "$DSOAL_SHARE/v1.4.zip"; print_status "Done." "$GREEN"
-            else
-                rm -f "$DSOAL_SHARE/v1.4.zip"; rmdir "$DSOAL_COMMUNITY_V14" 2>/dev/null
-                print_error_arrow "The downloaded file failed checksum verification, so this engine will be unavailable this run."
-            fi
-        else
-            rm -f "$DSOAL_SHARE/v1.4.zip"; rmdir "$DSOAL_COMMUNITY_V14" 2>/dev/null
-            print_error_arrow "The download failed or the file was corrupt, so this engine will be unavailable this run."
-        fi
-    else print_status "Available in cache." "$GREEN"; fi
+        else print_status "Available in cache." "$GREEN"; fi
+    fi
 
     echo -e "\n${CYAN}Checking known EAX games database...${NC}"
     if ensure_known_games_json; then

@@ -30,8 +30,7 @@ BASE_SHARE="$HOME/.local/share/eax-restore-linux"
 RECENT_GAMES_FILE="$BASE_SHARE/recent_games.txt"
 DSOAL_SHARE="$BASE_SHARE/dsoal"
 DSOAL_OFFICIAL="$DSOAL_SHARE/official"
-DSOAL_COMMUNITY_V13="$DSOAL_SHARE/community_v1.3"
-DSOAL_COMMUNITY_V14="$DSOAL_SHARE/community_v1.4"
+DSOAL_PINNED="$DSOAL_SHARE/pinned"
 OPENAL_SHARE="$BASE_SHARE/openal-soft"
 OPENAL_OFFICIAL="$OPENAL_SHARE/official"
 
@@ -45,13 +44,17 @@ VCRUN_DLL_NAMES=("concrt140" "msvcp140" "msvcp140_1" "msvcp140_2" "msvcp140_atom
 
 DSOAL_OFFICIAL_URL="https://github.com/kcat/dsoal/releases/download/latest-master/DSOAL.zip"
 DSOAL_OFFICIAL_API_URL="https://api.github.com/repos/kcat/dsoal/releases/tags/latest-master"
-DSOAL_COMMUNITY_V13_URL="https://github.com/ThreeDeeJay/dsoal/releases/download/0.9.6/DSOAL+HRTF.zip"
-DSOAL_COMMUNITY_V13_SHA256="271db46cffb086ffc0af06956ade3ee8e645e05fb108b5b6d1f74b733ecaf984"
-# PCGamingWiki blocks automated/bot downloads from their site, so this build is
-# re-hosted on our own GitHub release. The pinned SHA256 verifies the mirrored
-# file matches what we uploaded; bump it whenever the mirrored zip is updated.
-DSOAL_COMMUNITY_V14_URL="https://github.com/tanuki2k/eax-restore-linux/releases/download/assets/DSOALv1.4.zip"
-DSOAL_COMMUNITY_V14_SHA256="064f600eac5637d8a8ea6b6cd0172b42202b792406530bf867c0144e722e7414"
+
+# Frozen fallback, fetched only when EAX_RESTORE_DSOAL_PIN is set: one pinned
+# DSOAL revision from kcat's own "archive" release tag. CI keeps re-uploading
+# the newest revision's asset with a fresher OpenAL Soft, but every
+# already-superseded revision is static forever — so a non-newest asset has a
+# stable SHA256 and can be hard-verified, unlike the rolling latest-master
+# build above. To advance the pin, bump all three of these together (pick a
+# revision that is no longer the newest one in the archive release).
+DSOAL_PINNED_REV="r693"
+DSOAL_PINNED_URL="https://github.com/kcat/dsoal/releases/download/archive/DSOAL_r693.zip"
+DSOAL_PINNED_SHA256="5abe990ff5692fa070d549a8c28df2435842c5d3f586a59b0da5281bc1cb6605"
 
 # Community-maintained database of well-known EAX games (see
 # known-eax-games.json in this repo). Powers both the install-time "Heads

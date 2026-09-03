@@ -12,8 +12,10 @@
 #   folder and the Wine/Proton prefix system folders, with conflict backups
 #   on both — not just the game folder.
 #
-# * Engine Choice: Toggle between ThreeDeeJay Community, PCGamingWiki (self-
-#   hosted mirror), or kcat's official DSOAL + OpenAL Soft builds.
+# * Engine Choice: kcat's DSOAL + OpenAL Soft (translates DirectSound3D/EAX
+#   to OpenAL), or a direct OpenAL Soft swap for games that call OpenAL
+#   natively. EAX_RESTORE_DSOAL_PIN swaps in a frozen known-good DSOAL
+#   revision when a rolling build regresses.
 #
 # * Recent Games: Remembers game folders you've used before and offers them
 #   as a quick pick, without giving up the option to enter a new path.
@@ -39,9 +41,10 @@
 #   actually put there, never guesses by filename, and safely no-ops if run
 #   again on an already-uninstalled game.
 #
-# * Checksum Verification: Pinned SHA256 hashes for the community builds, and
-#   live verification against GitHub's published digests for kcat's official
-#   builds, with a clear prompt if a file can't be verified either way.
+# * Checksum Verification: Live verification against GitHub's published
+#   digests for kcat's rolling builds, plus a pinned SHA256 for the optional
+#   frozen fallback revision, with a clear prompt if a file can't be verified
+#   either way.
 #
 # * Hardened Downloads: Fails loudly on bad HTTP responses, verifies zip
 #   integrity before extracting, and preserves the existing cache instead of
@@ -53,7 +56,7 @@
 #   manager (skipped in favour of Discover on SteamOS, per Safety Guards).
 #
 # * Advanced Tweaks: Optional EAX Unified dummies, COM registry routing,
-#   expanded audio limits, and HRTF headphone profiles.
+#   expanded audio limits, and HRTF headphone output.
 #
 # * Auto-Overrides: Injects WINEDLLOVERRIDES natively into the Wine registry,
 #   tracked so uninstall can clean it up automatically without re-prompting.
@@ -73,16 +76,13 @@
 #   winetricks, and wine are already available. Speeds up repeat runs on a
 #   machine you've already verified.
 #
-# * EAX_RESTORE_DSOAL_COMMUNITY_V13=1  Pre-selects the ThreeDeeJay Community
-#   DSOAL engine (option 1), skipping the (i)nstall/(u)ninstall menu (goes
-#   straight to install) and the interactive engine-selection prompt.
-#
-# * EAX_RESTORE_DSOAL_COMMUNITY_V14=1  Pre-selects the PCGamingWiki Community
-#   DSOAL engine (option 2, self-hosted mirror) with the same effect.
-#
-# * EAX_RESTORE_DSOAL_OFFICIAL=1  Pre-selects kcat's official DSOAL + OpenAL
-#   Soft engine (option 3) with the same effect.
-#   Only set one EAX_RESTORE_DSOAL_* variable at a time.
+# * EAX_RESTORE_DSOAL_PIN=1  Installs a frozen, known-good kcat/dsoal build
+#   (the revision pinned in the script, taken from kcat's "archive" release)
+#   in place of the rolling latest-master. A break-glass lever for when a
+#   daily build regresses a game — pairs the pinned DSOAL with the current
+#   OpenAL Soft so only the one variable changes. Also selects the DSOAL
+#   engine and skips the (i)nstall/(u)ninstall menu (goes straight to
+#   install) and the engine-selection prompt.
 #
 # * EAX_RESTORE_VCRUN_ONLY=1  Skips the full install/uninstall flow and just
 #   (re)installs the MS VC++ 2022 Redistributable into a game's prefix.

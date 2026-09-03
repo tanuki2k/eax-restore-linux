@@ -13,8 +13,8 @@ Because modern operating systems and Proton/Wine don't natively support this old
 ## Features
 
 * **Dual-Copy Deployment:** Deploys DSOAL/OpenAL files to both your local game folder *and* the Wine/Proton prefix's system folders, with conflict backups on both — not just the game folder.
-* **Engine Choice:** Toggle between the "plug-and-play" ThreeDeeJay Community fork, the PCGamingWiki Community fork (self-hosted mirror), or kcat's official DSOAL + OpenAL Soft baseline.
-* **Dynamic HRTF Integration:** Automatically generates optimized `alsoft.ini` configurations and deploys headphone profiles for incredible 3D binaural audio.
+* **Engine Choice:** kcat's DSOAL + OpenAL Soft (translates DirectSound3D/EAX to OpenAL) for the vast majority of games, or a direct OpenAL Soft swap for the handful that call OpenAL natively. `EAX_RESTORE_DSOAL_PIN` swaps in a frozen known-good DSOAL revision if a rolling build ever regresses.
+* **Dynamic HRTF Integration:** Automatically generates an `alsoft.ini` tuned to your output (stereo/headphones/surround/matrix), enabling OpenAL Soft's HRTF binaural rendering for headphone users.
 * **Smart Architecture Scanner:** Automatically detects whether the game executable is 32-bit or 64-bit and grabs the exact right dependencies so the game doesn't crash on launch.
 * **Intelligent Prefix Routing:** Opt-in auto-detection for Steam AppIDs and Heroic Prefix paths, making it easy to find where your game is actually installed. Recently used game folders are remembered and offered as a quick pick on future runs.
 * **Library Scanning:** Opt-in scan of your Steam and Heroic libraries against a community-maintained list of known EAX games — pick a match from the list instead of hunting down the install folder yourself.
@@ -24,7 +24,7 @@ Because modern operating systems and Proton/Wine don't natively support this old
 * **COM Registry Injection:** Optional routing of DirectSound CLSIDs directly in the Wine registry. This fixes the stubbornly grayed-out EAX menus in games like *Grand Theft Auto: San Andreas* or *Halo: Combat Evolved*.
 * **Advanced Engine Tweaks:** Optional EAX Unified dummy files (`eax.dll`/`eaxunified.dll`) and expanded audio limits to fix stuttering in chaotic, high-channel games like *F.E.A.R.*
 * **Native Auto-Overrides:** Injects the `dsound` override natively into the Wine registry so you don't have to clutter up your Steam launch options.
-* **VC++ Runtime Handling:** Detects and installs the Microsoft VC++ 2022 Redistributable when the kcat engine needs it, falling back to a direct Microsoft download if winetricks/protontricks fails, and verifying the actual DLLs on disk rather than trusting exit codes.
+* **VC++ Runtime Handling:** Detects and installs the Microsoft VC++ 2022 Redistributable that older Proton/Wine builds need to load kcat's DSOAL / OpenAL Soft, falling back to a direct Microsoft download if winetricks/protontricks fails, and verifying the actual DLLs on disk rather than trusting exit codes.
 * **Safety Guards:** Refuses to run as root or from Steam's Gaming Mode, and won't auto-modify SteamOS's immutable filesystem.
 
 ## Prerequisites
@@ -108,22 +108,17 @@ For repeat runs or scripting, these can be set to skip prompts:
 | Variable | Effect |
 | --- | --- |
 | `EAX_RESTORE_SKIP_PREFLIGHT=1` | Skips the pre-flight tool scan, trusting that `curl`, `unzip`, `file`, `protontricks`, `winetricks`, and `wine` are already available. |
-| `EAX_RESTORE_DSOAL_COMMUNITY_V13=1` | Pre-selects the ThreeDeeJay Community engine and jumps straight to install. |
-| `EAX_RESTORE_DSOAL_COMMUNITY_V14=1` | Pre-selects the PCGamingWiki Community engine (self-hosted mirror) and jumps straight to install. |
-| `EAX_RESTORE_DSOAL_OFFICIAL=1` | Pre-selects kcat's official DSOAL + OpenAL Soft engine and jumps straight to install. |
+| `EAX_RESTORE_DSOAL_PIN=1` | Installs a frozen, known-good `kcat/dsoal` build (the revision pinned in the script, from kcat's `archive` release) instead of the rolling `latest-master` — a break-glass lever for when a daily build regresses a game. Pairs the pinned DSOAL with the current OpenAL Soft, selects the DSOAL engine, and jumps straight to install. |
 | `EAX_RESTORE_VCRUN_ONLY=1` | Skips the full install/uninstall flow and just (re)installs the MS VC++ 2022 Redistributable into a game's prefix. |
 | `EAX_RESTORE_SKIP_CACHE_CHECK=1` | Skips the repository cache check (the GitHub update check/download for DSOAL and OpenAL Soft), trusting whatever's already in the local cache. |
 | `EAX_RESTORE_KNOWN_GAMES_FILE=/path/to/known-eax-games.json` | Uses a local file instead of fetching `known-eax-games.json` — mainly for testing edits to the database itself before they're pushed. |
-
-Only set one `EAX_RESTORE_DSOAL_*` variable at a time.
 
 ## Credits & Upstream Sources
 
 This script automates the deployment of the following projects:
 
-* **kcat (Christopher Robinson)** - [DSOAL](https://github.com/kcat/dsoal) and [OpenAL Soft](https://github.com/kcat/openal-soft).
-* **ThreeDeeJay** - [DSOAL Community Fork](https://github.com/ThreeDeeJay/dsoal).
-* **PCGamingWiki** - DSOAL v1.4 Community Fork, re-hosted here as a self-hosted mirror since PCGamingWiki blocks automated downloads.
+* **kcat (Christopher Robinson)** - [DSOAL](https://github.com/kcat/dsoal) and [OpenAL Soft](https://github.com/kcat/openal-soft). The script deploys kcat's own `latest-master` DSOAL build and stable OpenAL Soft release, with `EAX_RESTORE_DSOAL_PIN` falling back to a pinned revision from the [`archive`](https://github.com/kcat/dsoal/releases/tag/archive) release when needed.
+* **ThreeDeeJay** - upstreamed the Win32/Win64 packaging pipeline that kcat's daily DSOAL builds are now produced by.
 
 ## License
 This script is provided under the [MIT License](LICENSE).

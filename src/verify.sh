@@ -2,10 +2,9 @@ print_offline_instructions() {
     print_banner "OFFLINE MODE INSTRUCTIONS" "$YELLOW"
     echo -e "\n${WHITE}GitHub is unreachable and no local cache was found.${NC}"
     echo -e "${WHITE}Manually extract release .zips into these folders:${NC}\n"
-    echo -e "${CYAN}1. kcat Official DSOAL:${NC} ${GREEN}$DSOAL_OFFICIAL${NC}"
-    echo -e "${CYAN}2. kcat OpenAL Soft:${NC}   ${GREEN}$OPENAL_OFFICIAL${NC}"
-    echo -e "${CYAN}3. ThreeDeeJay DSOAL:${NC}  ${GREEN}$DSOAL_COMMUNITY_V13${NC}"
-    echo -e "${CYAN}4. PCGamingWiki DSOAL (self-hosted mirror):${NC} ${GREEN}$DSOAL_COMMUNITY_V14${NC}\n"
+    echo -e "${CYAN}1. kcat DSOAL (latest-master):${NC} ${GREEN}$DSOAL_OFFICIAL${NC}"
+    echo -e "${CYAN}2. kcat OpenAL Soft:${NC}          ${GREEN}$OPENAL_OFFICIAL${NC}"
+    echo -e "${DIM}   (pinned fallback, only when EAX_RESTORE_DSOAL_PIN is set): $DSOAL_PINNED${NC}\n"
 }
 
 verify_checksum() {

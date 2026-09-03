@@ -484,7 +484,7 @@ confirm_continue_if_openal_native() {
     # same as the openal/binary-scan branches below it — it's still an
     # auto-detected value driving what the script does next.
     # Sets OPENAL_NATIVE_MODE, which the "Audio Engine Selection" step alone
-    # consumes to pick ENGINE_CHOICE=4.
+    # consumes to pick ENGINE_CHOICE=2 (the direct OpenAL Soft swap).
     OPENAL_NATIVE_MODE=""
     [ "$SCRIPT_ACTION" == "i" ] || return
     [ -z "$1" ] && return

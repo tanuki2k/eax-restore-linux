@@ -37,31 +37,28 @@
         VCRUN_INSTALLED_THIS_RUN="1"
     fi
 
-    # Engine-specific paths
+    # Engine-specific paths. Engine 1 always takes soft_oal.dll from the
+    # kcat OpenAL Soft cache; EAX_RESTORE_DSOAL_PIN only swaps the source of
+    # dsound.dll (the DSOAL half) to the frozen archive revision, so the pin
+    # is a pure DSOAL rollback with OpenAL Soft held constant.
     case "$ENGINE_CHOICE" in
         1)
-            TARGET_COMMUNITY=$(find "$DSOAL_COMMUNITY_V13" -type d -ipath "*/${ARCH_FOLDER}" | head -n 1)
-            DSOUND_SRC="$TARGET_COMMUNITY/dsound.dll"
-            DSOAL_SRC="$TARGET_COMMUNITY/dsoal-aldrv.dll"
-            ;;
-        2)
-            TARGET_V14=$(find "$DSOAL_COMMUNITY_V14" -type d -ipath "*/${ARCH_FOLDER}" | head -n 1)
-            DSOUND_SRC="$TARGET_V14/dsound.dll"
-            DSOAL_SRC="$TARGET_V14/dsoal-aldrv.dll"
-            ;;
-        3)
-            TARGET_DSOAL=$(find "$DSOAL_OFFICIAL" -type d -ipath "*/${ARCH_FOLDER}" | head -n 1)
+            if is_truthy "$EAX_RESTORE_DSOAL_PIN"; then
+                TARGET_DSOAL=$(find "$DSOAL_PINNED" -type d -ipath "*/${ARCH_FOLDER}" | head -n 1)
+            else
+                TARGET_DSOAL=$(find "$DSOAL_OFFICIAL" -type d -ipath "*/${ARCH_FOLDER}" | head -n 1)
+            fi
             TARGET_OAL=$(find "$OPENAL_OFFICIAL" -type d -ipath "*/bin/${ARCH_FOLDER}" | head -n 1)
             DSOUND_SRC="$TARGET_DSOAL/dsound.dll"
             DSOAL_SRC="$TARGET_OAL/soft_oal.dll"
             ;;
-        4)
+        2)
             TARGET_OAL=$(find "$OPENAL_OFFICIAL" -type d -ipath "*/bin/${ARCH_FOLDER}" | head -n 1)
             OPENAL_SRC="$TARGET_OAL/soft_oal.dll"
             ;;
     esac
 
-    if [ "$ENGINE_CHOICE" == "4" ]; then
+    if [ "$ENGINE_CHOICE" == "2" ]; then
         if [ ! -f "$OPENAL_SRC" ]; then
             print_error "Required OpenAL Soft source file was not found in the cache."
             echo -e "\n${WHITE}This usually means the download failed or was incomplete earlier in this run"
@@ -102,13 +99,13 @@
     print_task "Deploying files to local game folder"
 
     # DEPLOY_SRC/DEPLOY_DEST_NAME[0] is always the "primary" override DLL
-    # (dsound.dll for engines 1-3, OpenAL32.dll for engine 4) — the one Wine
+    # (dsound.dll for engine 1, OpenAL32.dll for engine 2) — the one Wine
     # gets told to override. Any further entries are secondary implementation
     # files DSOAL itself needs (dsoal-aldrv.dll) that aren't overridden
-    # directly. One shared list/loop serves all 4 engine choices instead of
+    # directly. One shared list/loop serves both engine choices instead of
     # a separate copy-block per engine.
     DEPLOY_SRC=(); DEPLOY_DEST_NAME=()
-    if [ "$ENGINE_CHOICE" == "4" ]; then
+    if [ "$ENGINE_CHOICE" == "2" ]; then
         DEPLOY_SRC=("$OPENAL_SRC")
         DEPLOY_DEST_NAME=("OpenAL32.dll")
     else
@@ -124,32 +121,6 @@
             print_status "Copied: ${DEPLOY_DEST_NAME[$i]} to $(basename "$GAME_DIR")"
         fi
     done
-
-    # V14 is the only bundle with genuine curated HRTF profiles (V13 has
-    # none, despite its zip's name — see engine descriptions above). Since
-    # update_local_cache always fetches V14 up front regardless of which
-    # engine ends up chosen, its HRTF set is layered onto whichever engine's
-    # DLLs are actually being deployed, rather than only being available
-    # when V14 itself is the chosen engine.
-    HRTF_SRC_DIR=$(find "$DSOAL_COMMUNITY_V14" -type d -iname "HRTF" 2>/dev/null | head -n 1)
-
-    if [ -n "$HRTF_SRC_DIR" ]; then
-        OPENAL_DIR_PREEXISTED=0
-        [ -d "$GAME_DIR/OpenAL" ] && OPENAL_DIR_PREEXISTED=1
-
-        mkdir -p "$GAME_DIR/OpenAL/HRTF"
-        cp -r "$HRTF_SRC_DIR/"* "$GAME_DIR/OpenAL/HRTF/"
-
-        if [ "$OPENAL_DIR_PREEXISTED" -eq 1 ]; then
-            # The OpenAL folder was already there before this run (game files
-            # or an unrelated mod) — only track the HRTF subfolder we added,
-            # so uninstall can't wipe out whatever else lives alongside it.
-            echo "$GAME_DIR/OpenAL/HRTF" >> "$INSTALL_MANIFEST"
-        else
-            echo "$GAME_DIR/OpenAL" >> "$INSTALL_MANIFEST"
-        fi
-        print_status "Deployed: HRTF profile directory to $(basename "$GAME_DIR")"
-    fi
 
     if [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows" ]; then
         print_task "Duplicating files to Wine/Proton system prefix"

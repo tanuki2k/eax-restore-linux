@@ -5,6 +5,9 @@
 # MS VC++ 2022 Redistributable into a game's prefix — e.g. if you skipped it
 # during a normal install and want to go back for it without redoing the rest.
 EAX_RESTORE_VCRUN_ONLY="${EAX_RESTORE_VCRUN_ONLY:-}"
+# Guarded here (the earliest point it's read) so cache.sh and config-flow.sh
+# downstream can test it freely.
+EAX_RESTORE_DSOAL_PIN="${EAX_RESTORE_DSOAL_PIN:-}"
 if is_truthy "$EAX_RESTORE_VCRUN_ONLY"; then
     print_banner "VC++ RUNTIME ONLY MODE"
     echo -e "\n${WHITE}EAX_RESTORE_VCRUN_ONLY is set, so this run will only install the MS VC++ 2022"
@@ -60,9 +63,9 @@ fi
 
 print_banner "SELECT OPERATION"
 
-if is_truthy "$EAX_RESTORE_DSOAL_COMMUNITY_V13" || is_truthy "$EAX_RESTORE_DSOAL_COMMUNITY_V14" || is_truthy "$EAX_RESTORE_DSOAL_OFFICIAL"; then
+if is_truthy "$EAX_RESTORE_DSOAL_PIN"; then
     SCRIPT_ACTION="i"
-    print_result "An EAX_RESTORE_DSOAL_* variable is set, so proceeding straight to install." "$GREEN"
+    print_result "EAX_RESTORE_DSOAL_PIN is set, so proceeding straight to install." "$GREEN"
 else
     while true; do
         prompt "Would you like to (i)nstall or (u)ninstall the EAX audio fix? (i/u): "

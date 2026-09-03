@@ -48,7 +48,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     print_step 5 "Audio Engine Selection"
 
     if [ -n "$OPENAL_NATIVE_MODE" ]; then
-        ENGINE_CHOICE=4
+        ENGINE_CHOICE=2
         print_paragraph "$GAME_NAME uses OpenAL natively — deploying kcat's OpenAL Soft."
     else
     DSOAL_DATE=$(cat "$DSOAL_SHARE/updated_at.txt" 2>/dev/null)
@@ -58,56 +58,37 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     [ -z "$OAL_VER" ] && OAL_VER="Unknown"
 
     echo -e "\n${WHITE}Before choosing, here is a quick breakdown of the available engines:\n${NC}"
-    echo -e " * ${BOLD}ThreeDeeJay Community:${NC} The best \"plug-and-play\" choice for older Windows 98/XP games."
-    echo -e "   Specific compatibility tweaks curated by the retro-gaming community, though it relies on a"
-    echo -e "   slightly older, locked codebase.\n"
-    echo -e " * ${BOLD}PCGamingWiki Community DSOAL:${NC} A popular updated community fork offering compatibility"
-    echo -e "   fixes for mid-2000s titles. PCGamingWiki blocks automated downloads, so this build is served"
-    echo -e "   from a self-hosted mirror rather than their site directly.\n"
-    echo -e " * ${BOLD}kcat DSOAL + OpenAL Soft:${NC} The official, rock-solid baseline from the original wrapper developer"
-    echo -e "   paired directly with the newest, bleeding-edge audio renderer for the highest fidelity algorithms.\n"
-
-    EAX_RESTORE_DSOAL_COMMUNITY_V13="${EAX_RESTORE_DSOAL_COMMUNITY_V13:-}"
-    EAX_RESTORE_DSOAL_COMMUNITY_V14="${EAX_RESTORE_DSOAL_COMMUNITY_V14:-}"
-    EAX_RESTORE_DSOAL_OFFICIAL="${EAX_RESTORE_DSOAL_OFFICIAL:-}"
-
-    ENGINE_ENV_SET=0
-    is_truthy "$EAX_RESTORE_DSOAL_COMMUNITY_V13" && ((ENGINE_ENV_SET++))
-    is_truthy "$EAX_RESTORE_DSOAL_COMMUNITY_V14" && ((ENGINE_ENV_SET++))
-    is_truthy "$EAX_RESTORE_DSOAL_OFFICIAL" && ((ENGINE_ENV_SET++))
-
-    if [ "$ENGINE_ENV_SET" -gt 1 ]; then
-        print_error "More than one EAX_RESTORE_DSOAL_* variable is set. Set only one and re-run."
-        exit 1
+    echo -e " * ${BOLD}kcat DSOAL + OpenAL Soft:${NC} The standard choice. Intercepts a game's"
+    echo -e "   DirectSound3D/EAX calls and translates them to OpenAL — the right pick for the"
+    echo -e "   vast majority of classic Windows games."
+    if is_truthy "$EAX_RESTORE_DSOAL_PIN"; then
+        echo -e "   ${DIM}EAX_RESTORE_DSOAL_PIN is set: the frozen [$DSOAL_PINNED_REV] DSOAL build will be used"
+        echo -e "   in place of the rolling one.${NC}"
     fi
+    echo ""
+    echo -e " * ${BOLD}OpenAL native:${NC} Only for the handful of games that already call OpenAL directly"
+    echo -e "   (no DirectSound3D layer to intercept) — swaps OpenAL Soft in as OpenAL32.dll.\n"
 
-    if is_truthy "$EAX_RESTORE_DSOAL_COMMUNITY_V13"; then
+    if is_truthy "$EAX_RESTORE_DSOAL_PIN"; then
         ENGINE_CHOICE=1
-        echo -e "${GREEN}EAX_RESTORE_DSOAL_COMMUNITY_V13 is set — using ThreeDeeJay Community DSOAL.${NC}"
-    elif is_truthy "$EAX_RESTORE_DSOAL_COMMUNITY_V14"; then
-        ENGINE_CHOICE=2
-        echo -e "${GREEN}EAX_RESTORE_DSOAL_COMMUNITY_V14 is set — using PCGamingWiki Community DSOAL.${NC}"
-    elif is_truthy "$EAX_RESTORE_DSOAL_OFFICIAL"; then
-        ENGINE_CHOICE=3
-        echo -e "${GREEN}EAX_RESTORE_DSOAL_OFFICIAL is set — using kcat DSOAL + OpenAL Soft.${NC}"
+        echo -e "${GREEN}EAX_RESTORE_DSOAL_PIN is set — using kcat DSOAL (pinned [$DSOAL_PINNED_REV]) + OpenAL Soft.${NC}"
     else
-        echo -e "${YELLOW}Selection (1, 2, or 3) [Default: 3]: ${NC}"
+        echo -e "${YELLOW}Selection (1 or 2) [Default: 1]: ${NC}"
         echo ""
-        print_option 1 "ThreeDeeJay Community DSOAL [v1.31a]"
-        print_option 2 "PCGamingWiki Community DSOAL (self-hosted mirror) [v1.4]"
-        print_option 3 "kcat DSOAL + OpenAL Soft    [DSOAL: $DSOAL_VER | OAL: $OAL_VER]"
+        print_option 1 "kcat DSOAL + OpenAL Soft    [DSOAL: $DSOAL_VER | OAL: $OAL_VER]"
+        print_option 2 "OpenAL native (direct OpenAL32.dll swap)"
 
         while true; do
             echo -e -n "\n> "
             read -r ENGINE_CHOICE
-            ENGINE_CHOICE="${ENGINE_CHOICE:-3}"
-            if [[ "$ENGINE_CHOICE" =~ ^[123]$ ]]; then break; else print_warning "That's not a valid option — please type 1, 2, or 3."; fi
+            ENGINE_CHOICE="${ENGINE_CHOICE:-1}"
+            if [[ "$ENGINE_CHOICE" =~ ^[12]$ ]]; then break; else print_warning "That's not a valid option — please type 1 or 2."; fi
         done
     fi
     fi
 
     # The Wine DLL override this install ultimately needs — dsound.dll for
-    # engines 1-3 (DSOAL intercepts DirectSound3D), OpenAL32.dll for engine 4
+    # engine 1 (DSOAL intercepts DirectSound3D), OpenAL32.dll for engine 2
     # (OpenAL Soft deployed directly, nothing for DSOAL to intercept). Set
     # once here so every later step (override wording, registry, deployment,
     # final launch instructions) reads the same value instead of each
@@ -117,43 +98,44 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     # the actual deployed file is written with its conventional casing).
     PRIMARY_DLL_NAME="dsound"
     PRIMARY_DLL_FILENAME="dsound.dll"
-    if [ "$ENGINE_CHOICE" == "4" ]; then
+    if [ "$ENGINE_CHOICE" == "2" ]; then
         PRIMARY_DLL_NAME="openal32"
         PRIMARY_DLL_FILENAME="OpenAL32.dll"
     fi
 
     # 6. VC++ Runtime Dependencies
+    # Both engines are kcat builds (DSOAL, OpenAL Soft) that need the genuine
+    # MS runtime on older Proton/Wine, so this step always runs now rather
+    # than being gated on the engine choice.
     INSTALL_VCRUN="n"
-    if [ "$ENGINE_CHOICE" == "3" ] || [ "$ENGINE_CHOICE" == "4" ]; then
-        print_step 6 "VC++ Runtime Dependencies"
-        print_paragraph "Genuine Microsoft C++ runtime libraries are needed for older Proton/Wine" \
-            "builds (9 and below) when using kcat's DSOAL or OpenAL Soft."
+    print_step 6 "VC++ Runtime Dependencies"
+    print_paragraph "Genuine Microsoft C++ runtime libraries are needed for older Proton/Wine" \
+        "builds (9 and below) to load kcat's DSOAL / OpenAL Soft."
 
-        if confirm "Check $GAME_NAME's prefix for existing VC++ runtime files?"; then
-            print_task "Checking prefix for existing VC++ runtime files"
+    if confirm "Check $GAME_NAME's prefix for existing VC++ runtime files?"; then
+        print_task "Checking prefix for existing VC++ runtime files"
 
-            if [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows" ]; then
-                verify_vcrun_files
-            else
-                VCRUN_SUCCESS=0
-                print_status "Prefix not resolved yet, can't check. Defaulting to asking below." "$YELLOW"
-            fi
-
-            if [ "$VCRUN_SUCCESS" -eq 1 ]; then
-                print_status "Core VC++ runtime files are already present." "$GREEN"
-                echo -e "${WHITE}This will set the DLL overrides so Wine actually loads them (file presence alone"
-                echo -e "doesn't guarantee that) once you confirm and deploy below, and skip the install step"
-                echo -e "itself.${NC}"
-                APPLY_VCRUN_OVERRIDES_NEEDED=1
-            else
-                echo -e "\n${WHITE}These files are missing or incomplete here. Without them, the game may crash"
-                echo -e "silently on startup when it tries to load the audio engine.${NC}"
-                if confirm "Install genuine MS VC++ runtimes?" N; then INSTALL_VCRUN="y"; else INSTALL_VCRUN="n"; fi
-            fi
+        if [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows" ]; then
+            verify_vcrun_files
         else
-            echo -e "\n${WHITE}Skipping. You can revisit this later with EAX_RESTORE_VCRUN_ONLY=1 without redoing"
-            echo -e "the rest of the install.${NC}"
+            VCRUN_SUCCESS=0
+            print_status "Prefix not resolved yet, can't check. Defaulting to asking below." "$YELLOW"
         fi
+
+        if [ "$VCRUN_SUCCESS" -eq 1 ]; then
+            print_status "Core VC++ runtime files are already present." "$GREEN"
+            echo -e "${WHITE}This will set the DLL overrides so Wine actually loads them (file presence alone"
+            echo -e "doesn't guarantee that) once you confirm and deploy below, and skip the install step"
+            echo -e "itself.${NC}"
+            APPLY_VCRUN_OVERRIDES_NEEDED=1
+        else
+            echo -e "\n${WHITE}These files are missing or incomplete here. Without them, the game may crash"
+            echo -e "silently on startup when it tries to load the audio engine.${NC}"
+            if confirm "Install genuine MS VC++ runtimes?" N; then INSTALL_VCRUN="y"; else INSTALL_VCRUN="n"; fi
+        fi
+    else
+        echo -e "\n${WHITE}Skipping. You can revisit this later with EAX_RESTORE_VCRUN_ONLY=1 without redoing"
+        echo -e "the rest of the install.${NC}"
     fi
 
     # 7. Audio Configuration
@@ -245,10 +227,10 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
 
     # Tweaks A (EAX Unified dummy files) and C (COM registry routing) both
     # target DirectSound3D specifically and have nothing to attach to on a
-    # direct OpenAL32.dll swap — so engine 4 only ever offers Tweak B.
+    # direct OpenAL32.dll swap — so engine 2 only ever offers Tweak B.
     TWEAK_A_APPLICABLE=1
     TWEAK_C_APPLICABLE=1
-    if [ "$ENGINE_CHOICE" == "4" ]; then
+    if [ "$ENGINE_CHOICE" == "2" ]; then
         TWEAK_A_APPLICABLE=0
         TWEAK_C_APPLICABLE=0
     fi
