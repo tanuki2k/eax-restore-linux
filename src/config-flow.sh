@@ -50,6 +50,18 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     if [ -n "$OPENAL_NATIVE_MODE" ]; then
         ENGINE_CHOICE=2
         print_paragraph "$GAME_NAME uses OpenAL natively — deploying kcat's OpenAL Soft."
+    elif [ -n "$API_CONFIRMED_DS3D" ]; then
+        # The Audio API Detection step positively identified this as a
+        # DirectSound3D title, so there's no menu to show — OpenAL-native
+        # would be a silent no-op here (the game never loads OpenAL32.dll).
+        # Mirrors the OPENAL_NATIVE_MODE branch above. EAX_RESTORE_DSOAL_PIN
+        # lands on ENGINE_CHOICE=1 too, so it only changes the wording.
+        ENGINE_CHOICE=1
+        if is_truthy "$EAX_RESTORE_DSOAL_PIN"; then
+            print_paragraph "$GAME_NAME uses DirectSound3D — deploying kcat DSOAL (pinned [$DSOAL_PINNED_REV]) + OpenAL Soft."
+        else
+            print_paragraph "$GAME_NAME uses DirectSound3D — deploying kcat DSOAL + OpenAL Soft."
+        fi
     else
     DSOAL_DATE=$(cat "$DSOAL_SHARE/updated_at.txt" 2>/dev/null)
     DSOAL_VER=${DSOAL_DATE%%T*}

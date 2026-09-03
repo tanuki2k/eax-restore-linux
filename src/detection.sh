@@ -436,7 +436,9 @@ detect_api_from_binary() {
     # strings "OpenAL32.dll" / "dsound.dll" — the same signature-grepping
     # trick is_genuine_dll() uses on PE binaries, and the same `file`-based
     # PE inspection select_architecture uses to walk GAME_DIR. Prints
-    # "openal" or "directsound3d" on stdout, or nothing if inconclusive.
+    # "openal", "directsound3d", or "both" on stdout, or nothing if
+    # inconclusive. "both" means the imports reference both APIs — the caller
+    # treats that as a low-confidence DirectSound3D guess, not a confirmation.
     # Not certain: a dynamically-LoadLibrary'd audio backend won't show up
     # in the import table at all, and an engine that supports multiple
     # backends may reference both. On a reinstall, this script's own
@@ -454,7 +456,9 @@ detect_api_from_binary() {
         grep -qa "dsound\.dll" "$f" 2>/dev/null && has_dsound=1
     done < <(find "$dir" -maxdepth 2 -type f \( -iname "*.exe" -o -iname "*.dll" \) -print0 2>/dev/null)
 
-    if [ "$has_openal" -eq 1 ] && [ "$has_dsound" -eq 0 ]; then
+    if [ "$has_openal" -eq 1 ] && [ "$has_dsound" -eq 1 ]; then
+        echo "both"
+    elif [ "$has_openal" -eq 1 ]; then
         echo "openal"
     elif [ "$has_dsound" -eq 1 ]; then
         echo "directsound3d"
@@ -486,6 +490,14 @@ confirm_continue_if_openal_native() {
     # Sets OPENAL_NATIVE_MODE, which the "Audio Engine Selection" step alone
     # consumes to pick ENGINE_CHOICE=2 (the direct OpenAL Soft swap).
     OPENAL_NATIVE_MODE=""
+    # Set only when the API is *positively* identified as DirectSound3D (a
+    # known-games entry whose api field is literally "directsound3d", a
+    # single-API binary scan, or the user explicitly choosing DirectSound3D
+    # at the fallback prompt below). The "Audio Engine Selection" step skips
+    # its menu when this is set, the same way OPENAL_NATIVE_MODE forces the
+    # native swap. A bare default / early return leaves it empty so the menu
+    # still appears.
+    API_CONFIRMED_DS3D=""
     [ "$SCRIPT_ACTION" == "i" ] || return
     [ -z "$1" ] && return
 
@@ -495,6 +507,10 @@ confirm_continue_if_openal_native() {
 
     local json_available=0 match_count=0
     local api="" matched=0 scanned=0 json_checked=0 declined=0
+    # The known-games entry's api field exactly as stored ("" when the entry
+    # omits it) — distinct from $api, which is defaulted to "directsound3d"
+    # for display. Only a literal "directsound3d" here counts as confirmed.
+    local db_api_raw=""
 
     # Availability is already known by this point (the REPOSITORY CACHE CHECK
     # step fetches/memoizes it before Phase 1 even starts), so there's nothing
@@ -513,7 +529,8 @@ confirm_continue_if_openal_native() {
         match_count=$(jq -r --arg id "$1" --arg field "$field" '[.games[] | select((.[$field] // "") | tostring == $id)] | length' "$KNOWN_GAMES_FILE" 2>/dev/null)
 
         if [ "${match_count:-0}" -gt 0 ]; then
-            api=$(jq -r --arg id "$1" --arg field "$field" '.games[] | select((.[$field] // "") | tostring == $id) | .api // "directsound3d"' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+            db_api_raw=$(jq -r --arg id "$1" --arg field "$field" '.games[] | select((.[$field] // "") | tostring == $id) | .api // ""' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+            api="${db_api_raw:-directsound3d}"
             matched=1
         else
             print_note "$game_name isn't in the known-games database."
@@ -545,7 +562,17 @@ confirm_continue_if_openal_native() {
                 exit 0
             fi
             OPENAL_NATIVE_MODE=1
-        elif ! confirm "Continue with the DSOAL/DirectSound3D install?"; then
+        elif confirm "Continue with the DSOAL/DirectSound3D install?"; then
+            # A known-games entry whose api field is literally "directsound3d",
+            # or a single-API binary scan, is a positive identification — the
+            # engine-selection menu can be skipped. A "both" scan result
+            # references both APIs and stays low-confidence, so the menu is
+            # kept as the route into OpenAL-native mode.
+            if { [ "$matched" -eq 1 ] && [ "$db_api_raw" == "directsound3d" ]; } ||
+               { [ "$scanned" -eq 1 ] && [ "$api" == "directsound3d" ]; }; then
+                API_CONFIRMED_DS3D=1
+            fi
+        else
             echo -e "\n${WHITE}Install cancelled.${NC}"
             exit 0
         fi
@@ -581,12 +608,15 @@ confirm_continue_if_openal_native() {
     print_option 1 "DirectSound3D / DSOAL   [default]"
     print_option 2 "OpenAL native           (deploy kcat's OpenAL Soft directly)"
 
-    local api_choice
+    local api_choice explicit=0
     while true; do
         prompt "Selection (1 or 2) [Default: 1]: "
         # EOF / empty falls back to 1: DirectSound3D is the safe default for
-        # the overwhelming majority of EAX titles.
-        read -r api_choice || api_choice=1
+        # the overwhelming majority of EAX titles. Only a typed "1" is an
+        # explicit choice — an accepted default doesn't confirm the API, so
+        # the engine-selection menu still appears for it.
+        read -r api_choice || api_choice=""
+        if [ "$api_choice" == "1" ]; then explicit=1; else explicit=0; fi
         api_choice="${api_choice:-1}"
         [[ "$api_choice" =~ ^[12]$ ]] && break
         print_warning "That's not a valid option — please type 1 or 2."
@@ -596,6 +626,7 @@ confirm_continue_if_openal_native() {
         print_status "Proceeding with kcat's OpenAL Soft." "$WHITE"
         OPENAL_NATIVE_MODE=1
     else
+        [ "$explicit" -eq 1 ] && API_CONFIRMED_DS3D=1
         print_status "Proceeding with DSOAL / DirectSound3D." "$WHITE"
     fi
 }

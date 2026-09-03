@@ -13,7 +13,7 @@ Because modern operating systems and Proton/Wine don't natively support this old
 ## Features
 
 * **Dual-Copy Deployment:** Deploys DSOAL/OpenAL files to both your local game folder *and* the Wine/Proton prefix's system folders, with conflict backups on both — not just the game folder.
-* **Engine Choice:** kcat's DSOAL + OpenAL Soft (translates DirectSound3D/EAX to OpenAL) for the vast majority of games, or a direct OpenAL Soft swap for the handful that call OpenAL natively. `EAX_RESTORE_DSOAL_PIN` swaps in a frozen known-good DSOAL revision if a rolling build ever regresses.
+* **Engine Choice:** kcat's DSOAL + OpenAL Soft (translates DirectSound3D/EAX to OpenAL) for the vast majority of games, or a direct OpenAL Soft swap for the handful that call OpenAL natively. When the Audio API Detection step has already pinned down which one the game uses, the engine menu is skipped automatically; you're only asked to pick when the API couldn't be confirmed. `EAX_RESTORE_DSOAL_PIN` swaps in a frozen known-good DSOAL revision if a rolling build ever regresses.
 * **Dynamic HRTF Integration:** Automatically generates an `alsoft.ini` tuned to your output (stereo/headphones/surround/matrix), enabling OpenAL Soft's HRTF binaural rendering for headphone users.
 * **Smart Architecture Scanner:** Automatically detects whether the game executable is 32-bit or 64-bit and grabs the exact right dependencies so the game doesn't crash on launch.
 * **Intelligent Prefix Routing:** Opt-in auto-detection for Steam AppIDs and Heroic Prefix paths, making it easy to find where your game is actually installed. Recently used game folders are remembered and offered as a quick pick on future runs.
