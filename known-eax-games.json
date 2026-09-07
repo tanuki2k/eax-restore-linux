@@ -138,7 +138,7 @@
       "gog_api": "openal",
       "eax_status": "supported",
       "eax_restore_hint": null,
-      "notes": "Thief Gold runs on the Dark Engine and speaks DirectSound3D natively on Steam, where pairing this with TFix (built on the NewDark engine patch) is worth considering for broader compatibility fixes alongside EAX. GOG's current default build ships pre-patched with NewDark already applied, which reimplements environmental audio through OpenAL Soft instead — this script detects that automatically and deploys OpenAL Soft directly there, with nothing left for DSOAL to intercept.",
+      "notes": "Thief Gold runs on the Dark Engine. The Steam release is still the original engine build, which uses DirectSound3D, so the standard DSOAL path applies — pairing it with TFix (which bundles the NewDark engine patch) is worth considering for broader compatibility fixes alongside EAX. GOG's version ships with NewDark already applied, and that rewrite routes positional audio and EAX reverb through OpenAL rather than DirectSound3D, leaving nothing for DSOAL to intercept; the script recognises this and deploys kcat's OpenAL Soft directly, in place of the older OpenAL build GOG bundles.",
       "eax_versions": [
         "1.0"
       ]
@@ -154,7 +154,7 @@
       "gog_api": "openal",
       "eax_status": "supported",
       "eax_restore_hint": null,
-      "notes": "Thief II: The Metal Age runs on the Dark Engine and speaks DirectSound3D natively on Steam, where pairing this with T2Fix (built on the NewDark engine patch) is worth considering for broader compatibility fixes alongside EAX. GOG's current default build ships pre-patched with NewDark already applied, which reimplements environmental audio through OpenAL Soft instead — this script detects that automatically and deploys OpenAL Soft directly there, with nothing left for DSOAL to intercept.",
+      "notes": "Thief II: The Metal Age runs on the Dark Engine. The Steam release is still the original engine build, which uses DirectSound3D, so the standard DSOAL path applies — pairing it with T2Fix (which bundles the NewDark engine patch) is worth considering for broader compatibility fixes alongside EAX. GOG's version ships with NewDark already applied, and that rewrite routes positional audio and EAX reverb through OpenAL rather than DirectSound3D, leaving nothing for DSOAL to intercept; the script recognises this and deploys kcat's OpenAL Soft directly, in place of the older OpenAL build GOG bundles.",
       "eax_versions": [
         "1.0",
         "2.0"
