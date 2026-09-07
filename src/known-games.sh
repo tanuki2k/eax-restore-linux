@@ -61,8 +61,8 @@ ensure_known_games_json() {
     # jq's `//` can't tell "key legitimately absent" from "key doesn't
     # exist in this schema yet" apart. Warn once so that's visible instead
     # of a checkbox that quietly never fires.
-    if ! jq -e '.games | any(has("api"))' "$KNOWN_GAMES_FILE" >/dev/null 2>&1; then
-        { echo ""; print_warning_arrow "$KNOWN_GAMES_FILE doesn't have the 'api'/'eax_status' fields this" \
+    if ! jq -e '.games | any(has("default_api"))' "$KNOWN_GAMES_FILE" >/dev/null 2>&1; then
+        { echo ""; print_warning_arrow "$KNOWN_GAMES_FILE doesn't have the 'default_api'/'eax_status' fields this" \
             "script version expects — it looks like an older database schema. Audio API" \
             "Detection and some install-time warnings won't work correctly until it updates."; } >&2
     fi
@@ -388,7 +388,7 @@ show_game_details_block() {
         '.games[] | select((.[$field] // "") | tostring == $id) | .edition // empty' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
     api=$(jq -r --arg id "$id" --arg field "$eax_id_field" --arg store "$store" \
-        '.games[] | select((.[$field] // "") | tostring == $id) | (.[$store + "_api"] // .api // "directsound3d")' \
+        '.games[] | select((.[$field] // "") | tostring == $id) | (.[$store + "_api"] // .default_api // "directsound3d")' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
     listing=$(jq -r --arg id "$id" --arg id_field "$eax_id_field" --arg listing_field "$listing_field" \
         '.games[] | select((.[$id_field] // "") | tostring == $id) | .[$listing_field] // empty' \
