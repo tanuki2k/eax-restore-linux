@@ -529,7 +529,7 @@ confirm_continue_if_openal_native() {
         match_count=$(jq -r --arg id "$1" --arg field "$field" '[.games[] | select((.[$field] // "") | tostring == $id)] | length' "$KNOWN_GAMES_FILE" 2>/dev/null)
 
         if [ "${match_count:-0}" -gt 0 ]; then
-            db_api_raw=$(jq -r --arg id "$1" --arg field "$field" '.games[] | select((.[$field] // "") | tostring == $id) | .api // ""' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+            db_api_raw=$(jq -r --arg id "$1" --arg field "$field" --arg store "$2" '.games[] | select((.[$field] // "") | tostring == $id) | (.[$store + "_api"] // .api // "")' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
             api="${db_api_raw:-directsound3d}"
             matched=1
         else

@@ -387,8 +387,8 @@ show_game_details_block() {
     edition=$(jq -r --arg id "$id" --arg field "$eax_id_field" \
         '.games[] | select((.[$field] // "") | tostring == $id) | .edition // empty' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
-    api=$(jq -r --arg id "$id" --arg field "$eax_id_field" \
-        '.games[] | select((.[$field] // "") | tostring == $id) | .api // "directsound3d"' \
+    api=$(jq -r --arg id "$id" --arg field "$eax_id_field" --arg store "$store" \
+        '.games[] | select((.[$field] // "") | tostring == $id) | (.[$store + "_api"] // .api // "directsound3d")' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
     listing=$(jq -r --arg id "$id" --arg id_field "$eax_id_field" --arg listing_field "$listing_field" \
         '.games[] | select((.[$id_field] // "") | tostring == $id) | .[$listing_field] // empty' \
