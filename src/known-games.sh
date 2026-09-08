@@ -472,13 +472,13 @@ show_game_details_block() {
             print_wrapped "$state_line"
         fi
     fi
-    if [ -n "$eax_restore_hint" ]; then
-        echo -e "\n${NOTE}  The fix:${NC}"
-        print_wrapped "$eax_restore_hint"
-    fi
     if [ -n "$build_notes" ]; then
         echo -e "\n${NOTE}  The $store_label build:${NC}"
         print_wrapped "$build_notes"
+    fi
+    if [ -n "$eax_restore_hint" ]; then
+        echo -e "\n${NOTE}  The fix:${NC}"
+        print_wrapped "$eax_restore_hint"
     fi
     if [ "$eax_status" == "supported" ]; then
         local solution="DSOAL + OpenAL Soft"
