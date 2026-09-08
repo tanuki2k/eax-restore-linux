@@ -257,10 +257,10 @@
       "stores": {
         "steam": {
           "id": 238210,
-          "listing": "available",
+          "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "build_notes": "The classic 1999 build was delisted from Steam in October 2025; Steam now sells only the 25th Anniversary Remaster, a different build not covered here.",
           "patches": "The System Shock 2 Community Patch (SCP) is worth pairing, though it's general bugfix/polish, not audio-specific."
         },
         "gog": {
@@ -268,7 +268,7 @@
           "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "The original 1999 build's own GOG listing is delisted — GOG now sells only the 25th Anniversary Remaster (a different build, not covered here) — but existing owners of the classic build keep access.",
+          "build_notes": "The original 1999 build's own GOG listing was delisted in October 2025 — GOG now sells only the 25th Anniversary Remaster (a different build, not covered here) — but existing owners of the classic build keep access.",
           "patches": "The System Shock 2 Community Patch (SCP) is worth pairing, though it's general bugfix/polish, not audio-specific."
         }
       },
@@ -625,10 +625,10 @@
       "stores": {
         "steam": {
           "id": 13240,
-          "listing": "available",
+          "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "build_notes": "Delisted from Steam in December 2022, when Epic pulled the entire classic Unreal series from sale.",
           "patches": null
         }
       },
@@ -640,17 +640,17 @@
         "1.0",
         "2.0"
       ],
-      "notes": "The base install has only basic EAX 1.0 / A3D in its levels. Full EAX 2.0 reverb and occlusion for the original Deathmatch and Capture the Flag maps needs Creative's separate official 'EAX Library Patch' (uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip), historically mirrored at patches-scrolls.com — check the mirror is still live and the files intact before installing. If you don't own this on Steam, OldUnreal (oldunreal.com) distributes a free full-game installer with Epic's permission; its patches add a selectable OpenAL-based 'ALAudio' renderer, which is a separate modern reimplementation, not the original EAX calls. Pick the original DirectSound3D renderer if you want this script's EAX restoration to apply."
+      "notes": "The base install has only basic EAX 1.0 / A3D in its levels. Full EAX 2.0 reverb and occlusion for the original Deathmatch and Capture the Flag maps needs Creative's separate official 'EAX Library Patch' (uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip), historically mirrored at patches-scrolls.com — check the mirror is still live and the files intact before installing. Now that it's delisted from Steam, OldUnreal (oldunreal.com) is the practical way to get a legitimate copy — a free full-game installer distributed with Epic's permission; its patches add a selectable OpenAL-based 'ALAudio' renderer, which is a separate modern reimplementation, not the original EAX calls. Pick the original DirectSound3D renderer if you want this script's EAX restoration to apply."
     },
     {
       "name": "Unreal Tournament 2004",
       "stores": {
         "steam": {
           "id": 13230,
-          "listing": "available",
+          "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "build_notes": "Delisted from Steam in December 2022, when Epic pulled the entire classic Unreal series from sale.",
           "patches": null
         }
       },
@@ -662,7 +662,7 @@
         "3.0",
         "5.0"
       ],
-      "notes": "If EAX seems inactive, check the in-game Audio settings: Audio Mode should be 'H/W 3D + EAX', with Low Sound Detail, System Driver and Reverse Stereo all unchecked (per Creative's setup notes for this game). If you don't own this on Steam, OldUnreal (oldunreal.com) distributes a free full-game installer with Epic's permission; its patches add a selectable OpenAL-based 'ALAudio' renderer, a separate modern reimplementation rather than the original EAX calls. Flathub's launcher for this game is a separate, actively-changing package, not necessarily the same build."
+      "notes": "If EAX seems inactive, check the in-game Audio settings: Audio Mode should be 'H/W 3D + EAX', with Low Sound Detail, System Driver and Reverse Stereo all unchecked (per Creative's setup notes for this game). Now that it's delisted from Steam, OldUnreal (oldunreal.com) is the practical way to get a legitimate copy — a free full-game installer distributed with Epic's permission; its patches add a selectable OpenAL-based 'ALAudio' renderer, a separate modern reimplementation rather than the original EAX calls. Flathub's launcher for this game is a separate, actively-changing package, not necessarily the same build."
     },
     {
       "name": "DOOM 3",
@@ -788,15 +788,15 @@
           "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "Epic pulled the original Unreal-series titles from Steam's sale; GOG remains the actively available option for new purchases.",
+          "build_notes": "Delisted from Steam in December 2022, when Epic pulled the entire classic Unreal series from sale.",
           "patches": null
         },
         "gog": {
           "id": 1207658679,
-          "listing": "available",
+          "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "build_notes": "Delisted from GOG in December 2022, a few days after the Steam version, in the same Unreal-series removal.",
           "patches": null
         }
       },
@@ -807,25 +807,25 @@
       "eax_versions": [
         "1.0"
       ],
-      "notes": "If hardware 3D audio doesn't engage, check Unreal.ini for UseSpatial=True, UseReverb=True and Use3dHardware=True in the audio section. If you don't own this on Steam, OldUnreal (oldunreal.com) distributes a free full-game installer with Epic's permission; its v227 patch adds a selectable OpenAL-based 'ALAudio' renderer, which OldUnreal's own manual calls 'not the old original model, but some replacement for it'. Pick v227's original DirectSound3D renderer if you want this script's EAX restoration to apply."
+      "notes": "If hardware 3D audio doesn't engage, check Unreal.ini for UseSpatial=True, UseReverb=True and Use3dHardware=True in the audio section. With the game now delisted from both Steam and GOG, OldUnreal (oldunreal.com) is the practical way to get a legitimate copy — a free full-game installer distributed with Epic's permission; its v227 patch adds a selectable OpenAL-based 'ALAudio' renderer, which OldUnreal's own manual calls 'not the old original model, but some replacement for it'. Pick v227's original DirectSound3D renderer if you want this script's EAX restoration to apply."
     },
     {
       "name": "Unreal II: The Awakening",
       "stores": {
         "steam": {
           "id": 13200,
-          "listing": "available",
+          "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "build_notes": "Delisted from Steam in December 2022, when Epic pulled the entire classic Unreal series from sale.",
           "patches": null
         },
         "gog": {
           "id": 1207658677,
-          "listing": "available",
+          "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "build_notes": "Delisted from GOG in December 2022, when Epic pulled the entire classic Unreal series from sale.",
           "patches": null
         }
       },
@@ -1276,10 +1276,10 @@
       "stores": {
         "steam": {
           "id": 8080,
-          "listing": "available",
+          "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "build_notes": "Square Enix removed the Steam version from sale in February 2021 and has said it has no plans to restore it. The GOG release is unaffected.",
           "patches": null
         },
         "gog": {
@@ -1924,7 +1924,7 @@
       "stores": {
         "steam": {
           "id": 46420,
-          "listing": "available",
+          "listing": "delisted",
           "api": null,
           "id_confidence": "steamdb_historical",
           "build_notes": null,
@@ -1948,7 +1948,7 @@
       "stores": {
         "steam": {
           "id": 46430,
-          "listing": "available",
+          "listing": "delisted",
           "api": null,
           "id_confidence": "steamdb_historical",
           "build_notes": null,
@@ -1972,7 +1972,7 @@
       "stores": {
         "steam": {
           "id": 6820,
-          "listing": "available",
+          "listing": "delisted",
           "api": null,
           "id_confidence": "steamdb_historical",
           "build_notes": null,
@@ -1993,10 +1993,10 @@
       "stores": {
         "steam": {
           "id": 4720,
-          "listing": "available",
+          "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "build_notes": "Delisted from Steam and the Microsoft Store at the end of October 2025, with no reason given.",
           "patches": null
         }
       },
@@ -2271,10 +2271,10 @@
       "stores": {
         "gog": {
           "id": 1207659233,
-          "listing": "available",
+          "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "build_notes": "Delisted from GOG and other stores at the end of 2016; GOG attributed the removal to expired car and music licensing.",
           "patches": null
         }
       },
@@ -2432,7 +2432,7 @@
       "stores": {
         "steam": {
           "id": 7060,
-          "listing": "available",
+          "listing": "delisted",
           "api": null,
           "id_confidence": "steamdb_historical",
           "build_notes": null,
@@ -2861,7 +2861,7 @@
       "stores": {
         "steam": {
           "id": 4550,
-          "listing": "available",
+          "listing": "delisted",
           "api": null,
           "id_confidence": "steamdb_historical",
           "build_notes": null,
@@ -3262,7 +3262,7 @@
       "stores": {
         "steam": {
           "id": 3200,
-          "listing": "available",
+          "listing": "delisted",
           "api": null,
           "id_confidence": "local_install_verified",
           "build_notes": null,
@@ -3477,10 +3477,10 @@
       "stores": {
         "gog": {
           "id": 1268478205,
-          "listing": "available",
+          "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "build_notes": "Delisted from GOG on 1 September 2024 at Warner Bros.' request; GOG was the only storefront that carried it.",
           "patches": null
         }
       },
@@ -3496,10 +3496,10 @@
       "stores": {
         "gog": {
           "id": 1578481504,
-          "listing": "available",
+          "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "build_notes": "Delisted from GOG on 1 September 2024 at Warner Bros.' request; GOG was the only storefront that carried it.",
           "patches": null
         }
       },
@@ -3515,10 +3515,10 @@
       "stores": {
         "steam": {
           "id": 13510,
-          "listing": "available",
+          "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "build_notes": "Delisted from Steam around 2015, reportedly over expired licensing for the PC build's Diesel engine.",
           "patches": null
         }
       },
