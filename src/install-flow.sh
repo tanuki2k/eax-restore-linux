@@ -191,11 +191,9 @@
 
         if [ -n "$HRTF_MODE" ]; then
             HRTF_MODE_PREFIX=""
-            HRTF_VALUE="auto"
         else
             HRTF_MODE_PREFIX="# "
             HRTF_MODE="full"
-            HRTF_VALUE="off"
         fi
 
         if [[ "$ADVANCED_LIMITS" =~ $YES_RE ]]; then
@@ -207,8 +205,6 @@ channels = $channels
 sample-type = float32
 stereo-mode = $STEREO_MODE
 stereo-encoding = $STEREO_ENCODING
-# hrtf is deprecated in favor of hrtf-mode, kept here for older builds
-hrtf = $HRTF_VALUE
 ${HRTF_MODE_PREFIX}hrtf-mode = $HRTF_MODE
 hrtf-paths = HRTF, OpenAL/HRTF
 period_size = 1024
@@ -234,8 +230,6 @@ channels = $channels
 sample-type = float32
 stereo-mode = $STEREO_MODE
 stereo-encoding = $STEREO_ENCODING
-# hrtf is deprecated in favor of hrtf-mode, kept here for older builds
-hrtf = $HRTF_VALUE
 ${HRTF_MODE_PREFIX}hrtf-mode = $HRTF_MODE
 hrtf-paths = HRTF, OpenAL/HRTF
 period_size = 1024
