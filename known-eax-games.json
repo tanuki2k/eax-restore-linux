@@ -1088,7 +1088,7 @@
       "default_api": "directsound3d",
       "eax_status": "supported",
       "eax_restore_hint": null,
-      "notes": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
+      "notes": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak. On Linux, the Arx Libertatis engine reimplementation (arx-libertatis.org) is a strong alternative: it runs the game natively without Wine or Proton, reuses your existing Arx Fatalis data files, and reproduces the game's environmental reverb through OpenAL Soft's EFX out of the box. That's a self-contained native audio path, so this script's DSOAL layer doesn't apply to an Arx Libertatis install — use one approach or the other.",
       "eax_versions": [
         "1.0",
         "2.0"
