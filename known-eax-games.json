@@ -339,10 +339,10 @@
       "stores": {
         "steam": {
           "id": 12120,
-          "listing": "available",
+          "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "There's no in-game EAX toggle — it switches on by itself once DirectSound3D is available, unlike GTA III and Vice City. For that to happen under Wine/Proton the game also needs the COM Registry Routing tweak (Tweak C). The current build (v3.0 / 'NewSteam') is a from-scratch Xbox-based port; the EAX/NVIDIA splash only shows on a downgraded v1.0, though the EAX Unified code is present in every version.",
+          "build_notes": "There's no in-game EAX toggle unlike GTA III and Vice City. The current build (v3.0 / 'NewSteam') is a from-scratch Xbox-based port; the EAX/NVIDIA splash only shows on a downgraded v1.0, though the EAX Unified code is present in every version.",
           "patches": "SilentPatch SA is the usual companion fix. If the stock reverb is too faint to make out, the community ReverbSA plugin ('[SA|OpenAL] Reverb' on GTAForums) adds pervasive, clearly audible reverb."
         }
       },
@@ -350,7 +350,7 @@
       "eax_unified": true,
       "eax_status": "supported",
       "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_restore_hint": "For EAX to work under Wine/Proton the game also needs the COM Registry Routing tweak (Tweak C).",
       "eax_versions": [
         "1.0",
         "2.0",

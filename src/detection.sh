@@ -271,15 +271,39 @@ normalize_game_name() {
         | tr -dc '[:alnum:]'
 }
 
+resolve_exe_manual_entry() {
+    # Usage: resolve_exe_manual_entry <scanned_root>
+    # Prompts for a game .exe folder, validates it exists, and warns when it
+    # falls outside the scanned install (the known-game notes may not apply).
+    # Returns 0 with GAME_DIR set, 1 otherwise (GAME_DIR cleared). Shared by
+    # every "enter a path manually" branch of resolve_exe_folder so declining
+    # a detected folder drops the user straight onto a path prompt instead of
+    # unwinding to the top-level locate-the-game menu (which throws away the
+    # scanned AppID and its known-games notes).
+    local root="$1"
+    prompt_manual_game_dir || return 1
+    if [ ! -d "$GAME_DIR" ]; then
+        print_error "Directory not found. Please check the path and try again."
+        GAME_DIR=""
+        return 1
+    fi
+    [[ "$GAME_DIR" == "$root"* ]] || print_warning "That path is outside the scanned install — the known-game notes for this title may not apply to it."
+    return 0
+}
+
 resolve_exe_folder() {
     # Usage: resolve_exe_folder <install_root>
     # A scanned install root isn't always the .exe folder — many titles nest
     # it (e.g. GameName/bin/x64), and get_game_directory's own detection
-    # comment notes exactly this. Finds where the .exe(s) actually live,
-    # always asks the user to confirm before setting GAME_DIR (a detected
-    # location is a guess, not an action taken on the user's behalf), and
-    # prompts to pick between candidates when more than one folder qualifies.
-    # Returns 1 (GAME_DIR left empty) if the user declines at any point.
+    # comment notes exactly this. Mirrors the prefix stage's shape: first
+    # asks whether to auto-detect at all (No -> straight to manual entry),
+    # then builds one ranked list of candidate folders (the root itself, if
+    # it holds a real .exe, followed by nested folders ranked name-match
+    # first) and shows the best one for a "Found ... / Use this location?"
+    # (Y/n) confirm. Declining opens a menu -- pick from the other detected
+    # folders (when there's more than one), type a path, or go back to game
+    # selection -- rather than dead-ending. Returns 1 (GAME_DIR left empty)
+    # if the user declines/goes back at any point.
     local root="$1"
     GAME_DIR=""
 
@@ -292,13 +316,32 @@ resolve_exe_folder() {
     # it's nested.
     local junk_exe_re='^(unins(t(all)?)?[0-9]*|vc_?redist.*|(dx|directx)?setup|dxsetup|dxwebsetup|dx[0-9]+ger|dx[0-9]+ntger|dotnetfx.*|ndp[0-9].*|windowsdesktop-runtime.*|oalinst|physx.*|easyanticheat.*|eac_?setup.*|eaclauncher|be(service|daisy|launcher|_ex)[a-z0-9_]*|battleye.*|unitycrashhandler.*|crashreport(er|client)?|crash_?handler|crashpad_handler|bugsplat.*|epiconlineservices(installer)?|epicwebhelper.*|rockstar-games-launcher|social-club-setup|tagesclient.*|vulkanrt.*installer.*|gamingrepair(tool)?|registrationreminder|overlayinjector|cleanup|touchup|driverversionchecker|layerschecker|supporttool|dowser|iscopyfiles|ue3?redist.*|unrealfrontend|unrealconsole|uescriptprofiler|cookersync|testapp|.*oshelper)\.exe$'
 
+    # Up-front gate, same as the prefix stage's "attempt to automatically
+    # find your Proton prefix?" -- a detected folder is still a guess, and
+    # some users would rather just type the path. confirm defaults to Yes and
+    # returns 1 on EOF, so a closed stdin falls to manual entry, which itself
+    # returns 1 on EOF -- a clean bail, no spin.
+    if ! confirm "Would you like the script to attempt to automatically find the game's executable folder?"; then
+        resolve_exe_manual_entry "$root" && return 0
+        return 1
+    fi
+
+    local f base exe_norm root_norm
+    root_norm="$(normalize_game_name "$(basename "$root")")"
+
+    # One ranked list of candidate folders + a representative .exe name per
+    # folder (knowing the location isn't as reassuring as seeing the actual
+    # filename about to be treated as the game's executable).
+    local -a cand_dirs=()
+    local -A cand_exe_name=()
+
+    # The scanned root itself, if it directly holds a real (non-junk) .exe.
+    # Pick a representative name to show: prefer one that isn't on the junk
+    # list and resembles the folder's own name, falling back to whatever's
+    # there so this never reports nothing.
     if find "$root" -maxdepth 1 -type f -iname "*.exe" -print -quit 2>/dev/null | grep -q .; then
-        # Pick a representative exe name to show: prefer one whose name
-        # isn't on the junk list and resembles the folder's own name,
-        # falling back to whatever's there so this never reports nothing.
-        local root_exes=() f base root_norm exe_norm root_exe_name=""
+        local root_exes=() root_exe_name=""
         while IFS= read -r f; do root_exes+=("$f"); done < <(find "$root" -maxdepth 1 -type f -iname "*.exe" 2>/dev/null)
-        root_norm="$(normalize_game_name "$(basename "$root")")"
         for f in "${root_exes[@]}"; do
             base="$(basename "$f" | tr '[:upper:]' '[:lower:]')"
             [[ "$base" =~ $junk_exe_re ]] && continue
@@ -310,40 +353,35 @@ resolve_exe_folder() {
             fi
         done
         [ -z "$root_exe_name" ] && root_exe_name="$(basename "${root_exes[0]}")"
-
-        echo -e "\n -> ${GREEN}Found the game executable:${NC} $root_exe_name ${DIM}in $root${NC}"
-        if confirm "Use this location?"; then
-            GAME_DIR="$root"
-            return 0
-        fi
-        return 1
+        cand_dirs+=("$root")
+        cand_exe_name["$root"]="$root_exe_name"
     fi
 
+    # Then nested folders below the root, ranked name-match first -- e.g. a
+    # "Half-Life" install's real exe is more likely hl.exe/Half-Life.exe than
+    # something sharing a folder with unrelated bundled tools. Roman numerals
+    # are converted to arabic first (word-bounded, so it only touches
+    # standalone numeral tokens) since sequel titles are commonly "Gothic II"
+    # but "Gothic2.exe"/"gothic 2" in practice.
+    # -mindepth 2 so the scanned root's own .exe files (already handled above)
+    # aren't re-listed here as if they lived in a nested folder.
     local all_exes=()
-    while IFS= read -r f; do all_exes+=("$f"); done < <(find "$root" -mindepth 1 -maxdepth 4 -type f -iname "*.exe" 2>/dev/null)
+    while IFS= read -r f; do all_exes+=("$f"); done < <(find "$root" -mindepth 2 -maxdepth 4 -type f -iname "*.exe" 2>/dev/null)
 
-    local candidates=() f base
+    local candidates=()
     for f in "${all_exes[@]}"; do
         base="$(basename "$f" | tr '[:upper:]' '[:lower:]')"
         [[ "$base" =~ $junk_exe_re ]] && continue
         candidates+=("$f")
     done
-    # If every .exe found happened to match the junk list, fall back to the
-    # unfiltered set rather than wrongly reporting none were found at all.
-    [ ${#candidates[@]} -eq 0 ] && candidates=("${all_exes[@]}")
-
-    # Rank folders whose .exe name resembles the game's own folder name
-    # first -- e.g. a "Half-Life" install's real exe is more likely
-    # hl.exe/Half-Life.exe than something sharing a folder with unrelated
-    # bundled tools. Roman numerals are converted to arabic first (word-
-    # bounded, so it only touches standalone numeral tokens) since sequel
-    # titles are commonly "Gothic II" but "Gothic2.exe"/"gothic 2" in
-    # practice -- a plain substring match would miss that pairing.
-    local root_norm
-    root_norm="$(normalize_game_name "$(basename "$root")")"
+    # Only fall back to the junk-only set when the root gave us nothing
+    # either -- otherwise a game whose real .exe is in the root but which
+    # also ships junk installers in subfolders would wrongly become a
+    # multi-candidate pick instead of a clean single-candidate confirm.
+    [ ${#candidates[@]} -eq 0 ] && [ ${#cand_dirs[@]} -eq 0 ] && candidates=("${all_exes[@]}")
 
     local -A dir_seen=()
-    local ordered_dirs=() f d
+    local ordered_dirs=() d
     for f in "${candidates[@]}"; do
         d="$(dirname "$f")"
         if [ -z "${dir_seen[$d]:-}" ]; then
@@ -352,16 +390,12 @@ resolve_exe_folder() {
         fi
     done
 
-    # A directory counts as a name match if ANY .exe inside it matches --
-    # not just whichever one find() happens to list first, since a real
-    # launcher/helper .exe often sits right next to the actual game .exe
-    # in the same folder.
-    # Also remembers a representative .exe name per folder to show the user
-    # (the name-matching one if there is one, otherwise whichever candidate
-    # came first) -- knowing the location isn't as reassuring as seeing the
-    # actual filename that's about to be treated as the game's executable.
+    # A directory counts as a name match if ANY .exe inside it matches -- not
+    # just whichever one find() happens to list first, since a real
+    # launcher/helper .exe often sits right next to the actual game .exe in
+    # the same folder.
     local -A dir_exe_name=()
-    local dirs=() dirs_matched=() exe_norm dir_is_match
+    local dirs=() dirs_matched=() dir_is_match
     for d in "${ordered_dirs[@]}"; do
         dir_is_match=""
         for f in "${candidates[@]}"; do
@@ -381,52 +415,78 @@ resolve_exe_folder() {
         fi
     done
     dirs=("${dirs_matched[@]}" "${dirs[@]}")
+    for d in "${dirs[@]}"; do
+        cand_dirs+=("$d")
+        cand_exe_name["$d"]="${dir_exe_name[$d]}"
+    done
 
-    if [ ${#dirs[@]} -eq 1 ]; then
-        echo -e "\n -> ${GREEN}Found the game executable:${NC} ${dir_exe_name[${dirs[0]}]} ${DIM}in ${dirs[0]}${NC}"
-        if confirm "Use this location?"; then
-            GAME_DIR="${dirs[0]}"
-            return 0
-        fi
-        return 1
-    elif [ ${#dirs[@]} -gt 1 ]; then
-        echo -e "\n${WHITE}Multiple folders with .exe files were found under this install — pick the one"
-        echo -e "with the game's main executable:${NC}"
-        local i
-        for i in "${!dirs[@]}"; do
-            print_option "$((i + 1))" "${dir_exe_name[${dirs[$i]}]}" "in ${dirs[$i]}"
-        done
-        print_option 0 "None of these / enter a path manually"
-        local choice
-        while true; do
-            prompt "Selection [0-${#dirs[@]}]: "
-            read -r choice || return 1
-            if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 0 ] && [ "$choice" -le ${#dirs[@]} ]; then
-                break
-            fi
-            print_warning "That's not a valid option — please enter a number from 0-${#dirs[@]}."
-        done
-        if [ "$choice" -eq 0 ]; then
-            # Honour "enter a path manually" right here. Returning 1 instead
-            # bails all the way back to the top-level locate-the-game menu,
-            # throwing away the scanned AppID and its known-games notes when
-            # the user only wants to point at a subfolder the scan missed.
-            prompt_manual_game_dir || return 1
-            if [ ! -d "$GAME_DIR" ]; then
-                print_error "Directory not found. Please check the path and try again."
-                GAME_DIR=""
-                return 1
-            fi
-            [[ "$GAME_DIR" == "$root"* ]] || print_warning "That path is outside the scanned install — the known-game notes for this title may not apply to it."
-            return 0
-        fi
-        GAME_DIR="${dirs[$((choice - 1))]}"
-        return 0
-    else
+    if [ ${#cand_dirs[@]} -eq 0 ]; then
         print_warning "No .exe files were found anywhere under this install."
         if confirm "Use the install root anyway?" N; then GAME_DIR="$root"; return 0; fi
         return 1
     fi
+
+    # Confirm the top pick (the scanned root when it holds a real .exe,
+    # otherwise the best name-matched nested folder) — the same
+    # "Found ... / Use this location?" the prefix stage uses for its detected
+    # value. Declining opens a menu rather than dead-ending back at the
+    # locate-the-game step: step through the other detected folders, type a
+    # path, or go back to game selection.
+    echo -e "\n -> ${GREEN}Found the game executable:${NC} ${cand_exe_name[${cand_dirs[0]}]} ${DIM}in ${cand_dirs[0]}${NC}"
+    if confirm "Use this location?"; then
+        GAME_DIR="${cand_dirs[0]}"
+        return 0
+    fi
+
+    local have_more=0 fb_max=2
+    if [ ${#cand_dirs[@]} -gt 1 ]; then have_more=1; fb_max=3; fi
+
+    echo ""
+    if [ "$have_more" -eq 1 ]; then
+        print_option 1 "Choose from the other detected folders"
+        print_option 2 "Enter the game's .exe folder path manually"
+        print_option 3 "Go back and choose a different game"
+    else
+        print_option 1 "Enter the game's .exe folder path manually"
+        print_option 2 "Go back and choose a different game"
+    fi
+    local choice
+    while true; do
+        prompt "Selection [1-${fb_max}]: "
+        read -r choice || return 1
+        [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "$fb_max" ] && break
+        print_warning "That's not a valid option — please enter a number from 1-${fb_max}."
+    done
+
+    if [ "$have_more" -eq 1 ] && [ "$choice" -eq 1 ]; then
+        echo -e "\n${WHITE}Detected folders with .exe files — pick the one with the game's main"
+        echo -e "executable:${NC}"
+        local i
+        for i in "${!cand_dirs[@]}"; do
+            print_option "$((i + 1))" "${cand_exe_name[${cand_dirs[$i]}]}" "in ${cand_dirs[$i]}"
+        done
+        print_option 0 "None of these / enter a path manually"
+        while true; do
+            prompt "Selection [0-${#cand_dirs[@]}]: "
+            read -r choice || return 1
+            if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 0 ] && [ "$choice" -le ${#cand_dirs[@]} ]; then
+                break
+            fi
+            print_warning "That's not a valid option — please enter a number from 0-${#cand_dirs[@]}."
+        done
+        if [ "$choice" -eq 0 ]; then
+            resolve_exe_manual_entry "$root" && return 0
+            return 1
+        fi
+        GAME_DIR="${cand_dirs[$((choice - 1))]}"
+        return 0
+    fi
+
+    # Collapse to manual=1 / go-back=2 whether or not the "other folders"
+    # entry was present.
+    [ "$have_more" -eq 1 ] && choice=$((choice - 1))
+    [ "$choice" -eq 1 ] && resolve_exe_manual_entry "$root" && return 0
+    return 1
 }
 
 detect_api_from_binary() {
