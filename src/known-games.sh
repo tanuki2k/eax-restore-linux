@@ -486,12 +486,12 @@ show_game_details_block() {
         echo -e "\n${NOTE}  Restoring EAX with:${NC}"
         print_wrapped "$solution"
     fi
+    show_known_game_notes "$id" "$store" 1
+    SCANNED_NOTES_SHOWN=1
     if [ -n "$patches" ]; then
         echo -e "\n${NOTE}  Suggested community patches:${NC}"
         print_wrapped "$patches"
     fi
-    show_known_game_notes "$id" "$store" 1
-    SCANNED_NOTES_SHOWN=1
     echo ""
 }
 
