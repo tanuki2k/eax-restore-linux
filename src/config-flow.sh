@@ -247,6 +247,37 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         TWEAK_C_APPLICABLE=0
     fi
 
+    # A game flagged EAX Unified in the known-games database reaches EAX through
+    # Creative's eax.dll shim. Tweak A creates empty eax.dll/eaxunified.dll to
+    # satisfy a title that only checks for the file's presence to unlock its EAX
+    # menu — but one that ships and loads a real eax.dll (GTA: San Andreas, Far
+    # Cry 2) would get it shadowed and can fail to boot. So for a flagged game,
+    # decide Tweak A here with a guarded check instead of the generic prompt.
+    TWEAK_A_HANDLED=0
+    if [ -z "$EAX_UNIFIED" ]; then
+        if [ "$LAUNCHER_TYPE" == "1" ]; then
+            resolve_eax_unified "$APPID" "steam"
+        else
+            resolve_eax_unified "$HEROIC_APP_NAME" "gog"
+        fi
+    fi
+    if [ -n "$EAX_UNIFIED" ] && [ "$TWEAK_A_APPLICABLE" -eq 1 ]; then
+        echo -e "${WHITE}$GAME_NAME is flagged as EAX Unified — it reaches EAX through an eax.dll shim.${NC}"
+        if confirm "Check whether it ships its own eax.dll?" Y; then
+            if is_genuine_dll "$GAME_DIR/eax.dll" || is_genuine_dll "$GAME_DIR/eaxunified.dll"; then
+                print_note "$GAME_NAME already ships its own eax.dll — the EAX Unified dummy-file tweak" \
+                    "isn't needed here and could stop the game booting, so it's being skipped."
+                ADVANCED_DUMMY="n"
+            elif confirm "Inject EAX Unified dummy files (Tweak A)? $GAME_NAME is flagged EAX Unified and has no eax.dll of its own." Y; then
+                ADVANCED_DUMMY="y"
+            else
+                ADVANCED_DUMMY="n"
+            fi
+            TWEAK_A_HANDLED=1
+        fi
+        echo ""
+    fi
+
     if [ "$TWEAK_A_APPLICABLE" -eq 0 ] && [ "$TWEAK_C_APPLICABLE" -eq 0 ]; then
         echo -e "${WHITE}Tweaks A and C target DirectSound3D specifically (the EAX Unified menu gate and"
         echo -e "dsound.dll COM routing), which don't apply to a direct OpenAL32.dll swap — only Tweak B applies here.${NC}\n"
@@ -263,7 +294,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         read -r SHOW_ADVANCED
 
         if [[ "$SHOW_ADVANCED" =~ $YES_RE ]]; then
-            if [ "$TWEAK_A_APPLICABLE" -eq 1 ]; then
+            if [ "$TWEAK_A_APPLICABLE" -eq 1 ] && [ "$TWEAK_A_HANDLED" -eq 0 ]; then
                 echo -e "\n${CYAN}${BOLD}Tweak A: EAX Unified Dummy Files${NC}"
                 echo -e "${WHITE}Tricks certain games (like KOTOR, Max Payne, and early Unreal Engine titles)"
                 echo -e "into unlocking the EAX menu option by creating harmless, empty eax.dll and eaxunified.dll files.${NC}"

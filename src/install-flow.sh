@@ -153,11 +153,19 @@
     print_task "Applying configurations and tweaks"
 
     if [[ "$ADVANCED_DUMMY" =~ $YES_RE ]]; then
-        if handle_conflict "$GAME_DIR/eax.dll"; then
+        # The dummy only helps a game that checks for the file's presence to
+        # unlock its EAX menu. If a genuine eax.dll/eaxunified.dll is already
+        # there the game ships and loads its own — shadowing it with a
+        # zero-byte file can stop it booting — so leave a real one alone.
+        if is_genuine_dll "$GAME_DIR/eax.dll"; then
+            print_status "Kept: existing eax.dll (game ships its own — dummy skipped)"
+        elif handle_conflict "$GAME_DIR/eax.dll"; then
             touch "$GAME_DIR/eax.dll"; echo "$GAME_DIR/eax.dll" >> "$INSTALL_MANIFEST"
             print_status "Created: eax.dll dummy"
         fi
-        if handle_conflict "$GAME_DIR/eaxunified.dll"; then
+        if is_genuine_dll "$GAME_DIR/eaxunified.dll"; then
+            print_status "Kept: existing eaxunified.dll (game ships its own — dummy skipped)"
+        elif handle_conflict "$GAME_DIR/eaxunified.dll"; then
             touch "$GAME_DIR/eaxunified.dll"; echo "$GAME_DIR/eaxunified.dll" >> "$INSTALL_MANIFEST"
             print_status "Created: eaxunified.dll dummy"
         fi

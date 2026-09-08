@@ -66,6 +66,15 @@ KNOWN_GAMES_URL="https://raw.githubusercontent.com/tanuki2k/eax-restore-linux/ma
 KNOWN_GAMES_CACHE="$BASE_SHARE/known-eax-games.json"
 KNOWN_GAMES_FILE=""
 KNOWN_GAMES_ATTEMPTED=""
+# Schema version this script expects. ensure_known_games_json warns once if the
+# loaded copy is older (a branch that hasn't merged a schema bump yet, or a
+# stale offline cache) so the silent `//` fallbacks below are visible.
+KNOWN_GAMES_SCHEMA_VERSION=2
+# Set by resolve_eax_unified / show_game_details_block when the picked game's
+# known-games entry is flagged eax_unified. The Advanced Compatibility Tweaks
+# step reads it to run the guarded "check for a real eax.dll" sub-flow for
+# Tweak A instead of the generic prompt.
+EAX_UNIFIED=""
 
 # Set by prompt_restart_or_quit when the user, at an EAX-impossible dead end,
 # chooses to go back and pick a different game rather than quit. The config

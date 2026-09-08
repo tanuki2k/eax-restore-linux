@@ -1,2285 +1,3581 @@
 {
-  "_comment": "Community-maintained database of well-known EAX-era games, matched by this script's library scanner and used for the install-time 'Heads up' notes. Contributions welcome via PR — see README.md's 'Contributing to the Known Games Database' section for the rules before adding an entry.",
+  "_comment": "Community-maintained database of well-known EAX-era games, matched by this script's library scanner and used for the install-time game-details notes. schema_version 2: per-store data lives under stores.steam / stores.gog. Contributions welcome via PR — see README.md's 'Contributing to the known games database' section for the field shapes and rules before adding an entry.",
+  "schema_version": 2,
   "games": [
     {
       "name": "Baldur's Gate: Enhanced Edition",
-      "steam_appid": 228280,
-      "gog_id": 1207666353,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "remaster",
+      "stores": {
+        "steam": {
+          "id": 228280,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1207666353,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "not_implemented",
-      "eax_status_notes": "The Enhanced Edition runs on a from-scratch OpenAL engine, built for its native Linux and macOS ports. It never had DirectSound3D EAX to begin with, so DSOAL has nothing to intercept here.",
+      "eax_status_notes": "The Enhanced Edition runs on a from-scratch OpenAL engine, built for its native Linux and macOS ports — it never had DirectSound3D EAX to begin with.",
       "eax_restore_hint": null,
-      "notes": "If you own the classic build too, it's a separate, independently detectable GOG product. See this file's 'Baldur's Gate: The Original Saga' entry (gog_id 1207658886) instead, which has real DirectSound3D EAX and isn't flagged impossible.",
-      "eax_versions": [
-        "1.0"
-      ]
+      "eax_versions": [],
+      "notes": "If you also own the classic build, it's a separate GOG product the scanner detects on its own — see the 'Baldur's Gate: The Original Saga' entry (gog_id 1207658886), which has real DirectSound3D EAX."
     },
     {
       "name": "Baldur's Gate II: Enhanced Edition",
-      "steam_appid": 257350,
-      "gog_id": 1207666373,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "remaster",
+      "stores": {
+        "steam": {
+          "id": 257350,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1207666373,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "not_implemented",
-      "eax_status_notes": "The Enhanced Edition runs on a from-scratch OpenAL engine, built for its native Linux and macOS ports. It never had DirectSound3D EAX to begin with, so DSOAL has nothing to intercept here.",
+      "eax_status_notes": "The Enhanced Edition runs on a from-scratch OpenAL engine, built for its native Linux and macOS ports — it never had DirectSound3D EAX to begin with.",
       "eax_restore_hint": null,
-      "notes": "If you own the classic build too, it's a separate, independently detectable GOG product. See this file's 'Baldur's Gate 2 Complete' entry (gog_id 1207658893) instead, which has real DirectSound3D EAX and isn't flagged impossible.",
-      "eax_versions": [
-        "1.0",
-        "2.0"
-      ]
+      "eax_versions": [],
+      "notes": "If you also own the classic build, it's a separate GOG product the scanner detects on its own — see the 'Baldur's Gate 2 Complete' entry (gog_id 1207658893), which has real DirectSound3D EAX."
     },
     {
       "name": "Baldur's Gate: The Original Saga",
-      "steam_appid": null,
-      "gog_id": 1207658886,
-      "steam_listing": null,
-      "gog_listing": "delisted",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1207658886,
+          "listing": "delisted",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": "The classic pre-2012 build, sold by GOG as a standalone product separate from 'Baldur's Gate: Enhanced Edition'. GOG's catalogue search doesn't surface it, but the product page and existing owners' libraries resolve normally. This build has real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite.",
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "This is the classic pre-2012 build, sold by GOG as a standalone product distinct from 'Baldur's Gate: Enhanced Edition'. Not surfaced by GOG's catalog search, but the product page and existing owners' libraries resolve normally. Real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite.",
       "eax_versions": [
         "1.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Baldur's Gate 2 Complete",
-      "steam_appid": null,
-      "gog_id": 1207658893,
-      "steam_listing": null,
-      "gog_listing": "delisted",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1207658893,
+          "listing": "delisted",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": "The classic pre-2013 build, sold by GOG as a standalone product separate from 'Baldur's Gate II: Enhanced Edition'. GOG's catalogue search doesn't surface it, but the product page and existing owners' libraries resolve normally. This build has real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite. Its EAX 2.0 environmental occlusion historically needed VxD drivers under Windows 9x (per the Vogons Wiki citation for this title), which is likely moot under Wine.",
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "This is the classic pre-2013 build, sold by GOG as a standalone product distinct from 'Baldur's Gate II: Enhanced Edition'. Not surfaced by GOG's catalog search, but the product page and existing owners' libraries resolve normally. Real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite. Its EAX 2.0 environmental occlusion historically needed VxD drivers under Windows 9x, per the Vogons Wiki's citation for this title — likely moot under Wine.",
       "eax_versions": [
         "1.0",
         "2.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Icewind Dale Complete",
-      "steam_appid": null,
-      "gog_id": 1207658888,
-      "steam_listing": null,
-      "gog_listing": "delisted",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1207658888,
+          "listing": "delisted",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": "The classic pre-2014 build, sold by GOG as a standalone product separate from 'Icewind Dale: Enhanced Edition'. GOG's catalogue search doesn't surface it, but the product page and existing owners' libraries resolve normally. This build has real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite.",
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "This is the classic pre-2014 build, sold by GOG as a standalone product distinct from 'Icewind Dale: Enhanced Edition'. Not surfaced by GOG's catalog search, but the product page and existing owners' libraries resolve normally. Real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite.",
       "eax_versions": [
         "1.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Planescape: Torment",
-      "steam_appid": null,
-      "gog_id": 1207658887,
-      "steam_listing": null,
-      "gog_listing": "delisted",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1207658887,
+          "listing": "delisted",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": "The classic pre-2017 build, sold by GOG as a standalone product separate from 'Planescape: Torment: Enhanced Edition'. GOG's catalogue search doesn't surface it, but the product page and existing owners' libraries resolve normally. This build has real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite.",
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "This is the classic pre-2017 build, sold by GOG as a standalone product distinct from 'Planescape: Torment: Enhanced Edition'. Not surfaced by GOG's catalog search, but the product page and existing owners' libraries resolve normally. Real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite.",
       "eax_versions": [
         "1.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Neverwinter Nights Diamond",
-      "steam_appid": null,
-      "gog_id": 1207658890,
-      "steam_listing": null,
-      "gog_listing": "delisted",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1207658890,
+          "listing": "delisted",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": "The classic build (base game plus all three official expansions), sold by GOG as a standalone product separate from 'Neverwinter Nights: Enhanced Edition'. GOG's catalogue search doesn't surface it, but the product page and existing owners' libraries resolve normally. This build has real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite.",
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "This is the classic build (base game plus all three official expansions), sold by GOG as a standalone product distinct from 'Neverwinter Nights: Enhanced Edition'. Not surfaced by GOG's catalog search, but the product page and existing owners' libraries resolve normally. Real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Deus Ex",
-      "steam_appid": 6910,
-      "gog_id": 1207658995,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 6910,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1207658995,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Deus Ex defaults to the Galaxy audio driver, which DSOAL can't add reverb to (open upstream bug: kcat/dsoal#79). If EAX sounds silent, try the community 'ALAudio for Deus Ex' mod instead — a separate, native-OpenAL audio path for this Unreal Engine 1 title, set via AudioDevice=ALAudio.ALAudioSubsystem in DeusEx.ini.",
       "eax_versions": [
         "1.0"
-      ]
+      ],
+      "notes": "Deus Ex defaults to its Galaxy audio driver, which this script can't add reverb to (open upstream bug kcat/dsoal#79). If EAX sounds silent, try the community 'ALAudio for Deus Ex' mod instead — a separate native-OpenAL audio path for this Unreal Engine 1 title, set via AudioDevice=ALAudio.ALAudioSubsystem in DeusEx.ini."
     },
     {
       "name": "Thief Gold",
-      "steam_appid": 211600,
-      "gog_id": 1207658997,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 211600,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": "Still the original Dark Engine build, on DirectSound3D.",
+          "patches": "TFix bundles the NewDark engine patch along with a range of modern-system fixes, and is worth installing alongside EAX."
+        },
+        "gog": {
+          "id": 1207658997,
+          "listing": "available",
+          "api": "openal",
+          "id_confidence": "storefront_verified",
+          "build_notes": "It comes with NewDark pre-installed, which runs positional audio and EAX reverb through OpenAL.",
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
-      "gog_api": "openal",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Thief Gold runs on the Dark Engine. The Steam release is still the original engine build, which uses DirectSound3D, so the standard DSOAL path applies — pairing it with TFix (which bundles the NewDark engine patch) is worth considering for broader compatibility fixes alongside EAX. GOG's version ships with NewDark already applied, and that rewrite routes positional audio and EAX reverb through OpenAL rather than DirectSound3D, leaving nothing for DSOAL to intercept; the script recognises this and deploys kcat's OpenAL Soft directly, in place of the older OpenAL build GOG bundles.",
       "eax_versions": [
         "1.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Thief II: The Metal Age",
-      "steam_appid": 211740,
-      "gog_id": 1207659001,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 211740,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": "Still the original Dark Engine build, on DirectSound3D.",
+          "patches": "T2Fix bundles the NewDark engine patch along with a range of modern-system fixes, and is worth installing alongside EAX."
+        },
+        "gog": {
+          "id": 1207659001,
+          "listing": "available",
+          "api": "openal",
+          "id_confidence": "storefront_verified",
+          "build_notes": "It comes with NewDark pre-installed, which runs positional audio and EAX reverb through OpenAL.",
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
-      "gog_api": "openal",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Thief II: The Metal Age runs on the Dark Engine. The Steam release is still the original engine build, which uses DirectSound3D, so the standard DSOAL path applies — pairing it with T2Fix (which bundles the NewDark engine patch) is worth considering for broader compatibility fixes alongside EAX. GOG's version ships with NewDark already applied, and that rewrite routes positional audio and EAX reverb through OpenAL rather than DirectSound3D, leaving nothing for DSOAL to intercept; the script recognises this and deploys kcat's OpenAL Soft directly, in place of the older OpenAL build GOG bundles.",
       "eax_versions": [
         "1.0",
         "2.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "System Shock 2",
-      "steam_appid": 238210,
-      "gog_id": 1207659172,
-      "steam_listing": "available",
-      "gog_listing": "delisted",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 238210,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": "The System Shock 2 Community Patch (SCP) is worth pairing, though it's general bugfix/polish, not audio-specific."
+        },
+        "gog": {
+          "id": 1207659172,
+          "listing": "delisted",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": "The original 1999 build's own GOG listing is delisted — GOG now sells only the 25th Anniversary Remaster (a different build, not covered here) — but existing owners of the classic build keep access.",
+          "patches": "The System Shock 2 Community Patch (SCP) is worth pairing, though it's general bugfix/polish, not audio-specific."
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "System Shock 2 ships pre-patched with NewDark, which has its own OpenAL Soft 'Hardware Acceleration' option in the in-game Audio menu — a separate native path from this script's DSOAL install. Worth trying if EAX doesn't sound right. The System Shock 2 Community Patch (SCP) is also worth pairing, though it's a general bugfix/polish patch, not an audio-specific one. Note: the original 1999 build's own GOG listing is delisted — GOG now only sells the 25th Anniversary Remaster, a different build that's deliberately left unmapped here — but existing owners of the classic build keep access to it.",
       "eax_versions": [
         "1.0"
-      ]
+      ],
+      "notes": "It comes with NewDark pre-installed, which has its own OpenAL Soft 'Hardware Acceleration' option in the in-game Audio menu — worth trying if EAX doesn't sound right."
     },
     {
       "name": "F.E.A.R.",
-      "steam_appid": 21090,
-      "gog_id": 1423058413,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 21090,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1423058413,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "If EAX audio drops out during large firefights, try this script's 'Expand Audio Limits' Advanced Compatibility Tweak (256 simultaneous sources, 48kHz) — that's exactly what it's for. A separate, older report (kcat/dsoal#67) described DSOAL failing to load under Wine for one user, but that's not universal — if EAX already works, you likely don't need any advanced tweaks. Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "2.0",
         "3.0",
         "4.0"
-      ]
+      ],
+      "notes": "If EAX audio drops out during large firefights, try the 'Expand Audio Limits' Advanced Compatibility Tweak (256 simultaneous sources, 48kHz) — that's what it's for. An older one-off report (kcat/dsoal#67) described a load failure under Wine, but it isn't universal; if EAX already works you don't need any advanced tweaks."
     },
     {
       "name": "Half-Life",
-      "steam_appid": 70,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 70,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "removed_by_patch",
       "eax_status_notes": "The original release used DirectSound3D, but a 2013 update replaced it with a newer audio engine that dropped EAX entirely.",
-      "eax_restore_hint": "If you still have the original pre-2013 CD/retail release installed outside Steam, its EAX calls are intact. Point this script at that install folder via a manual Wine prefix (not in this library scanner, since it has no Steam/GOG entry) and DSOAL should work normally there. For genuine EAX/A3D-style reverb and HRTF on the current Steam build instead, look into MetaAudio (github.com/LAGonauta/MetaAudio, requires MetaHookSv).",
-      "notes": null,
+      "eax_restore_hint": "If you still have the original pre-2013 CD/retail release installed outside Steam, its EAX calls are intact — point this script at that folder via a Wine prefix you set up yourself (it has no Steam/GOG entry, so the library scanner won't find it) and EAX restores normally. On the current Steam build, look into MetaAudio (github.com/LAGonauta/MetaAudio, needs MetaHookSv) for EAX/A3D-style reverb and HRTF.",
       "eax_versions": [
         "1.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Grand Theft Auto: San Andreas",
-      "steam_appid": 12120,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 12120,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": "There's no in-game EAX toggle — it switches on by itself once DirectSound3D is available, unlike GTA III and Vice City. For that to happen under Wine/Proton the game also needs the COM Registry Routing tweak (Tweak C). The current build (v3.0 / 'NewSteam') is a from-scratch Xbox-based port; the EAX/NVIDIA splash only shows on a downgraded v1.0, though the EAX Unified code is present in every version.",
+          "patches": "SilentPatch SA is the usual companion fix. If the stock reverb is too faint to make out, the community ReverbSA plugin ('[SA|OpenAL] Reverb' on GTAForums) adds pervasive, clearly audible reverb."
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Grand Theft Auto: San Andreas ships with EAX Unified (eax.dll 4.0.0.1) rather than native DirectSound3D EAX, and there is no in-game toggle — community reports say it activates on its own once the DirectSound3D path is available, unlike GTA III and Vice City which expose a menu option. For that path to come up under Wine/Proton the game's DirectSound CLSIDs have to resolve to the wrapper's dsound.dll, so opt into this script's Advanced Compatibility Tweaks and enable both 'EAX Unified Dummy Files' (Tweak A) and 'COM Registry Routing' (Tweak C) at install time. The stock game uses EAX very sparingly, so even a working setup is subtle; the clearest test spot is the enclosed warehouse in the 'Robbing Uncle Sam' mission, ideally compared against toggling the dsound.dll override off. SilentPatch SA is the usual companion fix, and the community ReverbSA plugin ('[SA|OpenAL] Reverb' on GTAForums) builds on the same DSOAL library to add pervasive, clearly audible reverb if the stock implementation is too faint to confirm. Note the current Steam build (v3.0 / 'NewSteam') is a from-scratch Xbox-based port; the EAX/NVIDIA splash screen only shows on a downgraded v1.0, though the EAX Unified code path is present in every version.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0",
         "4.0"
-      ]
+      ],
+      "notes": "EAX is used very sparingly here, so even a correct setup is subtle. The clearest place to check is the enclosed warehouse in the 'Robbing Uncle Sam' mission, ideally compared against toggling the audio override off."
     },
     {
       "name": "Vampire: The Masquerade - Bloodlines",
-      "steam_appid": 2600,
-      "gog_id": 1207659240,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 2600,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1207659240,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Vampire: The Masquerade - Bloodlines isn't documented (per PCGamingWiki) as having hardware EAX support — its acclaimed sound design is mostly scripted ambience, not DirectSound3D reverb zones. DSOAL may have little to no audible effect here; that's expected, not a bug. The 'List of games with EAX support' community database corroborates this: it lists a separate, earlier game, Vampire: The Masquerade – Redemption (2000), as EAX 1.0/2.0-capable, but does not list Bloodlines at all.",
-      "eax_versions": []
+      "eax_versions": [],
+      "notes": "Bloodlines isn't documented (per PCGamingWiki) as having hardware EAX — its sound design is mostly scripted ambience rather than DirectSound3D reverb zones, so restoring EAX may make little to no audible difference here. That's expected, not a fault. (The earlier Vampire: The Masquerade – Redemption, 2000, is the EAX-capable one.)"
     },
     {
       "name": "Thief: Deadly Shadows",
-      "steam_appid": 6980,
-      "gog_id": 1207659036,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 6980,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": "Runs on a modified Dark Engine build.",
+          "patches": "The unofficial 'Sneaky Upgrade' patch (works with the Steam and GOG releases) fixes a well-documented multi-core CPU issue and other modern-system quirks — worth pairing with EAX, much like TFix/T2Fix for the earlier Thief games."
+        },
+        "gog": {
+          "id": 1207659036,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": "Runs on a modified Dark Engine build.",
+          "patches": "The unofficial 'Sneaky Upgrade' patch (works with the Steam and GOG releases) fixes a well-documented multi-core CPU issue and other modern-system quirks — worth pairing with EAX, much like TFix/T2Fix for the earlier Thief games."
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Thief: Deadly Shadows runs on a modified Dark Engine build. The unofficial 'Sneaky Upgrade' patch (works with both the Steam and GOG releases) fixes a well-documented multi-core CPU issue and other modern-system quirks — worth pairing alongside EAX, similar to TFix/T2Fix for the earlier Thief games. Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak. EAX isn't on by default: in-game, go to Options, scroll to the bottom, and enable 'Audio Hardware Mixing', 'EAX ADVANCED HD', and 'EAX Multiple Environments' (per Creative's own setup guide for the game).",
       "eax_versions": [
         "3.0",
         "4.0"
-      ]
+      ],
+      "notes": "EAX is off by default: in-game, open Options, scroll to the bottom, and enable 'Audio Hardware Mixing', 'EAX ADVANCED HD' and 'EAX Multiple Environments' (per Creative's setup guide for the game)."
     },
     {
       "name": "Max Payne 2: The Fall of Max Payne",
-      "steam_appid": 12150,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 12150,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Star Wars Jedi Knight II: Jedi Outcast",
-      "steam_appid": 6030,
-      "gog_id": 1428935917,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 6030,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1428935917,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "openal",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "EAX support was only added in patch 1.03, so make sure the install is patched to at least that version.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": "EAX arrived in patch 1.03; if you're on a downgraded build, make sure it's patched to at least that."
     },
     {
       "name": "Star Wars Jedi Knight: Jedi Academy",
-      "steam_appid": 6020,
-      "gog_id": 1428935726,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 6020,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1428935726,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "openal",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Full EAX 4.0 ('Multi-Environment'/'Environment Panning') historically required a separate official patch beyond the base install, per Creative's own writeup — likely already included in the current Steam/GOG build, but worth checking the patch/build version if EAX seems limited to a single reverb zone.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0",
         "4.0"
-      ]
+      ],
+      "notes": "Full EAX 4.0 ('Multi-Environment' / 'Environment Panning') historically needed a separate official patch on top of the base install — likely already in the current Steam/GOG build, but worth checking the build version if EAX seems limited to a single reverb zone."
     },
     {
       "name": "Star Wars: Knights of the Old Republic",
-      "steam_appid": 32370,
-      "gog_id": 1207666283,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 32370,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1207666283,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Star Wars: Knights of the Old Republic II - The Sith Lords",
-      "steam_appid": 208580,
-      "gog_id": 1421404581,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 208580,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1421404581,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "removed_by_patch",
       "eax_status_notes": "The original release used DirectSound3D, but a later patch replaced it with a newer audio engine that dropped EAX entirely.",
       "eax_restore_hint": "Steam beta branch 'legacypc' reverts to the pre-patch build with EAX intact (right-click the game -> Properties -> Betas).",
-      "notes": null,
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Star Wars: Republic Commando",
-      "steam_appid": 6000,
-      "gog_id": 1421405135,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 6000,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1421405135,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Tom Clancy's Splinter Cell: Chaos Theory",
-      "steam_appid": 13570,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 13570,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Unreal Tournament: Game of the Year Edition",
-      "steam_appid": 13240,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 13240,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "The base install only has basic EAX 1.0/A3D support built into its levels. Full EAX 2.0 reverb/occlusion for the original Deathmatch and Capture the Flag maps needs Creative's separate official 'EAX Library Patch' (three files: uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip), historically mirrored at patches-scrolls.com — verify the mirror is still live and the files intact before installing. If you don't own this on Steam, OldUnreal (oldunreal.com) now distributes a free full-game installer with Epic's permission. Their patches add a selectable OpenAL-based 'ALAudio' renderer with its own reverb/EFX presets — this is a separate, modern reimplementation of environmental audio, not the original EAX calls, and picking it bypasses DirectSound3D entirely (nothing for this script's DSOAL to intercept). Select the original DirectSound3D-based audio renderer instead if you want this script's classic EAX restoration to apply.",
       "eax_versions": [
         "1.0",
         "2.0"
-      ]
+      ],
+      "notes": "The base install has only basic EAX 1.0 / A3D in its levels. Full EAX 2.0 reverb and occlusion for the original Deathmatch and Capture the Flag maps needs Creative's separate official 'EAX Library Patch' (uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip), historically mirrored at patches-scrolls.com — check the mirror is still live and the files intact before installing. If you don't own this on Steam, OldUnreal (oldunreal.com) distributes a free full-game installer with Epic's permission; its patches add a selectable OpenAL-based 'ALAudio' renderer, which is a separate modern reimplementation, not the original EAX calls. Pick the original DirectSound3D renderer if you want this script's EAX restoration to apply."
     },
     {
       "name": "Unreal Tournament 2004",
-      "steam_appid": 13230,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 13230,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "openal",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "If EAX seems inactive, check the in-game Audio settings: Audio Mode should be 'H/W 3D + EAX', with Low Sound Detail, System Driver, and Reverse Stereo all unchecked (per Creative's own setup notes for this game). If you don't own this on Steam, OldUnreal (oldunreal.com) now distributes a free full-game installer with Epic's permission. Their patches also add a selectable OpenAL-based 'ALAudio' renderer with its own reverb/EFX presets — a separate, modern reimplementation of environmental audio, not the original EAX calls; picking it bypasses DirectSound3D entirely (nothing for this script's DSOAL to intercept). Flathub's launcher for this game is a separate, actively-changing package, not necessarily the same build.",
       "eax_versions": [
         "3.0",
         "5.0"
-      ]
+      ],
+      "notes": "If EAX seems inactive, check the in-game Audio settings: Audio Mode should be 'H/W 3D + EAX', with Low Sound Detail, System Driver and Reverse Stereo all unchecked (per Creative's setup notes for this game). If you don't own this on Steam, OldUnreal (oldunreal.com) distributes a free full-game installer with Epic's permission; its patches add a selectable OpenAL-based 'ALAudio' renderer, a separate modern reimplementation rather than the original EAX calls. Flathub's launcher for this game is a separate, actively-changing package, not necessarily the same build."
     },
     {
       "name": "DOOM 3",
-      "steam_appid": 9050,
-      "gog_id": 1492054092,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 9050,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1492054092,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "local_install_verified",
+          "build_notes": "GOG sells this bundled with the 2012 BFG Edition remaster, and Heroic installs the two as separate library entries — this one is the classic build (its folder ends '.../DOOM 3'). BFG Edition is a different game and isn't covered here.",
+          "patches": null
+        }
+      },
       "default_api": "openal",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "GOG sells this bundled with the 2012 remaster, DOOM 3: BFG Edition, but Heroic installs them as two separate library entries with their own install paths — this gog_id matches only the classic build's own entry (confirmed against a real Heroic installed.json: appName 1492054092, install path ending '.../DOOM 3'). BFG Edition installs separately (appName 1135892318, path ending '.../DOOM 3 BFG') and isn't mapped here — it's a different, SDL/OpenAL-based audio path unrelated to this game's original DirectSound3D-era EAX support. EAX support was only added in patch 1.3, so make sure the classic build is patched to at least that version.",
       "eax_versions": [
         "4.0"
-      ]
+      ],
+      "notes": "EAX arrived in patch 1.3; if you're on a downgraded build, make sure it's patched to at least that."
     },
     {
       "name": "Serious Sam Classic: The First Encounter",
-      "steam_appid": 41050,
-      "gog_id": 1207658876,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 41050,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1207658876,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "2.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Serious Sam Classic: The Second Encounter",
-      "steam_appid": 41060,
-      "gog_id": 1207658877,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 41060,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1207658877,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "2.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Anachronox",
-      "steam_appid": 242940,
-      "gog_id": 1207659012,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 242940,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1207659012,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "1.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Unreal Gold",
-      "steam_appid": 13250,
-      "gog_id": 1207658679,
-      "steam_listing": "delisted",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 13250,
+          "listing": "delisted",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": "Epic pulled the original Unreal-series titles from Steam's sale; GOG remains the actively available option for new purchases.",
+          "patches": null
+        },
+        "gog": {
+          "id": 1207658679,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Epic pulled the original Unreal-series titles from Steam's sale (GOG remains the actively available option for new purchases). OldUnreal (oldunreal.com) also distributes a free full-game installer with Epic's permission; its v227 patch adds a selectable OpenAL-based 'ALAudio' renderer with its own reverb/EFX presets — per OldUnreal's own manual this is 'not the old original model, but some replacement for it', not a restoration of the original EAX calls, and picking it bypasses DirectSound3D entirely (nothing for DSOAL to intercept). Select v227's original DirectSound3D-based renderer instead for this script's classic EAX restoration to apply. If hardware 3D audio doesn't seem to engage, check Unreal.ini for UseSpatial=True, UseReverb=True, and Use3dHardware=True under the audio section.",
       "eax_versions": [
         "1.0"
-      ]
+      ],
+      "notes": "If hardware 3D audio doesn't engage, check Unreal.ini for UseSpatial=True, UseReverb=True and Use3dHardware=True in the audio section. If you don't own this on Steam, OldUnreal (oldunreal.com) distributes a free full-game installer with Epic's permission; its v227 patch adds a selectable OpenAL-based 'ALAudio' renderer, which OldUnreal's own manual calls 'not the old original model, but some replacement for it'. Pick v227's original DirectSound3D renderer if you want this script's EAX restoration to apply."
     },
     {
       "name": "Unreal II: The Awakening",
-      "steam_appid": 13200,
-      "gog_id": 1207658677,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 13200,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1207658677,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "openal",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Tom Clancy's Splinter Cell",
-      "steam_appid": 13560,
-      "gog_id": 1207659034,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 13560,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1207659034,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Postal 2",
-      "steam_appid": 223470,
-      "gog_id": 1207658755,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 223470,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1207658755,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "openal",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Tomb Raider: The Angel of Darkness",
-      "steam_appid": 225020,
-      "gog_id": 1207659089,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 225020,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1207659089,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0",
         "4.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Half-Life: Opposing Force",
-      "steam_appid": 50,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 50,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "removed_by_patch",
       "eax_status_notes": "The original release used DirectSound3D, but a 2013 update replaced it with a newer audio engine that dropped EAX entirely.",
-      "eax_restore_hint": "If you still have the original pre-2013 retail/CD release installed outside Steam, its EAX calls are intact and DSOAL should work normally there.",
-      "notes": null,
+      "eax_restore_hint": "If you still have the original pre-2013 retail/CD release installed outside Steam, its EAX calls are intact and this script restores EAX normally there.",
       "eax_versions": [
         "1.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Half-Life: Blue Shift",
-      "steam_appid": 130,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 130,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "removed_by_patch",
       "eax_status_notes": "The original release used DirectSound3D, but a 2013 update replaced it with a newer audio engine that dropped EAX entirely.",
-      "eax_restore_hint": "If you still have the original pre-2013 retail/CD release installed outside Steam, its EAX calls are intact and DSOAL should work normally there.",
-      "notes": null,
+      "eax_restore_hint": "If you still have the original pre-2013 retail/CD release installed outside Steam, its EAX calls are intact and this script restores EAX normally there.",
       "eax_versions": [
         "1.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Icewind Dale II",
-      "steam_appid": null,
-      "gog_id": 1207658891,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1207658891,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": "Sold only on GOG, as 'Icewind Dale 2 Complete'. Beamdog never gave it the OpenAL-native 'Enhanced Edition' treatment the other Infinity Engine games got, so this is still the original DirectSound3D-EAX Infinity Engine build.",
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Not sold on Steam — only available on GOG, as 'Icewind Dale 2 Complete'. Unlike Baldur's Gate, Baldur's Gate II, Icewind Dale, Planescape: Torment, and Neverwinter Nights (all rewritten by Beamdog as OpenAL-native 'Enhanced Editions' with EAX support gone, which is why none of those appear in this database), Icewind Dale II never got that treatment and is still the original DirectSound3D-EAX-era Infinity Engine build.",
       "eax_versions": [
         "1.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Neverwinter Nights 2",
-      "steam_appid": null,
-      "gog_id": 1207659162,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1207659162,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": "Steam only sells 2025's 'Enhanced Edition' rewrite, an OpenAL-native build — GOG's 'Neverwinter Nights 2 Complete' is still the original 2006 Obsidian/Electron Engine build with DirectSound3D EAX, which is why only a gog id is set here.",
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Steam only sells 2025's 'Enhanced Edition' rewrite (a different, OpenAL-native build) — GOG's 'Neverwinter Nights 2 Complete' is still the original 2006 Obsidian/Electron Engine build with DirectSound3D EAX intact, which is why only a gog_id is set here. For 5.1 surround, set Speaker Type=4 in nwn2.ini.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": "For 5.1 surround, set Speaker Type=4 in nwn2.ini."
     },
     {
       "name": "Medal of Honor: Allied Assault",
-      "steam_appid": null,
-      "gog_id": 1207659126,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1207659126,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": "Sold only on GOG, as the 'War Chest' edition — the base game plus the Spearhead and Breakthrough expansions.",
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Not currently sold on Steam — only available on GOG, as the 'War Chest' edition bundling the base game with the Spearhead and Breakthrough expansions.",
       "eax_versions": [
         "1.0",
         "2.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Stronghold",
-      "steam_appid": null,
-      "gog_id": 1207658712,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1207658712,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": "Sold only on GOG, as 'Stronghold HD' — the original 2001 Firefly Studios build. Steam delisted it in favour of the 2023 'Definitive Edition' remaster, which uses a different engine without DirectSound3D EAX.",
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Not currently sold on Steam (delisted in favor of the 2023 'Definitive Edition' remaster, a different engine without DirectSound3D EAX) — GOG's 'Stronghold HD' is the original 2001 Firefly Studios build with EAX support intact.",
       "eax_versions": [
         "1.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "The Witcher",
-      "steam_appid": 20900,
-      "gog_id": 1207658924,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 20900,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1207658924,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Only EAX 4.0 is supported. The game's own readme.rtf ('Known Issues' section) and CD Projekt's forums document EAX/Creative X-Fi Alchemy caveats worth checking if audio isn't right.",
       "eax_versions": [
         "4.0"
-      ]
+      ],
+      "notes": "Only EAX 4.0 is supported. The game's own readme.rtf ('Known Issues') and CD Projekt's forums document EAX / Creative X-Fi ALchemy caveats worth checking if audio isn't right."
     },
     {
       "name": "Rune Classic",
-      "steam_appid": 210950,
-      "gog_id": 1207660013,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 210950,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1207660013,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "2.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Star Wars: Battlefront II (Classic, 2005)",
-      "steam_appid": 6060,
-      "gog_id": 1421404701,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 6060,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1421404701,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Uses EAX Unified (eax.dll version 4.0.1.0) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0",
         "4.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Assassin's Creed",
-      "steam_appid": 15100,
-      "gog_id": 1207659023,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 15100,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1207659023,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak. The PC 'Director's Cut Edition' (the version sold on both Steam and GOG) isn't a remaster — it's the original 2008 PC port of the 2007 console game, with four PC-exclusive bonus missions and DirectX 10 support added on top.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0",
         "4.0"
-      ]
+      ],
+      "notes": "The PC 'Director's Cut Edition' sold on both stores isn't a remaster — it's the original 2008 PC port of the 2007 console game, with four PC-exclusive bonus missions and DirectX 10 support added on top."
     },
     {
       "name": "Dungeon Keeper II",
-      "steam_appid": 2616460,
-      "gog_id": 1207658959,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 2616460,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1207658959,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "1.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Dungeon Siege II",
-      "steam_appid": 39200,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 39200,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0",
         "4.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Hidden & Dangerous 2",
-      "steam_appid": 703320,
-      "gog_id": 1576810170,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 703320,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1576810170,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Kane & Lynch: Dead Men",
-      "steam_appid": 8080,
-      "gog_id": 1721096025,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 8080,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1721096025,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "openal",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "",
       "eax_versions": [
         "2.0",
         "3.0",
         "4.0",
         "5.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Soldier of Fortune II: Double Helix",
-      "steam_appid": null,
-      "gog_id": 1228964594,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1228964594,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": "Sold only on GOG, as the 'Gold Edition'.",
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Not sold on Steam — only available via GOG, as the 'Gold Edition'.",
       "eax_versions": [
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "SWAT 4",
-      "steam_appid": null,
-      "gog_id": 1409964317,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1409964317,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": "Sold only on GOG, as 'SWAT 4: Gold Edition'.",
+          "patches": null
+        }
+      },
       "default_api": "openal",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Not sold on Steam — only available via GOG, as 'SWAT 4: Gold Edition'.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Titan Quest Anniversary Edition",
-      "steam_appid": 475150,
-      "gog_id": 1196955511,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 475150,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1196955511,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Both stores now sell only this 2016 Anniversary Edition — no separate classic 2006 listing remains to compare against, and whether its audio path changed from the original hasn't been independently verified here.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0",
         "4.0"
-      ]
+      ],
+      "notes": "Both stores now sell only this 2016 Anniversary Edition; no separate classic 2006 listing remains to compare against, and whether its audio path changed from the original hasn't been independently verified here."
     },
     {
       "name": "Aliens versus Predator Classic 2000",
-      "steam_appid": 3730,
-      "gog_id": 1207665883,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 3730,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1207665883,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Both stores label this 'Classic 2000' to distinguish it from 2010's Aliens vs. Predator, an unrelated later game by a different developer.",
       "eax_versions": [
         "1.0"
-      ]
+      ],
+      "notes": "Both stores label this 'Classic 2000' to set it apart from 2010's Aliens vs. Predator, an unrelated later game by a different developer."
     },
     {
       "name": "Alpha Centauri",
-      "steam_appid": 2204130,
-      "gog_id": 1207658936,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 2204130,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1207658936,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "EAX support was added in the version 2.0 patch, per the game's own readme.txt — make sure the installed build is patched. Both stores sell this as the 'Planetary Pack', bundling the Alien Crossfire expansion.",
       "eax_versions": [
         "1.0"
-      ]
+      ],
+      "notes": "EAX arrived in the version 2.0 patch (per the game's readme.txt); if you're on a downgraded build, make sure it's patched. Both stores sell this as the 'Planetary Pack', bundling the Alien Crossfire expansion."
     },
     {
       "name": "BioShock",
-      "steam_appid": 7670,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 7670,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": "The original 2007 game, not 2016's 'BioShock Remastered'. GOG sells only the Remastered version, so no gog id is set here.",
+          "patches": null
+        }
+      },
       "default_api": "openal",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "This is the original 2007 game, distinct from 2016's 'BioShock Remastered' — GOG only sells the Remastered version, so no gog_id is set here.",
       "eax_versions": [
         "4.0",
         "5.0"
-      ]
+      ],
+      "notes": "This is the original 2007 game, distinct from 2016's 'BioShock Remastered' — GOG only sells the Remastered version, so no gog_id is set here."
     },
     {
       "name": "Brothers in Arms: Road to Hill 30",
-      "steam_appid": 15190,
-      "gog_id": 1993805983,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 15190,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1993805983,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "openal",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "",
       "eax_versions": [
         "2.0",
         "3.0",
         "4.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Clive Barker's Undying",
-      "steam_appid": null,
-      "gog_id": 1207659191,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1207659191,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": "Sold only on GOG.",
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Not sold on Steam — only available via GOG. Enable the 'Enable 3D Hardware' audio option in-game; the game logs whether EAX/A3D activated to Undying.log, useful for confirming it's working, per the Vogons Wiki's citation for this title.",
       "eax_versions": [
         "1.0"
-      ]
+      ],
+      "notes": "Turn on the 'Enable 3D Hardware' option in the in-game audio settings. The game records whether EAX/A3D actually activated to Undying.log, which is handy for confirming it worked (per the Vogons Wiki citation for this title)."
     },
     {
       "name": "Company of Heroes",
-      "steam_appid": 228200,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 228200,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Not sold on GOG. A 'Definitive Edition' remaster is announced but not yet released — this classic 2006 build is still the only Steam listing, worth rechecking this entry once that ships.",
       "eax_versions": [
         "2.0",
         "3.0",
         "4.0"
-      ]
+      ],
+      "notes": "Not on GOG. A 'Definitive Edition' remaster is announced but unreleased — this classic 2006 build is still the only Steam listing; worth rechecking this entry once that ships."
     },
     {
       "name": "Daikatana",
-      "steam_appid": 242980,
-      "gog_id": 1207659168,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 242980,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1207659168,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
-      "eax_versions": []
+      "eax_versions": [],
+      "notes": null
     },
     {
       "name": "Descent 3",
-      "steam_appid": 273590,
-      "gog_id": 1207658657,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 273590,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1207658657,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "2.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Dungeon Siege",
-      "steam_appid": 39190,
-      "gog_id": 1142020247,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 39190,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1142020247,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": "GOG sells this as the 'Dungeon Siege Collection' — base game plus both expansions.",
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "GOG sells this as the 'Dungeon Siege Collection' (base game plus both expansions).",
       "eax_versions": [
         "1.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Fallout Tactics: Brotherhood of Steel",
-      "steam_appid": 38420,
-      "gog_id": 1440163405,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 38420,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1440163405,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "1.0",
         "2.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Fallout Tactics Classic",
-      "steam_appid": null,
-      "gog_id": 3,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 3,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": "GOG relisted the game at some point — this is the older 'Classic' product ID some existing owners' libraries still show, the same game as the 'Fallout Tactics: Brotherhood of Steel' entry (gog_id 1440163405), with the same EAX support.",
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "GOG relisted this game at some point — this is the older \"Classic\" product ID some existing owners' libraries still show, distinct from this file's other 'Fallout Tactics: Brotherhood of Steel' entry (gog_id 1440163405). Same game, same EAX support.",
       "eax_versions": [
         "1.0",
         "2.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Far Cry 2",
-      "steam_appid": 19900,
-      "gog_id": 1207659042,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 19900,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1207659042,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": "GOG sells this as the 'Fortune's Edition' bundle, which throws in some bonus content.",
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Uses EAX Unified (eax.dll version 3.0.6.2) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak. GOG sells this as 'Far Cry 2: Fortune's Edition' (bundling bonus content).",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Final Fantasy VIII",
-      "steam_appid": 39150,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 39150,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": "The original 2013 PC port, not 2019's 'FINAL FANTASY VIII - REMASTERED'. GOG sells only the Remastered version, so no gog id is set here.",
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "This is the original 2013 PC port, distinct from 2019's 'FINAL FANTASY VIII - REMASTERED' — GOG only sells the Remastered version, so no gog_id is set here. Uses EAX Unified (eax.dll) rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
         "2.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Freedom Force",
-      "steam_appid": 8880,
-      "gog_id": 1445250806,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 8880,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1445250806,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "1.0",
         "2.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Alpha Prime",
-      "steam_appid": 2590,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 2590,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "4.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "AquaNox",
-      "steam_appid": 39630,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 39630,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "1.0",
         "2.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Arx Fatalis",
-      "steam_appid": 1700,
-      "gog_id": 1207658680,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 1700,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1207658680,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak. On Linux, the Arx Libertatis engine reimplementation (arx-libertatis.org) is a strong alternative: it runs the game natively without Wine or Proton, reuses your existing Arx Fatalis data files, and reproduces the game's environmental reverb through OpenAL Soft's EFX out of the box. That's a self-contained native audio path, so this script's DSOAL layer doesn't apply to an Arx Libertatis install — use one approach or the other.",
       "eax_versions": [
         "1.0",
         "2.0"
-      ]
+      ],
+      "notes": "On Linux, the Arx Libertatis engine reimplementation (arx-libertatis.org) is a strong alternative: it runs natively without Wine or Proton, reuses your existing Arx Fatalis data files, and reproduces the game's environmental reverb through OpenAL Soft's EFX out of the box. It's self-contained, so use it or this script's approach, not both."
     },
     {
       "name": "Battlestations: Midway",
-      "steam_appid": 6870,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 6870,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "3.0",
         "4.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Brothers in Arms: Hell's Highway",
-      "steam_appid": 15390,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 15390,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "4.0",
         "5.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Call of Juarez",
-      "steam_appid": 3020,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 3020,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Chaser",
-      "steam_appid": null,
-      "gog_id": 1207658894,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1207658894,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Chrome",
-      "steam_appid": 46420,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 46420,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "steamdb_historical",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Store page fully removed (redirects to Steam's homepage, not itself) — this AppID is SteamDB's confirmed historical record for this game, but hasn't been checked against a real local install. Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Chrome: SpecForce",
-      "steam_appid": 46430,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 46430,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "steamdb_historical",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Store page fully removed (redirects to Steam's homepage, not itself) — this AppID is SteamDB's confirmed historical record for this game, but hasn't been checked against a real local install. Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Commandos: Strike Force",
-      "steam_appid": 6820,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 6820,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "steamdb_historical",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Store page fully removed (redirects to Steam's homepage, not itself) — this AppID is SteamDB's confirmed historical record for this game, but hasn't been checked against a real local install.",
       "eax_versions": [
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Condemned: Criminal Origins",
-      "steam_appid": 4720,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 4720,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "2.0",
         "3.0",
         "4.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Crime Cities",
-      "steam_appid": null,
-      "gog_id": 1485600994,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1485600994,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "1.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Dreamfall: The Longest Journey",
-      "steam_appid": 6300,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 6300,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "3.0",
         "4.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Freedom Fighters",
-      "steam_appid": 1347780,
-      "gog_id": 1756362098,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 1347780,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1756362098,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Freedom Force vs. the Third Reich",
-      "steam_appid": 8890,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 8890,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "1.0",
         "2.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Freespace 2",
-      "steam_appid": null,
-      "gog_id": 5,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 5,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "1.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Full Spectrum Warrior",
-      "steam_appid": 4520,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 4520,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "3.0",
         "4.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Full Spectrum Warrior: Ten Hammers",
-      "steam_appid": 4530,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 4530,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "5.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Ghost Master",
-      "steam_appid": 6200,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 6200,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Giants: Citizen Kabuto",
-      "steam_appid": null,
-      "gog_id": 1207658650,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1207658650,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "1.0",
         "2.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Gothic",
-      "steam_appid": 65540,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 65540,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "2.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Gothic II: Gold Edition",
-      "steam_appid": 39510,
-      "gog_id": 1207658718,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 39510,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1207658718,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "2.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Race Driver: GRID",
-      "steam_appid": null,
-      "gog_id": 1207659233,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1207659233,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "5.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Hitman: Codename 47",
-      "steam_appid": 6900,
-      "gog_id": 1207658996,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 6900,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1207658996,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
         "2.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Hitman 2: Silent Assassin",
-      "steam_appid": 6850,
-      "gog_id": 1207659002,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 6850,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1207659002,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Hitman: Contracts",
-      "steam_appid": 247430,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 247430,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Hitman: Blood Money",
-      "steam_appid": 6860,
-      "gog_id": 1942346586,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 6860,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1942346586,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "2.0",
         "3.0",
         "4.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Incoming Forces",
-      "steam_appid": null,
-      "gog_id": 1207663873,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1207663873,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Infernal",
-      "steam_appid": 7060,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 7060,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "steamdb_historical",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Store page fully removed (redirects to Steam's homepage, not itself) — this AppID is SteamDB's confirmed historical record for this game, but hasn't been checked against a real local install. Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0",
         "4.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Killing Floor",
-      "steam_appid": 1250,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 1250,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Messiah",
-      "steam_appid": null,
-      "gog_id": 7,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 7,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "2.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Prince of Persia: The Sands of Time",
-      "steam_appid": 13600,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 13600,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Prince of Persia: Warrior Within",
-      "steam_appid": 13500,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 13500,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Prince of Persia: The Two Thrones",
-      "steam_appid": 13530,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 13530,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Project Eden",
-      "steam_appid": null,
-      "gog_id": 1207659235,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1207659235,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "1.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Red Faction",
-      "steam_appid": 20530,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 20530,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
         "2.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Requiem: Avenging Angel",
-      "steam_appid": null,
-      "gog_id": 1449581489,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1449581489,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "1.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Resident Evil 2",
-      "steam_appid": null,
-      "gog_id": 1534123252,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1534123252,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": "Sold only on GOG. Steam's 'Resident Evil 2' is the unrelated 2019 RE Engine remake, not the classic 1998 build this entry covers.",
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "GOG only — Steam sells only the 2019 RE Engine remake (a different, unrelated game with no DirectSound3D EAX support), not the classic 1998 build this entry covers.",
       "eax_versions": [
         "1.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "S.T.A.L.K.E.R.: Shadow of Chernobyl",
-      "steam_appid": 4500,
-      "gog_id": 1207660573,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 4500,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1207660573,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak. The Vogons Wiki specifically warns not to pair it with Creative's ALchemy wrapper.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": "The Vogons Wiki specifically warns against pairing this with Creative's ALchemy wrapper."
     },
     {
       "name": "S.T.A.L.K.E.R.: Clear Sky",
-      "steam_appid": 20510,
-      "gog_id": 1207660603,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 20510,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1207660603,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Distinct from 'S.T.A.L.K.E.R.: Clear Sky - Enhanced Edition', a separate Steam/GOG listing not covered by this entry. Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak. The Vogons Wiki specifically warns not to pair it with Creative's ALchemy wrapper.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": "Separate from 'S.T.A.L.K.E.R.: Clear Sky - Enhanced Edition', a different Steam/GOG listing this entry doesn't cover. The Vogons Wiki specifically warns against pairing this with Creative's ALchemy wrapper."
     },
     {
       "name": "S.T.A.L.K.E.R.: Call of Pripyat",
-      "steam_appid": 41700,
-      "gog_id": 1207660583,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 41700,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1207660583,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak. The Vogons Wiki specifically warns not to pair it with Creative's ALchemy wrapper.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": "The Vogons Wiki specifically warns against pairing this with Creative's ALchemy wrapper."
     },
     {
       "name": "Shogo: Mobile Armor Division",
-      "steam_appid": null,
-      "gog_id": 1207658659,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1207658659,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "1.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Sid Meier's Pirates!",
-      "steam_appid": 3920,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 3920,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Stubbs the Zombie in Rebel Without a Pulse",
-      "steam_appid": 7800,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 7800,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "4.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "The Wheel of Time",
-      "steam_appid": null,
-      "gog_id": 1584652180,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1584652180,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "1.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "TimeShift",
-      "steam_appid": 10130,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 10130,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "4.0",
         "5.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Titan Quest: Immortal Throne",
-      "steam_appid": 4550,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 4550,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "steamdb_historical",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Store page fully removed (redirects to Steam's homepage, not itself) — this AppID is SteamDB's confirmed historical record for this game, but hasn't been checked against a real local install. Superseded for new purchases by Titan Quest Anniversary Edition, already a separate entry in this file.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0",
         "4.0"
-      ]
+      ],
+      "notes": "Superseded for new purchases by Titan Quest Anniversary Edition, which is a separate entry in this file."
     },
     {
       "name": "Tom Clancy's Rainbow Six: Vegas",
-      "steam_appid": 13540,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 13540,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Tom Clancy's Rainbow Six: Vegas 2",
-      "steam_appid": 15120,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 15120,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0",
         "4.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Tom Clancy's Splinter Cell: Double Agent",
-      "steam_appid": 13580,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 13580,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0",
         "4.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "TRON 2.0",
-      "steam_appid": null,
-      "gog_id": 1655444396,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1655444396,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "UFO: Aftermath",
-      "steam_appid": null,
-      "gog_id": 1207658815,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1207658815,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "UFO: Aftershock",
-      "steam_appid": null,
-      "gog_id": 1207658816,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1207658816,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "2.0",
         "3.0",
         "4.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Vampire: The Masquerade - Redemption",
-      "steam_appid": null,
-      "gog_id": 1207658831,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1207658831,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "1.0",
         "2.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Warhammer 40,000: Fire Warrior",
-      "steam_appid": null,
-      "gog_id": 1394528466,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1394528466,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "X2: The Threat",
-      "steam_appid": 2800,
-      "gog_id": 1441032629,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 2800,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1441032629,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "1.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "X-COM: Enforcer",
-      "steam_appid": 7770,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 7770,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "1.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Avencast: Rise of the Mage",
-      "steam_appid": null,
-      "gog_id": 1731734113,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1731734113,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "openal",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "",
       "eax_versions": [
         "2.0",
         "3.0",
         "4.0",
         "5.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Brothers in Arms: Earned in Blood",
-      "steam_appid": 19800,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 19800,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "openal",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "",
       "eax_versions": [
         "2.0",
         "3.0",
         "4.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Dungeons & Dragons: Dragonshard",
-      "steam_appid": null,
-      "gog_id": 1207658928,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1207658928,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "The Vogons Wiki confirms a \"Creative EAX\" toggle exists in this game's Audio Settings, but doesn't document which EAX version(s) it supports.",
-      "eax_versions": []
+      "eax_versions": [],
+      "notes": "The Vogons Wiki confirms a 'Creative EAX' toggle in the game's Audio Settings but doesn't record which EAX version(s) it covers."
     },
     {
       "name": "Frontlines: Fuel of War",
-      "steam_appid": 9460,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 9460,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "openal",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "",
       "eax_versions": [
         "3.0",
         "4.0",
         "5.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Mafia",
-      "steam_appid": null,
-      "gog_id": 1595659240,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1595659240,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
+      "eax_unified": true,
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Own the 2020 remake ('Mafia: Definitive Edition') instead? That's a different, from-scratch Hangar 13 game with no relation to this classic 2002 build's EAX support — deliberately not mapped here. Uses EAX Unified rather than native DirectSound3D EAX — pairs with this script's EAX Unified Advanced Compatibility Tweak.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": "The 2020 remake ('Mafia: Definitive Edition') is a different, from-scratch Hangar 13 game with no relation to this classic 2002 build — it isn't covered here."
     },
     {
       "name": "Outcast",
-      "steam_appid": 336610,
-      "gog_id": 1207658853,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 336610,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1207658853,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "This is the \"Outcast 1.1\" listing — a 2014 official update to the classic 1999 build, same engine. Distinct from 2017's 'Outcast: Second Contact' and 2024's 'Outcast: A New Beginning' remakes, neither of which is mapped here.",
       "eax_versions": [
         "1.0"
-      ]
+      ],
+      "notes": "This is the 'Outcast 1.1' listing — a 2014 official update to the classic 1999 build, same engine. Separate from 2017's 'Outcast: Second Contact' and 2024's 'Outcast: A New Beginning' remakes, neither of which is covered here."
     },
     {
       "name": "Painkiller: Gold Edition",
-      "steam_appid": 3200,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 3200,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "local_install_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Store page fully removed (redirects to Steam's homepage, not itself) — but this AppID is confirmed from a real owned/installed copy in a user's own Steam library, not just a storefront record. Same original 2004 engine as the base game, not a remaster.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": "Same original 2004 engine as the base game, not a remaster."
     },
     {
       "name": "Populous: The Beginning",
-      "steam_appid": null,
-      "gog_id": 1207659027,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1207659027,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "1.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Project I.G.I.-2: Covert Strike",
-      "steam_appid": null,
-      "gog_id": 1207658666,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1207658666,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Psychonauts",
-      "steam_appid": 3830,
-      "gog_id": 1207658807,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 3830,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1207658807,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "openal",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "",
       "eax_versions": [
         "2.0",
         "3.0",
         "4.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Quake 4",
-      "steam_appid": 2210,
-      "gog_id": 1836059896,
-      "steam_listing": "available",
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 2210,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1836059896,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "openal",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "",
       "eax_versions": [
         "4.0",
         "5.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "RollerCoaster Tycoon 3: Complete Edition",
-      "steam_appid": null,
-      "gog_id": 1207659032,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1207659032,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "3.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "SimCity 3000: Unlimited",
-      "steam_appid": null,
-      "gog_id": 2086050016,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 2086050016,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "1.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Star Trek: Bridge Commander",
-      "steam_appid": null,
-      "gog_id": 1478736295,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1478736295,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Also supports A3D, per the Vogons Wiki's citation for this title.",
       "eax_versions": [
         "1.0",
         "2.0"
-      ]
+      ],
+      "notes": "Also supports A3D, per the Vogons Wiki citation for this title."
     },
     {
       "name": "Star Trek: Elite Force II",
-      "steam_appid": null,
-      "gog_id": 2125201406,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 2125201406,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Also supports A3D, per the Vogons Wiki's citation for this title.",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
-      ]
+      ],
+      "notes": "Also supports A3D, per the Vogons Wiki citation for this title."
     },
     {
       "name": "The Suffering",
-      "steam_appid": null,
-      "gog_id": 1268478205,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1268478205,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "The Vogons Wiki confirms an \"Enable EAX\" option exists in this game's configuration utility, but doesn't document which EAX version(s) it supports.",
-      "eax_versions": []
+      "eax_versions": [],
+      "notes": "The Vogons Wiki confirms an 'Enable EAX' option in the game's configuration utility but doesn't record which EAX version(s) it covers."
     },
     {
       "name": "The Suffering: Ties That Bind",
-      "steam_appid": null,
-      "gog_id": 1578481504,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1578481504,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "The Vogons Wiki confirms an \"Enable EAX\" option exists in this game's configuration utility, but doesn't document which EAX version(s) it supports.",
-      "eax_versions": []
+      "eax_versions": [],
+      "notes": "The Vogons Wiki confirms an 'Enable EAX' option in the game's configuration utility but doesn't record which EAX version(s) it covers."
     },
     {
       "name": "Tom Clancy's Ghost Recon: Advanced Warfighter 2",
-      "steam_appid": 13510,
-      "gog_id": null,
-      "steam_listing": "available",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 13510,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "openal",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "",
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0",
         "4.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Ultima 9: Ascension",
-      "steam_appid": null,
-      "gog_id": 1207659093,
-      "steam_listing": null,
-      "gog_listing": "available",
-      "edition": "original",
+      "stores": {
+        "gog": {
+          "id": 1207659093,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": null,
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": null,
       "eax_versions": [
         "1.0"
-      ]
+      ],
+      "notes": null
     },
     {
       "name": "Unreal Tournament 3",
-      "steam_appid": 13210,
-      "gog_id": null,
-      "steam_listing": "delisted",
-      "gog_listing": null,
-      "edition": "original",
+      "stores": {
+        "steam": {
+          "id": 13210,
+          "listing": "delisted",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "build_notes": "Delisted from Steam in December 2022, along with the rest of the Unreal series.",
+          "patches": null
+        }
+      },
       "default_api": "directsound3d",
       "eax_status": "supported",
+      "eax_status_notes": null,
       "eax_restore_hint": null,
-      "notes": "Delisted from Steam in December 2022, alongside the rest of the Unreal series.",
       "eax_versions": [
         "4.0",
         "5.0"
-      ]
+      ],
+      "notes": null
     }
   ]
 }

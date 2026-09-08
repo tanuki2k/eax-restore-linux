@@ -501,14 +501,14 @@ confirm_continue_if_openal_native() {
     [ "$SCRIPT_ACTION" == "i" ] || return
     [ -z "$1" ] && return
 
-    local field="steam_appid"
-    [ "$2" == "gog" ] && field="gog_id"
+    local store="steam"
+    [ "$2" == "gog" ] && store="gog"
     local game_name="${3:-this game}"
 
     local json_available=0 match_count=0
     local api="" matched=0 scanned=0 json_checked=0 declined=0
     # The known-games entry's audio API for this store, exactly as stored —
-    # the per-store override (steam_api/gog_api) if present, else default_api,
+    # the per-store override (stores.<store>.api) if present, else default_api,
     # else "" when the entry omits both. Distinct from $api, which is
     # defaulted to "directsound3d" for display. Only a literal "directsound3d"
     # here counts as confirmed.
@@ -528,10 +528,10 @@ confirm_continue_if_openal_native() {
         echo ""
         print_status "Checking known-games database for $game_name's audio API..."
 
-        match_count=$(jq -r --arg id "$1" --arg field "$field" '[.games[] | select((.[$field] // "") | tostring == $id)] | length' "$KNOWN_GAMES_FILE" 2>/dev/null)
+        match_count=$(jq -r --arg id "$1" --arg store "$store" '[.games[] | select((.stores[$store].id // "") | tostring == $id)] | length' "$KNOWN_GAMES_FILE" 2>/dev/null)
 
         if [ "${match_count:-0}" -gt 0 ]; then
-            db_api_raw=$(jq -r --arg id "$1" --arg field "$field" --arg store "$2" '.games[] | select((.[$field] // "") | tostring == $id) | (.[$store + "_api"] // .default_api // "")' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+            db_api_raw=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | (.stores[$store].api // .default_api // "")' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
             api="${db_api_raw:-directsound3d}"
             matched=1
         else
