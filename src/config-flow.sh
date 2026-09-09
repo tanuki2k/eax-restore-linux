@@ -282,12 +282,18 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         echo -e "${WHITE}Tweaks A and C target DirectSound3D specifically (the EAX Unified menu gate and"
         echo -e "dsound.dll COM routing), which don't apply to a direct OpenAL32.dll swap — only Tweak B applies here.${NC}\n"
 
-        echo -e "${CYAN}${BOLD}Tweak B: Expand Audio Limits${NC}"
-        echo -e "${WHITE}Forces the engine to handle 256 simultaneous sounds and locks the sample rate to 48kHz."
-        echo -e "Fixes audio dropping out in chaotic games (like F.E.A.R. or Thief), but uses more CPU.${NC}"
-        echo -e "\n${YELLOW}Expand OpenAL audio limits? (y/N): ${NC}"
+        echo -e "${YELLOW}Would you like to view and opt-in to this advanced tweak? (y/N): ${NC}"
         echo -e -n "> "
-        read -r ADVANCED_LIMITS
+        read -r SHOW_ADVANCED
+
+        if [[ "$SHOW_ADVANCED" =~ $YES_RE ]]; then
+            echo -e "\n${CYAN}${BOLD}Tweak B: Expand Audio Limits${NC}"
+            echo -e "${WHITE}Forces the engine to handle 256 simultaneous sounds and locks the sample rate to 48kHz."
+            echo -e "Fixes audio dropping out in chaotic games (like F.E.A.R. or Thief), but uses more CPU.${NC}"
+            echo -e "\n${YELLOW}Expand OpenAL audio limits? (y/N): ${NC}"
+            echo -e -n "> "
+            read -r ADVANCED_LIMITS
+        fi
     else
         echo -e "${YELLOW}Would you like to view and opt-in to these advanced tweaks? (y/N): ${NC}"
         echo -e -n "> "
