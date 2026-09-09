@@ -169,6 +169,28 @@ block_if_eax_not_implemented() {
     fi
 }
 
+detect_steam_beta_branch() {
+    # Usage: detect_steam_beta_branch <acf_file>
+    # Echoes the appmanifest's opted-in/mounted Steam beta branch ("BetaKey"),
+    # or nothing if there isn't one. Both "MountedConfig" (the branch actually
+    # installed — only present once Steam finishes updating to it) and
+    # "UserConfig" (the branch selected, which may not be downloaded yet)
+    # carry a same-named "BetaKey" key, so a plain grep across the whole file
+    # can't tell them apart — awk scopes the match to whichever block it's
+    # inside. MountedConfig wins when both are present since it reflects the
+    # actually-installed content, which is what the game will actually run.
+    local acf="$1"
+    [ -f "$acf" ] || return
+    local key
+    key=$(awk '/"MountedConfig"/{f=1} f&&/"BetaKey"/{print;exit}' "$acf" 2>/dev/null \
+        | sed -n 's/^[[:space:]]*"BetaKey"[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p')
+    if [ -z "$key" ]; then
+        key=$(awk '/"UserConfig"/{f=1} f&&/"BetaKey"/{print;exit}' "$acf" 2>/dev/null \
+            | sed -n 's/^[[:space:]]*"BetaKey"[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p')
+    fi
+    echo "$key"
+}
+
 scan_game_libraries() {
     # Usage: scan_game_libraries
     # Opt-in alternative to browsing/typing a path: scans Steam and Heroic
@@ -506,7 +528,7 @@ show_game_details_block() {
 }
 
 confirm_continue_if_eax_impossible() {
-    # Usage: confirm_continue_if_eax_impossible <id> <steam|gog>
+    # Usage: confirm_continue_if_eax_impossible <id> <steam|gog> [acf_file]
     # eax_status distinguishes two reasons this script has nothing to restore
     # on a build: "removed_by_patch" (a software update stripped EAX/A3D
     # calls from an otherwise-DirectSound3D game) vs. "not_implemented" (a
@@ -527,11 +549,13 @@ confirm_continue_if_eax_impossible() {
 
     local store="steam"
     [ "$2" == "gog" ] && store="gog"
+    local acf_file="$3"
 
-    local status="" workaround="false"
+    local status="" workaround="false" beta_branch=""
     if ensure_known_games_json; then
         status=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax_status // "supported"' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
         workaround=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .build_workaround_available // false' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+        beta_branch=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .stores[$store].beta_branch // empty' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
     elif [ "$store" != "gog" ] && [ -n "${EAX_IMPOSSIBLE_FALLBACK_STEAM[$1]:-}" ]; then
         # Only ever seeds Half-Life (AppID 70), which has no in-place
         # workaround — workaround stays "false".
@@ -554,6 +578,25 @@ confirm_continue_if_eax_impossible() {
             "isn't pointed at."
         prompt_restart_or_quit 1
         return
+    fi
+
+    # A known beta branch restores EAX in place — offer to check whether the
+    # user is already on it before showing a warning that wouldn't apply to
+    # them. Opt-in and reported before acting on it, same as every other
+    # auto-detect in this script (Proton prefix, AppID search): ask first,
+    # detect, report the raw result, then a separate confirm before it's
+    # allowed to skip the warning below.
+    if [ "$store" == "steam" ] && [ -n "$beta_branch" ] && [ -n "$acf_file" ]; then
+        if confirm "Check if you're already on Steam's '$beta_branch' beta branch, which keeps EAX intact?"; then
+            local detected
+            detected=$(detect_steam_beta_branch "$acf_file")
+            print_status "Detected beta branch: ${detected:-none}" ""
+            if [ "$detected" == "$beta_branch" ]; then
+                if confirm "Skip the EAX-removed warning — this build should already have EAX intact?"; then
+                    return
+                fi
+            fi
+        fi
     fi
 
     print_warning "EAX/A3D support was removed from this build by a software update, so there's" \

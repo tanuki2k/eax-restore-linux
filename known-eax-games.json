@@ -544,7 +544,8 @@
           "api": null,
           "id_confidence": "storefront_verified",
           "store_details": null,
-          "patches": null
+          "patches": null,
+          "beta_branch": "legacypc"
         },
         "gog": {
           "id": 1421404581,

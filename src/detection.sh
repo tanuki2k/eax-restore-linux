@@ -760,14 +760,14 @@ detect_game_environment() {
                 echo -e " -> ${GREEN}Detected Prefix:${NC} $DETECTED_STEAM_PREFIX"
                 if confirm "Use this detected prefix?"; then
                     PREFIX_PATH="$DETECTED_STEAM_PREFIX"
-                    confirm_continue_if_eax_impossible "$APPID" "steam"
+                    ACF_FILE="${GAME_DIR%/common/*}/appmanifest_${APPID}.acf"
+                    confirm_continue_if_eax_impossible "$APPID" "steam" "$ACF_FILE"
                     # User chose to go back and pick a different game — unwind
                     # to the config flow's Step 1-2 loop.
                     [ -n "$RESTART_REQUESTED" ] && return
                     if [ -z "$GAME_NAME" ]; then
                         # Same source appid/gog_id already come from, not the
                         # curated JSON — the appmanifest's own "name" key.
-                        ACF_FILE="${GAME_DIR%/common/*}/appmanifest_${APPID}.acf"
                         [ -f "$ACF_FILE" ] && GAME_NAME=$(sed -n 's/^[[:space:]]*"name"[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$ACF_FILE" 2>/dev/null | head -n 1)
                         [ -z "$GAME_NAME" ] && GAME_NAME="AppID $APPID"
                     fi
