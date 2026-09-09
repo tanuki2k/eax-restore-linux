@@ -292,7 +292,7 @@ resolve_exe_manual_entry() {
 }
 
 resolve_exe_folder() {
-    # Usage: resolve_exe_folder <install_root>
+    # Usage: resolve_exe_folder <install_root> [beta_branch]
     # A scanned install root isn't always the .exe folder — many titles nest
     # it (e.g. GameName/bin/x64), and get_game_directory's own detection
     # comment notes exactly this. Mirrors the prefix stage's shape: first
@@ -304,7 +304,15 @@ resolve_exe_folder() {
     # folders (when there's more than one), type a path, or go back to game
     # selection -- rather than dead-ending. Returns 1 (GAME_DIR left empty)
     # if the user declines/goes back at any point.
+    #
+    # beta_branch (optional, from known-eax-games.json's stores.steam.beta_branch)
+    # tailors the "no .exe found" case: some titles (e.g. KOTOR2) ship a
+    # native Linux port that Steam installs by default, which has no .exe at
+    # all -- the Windows build only comes down once the user opts into that
+    # beta branch. Passed in by scan_game_libraries, which already knows the
+    # matched game's known-games entry at this point.
     local root="$1"
+    local beta_branch="$2"
     GAME_DIR=""
 
     # Nested installs often bundle third-party installers/utilities
@@ -422,6 +430,11 @@ resolve_exe_folder() {
 
     if [ ${#cand_dirs[@]} -eq 0 ]; then
         print_warning "No .exe files were found anywhere under this install."
+        if [ -n "$beta_branch" ]; then
+            print_note "if Steam installed a native Linux build instead of Windows, opting" \
+                "into the '$beta_branch' beta branch (right-click the game -> Properties ->" \
+                "Betas) switches it to the Windows build this script needs."
+        fi
         if confirm "Use the install root anyway?" N; then GAME_DIR="$root"; return 0; fi
         return 1
     fi

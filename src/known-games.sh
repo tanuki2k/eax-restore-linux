@@ -337,7 +337,13 @@ scan_game_libraries() {
 
     GAME_NAME="${meta_names[$idx]}"
 
-    resolve_exe_folder "${paths[$idx]}" || return 1
+    local beta_branch=""
+    if [ "${stores[$idx]}" == "steam" ]; then
+        beta_branch=$(jq -r --arg id "${ids[$idx]}" \
+            '.games[] | select((.stores.steam.id // "") | tostring == $id) | .stores.steam.beta_branch // empty' \
+            "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+    fi
+    resolve_exe_folder "${paths[$idx]}" "$beta_branch" || return 1
 
     [ "${stores[$idx]}" == "steam" ] && SCANNED_APPID="${ids[$idx]}"
     return 0
