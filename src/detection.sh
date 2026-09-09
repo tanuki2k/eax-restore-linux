@@ -791,6 +791,18 @@ detect_game_environment() {
                 print_error "Proton prefix not found for AppID ${APPID}."
                 echo -e "\n${WHITE}If you just installed this game, Proton has not generated the prefix yet."
                 echo -e "Please launch the game at least once, close it, and try again.${NC}"
+                if ensure_known_games_json; then
+                    local beta_branch
+                    beta_branch=$(jq -r --arg id "$APPID" \
+                        '.games[] | select((.stores.steam.id // "") | tostring == $id) | .stores.steam.beta_branch // empty' \
+                        "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+                    if [ -n "$beta_branch" ]; then
+                        print_note "no prefix at all can also mean Steam installed a native Linux build" \
+                            "instead of Windows — no Proton is used for that. Opting into the" \
+                            "'$beta_branch' beta branch (right-click the game -> Properties -> Betas)" \
+                            "switches it to the Windows build this script needs."
+                    fi
+                fi
                 # "No" clears the AppID and drops back to the manual prompt for a
                 # corrected value; an empty entry there triggers restart/quit.
                 if ! confirm "Check this AppID again?"; then APPID=""; fi
