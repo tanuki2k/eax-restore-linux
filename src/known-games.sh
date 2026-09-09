@@ -473,18 +473,18 @@ show_game_details_block() {
         fi
     fi
     if [ -n "$store_details" ]; then
-        echo -e "\n${NOTE}  The $store_label build:${NC}"
+        echo -e "\n${NOTE}  $store_label details:${NC}"
         print_wrapped "$store_details"
-    fi
-    if [ -n "$restore_details" ]; then
-        echo -e "\n${NOTE}  The fix:${NC}"
-        print_wrapped "$restore_details"
     fi
     if [ "$eax_status" == "supported" ]; then
         local solution="DSOAL + OpenAL Soft"
         [ "$api" == "openal" ] && solution="OpenAL Soft"
         echo -e "\n${NOTE}  Restoring EAX with:${NC}"
         print_wrapped "$solution"
+    fi
+    if [ -n "$restore_details" ]; then
+        echo -e "\n${NOTE}  Additional steps:${NC}"
+        print_wrapped "$restore_details"
     fi
     show_known_game_notes "$id" "$store" 1
     SCANNED_NOTES_SHOWN=1
