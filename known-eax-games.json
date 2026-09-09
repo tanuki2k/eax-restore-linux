@@ -557,6 +557,7 @@
       },
       "default_api": "directsound3d",
       "eax_status": "removed_by_patch",
+      "build_workaround_available": true,
       "eax_status_details": "The original release used DirectSound3D, but a later patch replaced it with a newer audio engine that dropped EAX entirely.",
       "restore_details": "Steam beta branch 'legacypc' reverts to the pre-patch build with EAX intact (right-click the game -> Properties -> Betas).",
       "eax_versions": [

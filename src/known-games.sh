@@ -137,10 +137,11 @@ prompt_recent_game() {
 
 block_if_eax_not_implemented() {
     # Usage: block_if_eax_not_implemented <id> <steam|gog> <game_name>
-    # Early twin of confirm_continue_if_eax_impossible's not_implemented
-    # branch — called right after the scan pick so a known-impossible game is
-    # caught before wasting the user's time on AppID/prefix detection. On a
-    # match it hands off to prompt_restart_or_quit, which either exits or sets
+    # Early twin of confirm_continue_if_eax_impossible's hard-block branches
+    # (not_implemented, and removed_by_patch with no build_workaround_available)
+    # — called right after the scan pick so a known dead end is caught before
+    # wasting the user's time on AppID/prefix detection. On a match it hands
+    # off to prompt_restart_or_quit, which either exits or sets
     # RESTART_REQUESTED for scan_game_libraries to unwind on.
     [ "$SCRIPT_ACTION" == "i" ] || return
     [ -z "$1" ] && return
@@ -148,12 +149,21 @@ block_if_eax_not_implemented() {
 
     local store="steam"
     [ "$2" == "gog" ] && store="gog"
-    local status
+    local status workaround
     status=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax_status // "supported"' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+    workaround=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .build_workaround_available // false' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
 
     if [ "$status" == "not_implemented" ]; then
         print_error "$3 never implemented EAX/environmental audio in the first place, so" \
             "there would be nothing here for this script to restore."
+        prompt_restart_or_quit 1
+        return
+    fi
+
+    if [ "$status" == "removed_by_patch" ] && [ "$workaround" != "true" ]; then
+        print_error "EAX/A3D support was removed from $3's current build by a software update," \
+            "and there's no known in-place fix — restoring it would need a separate install this" \
+            "script isn't pointed at."
         prompt_restart_or_quit 1
         return
     fi
@@ -499,15 +509,16 @@ confirm_continue_if_eax_impossible() {
     # Usage: confirm_continue_if_eax_impossible <id> <steam|gog>
     # eax_status distinguishes two reasons this script has nothing to restore
     # on a build: "removed_by_patch" (a software update stripped EAX/A3D
-    # calls from an otherwise-DirectSound3D game — some
-    # users deliberately downgrade builds via old depot manifests, or a
-    # known alternate build/branch exists, specifically to work around
-    # this) vs. "not_implemented" (a remaster/rewrite that never had EAX in
-    # the first place — no build-level fix exists). "removed_by_patch" is a
-    # confirmable warning (the user might be on, or willing to switch to, an
-    # older build the ID alone can't tell us about — so "install anyway"
-    # stays offered); "not_implemented" is an unconditional no-op with no
-    # build-level workaround, so it skips straight to prompt_restart_or_quit.
+    # calls from an otherwise-DirectSound3D game) vs. "not_implemented" (a
+    # remaster/rewrite that never had EAX in the first place — no
+    # build-level fix exists). "not_implemented" is an unconditional no-op,
+    # so it skips straight to prompt_restart_or_quit. "removed_by_patch" is
+    # only a confirmable warning ("install anyway" stays offered) when
+    # build_workaround_available is true — meaning restore_details documents
+    # an in-place fix within this same store install (e.g. a Steam beta
+    # branch) the user might already be on or willing to switch to;
+    # otherwise (the field is absent) the only fix is a separate install this
+    # run isn't pointed at, so it hard-blocks exactly like "not_implemented".
     # Either way the dead end offers "pick a different game" rather than just
     # ending the script — see prompt_restart_or_quit / the Steps 1-2 loop in
     # config-flow.sh.
@@ -517,10 +528,13 @@ confirm_continue_if_eax_impossible() {
     local store="steam"
     [ "$2" == "gog" ] && store="gog"
 
-    local status=""
+    local status="" workaround="false"
     if ensure_known_games_json; then
         status=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax_status // "supported"' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+        workaround=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .build_workaround_available // false' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
     elif [ "$store" != "gog" ] && [ -n "${EAX_IMPOSSIBLE_FALLBACK_STEAM[$1]:-}" ]; then
+        # Only ever seeds Half-Life (AppID 70), which has no in-place
+        # workaround — workaround stays "false".
         status="removed_by_patch"
     fi
     if [ -z "$status" ] || [ "$status" == "supported" ]; then
@@ -530,6 +544,14 @@ confirm_continue_if_eax_impossible() {
     if [ "$status" == "not_implemented" ]; then
         print_error "This edition never implemented EAX/environmental audio in the first place, so" \
             "there would be nothing here for this script to restore."
+        prompt_restart_or_quit 1
+        return
+    fi
+
+    if [ "$workaround" != "true" ]; then
+        print_error "EAX/A3D support was removed from this build by a software update, and there's" \
+            "no known in-place fix — restoring it would need a separate install this script" \
+            "isn't pointed at."
         prompt_restart_or_quit 1
         return
     fi
