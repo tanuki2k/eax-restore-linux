@@ -79,6 +79,14 @@ print_result() {
     echo -e "\n${color}${text}${NC}"
 }
 
+# Usage: print_subheading "Label"
+# A "\n${NOTE}  Label:${NC}" section-header line introducing a print_wrapped
+# body — the GAME DETAILS block's Status:/Restoring EAX with:/Additional
+# steps:/Notes:/etc. labels.
+print_subheading() {
+    echo -e "\n${NOTE}  ${1}:${NC}"
+}
+
 # Usage: print_paragraph "line1" ["line2" ...]
 # A standalone WHITE paragraph — same multi-line joining as print_note/
 # print_warning/print_error but with no prefix. Always begins with its own

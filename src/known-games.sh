@@ -371,7 +371,7 @@ show_known_game_notes() {
     fi
 
     [ -z "$notes" ] && return
-    echo -e "\n${NOTE}  Notes:${NC}"
+    print_subheading "Notes"
     print_wrapped "$notes"
 }
 
@@ -465,7 +465,7 @@ show_game_details_block() {
     if [ "$eax_status" == "removed_by_patch" ] || [ "$eax_status" == "not_implemented" ]; then
         local state_line="Never implemented in this edition."
         [ "$eax_status" == "removed_by_patch" ] && state_line="Removed by a later patch."
-        echo -e "\n${NOTE}  Status:${NC}"
+        print_subheading "Status"
         if [ -n "$eax_status_details" ]; then
             print_wrapped "$state_line $eax_status_details"
         else
@@ -473,23 +473,23 @@ show_game_details_block() {
         fi
     fi
     if [ -n "$store_details" ]; then
-        echo -e "\n${NOTE}  $store_label details:${NC}"
+        print_subheading "$store_label details"
         print_wrapped "$store_details"
     fi
     if [ "$eax_status" == "supported" ]; then
         local solution="DSOAL + OpenAL Soft"
         [ "$api" == "openal" ] && solution="OpenAL Soft"
-        echo -e "\n${NOTE}  Restoring EAX with:${NC}"
+        print_subheading "Restoring EAX with"
         print_wrapped "$solution"
     fi
     if [ -n "$restore_details" ]; then
-        echo -e "\n${NOTE}  Additional steps:${NC}"
+        print_subheading "Additional steps"
         print_wrapped "$restore_details"
     fi
     show_known_game_notes "$id" "$store" 1
     SCANNED_NOTES_SHOWN=1
     if [ -n "$patches" ]; then
-        echo -e "\n${NOTE}  Suggested community patches:${NC}"
+        print_subheading "Suggested community patches"
         print_wrapped "$patches"
     fi
     echo ""
