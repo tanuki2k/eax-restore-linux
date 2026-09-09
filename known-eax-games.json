@@ -322,13 +322,13 @@
           "api": null,
           "id_confidence": "storefront_verified",
           "store_details": null,
-          "patches": null
+          "patches": "MetaAudio (github.com/LAGonauta/MetaAudio, needs MetaHookSv) adds EAX/A3D-style reverb and HRTF to the current Steam build."
         }
       },
       "default_api": "directsound3d",
       "eax_status": "removed_by_patch",
       "eax_status_details": "The original release used DirectSound3D, but a 2013 update replaced it with a newer audio engine that dropped EAX entirely.",
-      "restore_details": "If you still have the original pre-2013 CD/retail release installed outside Steam, its EAX calls are intact — point this script at that folder via a Wine prefix you set up yourself (it has no Steam/GOG entry, so the library scanner won't find it) and EAX restores normally. On the current Steam build, look into MetaAudio (github.com/LAGonauta/MetaAudio, needs MetaHookSv) for EAX/A3D-style reverb and HRTF.",
+      "restore_details": "If you still have the pre-2013 retail release, point this script at that install instead — EAX still works there.",
       "eax_versions": [
         "1.0"
       ],
