@@ -10,7 +10,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -18,14 +18,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "not_implemented",
-      "eax_status_notes": "The Enhanced Edition runs on a from-scratch OpenAL engine, built for its native Linux and macOS ports — it never had DirectSound3D EAX to begin with.",
-      "eax_restore_hint": null,
+      "eax_status_details": "The Enhanced Edition runs on a from-scratch OpenAL engine, built for its native Linux and macOS ports — it never had DirectSound3D EAX to begin with.",
+      "restore_details": null,
       "eax_versions": [],
       "notes": "If you also own the classic build, it's a separate GOG product the scanner detects on its own — see the 'Baldur's Gate: The Original Saga' entry (gog_id 1207658886), which has real DirectSound3D EAX."
     },
@@ -37,7 +37,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -45,14 +45,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "not_implemented",
-      "eax_status_notes": "The Enhanced Edition runs on a from-scratch OpenAL engine, built for its native Linux and macOS ports — it never had DirectSound3D EAX to begin with.",
-      "eax_restore_hint": null,
+      "eax_status_details": "The Enhanced Edition runs on a from-scratch OpenAL engine, built for its native Linux and macOS ports — it never had DirectSound3D EAX to begin with.",
+      "restore_details": null,
       "eax_versions": [],
       "notes": "If you also own the classic build, it's a separate GOG product the scanner detects on its own — see the 'Baldur's Gate 2 Complete' entry (gog_id 1207658893), which has real DirectSound3D EAX."
     },
@@ -64,14 +64,14 @@
           "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "The classic pre-2012 build, sold by GOG as a standalone product separate from 'Baldur's Gate: Enhanced Edition'. GOG's catalogue search doesn't surface it, but the product page and existing owners' libraries resolve normally. This build has real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite.",
+          "store_details": "The classic pre-2012 build, sold by GOG as a standalone product separate from 'Baldur's Gate: Enhanced Edition'. GOG's catalogue search doesn't surface it, but the product page and existing owners' libraries resolve normally. This build has real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite.",
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0"
       ],
@@ -85,14 +85,14 @@
           "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "The classic pre-2013 build, sold by GOG as a standalone product separate from 'Baldur's Gate II: Enhanced Edition'. GOG's catalogue search doesn't surface it, but the product page and existing owners' libraries resolve normally. This build has real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite. Its EAX 2.0 environmental occlusion historically needed VxD drivers under Windows 9x (per the Vogons Wiki citation for this title), which is likely moot under Wine.",
+          "store_details": "The classic pre-2013 build, sold by GOG as a standalone product separate from 'Baldur's Gate II: Enhanced Edition'. GOG's catalogue search doesn't surface it, but the product page and existing owners' libraries resolve normally. This build has real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite. Its EAX 2.0 environmental occlusion historically needed VxD drivers under Windows 9x (per the Vogons Wiki citation for this title), which is likely moot under Wine.",
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0"
@@ -107,14 +107,14 @@
           "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "The classic pre-2014 build, sold by GOG as a standalone product separate from 'Icewind Dale: Enhanced Edition'. GOG's catalogue search doesn't surface it, but the product page and existing owners' libraries resolve normally. This build has real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite.",
+          "store_details": "The classic pre-2014 build, sold by GOG as a standalone product separate from 'Icewind Dale: Enhanced Edition'. GOG's catalogue search doesn't surface it, but the product page and existing owners' libraries resolve normally. This build has real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite.",
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0"
       ],
@@ -128,14 +128,14 @@
           "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "The classic pre-2017 build, sold by GOG as a standalone product separate from 'Planescape: Torment: Enhanced Edition'. GOG's catalogue search doesn't surface it, but the product page and existing owners' libraries resolve normally. This build has real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite.",
+          "store_details": "The classic pre-2017 build, sold by GOG as a standalone product separate from 'Planescape: Torment: Enhanced Edition'. GOG's catalogue search doesn't surface it, but the product page and existing owners' libraries resolve normally. This build has real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite.",
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0"
       ],
@@ -149,14 +149,14 @@
           "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "The classic build (base game plus all three official expansions), sold by GOG as a standalone product separate from 'Neverwinter Nights: Enhanced Edition'. GOG's catalogue search doesn't surface it, but the product page and existing owners' libraries resolve normally. This build has real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite.",
+          "store_details": "The classic build (base game plus all three official expansions), sold by GOG as a standalone product separate from 'Neverwinter Nights: Enhanced Edition'. GOG's catalogue search doesn't surface it, but the product page and existing owners' libraries resolve normally. This build has real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite.",
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -172,7 +172,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -180,14 +180,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0"
       ],
@@ -201,7 +201,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "Still the original Dark Engine build, on DirectSound3D.",
+          "store_details": "Still the original Dark Engine build, on DirectSound3D.",
           "patches": "TFix bundles the NewDark engine patch along with a range of modern-system fixes, and is worth installing alongside EAX."
         },
         "gog": {
@@ -209,14 +209,14 @@
           "listing": "available",
           "api": "openal",
           "id_confidence": "storefront_verified",
-          "build_notes": "It comes with NewDark pre-installed, which runs positional audio and EAX reverb through OpenAL.",
+          "store_details": "It comes with NewDark pre-installed, which runs positional audio and EAX reverb through OpenAL.",
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0"
       ],
@@ -230,7 +230,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "Still the original Dark Engine build, on DirectSound3D.",
+          "store_details": "Still the original Dark Engine build, on DirectSound3D.",
           "patches": "T2Fix bundles the NewDark engine patch along with a range of modern-system fixes, and is worth installing alongside EAX."
         },
         "gog": {
@@ -238,14 +238,14 @@
           "listing": "available",
           "api": "openal",
           "id_confidence": "storefront_verified",
-          "build_notes": "It comes with NewDark pre-installed, which runs positional audio and EAX reverb through OpenAL.",
+          "store_details": "It comes with NewDark pre-installed, which runs positional audio and EAX reverb through OpenAL.",
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0"
@@ -260,7 +260,7 @@
           "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "The classic 1999 build was delisted from Steam in October 2025; Steam now sells only the 25th Anniversary Remaster, a different build not covered here.",
+          "store_details": "The classic 1999 build was delisted from Steam in October 2025; Steam now sells only the 25th Anniversary Remaster, a different build not covered here.",
           "patches": "The System Shock 2 Community Patch (SCP) is worth pairing, though it's general bugfix/polish, not audio-specific."
         },
         "gog": {
@@ -268,14 +268,14 @@
           "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "The original 1999 build's own GOG listing was delisted in October 2025 — GOG now sells only the 25th Anniversary Remaster (a different build, not covered here) — but existing owners of the classic build keep access.",
+          "store_details": "The original 1999 build's own GOG listing was delisted in October 2025 — GOG now sells only the 25th Anniversary Remaster (a different build, not covered here) — but existing owners of the classic build keep access.",
           "patches": "The System Shock 2 Community Patch (SCP) is worth pairing, though it's general bugfix/polish, not audio-specific."
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0"
       ],
@@ -289,7 +289,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -297,21 +297,21 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": "If EAX audio drops out during large firefights, try the 'Expand Audio Limits' Advanced Compatibility Tweak (256 simultaneous sources, 48kHz) — that's what it's for. An older one-off report (kcat/dsoal#67) described a load failure under Wine, but it isn't universal; if EAX already works you don't need any advanced tweaks.",
       "eax_versions": [
         "2.0",
         "3.0",
         "4.0"
       ],
-      "notes": "If EAX audio drops out during large firefights, try the 'Expand Audio Limits' Advanced Compatibility Tweak (256 simultaneous sources, 48kHz) — that's what it's for. An older one-off report (kcat/dsoal#67) described a load failure under Wine, but it isn't universal; if EAX already works you don't need any advanced tweaks."
+      "notes": null
     },
     {
       "name": "Half-Life",
@@ -321,14 +321,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "removed_by_patch",
-      "eax_status_notes": "The original release used DirectSound3D, but a 2013 update replaced it with a newer audio engine that dropped EAX entirely.",
-      "eax_restore_hint": "If you still have the original pre-2013 CD/retail release installed outside Steam, its EAX calls are intact — point this script at that folder via a Wine prefix you set up yourself (it has no Steam/GOG entry, so the library scanner won't find it) and EAX restores normally. On the current Steam build, look into MetaAudio (github.com/LAGonauta/MetaAudio, needs MetaHookSv) for EAX/A3D-style reverb and HRTF.",
+      "eax_status_details": "The original release used DirectSound3D, but a 2013 update replaced it with a newer audio engine that dropped EAX entirely.",
+      "restore_details": "If you still have the original pre-2013 CD/retail release installed outside Steam, its EAX calls are intact — point this script at that folder via a Wine prefix you set up yourself (it has no Steam/GOG entry, so the library scanner won't find it) and EAX restores normally. On the current Steam build, look into MetaAudio (github.com/LAGonauta/MetaAudio, needs MetaHookSv) for EAX/A3D-style reverb and HRTF.",
       "eax_versions": [
         "1.0"
       ],
@@ -342,15 +342,15 @@
           "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "There's no in-game EAX toggle unlike GTA III and Vice City. The current build (v3.0 / 'NewSteam') is a from-scratch Xbox-based port; the EAX/NVIDIA splash only shows on a downgraded v1.0, though the EAX Unified code is present in every version.",
+          "store_details": "There's no in-game EAX toggle unlike GTA III and Vice City. The current build (v3.0 / 'NewSteam') is a from-scratch Xbox-based port; the EAX/NVIDIA splash only shows on a downgraded v1.0, though the EAX Unified code is present in every version.",
           "patches": "SilentPatch SA is the usual companion fix. If the stock reverb is too faint to make out, the community ReverbSA plugin ('[SA|OpenAL] Reverb' on GTAForums) adds pervasive, clearly audible reverb."
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": "For EAX to work under Wine/Proton the game also needs the COM Registry Routing tweak (Tweak C).",
+      "eax_status_details": null,
+      "restore_details": "For EAX to work under Wine/Proton the game also needs the COM Registry Routing tweak (Tweak C).",
       "eax_versions": [
         "1.0",
         "2.0",
@@ -367,7 +367,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -375,14 +375,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [],
       "notes": "Bloodlines isn't documented (per PCGamingWiki) as having hardware EAX — its sound design is mostly scripted ambience rather than DirectSound3D reverb zones, so restoring EAX may make little to no audible difference here. That's expected, not a fault. (The earlier Vampire: The Masquerade – Redemption, 2000, is the EAX-capable one.)"
     },
@@ -394,7 +394,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "Runs on a modified Dark Engine build.",
+          "store_details": "Runs on a modified Dark Engine build.",
           "patches": "The unofficial 'Sneaky Upgrade' patch (works with the Steam and GOG releases) fixes a well-documented multi-core CPU issue and other modern-system quirks — worth pairing with EAX, much like TFix/T2Fix for the earlier Thief games."
         },
         "gog": {
@@ -402,20 +402,20 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "Runs on a modified Dark Engine build.",
+          "store_details": "Runs on a modified Dark Engine build.",
           "patches": "The unofficial 'Sneaky Upgrade' patch (works with the Steam and GOG releases) fixes a well-documented multi-core CPU issue and other modern-system quirks — worth pairing with EAX, much like TFix/T2Fix for the earlier Thief games."
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": "EAX is off by default: in-game, open Options, scroll to the bottom, and enable 'Audio Hardware Mixing', 'EAX ADVANCED HD' and 'EAX Multiple Environments' (per Creative's setup guide for the game).",
       "eax_versions": [
         "3.0",
         "4.0"
       ],
-      "notes": "EAX is off by default: in-game, open Options, scroll to the bottom, and enable 'Audio Hardware Mixing', 'EAX ADVANCED HD' and 'EAX Multiple Environments' (per Creative's setup guide for the game)."
+      "notes": null
     },
     {
       "name": "Max Payne 2: The Fall of Max Payne",
@@ -425,15 +425,15 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -449,7 +449,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -457,20 +457,20 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "openal",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0"
       ],
-      "notes": "EAX arrived in patch 1.03; if you're on a downgraded build, make sure it's patched to at least that."
+      "notes": null
     },
     {
       "name": "Star Wars Jedi Knight: Jedi Academy",
@@ -480,7 +480,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -488,21 +488,21 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "openal",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
         "3.0",
         "4.0"
       ],
-      "notes": "Full EAX 4.0 ('Multi-Environment' / 'Environment Panning') historically needed a separate official patch on top of the base install — likely already in the current Steam/GOG build, but worth checking the build version if EAX seems limited to a single reverb zone."
+      "notes": null
     },
     {
       "name": "Star Wars: Knights of the Old Republic",
@@ -512,7 +512,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -520,14 +520,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -543,7 +543,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -551,14 +551,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "removed_by_patch",
-      "eax_status_notes": "The original release used DirectSound3D, but a later patch replaced it with a newer audio engine that dropped EAX entirely.",
-      "eax_restore_hint": "Steam beta branch 'legacypc' reverts to the pre-patch build with EAX intact (right-click the game -> Properties -> Betas).",
+      "eax_status_details": "The original release used DirectSound3D, but a later patch replaced it with a newer audio engine that dropped EAX entirely.",
+      "restore_details": "Steam beta branch 'legacypc' reverts to the pre-patch build with EAX intact (right-click the game -> Properties -> Betas).",
       "eax_versions": [
         "1.0",
         "2.0",
@@ -574,7 +574,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -582,14 +582,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "2.0",
         "3.0"
@@ -604,15 +604,15 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -628,19 +628,19 @@
           "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "Delisted from Steam in December 2022, when Epic pulled the entire classic Unreal series from sale.",
-          "patches": null
+          "store_details": "Delisted from Steam in December 2022, when Epic pulled the entire classic Unreal series from sale. OldUnreal (oldunreal.com) distributes a free, Epic-authorized copy of the full game.",
+          "patches": "Creative's official 'EAX Library Patch' (uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip) adds full EAX 2.0 reverb and occlusion to the original Deathmatch and Capture the Flag maps — historically mirrored at patches-scrolls.com; verify the mirror and files before installing. OldUnreal's own patches also add a selectable OpenAL-based 'ALAudio' renderer, a strong alternative if you'd rather use it than this script's approach."
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0"
       ],
-      "notes": "The base install has only basic EAX 1.0 / A3D in its levels. Full EAX 2.0 reverb and occlusion for the original Deathmatch and Capture the Flag maps needs Creative's separate official 'EAX Library Patch' (uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip), historically mirrored at patches-scrolls.com — check the mirror is still live and the files intact before installing. Now that it's delisted from Steam, OldUnreal (oldunreal.com) is the practical way to get a legitimate copy — a free full-game installer distributed with Epic's permission; its patches add a selectable OpenAL-based 'ALAudio' renderer, which is a separate modern reimplementation, not the original EAX calls. Pick the original DirectSound3D renderer if you want this script's EAX restoration to apply."
+      "notes": null
     },
     {
       "name": "Unreal Tournament 2004",
@@ -650,19 +650,19 @@
           "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "Delisted from Steam in December 2022, when Epic pulled the entire classic Unreal series from sale.",
-          "patches": null
+          "store_details": "Delisted from Steam in December 2022, when Epic pulled the entire classic Unreal series from sale. OldUnreal (oldunreal.com) distributes a free, Epic-authorized copy of the full game. Flathub's launcher for this game is a separate, actively-changing package, not necessarily the same build.",
+          "patches": "OldUnreal's patches add a selectable OpenAL-based 'ALAudio' renderer — a strong alternative if you'd rather use it than this script's approach."
         }
       },
       "default_api": "openal",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": "Check the in-game Audio settings: Audio Mode should be 'H/W 3D + EAX', with Low Sound Detail, System Driver and Reverse Stereo all unchecked.",
       "eax_versions": [
         "3.0",
         "5.0"
       ],
-      "notes": "If EAX seems inactive, check the in-game Audio settings: Audio Mode should be 'H/W 3D + EAX', with Low Sound Detail, System Driver and Reverse Stereo all unchecked (per Creative's setup notes for this game). Now that it's delisted from Steam, OldUnreal (oldunreal.com) is the practical way to get a legitimate copy — a free full-game installer distributed with Epic's permission; its patches add a selectable OpenAL-based 'ALAudio' renderer, a separate modern reimplementation rather than the original EAX calls. Flathub's launcher for this game is a separate, actively-changing package, not necessarily the same build."
+      "notes": null
     },
     {
       "name": "DOOM 3",
@@ -672,7 +672,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -680,18 +680,18 @@
           "listing": "available",
           "api": null,
           "id_confidence": "local_install_verified",
-          "build_notes": "GOG sells this bundled with the 2012 BFG Edition remaster, and Heroic installs the two as separate library entries — this one is the classic build (its folder ends '.../DOOM 3'). BFG Edition is a different game and isn't covered here.",
+          "store_details": "GOG sells this bundled with the 2012 BFG Edition remaster, and Heroic installs the two as separate library entries — this one is the classic build (its folder ends '.../DOOM 3'). BFG Edition is a different game and isn't covered here.",
           "patches": null
         }
       },
       "default_api": "openal",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "4.0"
       ],
-      "notes": "EAX arrived in patch 1.3; if you're on a downgraded build, make sure it's patched to at least that."
+      "notes": null
     },
     {
       "name": "Serious Sam Classic: The First Encounter",
@@ -701,7 +701,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -709,14 +709,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "2.0"
       ],
@@ -730,7 +730,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -738,14 +738,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "2.0"
       ],
@@ -759,7 +759,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -767,14 +767,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0"
       ],
@@ -788,26 +788,26 @@
           "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "Delisted from Steam in December 2022, when Epic pulled the entire classic Unreal series from sale.",
-          "patches": null
+          "store_details": "Delisted from Steam in December 2022, when Epic pulled the entire classic Unreal series from sale. OldUnreal (oldunreal.com) distributes a free, Epic-authorized copy of the full game.",
+          "patches": "OldUnreal's v227 patch also adds a selectable OpenAL-based 'ALAudio' renderer — a strong alternative if you'd rather use it than this script's approach; it's a modern reimplementation of the game's audio, not the original DirectSound3D EAX path, so pick one or the other."
         },
         "gog": {
           "id": 1207658679,
           "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "Delisted from GOG in December 2022, a few days after the Steam version, in the same Unreal-series removal.",
-          "patches": null
+          "store_details": "Delisted from GOG in December 2022, when Epic pulled the entire classic Unreal series from sale. OldUnreal (oldunreal.com) distributes a free, Epic-authorized copy of the full game.",
+          "patches": "OldUnreal's v227 patch also adds a selectable OpenAL-based 'ALAudio' renderer — a strong alternative if you'd rather use it than this script's approach; it's a modern reimplementation of the game's audio, not the original DirectSound3D EAX path, so pick one or the other."
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": "Check Unreal.ini for UseSpatial=True, UseReverb=True and Use3dHardware=True in the audio section if hardware 3D audio doesn't engage.",
       "eax_versions": [
         "1.0"
       ],
-      "notes": "If hardware 3D audio doesn't engage, check Unreal.ini for UseSpatial=True, UseReverb=True and Use3dHardware=True in the audio section. With the game now delisted from both Steam and GOG, OldUnreal (oldunreal.com) is the practical way to get a legitimate copy — a free full-game installer distributed with Epic's permission; its v227 patch adds a selectable OpenAL-based 'ALAudio' renderer, which OldUnreal's own manual calls 'not the old original model, but some replacement for it'. Pick v227's original DirectSound3D renderer if you want this script's EAX restoration to apply."
+      "notes": null
     },
     {
       "name": "Unreal II: The Awakening",
@@ -817,7 +817,7 @@
           "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "Delisted from Steam in December 2022, when Epic pulled the entire classic Unreal series from sale.",
+          "store_details": "Delisted from Steam in December 2022, when Epic pulled the entire classic Unreal series from sale.",
           "patches": null
         },
         "gog": {
@@ -825,14 +825,14 @@
           "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "Delisted from GOG in December 2022, when Epic pulled the entire classic Unreal series from sale.",
+          "store_details": "Delisted from GOG in December 2022, when Epic pulled the entire classic Unreal series from sale.",
           "patches": null
         }
       },
       "default_api": "openal",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -848,7 +848,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -856,15 +856,15 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -880,7 +880,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -888,14 +888,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "openal",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -911,7 +911,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -919,15 +919,15 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -944,14 +944,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "removed_by_patch",
-      "eax_status_notes": "The original release used DirectSound3D, but a 2013 update replaced it with a newer audio engine that dropped EAX entirely.",
-      "eax_restore_hint": "If you still have the original pre-2013 retail/CD release installed outside Steam, its EAX calls are intact and this script restores EAX normally there.",
+      "eax_status_details": "The original release used DirectSound3D, but a 2013 update replaced it with a newer audio engine that dropped EAX entirely.",
+      "restore_details": "If you still have the original pre-2013 retail/CD release installed outside Steam, its EAX calls are intact and this script restores EAX normally there.",
       "eax_versions": [
         "1.0"
       ],
@@ -965,14 +965,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "removed_by_patch",
-      "eax_status_notes": "The original release used DirectSound3D, but a 2013 update replaced it with a newer audio engine that dropped EAX entirely.",
-      "eax_restore_hint": "If you still have the original pre-2013 retail/CD release installed outside Steam, its EAX calls are intact and this script restores EAX normally there.",
+      "eax_status_details": "The original release used DirectSound3D, but a 2013 update replaced it with a newer audio engine that dropped EAX entirely.",
+      "restore_details": "If you still have the original pre-2013 retail/CD release installed outside Steam, its EAX calls are intact and this script restores EAX normally there.",
       "eax_versions": [
         "1.0"
       ],
@@ -986,14 +986,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "Sold only on GOG, as 'Icewind Dale 2 Complete'. Beamdog never gave it the OpenAL-native 'Enhanced Edition' treatment the other Infinity Engine games got, so this is still the original DirectSound3D-EAX Infinity Engine build.",
+          "store_details": "Sold only on GOG, as 'Icewind Dale 2 Complete'. Beamdog never gave it the OpenAL-native 'Enhanced Edition' treatment the other Infinity Engine games got, so this is still the original DirectSound3D-EAX Infinity Engine build.",
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0"
       ],
@@ -1007,14 +1007,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "Steam only sells 2025's 'Enhanced Edition' rewrite, an OpenAL-native build — GOG's 'Neverwinter Nights 2 Complete' is still the original 2006 Obsidian/Electron Engine build with DirectSound3D EAX, which is why only a gog id is set here.",
+          "store_details": "Steam only sells 2025's 'Enhanced Edition' rewrite, an OpenAL-native build — GOG's 'Neverwinter Nights 2 Complete' is still the original 2006 Obsidian/Electron Engine build with DirectSound3D EAX, which is why only a gog id is set here.",
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -1030,14 +1030,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "Sold only on GOG, as the 'War Chest' edition — the base game plus the Spearhead and Breakthrough expansions.",
+          "store_details": "Sold only on GOG, as the 'War Chest' edition — the base game plus the Spearhead and Breakthrough expansions.",
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0"
@@ -1052,14 +1052,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "Sold only on GOG, as 'Stronghold HD' — the original 2001 Firefly Studios build. Steam delisted it in favour of the 2023 'Definitive Edition' remaster, which uses a different engine without DirectSound3D EAX.",
+          "store_details": "Sold only on GOG, as 'Stronghold HD' — the original 2001 Firefly Studios build. Steam delisted it in favour of the 2023 'Definitive Edition' remaster, which uses a different engine without DirectSound3D EAX.",
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0"
       ],
@@ -1073,7 +1073,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -1081,14 +1081,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "4.0"
       ],
@@ -1102,7 +1102,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -1110,14 +1110,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "2.0"
       ],
@@ -1131,7 +1131,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -1139,15 +1139,15 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -1164,7 +1164,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -1172,15 +1172,15 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -1197,7 +1197,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -1205,14 +1205,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0"
       ],
@@ -1226,14 +1226,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -1250,7 +1250,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -1258,14 +1258,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "3.0"
       ],
@@ -1279,7 +1279,7 @@
           "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "Square Enix removed the Steam version from sale in February 2021 and has said it has no plans to restore it. The GOG release is unaffected.",
+          "store_details": "Square Enix removed the Steam version from sale in February 2021 and has said it has no plans to restore it. The GOG release is unaffected.",
           "patches": null
         },
         "gog": {
@@ -1287,14 +1287,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "openal",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "2.0",
         "3.0",
@@ -1311,14 +1311,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "Sold only on GOG, as the 'Gold Edition'.",
+          "store_details": "Sold only on GOG, as the 'Gold Edition'.",
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "3.0"
       ],
@@ -1332,14 +1332,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "Sold only on GOG, as 'SWAT 4: Gold Edition'.",
+          "store_details": "Sold only on GOG, as 'SWAT 4: Gold Edition'.",
           "patches": null
         }
       },
       "default_api": "openal",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -1355,7 +1355,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -1363,14 +1363,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -1387,7 +1387,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -1395,14 +1395,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0"
       ],
@@ -1416,7 +1416,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": "Both stores sell this as the 'Planetary Pack', bundling the Alien Crossfire expansion.",
           "patches": null
         },
         "gog": {
@@ -1424,18 +1424,18 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": "Both stores sell this as the 'Planetary Pack', bundling the Alien Crossfire expansion.",
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0"
       ],
-      "notes": "EAX arrived in the version 2.0 patch (per the game's readme.txt); if you're on a downgraded build, make sure it's patched. Both stores sell this as the 'Planetary Pack', bundling the Alien Crossfire expansion."
+      "notes": null
     },
     {
       "name": "BioShock",
@@ -1445,14 +1445,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "The original 2007 game, not 2016's 'BioShock Remastered'. GOG sells only the Remastered version, so no gog id is set here.",
+          "store_details": "The original 2007 game, not 2016's 'BioShock Remastered'. GOG sells only the Remastered version, so no gog id is set here.",
           "patches": null
         }
       },
       "default_api": "openal",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "4.0",
         "5.0"
@@ -1467,7 +1467,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -1475,14 +1475,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "openal",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "2.0",
         "3.0",
@@ -1498,14 +1498,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "Sold only on GOG.",
+          "store_details": "Sold only on GOG.",
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0"
       ],
@@ -1519,14 +1519,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "2.0",
         "3.0",
@@ -1542,7 +1542,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -1550,14 +1550,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [],
       "notes": null
     },
@@ -1569,7 +1569,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -1577,14 +1577,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "2.0"
       ],
@@ -1598,7 +1598,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -1606,14 +1606,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "GOG sells this as the 'Dungeon Siege Collection' — base game plus both expansions.",
+          "store_details": "GOG sells this as the 'Dungeon Siege Collection' — base game plus both expansions.",
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0"
       ],
@@ -1627,7 +1627,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -1635,14 +1635,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0"
@@ -1657,14 +1657,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "GOG relisted the game at some point — this is the older 'Classic' product ID some existing owners' libraries still show, the same game as the 'Fallout Tactics: Brotherhood of Steel' entry (gog_id 1440163405), with the same EAX support.",
+          "store_details": "GOG relisted the game at some point — this is the older 'Classic' product ID some existing owners' libraries still show, the same game as the 'Fallout Tactics: Brotherhood of Steel' entry (gog_id 1440163405), with the same EAX support.",
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0"
@@ -1679,7 +1679,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -1687,15 +1687,15 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "GOG sells this as the 'Fortune's Edition' bundle, which throws in some bonus content.",
+          "store_details": "GOG sells this as the 'Fortune's Edition' bundle, which throws in some bonus content.",
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -1711,15 +1711,15 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "The original 2013 PC port, not 2019's 'FINAL FANTASY VIII - REMASTERED'. GOG sells only the Remastered version, so no gog id is set here.",
+          "store_details": "The original 2013 PC port, not 2019's 'FINAL FANTASY VIII - REMASTERED'. GOG sells only the Remastered version, so no gog id is set here.",
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0"
@@ -1734,7 +1734,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -1742,14 +1742,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0"
@@ -1764,14 +1764,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "4.0"
       ],
@@ -1785,14 +1785,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0"
@@ -1807,7 +1807,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -1815,15 +1815,15 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0"
@@ -1838,14 +1838,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "3.0",
         "4.0"
@@ -1860,14 +1860,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "4.0",
         "5.0"
@@ -1882,15 +1882,15 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -1906,14 +1906,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "3.0"
       ],
@@ -1927,15 +1927,15 @@
           "listing": "delisted",
           "api": null,
           "id_confidence": "steamdb_historical",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -1951,15 +1951,15 @@
           "listing": "delisted",
           "api": null,
           "id_confidence": "steamdb_historical",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -1975,14 +1975,14 @@
           "listing": "delisted",
           "api": null,
           "id_confidence": "steamdb_historical",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "3.0"
       ],
@@ -1996,15 +1996,15 @@
           "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "Delisted from Steam and the Microsoft Store at the end of October 2025, with no reason given.",
+          "store_details": "Delisted from Steam and the Microsoft Store at the end of October 2025, with no reason given.",
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "2.0",
         "3.0",
@@ -2020,14 +2020,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0"
       ],
@@ -2041,14 +2041,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "3.0",
         "4.0"
@@ -2063,7 +2063,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -2071,15 +2071,15 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -2095,14 +2095,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0"
@@ -2117,14 +2117,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0"
       ],
@@ -2138,14 +2138,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "3.0",
         "4.0"
@@ -2160,14 +2160,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "5.0"
       ],
@@ -2181,14 +2181,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "3.0"
       ],
@@ -2202,14 +2202,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0"
@@ -2224,14 +2224,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "2.0"
       ],
@@ -2245,7 +2245,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -2253,14 +2253,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "2.0"
       ],
@@ -2274,14 +2274,14 @@
           "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "Delisted from GOG and other stores at the end of 2016; GOG attributed the removal to expired car and music licensing.",
+          "store_details": "Delisted from GOG and other stores at the end of 2016; GOG attributed the removal to expired car and music licensing.",
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "5.0"
       ],
@@ -2295,7 +2295,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -2303,15 +2303,15 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0"
@@ -2326,7 +2326,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -2334,15 +2334,15 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -2358,15 +2358,15 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -2382,7 +2382,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -2390,14 +2390,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "2.0",
         "3.0",
@@ -2413,14 +2413,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "2.0",
         "3.0"
@@ -2435,15 +2435,15 @@
           "listing": "delisted",
           "api": null,
           "id_confidence": "steamdb_historical",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -2460,14 +2460,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "3.0"
       ],
@@ -2481,14 +2481,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "2.0"
       ],
@@ -2502,15 +2502,15 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -2526,15 +2526,15 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -2550,15 +2550,15 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -2574,14 +2574,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0"
       ],
@@ -2595,15 +2595,15 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0"
@@ -2618,14 +2618,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0"
       ],
@@ -2639,14 +2639,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "Sold only on GOG. Steam's 'Resident Evil 2' is the unrelated 2019 RE Engine remake, not the classic 1998 build this entry covers.",
+          "store_details": "Sold only on GOG. Steam's 'Resident Evil 2' is the unrelated 2019 RE Engine remake, not the classic 1998 build this entry covers.",
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0"
       ],
@@ -2660,7 +2660,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -2668,15 +2668,15 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -2692,7 +2692,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -2700,15 +2700,15 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -2724,7 +2724,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -2732,15 +2732,15 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -2756,14 +2756,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0"
       ],
@@ -2777,14 +2777,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -2800,14 +2800,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "4.0"
       ],
@@ -2821,14 +2821,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0"
       ],
@@ -2842,14 +2842,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "4.0",
         "5.0"
@@ -2864,14 +2864,14 @@
           "listing": "delisted",
           "api": null,
           "id_confidence": "steamdb_historical",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -2888,15 +2888,15 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -2912,15 +2912,15 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -2937,15 +2937,15 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -2962,14 +2962,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "2.0",
         "3.0"
@@ -2984,14 +2984,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -3007,14 +3007,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "2.0",
         "3.0",
@@ -3030,14 +3030,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0"
@@ -3052,14 +3052,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "3.0"
       ],
@@ -3073,7 +3073,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -3081,14 +3081,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0"
       ],
@@ -3102,14 +3102,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0"
       ],
@@ -3123,14 +3123,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "openal",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "2.0",
         "3.0",
@@ -3147,14 +3147,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "openal",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "2.0",
         "3.0",
@@ -3170,14 +3170,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [],
       "notes": "The Vogons Wiki confirms a 'Creative EAX' toggle in the game's Audio Settings but doesn't record which EAX version(s) it covers."
     },
@@ -3189,14 +3189,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "openal",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "3.0",
         "4.0",
@@ -3212,15 +3212,15 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_unified": true,
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -3236,7 +3236,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -3244,14 +3244,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0"
       ],
@@ -3265,14 +3265,14 @@
           "listing": "delisted",
           "api": null,
           "id_confidence": "local_install_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -3288,14 +3288,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0"
       ],
@@ -3309,14 +3309,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -3332,7 +3332,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -3340,14 +3340,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "openal",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "2.0",
         "3.0",
@@ -3363,7 +3363,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         },
         "gog": {
@@ -3371,14 +3371,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "openal",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "4.0",
         "5.0"
@@ -3393,14 +3393,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "3.0"
       ],
@@ -3414,14 +3414,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0"
       ],
@@ -3435,14 +3435,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0"
@@ -3457,14 +3457,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -3480,14 +3480,14 @@
           "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "Delisted from GOG on 1 September 2024 at Warner Bros.' request; GOG was the only storefront that carried it.",
+          "store_details": "Delisted from GOG on 1 September 2024 at Warner Bros.' request; GOG was the only storefront that carried it.",
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [],
       "notes": "The Vogons Wiki confirms an 'Enable EAX' option in the game's configuration utility but doesn't record which EAX version(s) it covers."
     },
@@ -3499,14 +3499,14 @@
           "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "Delisted from GOG on 1 September 2024 at Warner Bros.' request; GOG was the only storefront that carried it.",
+          "store_details": "Delisted from GOG on 1 September 2024 at Warner Bros.' request; GOG was the only storefront that carried it.",
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [],
       "notes": "The Vogons Wiki confirms an 'Enable EAX' option in the game's configuration utility but doesn't record which EAX version(s) it covers."
     },
@@ -3518,14 +3518,14 @@
           "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "Delisted from Steam around 2015, reportedly over expired licensing for the PC build's Diesel engine.",
+          "store_details": "Delisted from Steam around 2015, reportedly over expired licensing for the PC build's Diesel engine.",
           "patches": null
         }
       },
       "default_api": "openal",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0",
         "2.0",
@@ -3542,14 +3542,14 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": null,
+          "store_details": null,
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "1.0"
       ],
@@ -3563,14 +3563,14 @@
           "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "build_notes": "Delisted from Steam in December 2022, along with the rest of the Unreal series.",
+          "store_details": "Delisted from Steam in December 2022, along with the rest of the Unreal series.",
           "patches": null
         }
       },
       "default_api": "directsound3d",
       "eax_status": "supported",
-      "eax_status_notes": null,
-      "eax_restore_hint": null,
+      "eax_status_details": null,
+      "restore_details": null,
       "eax_versions": [
         "4.0",
         "5.0"

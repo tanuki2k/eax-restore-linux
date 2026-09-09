@@ -397,8 +397,8 @@ show_game_details_block() {
         "$KNOWN_GAMES_FILE" 2>/dev/null)
     [ "${match_count:-0}" -gt 0 ] || return
 
-    local name eax_versions api listing eax_status eax_status_notes eax_restore_hint
-    local build_notes patches id_confidence
+    local name eax_versions api listing eax_status eax_status_details restore_details
+    local store_details patches id_confidence
     name=$(jq -r --arg id "$id" --arg store "$store" \
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | .name' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
@@ -415,14 +415,14 @@ show_game_details_block() {
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax_status // "supported"' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
     [ -z "$eax_status" ] && eax_status="supported"
-    eax_status_notes=$(jq -r --arg id "$id" --arg store "$store" \
-        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax_status_notes // empty' \
+    eax_status_details=$(jq -r --arg id "$id" --arg store "$store" \
+        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax_status_details // empty' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
-    eax_restore_hint=$(jq -r --arg id "$id" --arg store "$store" \
-        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax_restore_hint // empty' \
+    restore_details=$(jq -r --arg id "$id" --arg store "$store" \
+        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .restore_details // empty' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
-    build_notes=$(jq -r --arg id "$id" --arg store "$store" \
-        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .stores[$store].build_notes // empty' \
+    store_details=$(jq -r --arg id "$id" --arg store "$store" \
+        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .stores[$store].store_details // empty' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
     patches=$(jq -r --arg id "$id" --arg store "$store" \
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | .stores[$store].patches // empty' \
@@ -466,19 +466,19 @@ show_game_details_block() {
         local state_line="Never implemented in this edition."
         [ "$eax_status" == "removed_by_patch" ] && state_line="Removed by a later patch."
         echo -e "\n${NOTE}  Status:${NC}"
-        if [ -n "$eax_status_notes" ]; then
-            print_wrapped "$state_line $eax_status_notes"
+        if [ -n "$eax_status_details" ]; then
+            print_wrapped "$state_line $eax_status_details"
         else
             print_wrapped "$state_line"
         fi
     fi
-    if [ -n "$build_notes" ]; then
+    if [ -n "$store_details" ]; then
         echo -e "\n${NOTE}  The $store_label build:${NC}"
-        print_wrapped "$build_notes"
+        print_wrapped "$store_details"
     fi
-    if [ -n "$eax_restore_hint" ]; then
+    if [ -n "$restore_details" ]; then
         echo -e "\n${NOTE}  The fix:${NC}"
-        print_wrapped "$eax_restore_hint"
+        print_wrapped "$restore_details"
     fi
     if [ "$eax_status" == "supported" ]; then
         local solution="DSOAL + OpenAL Soft"
