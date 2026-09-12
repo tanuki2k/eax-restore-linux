@@ -17,6 +17,11 @@ DIM='\033[2m'
 NOTE='\033[0;94m'
 NC='\033[0m'
 
+# Collects each Warning: message emitted this run (see print_warning /
+# print_warning_arrow in ui.sh) so print_run_summary can recap them right
+# before a completion banner — one buried mid-scroll is otherwise easy to miss.
+RUN_WARNINGS=()
+
 # --- Yes/No Input Matching ---
 # Used unquoted against =~ so bash treats these as regexes, not literal
 # strings. Matches "y"/"yes" and "n"/"no" (any case) instead of just a bare

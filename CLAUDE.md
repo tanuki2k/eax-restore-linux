@@ -30,8 +30,11 @@ End users get the script from a **GitHub Release asset**, not the repo directly 
 `README.md`'s `curl` command and `eax-restore-linux.desktop`'s launcher both fetch
 `.../releases/latest/download/eax-restore-linux.sh`. Cutting the **stable** release is
 a manual step: bump `SCRIPT_VERSION` in `src/globals.sh`, run
-`./build.sh`, and create a GitHub release tagged `vX.Y` with
-`dist/eax-restore-linux.sh` and `eax-restore-linux.desktop` attached as assets
+`./build.sh`, generate `dist/eax-restore-linux.sh.sha256` with
+`sha256sum dist/eax-restore-linux.sh > dist/eax-restore-linux.sh.sha256` (lets users
+verify the download — see README's "Verifying the download"), and create a GitHub
+release tagged `vX.Y` with `dist/eax-restore-linux.sh`,
+`dist/eax-restore-linux.sh.sha256`, and `eax-restore-linux.desktop` attached as assets
 (matching the existing `v0.28` release) — mark it as the latest release so the
 `releases/latest/download/` URLs resolve to it. `SCRIPT_DATE` is **not** bumped by
 hand: `build.sh` derives it from the HEAD commit date (`git show -s --format=%cs`)
@@ -89,29 +92,34 @@ their execution order in the assembled script):
    (`DSOAL_SHARE`, `OPENAL_SHARE`, `KNOWN_GAMES_*`), pinned download URLs/SHA256s,
    `VCRUN_DLL_NAMES`, `EAX_IMPOSSIBLE_FALLBACK_STEAM`. Pure variable/array
    assignments only — safe to source before the guards run.
-3. **`ui.sh`** — the text/output styling helpers (`print_banner`, `print_step`,
+3. **`args.sh`** — `-h`/`--help` and `-v`/`--version` command-line flag handling
+   (exits before anything else runs). Only needs `globals.sh`'s `SCRIPT_VERSION`/
+   `SCRIPT_DATE`/colour vars, not the `ui.sh` helpers. Keep its `--help` env-var
+   summary in sync with `header.sh`/`README.md` the same way those two are kept
+   in sync with each other.
+4. **`ui.sh`** — the text/output styling helpers (`print_banner`, `print_step`,
    `print_status`, `print_note`/`print_warning`/`print_error` and their `_arrow`
    variants, `print_wrapped`, `confirm`, plus `print_divider`/`print_line`). Sourced
    right after `globals.sh` since every helper depends on the colour vars defined
    there. See "Text/output style conventions" below.
-4. **`common.sh`** — small helpers used throughout every other file: `is_truthy`,
+5. **`common.sh`** — small helpers used throughout every other file: `is_truthy`,
    `is_genuine_dll`, `parse_selection`.
-5. **`guards.sh`** — refuses root / Steam Gaming Mode, runs before any real work
+6. **`guards.sh`** — refuses root / Steam Gaming Mode, runs before any real work
    starts.
-6. **`detection.sh`** — Steam AppID / Heroic prefix / architecture detection,
+7. **`detection.sh`** — Steam AppID / Heroic prefix / architecture detection,
    `get_game_directory`, `detect_game_environment`, `select_architecture`, etc.
-7. **`known-games.sh`** — the `known-eax-games.json` helpers:
+8. **`known-games.sh`** — the `known-eax-games.json` helpers:
    `ensure_known_games_json`, `scan_game_libraries`, `show_known_game_notes`,
    `confirm_continue_if_eax_impossible`, etc.
-8. **`vcrun.sh`** — the standalone VC++ runtime installer: `verify_vcrun_files`,
+9. **`vcrun.sh`** — the standalone VC++ runtime installer: `verify_vcrun_files`,
    `install_vcrun_dependencies`, `uninstall_vcrun_dependencies`, etc. —
    independently triggerable via `EAX_RESTORE_VCRUN_ONLY`, with its own `"VCRUN"`
    manifest entries.
-9. **`verify.sh`** — download verification: `verify_checksum`, `verify_or_confirm`,
-   `get_asset_digest`, `confirm_unverified_download`.
-10. **`cache.sh`** — `update_local_cache` (the repository-cache step), plus
+10. **`verify.sh`** — download verification: `verify_checksum`, `verify_or_confirm`,
+    `get_asset_digest`, `confirm_unverified_download`.
+11. **`cache.sh`** — `update_local_cache` (the repository-cache step), plus
     `handle_conflict` and `auto_backup_and_overwrite`.
-11. **`preflight.sh`** through **`install-flow.sh`** — top-level script flow:
+12. **`preflight.sh`** through **`install-flow.sh`** — top-level script flow:
     pre-flight dependency check, the `EAX_RESTORE_VCRUN_ONLY` early-exit path,
     `ACTION: UNINSTALL`, `ACTION: INSTALL`. The `ACTION: INSTALL` block itself
     spans two files sharing one `if [ "$SCRIPT_ACTION" == "i" ]` — opened in

@@ -2,6 +2,11 @@
 # ACTION: INSTALL (PHASE 1: CONFIGURATION)
 # ==============================================================================
 if [ "$SCRIPT_ACTION" == "i" ]; then
+    # Fixed step count for this flow (1-9, same regardless of launcher/engine
+    # branch) — read by print_step via the STEP_TOTAL global so headers show
+    # "N/9. Label" instead of just "N. Label".
+    STEP_TOTAL=9
+
     EAX_RESTORE_SKIP_CACHE_CHECK="${EAX_RESTORE_SKIP_CACHE_CHECK:-}"
     if is_truthy "$EAX_RESTORE_SKIP_CACHE_CHECK"; then
         print_note "EAX_RESTORE_SKIP_CACHE_CHECK is set — skipping the REPOSITORY CACHE CHECK" \

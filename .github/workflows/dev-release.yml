@@ -23,6 +23,9 @@ jobs:
       - name: Build
         run: ./build.sh
 
+      - name: Checksum
+        run: sha256sum dist/eax-restore-linux.sh > dist/eax-restore-linux.sh.sha256
+
       - name: Read stamp from build
         id: stamp
         run: |
@@ -47,10 +50,11 @@ jobs:
             git tag -f dev
             git push -f origin refs/tags/dev
             gh release edit dev --prerelease --title "$title" --notes "$notes"
-            gh release upload dev dist/eax-restore-linux.sh --clobber
+            gh release upload dev dist/eax-restore-linux.sh dist/eax-restore-linux.sh.sha256 --clobber
           else
             gh release create dev --prerelease --target "$GITHUB_SHA" \
-              --title "$title" --notes "$notes" dist/eax-restore-linux.sh
+              --title "$title" --notes "$notes" \
+              dist/eax-restore-linux.sh dist/eax-restore-linux.sh.sha256
           fi
 
       - name: Assert stable Latest release did not move

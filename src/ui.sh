@@ -35,13 +35,20 @@ print_banner() {
 # Emits the numbered step header ("2. Launcher Identification") used to
 # separate the sub-stages of PHASE 1: CONFIGURATION. Same blank/divider/
 # label/divider wrapper as print_banner (no trailing blank either), but a
-# plain (non-bold) CYAN label with no surrounding dashes.
+# plain (non-bold) CYAN label with no surrounding dashes. When the calling
+# flow has set the STEP_TOTAL global (its fixed step count — install is 9,
+# uninstall is 6, VCRUN_ONLY is 2), renders "N/TOTAL. Label" instead of just
+# "N. Label" so the user can gauge how much of the flow is left; a caller
+# that never sets it (e.g. detection.sh's select_architecture, invoked from
+# more than one flow) keeps today's plain "N. Label" behavior.
 print_step() {
     local n="$1"
     local label="$2"
+    local n_display="$n"
+    [ -n "${STEP_TOTAL:-}" ] && n_display="${n}/${STEP_TOTAL}"
     echo ""
     print_divider
-    echo -e "${CYAN}${n}. ${label}${NC}"
+    echo -e "${CYAN}${n_display}. ${label}${NC}"
     print_line
 }
 
@@ -127,18 +134,42 @@ print_note_arrow() {
 # Usage: print_warning_arrow "text" ["more text" ...]
 # Standalone-paragraph and " -> " arrow-sub-step forms of a "Warning: ..."
 # message. Both forms are bold YELLOW — kept identical on purpose, unlike
-# the historical inconsistency where the arrow form dropped BOLD.
+# the historical inconsistency where the arrow form dropped BOLD. Both also
+# record their headline (first arg) into RUN_WARNINGS for print_run_summary's
+# end-of-run recap.
 print_warning() {
     local first="$1"; shift
+    RUN_WARNINGS+=("$first")
     local body="\n${YELLOW}${BOLD}Warning: ${first}"
     for line in "$@"; do body+="\n${line}"; done
     echo -e "${body}${NC}"
 }
 print_warning_arrow() {
     local first="$1"; shift
+    RUN_WARNINGS+=("$first")
     local body=" -> ${YELLOW}${BOLD}Warning: ${first}"
     for line in "$@"; do body+="\n${YELLOW}${BOLD}${line}"; done
     echo -e "${body}${NC}"
+}
+
+# Usage: print_run_summary
+# Recaps every Warning: headline emitted so far this run, right before a
+# completion banner (INSTALLATION COMPLETE! / UNINSTALL COMPLETE! / VC++
+# RUNTIME INSTALL COMPLETE) — a warning that scrolled by mid-run isn't the
+# only place it's visible. No-op if RUN_WARNINGS is empty.
+print_run_summary() {
+    local count="${#RUN_WARNINGS[@]}"
+    [ "$count" -eq 0 ] && return
+    local noun="warning"
+    [ "$count" -ne 1 ] && noun="warnings"
+    echo ""
+    print_divider
+    echo -e "${YELLOW}${BOLD}${count} ${noun} occurred during this run:${NC}"
+    local w
+    for w in "${RUN_WARNINGS[@]}"; do
+        echo -e "  ${YELLOW}- ${w}${NC}"
+    done
+    print_divider
 }
 
 # Usage: print_error "text" ["more text" ...]

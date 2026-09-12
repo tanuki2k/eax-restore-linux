@@ -298,6 +298,7 @@ EOF
         fi
     fi
 
+    print_run_summary
     print_banner "INSTALLATION COMPLETE!"
 
     if [[ "$AUTO_OVERRIDE" =~ $YES_RE ]]; then

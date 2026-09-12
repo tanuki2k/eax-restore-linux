@@ -44,6 +44,59 @@ The script checks for these dependencies and offers to install them if they are 
 
 > **Testing the development build?** Every change on the `dev` branch is auto-published as a pre-release. Download it from `https://github.com/tanuki2k/eax-restore-linux/releases/download/dev/eax-restore-linux.sh` — its startup banner shows a `-dev` version plus the build date and commit, so you can always tell it apart from a stable build. It's unstable and unsupported; the `.desktop` launcher always fetches the stable latest release only.
 
+> **Just want to check what it does or which version you have?** Run `./eax-restore-linux.sh --help` or `--version` — both print instantly without starting the interactive install/uninstall flow.
+
+### What it looks like
+
+A real terminal session, from launch through the first configuration step (`EAX_RESTORE_SKIP_PREFLIGHT`/`EAX_RESTORE_SKIP_CACHE_CHECK` used here only to keep this excerpt short and reproducible — a normal run also includes the pre-flight tool scan and repository cache check before reaching this point):
+
+```ansi
+[0;36m[1m==========================================================[0m
+[0;36m[1m   DSOAL & OpenAL Soft Universal Installer                [0m
+[0;36m[1m   v0.29  (2026-08-13)[0m
+[0;36m[1m==========================================================[0m
+
+[0;36m----------------------------------------------------------[0m
+[0;32m[1m--- PRE-FLIGHT SYSTEM CHECK ---[0m
+[0;36m----------------------------------------------------------[0m
+
+[0;94mNote: EAX_RESTORE_SKIP_PREFLIGHT is set — skipping the tool scan and trusting that curl,
+unzip, file, protontricks, winetricks, wine, and jq are already available.[0m
+
+[0;36m----------------------------------------------------------[0m
+[0;32m[1m--- SELECT OPERATION ---[0m
+[0;36m----------------------------------------------------------[0m
+
+[1;33mWould you like to (i)nstall or (u)ninstall the EAX audio fix? (i/u): [0m
+> 
+[0;94mNote: EAX_RESTORE_SKIP_CACHE_CHECK is set — skipping the REPOSITORY CACHE CHECK
+and trusting whatever DSOAL/OpenAL Soft builds are already cached.[0m
+
+[0;36m----------------------------------------------------------[0m
+[0;32m[1m--- PHASE 1: CONFIGURATION ---[0m
+[0;36m----------------------------------------------------------[0m
+
+[0;36m----------------------------------------------------------[0m
+[0;36m1/9. Game Location[0m
+[0;36m----------------------------------------------------------[0m
+
+[0;94mNote: Library scanning needs the known-EAX-games database,
+which isn't available this run — skipping straight to manual entry.[0m
+
+[1;37mCommon game locations:[0m
+
+[1;37m Linux Desktop (Steam): ~/.local/share/Steam/steamapps/common/[Game][0m
+[1;37m Steam Deck (SD Card):  /run/media/mmcblk0p1/steamapps/common/[Game][0m
+[1;37m Heroic / GOG:          ~/Games/Heroic/[Game][0m
+
+ 1) Browse for the folder using a graphical file picker
+ 2) Enter the path manually
+
+[1;33mHow would you like to locate the game? [1-2]: [0m
+> 
+
+```
+
 **1. Download the script:**
 Open your terminal and run:
 
@@ -57,6 +110,12 @@ In the same terminal, run:
 ```bash
 chmod +x eax-restore-linux.sh
 ```
+
+> **Verifying the download (optional):** every release also publishes a `.sha256` checksum file for the script. If you'd like to confirm your download hasn't been corrupted or tampered with:
+> ```bash
+> curl -LO https://github.com/tanuki2k/eax-restore-linux/releases/latest/download/eax-restore-linux.sh.sha256
+> sha256sum -c eax-restore-linux.sh.sha256
+> ```
 
 **3. Run the installer:**
 

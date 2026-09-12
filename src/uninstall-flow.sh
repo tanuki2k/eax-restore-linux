@@ -2,6 +2,10 @@
 # ACTION: UNINSTALL FROM GAME
 # ==============================================================================
 if [ "$SCRIPT_ACTION" == "u" ]; then
+    # Fixed step count for this flow (1-6) — read by print_step via the
+    # STEP_TOTAL global so headers show "N/6. Label" instead of just "N. Label".
+    STEP_TOTAL=6
+
     print_banner "UNINSTALL EAX FIX"
 
     # Steps 1-2 loop: same restart-on-dead-end mechanism as the install flow
@@ -287,6 +291,7 @@ EOF
         echo -e "\n${WHITE}No VC++ runtime recorded or detected in this prefix — nothing to do here.${NC}"
     fi
 
+    print_run_summary
     print_banner "UNINSTALL COMPLETE!"
     exit 0
 fi

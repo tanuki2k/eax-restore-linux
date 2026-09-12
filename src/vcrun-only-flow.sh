@@ -17,6 +17,10 @@ if is_truthy "$EAX_RESTORE_VCRUN_ONLY"; then
 
     SCRIPT_ACTION="i"
 
+    # Fixed step count for this flow (1-2) — read by print_step via the
+    # STEP_TOTAL global so headers show "N/2. Label" instead of just "N. Label".
+    STEP_TOTAL=2
+
     # Steps 1-2 loop, same as the normal install flow: an EAX-impossible game
     # still lets the user pick a different one instead of exiting (see
     # prompt_restart_or_quit).
@@ -57,6 +61,7 @@ if is_truthy "$EAX_RESTORE_VCRUN_ONLY"; then
         echo "VCRUN" >> "$GAME_MANIFEST"
     fi
 
+    print_run_summary
     print_banner "VC++ RUNTIME INSTALL COMPLETE"
     exit 0
 fi
