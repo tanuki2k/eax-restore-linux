@@ -75,11 +75,22 @@ KNOWN_GAMES_ATTEMPTED=""
 # loaded copy is older (a branch that hasn't merged a schema bump yet, or a
 # stale offline cache) so the silent `//` fallbacks below are visible.
 KNOWN_GAMES_SCHEMA_VERSION=2
-# Set by resolve_eax_unified / show_game_details_block when the picked game's
-# known-games entry is flagged eax_unified. The Advanced Compatibility Tweaks
-# step reads it to run the guarded "check for a real eax.dll" sub-flow for
-# Tweak A instead of the generic prompt.
+# Set by resolve_recommended_tweaks / show_game_details_block from the picked
+# game's known-games entry's recommended_tweaks array. EAX_UNIFIED,
+# RECOMMENDED_AUDIO_LIMITS, and RECOMMENDED_COM_ROUTING mirror membership of
+# "eax_unified", "expand_audio_limits", and "com_registry_routing"
+# respectively. The Advanced Compatibility Tweaks step reads these to
+# pre-decide the EAX Unified Dummy Files / Expand Audio Limits / COM Registry
+# Routing tweaks with a default-Y prompt instead of the generic default-N one.
 EAX_UNIFIED=""
+RECOMMENDED_AUDIO_LIMITS=""
+RECOMMENDED_COM_ROUTING=""
+# Set (unconditionally, once an id lookup is attempted) by
+# resolve_recommended_tweaks so a caller besides show_game_details_block (i.e.
+# the Advanced Compatibility Tweaks step) can tell "already resolved this run"
+# apart from "resolved, but nothing was flagged" — the three flags above alone
+# can't disambiguate that now that more than one of them exists.
+RECOMMENDED_TWEAKS_RESOLVED=""
 
 # Set by show_game_details_block to the known-games entry's resolved audio
 # API (the same value it displays as "Audio API" in the GAME DETAILS block),

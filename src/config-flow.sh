@@ -238,38 +238,47 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     # 9. Advanced Compatibility Tweaks
     print_step 9 "Advanced Compatibility Tweaks"
     echo -e "\n${WHITE}These optional workarounds are designed for extremely stubborn games"
-    echo -e "that refuse to load EAX normally. In 90% of cases, you do not need these.${NC}\n"
+    echo -e "that refuse to load EAX normally. In 90% of cases, you do not need these.${NC}"
 
     ADVANCED_DUMMY="n"
     ADVANCED_LIMITS="n"
     ADVANCED_COM="n"
 
-    # Tweaks A (EAX Unified dummy files) and C (COM registry routing) both
-    # target DirectSound3D specifically and have nothing to attach to on a
-    # direct OpenAL32.dll swap — so engine 2 only ever offers Tweak B.
-    TWEAK_A_APPLICABLE=1
-    TWEAK_C_APPLICABLE=1
+    # EAX Unified Dummy Files and COM Registry Routing both target
+    # DirectSound3D specifically and have nothing to attach to on a direct
+    # OpenAL32.dll swap — so engine 2 only ever offers Expand Audio Limits.
+    EAX_UNIFIED_DUMMY_APPLICABLE=1
+    COM_ROUTING_APPLICABLE=1
     if [ "$ENGINE_CHOICE" == "2" ]; then
-        TWEAK_A_APPLICABLE=0
-        TWEAK_C_APPLICABLE=0
+        EAX_UNIFIED_DUMMY_APPLICABLE=0
+        COM_ROUTING_APPLICABLE=0
     fi
 
-    # A game flagged EAX Unified in the known-games database reaches EAX through
-    # Creative's eax.dll shim. Tweak A creates empty eax.dll/eaxunified.dll to
-    # satisfy a title that only checks for the file's presence to unlock its EAX
-    # menu — but one that ships and loads a real eax.dll (GTA: San Andreas, Far
-    # Cry 2) would get it shadowed and can fail to boot. So for a flagged game,
-    # decide Tweak A here with a guarded check instead of the generic prompt.
-    TWEAK_A_HANDLED=0
-    if [ -z "$EAX_UNIFIED" ]; then
+    # known-eax-games.json's recommended_tweaks array (see
+    # resolve_recommended_tweaks in known-games.sh) may flag any combination of
+    # the three tweaks below for this game. Each flagged, applicable tweak is
+    # decided here — before the generic opt-in gate further down — with a
+    # default-Y prompt instead of the generic default-N one, since the
+    # database recommends it specifically for this title.
+    EAX_UNIFIED_DUMMY_HANDLED=0
+    AUDIO_LIMITS_HANDLED=0
+    COM_ROUTING_HANDLED=0
+    if [ -z "$RECOMMENDED_TWEAKS_RESOLVED" ]; then
         if [ "$LAUNCHER_TYPE" == "1" ]; then
-            resolve_eax_unified "$APPID" "steam"
+            resolve_recommended_tweaks "$APPID" "steam"
         else
-            resolve_eax_unified "$HEROIC_APP_NAME" "gog"
+            resolve_recommended_tweaks "$HEROIC_APP_NAME" "gog"
         fi
     fi
-    if [ -n "$EAX_UNIFIED" ] && [ "$TWEAK_A_APPLICABLE" -eq 1 ]; then
-        echo -e "${WHITE}$GAME_NAME is one of those exceptions — it reaches EAX through an eax.dll shim (EAX Unified),${NC}"
+
+    # A game flagged EAX Unified reaches EAX through Creative's eax.dll shim.
+    # This tweak creates empty eax.dll/eaxunified.dll to satisfy a title that
+    # only checks for the file's presence to unlock its EAX menu — but one
+    # that ships and loads a real eax.dll (GTA: San Andreas, Far Cry 2) would
+    # get it shadowed and can fail to boot. So for a flagged game, decide it
+    # here with a guarded check instead of the generic prompt.
+    if [ -n "$EAX_UNIFIED" ] && [ "$EAX_UNIFIED_DUMMY_APPLICABLE" -eq 1 ]; then
+        echo -e "\n${WHITE}$GAME_NAME is one of those exceptions — it reaches EAX through an eax.dll shim (EAX Unified),${NC}"
         echo -e "${WHITE}so it's worth checking whether it already ships its own eax.dll before deciding${NC}"
         echo -e "${WHITE}whether to create dummy eax.dll files to unlock the game's EAX menu.${NC}"
         if confirm "Check whether it ships its own eax.dll?" Y; then
@@ -277,67 +286,107 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
                 print_note "$GAME_NAME already ships its own eax.dll — the EAX Unified dummy-file tweak" \
                     "isn't needed here and could stop the game booting, so it's being skipped."
                 ADVANCED_DUMMY="n"
-            elif confirm "Inject EAX Unified dummy files (Tweak A)? $GAME_NAME is flagged EAX Unified and has no eax.dll of its own." Y; then
+            elif confirm "Inject EAX Unified dummy files? $GAME_NAME is flagged EAX Unified and has no eax.dll of its own." Y; then
                 ADVANCED_DUMMY="y"
             else
                 ADVANCED_DUMMY="n"
             fi
-            TWEAK_A_HANDLED=1
+            EAX_UNIFIED_DUMMY_HANDLED=1
         fi
-        echo ""
     fi
 
-    if [ "$TWEAK_A_APPLICABLE" -eq 0 ] && [ "$TWEAK_C_APPLICABLE" -eq 0 ]; then
-        echo -e "${WHITE}Tweaks A and C target DirectSound3D specifically (the EAX Unified menu gate and"
-        echo -e "dsound.dll COM routing), which don't apply to a direct OpenAL32.dll swap — only Tweak B applies here.${NC}\n"
+    # recommended_tweaks can flag Expand Audio Limits for a game independently
+    # verified to need it (e.g. F.E.A.R.'s audio dropping out during large
+    # firefights). Applies to both engines, so — unlike the other two — it has
+    # no applicability gate.
+    if [ -n "$RECOMMENDED_AUDIO_LIMITS" ]; then
+        echo -e "\n${CYAN}${BOLD}Expand Audio Limits${NC}"
+        echo -e "${WHITE}Forces the engine to handle 256 simultaneous sounds and locks the sample rate to 48kHz."
+        echo -e "Fixes audio dropping out in chaotic games (like F.E.A.R. or Thief), but uses more CPU.${NC}"
+        if confirm "Expand OpenAL audio limits? $GAME_NAME is flagged in the known-games database as benefiting from this." Y; then
+            ADVANCED_LIMITS="y"
+        else
+            ADVANCED_LIMITS="n"
+        fi
+        AUDIO_LIMITS_HANDLED=1
+    fi
 
-        echo -e "${YELLOW}Would you like to view and opt-in to this advanced tweak? (y/N): ${NC}"
-        echo -e -n "> "
-        read -r SHOW_ADVANCED
+    # Same idea for COM Registry Routing (e.g. GTA: San Andreas, which needs
+    # it in addition to EAX Unified Dummy Files for EAX to work under
+    # Wine/Proton).
+    if [ -n "$RECOMMENDED_COM_ROUTING" ] && [ "$COM_ROUTING_APPLICABLE" -eq 1 ]; then
+        echo -e "\n${CYAN}${BOLD}COM Registry Routing${NC}"
+        echo -e "${WHITE}Explicitly forces the Windows registry to point directly to our custom dsound.dll."
+        echo -e "Beneficial for stubborn late-90s and early-2000s games that actively ignore local DLL files.${NC}"
+        if confirm "Inject COM registry routing? $GAME_NAME is flagged in the known-games database as needing this." Y; then
+            ADVANCED_COM="y"
+        else
+            ADVANCED_COM="n"
+        fi
+        COM_ROUTING_HANDLED=1
+    fi
 
-        if [[ "$SHOW_ADVANCED" =~ $YES_RE ]]; then
-            echo -e "\n${CYAN}${BOLD}Tweak B: Expand Audio Limits${NC}"
-            echo -e "${WHITE}Forces the engine to handle 256 simultaneous sounds and locks the sample rate to 48kHz."
-            echo -e "Fixes audio dropping out in chaotic games (like F.E.A.R. or Thief), but uses more CPU.${NC}"
-            echo -e "\n${YELLOW}Expand OpenAL audio limits? (y/N): ${NC}"
-            echo -e -n "> "
-            read -r ADVANCED_LIMITS
+    if [ "$EAX_UNIFIED_DUMMY_APPLICABLE" -eq 0 ] && [ "$COM_ROUTING_APPLICABLE" -eq 0 ]; then
+        # Engine 2: only Expand Audio Limits could possibly apply, and it's
+        # already been decided above if the database recommended it.
+        if [ "$AUDIO_LIMITS_HANDLED" -eq 0 ]; then
+            echo -e "\n${WHITE}EAX Unified Dummy Files and COM Registry Routing both target DirectSound3D"
+            echo -e "specifically, which doesn't apply to a direct OpenAL32.dll swap — only Expand Audio Limits applies here.${NC}"
+
+            if confirm "Would you like to view and opt-in to this advanced tweak?" N; then
+                echo -e "\n${CYAN}${BOLD}Expand Audio Limits${NC}"
+                echo -e "${WHITE}Forces the engine to handle 256 simultaneous sounds and locks the sample rate to 48kHz."
+                echo -e "Fixes audio dropping out in chaotic games (like F.E.A.R. or Thief), but uses more CPU.${NC}"
+                if confirm "Expand OpenAL audio limits?" N; then
+                    ADVANCED_LIMITS="y"
+                fi
+            fi
         fi
     else
-        if [ "$TWEAK_A_HANDLED" -eq 1 ]; then
-            echo -e "${YELLOW}Would you like to view and opt-in to the additional advanced tweaks? (y/N): ${NC}"
-        else
-            echo -e "${YELLOW}Would you like to view and opt-in to these advanced tweaks? (y/N): ${NC}"
-        fi
-        echo -e -n "> "
-        read -r SHOW_ADVANCED
+        ANY_TWEAK_HANDLED=0
+        [ "$EAX_UNIFIED_DUMMY_HANDLED" -eq 1 ] && ANY_TWEAK_HANDLED=1
+        [ "$AUDIO_LIMITS_HANDLED" -eq 1 ] && ANY_TWEAK_HANDLED=1
+        [ "$COM_ROUTING_HANDLED" -eq 1 ] && ANY_TWEAK_HANDLED=1
 
-        if [[ "$SHOW_ADVANCED" =~ $YES_RE ]]; then
-            if [ "$TWEAK_A_APPLICABLE" -eq 1 ] && [ "$TWEAK_A_HANDLED" -eq 0 ]; then
-                echo -e "\n${CYAN}${BOLD}Tweak A: EAX Unified Dummy Files${NC}"
-                echo -e "${WHITE}Tricks certain games (like KOTOR, Max Payne, and early Unreal Engine titles)"
-                echo -e "into unlocking the EAX menu option by creating harmless, empty eax.dll and eaxunified.dll files.${NC}"
-                echo -e "\n${YELLOW}Inject EAX Unified dummy files? (y/N): ${NC}"
-                echo -e -n "> "
-                read -r ADVANCED_DUMMY
-                echo ""
+        ALL_HANDLED=1
+        [ "$EAX_UNIFIED_DUMMY_APPLICABLE" -eq 1 ] && [ "$EAX_UNIFIED_DUMMY_HANDLED" -eq 0 ] && ALL_HANDLED=0
+        [ "$AUDIO_LIMITS_HANDLED" -eq 0 ] && ALL_HANDLED=0
+        [ "$COM_ROUTING_APPLICABLE" -eq 1 ] && [ "$COM_ROUTING_HANDLED" -eq 0 ] && ALL_HANDLED=0
+
+        if [ "$ALL_HANDLED" -eq 0 ]; then
+            if [ "$ANY_TWEAK_HANDLED" -eq 1 ]; then
+                GATE_PROMPT="Would you like to view and opt-in to the additional advanced tweaks?"
+            else
+                GATE_PROMPT="Would you like to view and opt-in to these advanced tweaks?"
             fi
 
-            echo -e "${CYAN}${BOLD}Tweak B: Expand Audio Limits${NC}"
-            echo -e "${WHITE}Forces the engine to handle 256 simultaneous sounds and locks the sample rate to 48kHz."
-            echo -e "Fixes audio dropping out in chaotic games (like F.E.A.R. or Thief), but uses more CPU.${NC}"
-            echo -e "\n${YELLOW}Expand OpenAL audio limits? (y/N): ${NC}"
-            echo -e -n "> "
-            read -r ADVANCED_LIMITS
+            if confirm "$GATE_PROMPT" N; then
+                if [ "$EAX_UNIFIED_DUMMY_APPLICABLE" -eq 1 ] && [ "$EAX_UNIFIED_DUMMY_HANDLED" -eq 0 ]; then
+                    echo -e "\n${CYAN}${BOLD}EAX Unified Dummy Files${NC}"
+                    echo -e "${WHITE}Tricks certain games (like KOTOR, Max Payne, and early Unreal Engine titles)"
+                    echo -e "into unlocking the EAX menu option by creating harmless, empty eax.dll and eaxunified.dll files.${NC}"
+                    if confirm "Inject EAX Unified dummy files?" N; then
+                        ADVANCED_DUMMY="y"
+                    fi
+                fi
 
-            if [ "$TWEAK_C_APPLICABLE" -eq 1 ]; then
-                echo ""
-                echo -e "${CYAN}${BOLD}Tweak C: COM Registry Routing${NC}"
-                echo -e "${WHITE}Explicitly forces the Windows registry to point directly to our custom dsound.dll."
-                echo -e "Beneficial for stubborn late-90s and early-2000s games that actively ignore local DLL files.${NC}"
-                echo -e "\n${YELLOW}Inject COM registry routing? (y/N): ${NC}"
-                echo -e -n "> "
-                read -r ADVANCED_COM
+                if [ "$AUDIO_LIMITS_HANDLED" -eq 0 ]; then
+                    echo -e "\n${CYAN}${BOLD}Expand Audio Limits${NC}"
+                    echo -e "${WHITE}Forces the engine to handle 256 simultaneous sounds and locks the sample rate to 48kHz."
+                    echo -e "Fixes audio dropping out in chaotic games (like F.E.A.R. or Thief), but uses more CPU.${NC}"
+                    if confirm "Expand OpenAL audio limits?" N; then
+                        ADVANCED_LIMITS="y"
+                    fi
+                fi
+
+                if [ "$COM_ROUTING_APPLICABLE" -eq 1 ] && [ "$COM_ROUTING_HANDLED" -eq 0 ]; then
+                    echo -e "\n${CYAN}${BOLD}COM Registry Routing${NC}"
+                    echo -e "${WHITE}Explicitly forces the Windows registry to point directly to our custom dsound.dll."
+                    echo -e "Beneficial for stubborn late-90s and early-2000s games that actively ignore local DLL files.${NC}"
+                    if confirm "Inject COM registry routing?" N; then
+                        ADVANCED_COM="y"
+                    fi
+                fi
             fi
         fi
     fi

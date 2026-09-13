@@ -207,6 +207,9 @@ scan_game_libraries() {
     SCANNED_NOTES_SHOWN=""
     OPENAL_NATIVE_MODE=""
     EAX_UNIFIED=""
+    RECOMMENDED_AUDIO_LIMITS=""
+    RECOMMENDED_COM_ROUTING=""
+    RECOMMENDED_TWEAKS_RESOLVED=""
 
     if ! ensure_known_games_json; then
         print_note "library scanning needs the known-EAX-games database, which isn't available this run."
@@ -360,25 +363,35 @@ scan_game_libraries() {
 # still only added when independently verified against the storefront's
 # own API — a wrong/stale ID would misdirect users to the wrong game.
 
-resolve_eax_unified() {
-    # Usage: resolve_eax_unified <id> <steam|gog>
-    # Sets EAX_UNIFIED=1 when the known-games entry for this id is flagged
-    # `eax_unified` (the ~32 titles that reach EAX through Creative's eax.dll
-    # shim rather than native DirectSound3D), "" otherwise. Cheap and
-    # idempotent — safe to call from more than one step. show_game_details_block
-    # calls it for the common (matched) path; the Advanced Compatibility Tweaks
-    # step calls it too so the guarded Tweak-A sub-flow still fires when the
-    # user skipped the Audio API Detection database check.
+resolve_recommended_tweaks() {
+    # Usage: resolve_recommended_tweaks <id> <steam|gog>
+    # Reads the known-games entry's recommended_tweaks array once and sets
+    # EAX_UNIFIED / RECOMMENDED_AUDIO_LIMITS / RECOMMENDED_COM_ROUTING to 1
+    # (else "") based on membership of "eax_unified" / "expand_audio_limits" /
+    # "com_registry_routing" respectively — the ~32 titles that reach EAX
+    # through Creative's eax.dll shim, plus any game independently verified to
+    # need the Expand Audio Limits or COM Registry Routing tweaks specifically.
+    # Cheap and idempotent — safe to call from more than one step.
+    # show_game_details_block calls it for the common (matched) path; the
+    # Advanced Compatibility Tweaks step calls it too (guarded on
+    # RECOMMENDED_TWEAKS_RESOLVED) so the pre-handled tweak sub-flows still
+    # fire when the user skipped the Audio API Detection database check.
     EAX_UNIFIED=""
+    RECOMMENDED_AUDIO_LIMITS=""
+    RECOMMENDED_COM_ROUTING=""
+    RECOMMENDED_TWEAKS_RESOLVED=1
     [ -z "$1" ] && return
     ensure_known_games_json || return
     local store="steam"
     [ "$2" == "gog" ] && store="gog"
-    local flag
-    flag=$(jq -r --arg id "$1" --arg store "$store" \
-        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax_unified // false' \
-        "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
-    [ "$flag" == "true" ] && EAX_UNIFIED=1
+    local tweaks
+    tweaks=$(jq -r --arg id "$1" --arg store "$store" \
+        '[.games[] | select((.stores[$store].id // "") | tostring == $id)][0] | .recommended_tweaks // [] | .[]' \
+        "$KNOWN_GAMES_FILE" 2>/dev/null)
+    [ -z "$tweaks" ] && return
+    grep -qx "eax_unified" <<< "$tweaks" && EAX_UNIFIED=1
+    grep -qx "expand_audio_limits" <<< "$tweaks" && RECOMMENDED_AUDIO_LIMITS=1
+    grep -qx "com_registry_routing" <<< "$tweaks" && RECOMMENDED_COM_ROUTING=1
 }
 
 show_known_game_notes() {
@@ -475,7 +488,7 @@ show_game_details_block() {
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | .stores[$store].id_confidence // empty' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
 
-    resolve_eax_unified "$id" "$store"
+    resolve_recommended_tweaks "$id" "$store"
 
     # --- Field lines: identity, then how EAX stands on this build ---
     print_banner "GAME DETAILS"

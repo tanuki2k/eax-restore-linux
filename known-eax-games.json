@@ -1,5 +1,5 @@
 {
-  "_comment": "Community-maintained database of well-known EAX-era games, matched by this script's library scanner and used for the install-time game-details notes. schema_version 2: per-store data lives under stores.steam / stores.gog. Contributions welcome via PR — see README.md's 'Contributing to the known games database' section for the field shapes and rules before adding an entry.",
+  "_comment": "Community-maintained database of well-known EAX-era games, matched by this script's library scanner and used for the install-time game-details notes. schema_version 2: per-store data lives under stores.steam / stores.gog; recommended_tweaks (array of \"eax_unified\"/\"expand_audio_limits\"/\"com_registry_routing\") replaces the old eax_unified boolean. Contributions welcome via PR — see README.md's 'Contributing to the known games database' section for the field shapes and rules before adding an entry.",
   "schema_version": 2,
   "games": [
     {
@@ -302,7 +302,10 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified",
+        "expand_audio_limits"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": "If EAX audio drops out during large firefights, try the 'Expand Audio Limits' Advanced Compatibility Tweak (256 simultaneous sources, 48kHz) — that's what it's for. An older one-off report (kcat/dsoal#67) described a load failure under Wine, but it isn't universal; if EAX already works you don't need any advanced tweaks.",
@@ -347,7 +350,10 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified",
+        "com_registry_routing"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": "For EAX to work under Wine/Proton the game also needs the COM Registry Routing tweak (Tweak C).",
@@ -407,7 +413,9 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": "EAX is off by default: in-game, open Options, scroll to the bottom, and enable 'Audio Hardware Mixing', 'EAX ADVANCED HD' and 'EAX Multiple Environments' (per Creative's setup guide for the game).",
@@ -430,7 +438,9 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": null,
@@ -611,7 +621,9 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": null,
@@ -863,7 +875,9 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": null,
@@ -926,7 +940,9 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": null,
@@ -1146,7 +1162,9 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": null,
@@ -1179,7 +1197,9 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": null,
@@ -1694,7 +1714,9 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": null,
@@ -1718,7 +1740,9 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": null,
@@ -1822,7 +1846,9 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": null,
@@ -1889,7 +1915,9 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": null,
@@ -1934,7 +1962,9 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": null,
@@ -1958,7 +1988,9 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": null,
@@ -2003,7 +2035,9 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": null,
@@ -2078,7 +2112,9 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": null,
@@ -2310,7 +2346,9 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": null,
@@ -2341,7 +2379,9 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": null,
@@ -2365,7 +2405,9 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": null,
@@ -2442,7 +2484,9 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": null,
@@ -2509,7 +2553,9 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": null,
@@ -2533,7 +2579,9 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": null,
@@ -2557,7 +2605,9 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": null,
@@ -2602,7 +2652,9 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": null,
@@ -2675,7 +2727,9 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": null,
@@ -2707,7 +2761,9 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": null,
@@ -2739,7 +2795,9 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": null,
@@ -2895,7 +2953,9 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": null,
@@ -2919,7 +2979,9 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": null,
@@ -2944,7 +3006,9 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": null,
@@ -3219,7 +3283,9 @@
         }
       },
       "default_api": "directsound3d",
-      "eax_unified": true,
+      "recommended_tweaks": [
+        "eax_unified"
+      ],
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": null,
@@ -3578,6 +3644,87 @@
         "5.0"
       ],
       "notes": null
+    },
+    {
+      "name": "Icewind Dale: Enhanced Edition",
+      "stores": {
+        "steam": {
+          "id": 321800,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "store_details": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1207666683,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "store_details": null,
+          "patches": null
+        }
+      },
+      "default_api": "directsound3d",
+      "eax_status": "not_implemented",
+      "eax_status_details": "The Enhanced Edition runs on a from-scratch OpenAL engine, built for its native Linux and macOS ports — it never had DirectSound3D EAX to begin with.",
+      "restore_details": null,
+      "eax_versions": [],
+      "notes": "If you also own the classic build, it's a separate GOG product the scanner detects on its own — see the 'Icewind Dale Complete' entry (gog_id 1207658888), which has real DirectSound3D EAX."
+    },
+    {
+      "name": "Neverwinter Nights: Enhanced Edition",
+      "stores": {
+        "steam": {
+          "id": 704450,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "store_details": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1097893768,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "store_details": null,
+          "patches": null
+        }
+      },
+      "default_api": "directsound3d",
+      "eax_status": "not_implemented",
+      "eax_status_details": "The Enhanced Edition runs on a from-scratch OpenAL engine, built for its native Linux and macOS ports — it never had DirectSound3D EAX to begin with.",
+      "restore_details": null,
+      "eax_versions": [],
+      "notes": "If you also own the classic build, it's a separate GOG product the scanner detects on its own — see the 'Neverwinter Nights Diamond' entry (gog_id 1207658890), which has real DirectSound3D EAX."
+    },
+    {
+      "name": "Neverwinter Nights 2: Enhanced Edition",
+      "stores": {
+        "steam": {
+          "id": 2738630,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "store_details": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1993442013,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "store_details": null,
+          "patches": null
+        }
+      },
+      "default_api": "directsound3d",
+      "eax_status": "not_implemented",
+      "eax_status_details": "The 2025 Enhanced Edition (Aspyr) is a from-scratch engine rewrite — it never had DirectSound3D EAX to begin with.",
+      "restore_details": null,
+      "eax_versions": [],
+      "notes": "If you also own the classic build, it's a separate GOG product the scanner detects on its own — see the 'Neverwinter Nights 2' entry (gog_id 1207659162), which has real DirectSound3D EAX."
     }
   ]
 }
