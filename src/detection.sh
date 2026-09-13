@@ -102,13 +102,13 @@ get_game_directory() {
         # might pick something else next time), and skipping straight to
         # the one available action avoids asking a one-choice "choice".
         local -a menu_actions=()
-        if [ "$can_scan" -eq 1 ]; then
-            print_option "$((${#menu_actions[@]} + 1))" "Scan your Steam/Heroic library for known EAX games"
-            menu_actions+=("scan")
-        fi
         if [ "$have_gui_picker" -eq 1 ]; then
             print_option "$((${#menu_actions[@]} + 1))" "Browse for the folder using a graphical file picker"
             menu_actions+=("gui")
+        fi
+        if [ "$can_scan" -eq 1 ]; then
+            print_option "$((${#menu_actions[@]} + 1))" "Scan your Steam/Heroic library for known EAX games"
+            menu_actions+=("scan")
         fi
         print_option "$((${#menu_actions[@]} + 1))" "Enter the path manually"
         menu_actions+=("manual")
