@@ -134,7 +134,7 @@ get_game_directory() {
                 print_note "the known-EAX-games list is a small, hand-verified, work-in-progress" \
                     "set — it doesn't cover every EAX game. A game you own may still support EAX" \
                     "even if it's not (yet) listed."
-                if ! confirm "Continue with the scan?"; then
+                if ! confirm "Understood — it's a work in progress?"; then
                     continue
                 fi
                 if scan_game_libraries; then
@@ -155,6 +155,7 @@ get_game_directory() {
                 GAME_DIR="${GAME_DIR%/}"
                 if [ -z "$GAME_DIR" ]; then
                     print_warning "No folder selected."
+                    echo ""
                     continue
                 fi
                 ;;
@@ -169,6 +170,7 @@ get_game_directory() {
                 if [ "$EXE_COUNT" -eq 0 ]; then
                     print_warning "No .exe files were found in this directory or its immediate subfolders."
                     if confirm "Are you absolutely sure this is the correct game folder?" N; then break; fi
+                    echo ""
                     GAME_DIR=""
                 else
                     break
@@ -314,6 +316,8 @@ resolve_exe_folder() {
     local root="$1"
     local beta_branch="$2"
     GAME_DIR=""
+
+    print_step 2 "Locate Game Executable"
 
     # Nested installs often bundle third-party installers/utilities
     # alongside the real game .exe (redistributables, anti-cheat setup,
@@ -472,8 +476,7 @@ resolve_exe_folder() {
     done
 
     if [ "$have_more" -eq 1 ] && [ "$choice" -eq 1 ]; then
-        echo -e "\n${WHITE}Detected folders with .exe files — pick the one with the game's main"
-        echo -e "executable:${NC}"
+        print_result "Detected folders with .exe files — pick the one with the game's main executable:"
         local i
         for i in "${!cand_dirs[@]}"; do
             print_option "$((i + 1))" "${cand_exe_name[${cand_dirs[$i]}]}" "in ${cand_dirs[$i]}"
@@ -544,7 +547,15 @@ confirm_continue_if_openal_native() {
     # implementation routes through OpenAL natively rather than DirectSound3D — the
     # dsound.dll/DSOAL swap has nothing to intercept here. Offers a distinct
     # remediation (direct OpenAL32.dll + alsoft.ini deployment) instead of a
-    # hard stop. Falls back to detect_api_from_binary()'s lower-confidence
+    # hard stop. Opens with a single upfront gate ("attempt to automatically
+    # detect $game_name's audio API?") governing everything below it -- when
+    # show_game_details_block already showed this game's documented API
+    # (KNOWN_GAME_API set), accepting the gate cross-checks that value
+    # against a live file scan instead of re-querying the database from
+    # scratch (the user was already told the answer), while declining it
+    # just trusts the documented value as-is with no file scan. When nothing
+    # is already known, the same gate governs the known-games database check
+    # and detect_api_from_binary()'s lower-confidence
     # filesystem guess whenever there's no authoritative JSON answer to go
     # on — either the game isn't in known-eax-games.json, OR the database
     # itself couldn't be loaded at all (offline, not yet merged to the
@@ -578,6 +589,9 @@ confirm_continue_if_openal_native() {
     [ "$2" == "gog" ] && store="gog"
     local game_name="${3:-this game}"
 
+    local attempt_auto_detect=1
+    confirm "Would you like the script to attempt to automatically detect $game_name's audio API?" || attempt_auto_detect=0
+
     local json_available=0 match_count=0
     local api="" matched=0 scanned=0 json_checked=0 declined=0
     # The known-games entry's audio API for this store, exactly as stored —
@@ -587,40 +601,77 @@ confirm_continue_if_openal_native() {
     # here counts as confirmed.
     local db_api_raw=""
 
-    # Availability is already known by this point (the REPOSITORY CACHE CHECK
-    # step fetches/memoizes it before Phase 1 even starts), so there's nothing
-    # to ask permission for when it's simply not there — go straight to the
-    # scan gate below instead of prompting a question with a foregone answer.
-    ensure_known_games_json && json_available=1
-
-    if [ "$json_available" -eq 0 ]; then
+    if [ -n "$KNOWN_GAME_API" ]; then
+        # Already resolved and displayed in the GAME DETAILS block shown
+        # earlier this run (show_game_details_block sets this alongside
+        # SCANNED_NOTES_SHOWN) -- no need to re-query the database from
+        # scratch. The gate above still governs whether it's cross-checked
+        # against the installed files or simply trusted as-is.
+        api="$KNOWN_GAME_API"
+        db_api_raw="$api"
+        matched=1
         json_checked=1
-        print_note "known-eax-games.json isn't available this run."
-    elif confirm "Would you like the script to check the known-games database for $game_name's audio API?"; then
-        json_checked=1
-        echo ""
-        print_status "Checking known-games database for $game_name's audio API..."
 
-        match_count=$(jq -r --arg id "$1" --arg store "$store" '[.games[] | select((.stores[$store].id // "") | tostring == $id)] | length' "$KNOWN_GAMES_FILE" 2>/dev/null)
+        local api_display="DirectSound3D"
+        [ "$api" == "openal" ] && api_display="OpenAL"
 
-        if [ "${match_count:-0}" -gt 0 ]; then
-            db_api_raw=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | (.stores[$store].api // .default_api // "")' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
-            api="${db_api_raw:-directsound3d}"
-            matched=1
+        if [ "$attempt_auto_detect" -eq 0 ]; then
+            print_note "Skipping the file cross-check -- using the known-games database's documented" \
+                "$api_display API as-is."
+        elif [ -n "$GAME_DIR" ] && [ -d "$GAME_DIR" ]; then
+            print_task "Cross-checking $game_name's installed files against the documented $api_display API"
+            local scan_result
+            scan_result=$(detect_api_from_binary "$GAME_DIR")
+            if [ -z "$scan_result" ] || [ "$scan_result" == "both" ] || [ "$scan_result" == "$api" ]; then
+                print_status "Consistent with the known-games database." "$GREEN"
+            else
+                local scan_display="DirectSound3D"
+                [ "$scan_result" == "openal" ] && scan_display="OpenAL"
+                print_warning "$game_name's installed files appear to reference $scan_display, which" \
+                    "conflicts with the known-games database's documented $api_display."
+                if ! confirm "Trust the known-games database ($api_display) over the file scan?"; then
+                    api="$scan_result"
+                    scanned=1
+                fi
+            fi
         else
-            print_note "$game_name isn't in the known-games database."
+            print_note "$game_name's folder isn't resolved yet, so the documented API couldn't be" \
+                "cross-checked against its installed files."
+        fi
+    elif [ "$attempt_auto_detect" -eq 0 ]; then
+        declined=1
+    else
+        # Availability is already known by this point (the REPOSITORY CACHE
+        # CHECK step fetches/memoizes it before Phase 1 even starts), so
+        # there's nothing further to ask permission for here — the gate
+        # above already covers it.
+        ensure_known_games_json && json_available=1
+
+        if [ "$json_available" -eq 0 ]; then
+            json_checked=1
+            print_note "known-eax-games.json isn't available this run."
+        else
+            json_checked=1
+            echo ""
+            print_status "Checking known-games database for $game_name's audio API..."
+
+            match_count=$(jq -r --arg id "$1" --arg store "$store" '[.games[] | select((.stores[$store].id // "") | tostring == $id)] | length' "$KNOWN_GAMES_FILE" 2>/dev/null)
+
+            if [ "${match_count:-0}" -gt 0 ]; then
+                db_api_raw=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | (.stores[$store].api // .default_api // "")' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+                api="${db_api_raw:-directsound3d}"
+                matched=1
+            else
+                print_note "$game_name isn't in the known-games database."
+            fi
         fi
     fi
 
-    if [ "$matched" -eq 0 ] && [ -n "$GAME_DIR" ] && [ -d "$GAME_DIR" ]; then
-        if confirm "Would you like the script to attempt to detect whether $game_name uses OpenAL or DirectSound3D?"; then
-            print_task "Searching for Audio APIs"
-            print_status "Scanning $game_name's .exe/.dll files for OpenAL32.dll/dsound.dll references..."  ""
-            api=$(detect_api_from_binary "$GAME_DIR")
-            scanned=1
-        else
-            declined=1
-        fi
+    if [ "$matched" -eq 0 ] && [ "$attempt_auto_detect" -eq 1 ] && [ -n "$GAME_DIR" ] && [ -d "$GAME_DIR" ]; then
+        print_task "Searching for Audio APIs"
+        print_status "Scanning $game_name's .exe/.dll files for OpenAL32.dll/dsound.dll references..."  ""
+        api=$(detect_api_from_binary "$GAME_DIR")
+        scanned=1
     fi
 
     if [ -n "$api" ]; then
@@ -664,7 +715,7 @@ confirm_continue_if_openal_native() {
         print_note_arrow "The scan found no OpenAL or DirectSound3D references in $game_name's" \
             "files, so its audio API couldn't be confirmed."
     elif [ "$declined" -eq 1 ]; then
-        print_note_arrow "The file scan was skipped, so $game_name's audio API is unconfirmed."
+        print_note_arrow "Auto-detection was skipped, so $game_name's audio API is unconfirmed."
     elif [ "$json_checked" -eq 0 ]; then
         print_note_arrow "The known-games check was skipped and $game_name's files couldn't be" \
             "scanned, so its audio API is unconfirmed."
@@ -710,18 +761,24 @@ detect_game_environment() {
     APPID=""
     PREFIX_PATH=""
 
+    local attempt_auto_detect=1
+    confirm "Would you like the script to attempt to automatically identify your Wine/Proton prefix?" || attempt_auto_detect=0
+
     if [[ "$GAME_DIR" == *"/steamapps/common/"* ]]; then
         LAUNCHER_TYPE="1"
         print_result "Steam installation detected!" "$GREEN"
 
         if [ -n "$SCANNED_APPID" ]; then
             # Already known from the library scanner in get_game_directory —
-            # skip the redundant search/confirmation and go straight to
-            # prefix verification below.
+            # skip the redundant search and go straight to prefix
+            # verification below regardless of the gate above: the AppID is
+            # already known, and the prefix lookup after it is a mandatory
+            # protontricks query with no manual alternative, so there's
+            # nothing left here for the gate to meaningfully govern.
             APPID="$SCANNED_APPID"
             print_status "Using AppID ${BOLD}$APPID${NC} from the library scan." ""
         else
-            if confirm "Would you like the script to attempt to automatically find your Proton prefix?"; then
+            if [ "$attempt_auto_detect" -eq 1 ]; then
                 print_task "Searching for Steam AppID"
                 # Use the top-level folder directly under steamapps/common/, not
                 # the leaf of GAME_DIR — the .exe is often nested in a subfolder
@@ -812,7 +869,7 @@ detect_game_environment() {
         LAUNCHER_TYPE="2"
         print_result "Non-Steam installation detected (Heroic/GOG, or a manually created Wine prefix)!" "$GREEN"
         HEROIC_APP_NAME=""
-        if confirm "Would you like the script to attempt to automatically find your Wine prefix?"; then
+        if [ "$attempt_auto_detect" -eq 1 ]; then
             IFS=$'\t' read -r DETECTED_PREFIX DETECTED_APP_NAME <<< "$(detect_heroic_prefix_verbose "$GAME_DIR")"
             if [ -n "$DETECTED_PREFIX" ]; then
                 echo -e " -> ${GREEN}Detected Prefix:${NC} $DETECTED_PREFIX"
@@ -922,7 +979,7 @@ select_architecture() {
                 DETECTED="UNKNOWN"
             fi
             if [ "$DETECTED" != "UNKNOWN" ]; then
-                if confirm "Detected ${DETECTED}-bit. Correct?"; then ARCH="$DETECTED"; fi
+                if confirm "Detected ${DETECTED}-bit. Continue?"; then ARCH="$DETECTED"; fi
             fi
         fi
     fi

@@ -246,6 +246,8 @@ scan_game_libraries() {
             done < <(sed -n 's/^[[:space:]]*"path"[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$vdf" 2>/dev/null)
         done
 
+        print_status "Checking ${#libs[@]} Steam library folder(s)..." ""
+
         local lib acf appid installdir name meta_name
         for lib in "${libs[@]}"; do
             for acf in "$lib"/appmanifest_*.acf; do
@@ -274,6 +276,7 @@ scan_game_libraries() {
     if [ -n "$gog_ids" ]; then
         local installed_jsons
         installed_jsons=$(find "$HOME/.config/heroic" "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic" -type f -name "installed.json" 2>/dev/null)
+        print_status "Checking Heroic installed.json files..." ""
         local json_file install_path app_name name meta_name
         while IFS= read -r json_file; do
             [ -z "$json_file" ] && continue
@@ -295,14 +298,14 @@ scan_game_libraries() {
     fi
 
     if [ ${#names[@]} -eq 0 ]; then
-        echo -e "\n${YELLOW}No known EAX games were found in your Steam or Heroic libraries.${NC}"
-        echo -e "\n${WHITE}This only checks the community-maintained known-games list, which currently"
-        echo -e "covers a small, hand-verified set of titles — it will grow over time. A game"
-        echo -e "you own may still support EAX even if it's not listed yet.${NC}\n"
+        print_warning "No known EAX games were found in your Steam or Heroic libraries."
+        print_note "this only checks the community-maintained known-games list, which currently" \
+            "covers a small, hand-verified set of titles — it will grow over time. A game" \
+            "you own may still support EAX even if it's not listed yet."
         return 1
     fi
 
-    echo -e "\n${WHITE}Known EAX games found in your libraries:${NC}"
+    print_result "Known EAX games found in your libraries:"
     local i store_label
     for i in "${!names[@]}"; do
         store_label="Steam"
@@ -322,6 +325,7 @@ scan_game_libraries() {
         echo ""
     done
     if [ "$choice" -eq 0 ]; then
+        print_warning "No game selected."
         return 1
     fi
 
@@ -422,6 +426,7 @@ show_game_details_block() {
     # when known-eax-games.json actually has a matching entry — an unmatched
     # manual pick has nothing to show, same as before this existed.
     local id="$1" store="$2" location="$3"
+    KNOWN_GAME_API=""
     [ "$SCRIPT_ACTION" == "i" ] || return
     [ -z "$id" ] && return
     ensure_known_games_json || return
@@ -446,6 +451,7 @@ show_game_details_block() {
     api=$(jq -r --arg id "$id" --arg store "$store" \
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | (.stores[$store].api // .default_api // "directsound3d")' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+    KNOWN_GAME_API="$api"
     listing=$(jq -r --arg id "$id" --arg store "$store" \
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | .stores[$store].listing // empty' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)

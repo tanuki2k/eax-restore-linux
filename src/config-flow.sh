@@ -2,10 +2,12 @@
 # ACTION: INSTALL (PHASE 1: CONFIGURATION)
 # ==============================================================================
 if [ "$SCRIPT_ACTION" == "i" ]; then
-    # Fixed step count for this flow (1-9, same regardless of launcher/engine
+    # Fixed step count for this flow (1-10, same regardless of launcher/engine
     # branch) — read by print_step via the STEP_TOTAL global so headers show
-    # "N/9. Label" instead of just "N. Label".
-    STEP_TOTAL=9
+    # "N/10. Label" instead of just "N. Label". Step 2 ("Locate Game
+    # Executable") only ever appears on the scan path — resolve_exe_folder
+    # prints it itself — so browse/manual users jump straight from 1 to 3.
+    STEP_TOTAL=10
 
     EAX_RESTORE_SKIP_CACHE_CHECK="${EAX_RESTORE_SKIP_CACHE_CHECK:-}"
     if is_truthy "$EAX_RESTORE_SKIP_CACHE_CHECK"; then
@@ -30,27 +32,27 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         print_step 1 "Game Location"
         get_game_directory ""
 
-        # 2. Game Identification & Launcher Auto-Detect
-        print_step 2 "Launcher Identification"
+        # 3. Game Identification & Launcher Auto-Detect
+        print_step 3 "Launcher Identification"
         detect_game_environment
         [ -n "$RESTART_REQUESTED" ] && continue
 
         break
     done
 
-    # 3. Audio API Detection
-    print_step 3 "Audio API Detection"
+    # 4. Audio API Detection
+    print_step 4 "Audio API Detection"
     if [ "$LAUNCHER_TYPE" == "1" ]; then
         confirm_continue_if_openal_native "$APPID" "steam" "$GAME_NAME"
     else
         confirm_continue_if_openal_native "$HEROIC_APP_NAME" "gog" "$GAME_NAME"
     fi
 
-    # 4. Architecture Scan
-    select_architecture 4
+    # 5. Architecture Scan
+    select_architecture 5
 
-    # 5. Engine Selection
-    print_step 5 "Audio Engine Selection"
+    # 6. Engine Selection
+    print_step 6 "Audio Engine Selection"
 
     if [ -n "$OPENAL_NATIVE_MODE" ]; then
         ENGINE_CHOICE=2
@@ -120,12 +122,12 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         PRIMARY_DLL_FILENAME="OpenAL32.dll"
     fi
 
-    # 6. VC++ Runtime Dependencies
+    # 7. VC++ Runtime Dependencies
     # Both engines are kcat builds (DSOAL, OpenAL Soft) that need the genuine
     # MS runtime on older Proton/Wine, so this step always runs now rather
     # than being gated on the engine choice.
     INSTALL_VCRUN="n"
-    print_step 6 "VC++ Runtime Dependencies"
+    print_step 7 "VC++ Runtime Dependencies"
     print_paragraph "Genuine Microsoft C++ runtime libraries are needed for older Proton/Wine" \
         "builds (9 and below) to load kcat's DSOAL / OpenAL Soft."
 
@@ -155,8 +157,8 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         echo -e "the rest of the install.${NC}"
     fi
 
-    # 7. Audio Configuration
-    print_step 7 "Speaker Configuration"
+    # 8. Audio Configuration
+    print_step 8 "Speaker Configuration"
     echo -e "\n${WHITE}What kind of audio output are you using?${NC}\n"
     print_option 1 "Stereo (headphones or 2-speaker setup)"
     print_option 2 "Surround Sound (4.0/5.1/6.1/7.1 speaker setup)"
@@ -233,8 +235,8 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         OUTPUT_MODE="matrix"
     fi
 
-    # 8. Advanced Compatibility Tweaks
-    print_step 8 "Advanced Compatibility Tweaks"
+    # 9. Advanced Compatibility Tweaks
+    print_step 9 "Advanced Compatibility Tweaks"
     echo -e "\n${WHITE}These optional workarounds are designed for extremely stubborn games"
     echo -e "that refuse to load EAX normally. In 90% of cases, you do not need these.${NC}\n"
 
@@ -267,7 +269,9 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         fi
     fi
     if [ -n "$EAX_UNIFIED" ] && [ "$TWEAK_A_APPLICABLE" -eq 1 ]; then
-        echo -e "${WHITE}$GAME_NAME is flagged as EAX Unified — it reaches EAX through an eax.dll shim.${NC}"
+        echo -e "${WHITE}$GAME_NAME is one of those exceptions — it reaches EAX through an eax.dll shim (EAX Unified),${NC}"
+        echo -e "${WHITE}so it's worth checking whether it already ships its own eax.dll before deciding${NC}"
+        echo -e "${WHITE}whether to create dummy eax.dll files to unlock the game's EAX menu.${NC}"
         if confirm "Check whether it ships its own eax.dll?" Y; then
             if is_genuine_dll "$GAME_DIR/eax.dll" || is_genuine_dll "$GAME_DIR/eaxunified.dll"; then
                 print_note "$GAME_NAME already ships its own eax.dll — the EAX Unified dummy-file tweak" \
@@ -300,7 +304,11 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
             read -r ADVANCED_LIMITS
         fi
     else
-        echo -e "${YELLOW}Would you like to view and opt-in to these advanced tweaks? (y/N): ${NC}"
+        if [ "$TWEAK_A_HANDLED" -eq 1 ]; then
+            echo -e "${YELLOW}Would you like to view and opt-in to the additional advanced tweaks? (y/N): ${NC}"
+        else
+            echo -e "${YELLOW}Would you like to view and opt-in to these advanced tweaks? (y/N): ${NC}"
+        fi
         echo -e -n "> "
         read -r SHOW_ADVANCED
 
@@ -334,8 +342,8 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         fi
     fi
 
-    # 9. Automatic DLL Override
-    print_step 9 "Automatic DLL Override"
+    # 10. Automatic DLL Override
+    print_step 10 "Automatic DLL Override"
     print_paragraph "Wine needs to be told to use the new ${PRIMARY_DLL_FILENAME} file instead of its built-in one." \
         "We can inject this rule directly into the Wine prefix registry so you don't have to" \
         "manually type WINEDLLOVERRIDES=\"${PRIMARY_DLL_NAME}=n,b\" %command% into your launcher."

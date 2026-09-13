@@ -81,6 +81,13 @@ KNOWN_GAMES_SCHEMA_VERSION=2
 # Tweak A instead of the generic prompt.
 EAX_UNIFIED=""
 
+# Set by show_game_details_block to the known-games entry's resolved audio
+# API (the same value it displays as "Audio API" in the GAME DETAILS block),
+# "" when no match was found/shown. confirm_continue_if_openal_native reads
+# this to cross-check the documented value against a live file scan instead
+# of re-deriving it from scratch.
+KNOWN_GAME_API=""
+
 # Set by prompt_restart_or_quit when the user, at an EAX-impossible dead end,
 # chooses to go back and pick a different game rather than quit. The config
 # flow's Steps 1-2 loop and the functions between it and the check
