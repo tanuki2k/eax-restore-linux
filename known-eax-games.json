@@ -260,7 +260,7 @@
           "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "store_details": "The classic 1999 build was delisted from Steam in October 2025; Steam now sells only the 25th Anniversary Remaster, a different build not covered here.",
+          "store_details": "The classic 1999 build was delisted from Steam in October 2025; Steam now sells only the 25th Anniversary Remaster, a separate ground-up rewrite with no DirectSound3D EAX support.",
           "patches": "The System Shock 2 Community Patch (SCP) is worth pairing, though it's general bugfix/polish, not audio-specific."
         },
         "gog": {
@@ -268,7 +268,7 @@
           "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "store_details": "The original 1999 build's own GOG listing was delisted in October 2025 — GOG now sells only the 25th Anniversary Remaster (a different build, not covered here) — but existing owners of the classic build keep access.",
+          "store_details": "The original 1999 build's own GOG listing was delisted in October 2025 — GOG now sells only the 25th Anniversary Remaster, a separate ground-up rewrite with no DirectSound3D EAX support — but existing owners of the classic build keep access.",
           "patches": "The System Shock 2 Community Patch (SCP) is worth pairing, though it's general bugfix/polish, not audio-specific."
         }
       },
@@ -280,6 +280,33 @@
         "1.0"
       ],
       "notes": "It comes with NewDark pre-installed, which has its own OpenAL Soft 'Hardware Acceleration' option in the in-game Audio menu — worth trying if EAX doesn't sound right."
+    },
+    {
+      "name": "System Shock 2: 25th Anniversary Remaster",
+      "stores": {
+        "steam": {
+          "id": 866570,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "store_details": null,
+          "patches": null
+        },
+        "gog": {
+          "id": 1448370350,
+          "listing": "available",
+          "api": null,
+          "id_confidence": "storefront_verified",
+          "store_details": null,
+          "patches": null
+        }
+      },
+      "default_api": "directsound3d",
+      "eax_status": "not_implemented",
+      "eax_status_details": "The 25th Anniversary Remaster runs on Nightdive's proprietary Kex Engine, a from-scratch rewrite — it never had DirectSound3D EAX to begin with.",
+      "restore_details": null,
+      "eax_versions": [],
+      "notes": "If you own the classic 1999 build, run this script against that installation instead — it has real DirectSound3D EAX support (plus NewDark's own OpenAL Soft 'Hardware Acceleration' option), neither of which this remaster's rewritten engine provides."
     },
     {
       "name": "F.E.A.R.",
