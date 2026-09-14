@@ -243,3 +243,64 @@ Color meaning, unchanged by the helpers:
 - Inline comments favor explaining *why* a non-obvious choice was made (e.g. why a
   cache is preserved on failure, why a check is memoized) over restating *what* the
   next line does — follow that tone when adding comments.
+
+## Writing style conventions
+
+The section above covers *mechanics* — which helper/color to use. This one covers
+*wording*: the tone and voice established over many past commits for the two kinds
+of prose in this repo, `known-eax-games.json`'s free-text fields and the script's
+own user-facing strings. Neither is enforceable by a linter, so match the examples
+below when writing or editing either.
+
+**`known-eax-games.json` prose fields** (`notes`, `store_details`, `patches`,
+`eax_status_details`, `restore_details` — see README's "Contributing to the known
+games database" for what belongs in which field):
+
+- Keep each field to its one job; don't restate content that belongs in a sibling
+  field just because it's related to the same title.
+- State the game/build fact and let the script's own output explain what it does
+  with it — don't write "DSOAL", "OpenAL Soft", "paths", or "intercepts" into data
+  fields.
+- Frame a community patch/reimplementation as a legitimate alternative worth using,
+  not an inferior fallback to apologize for (e.g. OldUnreal's OpenAL renderer).
+- Write each store's `store_details`/`patches` prose to stand on its own — never
+  reference "the other store's block" or "the Steam version" from within a
+  different store's block, since a user only ever sees one block at a time.
+- State only what's actually verified, and say exactly what was checked — avoid
+  hedge words ("probably", "should") where a concrete fact is possible, and don't
+  imply an install was checked locally if it wasn't. Cite a source in parentheses
+  when the claim is non-obvious, e.g. "(per the Vogons Wiki citation for this
+  title)", "(per PCGamingWiki)", "(per Creative's setup guide for the game)".
+- Be concrete and current rather than generic — name the actual tweak label,
+  mission, mod, or date — but keep each note to 1-3 sentences confined to its
+  field's job; don't pad it with everything known about the title.
+- A `notes` entry in practice: short, plain prose (no markdown), em-dashes for
+  parenthetical asides, occasionally addressing the user directly in a conditional
+  ("If you also own the classic build..."), one caveat or fact per note. E.g.
+  "Bloodlines isn't documented (per PCGamingWiki) as having hardware EAX... That's
+  expected, not a fault."
+
+**Script user-facing strings** (banners, `Note:`/`Warning:`/`Error:` messages,
+prompts — see "Text/output style conventions" above for which helper/color to use):
+
+- Prefer natural, polite, causal prose over log/debug-style boilerplate. Rewrite
+  mechanical fragments into a conversational phrasing of the same information,
+  e.g. `"Invalid selection. Please type 1, 2, or 3."` →
+  `"That's not a valid option — please type 1, 2, or 3."`, or a bare
+  `"Conflict: $(basename "$target_file")"` header → a question,
+  `"What would you like to do? [o]verwrite, [b]ackup & overwrite (default), [s]kip:"`.
+- Join cause and effect with a contraction and a causal "so" clause instead of two
+  clipped declarative sentences, e.g.
+  `"...checksum verification. This engine will be unavailable this run."` →
+  `"...checksum verification, so this engine will be unavailable this run."`
+- Explain jargon in plain English instead of using the internal term, e.g.
+  `"installing DSOAL here would be a functional no-op"` →
+  `"installing DSOAL here wouldn't do anything — there's nothing for it to hook
+  into"`.
+- Name the actual subject instead of a generic stand-in wherever the variable is
+  available — the real game name instead of "this edition", `$GAME_NAME`'s prefix
+  instead of "this prefix".
+- Trim explanatory copy down to the fact and its concrete, relatable consequence
+  rather than a throat-clearing reasoning paragraph, e.g. "will silently fail to
+  load the custom audio engine" → "the game will crash without showing an error
+  message".
