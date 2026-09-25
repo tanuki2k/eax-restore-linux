@@ -640,7 +640,10 @@ confirm_continue_if_openal_native() {
     # still appears.
     API_CONFIRMED_DS3D=""
     [ "$SCRIPT_ACTION" == "i" ] || return
-    [ -z "$1" ] && return
+    # No early return on an empty store ID (a manually entered Heroic
+    # prefix with no GamesConfig match, say): only the database lookup
+    # needs it. The file scan and the DirectSound3D/OpenAL choice below
+    # still apply, and skipping them left the step as a bare header.
 
     local store="steam"
     [ "$2" == "gog" ] && store="gog"
@@ -707,6 +710,10 @@ confirm_continue_if_openal_native() {
         if [ "$json_available" -eq 0 ]; then
             json_checked=1
             print_note "known-eax-games.json isn't available this run."
+        elif [ -z "$1" ]; then
+            json_checked=1
+            print_note "$game_name's store ID isn't known, so it can't be looked up in the" \
+                "known-games database."
         else
             json_checked=1
             echo ""
