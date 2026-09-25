@@ -2326,10 +2326,10 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
             else
                 echo -e "\n${WHITE}These files are missing or incomplete here. Without them, the game may crash"
                 echo -e "silently on startup when it tries to load the audio engine.${NC}"
-                echo -e "\n${YELLOW}Install genuine MS VC++ runtimes? (y/N): ${NC}"
+                echo -e "\n${YELLOW}Install genuine MS VC++ runtimes? (Y/n): ${NC}"
                 echo -e -n "> "
                 read -r INSTALL_VCRUN
-                INSTALL_VCRUN="${INSTALL_VCRUN:-n}"
+                INSTALL_VCRUN="${INSTALL_VCRUN:-y}"
             fi
         fi
     fi
