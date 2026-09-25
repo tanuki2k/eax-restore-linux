@@ -308,6 +308,7 @@ write_log_summary() {
         echo "Launcher:        $(case "$LAUNCHER_TYPE" in 1) echo "Steam (AppID ${APPID:-unknown})";; 2) echo "Non-Steam / Heroic${HEROIC_APP_NAME:+ (app $HEROIC_APP_NAME)}";; *) echo "not detected";; esac)"
         echo "Prefix:          ${PREFIX_PATH:-not set}"
         echo "Runner:          ${runner:-unknown}${IS_PROTON:+ (IS_PROTON=$IS_PROTON)}"
+        [ "$LAUNCHER_TYPE" == "2" ] && echo "Wine used:       ${WINE_CMD:-none}${WINESERVER_CMD:+ (wineserver $WINESERVER_CMD)}"
         echo "Architecture:    ${ARCH:-not set}"
         echo "Engine choice:   ${ENGINE_CHOICE:-not chosen} (DSOAL: ${DSOAL_VER:-?} | OpenAL Soft: ${OAL_VER:-?})"
         if [ -n "$INSTALL_MANIFEST" ] && [ -s "$INSTALL_MANIFEST" ]; then
@@ -672,6 +673,7 @@ detect_game_environment() {
                 [ -z "$APPID" ] && break
             fi
 
+            echo ""
             echo -e " -> Querying Protontricks database for AppID ${APPID}..."
             PREFIX_PATH=$(protontricks -c 'echo $WINEPREFIX' "$APPID" 2>/dev/null | grep "/pfx" | tail -n 1 | tr -d '\r')
 
@@ -691,7 +693,7 @@ detect_game_environment() {
     else
         LAUNCHER_TYPE="2"
         echo -e "${GREEN}Non-Steam (Heroic/GOG) installation detected!${NC}"
-        echo -e "\n${YELLOW}Would you like the script to attempt to automatically find your Wine prefix? (Y/n): ${NC}"
+        echo -e "\n${YELLOW}Would you like the script to attempt to automatically find the game's prefix? (Y/n): ${NC}"
         echo -e -n "> "
         read -r DO_AUTO_H
 
@@ -718,6 +720,7 @@ detect_game_environment() {
             fi
 
             if [ -d "$PREFIX_PATH/drive_c" ]; then
+                echo ""
                 echo -e " -> ${GREEN}Prefix verified!${NC}"
                 break
             else
@@ -732,20 +735,121 @@ detect_game_environment() {
             fi
         done
 
-        if [ "$SCRIPT_ACTION" == "i" ] && [ -n "$PREFIX_PATH" ]; then
-            echo -e "\n${CYAN}STATUS: Analysing Heroic runner configuration...${NC}"
-            HEROIC_JSON=$(find "$HOME/.config/heroic" "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic" -type f -path "*/GamesConfig/*.json" -exec grep -Fl "\"winePrefix\": \"$PREFIX_PATH\"" {} + 2>/dev/null | head -n 1)
-
-            if [ -n "$HEROIC_JSON" ]; then
-                if grep -iq '"type": "proton"\|"name": ".*proton' "$HEROIC_JSON"; then
-                    IS_PROTON=1
-                    echo -e " -> ${YELLOW}Proton runner detected within Heroic configuration.${NC}"
-                else
-                    echo -e " -> ${GREEN}Standard Wine runner detected.${NC}"
-                fi
-            fi
+        # Runs for uninstall too: its registry cleanup goes through the
+        # same Wine binary, so it needs the game's own runner just as much.
+        # Not gated or confirmed, unlike the prefix search: this reads the
+        # settings of the prefix just confirmed rather than guessing, and
+        # any other Wine would reintroduce the mismatch this fixes.
+        if [ -n "$PREFIX_PATH" ]; then
+            echo -e "\n${CYAN}STATUS: Checking which Wine version Heroic uses for this game...${NC}"
+            resolve_heroic_runner
         fi
     fi
+}
+
+resolve_heroic_runner() {
+    # Points WINE_CMD/WINESERVER_CMD at the Wine build Heroic actually runs
+    # this game with, read from its GamesConfig/<app>.json "wineVersion".
+    # Preflight's default is whatever `wine` is on PATH (or the first one
+    # under Heroic's tools folder) — e.g. a system Wine 8.0 writing into a
+    # GE-Proton 11 prefix, which is what a Halo CE bug report showed. Wine
+    # and Proton keep the registry in different layouts between versions,
+    # so the game's own runner is the only one whose changes are sure to
+    # land where the game will read them. Heroic's Proton prefixes keep
+    # drive_c at the prefix root (pfx is a symlink to "."), so Proton's own
+    # files/bin/wine can run against PREFIX_PATH directly.
+    local json runner_type runner_bin runner_name dir wine_bin="" server_bin=""
+    json=$(find "$HOME/.config/heroic" "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic" -type f -path "*/GamesConfig/*.json" \
+        \( -exec grep -Fq "\"winePrefix\": \"$PREFIX_PATH\"" {} \; -o -exec grep -Fq "\"winePrefix\": \"$PREFIX_PATH/\"" {} \; \) -print 2>/dev/null | head -n 1)
+    HEROIC_JSON="$json"
+    if [ -n "$json" ]; then
+        # \x1f-separated rather than @tsv: tab is IFS whitespace, so an
+        # empty field (no "name", say) would shift the rest one to the left.
+        IFS=$'\x1f' read -r runner_type runner_bin runner_name server_bin <<< "$(jq -r \
+            'first(.[] | objects | select(.wineVersion?) | .wineVersion) | [.type // "", .bin // "", .name // "", .wineserver // ""] | join("\u001f")' \
+            "$json" 2>/dev/null)"
+        case "$runner_type" in
+            proton)
+                IS_PROTON=1
+                dir=$(dirname "$runner_bin")
+                for d in "$dir/files/bin" "$dir/dist/bin"; do
+                    if [ -x "$d/wine" ]; then wine_bin="$d/wine"; server_bin="$d/wineserver"; break; fi
+                done
+                ;;
+            wine)
+                [ -x "$runner_bin" ] && wine_bin="$runner_bin"
+                [ -z "$server_bin" ] && server_bin="$(dirname "$runner_bin")/wineserver"
+                ;;
+        esac
+    fi
+
+    if [ -n "$wine_bin" ]; then
+        WINE_CMD="$wine_bin"
+        WINESERVER_CMD=""
+        [ -x "$server_bin" ] && WINESERVER_CMD="$server_bin"
+        # Name only, as Heroic's own Wine Version dropdown shows it; the
+        # full path goes in the run log's "Wine used:" summary line.
+        echo -e " -> ${GREEN}Using the same Wine version Heroic launches ${GAME_NAME:-this game} with: ${runner_name:-$runner_type}${NC}"
+        return 0
+    fi
+
+    WINESERVER_CMD=""
+    if [ -n "$runner_type" ]; then
+        echo -e " -> ${CYAN}Note: the Wine version Heroic launches ${GAME_NAME:-this game} with (${runner_name:-$runner_type}) wasn't found at${NC}"
+        echo -e "${CYAN}$runner_bin, so ${WINE_CMD:-no Wine binary} will be used instead. If EAX doesn't show up${NC}"
+        echo -e "${CYAN}in-game, that's the likely cause.${NC}"
+    elif [ -n "$WINE_CMD" ]; then
+        echo -e " -> ${CYAN}Note: no Heroic settings were found for this prefix, so $WINE_CMD will be used. If${NC}"
+        echo -e "${CYAN}${GAME_NAME:-the game} runs on Proton or a different Wine build, EAX may not show up in-game.${NC}"
+    fi
+    return 1
+}
+
+flush_wine_registry() {
+    # Wine keeps the registry in wineserver's memory and only writes
+    # user.reg once the server shuts down, so wait for that before reading
+    # the file back. Best-effort: a timeout just means the check below may
+    # not see the change yet.
+    if [ "$LAUNCHER_TYPE" == "1" ] && [ -n "$APPID" ]; then
+        log_cmd "protontricks wineserver -w (AppID $APPID)"
+        timeout 60 protontricks -c "wineserver -w" "$APPID" &>> "$EAX_LOG_FILE"
+    elif [ -n "$WINE_CMD" ]; then
+        local server="${WINESERVER_CMD:-$(dirname "$WINE_CMD")/wineserver}"
+        [ -x "$server" ] || server="wineserver"
+        log_cmd "$server -w (prefix $PREFIX_PATH)"
+        WINEPREFIX="$PREFIX_PATH" timeout 60 "$server" -w &>> "$EAX_LOG_FILE"
+    fi
+}
+
+registry_has_value() {
+    # Usage: registry_has_value <reg file> <section> <line>
+    # e.g. registry_has_value "$PREFIX_PATH/user.reg" 'Software\\Wine\\DllOverrides' '"dsound"="native,builtin"'
+    # Looks for an exact value line inside one section of a Wine .reg store
+    # file. Values go through ENVIRON, not awk -v, because -v would collapse
+    # the doubled backslashes Wine writes in section names.
+    SEC="[$2]" WANT="$3" awk 'BEGIN { sec = ENVIRON["SEC"]; want = tolower(ENVIRON["WANT"]) }
+        index($0, sec " ") == 1 || $0 == sec { in_sec = 1; next }
+        /^\[/ { in_sec = 0 }
+        in_sec && tolower($0) == want { found = 1 }
+        END { exit !found }' "$1"
+}
+
+verify_dll_override() {
+    # Usage: verify_dll_override <dll name>
+    # Reads the override back from the prefix's user.reg after regedit
+    # reported success — regedit can exit 0 without the key ever landing
+    # (e.g. a different Wine build than the prefix's own). Returns 0 if
+    # found, 1 if missing, 2 if there's no user.reg to check (never treated
+    # as a failure, since that says nothing about the override itself).
+    local dll="$1" store="$PREFIX_PATH/user.reg"
+    flush_wine_registry
+    [ -f "$store" ] || { log_cmd "override check skipped: $store not found"; return 2; }
+    if registry_has_value "$store" 'Software\\Wine\\DllOverrides' "\"$dll\"=\"native,builtin\""; then
+        log_cmd "override check: \"$dll\"=\"native,builtin\" found in $store"
+        return 0
+    fi
+    log_cmd "override check: \"$dll\"=\"native,builtin\" NOT found in $store"
+    return 1
 }
 
 apply_registry_patch() {
@@ -956,7 +1060,7 @@ install_vcrun_dependencies() {
     if [ "$LAUNCHER_TYPE" == "1" ]; then
         protontricks "$APPID" --force -q vcrun2022 &>> "$VCRUN_LOG"
     elif [ -n "$WINE_CMD" ]; then
-        WINEPREFIX="$PREFIX_PATH" WINE="$WINE_CMD" winetricks --force -q vcrun2022 &>> "$VCRUN_LOG"
+        WINEPREFIX="$PREFIX_PATH" WINE="$WINE_CMD" WINESERVER="${WINESERVER_CMD:-}" winetricks --force -q vcrun2022 &>> "$VCRUN_LOG"
     fi
 
     # 2. Verify physical file presence instead of trusting exit codes
@@ -2364,7 +2468,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         if [ -n "$WINE_CMD" ] && [ -n "$PREFIX_PATH" ]; then
             # Using --force to bypass winetricks safety blocks in Heroic
             log_cmd "winetricks --force -q openal (WINE=$WINE_CMD, prefix $PREFIX_PATH)"
-            WINEPREFIX="$PREFIX_PATH" WINE="$WINE_CMD" winetricks --force -q openal 2>> "$EAX_LOG_FILE"; OPENAL_RC=$?; echo "[exit $OPENAL_RC]" >> "$EAX_LOG_FILE"
+            WINEPREFIX="$PREFIX_PATH" WINE="$WINE_CMD" WINESERVER="${WINESERVER_CMD:-}" winetricks --force -q openal 2>> "$EAX_LOG_FILE"; OPENAL_RC=$?; echo "[exit $OPENAL_RC]" >> "$EAX_LOG_FILE"
         else
             echo -e " -> ${YELLOW}Warning: No local Wine binary or resolved prefix was found. Skipping core package.${NC}"
         fi
@@ -2621,12 +2725,30 @@ EOF
         # a key that was never set is harmless.
         [[ "$ADVANCED_COM" =~ ^[Yy]$ ]] && echo "REGISTRY:COM" >> "$INSTALL_MANIFEST"
         [[ "$AUTO_OVERRIDE" =~ ^[Yy]$ ]] && echo "REGISTRY:OVERRIDE" >> "$INSTALL_MANIFEST"
-        if apply_registry_patch "$REG_FILE"; then
+        # REG_STATUS: ok, failed (regedit itself), or missing (regedit
+        # reported success but the override isn't in the prefix). The
+        # override is the one registry change EAX can't work without, so
+        # it's read back rather than trusting regedit's exit code alone; a
+        # prefix with no user.reg to read (return 2) is left as ok.
+        REG_STATUS="ok"
+        if ! apply_registry_patch "$REG_FILE"; then
+            REG_STATUS="failed"
+        elif [[ "$AUTO_OVERRIDE" =~ ^[Yy]$ ]]; then
+            verify_dll_override "dsound"
+            [ $? -eq 1 ] && REG_STATUS="missing"
+        fi
+
+        if [ "$REG_STATUS" == "ok" ]; then
             [[ "$ADVANCED_COM" =~ ^[Yy]$ ]] && echo -e " -> Injected: COM Registry Routing"
             [[ "$AUTO_OVERRIDE" =~ ^[Yy]$ ]] && echo -e " -> Injected: WINEDLLOVERRIDES (native,builtin) into registry"
         else
-            echo -e " -> ${YELLOW}${BOLD}Error: Couldn't write the registry changes to the Wine prefix, so they aren't applied.${NC}"
-            echo -e "${WHITE}    The run log has the full output.${NC}"
+            if [ "$REG_STATUS" == "failed" ]; then
+                echo -e " -> ${YELLOW}${BOLD}Error: Couldn't write the registry changes to the Wine prefix, so they aren't applied.${NC}"
+                echo -e "${WHITE}    The run log has the full output.${NC}"
+            else
+                echo -e " -> ${YELLOW}${BOLD}Error: The registry import reported success, but the dsound.dll override isn't in${NC}"
+                echo -e "${YELLOW}${BOLD}the prefix's registry, so Wine won't load the new DLL. The run log has the details.${NC}"
+            fi
             DEPLOY_FAILURES=$(( ${DEPLOY_FAILURES:-0} + 1 ))
             # Show the manual WINEDLLOVERRIDES instructions instead of
             # claiming the override was handled automatically.
