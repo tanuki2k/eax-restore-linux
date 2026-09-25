@@ -1187,77 +1187,89 @@ uninstall_vcrun_dependencies() {
     # "Programs and Features" registration (see remove_vcrun_msi_registration)
     # so a future reinstall on this same prefix doesn't see a stale "already
     # installed" record and silently skip re-extracting the files. Uninstall
-    # doesn't run the architecture-selection step, so this detects 32 vs
-    # 64-bit by checking which runtime is actually present, same as
-    # verify_vcrun_files.
+    # doesn't run the architecture-selection step, so this checks both
+    # system32 and syswow64 for a genuine runtime (see below).
     if [ -z "$PREFIX_PATH" ] || [ ! -d "$PREFIX_PATH/drive_c/windows" ]; then
         echo -e " -> ${YELLOW}Prefix not found, skipping VC++ removal.${NC}"
         return
     fi
 
-    local target_dir=""
-    local vcrun_arch=""
-    if is_genuine_dll "$PREFIX_PATH/drive_c/windows/system32/vcruntime140.dll"; then
-        target_dir="$PREFIX_PATH/drive_c/windows/system32"
-        vcrun_arch="64"
-    elif is_genuine_dll "$PREFIX_PATH/drive_c/windows/syswow64/vcruntime140.dll"; then
-        target_dir="$PREFIX_PATH/drive_c/windows/syswow64"
-        vcrun_arch="32"
+    # winetricks' vcrun2022 installs both the x86 and x64 runtimes, so a
+    # 64-bit prefix usually has one in each folder: system32 holds the
+    # 64-bit copy and syswow64 the 32-bit one. A 32-bit-only prefix (no
+    # syswow64) keeps its 32-bit copy in system32. Every folder holding a
+    # genuine runtime is handled with its own architecture's uninstaller --
+    # stopping at the first one found left a 32-bit game's copy behind.
+    local win="$PREFIX_PATH/drive_c/windows"
+    local dirs=("$win/system32") arches=("x86")
+    if [ -d "$win/syswow64" ]; then
+        dirs=("$win/system32" "$win/syswow64"); arches=("x64" "x86")
     fi
+    local i present=()
+    for i in "${!dirs[@]}"; do
+        if is_genuine_dll "${dirs[$i]}/vcruntime140.dll" || is_genuine_dll "${dirs[$i]}/msvcp140.dll"; then
+            present+=("$i")
+        fi
+    done
 
-    if [ -z "$target_dir" ]; then
+    if [ "${#present[@]}" -eq 0 ]; then
         echo -e " -> ${YELLOW}No VC++ runtime files found in this prefix, nothing to remove.${NC}"
         return
     fi
 
     echo -e "\n${CYAN}STATUS: Removing MS VC++ 2022 Redistributable...${NC}"
 
-    # 1. Best-effort: the official uninstaller. Fetches the installer fresh
-    # if not already cached, but never blocks on a failed download — this
-    # step is pure upside if it works, and a no-op if it doesn't.
     local vcrun_share="$BASE_SHARE/vcrun2022"
     mkdir -p "$vcrun_share"
-    local vcrun_url vcrun_exe
-    if [ "$vcrun_arch" == "64" ]; then
-        vcrun_url="https://aka.ms/vs/17/release/vc_redist.x64.exe"
-        vcrun_exe="vc_redist.x64.exe"
-    else
-        vcrun_url="https://aka.ms/vs/17/release/vc_redist.x86.exe"
-        vcrun_exe="vc_redist.x86.exe"
-    fi
-    if [ ! -s "$vcrun_share/$vcrun_exe" ]; then
-        echo -e " -> Fetching the official uninstaller (best-effort)..."
-        curl -fL -# "$vcrun_url" -o "$vcrun_share/$vcrun_exe" 2>/dev/null
-    fi
-    if [ -s "$vcrun_share/$vcrun_exe" ]; then
-        echo -e " -> Running the official uninstaller (best-effort; direct cleanup follows regardless)..."
-        if [ "$LAUNCHER_TYPE" == "1" ]; then
-            log_cmd "protontricks $vcrun_exe /uninstall"
-            protontricks -c "wine \"$vcrun_share/$vcrun_exe\" /uninstall /q /norestart" "$APPID" &>> "$EAX_LOG_FILE"; echo "[exit $?]" >> "$EAX_LOG_FILE"
-        else
-            log_cmd "$WINE_CMD $vcrun_exe /uninstall"
-            WINEPREFIX="$PREFIX_PATH" "$WINE_CMD" "$vcrun_share/$vcrun_exe" /uninstall /q /norestart &>> "$EAX_LOG_FILE"; echo "[exit $?]" >> "$EAX_LOG_FILE"
-        fi
-    else
-        echo -e " -> Could not fetch the official uninstaller, skipping straight to direct cleanup."
-    fi
+    local dir arch vcrun_exe dll f
+    for i in "${present[@]}"; do
+        dir="${dirs[$i]}"; arch="${arches[$i]}"; vcrun_exe="vc_redist.$arch.exe"
 
-    # 2. Direct removal — the reliable part. Matches VCRUN_DLL_NAMES (every
-    # DLL install could have set an override for), not a shorter ad-hoc list.
-    local dll f
-    for dll in "${VCRUN_DLL_NAMES[@]}"; do
-        f="$target_dir/${dll}.dll"
-        if [ -f "$f" ]; then
-            rm -f "$f"
-            echo -e " -> Removed ${dll}.dll"
+        # 1. Best-effort: the official uninstaller. Fetches the installer
+        # fresh if not already cached, but never blocks on a failed
+        # download — this step is pure upside if it works, and a no-op if
+        # it doesn't.
+        if [ ! -s "$vcrun_share/$vcrun_exe" ]; then
+            echo -e " -> Fetching the official $arch uninstaller (best-effort)..."
+            curl -fL -# "https://aka.ms/vs/17/release/$vcrun_exe" -o "$vcrun_share/$vcrun_exe" 2>/dev/null
         fi
+        if [ -s "$vcrun_share/$vcrun_exe" ]; then
+            echo -e " -> Running the official $arch uninstaller (best-effort; direct cleanup follows regardless)..."
+            if [ "$LAUNCHER_TYPE" == "1" ]; then
+                log_cmd "protontricks $vcrun_exe /uninstall"
+                protontricks -c "wine \"$vcrun_share/$vcrun_exe\" /uninstall /q /norestart" "$APPID" &>> "$EAX_LOG_FILE"; echo "[exit $?]" >> "$EAX_LOG_FILE"
+            else
+                log_cmd "$WINE_CMD $vcrun_exe /uninstall"
+                WINEPREFIX="$PREFIX_PATH" "$WINE_CMD" "$vcrun_share/$vcrun_exe" /uninstall /q /norestart &>> "$EAX_LOG_FILE"; echo "[exit $?]" >> "$EAX_LOG_FILE"
+            fi
+        else
+            echo -e " -> Could not fetch the official $arch uninstaller, skipping straight to direct cleanup."
+        fi
+
+        # 2. Direct removal — the reliable part. Matches VCRUN_DLL_NAMES
+        # (every DLL install could have set an override for), not a
+        # shorter ad-hoc list. Only genuine Microsoft files: Wine's own
+        # same-named placeholders aren't ours to remove.
+        for dll in "${VCRUN_DLL_NAMES[@]}"; do
+            f="$dir/${dll}.dll"
+            if is_genuine_dll "$f" && rm -f "$f"; then
+                echo -e " -> Removed ${dll}.dll from $(basename "$dir")"
+            fi
+        done
     done
 
     remove_vcrun_msi_registration
     remove_vcrun_dll_overrides
 
-    if [ -f "$target_dir/vcruntime140.dll" ] || [ -f "$target_dir/msvcp140.dll" ]; then
-        echo -e " -> ${YELLOW}Warning: some core VC++ runtime files are still present.${NC}"
+    # Checks every folder, not just the ones handled above.
+    local left=()
+    for dir in "${dirs[@]}"; do
+        for dll in vcruntime140 msvcp140; do
+            is_genuine_dll "$dir/$dll.dll" && left+=("$(basename "$dir")/$dll.dll")
+        done
+    done
+    if [ "${#left[@]}" -gt 0 ]; then
+        echo -e " -> ${YELLOW}${BOLD}Warning: some core VC++ runtime files are still present: ${left[*]}${NC}"
     else
         echo -e " -> ${GREEN}VC++ Redistributable removed successfully.${NC}"
     fi
