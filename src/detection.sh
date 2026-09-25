@@ -225,12 +225,69 @@ detect_heroic_prefix_verbose() {
         [ -n "$auto_prefix" ] && break
     done <<< "$installed_jsons"
 
+    # Games added manually via Heroic's "Add Game" (sideloaded) aren't in any
+    # installed.json -- Heroic lists them in sideload_apps/library.json, keyed
+    # by folder_name. Their prefix still lives in GamesConfig/<app_name>.json.
+    local is_sideload=0 sideload_title=""
+    if [ -z "$app_name" ]; then
+        print_status "Searching Heroic's manually-added games (sideload_apps/library.json)..." "" >&2
+        local library_jsons
+        library_jsons=$(find "$HOME/.config/heroic" "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic" -type f -path "*/sideload_apps/library.json" 2>/dev/null)
+        while IFS= read -r json_file; do
+            [ -z "$json_file" ] && continue
+            # library.json nests an "install": {...} object inside each game,
+            # so the RS="}" record split used for installed.json above would
+            # cut each game in half. Track brace depth instead and emit one
+            # line per game object (depth 2) when it closes. Fields are split on
+            # \037 rather than tab: read collapses runs of whitespace IFS, which
+            # would shift fields over whenever one (e.g. folder_name) is empty.
+            while IFS=$'\037' read -r record_app_name record_title folder_name executable; do
+                [ -z "$record_app_name" ] && continue
+                [ -z "$folder_name" ] && [ -n "$executable" ] && folder_name=$(dirname "$executable")
+                [ -z "$folder_name" ] && continue
+                if [ "$target_dir" == "$folder_name" ] || [[ "$target_dir" == "$folder_name"/* ]]; then
+                    app_name="$record_app_name"
+                    sideload_title="$record_title"
+                    is_sideload=1
+                    break
+                fi
+            done < <(awk 'function val(s, key) { sub("^.*\"" key "\"[ \t]*:[ \t]*\"", "", s); sub(/".*$/, "", s); return s }
+                { line = $0
+                  if (depth == 2) { if (line ~ /"app_name"[ \t]*:/) an = val(line, "app_name"); if (line ~ /"title"[ \t]*:/) ti = val(line, "title"); if (line ~ /"folder_name"[ \t]*:/) fn = val(line, "folder_name") }
+                  if (line ~ /"executable"[ \t]*:/) ex = val(line, "executable")
+                  opens = gsub(/{/, "{", line); closes = gsub(/}/, "}", line); depth += opens - closes
+                  if (closes > 0 && depth <= 1 && an != "") { print an "\037" ti "\037" fn "\037" ex; an = ""; ti = ""; fn = ""; ex = "" } }' "$json_file")
+            [ -n "$app_name" ] && break
+        done <<< "$library_jsons"
+
+        if [ -n "$app_name" ]; then
+            print_status "Game found in Heroic's manually-added games: ${BOLD}${sideload_title:-$app_name}${NC}" "" >&2
+            print_status "Parsing GamesConfig/$app_name.json for custom prefix paths..." "" >&2
+            local config_jsons
+            config_jsons=$(find "$HOME/.config/heroic" "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic" -type f -path "*/GamesConfig/$app_name.json" 2>/dev/null)
+            while IFS= read -r conf_file; do
+                [ -z "$conf_file" ] && continue
+                auto_prefix=$(grep '"winePrefix"' "$conf_file" | awk -F '"' '{print $4}')
+                [ -n "$auto_prefix" ] && break
+            done <<< "$config_jsons"
+        fi
+    fi
+
     if [ -n "$app_name" ] && [ -z "$auto_prefix" ]; then
         print_status "No custom prefix defined. Checking default Heroic locations..." "" >&2
         if [ -d "$HOME/Games/Heroic/Prefixes/$app_name" ]; then auto_prefix="$HOME/Games/Heroic/Prefixes/$app_name"
         elif [ -d "$HOME/Games/Heroic/Prefixes/default/$app_name" ]; then auto_prefix="$HOME/Games/Heroic/Prefixes/default/$app_name"
+        # Heroic names default prefixes after the game's title (as typed in
+        # "Add Game" for sideloaded games), not its internal app_name.
+        elif [ -n "$sideload_title" ] && [ -d "$HOME/Games/Heroic/Prefixes/default/$sideload_title" ]; then auto_prefix="$HOME/Games/Heroic/Prefixes/default/$sideload_title"
+        elif [ -n "$sideload_title" ] && [ -d "$HOME/Games/Heroic/Prefixes/$sideload_title" ]; then auto_prefix="$HOME/Games/Heroic/Prefixes/$sideload_title"
         fi
     fi
+
+    # Callers treat the returned app_name as a GOG ID (known-games lookups,
+    # find_heroic_install_path). A sideloaded game's app_name is a random
+    # Heroic-generated ID, so hand back an empty one for those.
+    [ "$is_sideload" -eq 1 ] && app_name=""
 
     if [ -n "$auto_prefix" ]; then printf '%s\t%s\n' "$auto_prefix" "$app_name"; else echo -e " -> ${YELLOW}Search complete. No prefix found.${NC}" >&2; fi
 }
