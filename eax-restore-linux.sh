@@ -98,7 +98,7 @@
 # ==============================================================================
 
 # --- Build Info ---
-SCRIPT_VERSION="0.28.2"
+SCRIPT_VERSION="0.28.3"
 SCRIPT_DATE="2026-09-25"
 
 # --- Colour Definitions ---
