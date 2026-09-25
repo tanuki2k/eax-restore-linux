@@ -31,6 +31,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         # 1. Game Location
         print_step 1 "Game Location"
         get_game_directory ""
+        [ -n "$RESTART_REQUESTED" ] || check_target_writable "$GAME_DIR" "game folder"
 
         # 3. Game Identification & Launcher Auto-Detect
         print_step 3 "Launcher Identification"

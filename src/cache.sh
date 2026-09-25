@@ -178,30 +178,124 @@ update_local_cache() {
     fi
 }
 
+find_existing_variant() {
+    # Usage: find_existing_variant <path>
+    # Prints the path if it exists, otherwise any same-named file in that
+    # folder that differs only by case (e.g. DSOUND.DLL for dsound.dll).
+    # Linux filesystems -- NTFS via ntfs3/ntfs-3g included -- are
+    # case-sensitive, so an exact-name check alone would drop a second
+    # dsound.dll next to a game's own DSOUND.DLL rather than backing it up,
+    # leaving Wine to pick either and Windows (on a shared NTFS drive) with
+    # two names it can't tell apart.
+    local f="$1"
+    if [ -e "$f" ] || [ -L "$f" ]; then echo "$f"; return; fi
+    find "$(dirname "$f")" -maxdepth 1 -iname "$(basename "$f")" 2>/dev/null | head -n 1
+}
+
+target_fs_type() {
+    # Usage: target_fs_type <dir>  -> e.g. ext4, btrfs, ntfs3, ntfs (ntfs-3g)
+    local dir="$1" fs src
+    fs=$(findmnt -no FSTYPE -T "$dir" 2>/dev/null)
+    # ntfs-3g (and exFAT via FUSE) mounts show up as plain "fuseblk", so ask
+    # the block device what it actually is.
+    if [ "$fs" == "fuseblk" ]; then
+        src=$(findmnt -no SOURCE -T "$dir" 2>/dev/null)
+        [ -n "$src" ] && fs=$(lsblk -no FSTYPE "$src" 2>/dev/null | head -n 1)
+        [ -z "$fs" ] && fs="fuseblk"
+    fi
+    echo "$fs"
+}
+
+check_target_writable() {
+    # Usage: check_target_writable <dir> <label>
+    # Confirms the script can actually write to <dir> before anything is
+    # changed, and explains why not when it can't -- most often an NTFS drive
+    # that Linux mounted read-only because Windows Fast Startup/hibernation
+    # left it "dirty". Exits on failure; returns 0 when writable.
+    local dir="$1" label="$2" probe fs opts
+    probe="$dir/.eax-restore-write-test.$$"
+    fs=$(target_fs_type "$dir")
+    if touch "$probe" 2>/dev/null && rm -f "$probe" 2>/dev/null; then
+        if [[ "$fs" == ntfs* ]] && [ "$SCRIPT_ACTION" == "i" ] && [ -z "$NTFS_NOTE_SHOWN" ]; then
+            NTFS_NOTE_SHOWN=1
+            print_note "this $label is on an NTFS drive ($fs)." \
+                "If you also run this game from Windows, the files deployed here (the audio DLLs," \
+                "alsoft.ini, and any dummy eax.dll) affect it there too — a dummy eax.dll in" \
+                "particular can stop it starting under Windows. Uninstalling with this script" \
+                "restores the original files."
+        fi
+        return 0
+    fi
+    opts=$(findmnt -no OPTIONS -T "$dir" 2>/dev/null)
+    print_error "The $label can't be written to:" \
+        "${WHITE}  $dir" \
+        "  Filesystem: ${fs:-unknown}   Mount options: ${opts:-unknown}"
+    if [[ "$fs" == ntfs* ]] && [[ ",$opts," == *,ro,* ]]; then
+        print_paragraph "This NTFS drive is mounted read-only. That usually means Windows didn't fully" \
+            "shut down (Fast Startup or hibernation left the drive marked as in use), so Linux" \
+            "refuses to write to it. Boot into Windows and use Shut Down while holding Shift" \
+            "(or turn off Fast Startup in Power Options), then remount the drive and re-run."
+    elif [[ "$fs" == ntfs* ]]; then
+        print_paragraph "This NTFS drive is mounted, but your user isn't allowed to write to it. NTFS has" \
+            "no Linux permissions of its own, so access comes from the mount options — mount it" \
+            "with uid=$(id -u),gid=$(id -g) (or through your file manager / fstab) and re-run."
+    elif [[ ",$opts," == *,ro,* ]]; then
+        print_paragraph "This drive is mounted read-only. Remount it read-write and re-run."
+    else
+        print_paragraph "Your user doesn't have write permission here (owner: $(stat -c '%U' "$dir" 2>/dev/null))." \
+            "Fix the folder's permissions and re-run. Don't run this script as root."
+    fi
+    print_paragraph "Nothing has been changed."
+    exit 1
+}
+
+deploy_copy() {
+    # Usage: deploy_copy <src> <dest> <verb>
+    # Copies one file and only records it in the manifest (and reports it)
+    # if the copy actually succeeded; failures are counted in
+    # DEPLOY_FAILURES so the install can't report success when it isn't.
+    if cp -f "$1" "$2"; then
+        echo "$2" >> "$INSTALL_MANIFEST"
+        print_status "$3: $(basename "$2") to $(basename "$(dirname "$2")")"
+        return 0
+    fi
+    record_deploy_failure "$2"
+    return 1
+}
+
+record_deploy_failure() {
+    print_error_arrow "Could not write $(basename "$1") to $(dirname "$1")."
+    DEPLOY_FAILURES=$(( ${DEPLOY_FAILURES:-0} + 1 ))
+}
+
 handle_conflict() {
     local target_file="$1"
-    if [ -e "$target_file" ] || [ -L "$target_file" ]; then
+    local existing
+    existing=$(find_existing_variant "$target_file")
+    if [ -n "$existing" ]; then
         if [ "${PREV_MANIFEST_FILES[$target_file]:-0}" == "1" ]; then
             # Already ours from a previous install (tracked in the prior
             # manifest before it was reset) — not a genuine original, so
             # there's nothing here worth backing up. Overwrite directly;
             # any real original backup from the very first install, if one
             # exists, is left untouched rather than buried under this.
-            rm -f "$target_file"
+            rm -f "$existing"
             return 0
         fi
-        echo -e "\n${YELLOW}$(basename "$target_file")${NC} ${WHITE}already exists at $(dirname "$target_file").${NC}"
+        echo -e "\n${YELLOW}$(basename "$existing")${NC} ${WHITE}already exists at $(dirname "$target_file").${NC}"
         while true; do
             prompt "What would you like to do? [o]verwrite, [b]ackup & overwrite (default), [s]kip: "
             read -r C_CHOICE
             C_CHOICE="${C_CHOICE:-b}"
             case "${C_CHOICE,,}" in
-                o) rm -rf "$target_file"; return 0 ;;
+                o) rm -rf "$existing"; return 0 ;;
                 b)
+                    # Named after the target (not a differently-cased
+                    # original), so uninstall's "$f".bak* lookup finds it.
                     TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-                    mv "$target_file" "${target_file}.bak.${TIMESTAMP}"
+                    mv "$existing" "${target_file}.bak.${TIMESTAMP}"
                     echo ""
-                    print_status "Backed up original to $(basename "$target_file").bak.${TIMESTAMP}"
+                    print_status "Backed up original $(basename "$existing") to $(basename "$target_file").bak.${TIMESTAMP}"
                     return 0 ;;
                 s) echo ""; print_status "Skipped $(basename "$target_file")."; return 1 ;;
                 *) print_warning "That's not a valid option — please type o, b, or s." ;;
@@ -220,14 +314,16 @@ auto_backup_and_overwrite() {
     # handle_conflict's own default, so skipping the prompt here removes a
     # step without changing what actually happens in the common case.
     local target_file="$1"
-    if [ -e "$target_file" ] || [ -L "$target_file" ]; then
+    local existing
+    existing=$(find_existing_variant "$target_file")
+    if [ -n "$existing" ]; then
         if [ "${PREV_MANIFEST_FILES[$target_file]:-0}" == "1" ]; then
-            rm -f "$target_file"
+            rm -f "$existing"
             return 0
         fi
         TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-        mv "$target_file" "${target_file}.bak.${TIMESTAMP}"
-        print_status "Backed up existing $(basename "$target_file") to $(basename "$target_file").bak.${TIMESTAMP}"
+        mv "$existing" "${target_file}.bak.${TIMESTAMP}"
+        print_status "Backed up existing $(basename "$existing") to $(basename "$target_file").bak.${TIMESTAMP}"
     fi
     return 0
 }

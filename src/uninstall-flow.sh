@@ -17,6 +17,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
 
         print_step 1 "Game Location"
         get_game_directory ""
+        [ -n "$RESTART_REQUESTED" ] || check_target_writable "$GAME_DIR" "game folder"
 
         print_step 2 "Launcher Identification"
         detect_game_environment
