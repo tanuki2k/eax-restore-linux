@@ -165,7 +165,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         else
             echo -e "\n${WHITE}These files are missing or incomplete here. Without them, the game may crash"
             echo -e "silently on startup when it tries to load the audio engine.${NC}"
-            if confirm "Install genuine MS VC++ runtimes?" N; then INSTALL_VCRUN="y"; else INSTALL_VCRUN="n"; fi
+            if confirm "Install genuine MS VC++ runtimes?"; then INSTALL_VCRUN="y"; else INSTALL_VCRUN="n"; fi
         fi
     else
         echo -e "\n${WHITE}Skipping. You can revisit this later with EAX_RESTORE_VCRUN_ONLY=1 without redoing"
