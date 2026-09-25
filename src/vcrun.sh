@@ -70,7 +70,7 @@ apply_vcrun_dll_overrides() {
     # inside a Steam Runtime container that may not have /tmp bind-mounted —
     # the game's own library folder is guaranteed to be visible instead.
     local reg_file="$GAME_DIR/vcrun_overrides_$$.reg"
-    print_status "Setting DLL overrides so Wine loads the native runtime instead of its own builtin..."
+    print_status "Telling Wine to use Microsoft's VC++ runtime files instead of its own..."
     echo "Windows Registry Editor Version 5.00" > "$reg_file"
     echo "" >> "$reg_file"
     echo "[HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides]" >> "$reg_file"
@@ -81,8 +81,10 @@ apply_vcrun_dll_overrides() {
     local rc=0
     apply_registry_patch "$reg_file" || rc=1
     rm -f "$reg_file"
-    if [ "$rc" -ne 0 ]; then
-        print_warning_arrow "The VC++ DLL overrides couldn't be set, so Wine may still use its own builtin runtime." \
+    if [ "$rc" -eq 0 ]; then
+        print_status "Wine will now use Microsoft's VC++ runtime files." "$GREEN"
+    else
+        print_warning_arrow "Wine couldn't be told to use Microsoft's VC++ runtime files, so it may still use its own." \
             "The run log has the full output."
     fi
     return "$rc"
@@ -148,14 +150,14 @@ install_vcrun_dependencies() {
 
     # 3. Handle the outcome
     if [ "$VCRUN_SUCCESS" -eq 1 ]; then
-        print_status "Package manager installation successful (core DLLs verified)." "$GREEN"
+        print_status "Installed via $( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" ) (core DLLs verified)." "$GREEN"
         # An overrides failure warns on its own; still return 0 so the
         # runtime (genuinely installed) is recorded for uninstall.
         apply_vcrun_dll_overrides
         return 0
     fi
 
-    print_note_arrow "package manager didn't provide the core files — falling back to direct download..."
+    print_note_arrow "$( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" ) didn't install the core files, so using Microsoft's own installer instead..."
 
     if [ "$ARCH" == "64" ]; then
         VCRUN_URL="https://aka.ms/vs/17/release/vc_redist.x64.exe"
@@ -198,13 +200,13 @@ install_vcrun_dependencies() {
     # Final verification
     verify_vcrun_files
     if [ "$VCRUN_SUCCESS" -eq 1 ]; then
-        print_status "VC++ Redistributable installed successfully via fallback." "$GREEN"
+        print_status "VC++ Redistributable installed successfully with Microsoft's installer." "$GREEN"
         # An overrides failure warns on its own; still return 0 so the
         # runtime (genuinely installed) is recorded for uninstall.
         apply_vcrun_dll_overrides
         return 0
     else
-        print_warning_arrow "Direct installation completed, but core DLLs could not be verified."
+        print_warning_arrow "Microsoft's installer finished, but the core DLLs still aren't in place."
         print_status "Full installer output saved to: $VCRUN_LOG" "$WHITE"
         return 1
     fi

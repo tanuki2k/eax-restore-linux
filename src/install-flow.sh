@@ -10,10 +10,58 @@
         exit 0
     fi
 
+    # Checks that can stop the install run before anything is changed, so
+    # a failure never leaves the prefix half-set-up (and its error isn't
+    # shown under an unrelated step's header).
+
+    # Engine-specific paths. Engine 1 always takes soft_oal.dll from the
+    # kcat OpenAL Soft cache; EAX_RESTORE_DSOAL_PIN only swaps the source of
+    # dsound.dll (the DSOAL half) to the frozen archive revision, so the pin
+    # is a pure DSOAL rollback with OpenAL Soft held constant.
+    case "$ENGINE_CHOICE" in
+        1)
+            if is_truthy "$EAX_RESTORE_DSOAL_PIN"; then
+                TARGET_DSOAL=$(find "$DSOAL_PINNED" -type d -ipath "*/${ARCH_FOLDER}" | head -n 1)
+            else
+                TARGET_DSOAL=$(find "$DSOAL_OFFICIAL" -type d -ipath "*/${ARCH_FOLDER}" | head -n 1)
+            fi
+            TARGET_OAL=$(find "$OPENAL_OFFICIAL" -type d -ipath "*/bin/${ARCH_FOLDER}" | head -n 1)
+            DSOUND_SRC="$TARGET_DSOAL/dsound.dll"
+            DSOAL_SRC="$TARGET_OAL/soft_oal.dll"
+            ;;
+        2)
+            TARGET_OAL=$(find "$OPENAL_OFFICIAL" -type d -ipath "*/bin/${ARCH_FOLDER}" | head -n 1)
+            OPENAL_SRC="$TARGET_OAL/soft_oal.dll"
+            ;;
+    esac
+
+    if [ "$ENGINE_CHOICE" == "2" ]; then
+        if [ ! -f "$OPENAL_SRC" ]; then
+            print_error "Required OpenAL Soft source file was not found in the cache."
+            echo -e "\n${WHITE}This usually means the download failed or was incomplete earlier in this run"
+            echo -e "(check the REPOSITORY CACHE CHECK output above), or the ${ARCH_FOLDER} build isn't present in it."
+            echo -e "Re-run the script to retry the download.${NC}"
+            exit 1
+        fi
+    elif [ ! -f "$DSOUND_SRC" ] || [ ! -f "$DSOAL_SRC" ]; then
+        print_error "Required source files for the selected engine were not found in the cache."
+        echo -e "\n${WHITE}This usually means the download for this engine failed or was incomplete earlier in this run"
+        echo -e "(check the REPOSITORY CACHE CHECK output above), or the ${ARCH_FOLDER} build isn't present in it."
+        echo -e "Re-run the script to retry the download, or choose a different engine.${NC}"
+        exit 1
+    fi
+
+    # The prefix copy comes after the game-folder copy, so check it can be
+    # written now rather than failing halfway through deployment.
+    if [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows/system32" ]; then
+        check_target_writable "$PREFIX_PATH/drive_c/windows/system32" "Wine/Proton prefix"
+    fi
+
     # One bar step per STATUS: header below: OpenAL runtime, game folder,
-    # configurations, plus VC++ and the prefix copy when those run.
+    # configurations, plus VC++ (installing it, or setting up one that's
+    # already there) and the prefix copy when those run.
     phase_total=3
-    [[ "$INSTALL_VCRUN" =~ $YES_RE ]] && phase_total=$(( phase_total + 1 ))
+    { [[ "$INSTALL_VCRUN" =~ $YES_RE ]] || [ -n "${APPLY_VCRUN_OVERRIDES_NEEDED:-}" ]; } && phase_total=$(( phase_total + 1 ))
     [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows" ] && phase_total=$(( phase_total + 1 ))
     start_phase_progress "$phase_total"
 
@@ -56,45 +104,9 @@
         # this is actually happening (not back during configuration).
         # Recorded even if setting them failed (that warns on its own), so
         # uninstall still tries to clear any that did get written.
+        print_phase_task "Setting up the VC++ runtime that's already in the prefix"
         apply_vcrun_dll_overrides
         VCRUN_INSTALLED_THIS_RUN="1"
-    fi
-
-    # Engine-specific paths. Engine 1 always takes soft_oal.dll from the
-    # kcat OpenAL Soft cache; EAX_RESTORE_DSOAL_PIN only swaps the source of
-    # dsound.dll (the DSOAL half) to the frozen archive revision, so the pin
-    # is a pure DSOAL rollback with OpenAL Soft held constant.
-    case "$ENGINE_CHOICE" in
-        1)
-            if is_truthy "$EAX_RESTORE_DSOAL_PIN"; then
-                TARGET_DSOAL=$(find "$DSOAL_PINNED" -type d -ipath "*/${ARCH_FOLDER}" | head -n 1)
-            else
-                TARGET_DSOAL=$(find "$DSOAL_OFFICIAL" -type d -ipath "*/${ARCH_FOLDER}" | head -n 1)
-            fi
-            TARGET_OAL=$(find "$OPENAL_OFFICIAL" -type d -ipath "*/bin/${ARCH_FOLDER}" | head -n 1)
-            DSOUND_SRC="$TARGET_DSOAL/dsound.dll"
-            DSOAL_SRC="$TARGET_OAL/soft_oal.dll"
-            ;;
-        2)
-            TARGET_OAL=$(find "$OPENAL_OFFICIAL" -type d -ipath "*/bin/${ARCH_FOLDER}" | head -n 1)
-            OPENAL_SRC="$TARGET_OAL/soft_oal.dll"
-            ;;
-    esac
-
-    if [ "$ENGINE_CHOICE" == "2" ]; then
-        if [ ! -f "$OPENAL_SRC" ]; then
-            print_error "Required OpenAL Soft source file was not found in the cache."
-            echo -e "\n${WHITE}This usually means the download failed or was incomplete earlier in this run"
-            echo -e "(check the REPOSITORY CACHE CHECK output above), or the ${ARCH_FOLDER} build isn't present in it."
-            echo -e "Re-run the script to retry the download.${NC}"
-            exit 1
-        fi
-    elif [ ! -f "$DSOUND_SRC" ] || [ ! -f "$DSOAL_SRC" ]; then
-        print_error "Required source files for the selected engine were not found in the cache."
-        echo -e "\n${WHITE}This usually means the download for this engine failed or was incomplete earlier in this run"
-        echo -e "(check the REPOSITORY CACHE CHECK output above), or the ${ARCH_FOLDER} build isn't present in it."
-        echo -e "Re-run the script to retry the download, or choose a different engine.${NC}"
-        exit 1
     fi
 
     # Manifest of everything THIS run actually deploys, so uninstall only ever
@@ -116,11 +128,6 @@
         done < "$INSTALL_MANIFEST"
     fi
 
-    # The prefix copy happens after the game-folder copy, so check it can be
-    # written now rather than failing halfway through deployment.
-    if [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows/system32" ]; then
-        check_target_writable "$PREFIX_PATH/drive_c/windows/system32" "Wine/Proton prefix"
-    fi
     DEPLOY_FAILURES=0
 
     : > "$INSTALL_MANIFEST"

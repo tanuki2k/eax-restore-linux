@@ -159,10 +159,9 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         fi
 
         if [ "$VCRUN_SUCCESS" -eq 1 ]; then
-            print_status "Core VC++ runtime files are already present." "$GREEN"
-            echo -e "${WHITE}This will set the DLL overrides so Wine actually loads them (file presence alone"
-            echo -e "doesn't guarantee that) once you confirm and deploy below, and skip the install step"
-            echo -e "itself.${NC}"
+            print_status "Core VC++ runtime files are already present, so there's nothing to install." "$GREEN"
+            print_paragraph "Wine will still be told to use them instead of its own copies, which it" \
+                "prefers by default even when Microsoft's files are there."
             APPLY_VCRUN_OVERRIDES_NEEDED=1
         else
             echo -e "\n${WHITE}These files are missing or incomplete here. Without them, the game may crash"
