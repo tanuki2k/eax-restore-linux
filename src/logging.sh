@@ -82,6 +82,7 @@ write_log_summary() {
         echo "Launcher:        $(case "$LAUNCHER_TYPE" in 1) echo "Steam (AppID ${APPID:-unknown})";; 2) echo "Non-Steam / Heroic${HEROIC_APP_NAME:+ (app $HEROIC_APP_NAME)}";; *) echo "not detected";; esac)"
         echo "Prefix:          ${PREFIX_PATH:-not set}"
         echo "Runner:          ${runner:-unknown}${IS_PROTON:+ (IS_PROTON=$IS_PROTON)}"
+        [ "$LAUNCHER_TYPE" == "2" ] && echo "Wine used:       ${WINE_CMD:-none}${WINESERVER_CMD:+ (wineserver $WINESERVER_CMD)}"
         echo "Architecture:    ${ARCH:-not set}"
         echo "Engine choice:   ${ENGINE_CHOICE:-not chosen} (DSOAL: ${DSOAL_VER:-?} | OpenAL Soft: ${OAL_VER:-?})"
         if [ -n "$INSTALL_MANIFEST" ] && [ -s "$INSTALL_MANIFEST" ]; then

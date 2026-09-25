@@ -24,7 +24,7 @@
         if [ -n "$WINE_CMD" ] && [ -n "$PREFIX_PATH" ]; then
             # Using --force to bypass winetricks safety blocks in Heroic
             log_cmd "winetricks --force -q openal (WINE=$WINE_CMD, prefix $PREFIX_PATH)"
-            WINEPREFIX="$PREFIX_PATH" WINE="$WINE_CMD" winetricks --force -q openal 2>> "$EAX_LOG_FILE"; OPENAL_RC=$?; echo "[exit $OPENAL_RC]" >> "$EAX_LOG_FILE"
+            WINEPREFIX="$PREFIX_PATH" WINE="$WINE_CMD" WINESERVER="${WINESERVER_CMD:-}" winetricks --force -q openal 2>> "$EAX_LOG_FILE"; OPENAL_RC=$?; echo "[exit $OPENAL_RC]" >> "$EAX_LOG_FILE"
         else
             print_warning_arrow "No local Wine binary or resolved prefix was found, so this step is being skipped."
         fi
@@ -306,12 +306,30 @@ EOF
         # a key that was never set is harmless.
         [[ "$ADVANCED_COM" =~ $YES_RE ]] && echo "REGISTRY:COM" >> "$INSTALL_MANIFEST"
         [[ "$AUTO_OVERRIDE" =~ $YES_RE ]] && echo "REGISTRY:OVERRIDE:${PRIMARY_DLL_NAME}" >> "$INSTALL_MANIFEST"
-        if apply_registry_patch "$REG_FILE"; then
+        # REG_STATUS: ok, failed (regedit itself), or missing (regedit
+        # reported success but the override isn't in the prefix). The
+        # override is the one registry change EAX can't work without, so
+        # it's read back rather than trusting regedit's exit code alone; a
+        # prefix with no user.reg to read (return 2) is left as ok.
+        REG_STATUS="ok"
+        if ! apply_registry_patch "$REG_FILE"; then
+            REG_STATUS="failed"
+        elif [[ "$AUTO_OVERRIDE" =~ $YES_RE ]]; then
+            verify_dll_override "$PRIMARY_DLL_NAME"
+            [ $? -eq 1 ] && REG_STATUS="missing"
+        fi
+
+        if [ "$REG_STATUS" == "ok" ]; then
             [[ "$ADVANCED_COM" =~ $YES_RE ]] && print_status "Injected: COM Registry Routing"
             [[ "$AUTO_OVERRIDE" =~ $YES_RE ]] && print_status "Injected: WINEDLLOVERRIDES (native,builtin) into registry"
         else
-            print_error_arrow "Couldn't write the registry changes to the Wine prefix, so they aren't applied." \
-                "The run log has the full output."
+            if [ "$REG_STATUS" == "failed" ]; then
+                print_error_arrow "Couldn't write the registry changes to the Wine prefix, so they aren't applied." \
+                    "The run log has the full output."
+            else
+                print_error_arrow "The registry import reported success, but the ${PRIMARY_DLL_NAME}.dll override isn't in" \
+                    "the prefix's registry, so Wine won't load the new DLL. The run log has the details."
+            fi
             DEPLOY_FAILURES=$(( ${DEPLOY_FAILURES:-0} + 1 ))
             # Show the manual WINEDLLOVERRIDES instructions below instead
             # of claiming the override was handled automatically.

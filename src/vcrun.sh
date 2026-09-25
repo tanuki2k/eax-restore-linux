@@ -140,7 +140,7 @@ install_vcrun_dependencies() {
     if [ "$LAUNCHER_TYPE" == "1" ]; then
         protontricks "$APPID" --force -q vcrun2022 &>> "$VCRUN_LOG"
     elif [ -n "$WINE_CMD" ]; then
-        WINEPREFIX="$PREFIX_PATH" WINE="$WINE_CMD" winetricks --force -q vcrun2022 &>> "$VCRUN_LOG"
+        WINEPREFIX="$PREFIX_PATH" WINE="$WINE_CMD" WINESERVER="${WINESERVER_CMD:-}" winetricks --force -q vcrun2022 &>> "$VCRUN_LOG"
     fi
 
     # 2. Verify physical file presence instead of trusting exit codes
