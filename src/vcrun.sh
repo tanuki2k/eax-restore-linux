@@ -121,8 +121,7 @@ install_vcrun_dependencies() {
     # failure (either path can silently "succeed" without leaving files
     # behind, e.g. if Wine's MSI engine chokes on it) is actually debuggable
     # instead of a dead end with no information.
-    print_task "Installing MS VC++ 2022 Redistributable"
-    advance_phase_progress
+    print_phase_task "Installing MS VC++ 2022 Redistributable"
 
     VCRUN_SHARE="$BASE_SHARE/vcrun2022"
     mkdir -p "$VCRUN_SHARE"

@@ -104,6 +104,9 @@ write_log_summary() {
 finish_run_log() {
     local rc=$?
     trap - EXIT
+    # Release a pinned PHASE 2 progress bar first, or an exit mid-deploy
+    # leaves the terminal scrolling inside its region.
+    end_phase_progress
     # Own line, with $HOME shown as ~, so the path fits the 76-column layout.
     echo -e "\n${WHITE}Log saved to:${NC}"
     echo -e "  ${GREEN}${EAX_LOG_FILE/#$HOME/\~}${NC}"

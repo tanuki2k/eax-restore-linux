@@ -284,15 +284,72 @@ print_phase_progress() {
     echo -e "    $(progress_bar "$1" "$2")  ${DIM}step $1 of $2${NC}"
 }
 
-# Usage: advance_phase_progress
-# Bumps PHASE_STEP and prints its bar under the step header just printed.
-# A no-op unless PHASE_TOTAL is set, so a helper shared with other flows
-# (install_vcrun_dependencies, used by VC++-only mode too) can call it
-# unconditionally.
-advance_phase_progress() {
-    [ -n "${PHASE_TOTAL:-}" ] || return 0
+# PHASE 2's single progress bar is pinned to the top row of the screen
+# with a terminal scroll region (ESC[top;bottomr, the same trick apt uses),
+# so the deployment output scrolls underneath it instead of each step
+# printing a bar of its own. Only plain CSI sequences are used, which the
+# run log's writer strips. With no terminal (or a very short one) it falls
+# back to printing the bar under each step's header.
+PHASE_PINNED=""
+
+# Usage: start_phase_progress <total steps>
+# Call once, right after the user confirms, while nothing else is being
+# printed: the setup goes straight to /dev/tty (so it stays out of the
+# log), which can't race the log's tee only because nothing is in flight.
+start_phase_progress() {
+    PHASE_STEP=0; PHASE_TOTAL="$1"; PHASE_PINNED=""
+    local size rows
+    # stdout must be the terminal too (fd 3 holds it while logging).
+    { [ -t 1 ] || [ -t 3 ]; } 2>/dev/null || return 0
+    size=$(stty size < /dev/tty 2>/dev/null) || return 0
+    rows="${size%% *}"
+    [[ "$rows" =~ ^[0-9]+$ ]] && [ "$rows" -ge 12 ] || return 0
+    {
+        # Scroll what's on screen up into scrollback (rather than clearing
+        # it), then set rows 2..bottom as the scroll region -- which also
+        # homes the cursor, hence the explicit move back to row 2.
+        printf '\033[%d;1H' "$rows"
+        printf '\n%.0s' $(seq 2 "$rows")
+        printf '\033[H'
+        _draw_pinned_phase_bar
+        printf '\033[2;%dr\033[2;1H' "$rows"
+    } > /dev/tty 2>/dev/null || return 0
+    PHASE_PINNED=1
+    # finish_run_log resets it on any exit while logging; without logging
+    # there's no EXIT trap, so make sure the terminal is still restored.
+    [ -z "$(trap -p EXIT)" ] && trap end_phase_progress EXIT
+}
+
+# Usage: print_phase_task "text"
+# print_task for a PHASE 2 step: bumps PHASE_STEP and updates the bar --
+# redrawn in place on the pinned row (before the header, whose leading
+# blank line then ends the bar's line in the log), or printed under the
+# header when not pinned. Without PHASE_TOTAL (a helper shared with other
+# flows, e.g. VC++-only mode) it's plain print_task.
+print_phase_task() {
+    if [ -z "${PHASE_TOTAL:-}" ]; then print_task "$1"; return; fi
     PHASE_STEP=$(( ${PHASE_STEP:-0} + 1 ))
-    print_phase_progress "$PHASE_STEP" "$PHASE_TOTAL"
+    if [ -n "$PHASE_PINNED" ]; then
+        _draw_pinned_phase_bar
+        print_task "$1"
+    else
+        print_task "$1"
+        print_phase_progress "$PHASE_STEP" "$PHASE_TOTAL"
+    fi
+}
+_draw_pinned_phase_bar() {
+    printf '\033[s\033[1;1H\033[2K    %s  %bstep %d of %d%b\033[u' \
+        "$(progress_bar "${PHASE_STEP:-0}" "$PHASE_TOTAL")" "$DIM" "${PHASE_STEP:-0}" "$PHASE_TOTAL" "$NC"
+}
+
+# Usage: end_phase_progress
+# Releases the scroll region so what follows scrolls normally and the bar
+# scrolls away with it. Resetting the region homes the cursor, hence the
+# save/restore around it. Safe to call when nothing is pinned.
+end_phase_progress() {
+    [ -n "$PHASE_PINNED" ] || return 0
+    PHASE_PINNED=""
+    printf '\033[s\033[r\033[u'
 }
 
 # Runs "$@" in the background and redraws "$1"'s line until it finishes;

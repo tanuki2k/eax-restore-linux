@@ -12,13 +12,13 @@
 
     # One bar step per STATUS: header below: OpenAL runtime, game folder,
     # configurations, plus VC++ and the prefix copy when those run.
-    PHASE_STEP=0; PHASE_TOTAL=3
-    [[ "$INSTALL_VCRUN" =~ $YES_RE ]] && PHASE_TOTAL=$(( PHASE_TOTAL + 1 ))
-    [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows" ] && PHASE_TOTAL=$(( PHASE_TOTAL + 1 ))
+    phase_total=3
+    [[ "$INSTALL_VCRUN" =~ $YES_RE ]] && phase_total=$(( phase_total + 1 ))
+    [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows" ] && phase_total=$(( phase_total + 1 ))
+    start_phase_progress "$phase_total"
 
     OPENAL_TOOL=$( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" )
-    print_task "Installing Creative's OpenAL runtime into the prefix"
-    advance_phase_progress
+    print_phase_task "Installing Creative's OpenAL runtime into the prefix"
 
     # A failure here is a warning, not a deploy failure: the engine's own
     # DLLs are copied in directly below and don't depend on this package —
@@ -126,8 +126,7 @@
     : > "$INSTALL_MANIFEST"
     [ "$VCRUN_INSTALLED_THIS_RUN" == "1" ] && echo "VCRUN" >> "$INSTALL_MANIFEST"
 
-    print_task "Deploying files to local game folder"
-    advance_phase_progress
+    print_phase_task "Deploying files to local game folder"
 
     # DEPLOY_SRC/DEPLOY_DEST_NAME[0] is always the "primary" override DLL
     # (dsound.dll for engine 1, OpenAL32.dll for engine 2) — the one Wine
@@ -152,8 +151,7 @@
     done
 
     if [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows" ]; then
-        print_task "Duplicating files to Wine/Proton system prefix"
-        advance_phase_progress
+        print_phase_task "Duplicating files to Wine/Proton system prefix"
         if [ "$ARCH" == "32" ] && [ -d "$PREFIX_PATH/drive_c/windows/syswow64" ]; then
             PREFIX_TARGET_DIR="$PREFIX_PATH/drive_c/windows/syswow64"
         else
@@ -175,8 +173,7 @@
         done
     fi
 
-    print_task "Applying configurations and tweaks"
-    advance_phase_progress
+    print_phase_task "Applying configurations and tweaks"
 
     if [[ "$ADVANCED_DUMMY" =~ $YES_RE ]]; then
         # The dummy only helps a game that checks for the file's presence to
@@ -353,6 +350,7 @@ EOF
         rm -f "$REG_FILE"
     fi
 
+    end_phase_progress
     print_run_summary
 
     if [ "${DEPLOY_FAILURES:-0}" -gt 0 ]; then
