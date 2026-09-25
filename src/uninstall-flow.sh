@@ -271,9 +271,12 @@ EOF
             fi
 
             print_task "Cleaning registry"
-            apply_registry_patch "$REG_FILE"
+            if apply_registry_patch "$REG_FILE"; then
+                print_status "Registry keys safely removed." "$GREEN"
+            else
+                print_warning_arrow "The registry keys couldn't be removed from the Wine prefix. The run log has the full output."
+            fi
             rm -f "$REG_FILE"
-            print_status "Registry keys safely removed." "$GREEN"
         else
             echo ""
             print_note_arrow "No prefix or AppID was found for this game, so there's nothing to clean up in the registry."

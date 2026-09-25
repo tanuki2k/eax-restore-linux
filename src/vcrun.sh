@@ -78,8 +78,14 @@ apply_vcrun_dll_overrides() {
     for dll in "${VCRUN_DLL_NAMES[@]}"; do
         echo "\"$dll\"=\"native,builtin\"" >> "$reg_file"
     done
-    apply_registry_patch "$reg_file"
+    local rc=0
+    apply_registry_patch "$reg_file" || rc=1
     rm -f "$reg_file"
+    if [ "$rc" -ne 0 ]; then
+        print_warning_arrow "The VC++ DLL overrides couldn't be set, so Wine may still use its own builtin runtime." \
+            "The run log has the full output."
+    fi
+    return "$rc"
 }
 
 remove_vcrun_dll_overrides() {
@@ -98,7 +104,9 @@ remove_vcrun_dll_overrides() {
     for dll in "${VCRUN_DLL_NAMES[@]}"; do
         echo "\"$dll\"=-" >> "$reg_file"
     done
-    apply_registry_patch "$reg_file"
+    if ! apply_registry_patch "$reg_file"; then
+        print_warning_arrow "The VC++ DLL overrides couldn't be removed. The run log has the full output."
+    fi
     rm -f "$reg_file"
 }
 
@@ -141,6 +149,8 @@ install_vcrun_dependencies() {
     # 3. Handle the outcome
     if [ "$VCRUN_SUCCESS" -eq 1 ]; then
         print_status "Package manager installation successful (core DLLs verified)." "$GREEN"
+        # An overrides failure warns on its own; still return 0 so the
+        # runtime (genuinely installed) is recorded for uninstall.
         apply_vcrun_dll_overrides
         return 0
     fi
@@ -173,6 +183,8 @@ install_vcrun_dependencies() {
     verify_vcrun_files
     if [ "$VCRUN_SUCCESS" -eq 1 ]; then
         print_status "VC++ Redistributable installed successfully via fallback." "$GREEN"
+        # An overrides failure warns on its own; still return 0 so the
+        # runtime (genuinely installed) is recorded for uninstall.
         apply_vcrun_dll_overrides
         return 0
     else

@@ -13,19 +13,27 @@
     print_task "Executing system verbs via $( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" ) (Silent Mode)"
     print_status "Installing the OpenAL package via $( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" )..."
 
+    # A failure here is a warning, not a deploy failure: the engine's own
+    # DLLs are copied in directly below and don't depend on this package —
+    # but it must never be reported as installed when the tool failed.
+    OPENAL_RC=""
     if [ "$LAUNCHER_TYPE" == "1" ]; then
         log_cmd "protontricks $APPID -q openal"
-        protontricks "$APPID" -q openal 2>> "$EAX_LOG_FILE"; echo "[exit $?]" >> "$EAX_LOG_FILE"
-        print_status "OpenAL was installed successfully." "$GREEN"
+        protontricks "$APPID" -q openal 2>> "$EAX_LOG_FILE"; OPENAL_RC=$?; echo "[exit $OPENAL_RC]" >> "$EAX_LOG_FILE"
     else
         if [ -n "$WINE_CMD" ] && [ -n "$PREFIX_PATH" ]; then
             # Using --force to bypass winetricks safety blocks in Heroic
             log_cmd "winetricks --force -q openal (WINE=$WINE_CMD, prefix $PREFIX_PATH)"
-            WINEPREFIX="$PREFIX_PATH" WINE="$WINE_CMD" winetricks --force -q openal 2>> "$EAX_LOG_FILE"; echo "[exit $?]" >> "$EAX_LOG_FILE"
-            print_status "OpenAL was installed successfully." "$GREEN"
+            WINEPREFIX="$PREFIX_PATH" WINE="$WINE_CMD" winetricks --force -q openal 2>> "$EAX_LOG_FILE"; OPENAL_RC=$?; echo "[exit $OPENAL_RC]" >> "$EAX_LOG_FILE"
         else
             print_warning_arrow "No local Wine binary or resolved prefix was found, so this step is being skipped."
         fi
+    fi
+    if [ "$OPENAL_RC" == "0" ]; then
+        print_status "OpenAL was installed successfully." "$GREEN"
+    elif [ -n "$OPENAL_RC" ]; then
+        print_warning_arrow "The OpenAL package didn't install (exit code $OPENAL_RC), so the prefix may be missing it." \
+            "The run log has the full output."
     fi
 
    VCRUN_INSTALLED_THIS_RUN="0"
@@ -35,6 +43,8 @@
         # Deferred from step 5: the runtime was already present, so this just
         # sets the DLL overrides, only now that the user has confirmed and
         # this is actually happening (not back during configuration).
+        # Recorded even if setting them failed (that warns on its own), so
+        # uninstall still tries to clear any that did get written.
         apply_vcrun_dll_overrides
         VCRUN_INSTALLED_THIS_RUN="1"
     fi
@@ -145,8 +155,7 @@
         for i in "${!DEPLOY_SRC[@]}"; do
             DEPLOY_DEST="$PREFIX_TARGET_DIR/${DEPLOY_DEST_NAME[$i]}"
             if [ "$i" -eq 0 ]; then
-                auto_backup_and_overwrite "$DEPLOY_DEST"
-                deploy_copy "${DEPLOY_SRC[$i]}" "$DEPLOY_DEST" "Duplicated"
+                auto_backup_and_overwrite "$DEPLOY_DEST" && deploy_copy "${DEPLOY_SRC[$i]}" "$DEPLOY_DEST" "Duplicated"
             elif handle_conflict "$DEPLOY_DEST"; then
                 deploy_copy "${DEPLOY_SRC[$i]}" "$DEPLOY_DEST" "Duplicated"
             fi
@@ -175,7 +184,6 @@
     fi
 
     if handle_conflict "$GAME_DIR/alsoft.ini"; then
-        echo "$GAME_DIR/alsoft.ini" >> "$INSTALL_MANIFEST"
         if [ "$OUTPUT_MODE" == "surround" ]; then
             # Surround speaker setups bypass HRTF (headphone-only binaural
             # processing) and stereo-only encodings entirely.
@@ -231,7 +239,7 @@ resampler = spline
 [EAX]
 enable = true
 EOF
-            if [ -s "$GAME_DIR/alsoft.ini" ]; then print_status "Generated: Advanced alsoft.ini with expanded channel limits"
+            if [ -s "$GAME_DIR/alsoft.ini" ]; then echo "$GAME_DIR/alsoft.ini" >> "$INSTALL_MANIFEST"; print_status "Generated: Advanced alsoft.ini with expanded channel limits"
             else record_deploy_failure "$GAME_DIR/alsoft.ini"; fi
         else
             cat <<EOF > "$GAME_DIR/alsoft.ini"
@@ -253,7 +261,7 @@ resampler = spline
 [EAX]
 enable = true
 EOF
-            if [ -s "$GAME_DIR/alsoft.ini" ]; then print_status "Generated: Linux-optimised alsoft.ini"
+            if [ -s "$GAME_DIR/alsoft.ini" ]; then echo "$GAME_DIR/alsoft.ini" >> "$INSTALL_MANIFEST"; print_status "Generated: Linux-optimised alsoft.ini"
             else record_deploy_failure "$GAME_DIR/alsoft.ini"; fi
         fi
     fi
@@ -293,24 +301,38 @@ EOF
 EOF
         fi
 
-        apply_registry_patch "$REG_FILE"
-        rm -f "$REG_FILE"
-
-        [[ "$ADVANCED_COM" =~ $YES_RE ]] && echo "REGISTRY:COM" >> "$INSTALL_MANIFEST" && print_status "Injected: COM Registry Routing"
-        if [[ "$AUTO_OVERRIDE" =~ $YES_RE ]]; then
-            echo "REGISTRY:OVERRIDE:${PRIMARY_DLL_NAME}" >> "$INSTALL_MANIFEST"
-            print_status "Injected: WINEDLLOVERRIDES (native,builtin) into registry"
+        # The manifest lines are written whether or not regedit succeeded: a
+        # partial import can still leave keys behind, and uninstall deleting
+        # a key that was never set is harmless.
+        [[ "$ADVANCED_COM" =~ $YES_RE ]] && echo "REGISTRY:COM" >> "$INSTALL_MANIFEST"
+        [[ "$AUTO_OVERRIDE" =~ $YES_RE ]] && echo "REGISTRY:OVERRIDE:${PRIMARY_DLL_NAME}" >> "$INSTALL_MANIFEST"
+        if apply_registry_patch "$REG_FILE"; then
+            [[ "$ADVANCED_COM" =~ $YES_RE ]] && print_status "Injected: COM Registry Routing"
+            [[ "$AUTO_OVERRIDE" =~ $YES_RE ]] && print_status "Injected: WINEDLLOVERRIDES (native,builtin) into registry"
+        else
+            print_error_arrow "Couldn't write the registry changes to the Wine prefix, so they aren't applied." \
+                "The run log has the full output."
+            DEPLOY_FAILURES=$(( ${DEPLOY_FAILURES:-0} + 1 ))
+            # Show the manual WINEDLLOVERRIDES instructions below instead
+            # of claiming the override was handled automatically.
+            [[ "$AUTO_OVERRIDE" =~ $YES_RE ]] && OVERRIDE_PATCH_FAILED="1"
+            AUTO_OVERRIDE="n"
         fi
+        rm -f "$REG_FILE"
     fi
 
     print_run_summary
 
     if [ "${DEPLOY_FAILURES:-0}" -gt 0 ]; then
         print_banner "INSTALLATION INCOMPLETE" "$YELLOW"
-        print_error "$DEPLOY_FAILURES file(s) could not be written (see the errors above), so the EAX fix" \
+        print_error "$DEPLOY_FAILURES step(s) failed (see the errors above), so the EAX fix" \
             "is NOT fully installed. The game may run without it or fail to start."
         print_paragraph "Fix the cause (usually a read-only drive or folder permissions), then run the" \
             "script again, or choose (u)ninstall to remove what was deployed."
+        if [ -n "${OVERRIDE_PATCH_FAILED:-}" ]; then
+            print_paragraph "Until then, you can set the DLL override by hand:" \
+                "  $( [ "$LAUNCHER_TYPE" == "1" ] && echo "Steam Launch Options: WINEDLLOVERRIDES=\"${PRIMARY_DLL_NAME}=n,b\" %command%" || echo "Heroic Environment Variable: WINEDLLOVERRIDES = ${PRIMARY_DLL_NAME}=n,b" )"
+        fi
         exit 1
     fi
 

@@ -998,16 +998,25 @@ detect_game_environment() {
 }
 
 apply_registry_patch() {
-    local reg_file="$1"
+    # Returns regedit's exit status, or 1 when there was nothing to run it
+    # with (no AppID / Wine binary / prefix) or the .reg file couldn't be
+    # written — callers use this to decide whether to report "Injected" or
+    # "removed", so it must never look like success when nothing happened.
+    local reg_file="$1" rc=1
+    if [ ! -s "$reg_file" ]; then
+        log_cmd "regedit skipped: $reg_file is missing or empty"
+        return 1
+    fi
     if [ "$LAUNCHER_TYPE" == "1" ] && [ -n "$APPID" ]; then
         log_cmd "protontricks regedit $reg_file (AppID $APPID)"; sed 's/^/  | /' "$reg_file" >> "$EAX_LOG_FILE" 2>/dev/null
-        protontricks -c "regedit \"$reg_file\"" "$APPID" &>> "$EAX_LOG_FILE"; echo "[exit $?]" >> "$EAX_LOG_FILE"
-    elif [ "$LAUNCHER_TYPE" == "2" ] && [ -d "$PREFIX_PATH/drive_c" ]; then
-        if [ -n "$WINE_CMD" ]; then
-            log_cmd "$WINE_CMD regedit $reg_file (prefix $PREFIX_PATH)"; sed 's/^/  | /' "$reg_file" >> "$EAX_LOG_FILE" 2>/dev/null
-            WINEPREFIX="$PREFIX_PATH" "$WINE_CMD" regedit "$reg_file" &>> "$EAX_LOG_FILE"; echo "[exit $?]" >> "$EAX_LOG_FILE"
-        fi
+        protontricks -c "regedit \"$reg_file\"" "$APPID" &>> "$EAX_LOG_FILE"; rc=$?; echo "[exit $rc]" >> "$EAX_LOG_FILE"
+    elif [ "$LAUNCHER_TYPE" == "2" ] && [ -d "$PREFIX_PATH/drive_c" ] && [ -n "$WINE_CMD" ]; then
+        log_cmd "$WINE_CMD regedit $reg_file (prefix $PREFIX_PATH)"; sed 's/^/  | /' "$reg_file" >> "$EAX_LOG_FILE" 2>/dev/null
+        WINEPREFIX="$PREFIX_PATH" "$WINE_CMD" regedit "$reg_file" &>> "$EAX_LOG_FILE"; rc=$?; echo "[exit $rc]" >> "$EAX_LOG_FILE"
+    else
+        log_cmd "regedit skipped: no AppID, Wine binary, or prefix to apply $reg_file to"
     fi
+    return "$rc"
 }
 
 select_architecture() {

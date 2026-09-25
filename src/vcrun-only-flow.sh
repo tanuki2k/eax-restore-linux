@@ -59,6 +59,12 @@ if is_truthy "$EAX_RESTORE_VCRUN_ONLY"; then
             : > "$GAME_MANIFEST"
         fi
         echo "VCRUN" >> "$GAME_MANIFEST"
+    else
+        print_run_summary
+        print_banner "VC++ RUNTIME INSTALL INCOMPLETE" "$YELLOW"
+        print_error "The core VC++ runtime files couldn't be verified in the prefix, so the runtime" \
+            "isn't installed. The installer output is saved in $VCRUN_LOG."
+        exit 1
     fi
 
     print_run_summary

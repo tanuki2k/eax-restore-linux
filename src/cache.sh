@@ -281,8 +281,9 @@ handle_conflict() {
             # there's nothing here worth backing up. Overwrite directly;
             # any real original backup from the very first install, if one
             # exists, is left untouched rather than buried under this.
-            rm -f "$existing"
-            return 0
+            if rm -f "$existing"; then return 0; fi
+            record_deploy_failure "$target_file"
+            return 1
         fi
         echo -e "\n${YELLOW}$(basename "$existing")${NC} ${WHITE}already exists at $(dirname "$target_file").${NC}"
         while true; do
@@ -290,13 +291,24 @@ handle_conflict() {
             read -r C_CHOICE
             C_CHOICE="${C_CHOICE:-b}"
             case "${C_CHOICE,,}" in
-                o) rm -rf "$existing"; return 0 ;;
+                o)
+                    if rm -rf "$existing"; then return 0; fi
+                    record_deploy_failure "$target_file"
+                    return 1 ;;
                 b)
                     # Named after the target (not a differently-cased
                     # original), so uninstall's "$f".bak* lookup finds it.
+                    # A failed backup skips the copy: cp -f onto the file
+                    # can still succeed (it needs only file write access,
+                    # mv needs the folder's), which would destroy the
+                    # original with no backup left.
                     TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-                    mv "$existing" "${target_file}.bak.${TIMESTAMP}"
                     echo ""
+                    if ! mv "$existing" "${target_file}.bak.${TIMESTAMP}"; then
+                        print_error_arrow "Couldn't back up $(basename "$existing"), so it was left untouched."
+                        DEPLOY_FAILURES=$(( ${DEPLOY_FAILURES:-0} + 1 ))
+                        return 1
+                    fi
                     print_status "Backed up original $(basename "$existing") to $(basename "$target_file").bak.${TIMESTAMP}"
                     return 0 ;;
                 s) echo ""; print_status "Skipped $(basename "$target_file")."; return 1 ;;
@@ -315,16 +327,23 @@ auto_backup_and_overwrite() {
     # likely to already exist there, and backup-and-overwrite is already
     # handle_conflict's own default, so skipping the prompt here removes a
     # step without changing what actually happens in the common case.
+    # Returns 1 (and counts a deploy failure) if the existing file couldn't
+    # be moved aside, so the caller skips the copy instead of overwriting it.
     local target_file="$1"
     local existing
     existing=$(find_existing_variant "$target_file")
     if [ -n "$existing" ]; then
         if [ "${PREV_MANIFEST_FILES[$target_file]:-0}" == "1" ]; then
-            rm -f "$existing"
-            return 0
+            if rm -f "$existing"; then return 0; fi
+            record_deploy_failure "$target_file"
+            return 1
         fi
         TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-        mv "$existing" "${target_file}.bak.${TIMESTAMP}"
+        if ! mv "$existing" "${target_file}.bak.${TIMESTAMP}"; then
+            print_error_arrow "Couldn't back up $(basename "$existing"), so it was left untouched."
+            DEPLOY_FAILURES=$(( ${DEPLOY_FAILURES:-0} + 1 ))
+            return 1
+        fi
         print_status "Backed up existing $(basename "$existing") to $(basename "$target_file").bak.${TIMESTAMP}"
     fi
     return 0
