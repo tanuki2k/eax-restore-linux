@@ -2485,8 +2485,8 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     echo -e -n "${CYAN}Ready to deploy the audio files to your game and system prefix. Proceed? (Y/n): ${NC}"; read -r CONFIRM_FIN
     if [[ "$CONFIRM_FIN" =~ ^[Nn]$ ]]; then echo -e "${YELLOW}Installation aborted.${NC}"; exit 0; fi
 
-    echo -e "\n${CYAN}STATUS: Executing system verbs via $( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" ) (Silent Mode)...${NC}"
-    echo -e " -> Applying core package: openal"
+    echo -e "\n${CYAN}STATUS: Installing Creative's OpenAL runtime into the prefix...${NC}"
+    echo -e " -> Installing via $( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" )..."
 
     # A failure here is a warning, not a deploy failure: the engine's own
     # DLLs are copied in directly below and don't depend on this package —
@@ -2501,13 +2501,13 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
             log_cmd "winetricks --force -q openal (WINE=$WINE_CMD, prefix $PREFIX_PATH)"
             WINEPREFIX="$PREFIX_PATH" WINE="$WINE_CMD" WINESERVER="${WINESERVER_CMD:-}" winetricks --force -q openal 2>> "$EAX_LOG_FILE"; OPENAL_RC=$?; echo "[exit $OPENAL_RC]" >> "$EAX_LOG_FILE"
         else
-            echo -e " -> ${YELLOW}Warning: No local Wine binary or resolved prefix was found. Skipping core package.${NC}"
+            echo -e " -> ${YELLOW}Warning: No local Wine binary or resolved prefix was found, so this step is being skipped.${NC}"
         fi
     fi
     if [ "$OPENAL_RC" == "0" ]; then
-        echo -e " -> ${GREEN}Core package (openal) applied successfully.${NC}"
+        echo -e " -> ${GREEN}OpenAL was installed successfully.${NC}"
     elif [ -n "$OPENAL_RC" ]; then
-        echo -e " -> ${YELLOW}${BOLD}Warning: The core package (openal) didn't install (exit code $OPENAL_RC), so the prefix may be missing it.${NC}"
+        echo -e " -> ${YELLOW}${BOLD}Warning: Creative's OpenAL runtime didn't install (exit code $OPENAL_RC), so the prefix may be missing it.${NC}"
         echo -e "${WHITE}    The run log has the full output.${NC}"
     fi
 
