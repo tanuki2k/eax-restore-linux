@@ -297,6 +297,11 @@ prompts — see "Text/output style conventions" above for which helper/color to 
   `"installing DSOAL here would be a functional no-op"` →
   `"installing DSOAL here wouldn't do anything — there's nothing for it to hook
   into"`.
+- Don't refer to steps the user hasn't reached yet or to the tools behind them
+  ("the registry and winetricks steps") — someone running the script for the
+  first time can't know what those are. Say what the choice means for their
+  game instead, e.g. `"Use this detected runner for the registry and winetricks
+  steps?"` → `"Use the same Wine version Heroic launches $GAME_NAME with?"`.
 - Name the actual subject instead of a generic stand-in wherever the variable is
   available — the real game name instead of "this edition", `$GAME_NAME`'s prefix
   instead of "this prefix".
