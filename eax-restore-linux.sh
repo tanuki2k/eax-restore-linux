@@ -997,7 +997,7 @@ apply_vcrun_dll_overrides() {
     # on an "unimplemented function" despite every file being verified
     # present on disk.
     local reg_file="$GAME_DIR/vcrun_overrides_$$.reg"
-    echo -e " -> Setting DLL overrides so Wine loads the native runtime instead of its own builtin..."
+    echo -e " -> Telling Wine to use Microsoft's VC++ runtime files instead of its own..."
     echo "Windows Registry Editor Version 5.00" > "$reg_file"
     echo "" >> "$reg_file"
     echo "[HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides]" >> "$reg_file"
@@ -1009,7 +1009,7 @@ apply_vcrun_dll_overrides() {
     apply_registry_patch "$reg_file" || rc=1
     rm -f "$reg_file"
     if [ "$rc" -ne 0 ]; then
-        echo -e " -> ${YELLOW}${BOLD}Warning: The VC++ DLL overrides couldn't be set, so Wine may still use its own builtin runtime.${NC}"
+        echo -e " -> ${YELLOW}${BOLD}Warning: Wine couldn't be told to use Microsoft's VC++ runtime files, so it may still use its own.${NC}"
         echo -e "${WHITE}    The run log has the full output.${NC}"
     fi
     return "$rc"
@@ -1052,7 +1052,7 @@ install_vcrun_dependencies() {
     VCRUN_LOG="$VCRUN_SHARE/install.log"
     : > "$VCRUN_LOG"
 
-    echo -e " -> Attempting installation via package manager..."
+    echo -e " -> Installing via $( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" )..."
 
     # 1. Run the package manager
     # --force bypasses winetricks' own checksum check for vc_redist.exe: it
@@ -1072,12 +1072,12 @@ install_vcrun_dependencies() {
 
     # 3. Handle the outcome
     if [ "$VCRUN_SUCCESS" -eq 1 ]; then
-        echo -e " -> ${GREEN}Package manager installation successful (core DLLs verified).${NC}"
+        echo -e " -> ${GREEN}Installed via $( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" ) (core DLLs verified).${NC}"
         apply_vcrun_dll_overrides
         return 0
     fi
 
-    echo -e " -> ${YELLOW}Package manager failed (core files missing). Falling back to direct download...${NC}"
+    echo -e " -> ${YELLOW}$( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" ) didn't install the core files, so using Microsoft's own installer instead...${NC}"
 
     if [ "$ARCH" == "64" ]; then
         VCRUN_URL="https://aka.ms/vs/17/release/vc_redist.x64.exe"
@@ -1119,11 +1119,11 @@ install_vcrun_dependencies() {
     # Final verification
     verify_vcrun_files
     if [ "$VCRUN_SUCCESS" -eq 1 ]; then
-        echo -e " -> ${GREEN}VC++ Redistributable installed successfully via fallback.${NC}"
+        echo -e " -> ${GREEN}VC++ Redistributable installed successfully with Microsoft's installer.${NC}"
         apply_vcrun_dll_overrides
         return 0
     else
-        echo -e " -> ${YELLOW}Warning: Direct installation completed, but core DLLs could not be verified.${NC}"
+        echo -e " -> ${YELLOW}Warning: Microsoft's installer finished, but the core DLLs still aren't in place.${NC}"
         echo -e " -> ${WHITE}Full installer output saved to: $VCRUN_LOG${NC}"
         return 1
     fi
@@ -2485,6 +2485,40 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     echo -e -n "${CYAN}Ready to deploy the audio files to your game and system prefix. Proceed? (Y/n): ${NC}"; read -r CONFIRM_FIN
     if [[ "$CONFIRM_FIN" =~ ^[Nn]$ ]]; then echo -e "${YELLOW}Installation aborted.${NC}"; exit 0; fi
 
+    # Checks that can stop the install run before anything is changed, so
+    # a failure never leaves the prefix half-set-up (and its error isn't
+    # shown under an unrelated step's header).
+
+    # Engine-specific paths
+    if [ "$ENGINE_CHOICE" == "1" ]; then
+        TARGET_COMMUNITY=$(find "$DSOAL_COMMUNITY_V13" -type d -ipath "*/${ARCH_FOLDER}" | head -n 1)
+        DSOUND_SRC="$TARGET_COMMUNITY/dsound.dll"
+        DSOAL_SRC="$TARGET_COMMUNITY/dsoal-aldrv.dll"
+    elif [ "$ENGINE_CHOICE" == "2" ]; then
+        TARGET_V14=$(find "$DSOAL_COMMUNITY_V14" -type d -ipath "*/${ARCH_FOLDER}" | head -n 1)
+        DSOUND_SRC="$TARGET_V14/dsound.dll"
+        DSOAL_SRC="$TARGET_V14/dsoal-aldrv.dll"
+    elif [ "$ENGINE_CHOICE" == "3" ]; then
+        TARGET_DSOAL=$(find "$DSOAL_OFFICIAL" -type d -ipath "*/${ARCH_FOLDER}" | head -n 1)
+        TARGET_OAL=$(find "$OPENAL_OFFICIAL" -type d -ipath "*/bin/${ARCH_FOLDER}" | head -n 1)
+        DSOUND_SRC="$TARGET_DSOAL/dsound.dll"
+        DSOAL_SRC="$TARGET_OAL/soft_oal.dll"
+    fi
+
+    if [ ! -f "$DSOUND_SRC" ] || [ ! -f "$DSOAL_SRC" ]; then
+        echo -e "\n${YELLOW}${BOLD}Error: Required source files for the selected engine were not found in the cache.${NC}"
+        echo -e "${WHITE}This usually means the download for this engine failed or was incomplete earlier in this run"
+        echo -e "(check the REPOSITORY CACHE CHECK output above), or the ${ARCH_FOLDER} build isn't present in it."
+        echo -e "Re-run the script to retry the download, or choose a different engine.${NC}"
+        exit 1
+    fi
+
+    # The prefix copy comes after the game-folder copy, so check it can be
+    # written now rather than failing halfway through deployment.
+    if [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows/system32" ]; then
+        check_target_writable "$PREFIX_PATH/drive_c/windows/system32" "Wine/Proton prefix"
+    fi
+
     echo -e "\n${CYAN}STATUS: Installing Creative's OpenAL runtime into the prefix...${NC}"
     echo -e " -> Installing via $( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" )..."
 
@@ -2516,30 +2550,6 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         install_vcrun_dependencies && VCRUN_INSTALLED_THIS_RUN="1"
     fi
 
-    # Engine-specific paths
-    if [ "$ENGINE_CHOICE" == "1" ]; then
-        TARGET_COMMUNITY=$(find "$DSOAL_COMMUNITY_V13" -type d -ipath "*/${ARCH_FOLDER}" | head -n 1)
-        DSOUND_SRC="$TARGET_COMMUNITY/dsound.dll"
-        DSOAL_SRC="$TARGET_COMMUNITY/dsoal-aldrv.dll"
-    elif [ "$ENGINE_CHOICE" == "2" ]; then
-        TARGET_V14=$(find "$DSOAL_COMMUNITY_V14" -type d -ipath "*/${ARCH_FOLDER}" | head -n 1)
-        DSOUND_SRC="$TARGET_V14/dsound.dll"
-        DSOAL_SRC="$TARGET_V14/dsoal-aldrv.dll"
-    elif [ "$ENGINE_CHOICE" == "3" ]; then
-        TARGET_DSOAL=$(find "$DSOAL_OFFICIAL" -type d -ipath "*/${ARCH_FOLDER}" | head -n 1)
-        TARGET_OAL=$(find "$OPENAL_OFFICIAL" -type d -ipath "*/bin/${ARCH_FOLDER}" | head -n 1)
-        DSOUND_SRC="$TARGET_DSOAL/dsound.dll"
-        DSOAL_SRC="$TARGET_OAL/soft_oal.dll"
-    fi
-
-    if [ ! -f "$DSOUND_SRC" ] || [ ! -f "$DSOAL_SRC" ]; then
-        echo -e "\n${YELLOW}${BOLD}Error: Required source files for the selected engine were not found in the cache.${NC}"
-        echo -e "${WHITE}This usually means the download for this engine failed or was incomplete earlier in this run"
-        echo -e "(check the REPOSITORY CACHE CHECK output above), or the ${ARCH_FOLDER} build isn't present in it."
-        echo -e "Re-run the script to retry the download, or choose a different engine.${NC}"
-        exit 1
-    fi
-
     # Manifest of everything THIS run actually deploys, so uninstall only ever
     # touches files the script itself put there (never pre-existing user files
     # that were left alone because of a [s]kip during a conflict prompt).
@@ -2559,11 +2569,6 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         done < "$INSTALL_MANIFEST"
     fi
 
-    # The prefix copy happens after the game-folder copy, so check it can be
-    # written now rather than failing halfway through deployment.
-    if [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows/system32" ]; then
-        check_target_writable "$PREFIX_PATH/drive_c/windows/system32" "Wine/Proton prefix"
-    fi
     DEPLOY_FAILURES=0
 
     : > "$INSTALL_MANIFEST"
