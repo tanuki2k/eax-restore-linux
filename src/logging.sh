@@ -104,7 +104,9 @@ write_log_summary() {
 finish_run_log() {
     local rc=$?
     trap - EXIT
-    echo -e "\n${WHITE}Log saved to: ${GREEN}$EAX_LOG_FILE${NC}"
+    # Own line, with $HOME shown as ~, so the path fits the 76-column layout.
+    echo -e "\n${WHITE}Log saved to:${NC}"
+    echo -e "  ${GREEN}${EAX_LOG_FILE/#$HOME/\~}${NC}"
     if [ "$rc" -ne 0 ]; then
         echo -e "${YELLOW}If something went wrong, please attach this log to a bug report:${NC}"
         echo -e "${WHITE}$BUG_REPORT_URL${NC}"
