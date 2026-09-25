@@ -203,9 +203,11 @@ remove_vcrun_msi_registration() {
 
     for hive in "${hives[@]}"; do
         if [ "$LAUNCHER_TYPE" == "1" ]; then
-            query_output=$(protontricks -c "wine reg query \"$hive\" /s /f \"Visual C++\" /d" "$APPID" 2>/dev/null)
+            log_cmd "protontricks wine reg query $hive (Visual C++)"
+            query_output=$(protontricks -c "wine reg query \"$hive\" /s /f \"Visual C++\" /d" "$APPID" 2>> "$EAX_LOG_FILE")
         elif [ -n "$WINE_CMD" ]; then
-            query_output=$(WINEPREFIX="$PREFIX_PATH" "$WINE_CMD" reg query "$hive" /s /f "Visual C++" /d 2>/dev/null)
+            log_cmd "$WINE_CMD reg query $hive (Visual C++)"
+            query_output=$(WINEPREFIX="$PREFIX_PATH" "$WINE_CMD" reg query "$hive" /s /f "Visual C++" /d 2>> "$EAX_LOG_FILE")
         else
             continue
         fi
@@ -214,9 +216,11 @@ remove_vcrun_msi_registration() {
             [[ "$line" == HKEY_LOCAL_MACHINE* ]] || continue
             key="${line%$'\r'}"
             if [ "$LAUNCHER_TYPE" == "1" ]; then
-                protontricks -c "wine reg delete \"$key\" /f" "$APPID" &>/dev/null
+                log_cmd "protontricks wine reg delete $key"
+                protontricks -c "wine reg delete \"$key\" /f" "$APPID" &>> "$EAX_LOG_FILE"
             else
-                WINEPREFIX="$PREFIX_PATH" "$WINE_CMD" reg delete "$key" /f &>/dev/null
+                log_cmd "$WINE_CMD reg delete $key"
+                WINEPREFIX="$PREFIX_PATH" "$WINE_CMD" reg delete "$key" /f &>> "$EAX_LOG_FILE"
             fi
             removed_any=1
         done <<< "$query_output"
@@ -287,9 +291,11 @@ uninstall_vcrun_dependencies() {
     if [ -s "$vcrun_share/$vcrun_exe" ]; then
         print_status "Running the official uninstaller (best-effort; direct cleanup follows regardless)..."
         if [ "$LAUNCHER_TYPE" == "1" ]; then
-            protontricks -c "wine \"$vcrun_share/$vcrun_exe\" /uninstall /q /norestart" "$APPID" &>/dev/null
+            log_cmd "protontricks $vcrun_exe /uninstall"
+            protontricks -c "wine \"$vcrun_share/$vcrun_exe\" /uninstall /q /norestart" "$APPID" &>> "$EAX_LOG_FILE"; echo "[exit $?]" >> "$EAX_LOG_FILE"
         else
-            WINEPREFIX="$PREFIX_PATH" "$WINE_CMD" "$vcrun_share/$vcrun_exe" /uninstall /q /norestart &>/dev/null
+            log_cmd "$WINE_CMD $vcrun_exe /uninstall"
+            WINEPREFIX="$PREFIX_PATH" "$WINE_CMD" "$vcrun_share/$vcrun_exe" /uninstall /q /norestart &>> "$EAX_LOG_FILE"; echo "[exit $?]" >> "$EAX_LOG_FILE"
         fi
     else
         print_note_arrow "could not fetch the official uninstaller — skipping straight to direct cleanup."

@@ -14,12 +14,14 @@
     print_status "Installing the OpenAL package via $( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" )..."
 
     if [ "$LAUNCHER_TYPE" == "1" ]; then
-        protontricks "$APPID" -q openal 2>/dev/null
+        log_cmd "protontricks $APPID -q openal"
+        protontricks "$APPID" -q openal 2>> "$EAX_LOG_FILE"; echo "[exit $?]" >> "$EAX_LOG_FILE"
         print_status "OpenAL was installed successfully." "$GREEN"
     else
         if [ -n "$WINE_CMD" ] && [ -n "$PREFIX_PATH" ]; then
             # Using --force to bypass winetricks safety blocks in Heroic
-            WINEPREFIX="$PREFIX_PATH" WINE="$WINE_CMD" winetricks --force -q openal 2>/dev/null
+            log_cmd "winetricks --force -q openal (WINE=$WINE_CMD, prefix $PREFIX_PATH)"
+            WINEPREFIX="$PREFIX_PATH" WINE="$WINE_CMD" winetricks --force -q openal 2>> "$EAX_LOG_FILE"; echo "[exit $?]" >> "$EAX_LOG_FILE"
             print_status "OpenAL was installed successfully." "$GREEN"
         else
             print_warning_arrow "No local Wine binary or resolved prefix was found, so this step is being skipped."

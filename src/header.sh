@@ -95,6 +95,10 @@
 #   machine with a cache you know is current; if a needed engine build
 #   isn't cached yet, deployment will fail later with nothing to install.
 #
+# * EAX_RESTORE_NO_LOG=1  Turns off the per-run log file. Normally every run
+#   is logged to ~/.local/state/eax-restore-linux/logs/ (newest 10 kept,
+#   latest.log points at the most recent) for attaching to bug reports.
+#
 # * EAX_RESTORE_KNOWN_GAMES_FILE=/path/to/file.json  Uses a local file instead
 #   of fetching known-eax-games.json from GitHub. For testing schema/data
 #   edits to the database before they've been pushed to the branch it's

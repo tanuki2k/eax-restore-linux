@@ -1000,10 +1000,12 @@ detect_game_environment() {
 apply_registry_patch() {
     local reg_file="$1"
     if [ "$LAUNCHER_TYPE" == "1" ] && [ -n "$APPID" ]; then
-        protontricks -c "regedit \"$reg_file\"" "$APPID" &>/dev/null
+        log_cmd "protontricks regedit $reg_file (AppID $APPID)"; sed 's/^/  | /' "$reg_file" >> "$EAX_LOG_FILE" 2>/dev/null
+        protontricks -c "regedit \"$reg_file\"" "$APPID" &>> "$EAX_LOG_FILE"; echo "[exit $?]" >> "$EAX_LOG_FILE"
     elif [ "$LAUNCHER_TYPE" == "2" ] && [ -d "$PREFIX_PATH/drive_c" ]; then
         if [ -n "$WINE_CMD" ]; then
-            WINEPREFIX="$PREFIX_PATH" "$WINE_CMD" regedit "$reg_file" &>/dev/null
+            log_cmd "$WINE_CMD regedit $reg_file (prefix $PREFIX_PATH)"; sed 's/^/  | /' "$reg_file" >> "$EAX_LOG_FILE" 2>/dev/null
+            WINEPREFIX="$PREFIX_PATH" "$WINE_CMD" regedit "$reg_file" &>> "$EAX_LOG_FILE"; echo "[exit $?]" >> "$EAX_LOG_FILE"
         fi
     fi
 }

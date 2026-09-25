@@ -20,6 +20,7 @@ COMPONENTS=(
     ui.sh
     common.sh
     guards.sh
+    logging.sh
     detection.sh
     known-games.sh
     vcrun.sh
