@@ -43,6 +43,8 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
 
     # 4. Audio API Detection
     print_step 4 "Audio API Detection"
+    print_paragraph "This step works out whether the game plays its 3D sound through DirectSound3D or" \
+        "OpenAL, so the matching audio fix is installed."
     if [ "$LAUNCHER_TYPE" == "1" ]; then
         confirm_continue_if_openal_native "$APPID" "steam" "$GAME_NAME"
     else
