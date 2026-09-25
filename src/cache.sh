@@ -32,12 +32,14 @@ fetch_pinned_dsoal_into_official() {
             echo "archive-$DSOAL_PINNED_REV" > "$DSOAL_SHARE/updated_at.txt"; rm -f "$DSOAL_SHARE/pinned.zip"; print_status "Done." "$GREEN"
             return 0
         fi
-        print_error_arrow "The archived build failed checksum verification."
+        rm -f "$DSOAL_SHARE/pinned.zip"
+        print_error_arrow "The archived build failed checksum verification, so kcat DSOAL will be unavailable" \
+            "this run — the OpenAL native engine still works."
     else
-        print_error_arrow "The archived build download failed or the file was corrupt."
+        rm -f "$DSOAL_SHARE/pinned.zip"
+        print_error_arrow "The archived build couldn't be downloaded, so kcat DSOAL will be unavailable" \
+            "this run — the OpenAL native engine still works."
     fi
-    rm -f "$DSOAL_SHARE/pinned.zip"
-    print_error_arrow "kcat DSOAL will be unavailable this run (the OpenAL native engine still works)."
     return 1
 }
 
@@ -264,7 +266,7 @@ deploy_copy() {
 }
 
 record_deploy_failure() {
-    print_error_arrow "Could not write $(basename "$1") to $(dirname "$1")."
+    print_error_arrow "Couldn't write $(basename "$1") to $(dirname "$1"), so it isn't installed."
     DEPLOY_FAILURES=$(( ${DEPLOY_FAILURES:-0} + 1 ))
 }
 

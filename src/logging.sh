@@ -69,7 +69,8 @@ write_log_summary() {
     fi
     # Last numbered step / banner reached, read back from the screen output
     # already in the log -- shows where a failed run stopped.
-    last_section=$(grep -E '^[0-9]+\. [A-Z]|^--- .* ---$' "$EAX_LOG_FILE" | tail -n 1)
+    # (step headings read "3. Label", or "3/8. Label" once STEP_TOTAL is set).
+    last_section=$(grep -E '^[0-9]+(/[0-9]+)?\. [A-Z]|^--- .* ---$' "$EAX_LOG_FILE" | tail -n 1)
     {
         echo ""
         echo "=== Run summary ==="

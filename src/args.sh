@@ -30,6 +30,8 @@ prompts is done via environment variables:
   EAX_RESTORE_VCRUN_ONLY=1            Only (re)install the VC++ runtime
   EAX_RESTORE_SKIP_CACHE_CHECK=1      Trust the existing local cache
   EAX_RESTORE_KNOWN_GAMES_FILE=PATH   Use a local known-games JSON file
+  EAX_RESTORE_NO_LOG=1                Don't write a run log (normally saved to
+                                      ~/.local/state/eax-restore-linux/logs/)
 
 Full feature list, environment variable details, and README:
 https://github.com/tanuki2k/eax-restore-linux
