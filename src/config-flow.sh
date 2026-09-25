@@ -94,16 +94,30 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     else
         echo -e "${YELLOW}Selection (1 or 2) [Default: 1]: ${NC}"
         echo ""
-        print_option 1 "kcat DSOAL + OpenAL Soft    [DSOAL: $DSOAL_VER | OAL: $OAL_VER]"
+        # Engine 1 stays the default even when its download failed -- engine
+        # 2 is only right for OpenAL-native games, so it's never picked for
+        # the user; an unavailable engine is shown but refused instead.
+        print_option 1 "kcat DSOAL + OpenAL Soft    [DSOAL: $DSOAL_VER | OAL: $OAL_VER]$(engine_available 1 || echo -e " ${YELLOW}[unavailable this run]${NC}")"
         print_option 2 "OpenAL native (direct OpenAL32.dll swap)"
 
         while true; do
             echo -e -n "\n> "
             read -r ENGINE_CHOICE
             ENGINE_CHOICE="${ENGINE_CHOICE:-1}"
-            if [[ "$ENGINE_CHOICE" =~ ^[12]$ ]]; then break; else print_warning "That's not a valid option — please type 1 or 2."; fi
+            if [[ ! "$ENGINE_CHOICE" =~ ^[12]$ ]]; then print_warning "That's not a valid option — please type 1 or 2."
+            elif ! engine_available "$ENGINE_CHOICE"; then print_warning "kcat DSOAL couldn't be downloaded this run (see the Repository Cache Check above). Pick 2 only if this game uses OpenAL natively; otherwise quit and re-run later."
+            else break; fi
         done
     fi
+    fi
+
+    # Covers the paths above that pick engine 1 without the menu (a confirmed
+    # DirectSound3D game, or EAX_RESTORE_DSOAL_PIN) -- stop here rather than
+    # after the rest of the configuration steps.
+    if ! engine_available "$ENGINE_CHOICE"; then
+        print_error "kcat DSOAL couldn't be downloaded this run, and this game needs it."
+        echo -e "${WHITE}Check the Repository Cache Check output above, then re-run the script later.${NC}"
+        exit 1
     fi
 
     # The Wine DLL override this install ultimately needs — dsound.dll for
