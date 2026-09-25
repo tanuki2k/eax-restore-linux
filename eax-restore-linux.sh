@@ -814,7 +814,9 @@ flush_wine_registry() {
     # not see the change yet.
     if [ "$LAUNCHER_TYPE" == "1" ] && [ -n "$APPID" ]; then
         log_cmd "protontricks wineserver -w (AppID $APPID)"
-        timeout 60 protontricks -c "wineserver -w" "$APPID" &>> "$EAX_LOG_FILE"
+        # timeout goes inside -c: the Flatpak protontricks is a shell
+        # function, which timeout can't run.
+        protontricks -c "timeout 60 wineserver -w" "$APPID" &>> "$EAX_LOG_FILE"
     elif [ -n "$WINE_CMD" ]; then
         local server="${WINESERVER_CMD:-$(dirname "$WINE_CMD")/wineserver}"
         [ -x "$server" ] || server="wineserver"
