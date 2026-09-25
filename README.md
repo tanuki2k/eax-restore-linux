@@ -87,8 +87,17 @@ For repeat runs or scripting, these can be set to skip prompts:
 | `EAX_RESTORE_DSOAL_COMMUNITY_V14=1` | Pre-selects the PCGamingWiki Community engine (self-hosted mirror) and jumps straight to install. |
 | `EAX_RESTORE_DSOAL_OFFICIAL=1` | Pre-selects kcat's official DSOAL + OpenAL Soft engine and jumps straight to install. |
 | `EAX_RESTORE_VCRUN_ONLY=1` | Skips the full install/uninstall flow and just (re)installs the MS VC++ 2022 Redistributable into a game's prefix. |
+| `EAX_RESTORE_NO_LOG=1` | Turns off the per-run log file (see [Logs & Bug Reports](#logs--bug-reports)). |
 
 Only set one `EAX_RESTORE_DSOAL_*` variable at a time.
+
+### Logs & Bug Reports
+
+Every run is saved to a log file in `~/.local/state/eax-restore-linux/logs/`, and the script prints its path when the run finishes. Each run gets its own timestamped file (the newest 10 are kept), and `latest.log` always points at the most recent one. Dev builds log separately, to `~/.local/state/eax-restore-linux/logs/dev/`.
+
+The log contains everything shown on screen, plus details useful for troubleshooting: your distro, kernel, and Wine/winetricks/protontricks versions, the output of the Wine, winetricks, and protontricks commands the script runs, and a summary of the detected game, prefix, runner (Proton/Wine version), architecture, and chosen engine.
+
+If something goes wrong, please [open a bug report](https://github.com/tanuki2k/eax-restore-linux/issues/new?template=bug_report.md) and attach `~/.local/state/eax-restore-linux/logs/latest.log`. The log includes local file paths, which contain your username — feel free to redact them.
 
 ## Credits & Upstream Sources
 
