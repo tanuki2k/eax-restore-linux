@@ -1388,30 +1388,124 @@ engine_available() {
     esac
 }
 
+find_existing_variant() {
+    # Usage: find_existing_variant <path>
+    # Prints the path if it exists, otherwise any same-named file in that
+    # folder that differs only by case (e.g. DSOUND.DLL for dsound.dll).
+    # Linux filesystems -- NTFS via ntfs3/ntfs-3g included -- are
+    # case-sensitive, so an exact-name check alone would drop a second
+    # dsound.dll next to a game's own DSOUND.DLL rather than backing it up,
+    # leaving Wine to pick either and Windows (on a shared NTFS drive) with
+    # two names it can't tell apart.
+    local f="$1"
+    if [ -e "$f" ] || [ -L "$f" ]; then echo "$f"; return; fi
+    find "$(dirname "$f")" -maxdepth 1 -iname "$(basename "$f")" 2>/dev/null | head -n 1
+}
+
+target_fs_type() {
+    # Usage: target_fs_type <dir>  -> e.g. ext4, btrfs, ntfs3, ntfs (ntfs-3g)
+    local dir="$1" fs src
+    fs=$(findmnt -no FSTYPE -T "$dir" 2>/dev/null)
+    # ntfs-3g (and exFAT via FUSE) mounts show up as plain "fuseblk", so ask
+    # the block device what it actually is.
+    if [ "$fs" == "fuseblk" ]; then
+        src=$(findmnt -no SOURCE -T "$dir" 2>/dev/null)
+        [ -n "$src" ] && fs=$(lsblk -no FSTYPE "$src" 2>/dev/null | head -n 1)
+        [ -z "$fs" ] && fs="fuseblk"
+    fi
+    echo "$fs"
+}
+
+check_target_writable() {
+    # Usage: check_target_writable <dir> <label>
+    # Confirms the script can actually write to <dir> before anything is
+    # changed, and explains why not when it can't -- most often an NTFS drive
+    # that Linux mounted read-only because Windows Fast Startup/hibernation
+    # left it "dirty". Exits on failure; returns 0 when writable.
+    local dir="$1" label="$2" probe fs opts
+    probe="$dir/.eax-restore-write-test.$$"
+    fs=$(target_fs_type "$dir")
+    if touch "$probe" 2>/dev/null && rm -f "$probe" 2>/dev/null; then
+        if [[ "$fs" == ntfs* ]] && [ "$SCRIPT_ACTION" == "i" ] && [ -z "$NTFS_NOTE_SHOWN" ]; then
+            NTFS_NOTE_SHOWN=1
+            echo -e "\n${YELLOW}Note: this $label is on an NTFS drive ($fs).${NC}"
+            echo -e "${WHITE}If you also run this game from Windows, the files deployed here (dsound.dll,"
+            echo -e "dsoal-aldrv.dll, alsoft.ini, and any dummy eax.dll) affect it there too — a dummy"
+            echo -e "eax.dll in particular can stop it starting under Windows. Uninstalling with this"
+            echo -e "script restores the original files.${NC}"
+        fi
+        return 0
+    fi
+    opts=$(findmnt -no OPTIONS -T "$dir" 2>/dev/null)
+    echo -e "\n${YELLOW}${BOLD}Error: The $label can't be written to:${NC}"
+    echo -e "${WHITE}  $dir${NC}"
+    echo -e "${WHITE}  Filesystem: ${fs:-unknown}   Mount options: ${opts:-unknown}${NC}\n"
+    if [[ "$fs" == ntfs* ]] && [[ ",$opts," == *,ro,* ]]; then
+        echo -e "${WHITE}This NTFS drive is mounted read-only. That usually means Windows didn't fully"
+        echo -e "shut down (Fast Startup or hibernation left the drive marked as in use), so Linux"
+        echo -e "refuses to write to it. Boot into Windows and use Shut Down while holding Shift"
+        echo -e "(or turn off Fast Startup in Power Options), then remount the drive and re-run.${NC}"
+    elif [[ "$fs" == ntfs* ]]; then
+        echo -e "${WHITE}This NTFS drive is mounted, but your user isn't allowed to write to it. NTFS has"
+        echo -e "no Linux permissions of its own, so access comes from the mount options — mount it"
+        echo -e "with uid=$(id -u),gid=$(id -g) (or through your file manager / fstab) and re-run.${NC}"
+    elif [[ ",$opts," == *,ro,* ]]; then
+        echo -e "${WHITE}This drive is mounted read-only. Remount it read-write and re-run.${NC}"
+    else
+        echo -e "${WHITE}Your user doesn't have write permission here (owner: $(stat -c '%U' "$dir" 2>/dev/null))."
+        echo -e "Fix the folder's permissions and re-run. Don't run this script as root.${NC}"
+    fi
+    echo -e "\n${WHITE}Nothing has been changed.${NC}"
+    exit 1
+}
+
+deploy_copy() {
+    # Usage: deploy_copy <src> <dest> <verb>
+    # Copies one file and only records it in the manifest (and reports it)
+    # if the copy actually succeeded; failures are counted in
+    # DEPLOY_FAILURES so the install can't report success when it isn't.
+    if cp -f "$1" "$2"; then
+        echo "$2" >> "$INSTALL_MANIFEST"
+        echo -e " -> $3: $(basename "$2") to $(basename "$(dirname "$2")")"
+        return 0
+    fi
+    record_deploy_failure "$2"
+    return 1
+}
+
+record_deploy_failure() {
+    echo -e " -> ${YELLOW}${BOLD}Error: Could not write $(basename "$1") to $(dirname "$1").${NC}"
+    DEPLOY_FAILURES=$(( ${DEPLOY_FAILURES:-0} + 1 ))
+}
+
 handle_conflict() {
     local target_file="$1"
-    if [ -e "$target_file" ] || [ -L "$target_file" ]; then
+    local existing
+    existing=$(find_existing_variant "$target_file")
+    if [ -n "$existing" ]; then
         if [ "${PREV_MANIFEST_FILES[$target_file]:-0}" == "1" ]; then
             # Already ours from a previous install (tracked in the prior
             # manifest before it was reset) — not a genuine original, so
             # there's nothing here worth backing up. Overwrite directly;
             # any real original backup from the very first install, if one
             # exists, is left untouched rather than buried under this.
-            rm -f "$target_file"
+            rm -f "$existing"
             return 0
         fi
-        echo -e "\n${YELLOW}Conflict: $(basename "$target_file")${NC} ${WHITE}already exists at $(dirname "$target_file").${NC}"
+        echo -e "\n${YELLOW}Conflict: $(basename "$existing")${NC} ${WHITE}already exists at $(dirname "$target_file").${NC}"
         while true; do
             echo -e "\n${YELLOW}Action - [o]verwrite, [B]ackup & overwrite (default), [s]kip: ${NC}"
             echo -e -n "> "
             read -r C_CHOICE
             C_CHOICE="${C_CHOICE:-b}"
             case "${C_CHOICE,,}" in
-                o) rm -rf "$target_file"; return 0 ;;
+                o) rm -rf "$existing"; return 0 ;;
                 b)
+                    # Named after the target (not a differently-cased
+                    # original), so uninstall's "$f".bak* lookup finds it.
                     TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-                    mv "$target_file" "${target_file}.bak.${TIMESTAMP}"
-                    echo -e " -> Backed up original to $(basename "$target_file").bak.${TIMESTAMP}"
+                    mv "$existing" "${target_file}.bak.${TIMESTAMP}"
+                    echo -e " -> Backed up original $(basename "$existing") to $(basename "$target_file").bak.${TIMESTAMP}"
                     return 0 ;;
                 s) echo -e " -> Skipped $(basename "$target_file")."; return 1 ;;
                 *) echo -e "${YELLOW}${BOLD}Invalid choice. Type o, b, or s.${NC}" ;;
@@ -1430,14 +1524,16 @@ auto_backup_and_overwrite() {
     # handle_conflict's own default, so skipping the prompt here removes a
     # step without changing what actually happens in the common case.
     local target_file="$1"
-    if [ -e "$target_file" ] || [ -L "$target_file" ]; then
+    local existing
+    existing=$(find_existing_variant "$target_file")
+    if [ -n "$existing" ]; then
         if [ "${PREV_MANIFEST_FILES[$target_file]:-0}" == "1" ]; then
-            rm -f "$target_file"
+            rm -f "$existing"
             return 0
         fi
         TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-        mv "$target_file" "${target_file}.bak.${TIMESTAMP}"
-        echo -e " -> Backed up existing $(basename "$target_file") to $(basename "$target_file").bak.${TIMESTAMP}"
+        mv "$existing" "${target_file}.bak.${TIMESTAMP}"
+        echo -e " -> Backed up existing $(basename "$existing") to $(basename "$target_file").bak.${TIMESTAMP}"
     fi
     return 0
 }
@@ -1637,6 +1733,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     echo -e "${CYAN}1. Game Location${NC}"
     print_line
     get_game_directory ""
+    check_target_writable "$GAME_DIR" "game folder"
 
     echo ""
     print_divider
@@ -1924,6 +2021,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     echo -e "${CYAN}1. Game Location${NC}"
     print_line
     get_game_directory ""
+    check_target_writable "$GAME_DIR" "game folder"
 
     # 2. Game Identification & Launcher Auto-Detect
     echo ""
@@ -2270,21 +2368,24 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         done < "$INSTALL_MANIFEST"
     fi
 
+    # The prefix copy happens after the game-folder copy, so check it can be
+    # written now rather than failing halfway through deployment.
+    if [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows/system32" ]; then
+        check_target_writable "$PREFIX_PATH/drive_c/windows/system32" "Wine/Proton prefix"
+    fi
+    DEPLOY_FAILURES=0
+
     : > "$INSTALL_MANIFEST"
     [ "$VCRUN_INSTALLED_THIS_RUN" == "1" ] && echo "VCRUN" >> "$INSTALL_MANIFEST"
 
     echo -e "\n${CYAN}STATUS: Deploying files to local game folder...${NC}"
 
     if handle_conflict "$GAME_DIR/dsound.dll"; then
-        cp -f "$DSOUND_SRC" "$GAME_DIR/dsound.dll"
-        echo "$GAME_DIR/dsound.dll" >> "$INSTALL_MANIFEST"
-        echo -e " -> Copied: dsound.dll to $(basename "$GAME_DIR")"
+        deploy_copy "$DSOUND_SRC" "$GAME_DIR/dsound.dll" "Copied"
     fi
 
     if handle_conflict "$GAME_DIR/dsoal-aldrv.dll"; then
-        cp -f "$DSOAL_SRC" "$GAME_DIR/dsoal-aldrv.dll"
-        echo "$GAME_DIR/dsoal-aldrv.dll" >> "$INSTALL_MANIFEST"
-        echo -e " -> Copied: dsoal-aldrv.dll to $(basename "$GAME_DIR")"
+        deploy_copy "$DSOAL_SRC" "$GAME_DIR/dsoal-aldrv.dll" "Copied"
     fi
 
     # V14 is the only bundle with genuine curated HRTF profiles (V13 has
@@ -2299,10 +2400,9 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         OPENAL_DIR_PREEXISTED=0
         [ -d "$GAME_DIR/OpenAL" ] && OPENAL_DIR_PREEXISTED=1
 
-        mkdir -p "$GAME_DIR/OpenAL/HRTF"
-        cp -r "$HRTF_SRC_DIR/"* "$GAME_DIR/OpenAL/HRTF/"
-
-        if [ "$OPENAL_DIR_PREEXISTED" -eq 1 ]; then
+        if ! { mkdir -p "$GAME_DIR/OpenAL/HRTF" && cp -r "$HRTF_SRC_DIR/"* "$GAME_DIR/OpenAL/HRTF/"; }; then
+            record_deploy_failure "$GAME_DIR/OpenAL/HRTF"
+        elif [ "$OPENAL_DIR_PREEXISTED" -eq 1 ]; then
             # The OpenAL folder was already there before this run (game files
             # or an unrelated mod) — only track the HRTF subfolder we added,
             # so uninstall can't wipe out whatever else lives alongside it.
@@ -2310,7 +2410,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         else
             echo "$GAME_DIR/OpenAL" >> "$INSTALL_MANIFEST"
         fi
-        echo -e " -> Deployed: HRTF profile directory to $(basename "$GAME_DIR")"
+        [ -d "$GAME_DIR/OpenAL/HRTF" ] && echo -e " -> Deployed: HRTF profile directory to $(basename "$GAME_DIR")"
     fi
 
     if [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows" ]; then
@@ -2322,14 +2422,10 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         fi
 
         auto_backup_and_overwrite "$PREFIX_TARGET_DIR/dsound.dll"
-        cp -f "$DSOUND_SRC" "$PREFIX_TARGET_DIR/dsound.dll"
-        echo "$PREFIX_TARGET_DIR/dsound.dll" >> "$INSTALL_MANIFEST"
-        echo -e " -> Duplicated: dsound.dll to $(basename "$PREFIX_TARGET_DIR")"
+        deploy_copy "$DSOUND_SRC" "$PREFIX_TARGET_DIR/dsound.dll" "Duplicated"
 
         if handle_conflict "$PREFIX_TARGET_DIR/dsoal-aldrv.dll"; then
-            cp -f "$DSOAL_SRC" "$PREFIX_TARGET_DIR/dsoal-aldrv.dll"
-            echo "$PREFIX_TARGET_DIR/dsoal-aldrv.dll" >> "$INSTALL_MANIFEST"
-            echo -e " -> Duplicated: dsoal-aldrv.dll to $(basename "$PREFIX_TARGET_DIR")"
+            deploy_copy "$DSOAL_SRC" "$PREFIX_TARGET_DIR/dsoal-aldrv.dll" "Duplicated"
         fi
     fi
 
@@ -2337,12 +2433,12 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
 
     if [[ "$ADVANCED_DUMMY" =~ ^[Yy]$ ]]; then
         if handle_conflict "$GAME_DIR/eax.dll"; then
-            touch "$GAME_DIR/eax.dll"; echo "$GAME_DIR/eax.dll" >> "$INSTALL_MANIFEST"
-            echo -e " -> Created: eax.dll dummy"
+            if touch "$GAME_DIR/eax.dll"; then echo "$GAME_DIR/eax.dll" >> "$INSTALL_MANIFEST"; echo -e " -> Created: eax.dll dummy"
+            else record_deploy_failure "$GAME_DIR/eax.dll"; fi
         fi
         if handle_conflict "$GAME_DIR/eaxunified.dll"; then
-            touch "$GAME_DIR/eaxunified.dll"; echo "$GAME_DIR/eaxunified.dll" >> "$INSTALL_MANIFEST"
-            echo -e " -> Created: eaxunified.dll dummy"
+            if touch "$GAME_DIR/eaxunified.dll"; then echo "$GAME_DIR/eaxunified.dll" >> "$INSTALL_MANIFEST"; echo -e " -> Created: eaxunified.dll dummy"
+            else record_deploy_failure "$GAME_DIR/eaxunified.dll"; fi
         fi
     fi
 
@@ -2407,7 +2503,8 @@ resampler = spline
 [EAX]
 enable = true
 EOF
-            echo -e " -> Generated: Advanced alsoft.ini with expanded channel limits"
+            if [ -s "$GAME_DIR/alsoft.ini" ]; then echo -e " -> Generated: Advanced alsoft.ini with expanded channel limits"
+            else record_deploy_failure "$GAME_DIR/alsoft.ini"; fi
         else
             cat <<EOF > "$GAME_DIR/alsoft.ini"
 # Auto-generated by EAX Restore Script for Linux
@@ -2430,7 +2527,8 @@ resampler = spline
 [EAX]
 enable = true
 EOF
-            echo -e " -> Generated: Linux-optimised alsoft.ini"
+            if [ -s "$GAME_DIR/alsoft.ini" ]; then echo -e " -> Generated: Linux-optimised alsoft.ini"
+            else record_deploy_failure "$GAME_DIR/alsoft.ini"; fi
         fi
     fi
 
@@ -2469,6 +2567,18 @@ EOF
 
         [[ "$ADVANCED_COM" =~ ^[Yy]$ ]] && echo "REGISTRY:COM" >> "$INSTALL_MANIFEST" && echo -e " -> Injected: COM Registry Routing"
         [[ "$AUTO_OVERRIDE" =~ ^[Yy]$ ]] && echo "REGISTRY:OVERRIDE" >> "$INSTALL_MANIFEST" && echo -e " -> Injected: WINEDLLOVERRIDES (native,builtin) into registry"
+    fi
+
+    if [ "${DEPLOY_FAILURES:-0}" -gt 0 ]; then
+        echo ""
+        print_divider
+        echo -e "${YELLOW}${BOLD}--- INSTALLATION INCOMPLETE ---${NC}"
+        print_line
+        echo -e "\n${YELLOW}${BOLD}$DEPLOY_FAILURES file(s) could not be written (see the errors above), so the EAX fix${NC}"
+        echo -e "${YELLOW}${BOLD}is NOT fully installed. The game may run without it or fail to start.${NC}"
+        echo -e "${WHITE}Fix the cause (usually a read-only drive or folder permissions), then run the"
+        echo -e "script again, or choose (u)ninstall to remove what was deployed.${NC}"
+        exit 1
     fi
 
     echo ""
