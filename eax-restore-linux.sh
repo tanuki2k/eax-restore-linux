@@ -749,16 +749,25 @@ detect_game_environment() {
 }
 
 apply_registry_patch() {
-    local reg_file="$1"
+    # Returns regedit's exit status, or 1 when there was nothing to run it
+    # with (no AppID / Wine binary / prefix) or the .reg file couldn't be
+    # written — callers use this to decide whether to report "Injected" or
+    # "removed", so it must never look like success when nothing happened.
+    local reg_file="$1" rc=1
+    if [ ! -s "$reg_file" ]; then
+        log_cmd "regedit skipped: $reg_file is missing or empty"
+        return 1
+    fi
     if [ "$LAUNCHER_TYPE" == "1" ] && [ -n "$APPID" ]; then
         log_cmd "protontricks regedit $reg_file (AppID $APPID)"; sed 's/^/  | /' "$reg_file" >> "$EAX_LOG_FILE" 2>/dev/null
-        protontricks -c "regedit \"$reg_file\"" "$APPID" &>> "$EAX_LOG_FILE"; echo "[exit $?]" >> "$EAX_LOG_FILE"
-    elif [ "$LAUNCHER_TYPE" == "2" ] && [ -d "$PREFIX_PATH/drive_c" ]; then
-        if [ -n "$WINE_CMD" ]; then
-            log_cmd "$WINE_CMD regedit $reg_file (prefix $PREFIX_PATH)"; sed 's/^/  | /' "$reg_file" >> "$EAX_LOG_FILE" 2>/dev/null
-            WINEPREFIX="$PREFIX_PATH" "$WINE_CMD" regedit "$reg_file" &>> "$EAX_LOG_FILE"; echo "[exit $?]" >> "$EAX_LOG_FILE"
-        fi
+        protontricks -c "regedit \"$reg_file\"" "$APPID" &>> "$EAX_LOG_FILE"; rc=$?; echo "[exit $rc]" >> "$EAX_LOG_FILE"
+    elif [ "$LAUNCHER_TYPE" == "2" ] && [ -d "$PREFIX_PATH/drive_c" ] && [ -n "$WINE_CMD" ]; then
+        log_cmd "$WINE_CMD regedit $reg_file (prefix $PREFIX_PATH)"; sed 's/^/  | /' "$reg_file" >> "$EAX_LOG_FILE" 2>/dev/null
+        WINEPREFIX="$PREFIX_PATH" "$WINE_CMD" regedit "$reg_file" &>> "$EAX_LOG_FILE"; rc=$?; echo "[exit $rc]" >> "$EAX_LOG_FILE"
+    else
+        log_cmd "regedit skipped: no AppID, Wine binary, or prefix to apply $reg_file to"
     fi
+    return "$rc"
 }
 
 select_architecture() {
@@ -888,8 +897,14 @@ apply_vcrun_dll_overrides() {
     for dll in "${VCRUN_DLL_NAMES[@]}"; do
         echo "\"$dll\"=\"native,builtin\"" >> "$reg_file"
     done
-    apply_registry_patch "$reg_file"
+    local rc=0
+    apply_registry_patch "$reg_file" || rc=1
     rm -f "$reg_file"
+    if [ "$rc" -ne 0 ]; then
+        echo -e " -> ${YELLOW}${BOLD}Warning: The VC++ DLL overrides couldn't be set, so Wine may still use its own builtin runtime.${NC}"
+        echo -e "${WHITE}    The run log has the full output.${NC}"
+    fi
+    return "$rc"
 }
 
 remove_vcrun_dll_overrides() {
@@ -905,7 +920,9 @@ remove_vcrun_dll_overrides() {
     for dll in "${VCRUN_DLL_NAMES[@]}"; do
         echo "\"$dll\"=-" >> "$reg_file"
     done
-    apply_registry_patch "$reg_file"
+    if ! apply_registry_patch "$reg_file"; then
+        echo -e " -> ${YELLOW}${BOLD}Warning: The VC++ DLL overrides couldn't be removed. The run log has the full output.${NC}"
+    fi
     rm -f "$reg_file"
 }
 
@@ -1489,8 +1506,9 @@ handle_conflict() {
             # there's nothing here worth backing up. Overwrite directly;
             # any real original backup from the very first install, if one
             # exists, is left untouched rather than buried under this.
-            rm -f "$existing"
-            return 0
+            if rm -f "$existing"; then return 0; fi
+            record_deploy_failure "$target_file"
+            return 1
         fi
         echo -e "\n${YELLOW}Conflict: $(basename "$existing")${NC} ${WHITE}already exists at $(dirname "$target_file").${NC}"
         while true; do
@@ -1499,12 +1517,23 @@ handle_conflict() {
             read -r C_CHOICE
             C_CHOICE="${C_CHOICE:-b}"
             case "${C_CHOICE,,}" in
-                o) rm -rf "$existing"; return 0 ;;
+                o)
+                    if rm -rf "$existing"; then return 0; fi
+                    record_deploy_failure "$target_file"
+                    return 1 ;;
                 b)
                     # Named after the target (not a differently-cased
                     # original), so uninstall's "$f".bak* lookup finds it.
+                    # A failed backup skips the copy: cp -f onto the file
+                    # can still succeed (it needs only file write access,
+                    # mv needs the folder's), which would destroy the
+                    # original with no backup left.
                     TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-                    mv "$existing" "${target_file}.bak.${TIMESTAMP}"
+                    if ! mv "$existing" "${target_file}.bak.${TIMESTAMP}"; then
+                        echo -e " -> ${YELLOW}${BOLD}Error: Couldn't back up $(basename "$existing"), so it was left untouched.${NC}"
+                        DEPLOY_FAILURES=$(( ${DEPLOY_FAILURES:-0} + 1 ))
+                        return 1
+                    fi
                     echo -e " -> Backed up original $(basename "$existing") to $(basename "$target_file").bak.${TIMESTAMP}"
                     return 0 ;;
                 s) echo -e " -> Skipped $(basename "$target_file")."; return 1 ;;
@@ -1523,16 +1552,23 @@ auto_backup_and_overwrite() {
     # likely to already exist there, and backup-and-overwrite is already
     # handle_conflict's own default, so skipping the prompt here removes a
     # step without changing what actually happens in the common case.
+    # Returns 1 (and counts a deploy failure) if the existing file couldn't
+    # be moved aside, so the caller skips the copy instead of overwriting it.
     local target_file="$1"
     local existing
     existing=$(find_existing_variant "$target_file")
     if [ -n "$existing" ]; then
         if [ "${PREV_MANIFEST_FILES[$target_file]:-0}" == "1" ]; then
-            rm -f "$existing"
-            return 0
+            if rm -f "$existing"; then return 0; fi
+            record_deploy_failure "$target_file"
+            return 1
         fi
         TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-        mv "$existing" "${target_file}.bak.${TIMESTAMP}"
+        if ! mv "$existing" "${target_file}.bak.${TIMESTAMP}"; then
+            echo -e " -> ${YELLOW}${BOLD}Error: Couldn't back up $(basename "$existing"), so it was left untouched.${NC}"
+            DEPLOY_FAILURES=$(( ${DEPLOY_FAILURES:-0} + 1 ))
+            return 1
+        fi
         echo -e " -> Backed up existing $(basename "$existing") to $(basename "$target_file").bak.${TIMESTAMP}"
     fi
     return 0
@@ -1690,6 +1726,15 @@ if is_truthy "$EAX_RESTORE_VCRUN_ONLY"; then
             : > "$GAME_MANIFEST"
         fi
         echo "VCRUN" >> "$GAME_MANIFEST"
+    else
+        echo ""
+        print_divider
+        echo -e "${YELLOW}${BOLD}--- VC++ RUNTIME INSTALL INCOMPLETE ---${NC}"
+        print_line
+        echo -e "\n${YELLOW}${BOLD}Error: The core VC++ runtime files couldn't be verified in the prefix, so the runtime${NC}"
+        echo -e "${YELLOW}${BOLD}isn't installed. The installer output is saved in $VCRUN_LOG.${NC}"
+        echo ""
+        exit 1
     fi
 
     echo ""
@@ -1971,9 +2016,12 @@ EOF
             fi
 
             echo -e "\n${CYAN}STATUS: Cleaning registry...${NC}"
-            apply_registry_patch "$REG_FILE"
+            if apply_registry_patch "$REG_FILE"; then
+                echo -e " -> ${GREEN}Registry keys safely removed.${NC}"
+            else
+                echo -e " -> ${YELLOW}${BOLD}Warning: The registry keys couldn't be removed from the Wine prefix. The run log has the full output.${NC}"
+            fi
             rm -f "$REG_FILE"
-            echo -e " -> ${GREEN}Registry keys safely removed.${NC}"
         else echo -e "${YELLOW}${BOLD}Prefix/AppID not found, skipping registry cleanup.${NC}"; fi
     fi
 
@@ -2305,19 +2353,27 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     echo -e "\n${CYAN}STATUS: Executing system verbs via $( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" ) (Silent Mode)...${NC}"
     echo -e " -> Applying core package: openal"
 
+    # A failure here is a warning, not a deploy failure: the engine's own
+    # DLLs are copied in directly below and don't depend on this package —
+    # but it must never be reported as applied when the tool failed.
+    OPENAL_RC=""
     if [ "$LAUNCHER_TYPE" == "1" ]; then
         log_cmd "protontricks $APPID -q openal"
-        protontricks "$APPID" -q openal 2>> "$EAX_LOG_FILE"; echo "[exit $?]" >> "$EAX_LOG_FILE"
-        echo -e " -> ${GREEN}Core package (openal) applied successfully.${NC}"
+        protontricks "$APPID" -q openal 2>> "$EAX_LOG_FILE"; OPENAL_RC=$?; echo "[exit $OPENAL_RC]" >> "$EAX_LOG_FILE"
     else
-        if [ -n "$WINE_CMD" ]; then
+        if [ -n "$WINE_CMD" ] && [ -n "$PREFIX_PATH" ]; then
             # Using --force to bypass winetricks safety blocks in Heroic
             log_cmd "winetricks --force -q openal (WINE=$WINE_CMD, prefix $PREFIX_PATH)"
-            WINEPREFIX="$PREFIX_PATH" WINE="$WINE_CMD" winetricks --force -q openal 2>> "$EAX_LOG_FILE"; echo "[exit $?]" >> "$EAX_LOG_FILE"
-            echo -e " -> ${GREEN}Core package (openal) applied successfully.${NC}"
+            WINEPREFIX="$PREFIX_PATH" WINE="$WINE_CMD" winetricks --force -q openal 2>> "$EAX_LOG_FILE"; OPENAL_RC=$?; echo "[exit $OPENAL_RC]" >> "$EAX_LOG_FILE"
         else
-            echo -e " -> ${YELLOW}Warning: No local Wine binary found. Skipping core package.${NC}"
+            echo -e " -> ${YELLOW}Warning: No local Wine binary or resolved prefix was found. Skipping core package.${NC}"
         fi
+    fi
+    if [ "$OPENAL_RC" == "0" ]; then
+        echo -e " -> ${GREEN}Core package (openal) applied successfully.${NC}"
+    elif [ -n "$OPENAL_RC" ]; then
+        echo -e " -> ${YELLOW}${BOLD}Warning: The core package (openal) didn't install (exit code $OPENAL_RC), so the prefix may be missing it.${NC}"
+        echo -e "${WHITE}    The run log has the full output.${NC}"
     fi
 
    VCRUN_INSTALLED_THIS_RUN="0"
@@ -2421,8 +2477,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
             PREFIX_TARGET_DIR="$PREFIX_PATH/drive_c/windows/system32"
         fi
 
-        auto_backup_and_overwrite "$PREFIX_TARGET_DIR/dsound.dll"
-        deploy_copy "$DSOUND_SRC" "$PREFIX_TARGET_DIR/dsound.dll" "Duplicated"
+        auto_backup_and_overwrite "$PREFIX_TARGET_DIR/dsound.dll" && deploy_copy "$DSOUND_SRC" "$PREFIX_TARGET_DIR/dsound.dll" "Duplicated"
 
         if handle_conflict "$PREFIX_TARGET_DIR/dsoal-aldrv.dll"; then
             deploy_copy "$DSOAL_SRC" "$PREFIX_TARGET_DIR/dsoal-aldrv.dll" "Duplicated"
@@ -2443,7 +2498,6 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     fi
 
     if handle_conflict "$GAME_DIR/alsoft.ini"; then
-        echo "$GAME_DIR/alsoft.ini" >> "$INSTALL_MANIFEST"
         if [ "$OUTPUT_MODE" == "surround" ]; then
             # Surround speaker setups bypass HRTF (headphone-only binaural
             # processing) and stereo-only encodings entirely.
@@ -2503,7 +2557,7 @@ resampler = spline
 [EAX]
 enable = true
 EOF
-            if [ -s "$GAME_DIR/alsoft.ini" ]; then echo -e " -> Generated: Advanced alsoft.ini with expanded channel limits"
+            if [ -s "$GAME_DIR/alsoft.ini" ]; then echo "$GAME_DIR/alsoft.ini" >> "$INSTALL_MANIFEST"; echo -e " -> Generated: Advanced alsoft.ini with expanded channel limits"
             else record_deploy_failure "$GAME_DIR/alsoft.ini"; fi
         else
             cat <<EOF > "$GAME_DIR/alsoft.ini"
@@ -2527,7 +2581,7 @@ resampler = spline
 [EAX]
 enable = true
 EOF
-            if [ -s "$GAME_DIR/alsoft.ini" ]; then echo -e " -> Generated: Linux-optimised alsoft.ini"
+            if [ -s "$GAME_DIR/alsoft.ini" ]; then echo "$GAME_DIR/alsoft.ini" >> "$INSTALL_MANIFEST"; echo -e " -> Generated: Linux-optimised alsoft.ini"
             else record_deploy_failure "$GAME_DIR/alsoft.ini"; fi
         fi
     fi
@@ -2562,11 +2616,24 @@ EOF
 EOF
         fi
 
-        apply_registry_patch "$REG_FILE"
+        # The manifest lines are written whether or not regedit succeeded: a
+        # partial import can still leave keys behind, and uninstall deleting
+        # a key that was never set is harmless.
+        [[ "$ADVANCED_COM" =~ ^[Yy]$ ]] && echo "REGISTRY:COM" >> "$INSTALL_MANIFEST"
+        [[ "$AUTO_OVERRIDE" =~ ^[Yy]$ ]] && echo "REGISTRY:OVERRIDE" >> "$INSTALL_MANIFEST"
+        if apply_registry_patch "$REG_FILE"; then
+            [[ "$ADVANCED_COM" =~ ^[Yy]$ ]] && echo -e " -> Injected: COM Registry Routing"
+            [[ "$AUTO_OVERRIDE" =~ ^[Yy]$ ]] && echo -e " -> Injected: WINEDLLOVERRIDES (native,builtin) into registry"
+        else
+            echo -e " -> ${YELLOW}${BOLD}Error: Couldn't write the registry changes to the Wine prefix, so they aren't applied.${NC}"
+            echo -e "${WHITE}    The run log has the full output.${NC}"
+            DEPLOY_FAILURES=$(( ${DEPLOY_FAILURES:-0} + 1 ))
+            # Show the manual WINEDLLOVERRIDES instructions instead of
+            # claiming the override was handled automatically.
+            [[ "$AUTO_OVERRIDE" =~ ^[Yy]$ ]] && OVERRIDE_PATCH_FAILED="1"
+            AUTO_OVERRIDE="n"
+        fi
         rm -f "$REG_FILE"
-
-        [[ "$ADVANCED_COM" =~ ^[Yy]$ ]] && echo "REGISTRY:COM" >> "$INSTALL_MANIFEST" && echo -e " -> Injected: COM Registry Routing"
-        [[ "$AUTO_OVERRIDE" =~ ^[Yy]$ ]] && echo "REGISTRY:OVERRIDE" >> "$INSTALL_MANIFEST" && echo -e " -> Injected: WINEDLLOVERRIDES (native,builtin) into registry"
     fi
 
     if [ "${DEPLOY_FAILURES:-0}" -gt 0 ]; then
@@ -2574,10 +2641,18 @@ EOF
         print_divider
         echo -e "${YELLOW}${BOLD}--- INSTALLATION INCOMPLETE ---${NC}"
         print_line
-        echo -e "\n${YELLOW}${BOLD}$DEPLOY_FAILURES file(s) could not be written (see the errors above), so the EAX fix${NC}"
+        echo -e "\n${YELLOW}${BOLD}$DEPLOY_FAILURES step(s) failed (see the errors above), so the EAX fix${NC}"
         echo -e "${YELLOW}${BOLD}is NOT fully installed. The game may run without it or fail to start.${NC}"
         echo -e "${WHITE}Fix the cause (usually a read-only drive or folder permissions), then run the"
         echo -e "script again, or choose (u)ninstall to remove what was deployed.${NC}"
+        if [ -n "${OVERRIDE_PATCH_FAILED:-}" ]; then
+            echo -e "\n${WHITE}Until then, you can set the DLL override by hand:"
+            if [ "$LAUNCHER_TYPE" == "1" ]; then
+                echo -e "  Steam Launch Options: ${CYAN}WINEDLLOVERRIDES=\"dsound=n,b\" %command%${NC}"
+            else
+                echo -e "  Heroic Environment Variable: ${CYAN}WINEDLLOVERRIDES${NC} = ${CYAN}dsound=n,b${NC}"
+            fi
+        fi
         exit 1
     fi
 
