@@ -231,6 +231,15 @@ VCRUN_DLL_NAMES=("concrt140" "msvcp140" "msvcp140_1" "msvcp140_2" "msvcp140_atom
 
 DSOAL_OFFICIAL_URL="https://github.com/kcat/dsoal/releases/download/latest-master/DSOAL.zip"
 DSOAL_OFFICIAL_API_URL="https://api.github.com/repos/kcat/dsoal/releases/tags/latest-master"
+# Automatic fallback for when kcat's rolling latest-master release is missing
+# (their CI deletes it before re-creating it, so a failed CI run leaves it
+# gone) and there's no cached build to fall back on: one frozen revision from
+# kcat's own "archive" release. Every already-superseded archive asset is
+# static, so it has a stable SHA256 and can be hard-verified. To advance the
+# pin, bump all three together (pick a revision that is no longer the newest).
+DSOAL_PINNED_REV="r693"
+DSOAL_PINNED_URL="https://github.com/kcat/dsoal/releases/download/archive/DSOAL_r693.zip"
+DSOAL_PINNED_SHA256="5abe990ff5692fa070d549a8c28df2435842c5d3f586a59b0da5281bc1cb6605"
 DSOAL_COMMUNITY_V13_URL="https://github.com/ThreeDeeJay/dsoal/releases/download/0.9.6/DSOAL+HRTF.zip"
 DSOAL_COMMUNITY_V13_SHA256="271db46cffb086ffc0af06956ade3ee8e645e05fb108b5b6d1f74b733ecaf984"
 # PCGamingWiki blocks automated/bot downloads from their site, so this build is
@@ -1055,6 +1064,36 @@ verify_or_confirm() {
     confirm_unverified_download "$label"
 }
 
+dsoal_official_cached() {
+    [ -d "$DSOAL_OFFICIAL" ] && [ -n "$(ls -A "$DSOAL_OFFICIAL" 2>/dev/null)" ]
+}
+
+fetch_pinned_dsoal_into_official() {
+    # Used when the rolling latest-master build can't be obtained and there's
+    # no cache: installs the pinned archive revision into the same
+    # $DSOAL_OFFICIAL folder, so the rest of the script needs no special
+    # casing. Records "archive-<rev>" as the cached date, which can never
+    # match a real latest-master updated_at, so the next run that can reach
+    # latest-master upgrades to it automatically.
+    echo -e " -> ${CYAN}Falling back to kcat's archived DSOAL build [$DSOAL_PINNED_REV]...${NC}"
+    if curl -fL -# "$DSOAL_PINNED_URL" -o "$DSOAL_SHARE/pinned.zip" && unzip -tq "$DSOAL_SHARE/pinned.zip" &>/dev/null; then
+        if verify_checksum "$DSOAL_SHARE/pinned.zip" "$DSOAL_PINNED_SHA256"; then
+            rm -rf "$DSOAL_OFFICIAL"; mkdir -p "$DSOAL_OFFICIAL"
+            unzip -q "$DSOAL_SHARE/pinned.zip" -d "$DSOAL_OFFICIAL"
+            NESTED=$(find "$DSOAL_OFFICIAL" -maxdepth 1 -name "DSOAL_*.zip" | head -n 1)
+            if [ -n "$NESTED" ] && unzip -tq "$NESTED" &>/dev/null; then unzip -q "$NESTED" -d "$DSOAL_OFFICIAL"; fi
+            echo "archive-$DSOAL_PINNED_REV" > "$DSOAL_SHARE/updated_at.txt"; rm -f "$DSOAL_SHARE/pinned.zip"; echo -e " -> ${GREEN}Done.${NC}"
+            return 0
+        fi
+        echo -e " -> ${YELLOW}${BOLD}The archived build failed checksum verification.${NC}"
+    else
+        echo -e " -> ${YELLOW}${BOLD}The archived build download failed or the file was corrupt.${NC}"
+    fi
+    rm -f "$DSOAL_SHARE/pinned.zip"
+    echo -e " -> ${YELLOW}${BOLD}The kcat DSOAL + OpenAL Soft engine will be unavailable this run.${NC}"
+    return 1
+}
+
 update_local_cache() {
     echo ""
     print_divider
@@ -1063,12 +1102,23 @@ update_local_cache() {
     mkdir -p "$DSOAL_SHARE" "$OPENAL_SHARE"
 
     echo -e "\n${CYAN}Checking kcat Official DSOAL repository...${NC}"
-    DSOAL_OFFICIAL_JSON=$(curl -s "$DSOAL_OFFICIAL_API_URL")
+    # curl -s without -f still succeeds on an HTTP error, so a failure here
+    # means GitHub is genuinely unreachable -- as opposed to reachable but
+    # without an updated_at (latest-master missing upstream, or API rate limit).
+    DSOAL_API_REACHABLE=1
+    DSOAL_OFFICIAL_JSON=$(curl -s "$DSOAL_OFFICIAL_API_URL") || DSOAL_API_REACHABLE=0
     LATEST_DATE=$(echo "$DSOAL_OFFICIAL_JSON" | grep -m 1 '"updated_at"' | cut -d '"' -f 4)
     LOCAL_DATE=$(cat "$DSOAL_SHARE/updated_at.txt" 2>/dev/null)
     if [ -z "$LATEST_DATE" ]; then
-        if [ -d "$DSOAL_OFFICIAL" ] && [ "$(ls -A "$DSOAL_OFFICIAL")" ]; then echo -e " -> ${YELLOW}Offline. Using cached version [${LOCAL_DATE%%T*}]${NC}"
-        else echo -e " -> ${YELLOW}${BOLD}Error: Offline and no cache found.${NC}"; print_offline_instructions; exit 1; fi
+        if dsoal_official_cached; then
+            if [ "$DSOAL_API_REACHABLE" -eq 1 ]; then echo -e " -> ${YELLOW}Could not check for updates (kcat's latest-master release is unavailable). Using cached version [${LOCAL_DATE%%T*}]${NC}"
+            else echo -e " -> ${YELLOW}Offline. Using cached version [${LOCAL_DATE%%T*}]${NC}"; fi
+        elif [ "$DSOAL_API_REACHABLE" -eq 1 ]; then
+            echo -e " -> ${YELLOW}kcat's latest-master build is unavailable upstream right now.${NC}"
+            fetch_pinned_dsoal_into_official
+        else
+            echo -e " -> ${YELLOW}${BOLD}Offline and no cache found. The kcat DSOAL + OpenAL Soft engine will be unavailable this run.${NC}"
+        fi
     elif [ "$LATEST_DATE" != "$LOCAL_DATE" ] || [ ! -d "$DSOAL_OFFICIAL" ]; then
         echo -e " -> ${CYAN}Updates found! Downloading latest build...${NC}"
         if curl -fL -# "$DSOAL_OFFICIAL_URL" -o "$DSOAL_SHARE/dsoal.zip" && unzip -tq "$DSOAL_SHARE/dsoal.zip" &>/dev/null; then
@@ -1081,18 +1131,20 @@ update_local_cache() {
                 echo "$LATEST_DATE" > "$DSOAL_SHARE/updated_at.txt"; rm -f "$DSOAL_SHARE/dsoal.zip"; echo -e " -> ${GREEN}Done.${NC}"
             else
                 rm -f "$DSOAL_SHARE/dsoal.zip"
-                if [ -d "$DSOAL_OFFICIAL" ] && [ "$(ls -A "$DSOAL_OFFICIAL" 2>/dev/null)" ]; then
+                if dsoal_official_cached; then
                     echo -e " -> ${YELLOW}${BOLD}Skipping this download. Keeping existing cache [${LOCAL_DATE%%T*}].${NC}"
                 else
-                    echo -e " -> ${YELLOW}${BOLD}Error: Could not verify or confirm this download, and no usable cache exists.${NC}"; print_offline_instructions; exit 1
+                    echo -e " -> ${YELLOW}${BOLD}Could not verify or confirm this download, and no usable cache exists.${NC}"
+                    fetch_pinned_dsoal_into_official
                 fi
             fi
         else
             rm -f "$DSOAL_SHARE/dsoal.zip"
-            if [ -d "$DSOAL_OFFICIAL" ] && [ "$(ls -A "$DSOAL_OFFICIAL" 2>/dev/null)" ]; then
+            if dsoal_official_cached; then
                 echo -e " -> ${YELLOW}${BOLD}Download failed or file was corrupt. Keeping existing cache [${LOCAL_DATE%%T*}].${NC}"
             else
-                echo -e " -> ${YELLOW}${BOLD}Error: Download failed and no usable cache exists.${NC}"; print_offline_instructions; exit 1
+                echo -e " -> ${YELLOW}${BOLD}Download failed and no usable cache exists.${NC}"
+                fetch_pinned_dsoal_into_official
             fi
         fi
     else echo -e " -> ${GREEN}Up to date [${LOCAL_DATE%%T*}]${NC}"; fi
@@ -1102,7 +1154,7 @@ update_local_cache() {
     LOCAL_OAL_TAG=$(cat "$OPENAL_SHARE/updated_at.txt" 2>/dev/null)
     if [ -z "$OAL_TAG" ]; then
         if [ -d "$OPENAL_OFFICIAL" ]; then echo -e " -> ${YELLOW}Offline. Using cached version [${LOCAL_OAL_TAG}]${NC}"
-        else echo -e " -> ${YELLOW}${BOLD}Error: OpenAL cache missing.${NC}"; exit 1; fi
+        else echo -e " -> ${YELLOW}${BOLD}Offline and no cache found. The kcat DSOAL + OpenAL Soft engine will be unavailable this run.${NC}"; fi
     elif [ "$OAL_TAG" != "$LOCAL_OAL_TAG" ] || [ ! -d "$OPENAL_OFFICIAL" ]; then
         echo -e " -> ${CYAN}Updates found! Downloading OpenAL Soft [${OAL_TAG}]...${NC}"
         OAL_ASSET_NAME="openal-soft-${OAL_TAG}-bin.zip"
@@ -1119,7 +1171,7 @@ update_local_cache() {
                 if [ -d "$OPENAL_OFFICIAL" ] && [ "$(ls -A "$OPENAL_OFFICIAL" 2>/dev/null)" ]; then
                     echo -e " -> ${YELLOW}${BOLD}Skipping this download. Keeping existing cache [${LOCAL_OAL_TAG}].${NC}"
                 else
-                    echo -e " -> ${YELLOW}${BOLD}Error: Could not verify or confirm this download, and no usable cache exists.${NC}"; exit 1
+                    echo -e " -> ${YELLOW}${BOLD}Could not verify or confirm this download, and no usable cache exists. The kcat DSOAL + OpenAL Soft engine will be unavailable this run.${NC}"
                 fi
             fi
         else
@@ -1127,7 +1179,7 @@ update_local_cache() {
             if [ -d "$OPENAL_OFFICIAL" ] && [ "$(ls -A "$OPENAL_OFFICIAL" 2>/dev/null)" ]; then
                 echo -e " -> ${YELLOW}${BOLD}Download failed or file was corrupt. Keeping existing cache [${LOCAL_OAL_TAG}].${NC}"
             else
-                echo -e " -> ${YELLOW}${BOLD}Error: Download failed and no usable cache exists.${NC}"; exit 1
+                echo -e " -> ${YELLOW}${BOLD}Download failed and no usable cache exists. The kcat DSOAL + OpenAL Soft engine will be unavailable this run.${NC}"
             fi
         fi
     else echo -e " -> ${GREEN}Up to date [${LOCAL_OAL_TAG}]${NC}"; fi
@@ -1165,6 +1217,23 @@ update_local_cache() {
             echo -e " -> ${YELLOW}${BOLD}Error: Download failed or file was corrupt. This engine will be unavailable this run.${NC}"
         fi
     else echo -e " -> ${GREEN}Available in cache.${NC}"; fi
+
+    # Each engine's download is allowed to fail on its own above, so one
+    # upstream outage doesn't block the others. Only stop here if nothing at
+    # all is installable.
+    if ! engine_available 1 && ! engine_available 2 && ! engine_available 3; then
+        print_offline_instructions; exit 1
+    fi
+}
+
+engine_available() {
+    # Usage: engine_available <1|2|3>  (the ENGINE_CHOICE numbering)
+    case "$1" in
+        1) [ -n "$(ls -A "$DSOAL_COMMUNITY_V13" 2>/dev/null)" ] ;;
+        2) [ -n "$(ls -A "$DSOAL_COMMUNITY_V14" 2>/dev/null)" ] ;;
+        3) dsoal_official_cached && [ -n "$(ls -A "$OPENAL_OFFICIAL" 2>/dev/null)" ] ;;
+        *) return 1 ;;
+    esac
 }
 
 handle_conflict() {
@@ -1761,17 +1830,32 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         ENGINE_CHOICE=3
         echo -e "${GREEN}EAX_RESTORE_DSOAL_OFFICIAL is set — using kcat DSOAL + OpenAL Soft.${NC}"
     else
-        echo -e "${YELLOW}Selection (1, 2, or 3) [Default: 3]: ${NC}"
-        echo -e "\n 1) ThreeDeeJay Community DSOAL [v1.31a]"
-        echo -e " 2) PCGamingWiki Community DSOAL (self-hosted mirror) [v1.4]"
-        echo -e " 3) kcat DSOAL + OpenAL Soft    [DSOAL: $DSOAL_VER | OAL: $OAL_VER]"
+        # An engine whose download failed in the cache check is shown but
+        # can't be picked, and the default moves to the first one that works.
+        ENGINE_DEFAULT=3
+        if ! engine_available 3; then
+            if engine_available 1; then ENGINE_DEFAULT=1; else ENGINE_DEFAULT=2; fi
+        fi
+        ENGINE_UNAVAILABLE_TAG=" ${YELLOW}[unavailable this run]${NC}"
+        echo -e "${YELLOW}Selection (1, 2, or 3) [Default: $ENGINE_DEFAULT]: ${NC}"
+        echo -e "\n 1) ThreeDeeJay Community DSOAL [v1.31a]$(engine_available 1 || echo -e "$ENGINE_UNAVAILABLE_TAG")"
+        echo -e " 2) PCGamingWiki Community DSOAL (self-hosted mirror) [v1.4]$(engine_available 2 || echo -e "$ENGINE_UNAVAILABLE_TAG")"
+        echo -e " 3) kcat DSOAL + OpenAL Soft    [DSOAL: $DSOAL_VER | OAL: $OAL_VER]$(engine_available 3 || echo -e "$ENGINE_UNAVAILABLE_TAG")"
 
         while true; do
             echo -e -n "\n> "
             read -r ENGINE_CHOICE
-            ENGINE_CHOICE="${ENGINE_CHOICE:-3}"
-            if [[ "$ENGINE_CHOICE" =~ ^[123]$ ]]; then break; else echo -e "${YELLOW}${BOLD}Invalid selection. Please type 1, 2, or 3.${NC}"; fi
+            ENGINE_CHOICE="${ENGINE_CHOICE:-$ENGINE_DEFAULT}"
+            if [[ ! "$ENGINE_CHOICE" =~ ^[123]$ ]]; then echo -e "${YELLOW}${BOLD}Invalid selection. Please type 1, 2, or 3.${NC}"
+            elif ! engine_available "$ENGINE_CHOICE"; then echo -e "${YELLOW}${BOLD}That engine couldn't be downloaded this run (see the REPOSITORY CACHE CHECK above). Please pick another.${NC}"
+            else break; fi
         done
+    fi
+
+    if ! engine_available "$ENGINE_CHOICE"; then
+        echo -e "\n${YELLOW}${BOLD}Error: The engine selected by your EAX_RESTORE_DSOAL_* variable couldn't be downloaded this run.${NC}"
+        echo -e "${WHITE}Check the REPOSITORY CACHE CHECK output above, then re-run, or unset the variable to choose another engine.${NC}"
+        exit 1
     fi
 
     # 5. VC++ Runtime Dependencies
