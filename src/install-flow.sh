@@ -10,14 +10,14 @@
         exit 0
     fi
 
-    # One bar step per STATUS: header below: OpenAL package, game folder,
+    # One bar step per STATUS: header below: OpenAL runtime, game folder,
     # configurations, plus VC++ and the prefix copy when those run.
     PHASE_STEP=0; PHASE_TOTAL=3
     [[ "$INSTALL_VCRUN" =~ $YES_RE ]] && PHASE_TOTAL=$(( PHASE_TOTAL + 1 ))
     [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows" ] && PHASE_TOTAL=$(( PHASE_TOTAL + 1 ))
 
     OPENAL_TOOL=$( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" )
-    print_task "Executing system verbs via $OPENAL_TOOL (Silent Mode)"
+    print_task "Installing Creative's OpenAL runtime into the prefix"
     advance_phase_progress
 
     # A failure here is a warning, not a deploy failure: the engine's own
@@ -26,14 +26,14 @@
     OPENAL_RC=""
     if [ "$LAUNCHER_TYPE" == "1" ]; then
         log_cmd "protontricks $APPID -q openal"
-        run_with_spinner "Installing the OpenAL package via $OPENAL_TOOL..." "$EAX_LOG_FILE" \
+        run_with_spinner "Installing via $OPENAL_TOOL..." "$EAX_LOG_FILE" \
             protontricks "$APPID" -q openal
         OPENAL_RC=$?; echo "[exit $OPENAL_RC]" >> "$EAX_LOG_FILE"
     else
         if [ -n "$WINE_CMD" ] && [ -n "$PREFIX_PATH" ]; then
             # Using --force to bypass winetricks safety blocks in Heroic
             log_cmd "winetricks --force -q openal (WINE=$WINE_CMD, prefix $PREFIX_PATH)"
-            run_with_spinner "Installing the OpenAL package via $OPENAL_TOOL..." "$EAX_LOG_FILE" \
+            run_with_spinner "Installing via $OPENAL_TOOL..." "$EAX_LOG_FILE" \
                 env WINEPREFIX="$PREFIX_PATH" WINE="$WINE_CMD" WINESERVER="${WINESERVER_CMD:-}" winetricks --force -q openal
             OPENAL_RC=$?; echo "[exit $OPENAL_RC]" >> "$EAX_LOG_FILE"
         else
@@ -43,7 +43,7 @@
     if [ "$OPENAL_RC" == "0" ]; then
         print_status "OpenAL was installed successfully." "$GREEN"
     elif [ -n "$OPENAL_RC" ]; then
-        print_warning_arrow "The OpenAL package didn't install (exit code $OPENAL_RC), so the prefix may be missing it." \
+        print_warning_arrow "Creative's OpenAL runtime didn't install (exit code $OPENAL_RC), so the prefix may be missing it." \
             "The run log has the full output."
     fi
 
