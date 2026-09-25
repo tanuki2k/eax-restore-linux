@@ -1090,11 +1090,26 @@ install_vcrun_dependencies() {
         echo -e " -> Using cached $VCRUN_EXE"
     fi
 
-    echo -e " -> Running silent installer in prefix..."
-    if [ "$LAUNCHER_TYPE" == "1" ]; then
-        protontricks -c "wine \"$VCRUN_SHARE/$VCRUN_EXE\" /q /norestart" "$APPID" &>> "$VCRUN_LOG"
+    # Already registered in the prefix (an earlier install, even one whose
+    # msvcp140.dll a Wine/Proton prefix update later swapped for its own
+    # builtin): a plain install sees "already installed" and exits without
+    # copying anything, so ask the installer to repair instead, which puts
+    # back missing or replaced files. winetricks' own vcrun2022 verb can't
+    # cover this either: it extracts "msvcp140.dll" from the cab, but the
+    # current redistributable names that entry "msvcp140.dll_x86".
+    local vc_mode="/q" vc_arch="X86"
+    [ "$ARCH" == "64" ] && vc_arch="X64"
+    if grep -q "\"DisplayName\"=\"Microsoft Visual C++ 2022 $vc_arch Minimum Runtime" "$PREFIX_PATH/system.reg" 2>/dev/null; then
+        vc_mode="/repair /quiet"
+        echo -e " -> VC++ 2022 is already registered in this prefix, but a core file was replaced, so running Microsoft's repair..."
     else
-        WINEPREFIX="$PREFIX_PATH" "$WINE_CMD" "$VCRUN_SHARE/$VCRUN_EXE" /q /norestart &>> "$VCRUN_LOG"
+        echo -e " -> Running silent installer in prefix..."
+    fi
+    if [ "$LAUNCHER_TYPE" == "1" ]; then
+        protontricks -c "wine \"$VCRUN_SHARE/$VCRUN_EXE\" $vc_mode /norestart" "$APPID" &>> "$VCRUN_LOG"
+    else
+        # shellcheck disable=SC2086  # vc_mode is one or two flags
+        WINEPREFIX="$PREFIX_PATH" "$WINE_CMD" "$VCRUN_SHARE/$VCRUN_EXE" $vc_mode /norestart &>> "$VCRUN_LOG"
     fi
 
     # Final verification
