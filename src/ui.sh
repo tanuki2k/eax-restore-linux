@@ -252,3 +252,123 @@ print_option() {
         echo -e " ${n}) ${label}"
     fi
 }
+
+# ==============================================================================
+# PROGRESS HELPERS
+# ==============================================================================
+# The look follows dankinstall's installer (AvengeMedia/DankMaterialShell,
+# MIT): a 30-cell █/░ bar with a percentage, and a braille dot spinner on
+# the line of whatever long-running command is in progress. Everything
+# redraws a single line with \r rather than scrolling, which also keeps the
+# run log clean -- its writer collapses each \r-redrawn line to its final
+# state.
+SPINNER_FRAMES=(⣾ ⣽ ⣻ ⢿ ⡿ ⣟ ⣯ ⣷)
+
+# Usage: progress_bar <done> <total>
+# Prints "[██████░░░…] 40%" (no newline) for done/total.
+progress_bar() {
+    local done="$1" total="$2" width=30 filled bar="" i
+    [ "${total:-0}" -gt 0 ] || total=1
+    [ "$done" -gt "$total" ] && done="$total"
+    filled=$(( done * width / total ))
+    for (( i = 0; i < width; i++ )); do
+        if [ "$i" -lt "$filled" ]; then bar+="█"; else bar+="░"; fi
+    done
+    printf '%b[%s]%b %3d%%' "$CYAN" "$bar" "$NC" $(( done * 100 / total ))
+}
+
+# Usage: print_phase_progress <step> <total>
+# The overall PHASE 2 bar, printed once under each step's STATUS: header,
+# e.g. "    [████████████░░░…]  40%  step 2 of 5".
+print_phase_progress() {
+    echo -e "    $(progress_bar "$1" "$2")  ${DIM}step $1 of $2${NC}"
+}
+
+# Usage: advance_phase_progress
+# Bumps PHASE_STEP and prints its bar under the step header just printed.
+# A no-op unless PHASE_TOTAL is set, so a helper shared with other flows
+# (install_vcrun_dependencies, used by VC++-only mode too) can call it
+# unconditionally.
+advance_phase_progress() {
+    [ -n "${PHASE_TOTAL:-}" ] || return 0
+    PHASE_STEP=$(( ${PHASE_STEP:-0} + 1 ))
+    print_phase_progress "$PHASE_STEP" "$PHASE_TOTAL"
+}
+
+# Runs "$@" in the background and redraws "$1"'s line until it finishes;
+# the calling helper passes the pid-wait loop body as a function. Ctrl-C
+# has to kill the job explicitly: a non-interactive shell starts
+# background jobs with SIGINT ignored, so they'd outlive the script.
+_bg_job_pid=""
+_start_bg_job() {
+    "$@" &
+    _bg_job_pid=$!
+    _bg_saved_int=$(trap -p INT)
+    trap 'kill "$_bg_job_pid" 2>/dev/null; exit 130' INT
+}
+_finish_bg_job() {
+    local rc
+    wait "$_bg_job_pid"; rc=$?
+    _bg_job_pid=""
+    if [ -n "$_bg_saved_int" ]; then eval "$_bg_saved_int"; else trap - INT; fi
+    return "$rc"
+}
+
+# Usage: fetch_with_progress <url> <dest>
+# Drop-in for `curl -fL -# <url> -o <dest>` with a 30-cell bar and the
+# downloaded/total size instead of curl's full-width row of #s. The total
+# comes from a HEAD request (the last Content-Length after redirects); if
+# the server doesn't send one, a spinner and the running size are shown.
+# On failure the line is cleared (curl's own error goes to the run log), so
+# the caller's error message stands alone. Returns curl's exit status.
+fetch_with_progress() {
+    local url="$1" dest="$2" total size frame=0 rc
+    total=$(curl -sIL "$url" 2>/dev/null | tr -d '\r' | awk 'tolower($1) == "content-length:" { n = $2 } END { print n + 0 }')
+    rm -f "$dest"
+    _start_bg_job _run_logged "${EAX_LOG_FILE:-/dev/null}" curl -fsSL "$url" -o "$dest"
+    while kill -0 "$_bg_job_pid" 2>/dev/null; do
+        size=$(stat -c %s "$dest" 2>/dev/null || echo 0)
+        _draw_fetch_line "$size" "$total" "$frame"
+        frame=$(( frame + 1 )); sleep 0.1
+    done
+    _finish_bg_job; rc=$?
+    if [ "$rc" -ne 0 ]; then
+        printf '\r\033[K'
+        return "$rc"
+    fi
+    size=$(stat -c %s "$dest" 2>/dev/null || echo 0)
+    total="$size"
+    _draw_fetch_line "$size" "$total" 0
+    echo ""
+    return 0
+}
+_draw_fetch_line() {
+    local size="$1" total="$2" mb
+    mb=$(awk -v s="$size" -v t="$total" 'BEGIN { if (t > 0) printf "%.1f/%.1f MB", s / 1048576, t / 1048576; else printf "%.1f MB", s / 1048576 }')
+    if [ "$total" -gt 0 ]; then
+        printf '\r    %s  %b%s%b\033[K' "$(progress_bar "$size" "$total")" "$DIM" "$mb" "$NC"
+    else
+        printf '\r    %b%s%b  %b%s%b\033[K' "$CYAN" "${SPINNER_FRAMES[$(( $3 % 8 ))]}" "$NC" "$DIM" "$mb" "$NC"
+    fi
+}
+
+# Usage: run_with_spinner "label" <log file> command [args...]
+# Runs a slow, quiet command (winetricks, protontricks, a Windows installer)
+# with its output appended to <log file>, showing " ⣾ label" while it
+# works. The spinner line is cleared when the command ends, so the caller's
+# own result line takes its place. Returns the command's exit status.
+run_with_spinner() {
+    local label="$1" log="$2" frame=0
+    shift 2
+    _start_bg_job _run_logged "$log" "$@"
+    while kill -0 "$_bg_job_pid" 2>/dev/null; do
+        printf '\r %b%s%b %s\033[K' "$CYAN" "${SPINNER_FRAMES[$(( frame % 8 ))]}" "$NC" "$label"
+        frame=$(( frame + 1 )); sleep 0.1
+    done
+    printf '\r\033[K'
+    _finish_bg_job
+}
+_run_logged() {
+    local log="$1"; shift
+    "$@" &>> "$log"
+}

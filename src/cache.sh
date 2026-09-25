@@ -23,7 +23,7 @@ fetch_pinned_dsoal_into_official() {
     # never match a real latest-master updated_at, so the next run that can
     # reach latest-master upgrades to it automatically.
     print_status "Falling back to kcat's archived DSOAL build [$DSOAL_PINNED_REV]..."
-    if curl -fL -# "$DSOAL_PINNED_URL" -o "$DSOAL_SHARE/pinned.zip" && unzip -tq "$DSOAL_SHARE/pinned.zip" &>/dev/null; then
+    if fetch_with_progress "$DSOAL_PINNED_URL" "$DSOAL_SHARE/pinned.zip" && unzip -tq "$DSOAL_SHARE/pinned.zip" &>/dev/null; then
         if verify_checksum "$DSOAL_SHARE/pinned.zip" "$DSOAL_PINNED_SHA256"; then
             rm -rf "$DSOAL_OFFICIAL"; mkdir -p "$DSOAL_OFFICIAL"
             unzip -q "$DSOAL_SHARE/pinned.zip" -d "$DSOAL_OFFICIAL"
@@ -67,7 +67,7 @@ update_local_cache() {
         fi
     elif [ "$LATEST_DATE" != "$LOCAL_DATE" ] || [ ! -d "$DSOAL_OFFICIAL" ]; then
         print_status "Updates found! Downloading latest build..."
-        if curl -fL -# "$DSOAL_OFFICIAL_URL" -o "$DSOAL_SHARE/dsoal.zip" && unzip -tq "$DSOAL_SHARE/dsoal.zip" &>/dev/null; then
+        if fetch_with_progress "$DSOAL_OFFICIAL_URL" "$DSOAL_SHARE/dsoal.zip" && unzip -tq "$DSOAL_SHARE/dsoal.zip" &>/dev/null; then
             DSOAL_OFFICIAL_DIGEST=$(get_asset_digest "$DSOAL_OFFICIAL_JSON" "DSOAL.zip")
             if verify_or_confirm "$DSOAL_SHARE/dsoal.zip" "$DSOAL_OFFICIAL_DIGEST" "kcat Official DSOAL"; then
                 rm -rf "$DSOAL_OFFICIAL"; mkdir -p "$DSOAL_OFFICIAL"
@@ -114,7 +114,7 @@ update_local_cache() {
         print_status "Updates found! Downloading OpenAL Soft [${OAL_TAG}]..."
         OAL_ASSET_NAME="openal-soft-${OAL_TAG}-bin.zip"
         OAL_URL="https://github.com/kcat/openal-soft/releases/download/${OAL_TAG}/${OAL_ASSET_NAME}"
-        if curl -fL -# "$OAL_URL" -o "$OPENAL_SHARE/openal.zip" && unzip -tq "$OPENAL_SHARE/openal.zip" &>/dev/null; then
+        if fetch_with_progress "$OAL_URL" "$OPENAL_SHARE/openal.zip" && unzip -tq "$OPENAL_SHARE/openal.zip" &>/dev/null; then
             OPENAL_OFFICIAL_JSON=$(curl -s "https://api.github.com/repos/kcat/openal-soft/releases/tags/${OAL_TAG}")
             OAL_DIGEST=$(get_asset_digest "$OPENAL_OFFICIAL_JSON" "$OAL_ASSET_NAME")
             if verify_or_confirm "$OPENAL_SHARE/openal.zip" "$OAL_DIGEST" "kcat OpenAL Soft [$OAL_TAG]"; then
@@ -147,7 +147,7 @@ update_local_cache() {
         if [ ! -d "$DSOAL_PINNED" ]; then
             print_status "Cache missing. Downloading pinned build [$DSOAL_PINNED_REV]..."
             mkdir -p "$DSOAL_PINNED"
-            if curl -fL -# "$DSOAL_PINNED_URL" -o "$DSOAL_SHARE/pinned.zip" && unzip -tq "$DSOAL_SHARE/pinned.zip" &>/dev/null; then
+            if fetch_with_progress "$DSOAL_PINNED_URL" "$DSOAL_SHARE/pinned.zip" && unzip -tq "$DSOAL_SHARE/pinned.zip" &>/dev/null; then
                 # Hard-fails on mismatch, unlike verify_or_confirm's softer
                 # handling of the rolling latest-master download: a frozen,
                 # already-superseded archive asset has a stable SHA256, so a

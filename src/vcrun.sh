@@ -122,13 +122,13 @@ install_vcrun_dependencies() {
     # behind, e.g. if Wine's MSI engine chokes on it) is actually debuggable
     # instead of a dead end with no information.
     print_task "Installing MS VC++ 2022 Redistributable"
+    advance_phase_progress
 
     VCRUN_SHARE="$BASE_SHARE/vcrun2022"
     mkdir -p "$VCRUN_SHARE"
     VCRUN_LOG="$VCRUN_SHARE/install.log"
     : > "$VCRUN_LOG"
 
-    print_status "Attempting installation via package manager..."
 
     # 1. Run the package manager
     # --force bypasses winetricks' own checksum check for vc_redist.exe: it
@@ -138,9 +138,10 @@ install_vcrun_dependencies() {
     # never gets answered in this non-interactive context — previously only
     # the Heroic/winetricks path below had this, not this protontricks path.
     if [ "$LAUNCHER_TYPE" == "1" ]; then
-        protontricks "$APPID" --force -q vcrun2022 &>> "$VCRUN_LOG"
+        run_with_spinner "Installing via protontricks..." "$VCRUN_LOG" protontricks "$APPID" --force -q vcrun2022
     elif [ -n "$WINE_CMD" ]; then
-        WINEPREFIX="$PREFIX_PATH" WINE="$WINE_CMD" WINESERVER="${WINESERVER_CMD:-}" winetricks --force -q vcrun2022 &>> "$VCRUN_LOG"
+        run_with_spinner "Installing via winetricks..." "$VCRUN_LOG" \
+            env WINEPREFIX="$PREFIX_PATH" WINE="$WINE_CMD" WINESERVER="${WINESERVER_CMD:-}" winetricks --force -q vcrun2022
     fi
 
     # 2. Verify physical file presence instead of trusting exit codes
@@ -167,7 +168,7 @@ install_vcrun_dependencies() {
 
     if [ ! -s "$VCRUN_SHARE/$VCRUN_EXE" ]; then
         print_status "Downloading $VCRUN_EXE from Microsoft..."
-        curl -fL -# "$VCRUN_URL" -o "$VCRUN_SHARE/$VCRUN_EXE"
+        fetch_with_progress "$VCRUN_URL" "$VCRUN_SHARE/$VCRUN_EXE"
     else
         print_status "Using cached $VCRUN_EXE"
     fi
@@ -179,19 +180,20 @@ install_vcrun_dependencies() {
     # back missing or replaced files. winetricks' own vcrun2022 verb can't
     # cover this either: it extracts "msvcp140.dll" from the cab, but the
     # current redistributable names that entry "msvcp140.dll_x86".
-    local vc_mode="/q" vc_arch="X86"
+    local vc_mode="/q" vc_arch="X86" vc_label="Running Microsoft's installer in the prefix..."
     [ "$ARCH" == "64" ] && vc_arch="X64"
     if grep -q "\"DisplayName\"=\"Microsoft Visual C++ 2022 $vc_arch Minimum Runtime" "$PREFIX_PATH/system.reg" 2>/dev/null; then
         vc_mode="/repair /quiet"
-        print_status "VC++ 2022 is already registered in this prefix, but a core file was replaced, so running Microsoft's repair..."
-    else
-        print_status "Running silent installer in prefix..."
+        vc_label="Running Microsoft's repair in the prefix..."
+        print_status "VC++ 2022 is already registered in this prefix, but a core file was replaced."
     fi
     if [ "$LAUNCHER_TYPE" == "1" ]; then
-        protontricks -c "wine \"$VCRUN_SHARE/$VCRUN_EXE\" $vc_mode /norestart" "$APPID" &>> "$VCRUN_LOG"
+        run_with_spinner "$vc_label" "$VCRUN_LOG" \
+            protontricks -c "wine \"$VCRUN_SHARE/$VCRUN_EXE\" $vc_mode /norestart" "$APPID"
     else
         # shellcheck disable=SC2086  # vc_mode is one or two flags
-        WINEPREFIX="$PREFIX_PATH" "$WINE_CMD" "$VCRUN_SHARE/$VCRUN_EXE" $vc_mode /norestart &>> "$VCRUN_LOG"
+        run_with_spinner "$vc_label" "$VCRUN_LOG" \
+            env WINEPREFIX="$PREFIX_PATH" "$WINE_CMD" "$VCRUN_SHARE/$VCRUN_EXE" $vc_mode /norestart
     fi
 
     # Final verification
@@ -313,7 +315,7 @@ uninstall_vcrun_dependencies() {
     fi
     if [ ! -s "$vcrun_share/$vcrun_exe" ]; then
         print_status "Fetching the official uninstaller (best-effort)..."
-        curl -fL -# "$vcrun_url" -o "$vcrun_share/$vcrun_exe" 2>/dev/null
+        fetch_with_progress "$vcrun_url" "$vcrun_share/$vcrun_exe"
     fi
     if [ -s "$vcrun_share/$vcrun_exe" ]; then
         print_status "Running the official uninstaller (best-effort; direct cleanup follows regardless)..."

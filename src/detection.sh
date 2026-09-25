@@ -1067,12 +1067,14 @@ flush_wine_registry() {
     # not see the change yet.
     if [ "$LAUNCHER_TYPE" == "1" ] && [ -n "$APPID" ]; then
         log_cmd "protontricks wineserver -w (AppID $APPID)"
-        timeout 60 protontricks -c "wineserver -w" "$APPID" &>> "$EAX_LOG_FILE"
+        # timeout goes inside -c: the Flatpak protontricks is a shell
+        # function, which timeout can't run.
+        run_with_spinner "Checking the DLL override..." "$EAX_LOG_FILE" protontricks -c "timeout 60 wineserver -w" "$APPID"
     elif [ -n "$WINE_CMD" ]; then
         local server="${WINESERVER_CMD:-$(dirname "$WINE_CMD")/wineserver}"
         [ -x "$server" ] || server="wineserver"
         log_cmd "$server -w (prefix $PREFIX_PATH)"
-        WINEPREFIX="$PREFIX_PATH" timeout 60 "$server" -w &>> "$EAX_LOG_FILE"
+        run_with_spinner "Checking the DLL override..." "$EAX_LOG_FILE" env WINEPREFIX="$PREFIX_PATH" timeout 60 "$server" -w
     fi
 }
 
@@ -1119,10 +1121,12 @@ apply_registry_patch() {
     fi
     if [ "$LAUNCHER_TYPE" == "1" ] && [ -n "$APPID" ]; then
         log_cmd "protontricks regedit $reg_file (AppID $APPID)"; sed 's/^/  | /' "$reg_file" >> "$EAX_LOG_FILE" 2>/dev/null
-        protontricks -c "regedit \"$reg_file\"" "$APPID" &>> "$EAX_LOG_FILE"; rc=$?; echo "[exit $rc]" >> "$EAX_LOG_FILE"
+        run_with_spinner "Updating the prefix's registry..." "$EAX_LOG_FILE" protontricks -c "regedit \"$reg_file\"" "$APPID"
+        rc=$?; echo "[exit $rc]" >> "$EAX_LOG_FILE"
     elif [ "$LAUNCHER_TYPE" == "2" ] && [ -d "$PREFIX_PATH/drive_c" ] && [ -n "$WINE_CMD" ]; then
         log_cmd "$WINE_CMD regedit $reg_file (prefix $PREFIX_PATH)"; sed 's/^/  | /' "$reg_file" >> "$EAX_LOG_FILE" 2>/dev/null
-        WINEPREFIX="$PREFIX_PATH" "$WINE_CMD" regedit "$reg_file" &>> "$EAX_LOG_FILE"; rc=$?; echo "[exit $rc]" >> "$EAX_LOG_FILE"
+        run_with_spinner "Updating the prefix's registry..." "$EAX_LOG_FILE" env WINEPREFIX="$PREFIX_PATH" "$WINE_CMD" regedit "$reg_file"
+        rc=$?; echo "[exit $rc]" >> "$EAX_LOG_FILE"
     else
         log_cmd "regedit skipped: no AppID, Wine binary, or prefix to apply $reg_file to"
     fi

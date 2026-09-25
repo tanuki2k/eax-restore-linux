@@ -10,8 +10,15 @@
         exit 0
     fi
 
-    print_task "Executing system verbs via $( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" ) (Silent Mode)"
-    print_status "Installing the OpenAL package via $( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" )..."
+    # One bar step per STATUS: header below: OpenAL package, game folder,
+    # configurations, plus VC++ and the prefix copy when those run.
+    PHASE_STEP=0; PHASE_TOTAL=3
+    [[ "$INSTALL_VCRUN" =~ $YES_RE ]] && PHASE_TOTAL=$(( PHASE_TOTAL + 1 ))
+    [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows" ] && PHASE_TOTAL=$(( PHASE_TOTAL + 1 ))
+
+    OPENAL_TOOL=$( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" )
+    print_task "Executing system verbs via $OPENAL_TOOL (Silent Mode)"
+    advance_phase_progress
 
     # A failure here is a warning, not a deploy failure: the engine's own
     # DLLs are copied in directly below and don't depend on this package —
@@ -19,12 +26,16 @@
     OPENAL_RC=""
     if [ "$LAUNCHER_TYPE" == "1" ]; then
         log_cmd "protontricks $APPID -q openal"
-        protontricks "$APPID" -q openal 2>> "$EAX_LOG_FILE"; OPENAL_RC=$?; echo "[exit $OPENAL_RC]" >> "$EAX_LOG_FILE"
+        run_with_spinner "Installing the OpenAL package via $OPENAL_TOOL..." "$EAX_LOG_FILE" \
+            protontricks "$APPID" -q openal
+        OPENAL_RC=$?; echo "[exit $OPENAL_RC]" >> "$EAX_LOG_FILE"
     else
         if [ -n "$WINE_CMD" ] && [ -n "$PREFIX_PATH" ]; then
             # Using --force to bypass winetricks safety blocks in Heroic
             log_cmd "winetricks --force -q openal (WINE=$WINE_CMD, prefix $PREFIX_PATH)"
-            WINEPREFIX="$PREFIX_PATH" WINE="$WINE_CMD" WINESERVER="${WINESERVER_CMD:-}" winetricks --force -q openal 2>> "$EAX_LOG_FILE"; OPENAL_RC=$?; echo "[exit $OPENAL_RC]" >> "$EAX_LOG_FILE"
+            run_with_spinner "Installing the OpenAL package via $OPENAL_TOOL..." "$EAX_LOG_FILE" \
+                env WINEPREFIX="$PREFIX_PATH" WINE="$WINE_CMD" WINESERVER="${WINESERVER_CMD:-}" winetricks --force -q openal
+            OPENAL_RC=$?; echo "[exit $OPENAL_RC]" >> "$EAX_LOG_FILE"
         else
             print_warning_arrow "No local Wine binary or resolved prefix was found, so this step is being skipped."
         fi
@@ -116,6 +127,7 @@
     [ "$VCRUN_INSTALLED_THIS_RUN" == "1" ] && echo "VCRUN" >> "$INSTALL_MANIFEST"
 
     print_task "Deploying files to local game folder"
+    advance_phase_progress
 
     # DEPLOY_SRC/DEPLOY_DEST_NAME[0] is always the "primary" override DLL
     # (dsound.dll for engine 1, OpenAL32.dll for engine 2) — the one Wine
@@ -141,6 +153,7 @@
 
     if [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows" ]; then
         print_task "Duplicating files to Wine/Proton system prefix"
+        advance_phase_progress
         if [ "$ARCH" == "32" ] && [ -d "$PREFIX_PATH/drive_c/windows/syswow64" ]; then
             PREFIX_TARGET_DIR="$PREFIX_PATH/drive_c/windows/syswow64"
         else
@@ -163,6 +176,7 @@
     fi
 
     print_task "Applying configurations and tweaks"
+    advance_phase_progress
 
     if [[ "$ADVANCED_DUMMY" =~ $YES_RE ]]; then
         # The dummy only helps a game that checks for the file's presence to
