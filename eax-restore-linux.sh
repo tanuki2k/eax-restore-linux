@@ -675,9 +675,10 @@ detect_heroic_prefix_verbose() {
     while IFS=$'\t' read -r label root; do
         [ -z "$root" ] && continue
         log_cmd "heroic: $label config folder $root"
-        local id="" gog="" title="" is_sideload=0
+        local id="" gog="" title="" is_sideload=0 shown="$label"
+        [ "$label" == "flatpak" ] && shown="Flatpak"
 
-        echo -e " -> Searching installed.json for matching game path ($label Heroic)..." >&2
+        echo -e " -> Looking for the game in $shown Heroic's library..." >&2
         while IFS= read -r json_file; do
             [ -z "$json_file" ] && continue
             # Match by install_path rather than a raw substring search, since the
@@ -696,7 +697,7 @@ detect_heroic_prefix_verbose() {
         # installed.json -- Heroic lists them in sideload_apps/library.json, keyed
         # by folder_name. Their prefix still lives in GamesConfig/<app_name>.json.
         if [ -z "$id" ]; then
-            echo -e " -> Searching Heroic's manually-added games (sideload_apps/library.json)..." >&2
+            echo -e " -> Checking $shown Heroic's manually added games..." >&2
             json_file="$root/sideload_apps/library.json"
             if [ -f "$json_file" ]; then
                 # library.json nests an "install": {...} object inside each game,
@@ -726,11 +727,11 @@ detect_heroic_prefix_verbose() {
         if [ -z "$id" ]; then log_cmd "heroic: not in the $label library"; continue; fi
 
         if [ "$is_sideload" -eq 1 ]; then
-            echo -e " -> Game found in $label Heroic's manually-added games: ${BOLD}${title:-$id}${NC}" >&2
+            echo -e " -> Found in $shown Heroic's manually added games: ${BOLD}${title:-$id}${NC}" >&2
         else
-            echo -e " -> Game found in $label Heroic! Internal ID: ${BOLD}$id${NC}" >&2
+            echo -e " -> Found in $shown Heroic's library: ${BOLD}${title:-$id}${NC}" >&2
         fi
-        echo -e " -> Parsing GamesConfig/$id.json for custom prefix paths..." >&2
+        echo -e " -> Reading ${title:-the game}'s Heroic settings..." >&2
         local conf="$root/GamesConfig/$id.json" prefix="" source=""
         if [ -f "$conf" ]; then
             prefix=$(heroic_json_value "$conf" winePrefix)
@@ -746,7 +747,7 @@ detect_heroic_prefix_verbose() {
             # global prefix: config.json's "winePrefix", or <prefix folder>/shared
             # when that's unset (game_config.ts: `winePrefix || sharedWinePrefix`).
             # On older installs that global prefix is .../Prefixes/default itself.
-            echo -e " -> No custom prefix defined. Checking Heroic's shared prefix..." >&2
+            echo -e " -> No prefix of its own, so checking Heroic's shared prefix..." >&2
             local default_dir global_prefix cand
             default_dir=$(heroic_json_value "$root/config.json" defaultWinePrefixDir)
             [ -z "$default_dir" ] && default_dir=$(heroic_json_value "$root/config.json" defaultWinePrefix)
@@ -807,11 +808,15 @@ detect_heroic_prefix_verbose() {
     done
     for i in "${!m_id[@]}"; do
         if [ "$i" -ne "$pick" ] && [ -n "${m_prefix[$i]}" ] && [ "${m_prefix[$i]%/}" != "${m_prefix[$pick]%/}" ]; then
+            local shown_pick="${m_label[$pick]}" shown_other="${m_label[$i]}"
+            [ "$shown_pick" == "flatpak" ] && shown_pick="Flatpak"
+            [ "$shown_other" == "flatpak" ] && shown_other="Flatpak"
             {
-                echo -e "\n${CYAN}Note: ${m_title[$pick]:-this game} is set up in both native and Flatpak Heroic, with different prefixes:"
-                echo -e "  ${m_label[$pick]}: ${m_prefix[$pick]}"
-                echo -e "  ${m_label[$i]}: ${m_prefix[$i]}"
-                echo -e "The ${m_label[$pick]} one is suggested below — if you launch the game from the other"
+                echo -e "\n${CYAN}Note: ${m_title[$pick]:-this game} is set up in both native and Flatpak"
+                echo -e "Heroic, and each one uses a different prefix:"
+                echo -e "  $shown_pick: ${m_prefix[$pick]}"
+                echo -e "  $shown_other: ${m_prefix[$i]}"
+                echo -e "The $shown_pick one is suggested below — if you play it from the other"
                 echo -e "Heroic, answer no and enter that prefix instead.${NC}"
             } >&2
             break
@@ -855,27 +860,26 @@ check_heroic_prefix_match() {
     [ -z "$reason" ] && return 0
 
     if [ "$reason" == "shared" ]; then
-        echo -e "\n${YELLOW}${BOLD}Warning: $title has no prefix of its own in Heroic, so Heroic launches it"
-        echo -e "with its shared prefix instead:"
+        echo -e "\n${YELLOW}${BOLD}Warning: $title has no prefix of its own set"
+        echo -e "in Heroic, so Heroic runs it in the shared prefix below instead of the"
+        echo -e "one you entered, and EAX wouldn't reach the game:"
         echo -e "  $HEROIC_EXPECTED_PREFIX"
-        echo -e "That happens with games added in Heroic 2.22.1, whose Add Game dialog"
-        echo -e "didn't save the prefix, so changes made to the one you picked won't reach"
-        echo -e "the game. To give it its own prefix, set one in $title's Heroic settings"
-        echo -e "(Settings -> WINE), launch it once, then run this script again.${NC}"
+        echo -e "This happens with games added in Heroic 2.22.1. To give the game its"
+        echo -e "own prefix, choose one in its Heroic settings (Settings -> WINE),"
+        echo -e "launch it once, then run this script again.${NC}"
     elif [ "$reason" == "explicit" ]; then
-        echo -e "\n${YELLOW}${BOLD}Warning: Heroic launches $title with a different prefix:"
-        echo -e "  $HEROIC_EXPECTED_PREFIX"
-        echo -e "The DLL override and prefix files only take effect in the prefix the game"
-        echo -e "actually runs in, so changes made to this one won't reach it.${NC}"
+        echo -e "\n${YELLOW}${BOLD}Warning: Heroic runs $title in a different prefix"
+        echo -e "from the one you entered, so EAX wouldn't reach the game from there:"
+        echo -e "  $HEROIC_EXPECTED_PREFIX${NC}"
     else
-        echo -e "\n${YELLOW}${BOLD}Warning: this prefix is set up for a different game in Heroic's library, not $title."
-        echo -e "Heroic may be launching $title with another prefix — check the WinePrefix folder"
-        echo -e "in $title's Heroic settings (Settings -> WINE) to see which one it uses.${NC}"
+        echo -e "\n${YELLOW}${BOLD}Warning: This prefix belongs to a different game in Heroic's library,"
+        echo -e "so it's probably not where $title runs. Its Heroic settings"
+        echo -e "(Settings -> WINE) show the WinePrefix folder the game actually uses.${NC}"
         log_cmd "heroic prefix check: prefix belongs to $claimers"
     fi
 
     if [ -n "$HEROIC_EXPECTED_PREFIX" ] && [ -d "$HEROIC_EXPECTED_PREFIX/drive_c" ]; then
-        [ "$reason" == "other" ] && echo -e " -> ${WHITE}Heroic's default prefix for $title exists: $HEROIC_EXPECTED_PREFIX${NC}"
+        [ "$reason" == "other" ] && echo -e " -> ${WHITE}A prefix named after $title exists: $HEROIC_EXPECTED_PREFIX${NC}"
         # The shared prefix is every such game's, so switching there puts
         # the audio files and DLL override under all of them — opt-in only.
         local use_expected switch_yes=1
@@ -1026,7 +1030,7 @@ detect_game_environment() {
         if [[ ! "$DO_AUTO_H" =~ ^[Nn]$ ]]; then
             if [ -n "$DETECTED_PREFIX" ]; then
                 echo -e " -> ${GREEN}Detected Prefix:${NC} $DETECTED_PREFIX"
-                [ "$HEROIC_PREFIX_SOURCE" == "shared" ] && echo -e " -> (Heroic's shared prefix — ${HEROIC_GAME_TITLE:-this game} has no prefix of its own set in Heroic)"
+                [ "$HEROIC_PREFIX_SOURCE" == "shared" ] && echo -e " -> This is Heroic's shared prefix, because ${HEROIC_GAME_TITLE:-this game} has no prefix of its own."
                 echo -e "\n${YELLOW}Use this detected prefix? (Y/n): ${NC}"
                 echo -e -n "> "
                 read_answer C_AUTO
