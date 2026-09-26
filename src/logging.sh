@@ -83,6 +83,7 @@ write_log_summary() {
         echo "Launcher:        $(case "$LAUNCHER_TYPE" in 1) echo "Steam (AppID ${APPID:-unknown})";; 2) echo "Non-Steam / Heroic${HEROIC_APP_NAME:+ (app $HEROIC_APP_NAME)}";; *) echo "not detected";; esac)"
         echo "Prefix:          ${PREFIX_PATH:-not set}"
         echo "Runner:          ${runner:-unknown}${IS_PROTON:+ (IS_PROTON=$IS_PROTON)}"
+        [ "$LAUNCHER_TYPE" == "1" ] && echo "Steam library:   ${STEAM_LIBRARY:-unknown}${STEAM_DIR:+ (STEAM_DIR=$STEAM_DIR)}"
         [ "$LAUNCHER_TYPE" == "2" ] && echo "Wine used:       ${WINE_CMD:-none}${WINESERVER_CMD:+ (wineserver $WINESERVER_CMD)}"
         if [ "$LAUNCHER_TYPE" == "2" ]; then
             echo "Heroic game ID:  ${HEROIC_GAME_ID:-not found in the Heroic library}${HEROIC_GAME_TITLE:+, title: $HEROIC_GAME_TITLE}"
