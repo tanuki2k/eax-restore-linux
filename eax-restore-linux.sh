@@ -98,8 +98,8 @@
 # ==============================================================================
 
 # --- Build Info ---
-SCRIPT_VERSION="0.28.3"
-SCRIPT_DATE="2026-09-25"
+SCRIPT_VERSION="0.28.4"
+SCRIPT_DATE="2026-09-26"
 
 # --- Colour Definitions ---
 GREEN='\033[0;32m'
