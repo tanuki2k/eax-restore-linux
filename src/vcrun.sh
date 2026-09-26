@@ -157,7 +157,7 @@ install_vcrun_dependencies() {
         return 0
     fi
 
-    print_note_arrow "$( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" ) didn't install the core files, so using Microsoft's own installer instead..."
+    print_status "$( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" ) didn't install the core files. Trying Microsoft's installer..." "$YELLOW"
 
     if [ "$ARCH" == "64" ]; then
         VCRUN_URL="https://aka.ms/vs/17/release/vc_redist.x64.exe"
@@ -334,7 +334,7 @@ uninstall_vcrun_dependencies() {
             fi
             echo "[exit $?]" >> "$EAX_LOG_FILE"
         else
-            print_note_arrow "could not fetch the official $arch uninstaller — skipping straight to direct cleanup."
+            print_status "Couldn't fetch the $arch uninstaller. Using direct cleanup." "$YELLOW"
         fi
 
         # 2. Direct removal — the reliable part. Matches VCRUN_DLL_NAMES

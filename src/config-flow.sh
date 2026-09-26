@@ -107,8 +107,9 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
             echo -e -n "\n> "
             read_answer ENGINE_CHOICE
             ENGINE_CHOICE="${ENGINE_CHOICE:-1}"
-            if [[ ! "$ENGINE_CHOICE" =~ ^[12]$ ]]; then print_warning "That's not a valid option — please type 1 or 2."
-            elif ! engine_available "$ENGINE_CHOICE"; then print_warning "kcat DSOAL couldn't be downloaded this run (see the Repository Cache Check above). Pick 2 only if this game uses OpenAL natively; otherwise quit and re-run later."
+            if [[ ! "$ENGINE_CHOICE" =~ ^[12]$ ]]; then print_result "That's not a valid option — please type 1 or 2." "$YELLOW"
+            elif ! engine_available "$ENGINE_CHOICE"; then print_warning "kcat DSOAL couldn't be downloaded this run (see the Repository Cache Check above)." \
+                "Pick 2 only if this game uses OpenAL natively; otherwise quit and re-run later."
             else break; fi
         done
     fi
@@ -184,7 +185,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         prompt "Selection [1-3, Default: 1]: "
         read_answer OUTPUT_MODE_CHOICE
         OUTPUT_MODE_CHOICE="${OUTPUT_MODE_CHOICE:-1}"
-        if [[ "$OUTPUT_MODE_CHOICE" =~ ^[123]$ ]]; then break; else print_warning "That's not a valid option — please type 1, 2, or 3."; fi
+        if [[ "$OUTPUT_MODE_CHOICE" =~ ^[123]$ ]]; then break; else print_result "That's not a valid option — please type 1, 2, or 3." "$YELLOW"; fi
     done
 
     ENABLE_HRTF=""
@@ -203,7 +204,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
             prompt "Selection [1-3, Default: 1]: "
             read_answer STEREO_MODE_CHOICE
             STEREO_MODE_CHOICE="${STEREO_MODE_CHOICE:-1}"
-            if [[ "$STEREO_MODE_CHOICE" =~ ^[123]$ ]]; then break; else print_warning "That's not a valid option — please type 1, 2, or 3."; fi
+            if [[ "$STEREO_MODE_CHOICE" =~ ^[123]$ ]]; then break; else print_result "That's not a valid option — please type 1, 2, or 3." "$YELLOW"; fi
         done
 
         case "$STEREO_MODE_CHOICE" in
@@ -244,7 +245,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
                 2) SURROUND_CHANNELS="surround51"; break ;;
                 3) SURROUND_CHANNELS="surround61"; break ;;
                 4) SURROUND_CHANNELS="surround71"; break ;;
-                *) print_warning "That's not a valid option — please type 1, 2, 3, or 4." ;;
+                *) print_result "That's not a valid option — please type 1, 2, 3, or 4." "$YELLOW" ;;
             esac
         done
     else

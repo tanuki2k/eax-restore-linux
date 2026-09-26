@@ -162,14 +162,12 @@ print_run_summary() {
     [ "$count" -eq 0 ] && return
     local noun="warning"
     [ "$count" -ne 1 ] && noun="warnings"
-    echo ""
-    print_divider
-    echo -e "${YELLOW}${BOLD}${count} ${noun} occurred during this run:${NC}"
+    print_banner "WARNINGS" "$YELLOW"
+    echo -e "\n${YELLOW}${BOLD}${count} ${noun} occurred during this run:${NC}"
     local w
     for w in "${RUN_WARNINGS[@]}"; do
         echo -e "  ${YELLOW}- ${w}${NC}"
     done
-    print_divider
 }
 
 # Usage: print_error "text" ["more text" ...]

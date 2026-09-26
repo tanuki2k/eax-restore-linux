@@ -124,7 +124,7 @@ get_game_directory() {
                 if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#menu_actions[@]}" ]; then
                     break
                 fi
-                print_warning "Invalid selection. Please enter a number 1-${#menu_actions[@]}."
+                print_result "Invalid selection. Please enter a number 1-${#menu_actions[@]}." "$YELLOW"
             done
             action="${menu_actions[$((choice - 1))]}"
         fi
@@ -154,7 +154,7 @@ get_game_directory() {
                 GAME_DIR=$(pick_directory_gui)
                 GAME_DIR="${GAME_DIR%/}"
                 if [ -z "$GAME_DIR" ]; then
-                    print_warning "No folder selected."
+                    print_result "No folder selected." "$YELLOW"
                     echo ""
                     continue
                 fi
@@ -585,7 +585,8 @@ resolve_exe_manual_entry() {
         GAME_DIR=""
         return 1
     fi
-    [[ "$GAME_DIR" == "$root"* ]] || print_warning "That path is outside the scanned install — the known-game notes for this title may not apply to it."
+    [[ "$GAME_DIR" == "$root"* ]] || print_warning "That path is outside the scanned install." \
+        "The known-game notes for this title may not apply to it."
     return 0
 }
 
@@ -768,7 +769,7 @@ resolve_exe_folder() {
         prompt "Selection [1-${fb_max}]: "
         read_answer choice || return 1
         [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "$fb_max" ] && break
-        print_warning "That's not a valid option — please enter a number from 1-${fb_max}."
+        print_result "That's not a valid option — please enter a number from 1-${fb_max}." "$YELLOW"
     done
 
     if [ "$have_more" -eq 1 ] && [ "$choice" -eq 1 ]; then
@@ -784,7 +785,7 @@ resolve_exe_folder() {
             if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 0 ] && [ "$choice" -le ${#cand_dirs[@]} ]; then
                 break
             fi
-            print_warning "That's not a valid option — please enter a number from 0-${#cand_dirs[@]}."
+            print_result "That's not a valid option — please enter a number from 0-${#cand_dirs[@]}." "$YELLOW"
         done
         if [ "$choice" -eq 0 ]; then
             resolve_exe_manual_entry "$root" && return 0
@@ -1048,7 +1049,7 @@ confirm_continue_if_openal_native() {
         if [ "$api_choice" == "1" ]; then explicit=1; else explicit=0; fi
         api_choice="${api_choice:-1}"
         [[ "$api_choice" =~ ^[12]$ ]] && break
-        print_warning "That's not a valid option — please type 1 or 2."
+        print_result "That's not a valid option — please type 1 or 2." "$YELLOW"
     done
 
     if [ "$api_choice" == "2" ]; then
@@ -1330,12 +1331,12 @@ resolve_heroic_runner() {
 
     WINESERVER_CMD=""
     if [ -n "$runner_type" ]; then
-        print_note_arrow "the Wine version Heroic launches ${GAME_NAME:-this game} with (${runner_name:-$runner_type}) wasn't found at" \
-            "$runner_bin, so ${WINE_CMD:-no Wine binary} will be used instead. If EAX doesn't show up" \
-            "in-game, that's the likely cause."
+        print_warning_arrow "Heroic's Wine version for ${GAME_NAME:-this game} (${runner_name:-$runner_type}) wasn't found." \
+            "Expected at $runner_bin, so ${WINE_CMD:-no Wine binary} will be used instead." \
+            "If EAX doesn't show up in-game, that's the likely cause."
     elif [ -n "$WINE_CMD" ]; then
-        print_note_arrow "no Heroic settings were found for this prefix, so $WINE_CMD will be used. If" \
-            "${GAME_NAME:-the game} runs on Proton or a different Wine build, EAX may not show up in-game."
+        print_warning_arrow "No Heroic settings were found for this prefix, so $WINE_CMD will be used." \
+            "If ${GAME_NAME:-the game} runs on Proton or a different Wine build, EAX may not show up in-game."
     fi
     return 1
 }
@@ -1450,7 +1451,7 @@ select_architecture() {
             prompt "Architecture (32/64): "
             read_answer ARCH
             if [[ "$ARCH" == "32" || "$ARCH" == "64" ]]; then break
-            else print_warning "Invalid selection. Please type 32 or 64."; fi
+            else print_result "Invalid selection. Please type 32 or 64." "$YELLOW"; fi
         done
     fi
     ARCH_FOLDER=$([ "$ARCH" == "64" ] && echo "Win64" || echo "Win32")

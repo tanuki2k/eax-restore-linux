@@ -47,7 +47,7 @@ if is_truthy "$EAX_RESTORE_VCRUN_ONLY"; then
     echo -e -n "> "
     read_answer CONFIRM_VCRUN_ONLY
     if [[ "$CONFIRM_VCRUN_ONLY" =~ $NO_RE ]]; then
-        print_warning "Cancelled — no changes were made."
+        print_result "Cancelled — no changes were made." "$YELLOW"
         exit 0
     fi
 
@@ -83,6 +83,6 @@ else
         read_answer SCRIPT_ACTION
         SCRIPT_ACTION="${SCRIPT_ACTION,,}"
         if [[ "$SCRIPT_ACTION" == "i" || "$SCRIPT_ACTION" == "u" ]]; then break
-        else print_warning "That's not a valid option — please type 'i' or 'u'."; fi
+        else print_result "That's not a valid option — please type 'i' or 'u'." "$YELLOW"; fi
     done
 fi

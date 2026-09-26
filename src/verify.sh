@@ -17,7 +17,7 @@ verify_checksum() {
     local expected="$2"
 
     if ! command -v sha256sum &> /dev/null; then
-        print_note_arrow "Couldn't find sha256sum on this system, so checksum verification is being skipped."
+        print_status "sha256sum not found. Skipping checksum verification." "$YELLOW"
         return 0
     fi
 

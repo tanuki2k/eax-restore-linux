@@ -57,8 +57,8 @@ update_local_cache() {
     LOCAL_DATE=$(cat "$DSOAL_SHARE/updated_at.txt" 2>/dev/null)
     if [ -z "$LATEST_DATE" ]; then
         if dsoal_official_cached; then
-            if [ "$DSOAL_API_REACHABLE" -eq 1 ]; then print_note_arrow "could not check for updates (kcat's latest-master release is unavailable). Using cached version [${LOCAL_DATE%%T*}]"
-            else print_note_arrow "offline. Using cached version [${LOCAL_DATE%%T*}]"; fi
+            if [ "$DSOAL_API_REACHABLE" -eq 1 ]; then print_status "Couldn't check for updates. Using cached version [${LOCAL_DATE%%T*}]" "$YELLOW"
+            else print_status "Offline. Using cached version [${LOCAL_DATE%%T*}]" "$YELLOW"; fi
         elif [ "$DSOAL_API_REACHABLE" -eq 1 ]; then
             print_warning_arrow "kcat's latest-master build is unavailable upstream right now."
             fetch_pinned_dsoal_into_official
@@ -108,7 +108,7 @@ update_local_cache() {
     OAL_TAG=$(curl -sI https://github.com/kcat/openal-soft/releases/latest | grep -i "^location:" | awk -F '/' '{print $NF}' | tr -d '\r')
     LOCAL_OAL_TAG=$(cat "$OPENAL_SHARE/updated_at.txt" 2>/dev/null)
     if [ -z "$OAL_TAG" ]; then
-        if [ -d "$OPENAL_OFFICIAL" ]; then print_note_arrow "offline. Using cached version [${LOCAL_OAL_TAG}]"
+        if [ -d "$OPENAL_OFFICIAL" ]; then print_status "Offline. Using cached version [${LOCAL_OAL_TAG}]" "$YELLOW"
         else print_error_arrow "OpenAL cache missing."; print_offline_instructions; exit 1; fi
     elif [ "$OAL_TAG" != "$LOCAL_OAL_TAG" ] || [ ! -d "$OPENAL_OFFICIAL" ]; then
         print_status "Updates found! Downloading OpenAL Soft [${OAL_TAG}]..."
@@ -312,7 +312,7 @@ handle_conflict() {
                     print_status "Backed up original $(basename "$existing") to $(basename "$target_file").bak.${TIMESTAMP}"
                     return 0 ;;
                 s) echo ""; print_status "Skipped $(basename "$target_file")."; return 1 ;;
-                *) print_warning "That's not a valid option — please type o, b, or s." ;;
+                *) print_result "That's not a valid option — please type o, b, or s." "$YELLOW" ;;
             esac
         done
     fi

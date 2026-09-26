@@ -23,7 +23,7 @@ ensure_known_games_json() {
     if [ -n "${EAX_RESTORE_KNOWN_GAMES_FILE:-}" ]; then
         if [ -s "$EAX_RESTORE_KNOWN_GAMES_FILE" ] && jq empty "$EAX_RESTORE_KNOWN_GAMES_FILE" 2>/dev/null; then
             KNOWN_GAMES_FILE="$EAX_RESTORE_KNOWN_GAMES_FILE"
-            { print_note "EAX_RESTORE_KNOWN_GAMES_FILE is set — using $EAX_RESTORE_KNOWN_GAMES_FILE instead of fetching."; echo ""; } >&2
+            { print_note "Using local known-games file (EAX_RESTORE_KNOWN_GAMES_FILE):" "$EAX_RESTORE_KNOWN_GAMES_FILE"; echo ""; } >&2
         else
             { print_error "EAX_RESTORE_KNOWN_GAMES_FILE is set but the file is missing or not valid JSON."; echo ""; } >&2
             return 1
@@ -39,7 +39,7 @@ ensure_known_games_json() {
             rm -f "$tmp" 2>/dev/null
             if [ -s "$KNOWN_GAMES_CACHE" ] && jq empty "$KNOWN_GAMES_CACHE" 2>/dev/null; then
                 KNOWN_GAMES_FILE="$KNOWN_GAMES_CACHE"
-                { echo ""; print_note_arrow "couldn't refresh the known-EAX-games database (offline?) — using the last cached copy."; } >&2
+                { echo ""; print_status "Couldn't refresh the known-games database. Using cached copy." "$YELLOW"; } >&2
             else
                 # No message here — every caller that has something
                 # meaningful to say about a missing database says it
@@ -324,11 +324,11 @@ scan_game_libraries() {
         if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 0 ] && [ "$choice" -le ${#names[@]} ]; then
             break
         fi
-        print_warning "That's not a valid option — please enter a number from 0-${#names[@]}."
+        print_result "That's not a valid option — please enter a number from 0-${#names[@]}." "$YELLOW"
         echo ""
     done
     if [ "$choice" -eq 0 ]; then
-        print_warning "No game selected."
+        print_result "No game selected." "$YELLOW"
         return 1
     fi
 
