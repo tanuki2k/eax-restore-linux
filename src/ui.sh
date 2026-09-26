@@ -327,13 +327,15 @@ print_phase_progress() {
     echo -e "    $(progress_bar "$1" "$2")  ${DIM}step $1 of $2${NC}"
 }
 
-# PHASE 2's single progress bar is pinned to the top row of the screen
-# with a terminal scroll region (ESC[top;bottomr, the same trick apt uses),
-# so the deployment output scrolls underneath it instead of each step
-# printing a bar of its own. Only plain CSI sequences are used, which the
+# PHASE 2's single progress bar is pinned to the bottom row of the screen
+# with a terminal scroll region (ESC[top;bottomr, the same trick and spot
+# apt uses), so the deployment output scrolls above it instead of each step
+# printing a bar of its own -- and, unlike pinning it to the top, nothing
+# already on screen has to be pushed away to make room. Only plain CSI sequences are used, which the
 # run log's writer strips. With no terminal (or a very short one) it falls
 # back to printing the bar under each step's header.
 PHASE_PINNED=""
+PHASE_ROWS=""
 
 # Usage: start_phase_progress <total steps>
 # Call once, right after the user confirms, while nothing else is being
@@ -347,15 +349,14 @@ start_phase_progress() {
     size=$(stty size < /dev/tty 2>/dev/null) || return 0
     rows="${size%% *}"
     [[ "$rows" =~ ^[0-9]+$ ]] && [ "$rows" -ge 12 ] || return 0
+    PHASE_ROWS="$rows"
     {
-        # Scroll what's on screen up into scrollback (rather than clearing
-        # it), then set rows 2..bottom as the scroll region -- which also
-        # homes the cursor, hence the explicit move back to row 2.
-        printf '\033[%d;1H' "$rows"
-        printf '\n%.0s' $(seq 2 "$rows")
-        printf '\033[H'
+        # Newline then back up: frees the bottom row by scrolling exactly one
+        # line when the cursor is already on it, a no-op otherwise. Then set
+        # rows 1..bottom-1 as the scroll region -- which homes the cursor,
+        # hence the save/restore around it.
+        printf '\n\033[1A\033[s\033[1;%dr\033[u' "$(( rows - 1 ))"
         _draw_pinned_phase_bar
-        printf '\033[2;%dr\033[2;1H' "$rows"
     } > /dev/tty 2>/dev/null || return 0
     PHASE_PINNED=1
     # finish_run_log resets it on any exit while logging; without logging
@@ -381,18 +382,19 @@ print_phase_task() {
     fi
 }
 _draw_pinned_phase_bar() {
-    printf '\033[s\033[1;1H\033[2K    %s  %bstep %d of %d%b\033[u' \
+    printf '\033[s\033[%d;1H\033[2K    %s  %bstep %d of %d%b\033[u' "$PHASE_ROWS" \
         "$(progress_bar "${PHASE_STEP:-0}" "$PHASE_TOTAL")" "$DIM" "${PHASE_STEP:-0}" "$PHASE_TOTAL" "$NC"
 }
 
 # Usage: end_phase_progress
-# Releases the scroll region so what follows scrolls normally and the bar
-# scrolls away with it. Resetting the region homes the cursor, hence the
-# save/restore around it. Safe to call when nothing is pinned.
+# Releases the scroll region so what follows scrolls normally, and clears
+# the bar's row so that output can't land on top of a stale bar. Resetting
+# the region homes the cursor, hence the save/restore around it. Safe to
+# call when nothing is pinned.
 end_phase_progress() {
     [ -n "$PHASE_PINNED" ] || return 0
     PHASE_PINNED=""
-    printf '\033[s\033[r\033[u'
+    printf '\033[s\033[r\033[%d;1H\033[2K\033[u' "$PHASE_ROWS"
 }
 
 # Runs "$@" in the background and redraws "$1"'s line until it finishes;
