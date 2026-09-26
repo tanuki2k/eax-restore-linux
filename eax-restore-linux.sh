@@ -230,7 +230,8 @@ OPENAL_OFFICIAL="$OPENAL_SHARE/official"
 # ==============================================================================
 # Every run gets its own timestamped log in $LOG_DIR (newest 10 kept, with
 # latest.log always pointing at the current one; the path is shown on exit), so a bug report can attach
-# the full picture: everything shown on screen, the output of the Wine /
+# the full picture: everything shown on screen, the answers typed at its
+# prompts, the output of the Wine /
 # winetricks / protontricks calls that is hidden from the screen, a header
 # with the system details the bug report template asks for, and a summary of
 # what this run detected and chose. EAX_RESTORE_NO_LOG=1 turns it off.
@@ -279,6 +280,31 @@ log_cmd() {
     # Marks, in the log only, which command the following hidden output
     # (redirected with &>> "$EAX_LOG_FILE") came from.
     echo -e "\n[cmd $(date '+%H:%M:%S')] $*" >> "$EAX_LOG_FILE"
+}
+
+# Usage: read_answer VAR
+# Drop-in for `read -r VAR` at a user prompt that also puts the answer in
+# the run log. The terminal echoes typed keys straight to the screen, so
+# they never pass through the log's tee; this sends the answer down stdout
+# afterwards, wrapped in a private OSC (\e]7137;...\a) that terminals
+# ignore and the log writer unwraps, then "\e[1A\n" -- a cursor no-op on
+# screen (Enter already moved it down a line) that gives the log writer
+# the newline it needs to flush the prompt line. Piped (non-tty) answers
+# weren't echoed at all, so they're just printed. EOF returns 1, like read.
+read_answer() {
+    local __ra_rc __ra_val
+    read -r "$1"; __ra_rc=$?
+    __ra_val="${!1//[[:cntrl:]]/}"
+    if [ "$EAX_LOG_FILE" != "/dev/null" ]; then
+        if [ "$__ra_rc" -ne 0 ]; then
+            echo ""
+        elif [ ! -t 0 ]; then
+            printf '%s\n' "$__ra_val"
+        elif [ "$TERM" != "linux" ]; then
+            printf '\e]7137;%s\a\e[1A\n' "$__ra_val"
+        fi
+    fi
+    return "$__ra_rc"
 }
 
 write_log_summary() {
@@ -334,8 +360,8 @@ finish_run_log() {
     echo -e "\n${WHITE}Log saved to:${NC}"
     echo -e "  ${GREEN}${EAX_LOG_FILE/#$HOME/\~}${NC}"
     if [ "$rc" -ne 0 ]; then
-        echo -e "${YELLOW}If something went wrong, please attach this log to a bug report:${NC}"
-        echo -e "${WHITE}$BUG_REPORT_URL${NC}"
+        echo -e "\n${YELLOW}If something went wrong, please attach this log to a bug report:${NC}"
+        echo -e "  ${WHITE}$BUG_REPORT_URL${NC}"
     fi
     # Hand the terminal back and let tee drain before appending the summary,
     # so the summary really is the last thing in the file.
@@ -354,13 +380,15 @@ if ! is_truthy "${EAX_RESTORE_NO_LOG:-}" && mkdir -p "$LOG_DIR" 2>/dev/null; the
     # Keep the newest 10 (this run's included).
     ls -1t "$LOG_DIR"/eax-restore-*.log 2>/dev/null | tail -n +11 | xargs -r rm -f --
     # Mirror everything on screen into the log, minus colour codes, with
-    # curl's \r progress bars collapsed to their final state. tee and the
+    # curl's \r progress bars collapsed to their final state, and the
+    # answers read_answer sends as a private OSC unwrapped onto their
+    # prompt's line. tee and the
     # log writer run in their own session (setsid) so a Ctrl-C at the
     # terminal can't kill them before the "Log saved" line and summary are
     # written; the writer's PID is recorded so finish_run_log can wait for
     # it to drain.
     exec 3>&1 4>&2
-    exec > >(exec setsid bash -c 'exec tee >(echo "$BASHPID" > "$1.pid"; exec sed -u -e "s/\x1b\[[0-9;]*[A-Za-z]//g" -e "s/.*\r//" >> "$1")' _ "$EAX_LOG_FILE") 2>&1
+    exec > >(exec setsid bash -c 'exec tee >(echo "$BASHPID" > "$1.pid"; exec sed -u -e "s/\x1b\]7137;\([^\x07]*\)\x07/\1/g" -e "s/\x1b\[[0-9;]*[A-Za-z]//g" -e "s/.*\r//" >> "$1")' _ "$EAX_LOG_FILE") 2>&1
     trap finish_run_log EXIT
     # Turn Ctrl-C / kill into a normal exit with the conventional status, so
     # the EXIT trap above records the real exit code (not the last command's).
@@ -466,7 +494,7 @@ prompt_recent_game() {
     echo -e "${YELLOW}Selection [0-${#paths[@]}]: ${NC}"
     echo -e -n "> "
     local choice
-    read -r choice
+    read_answer choice
 
     if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#paths[@]} ]; then
         GAME_DIR="${paths[$((choice - 1))]}"
@@ -493,7 +521,7 @@ get_game_directory() {
 
     while [ -z "$GAME_DIR" ]; do
         echo -e -n "> "
-        read -r GAME_DIR
+        read_answer GAME_DIR
 
         GAME_DIR="${GAME_DIR//\'/}"; GAME_DIR="${GAME_DIR//\"/}"; GAME_DIR="${GAME_DIR%/}"
         GAME_DIR="${GAME_DIR/#\~/$HOME}"
@@ -505,7 +533,7 @@ get_game_directory() {
                     echo -e "\n${YELLOW}${BOLD}Warning: No .exe files were found in this directory or its immediate subfolders.${NC}"
                     echo -e "\n${YELLOW}Are you absolutely sure this is the correct game folder? (y/N): ${NC}"
                     echo -e -n "> "
-                    read -r FORCE_DIR
+                    read_answer FORCE_DIR
                     if [[ "$FORCE_DIR" =~ ^[Yy]$ ]]; then break; fi
                     GAME_DIR=""
                     echo -e "\n${YELLOW}Enter the full path to the game's .exe folder:${NC}"
@@ -634,7 +662,7 @@ detect_game_environment() {
         echo -e "${GREEN}Steam installation detected!${NC}"
         echo -e "\n${YELLOW}Would you like the script to attempt to automatically find your Proton prefix? (Y/n): ${NC}"
         echo -e -n "> "
-        read -r DO_AUTO_S
+        read_answer DO_AUTO_S
 
         if [[ ! "$DO_AUTO_S" =~ ^[Nn]$ ]]; then
             echo -e "\n${CYAN}STATUS: Searching for Steam AppID...${NC}"
@@ -657,7 +685,7 @@ detect_game_environment() {
                 echo -e " -> Found AppID: ${BOLD}$AUTO_APPID${NC}"
                 echo -e "\n${YELLOW}Use this detected Steam AppID? (Y/n): ${NC}"
                 echo -e -n "> "
-                read -r C_AUTO
+                read_answer C_AUTO
                 if [[ ! "$C_AUTO" =~ ^[Nn]$ ]]; then APPID="$AUTO_APPID"; fi
             else
                 echo -e " -> ${YELLOW}Search complete. No matching AppID found.${NC}"
@@ -670,7 +698,7 @@ detect_game_environment() {
                 echo -e "\n${YELLOW}Enter the Steam AppID manually (or press Enter to skip): ${NC}"
                 echo -e "${WHITE} Tip: Found on the game's Steam Store URL, or in Steam by right-clicking the game -> Properties -> Updates.${NC}"
                 echo -e -n "> "
-                read -r APPID
+                read_answer APPID
                 APPID=$(echo "$APPID" | tr -dc '0-9')
                 [ -z "$APPID" ] && break
             fi
@@ -688,7 +716,7 @@ detect_game_environment() {
                 echo -e "Please launch the game at least once, close it, and try again.${NC}"
                 echo -e "\n${YELLOW}Check this AppID again? (Y/n): ${NC}"
                 echo -e -n "> "
-                read -r RET
+                read_answer RET
                 if [[ "$RET" =~ ^[Nn]$ ]]; then APPID=""; fi
             fi
         done
@@ -697,7 +725,7 @@ detect_game_environment() {
         echo -e "${GREEN}Non-Steam (Heroic/GOG) installation detected!${NC}"
         echo -e "\n${YELLOW}Would you like the script to attempt to automatically find the game's prefix? (Y/n): ${NC}"
         echo -e -n "> "
-        read -r DO_AUTO_H
+        read_answer DO_AUTO_H
 
         if [[ ! "$DO_AUTO_H" =~ ^[Nn]$ ]]; then
             DETECTED_PREFIX=$(detect_heroic_prefix_verbose "$GAME_DIR")
@@ -705,7 +733,7 @@ detect_game_environment() {
                 echo -e " -> ${GREEN}Detected Prefix:${NC} $DETECTED_PREFIX"
                 echo -e "\n${YELLOW}Use this detected prefix? (Y/n): ${NC}"
                 echo -e -n "> "
-                read -r C_AUTO
+                read_answer C_AUTO
                 if [[ ! "$C_AUTO" =~ ^[Nn]$ ]]; then PREFIX_PATH="$DETECTED_PREFIX"; fi
             fi
         fi
@@ -715,7 +743,7 @@ detect_game_environment() {
                 echo -e "\n${YELLOW}Enter the Wine Prefix path manually (or press Enter to skip): ${NC}"
                 echo -e "${WHITE} Example Heroic: ~/Games/Heroic/Prefixes/[Game-Name]${NC}"
                 echo -e -n "> "
-                read -r PREFIX_PATH
+                read_answer PREFIX_PATH
                 [ -z "$PREFIX_PATH" ] && break
                 PREFIX_PATH="${PREFIX_PATH//\'/}"; PREFIX_PATH="${PREFIX_PATH//\"/}"; PREFIX_PATH="${PREFIX_PATH%/}"
                 PREFIX_PATH="${PREFIX_PATH/#\~/$HOME}"
@@ -732,7 +760,7 @@ detect_game_environment() {
 
                 echo -e "\n${YELLOW}Check this path again? (Y/n): ${NC}"
                 echo -e -n "> "
-                read -r RET
+                read_answer RET
                 if [[ "$RET" =~ ^[Nn]$ ]]; then PREFIX_PATH=""; fi
             fi
         done
@@ -896,7 +924,7 @@ select_architecture() {
     if command -v file &> /dev/null; then
         echo -e "${YELLOW}Attempt to auto-detect 32/64-bit architecture? (Y/n): ${NC}"
         echo -e -n "> "
-        read -r DO_AUTO
+        read_answer DO_AUTO
         if [[ ! "$DO_AUTO" =~ ^[Nn]$ ]]; then
             A32=0; A64=0
             while IFS= read -r -d '' exe; do
@@ -912,7 +940,7 @@ select_architecture() {
             if [ "$DETECTED" != "UNKNOWN" ]; then
                 echo -e "\n${GREEN}Detected ${DETECTED}-bit. Correct? (Y/n): ${NC}"
                 echo -e -n "> "
-                read -r CONF
+                read_answer CONF
                 if [[ ! "$CONF" =~ ^[Nn]$ ]]; then ARCH="$DETECTED"; fi
             fi
         fi
@@ -921,7 +949,7 @@ select_architecture() {
         while true; do
             echo -e "\n${YELLOW}Architecture (32/64): ${NC}"
             echo -e -n "> "
-            read -r ARCH
+            read_answer ARCH
             if [[ "$ARCH" == "32" || "$ARCH" == "64" ]]; then break
             else echo -e "${YELLOW}${BOLD}Invalid selection. Please type 32 or 64.${NC}"; fi
         done
@@ -1347,7 +1375,7 @@ confirm_unverified_download() {
     echo -e "    be safe — but without a checksum, the script can't independently confirm that.${NC}"
     echo -e "    ${YELLOW}Install it anyway? (Y/n): ${NC}"
     echo -n "    > "
-    read -r CONFIRM_UNVERIFIED
+    read_answer CONFIRM_UNVERIFIED
     [[ ! "$CONFIRM_UNVERIFIED" =~ ^[Nn]$ ]]
 }
 
@@ -1649,7 +1677,7 @@ handle_conflict() {
         while true; do
             echo -e "\n${YELLOW}Action - [o]verwrite, [B]ackup & overwrite (default), [s]kip: ${NC}"
             echo -e -n "> "
-            read -r C_CHOICE
+            read_answer C_CHOICE
             C_CHOICE="${C_CHOICE:-b}"
             case "${C_CHOICE,,}" in
                 o)
@@ -1787,7 +1815,7 @@ else
             echo -e "${YELLOW}${BOLD}Cannot proceed without base dependencies. Exiting.${NC}"; exit 1
         else
             echo -e -n "${YELLOW}Auto-install these dependencies now? (Requires sudo) (Y/n): ${NC}"
-            read -r AUTO_INSTALL_BASE
+            read_answer AUTO_INSTALL_BASE
             if [[ ! "$AUTO_INSTALL_BASE" =~ ^[Nn]$ ]]; then
                 echo -e "\n${CYAN}STATUS: Installing missing packages...${NC}"
                 source /etc/os-release
@@ -1847,7 +1875,7 @@ if is_truthy "$EAX_RESTORE_VCRUN_ONLY"; then
     [ -n "$PREFIX_PATH" ] && echo -e "${WHITE} -> Prefix: ${BOLD}$PREFIX_PATH${NC}"
     echo -e "\n${YELLOW}Proceed? (Y/n): ${NC}"
     echo -e -n "> "
-    read -r CONFIRM_VCRUN_ONLY
+    read_answer CONFIRM_VCRUN_ONLY
     if [[ "$CONFIRM_VCRUN_ONLY" =~ ^[Nn]$ ]]; then
         echo -e "\n${YELLOW}Aborted. No changes made.${NC}"
         exit 0
@@ -1892,7 +1920,7 @@ else
     while true; do
         echo -e "\n${YELLOW}Would you like to (i)nstall or (u)ninstall the EAX audio fix? (i/u): ${NC}"
         echo -e -n "> "
-        read -r SCRIPT_ACTION
+        read_answer SCRIPT_ACTION
         SCRIPT_ACTION="${SCRIPT_ACTION,,}"
         if [[ "$SCRIPT_ACTION" == "i" || "$SCRIPT_ACTION" == "u" ]]; then break
         else echo -e "${YELLOW}${BOLD}Invalid selection. Please type 'i' or 'u'.${NC}"; fi
@@ -2034,7 +2062,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         echo -e "\n${YELLOW}Press Enter to remove all, or pick which to remove (e.g. \"1 2 3\", \"1-3\", \"^4\""
         echo -e "to remove all except 4), or 'n' to cancel entirely: ${NC}"
         echo -e -n "> "
-        read -r CONFIRM_UNINSTALL
+        read_answer CONFIRM_UNINSTALL
 
         if [[ "$CONFIRM_UNINSTALL" =~ ^[Nn]$ ]]; then
             FILES_DECLINED="1"
@@ -2123,7 +2151,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         echo -e "skip it if you never opted into 'Automatic DLL Override' or 'COM Registry Routing'.${NC}"
         echo -e "\n${YELLOW}Do you want to remove Override/COM keys from the Wine registry? (y/N): ${NC}"
         echo -e -n "> "
-        read -r REMOVE_REG
+        read_answer REMOVE_REG
         if [[ "$REMOVE_REG" =~ ^[Yy]$ ]]; then REG_HAS_COM="y"; REG_HAS_OVERRIDE="y"; fi
     fi
 
@@ -2172,7 +2200,7 @@ EOF
         echo -e "needs it.${NC}"
         echo -e "\n${YELLOW}Also remove the VC++ 2022 Redistributable from this prefix? (y/N): ${NC}"
         echo -e -n "> "
-        read -r REMOVE_VCRUN
+        read_answer REMOVE_VCRUN
         if [[ "$REMOVE_VCRUN" =~ ^[Yy]$ ]]; then
             uninstall_vcrun_dependencies
         fi
@@ -2277,7 +2305,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
 
         while true; do
             echo -e -n "\n> "
-            read -r ENGINE_CHOICE
+            read_answer ENGINE_CHOICE
             ENGINE_CHOICE="${ENGINE_CHOICE:-$ENGINE_DEFAULT}"
             if [[ ! "$ENGINE_CHOICE" =~ ^[123]$ ]]; then echo -e "${YELLOW}${BOLD}Invalid selection. Please type 1, 2, or 3.${NC}"
             elif ! engine_available "$ENGINE_CHOICE"; then echo -e "${YELLOW}${BOLD}That engine couldn't be downloaded this run (see the REPOSITORY CACHE CHECK above). Please pick another.${NC}"
@@ -2303,7 +2331,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         echo -e "than guess from a version number, this can check the prefix directly.${NC}"
         echo -e "\n${YELLOW}Check this prefix for existing VC++ runtime files? (Y/n): ${NC}"
         echo -e -n "> "
-        read -r DO_VCRUN_CHECK
+        read_answer DO_VCRUN_CHECK
 
         if [[ "$DO_VCRUN_CHECK" =~ ^[Nn]$ ]]; then
             echo -e "\n${WHITE}Skipping. You can revisit this later with EAX_RESTORE_VCRUN_ONLY=1 without redoing"
@@ -2328,7 +2356,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
                 echo -e "silently on startup when it tries to load the audio engine.${NC}"
                 echo -e "\n${YELLOW}Install genuine MS VC++ runtimes? (Y/n): ${NC}"
                 echo -e -n "> "
-                read -r INSTALL_VCRUN
+                read_answer INSTALL_VCRUN
                 INSTALL_VCRUN="${INSTALL_VCRUN:-y}"
             fi
         fi
@@ -2348,7 +2376,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     while true; do
         echo -e "${YELLOW}Selection [1-3, Default: 1]: ${NC}"
         echo -e -n "> "
-        read -r OUTPUT_MODE_CHOICE
+        read_answer OUTPUT_MODE_CHOICE
         OUTPUT_MODE_CHOICE="${OUTPUT_MODE_CHOICE:-1}"
         if [[ "$OUTPUT_MODE_CHOICE" =~ ^[123]$ ]]; then break; else echo -e "${YELLOW}${BOLD}Invalid selection. Please type 1, 2, or 3.${NC}"; fi
     done
@@ -2368,7 +2396,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         while true; do
             echo -e "${YELLOW}Selection [1-3, Default: 1]: ${NC}"
             echo -e -n "> "
-            read -r STEREO_MODE_CHOICE
+            read_answer STEREO_MODE_CHOICE
             STEREO_MODE_CHOICE="${STEREO_MODE_CHOICE:-1}"
             if [[ "$STEREO_MODE_CHOICE" =~ ^[123]$ ]]; then break; else echo -e "${YELLOW}${BOLD}Invalid selection. Please type 1, 2, or 3.${NC}"; fi
         done
@@ -2391,7 +2419,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
             echo -e "allow you to hear exactly whether a sound is coming from above, below, or behind you.${NC}\n"
             echo -e "${YELLOW}Do you want to enable HRTF for headphones? (y/N): ${NC}"
             echo -e -n "> "
-            read -r ENABLE_HRTF
+            read_answer ENABLE_HRTF
         fi
     elif [ "$OUTPUT_MODE_CHOICE" == "2" ]; then
         OUTPUT_MODE="surround"
@@ -2406,7 +2434,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         while true; do
             echo -e "${YELLOW}Selection [1-4]: ${NC}"
             echo -e -n "> "
-            read -r SURROUND_CHOICE
+            read_answer SURROUND_CHOICE
             case "$SURROUND_CHOICE" in
                 1) SURROUND_CHANNELS="quad"; break ;;
                 2) SURROUND_CHANNELS="surround51"; break ;;
@@ -2430,7 +2458,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
 
     echo -e "${YELLOW}Would you like to view and opt-in to these advanced tweaks? (y/N): ${NC}"
     echo -e -n "> "
-    read -r SHOW_ADVANCED
+    read_answer SHOW_ADVANCED
 
     ADVANCED_DUMMY="n"
     ADVANCED_LIMITS="n"
@@ -2442,7 +2470,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         echo -e "into unlocking the EAX menu option by creating harmless, empty eax.dll and eaxunified.dll files.${NC}"
         echo -e "\n${YELLOW}Inject EAX Unified dummy files? (y/N): ${NC}"
         echo -e -n "> "
-        read -r ADVANCED_DUMMY
+        read_answer ADVANCED_DUMMY
 
         echo ""
         echo -e "${CYAN}${BOLD}Tweak B: Expand Audio Limits${NC}"
@@ -2450,7 +2478,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         echo -e "Fixes audio dropping out in chaotic games (like F.E.A.R. or Thief), but uses more CPU.${NC}"
         echo -e "\n${YELLOW}Expand OpenAL audio limits? (y/N): ${NC}"
         echo -e -n "> "
-        read -r ADVANCED_LIMITS
+        read_answer ADVANCED_LIMITS
 
         echo ""
         echo -e "${CYAN}${BOLD}Tweak C: COM Registry Routing${NC}"
@@ -2458,7 +2486,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         echo -e "Beneficial for stubborn late-90s and early-2000s games that actively ignore local DLL files.${NC}"
         echo -e "\n${YELLOW}Inject COM registry routing? (y/N): ${NC}"
         echo -e -n "> "
-        read -r ADVANCED_COM
+        read_answer ADVANCED_COM
     fi
 
     # 8. Automatic DLL Override
@@ -2472,7 +2500,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     echo -e "manually type WINEDLLOVERRIDES=\"dsound=n,b\" %command% into your launcher.${NC}"
     echo -e "\n${YELLOW}Automatically set dsound.dll override in Wine registry? (y/N): ${NC}"
     echo -e -n "> "
-    read -r AUTO_OVERRIDE
+    read_answer AUTO_OVERRIDE
 
     # ==============================================================================
     # PHASE 2: EXECUTION
@@ -2482,7 +2510,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     echo -e "${GREEN}${BOLD}--- PHASE 2: EXECUTION ---${NC}"
     print_line
     echo -e "\n${CYAN}${BOLD}Configuration finished!${NC}"
-    echo -e -n "${CYAN}Ready to deploy the audio files to your game and system prefix. Proceed? (Y/n): ${NC}"; read -r CONFIRM_FIN
+    echo -e -n "${CYAN}Ready to deploy the audio files to your game and system prefix. Proceed? (Y/n): ${NC}"; read_answer CONFIRM_FIN
     if [[ "$CONFIRM_FIN" =~ ^[Nn]$ ]]; then echo -e "${YELLOW}Installation aborted.${NC}"; exit 0; fi
 
     # Checks that can stop the install run before anything is changed, so
