@@ -1132,12 +1132,12 @@ resolve_heroic_runner() {
 
     WINESERVER_CMD=""
     if [ -n "$runner_type" ]; then
-        echo -e " -> ${CYAN}Note: the Wine version Heroic launches ${GAME_NAME:-this game} with (${runner_name:-$runner_type}) wasn't found at${NC}"
-        echo -e "${CYAN}$runner_bin, so ${WINE_CMD:-no Wine binary} will be used instead. If EAX doesn't show up${NC}"
-        echo -e "${CYAN}in-game, that's the likely cause.${NC}"
+        echo -e " -> ${YELLOW}${BOLD}Warning: Heroic's Wine version for ${GAME_NAME:-this game} (${runner_name:-$runner_type}) wasn't found."
+        echo -e "Expected at $runner_bin, so ${WINE_CMD:-no Wine binary} will be used instead."
+        echo -e "If EAX doesn't show up in-game, that's the likely cause.${NC}"
     elif [ -n "$WINE_CMD" ]; then
-        echo -e " -> ${CYAN}Note: no Heroic settings were found for this prefix, so $WINE_CMD will be used. If${NC}"
-        echo -e "${CYAN}${GAME_NAME:-the game} runs on Proton or a different Wine build, EAX may not show up in-game.${NC}"
+        echo -e " -> ${YELLOW}${BOLD}Warning: No Heroic settings were found for this prefix, so $WINE_CMD will be used."
+        echo -e "If ${GAME_NAME:-the game} runs on Proton or a different Wine build, EAX may not show up in-game.${NC}"
     fi
     return 1
 }
@@ -1412,7 +1412,7 @@ install_vcrun_dependencies() {
         return 0
     fi
 
-    echo -e " -> ${YELLOW}$( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" ) didn't install the core files, so using Microsoft's own installer instead...${NC}"
+    echo -e " -> ${YELLOW}$( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" ) didn't install the core files. Trying Microsoft's installer...${NC}"
 
     if [ "$ARCH" == "64" ]; then
         VCRUN_URL="https://aka.ms/vs/17/release/vc_redist.x64.exe"
@@ -1578,7 +1578,7 @@ uninstall_vcrun_dependencies() {
                 WINEPREFIX="$PREFIX_PATH" "$WINE_CMD" "$vcrun_share/$vcrun_exe" /uninstall /q /norestart &>> "$EAX_LOG_FILE"; echo "[exit $?]" >> "$EAX_LOG_FILE"
             fi
         else
-            echo -e " -> Could not fetch the official $arch uninstaller, skipping straight to direct cleanup."
+            echo -e " -> ${YELLOW}Couldn't fetch the $arch uninstaller. Using direct cleanup.${NC}"
         fi
 
         # 2. Direct removal — the reliable part. Matches VCRUN_DLL_NAMES
@@ -1633,7 +1633,7 @@ verify_checksum() {
     local expected="$2"
 
     if ! command -v sha256sum &> /dev/null; then
-        echo -e " -> ${YELLOW}sha256sum not available, skipping checksum verification.${NC}"
+        echo -e " -> ${YELLOW}sha256sum not found. Skipping checksum verification.${NC}"
         return 0
     fi
 
@@ -1750,7 +1750,7 @@ update_local_cache() {
     LOCAL_DATE=$(cat "$DSOAL_SHARE/updated_at.txt" 2>/dev/null)
     if [ -z "$LATEST_DATE" ]; then
         if dsoal_official_cached; then
-            if [ "$DSOAL_API_REACHABLE" -eq 1 ]; then echo -e " -> ${YELLOW}Could not check for updates (kcat's latest-master release is unavailable). Using cached version [${LOCAL_DATE%%T*}]${NC}"
+            if [ "$DSOAL_API_REACHABLE" -eq 1 ]; then echo -e " -> ${YELLOW}Couldn't check for updates. Using cached version [${LOCAL_DATE%%T*}]${NC}"
             else echo -e " -> ${YELLOW}Offline. Using cached version [${LOCAL_DATE%%T*}]${NC}"; fi
         elif [ "$DSOAL_API_REACHABLE" -eq 1 ]; then
             echo -e " -> ${YELLOW}kcat's latest-master build is unavailable upstream right now.${NC}"
@@ -1916,10 +1916,9 @@ check_target_writable() {
         if [[ "$fs" == ntfs* ]] && [ "$SCRIPT_ACTION" == "i" ] && [ -z "$NTFS_NOTE_SHOWN" ]; then
             NTFS_NOTE_SHOWN=1
             echo -e "\n${YELLOW}Note: this $label is on an NTFS drive ($fs).${NC}"
-            echo -e "${WHITE}If you also run this game from Windows, the files deployed here (dsound.dll,"
-            echo -e "dsoal-aldrv.dll, alsoft.ini, and any dummy eax.dll) affect it there too — a dummy"
-            echo -e "eax.dll in particular can stop it starting under Windows. Uninstalling with this"
-            echo -e "script restores the original files.${NC}"
+            echo -e "${WHITE}NTFS isn't a good fit for Linux gaming. Install the game to a Linux filesystem"
+            echo -e "(e.g. ext4 or btrfs). It's highly recommended to avoid NTFS for Wine/Proton"
+            echo -e "prefixes.${NC}"
         fi
         return 0
     fi
@@ -1928,14 +1927,10 @@ check_target_writable() {
     echo -e "${WHITE}  $dir${NC}"
     echo -e "${WHITE}  Filesystem: ${fs:-unknown}   Mount options: ${opts:-unknown}${NC}\n"
     if [[ "$fs" == ntfs* ]] && [[ ",$opts," == *,ro,* ]]; then
-        echo -e "${WHITE}This NTFS drive is mounted read-only. That usually means Windows didn't fully"
-        echo -e "shut down (Fast Startup or hibernation left the drive marked as in use), so Linux"
-        echo -e "refuses to write to it. Boot into Windows and use Shut Down while holding Shift"
-        echo -e "(or turn off Fast Startup in Power Options), then remount the drive and re-run.${NC}"
+        echo -e "${WHITE}Windows didn't fully shut down (Fast Startup or hibernation), so Linux"
+        echo -e "mounted this drive read-only.${NC}"
     elif [[ "$fs" == ntfs* ]]; then
-        echo -e "${WHITE}This NTFS drive is mounted, but your user isn't allowed to write to it. NTFS has"
-        echo -e "no Linux permissions of its own, so access comes from the mount options — mount it"
-        echo -e "with uid=$(id -u),gid=$(id -g) (or through your file manager / fstab) and re-run.${NC}"
+        echo -e "${WHITE}This NTFS drive is mounted without write access for your user.${NC}"
     elif [[ ",$opts," == *,ro,* ]]; then
         echo -e "${WHITE}This drive is mounted read-only. Remount it read-write and re-run.${NC}"
     else
