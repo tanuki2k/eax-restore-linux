@@ -176,7 +176,7 @@ update_local_cache() {
         GAME_COUNT=$(jq '.games | length' "$KNOWN_GAMES_FILE" 2>/dev/null)
         print_status "Loaded (${GAME_COUNT:-0} games)." "$GREEN"
     else
-        print_error_arrow "The download failed or the file was corrupt, so the game database will be unavailable this run."
+        print_error_arrow "Game database is unavailable. Download failed or the file was corrupt."
     fi
 }
 
