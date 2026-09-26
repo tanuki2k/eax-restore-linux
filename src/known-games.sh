@@ -23,7 +23,7 @@ ensure_known_games_json() {
     if [ -n "${EAX_RESTORE_KNOWN_GAMES_FILE:-}" ]; then
         if [ -s "$EAX_RESTORE_KNOWN_GAMES_FILE" ] && jq empty "$EAX_RESTORE_KNOWN_GAMES_FILE" 2>/dev/null; then
             KNOWN_GAMES_FILE="$EAX_RESTORE_KNOWN_GAMES_FILE"
-            { print_note "Using local known-games file (EAX_RESTORE_KNOWN_GAMES_FILE):" "$EAX_RESTORE_KNOWN_GAMES_FILE"; echo ""; } >&2
+            { print_note "Using local known-games file:" "$EAX_RESTORE_KNOWN_GAMES_FILE"; echo ""; } >&2
         else
             { print_error "EAX_RESTORE_KNOWN_GAMES_FILE is set but the file is missing or not valid JSON."; echo ""; } >&2
             return 1
