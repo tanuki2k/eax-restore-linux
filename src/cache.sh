@@ -221,10 +221,9 @@ check_target_writable() {
         if [[ "$fs" == ntfs* ]] && [ "$SCRIPT_ACTION" == "i" ] && [ -z "$NTFS_NOTE_SHOWN" ]; then
             NTFS_NOTE_SHOWN=1
             print_note "this $label is on an NTFS drive ($fs)." \
-                "If you also run this game from Windows, the files deployed here (the audio DLLs," \
-                "alsoft.ini, and any dummy eax.dll) affect it there too — a dummy eax.dll in" \
-                "particular can stop it starting under Windows. Uninstalling with this script" \
-                "restores the original files."
+                "NTFS isn't a good fit for Linux gaming. Install the game to a Linux filesystem" \
+                "(e.g. ext4 or btrfs). It's highly recommended to avoid NTFS for Wine/Proton" \
+                "prefixes."
         fi
         return 0
     fi
@@ -233,14 +232,10 @@ check_target_writable() {
         "${WHITE}  $dir" \
         "  Filesystem: ${fs:-unknown}   Mount options: ${opts:-unknown}"
     if [[ "$fs" == ntfs* ]] && [[ ",$opts," == *,ro,* ]]; then
-        print_paragraph "This NTFS drive is mounted read-only. That usually means Windows didn't fully" \
-            "shut down (Fast Startup or hibernation left the drive marked as in use), so Linux" \
-            "refuses to write to it. Boot into Windows and use Shut Down while holding Shift" \
-            "(or turn off Fast Startup in Power Options), then remount the drive and re-run."
+        print_paragraph "Windows didn't fully shut down (Fast Startup or hibernation), so Linux" \
+            "mounted this drive read-only."
     elif [[ "$fs" == ntfs* ]]; then
-        print_paragraph "This NTFS drive is mounted, but your user isn't allowed to write to it. NTFS has" \
-            "no Linux permissions of its own, so access comes from the mount options — mount it" \
-            "with uid=$(id -u),gid=$(id -g) (or through your file manager / fstab) and re-run."
+        print_paragraph "This NTFS drive is mounted without write access for your user."
     elif [[ ",$opts," == *,ro,* ]]; then
         print_paragraph "This drive is mounted read-only. Remount it read-write and re-run."
     else
