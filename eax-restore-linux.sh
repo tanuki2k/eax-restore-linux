@@ -334,6 +334,7 @@ write_log_summary() {
         echo "Launcher:        $(case "$LAUNCHER_TYPE" in 1) echo "Steam (AppID ${APPID:-unknown})";; 2) echo "Non-Steam / Heroic${HEROIC_APP_NAME:+ (app $HEROIC_APP_NAME)}";; *) echo "not detected";; esac)"
         echo "Prefix:          ${PREFIX_PATH:-not set}"
         echo "Runner:          ${runner:-unknown}${IS_PROTON:+ (IS_PROTON=$IS_PROTON)}"
+        [ "$LAUNCHER_TYPE" == "1" ] && echo "Steam library:   ${STEAM_LIBRARY:-unknown}${STEAM_DIR:+ (STEAM_DIR=$STEAM_DIR)}"
         [ "$LAUNCHER_TYPE" == "2" ] && echo "Wine used:       ${WINE_CMD:-none}${WINESERVER_CMD:+ (wineserver $WINESERVER_CMD)}"
         if [ "$LAUNCHER_TYPE" == "2" ]; then
             echo "Heroic game ID:  ${HEROIC_GAME_ID:-not found in the Heroic library}${HEROIC_GAME_TITLE:+, title: $HEROIC_GAME_TITLE}"
@@ -558,6 +559,62 @@ get_game_directory() {
     record_recent_game "$GAME_DIR"
 }
 
+steam_roots() {
+    # Usage: steam_roots
+    # Prints "label<TAB>dir" for each Steam install present — native first,
+    # then Flatpak (its current and older data layouts).
+    local d
+    for d in "$HOME/.local/share/Steam" "$HOME/.steam/steam"; do
+        if [ -d "$d/steamapps" ]; then printf 'native\t%s\n' "$(realpath -m "$d")"; break; fi
+    done
+    for d in "$HOME/.var/app/com.valvesoftware.Steam/.local/share/Steam" "$HOME/.var/app/com.valvesoftware.Steam/data/Steam"; do
+        if [ -d "$d/steamapps" ]; then printf 'flatpak\t%s\n' "$(realpath -m "$d")"; break; fi
+    done
+    return 0
+}
+
+steam_root_for_library() {
+    # Usage: steam_root_for_library <library dir>
+    # Prints "label<TAB>root" for the Steam install that owns a library
+    # folder (the one holding steamapps/): the install root itself, or the
+    # install whose libraryfolders.vdf lists it. Returns 1 if none does.
+    local lib label root
+    lib=$(realpath -m "$1")
+    while IFS=$'\t' read -r label root; do
+        [ -z "$root" ] && continue
+        if [ "$root" == "$lib" ] || grep -Fq -e "\"$lib\"" -e "\"${1%/}\"" "$root/steamapps/libraryfolders.vdf" 2>/dev/null; then
+            printf '%s\t%s\n' "$label" "$root"
+            return 0
+        fi
+    done < <(steam_roots)
+    return 1
+}
+
+pin_steam_dir() {
+    # Usage: pin_steam_dir   (reads GAME_DIR, sets STEAM_LIBRARY)
+    # protontricks picks a Steam install on its own, and with both native
+    # and Flatpak Steam present it can pick the one this game isn't in —
+    # then the AppID lookup fails even though the prefix is right beside
+    # the game. Exporting STEAM_DIR (which protontricks honours) pins it to
+    # the install that owns the game's library, for every protontricks call
+    # after this. A STEAM_DIR the user set themselves is left alone.
+    local owner label root
+    STEAM_LIBRARY="${GAME_DIR%%/steamapps/common/*}"
+    if [ -n "$STEAM_DIR" ] && [ -z "$STEAM_DIR_PINNED" ]; then
+        log_cmd "steam: library $STEAM_LIBRARY; STEAM_DIR was set by the user ($STEAM_DIR), leaving it"
+        return 0
+    fi
+    if owner=$(steam_root_for_library "$STEAM_LIBRARY"); then
+        IFS=$'\t' read -r label root <<< "$owner"
+        export STEAM_DIR="$root"; STEAM_DIR_PINNED=1
+        log_cmd "steam: library $STEAM_LIBRARY belongs to the $label Steam; STEAM_DIR=$STEAM_DIR for protontricks"
+    else
+        [ -n "$STEAM_DIR_PINNED" ] && unset STEAM_DIR
+        STEAM_DIR_PINNED=""
+        log_cmd "steam: no Steam install lists library $STEAM_LIBRARY (found: $(steam_roots | tr '\t\n' ': ')), leaving protontricks to search"
+    fi
+}
+
 heroic_roots() {
     # Usage: heroic_roots
     # Prints "label<TAB>dir" for each Heroic config folder present — native
@@ -700,6 +757,22 @@ detect_heroic_prefix_verbose() {
             # Heroic names default prefixes after the game's title (as typed in
             # "Add Game" for sideloaded games), not its internal app_name.
             [ -n "$title" ] && cands+=("$HOME/Games/Heroic/Prefixes/default/$title" "$HOME/Games/Heroic/Prefixes/$title")
+            # Not a Heroic default, but cheap to rule out: the Flatpak's own
+            # data folder, in case a prefix ended up there.
+            local fp_data="$HOME/.var/app/com.heroicgameslauncher.hgl/data/heroic/prefixes"
+            [ -n "$title" ] && cands+=("$fp_data/default/$(heroic_prefix_name "$title")" "$fp_data/$(heroic_prefix_name "$title")")
+            cands+=("$fp_data/default/$id" "$fp_data/$id")
+            # What actually exists in each prefix folder, so a report shows
+            # the real names when none of the guesses match.
+            local base names seen=""
+            for base in ${default_dir:+"$default_dir"} "$HOME/Games/Heroic/Prefixes/default" "$fp_data/default" "$fp_data"; do
+                base="${base%/}"
+                [ -d "$base" ] || continue
+                [[ "$seen" == *"|$base|"* ]] && continue
+                seen+="|$base|"
+                names=$(find "$base" -mindepth 1 -maxdepth 1 -type d -printf '"%f"\n' 2>/dev/null | head -n 30 | tr '\n' ' ')
+                log_cmd "heroic: prefixes in $base: ${names:-none}"
+            done
             for cand in "${cands[@]}"; do
                 if [ -d "$cand" ]; then log_cmd "heroic: candidate $cand exists"; prefix="$cand"; source="default"; break; fi
                 log_cmd "heroic: candidate $cand not found"
@@ -849,6 +922,7 @@ detect_game_environment() {
             fi
         fi
 
+        pin_steam_dir
         echo -e "\n${CYAN}Verifying Wine Prefix...${NC}"
         while true; do
             if [ -z "$APPID" ]; then
@@ -862,11 +936,36 @@ detect_game_environment() {
 
             echo ""
             echo -e " -> Querying Protontricks database for AppID ${APPID}..."
-            PREFIX_PATH=$(protontricks -c 'echo $WINEPREFIX' "$APPID" 2>/dev/null | grep "/pfx" | tail -n 1 | tr -d '\r')
+            # Output (and errors) go to the log too, so a failed lookup shows why.
+            log_cmd "protontricks -c 'echo \$WINEPREFIX' $APPID${STEAM_DIR:+ (STEAM_DIR=$STEAM_DIR)}"
+            PREFIX_PATH=$(protontricks -c 'echo $WINEPREFIX' "$APPID" 2>> "$EAX_LOG_FILE" | tee -a "$EAX_LOG_FILE" | grep "/pfx" | tail -n 1 | tr -d '\r')
 
             if [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH" ]; then
                 echo -e " -> ${GREEN}Prefix verified!${NC}"
                 break
+            elif [ -d "$STEAM_LIBRARY/steamapps/compatdata/$APPID/pfx/drive_c" ]; then
+                # The prefix is right there beside the game, so it's
+                # protontricks that can't see it — and every later registry
+                # step goes through protontricks too, so it has to be fixed
+                # rather than worked around.
+                PREFIX_PATH=""
+                log_cmd "steam: $STEAM_LIBRARY/steamapps/compatdata/$APPID/pfx exists, but protontricks didn't report it"
+                echo -e "\n${YELLOW}${BOLD}Error: The Proton prefix for AppID ${APPID} exists, but protontricks couldn't find it:"
+                echo -e "  $STEAM_LIBRARY/steamapps/compatdata/$APPID/pfx${NC}"
+                if declare -F protontricks &>/dev/null; then
+                    # Preflight only defines the function for the Flatpak build.
+                    echo -e "\n${WHITE}Flatpak protontricks can only see the folders it has been given access to."
+                    echo -e "Allow it to read this Steam library by running the command below, then"
+                    echo -e "check again:"
+                    echo -e ""
+                    echo -e "  flatpak override --user --filesystem=\"$STEAM_LIBRARY\" com.github.Matoking.protontricks${NC}"
+                else
+                    echo -e "\n${WHITE}protontricks' own output is in the run log, and usually says why.${NC}"
+                fi
+                echo -e "\n${YELLOW}Check this AppID again? (Y/n): ${NC}"
+                echo -e -n "> "
+                read_answer RET
+                if [[ "$RET" =~ ^[Nn]$ ]]; then APPID=""; fi
             else
                 echo -e "\n${YELLOW}${BOLD}Error: Proton prefix not found for AppID ${APPID}.${NC}"
                 echo -e "${WHITE}If you just installed this game, Proton has not generated the prefix yet."
