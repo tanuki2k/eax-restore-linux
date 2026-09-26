@@ -1498,7 +1498,7 @@
           "patches": null
         }
       },
-      "default_api": "openal",
+      "default_api": "directsound3d",
       "eax_status": "supported",
       "eax_status_details": null,
       "restore_details": null,
