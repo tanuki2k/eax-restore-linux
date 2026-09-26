@@ -649,7 +649,8 @@
       },
       "default_api": "directsound3d",
       "recommended_tweaks": [
-        "eax_unified"
+        "eax_unified",
+        "com_registry_routing"
       ],
       "eax_status": "supported",
       "eax_status_details": null,
