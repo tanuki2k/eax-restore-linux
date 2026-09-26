@@ -3,7 +3,8 @@
 # ==============================================================================
 # Every run gets its own timestamped log in $LOG_DIR (newest 10 kept, with
 # latest.log always pointing at the current one; the path is shown on exit), so a bug report can attach
-# the full picture: everything shown on screen, the output of the Wine /
+# the full picture: everything shown on screen, the answers typed at its
+# prompts, the output of the Wine /
 # winetricks / protontricks calls that is hidden from the screen, a header
 # with the system details the bug report template asks for, and a summary of
 # what this run detected and chose. EAX_RESTORE_NO_LOG=1 turns it off.
@@ -111,8 +112,8 @@ finish_run_log() {
     echo -e "\n${WHITE}Log saved to:${NC}"
     echo -e "  ${GREEN}${EAX_LOG_FILE/#$HOME/\~}${NC}"
     if [ "$rc" -ne 0 ]; then
-        echo -e "${YELLOW}If something went wrong, please attach this log to a bug report:${NC}"
-        echo -e "${WHITE}$BUG_REPORT_URL${NC}"
+        echo -e "\n${YELLOW}If something went wrong, please attach this log to a bug report:${NC}"
+        echo -e "  ${WHITE}$BUG_REPORT_URL${NC}"
     fi
     # Hand the terminal back and let tee drain before appending the summary,
     # so the summary really is the last thing in the file.
@@ -131,13 +132,15 @@ if ! is_truthy "${EAX_RESTORE_NO_LOG:-}" && mkdir -p "$LOG_DIR" 2>/dev/null; the
     # Keep the newest 10 (this run's included).
     ls -1t "$LOG_DIR"/eax-restore-*.log 2>/dev/null | tail -n +11 | xargs -r rm -f --
     # Mirror everything on screen into the log, minus colour codes, with
-    # curl's \r progress bars collapsed to their final state. tee and the
+    # curl's \r progress bars collapsed to their final state, and the
+    # answers read_answer sends as a private OSC unwrapped onto their
+    # prompt's line. tee and the
     # log writer run in their own session (setsid) so a Ctrl-C at the
     # terminal can't kill them before the "Log saved" line and summary are
     # written; the writer's PID is recorded so finish_run_log can wait for
     # it to drain.
     exec 3>&1 4>&2
-    exec > >(exec setsid bash -c 'exec tee >(echo "$BASHPID" > "$1.pid"; exec sed -u -e "s/\x1b\[[0-9;]*[A-Za-z]//g" -e "s/.*\r//" >> "$1")' _ "$EAX_LOG_FILE") 2>&1
+    exec > >(exec setsid bash -c 'exec tee >(echo "$BASHPID" > "$1.pid"; exec sed -u -e "s/\x1b\]7137;\([^\x07]*\)\x07/\1/g" -e "s/\x1b\[[0-9;]*[A-Za-z]//g" -e "s/.*\r//" >> "$1")' _ "$EAX_LOG_FILE") 2>&1
     trap finish_run_log EXIT
     # Turn Ctrl-C / kill into a normal exit with the conventional status, so
     # the EXIT trap above records the real exit code (not the last command's).

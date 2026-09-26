@@ -45,7 +45,7 @@ if is_truthy "$EAX_RESTORE_VCRUN_ONLY"; then
     [ -n "$PREFIX_PATH" ] && echo -e "${WHITE} -> Prefix: ${BOLD}$PREFIX_PATH${NC}"
     echo -e "\n${YELLOW}Proceed? (Y/n): ${NC}"
     echo -e -n "> "
-    read -r CONFIRM_VCRUN_ONLY
+    read_answer CONFIRM_VCRUN_ONLY
     if [[ "$CONFIRM_VCRUN_ONLY" =~ $NO_RE ]]; then
         print_warning "Cancelled — no changes were made."
         exit 0
@@ -80,7 +80,7 @@ if is_truthy "$EAX_RESTORE_DSOAL_PIN"; then
 else
     while true; do
         prompt "Would you like to (i)nstall or (u)ninstall the EAX audio fix? (i/u): "
-        read -r SCRIPT_ACTION
+        read_answer SCRIPT_ACTION
         SCRIPT_ACTION="${SCRIPT_ACTION,,}"
         if [[ "$SCRIPT_ACTION" == "i" || "$SCRIPT_ACTION" == "u" ]]; then break
         else print_warning "That's not a valid option — please type 'i' or 'u'."; fi

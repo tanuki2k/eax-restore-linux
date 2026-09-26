@@ -126,7 +126,7 @@ prompt_recent_game() {
 
     prompt "Selection [0-${#paths[@]}]: "
     local choice
-    read -r choice
+    read_answer choice
 
     if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#paths[@]} ]; then
         GAME_DIR="${paths[$((choice - 1))]}"
@@ -320,7 +320,7 @@ scan_game_libraries() {
     local choice
     while true; do
         prompt "Selection [0-${#names[@]}]: "
-        read -r choice
+        read_answer choice
         if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 0 ] && [ "$choice" -le ${#names[@]} ]; then
             break
         fi

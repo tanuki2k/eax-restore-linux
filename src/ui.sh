@@ -198,6 +198,31 @@ print_wrapped() {
     echo -e "${WHITE}$(printf '%s' "$1" | fold -s -w 76 | sed 's/^/  /')${NC}"
 }
 
+# Usage: read_answer VAR
+# Drop-in for `read -r VAR` at a user prompt that also puts the answer in
+# the run log. The terminal echoes typed keys straight to the screen, so
+# they never pass through the log's tee; this sends the answer down stdout
+# afterwards, wrapped in a private OSC (\e]7137;...\a) that terminals
+# ignore and the log writer unwraps, then "\e[1A\n" -- a cursor no-op on
+# screen (Enter already moved it down a line) that gives the log writer
+# the newline it needs to flush the prompt line. Piped (non-tty) answers
+# weren't echoed at all, so they're just printed. EOF returns 1, like read.
+read_answer() {
+    local __ra_rc __ra_val
+    read -r "$1"; __ra_rc=$?
+    __ra_val="${!1//[[:cntrl:]]/}"
+    if [ "$EAX_LOG_FILE" != "/dev/null" ]; then
+        if [ "$__ra_rc" -ne 0 ]; then
+            echo ""
+        elif [ ! -t 0 ]; then
+            printf '%s\n' "$__ra_val"
+        elif [ "$TERM" != "linux" ]; then
+            printf '\e]7137;%s\a\e[1A\n' "$__ra_val"
+        fi
+    fi
+    return "$__ra_rc"
+}
+
 # Usage: confirm "Question?" [default=Y|N]
 # Emits the canonical two-line (Y/n)/(y/N) prompt (question line, then a
 # separate "> " read line) and returns 0 for yes, 1 for no. default (Y or N,
@@ -218,7 +243,7 @@ confirm() {
     # pre-fed answers) is not an answer: decline regardless of the default,
     # so the caller ends cleanly instead of looping on a prompt nothing will
     # ever respond to.
-    read -r answer || return 1
+    read_answer answer || return 1
 
     if [[ "${default^^}" == "N" ]]; then
         [[ "$answer" =~ $YES_RE ]]
@@ -227,7 +252,7 @@ confirm() {
     fi
 }
 
-# Usage: prompt "question text: "   (caller then does its own `read -r VAR`)
+# Usage: prompt "question text: "   (caller then does its own `read_answer VAR`)
 # The non-yes/no counterpart of confirm(): a leading blank line, the YELLOW
 # question line, then the separate "> " read line — but NO read, because
 # these call sites need the raw typed value (menu numbers, free-text paths)

@@ -22,7 +22,7 @@ prompt_manual_game_dir() {
     # so a caller looping on the read can't spin on closed stdin; callers do
     # their own directory-exists / .exe-count validation afterwards.
     prompt "Enter the full path to the game's .exe folder:"
-    if ! read -r GAME_DIR; then GAME_DIR=""; return 1; fi
+    if ! read_answer GAME_DIR; then GAME_DIR=""; return 1; fi
     GAME_DIR="${GAME_DIR//\'/}"; GAME_DIR="${GAME_DIR//\"/}"; GAME_DIR="${GAME_DIR%/}"
     GAME_DIR="${GAME_DIR/#\~/$HOME}"
     [ -z "$GAME_DIR" ] && return 1
@@ -120,7 +120,7 @@ get_game_directory() {
             local choice
             while true; do
                 prompt "How would you like to locate the game? [1-${#menu_actions[@]}]: "
-                read -r choice
+                read_answer choice
                 if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#menu_actions[@]}" ]; then
                     break
                 fi
@@ -158,6 +158,7 @@ get_game_directory() {
                     echo ""
                     continue
                 fi
+                echo -e "${DIM}Selected: $GAME_DIR${NC}"
                 ;;
             manual)
                 prompt_manual_game_dir || true
@@ -527,7 +528,7 @@ resolve_exe_folder() {
     local choice
     while true; do
         prompt "Selection [1-${fb_max}]: "
-        read -r choice || return 1
+        read_answer choice || return 1
         [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "$fb_max" ] && break
         print_warning "That's not a valid option — please enter a number from 1-${fb_max}."
     done
@@ -541,7 +542,7 @@ resolve_exe_folder() {
         print_option 0 "None of these / enter a path manually"
         while true; do
             prompt "Selection [0-${#cand_dirs[@]}]: "
-            read -r choice || return 1
+            read_answer choice || return 1
             if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 0 ] && [ "$choice" -le ${#cand_dirs[@]} ]; then
                 break
             fi
@@ -805,7 +806,7 @@ confirm_continue_if_openal_native() {
         # the overwhelming majority of EAX titles. Only a typed "1" is an
         # explicit choice — an accepted default doesn't confirm the API, so
         # the engine-selection menu still appears for it.
-        read -r api_choice || api_choice=""
+        read_answer api_choice || api_choice=""
         if [ "$api_choice" == "1" ]; then explicit=1; else explicit=0; fi
         api_choice="${api_choice:-1}"
         [[ "$api_choice" =~ ^[12]$ ]] && break
@@ -874,7 +875,7 @@ detect_game_environment() {
                 echo -e "\n${YELLOW}Enter the Steam AppID manually: ${NC}"
                 echo -e "${WHITE} Tip: Found on the game's Steam Store URL, or in Steam by right-clicking the game -> Properties -> Updates.${NC}"
                 echo -e -n "> "
-                if ! read -r APPID; then
+                if ! read_answer APPID; then
                     # stdin closed (piped/exhausted) — can't keep prompting, so
                     # offer game reselection / exit rather than spinning.
                     print_error "A Steam AppID is required — protontricks uses it to locate the game's Proton prefix."
@@ -950,7 +951,7 @@ detect_game_environment() {
                 echo -e "\n${YELLOW}Enter the Wine prefix path: ${NC}"
                 echo -e "${WHITE} Example Heroic: ~/Games/Heroic/Prefixes/[Game-Name]${NC}"
                 echo -e -n "> "
-                if ! read -r PREFIX_PATH; then
+                if ! read_answer PREFIX_PATH; then
                     # stdin closed (piped/exhausted) — can't keep prompting, so
                     # offer game reselection / exit rather than spinning.
                     print_error "A Wine prefix is required — it's where the DLL override and prefix-side files go."
@@ -1168,7 +1169,7 @@ select_architecture() {
     if [ "$ARCH" == "MANUAL" ]; then
         while true; do
             prompt "Architecture (32/64): "
-            read -r ARCH
+            read_answer ARCH
             if [[ "$ARCH" == "32" || "$ARCH" == "64" ]]; then break
             else print_warning "Invalid selection. Please type 32 or 64."; fi
         done

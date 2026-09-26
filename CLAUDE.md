@@ -99,7 +99,7 @@ their execution order in the assembled script):
    in sync with each other.
 4. **`ui.sh`** — the text/output styling helpers (`print_banner`, `print_step`,
    `print_status`, `print_note`/`print_warning`/`print_error` and their `_arrow`
-   variants, `print_wrapped`, `confirm`, plus `print_divider`/`print_line`). Sourced
+   variants, `print_wrapped`, `confirm`, `read_answer`, plus `print_divider`/`print_line`). Sourced
    right after `globals.sh` since every helper depends on the colour vars defined
    there. See "Text/output style conventions" below.
 5. **`common.sh`** — small helpers used throughout every other file: `is_truthy`,
@@ -196,14 +196,18 @@ for a new call site.
   blank line, the `${YELLOW}` question line, then the separate `"> "` read line — but
   **no `read`**, because these call sites need the raw typed value (menu numbers,
   free-text paths) and loop on their own validation. The caller still writes its own
-  `read -r VAR` right after. (Hand-rolled `(y/N)` prompts that predate `confirm` are
+  `read_answer VAR` right after. (Hand-rolled `(y/N)` prompts that predate `confirm` are
   a separate migration — leave those for a dedicated pass.)
+- `read_answer VAR` — use instead of a bare `read -r VAR` for every user answer
+  (prompts, menus, free-text paths). The terminal's own echo of typed keys never
+  reaches the run log, so this replays the answer into it (see its comment in
+  `ui.sh`); a bare `read -r` leaves the answer out of bug-report logs.
 - `print_option N "Label" ["dim detail"]` — one ` N) Label` row of a numbered
   selection menu, plain/uncolored (the sanctioned menu-row look — don't wrap rows in
   `${WHITE}`, which renders bold). An optional third arg is appended as a
   de-emphasized ` detail` in `DIM` (e.g. `in /path/to/dir`, `(Steam)`). The caller
   still owns the menu's `${WHITE}` header line, its leading/trailing blank lines, and
-  the `${YELLOW}` `Selection [...]:` prompt + `read -r` loop.
+  the `${YELLOW}` `Selection [...]:` prompt + `read_answer` loop.
 - `print_wrapped "free text"` — wraps data-sourced prose (e.g. the `notes` field in
   `known-eax-games.json`, not already hand-wrapped script text) at 76 columns and
   indents it, in WHITE. Don't hardcode line breaks into stored data; wrap at render

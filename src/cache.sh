@@ -288,7 +288,7 @@ handle_conflict() {
         echo -e "\n${YELLOW}$(basename "$existing")${NC} ${WHITE}already exists at $(dirname "$target_file").${NC}"
         while true; do
             prompt "What would you like to do? [o]verwrite, [b]ackup & overwrite (default), [s]kip: "
-            read -r C_CHOICE
+            read_answer C_CHOICE
             C_CHOICE="${C_CHOICE:-b}"
             case "${C_CHOICE,,}" in
                 o)

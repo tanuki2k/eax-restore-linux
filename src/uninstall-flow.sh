@@ -140,7 +140,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         echo -e "\n${YELLOW}Press Enter to remove all of these, or type the numbers of just the ones you"
         echo -e "want (e.g. \"1 2 3\", \"1-3\", or \"^4\" to remove everything except 4), or 'n' to cancel: ${NC}"
         echo -e -n "> "
-        read -r CONFIRM_UNINSTALL
+        read_answer CONFIRM_UNINSTALL
 
         if [[ "$CONFIRM_UNINSTALL" =~ $NO_RE ]]; then
             FILES_DECLINED="1"

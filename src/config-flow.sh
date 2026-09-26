@@ -105,7 +105,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
 
         while true; do
             echo -e -n "\n> "
-            read -r ENGINE_CHOICE
+            read_answer ENGINE_CHOICE
             ENGINE_CHOICE="${ENGINE_CHOICE:-1}"
             if [[ ! "$ENGINE_CHOICE" =~ ^[12]$ ]]; then print_warning "That's not a valid option — please type 1 or 2."
             elif ! engine_available "$ENGINE_CHOICE"; then print_warning "kcat DSOAL couldn't be downloaded this run (see the Repository Cache Check above). Pick 2 only if this game uses OpenAL natively; otherwise quit and re-run later."
@@ -182,7 +182,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
 
     while true; do
         prompt "Selection [1-3, Default: 1]: "
-        read -r OUTPUT_MODE_CHOICE
+        read_answer OUTPUT_MODE_CHOICE
         OUTPUT_MODE_CHOICE="${OUTPUT_MODE_CHOICE:-1}"
         if [[ "$OUTPUT_MODE_CHOICE" =~ ^[123]$ ]]; then break; else print_warning "That's not a valid option — please type 1, 2, or 3."; fi
     done
@@ -201,7 +201,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
 
         while true; do
             prompt "Selection [1-3, Default: 1]: "
-            read -r STEREO_MODE_CHOICE
+            read_answer STEREO_MODE_CHOICE
             STEREO_MODE_CHOICE="${STEREO_MODE_CHOICE:-1}"
             if [[ "$STEREO_MODE_CHOICE" =~ ^[123]$ ]]; then break; else print_warning "That's not a valid option — please type 1, 2, or 3."; fi
         done
@@ -224,7 +224,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
             echo -e "allow you to hear exactly whether a sound is coming from above, below, or behind you.${NC}\n"
             echo -e "${YELLOW}Do you want to enable HRTF for headphones? (y/N): ${NC}"
             echo -e -n "> "
-            read -r ENABLE_HRTF
+            read_answer ENABLE_HRTF
         fi
     elif [ "$OUTPUT_MODE_CHOICE" == "2" ]; then
         OUTPUT_MODE="surround"
@@ -238,7 +238,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
 
         while true; do
             prompt "Selection [1-4]: "
-            read -r SURROUND_CHOICE
+            read_answer SURROUND_CHOICE
             case "$SURROUND_CHOICE" in
                 1) SURROUND_CHANNELS="quad"; break ;;
                 2) SURROUND_CHANNELS="surround51"; break ;;
@@ -414,6 +414,6 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         "manually type WINEDLLOVERRIDES=\"${PRIMARY_DLL_NAME}=n,b\" %command% into your launcher."
     echo -e "\n${YELLOW}Automatically set ${PRIMARY_DLL_FILENAME} override in Wine registry? (y/N): ${NC}"
     echo -e -n "> "
-    read -r AUTO_OVERRIDE
+    read_answer AUTO_OVERRIDE
 
     # (continues below: "if" opened above closes at the bottom of install-flow.sh)

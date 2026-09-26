@@ -66,7 +66,7 @@ confirm_unverified_download() {
     echo -e "    be safe — but without a checksum, the script can't independently confirm that.${NC}"
     echo -e "\n    ${YELLOW}Install it anyway? (Y/n): ${NC}"
     echo -n "    > "
-    read -r CONFIRM_UNVERIFIED
+    read_answer CONFIRM_UNVERIFIED
     echo ""
     [[ ! "$CONFIRM_UNVERIFIED" =~ $NO_RE ]]
 }
