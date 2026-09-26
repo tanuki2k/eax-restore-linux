@@ -308,8 +308,23 @@ scan_game_libraries() {
         return 1
     fi
 
+    # Discovery order is appmanifest glob order (AppIDs compared as text)
+    # with Heroic tacked on after, which means nothing to someone scanning
+    # the list by eye -- sort by display name instead, Steam before GOG for
+    # a title owned on both.
+    local i order=() s_names=() s_meta=() s_paths=() s_stores=() s_ids=()
+    while IFS= read -r i; do order+=("$i"); done < <(
+        for i in "${!names[@]}"; do printf '%s\t%s\t%d\n' "${names[$i]}" "${stores[$i]}" "$i"; done \
+            | sort -f -t$'\t' -k1,1 -k2,2r | cut -f3)
+    for i in "${order[@]}"; do
+        s_names+=("${names[$i]}"); s_meta+=("${meta_names[$i]}"); s_paths+=("${paths[$i]}")
+        s_stores+=("${stores[$i]}"); s_ids+=("${ids[$i]}")
+    done
+    names=("${s_names[@]}"); meta_names=("${s_meta[@]}"); paths=("${s_paths[@]}")
+    stores=("${s_stores[@]}"); ids=("${s_ids[@]}")
+
     print_result "Known EAX games found in your libraries:"
-    local i store_label
+    local store_label
     for i in "${!names[@]}"; do
         store_label="Steam"
         [ "${stores[$i]}" == "gog" ] && store_label="GOG"
