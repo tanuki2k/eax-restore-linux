@@ -1054,7 +1054,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "store_details": "Steam only sells 2025's 'Enhanced Edition' rewrite, an OpenAL-native build — GOG's 'Neverwinter Nights 2 Complete' is still the original 2006 Obsidian/Electron Engine build with DirectSound3D EAX, which is why only a gog id is set here.",
+          "store_details": "The original 2006 Obsidian/Electron Engine build with DirectSound3D EAX, not 2025's OpenAL-native 'Enhanced Edition' rewrite.",
           "patches": null
         }
       },
@@ -1330,7 +1330,7 @@
           "listing": "delisted",
           "api": null,
           "id_confidence": "storefront_verified",
-          "store_details": "Square Enix removed the Steam version from sale in February 2021 and has said it has no plans to restore it. The GOG release is unaffected.",
+          "store_details": "Square Enix removed it from sale on Steam in February 2021 and has said it has no plans to restore it.",
           "patches": null
         },
         "gog": {
@@ -1496,7 +1496,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "store_details": "The original 2007 game, not 2016's 'BioShock Remastered'. GOG sells only the Remastered version, so no gog id is set here.",
+          "store_details": "The original 2007 game, not 2016's 'BioShock Remastered'.",
           "patches": null
         }
       },
@@ -1508,7 +1508,7 @@
         "4.0",
         "5.0"
       ],
-      "notes": "This is the original 2007 game, distinct from 2016's 'BioShock Remastered' — GOG only sells the Remastered version, so no gog_id is set here."
+      "notes": null
     },
     {
       "name": "Brothers in Arms: Road to Hill 30",
@@ -1764,7 +1764,7 @@
           "listing": "available",
           "api": null,
           "id_confidence": "storefront_verified",
-          "store_details": "The original 2013 PC port, not 2019's 'FINAL FANTASY VIII - REMASTERED'. GOG sells only the Remastered version, so no gog id is set here.",
+          "store_details": "The original 2013 PC port, not 2019's 'FINAL FANTASY VIII - REMASTERED'.",
           "patches": null
         }
       },
