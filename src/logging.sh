@@ -62,8 +62,8 @@ write_log_summary() {
     if [ -n "$PREFIX_PATH" ]; then
         if [ -f "$(dirname "$PREFIX_PATH")/version" ]; then runner="Proton $(head -n 1 "$(dirname "$PREFIX_PATH")/version")"
         elif [ -f "$PREFIX_PATH/version" ]; then runner="Proton $(head -n 1 "$PREFIX_PATH/version")"; fi
-        local heroic_conf
-        heroic_conf=$(find "$HOME/.config/heroic" "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic" -type f -path "*/GamesConfig/*.json" -exec grep -Fl "\"winePrefix\": \"$PREFIX_PATH\"" {} + 2>/dev/null | head -n 1)
+        local heroic_conf="$HEROIC_JSON"
+        [ -z "$heroic_conf" ] && heroic_conf=$(heroic_configs_for_prefix "$PREFIX_PATH" | head -n 1)
         if [ -n "$heroic_conf" ]; then
             runner="${runner:+$runner; }Heroic runner: $(grep -A3 '"wineVersion"' "$heroic_conf" | grep '"name"' | head -n 1 | awk -F '"' '{print $4}') [$(grep -A3 '"wineVersion"' "$heroic_conf" | grep '"type"' | head -n 1 | awk -F '"' '{print $4}')]"
         fi
@@ -84,6 +84,11 @@ write_log_summary() {
         echo "Prefix:          ${PREFIX_PATH:-not set}"
         echo "Runner:          ${runner:-unknown}${IS_PROTON:+ (IS_PROTON=$IS_PROTON)}"
         [ "$LAUNCHER_TYPE" == "2" ] && echo "Wine used:       ${WINE_CMD:-none}${WINESERVER_CMD:+ (wineserver $WINESERVER_CMD)}"
+        if [ "$LAUNCHER_TYPE" == "2" ]; then
+            echo "Heroic game ID:  ${HEROIC_GAME_ID:-not found in the Heroic library}${HEROIC_GAME_TITLE:+, title: $HEROIC_GAME_TITLE}"
+            echo "Heroic config:   ${HEROIC_JSON:-none}"
+            echo "Heroic prefix:   ${HEROIC_EXPECTED_PREFIX:-unknown}${HEROIC_PREFIX_SOURCE:+ ($HEROIC_PREFIX_SOURCE)}"
+        fi
         echo "Architecture:    ${ARCH:-not set}"
         echo "Engine choice:   ${ENGINE_CHOICE:-not chosen} (DSOAL: ${DSOAL_VER:-?} | OpenAL Soft: ${OAL_VER:-?})"
         if [ -n "$INSTALL_MANIFEST" ] && [ -s "$INSTALL_MANIFEST" ]; then
