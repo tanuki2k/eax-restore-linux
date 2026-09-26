@@ -893,7 +893,9 @@ confirm_continue_if_openal_native() {
     # to do."
     # A confirmed known-games match still gets a (Y/n) before continuing,
     # same as the openal/binary-scan branches below it — it's still an
-    # auto-detected value driving what the script does next.
+    # auto-detected value driving what the script does next. Declining it
+    # opens the same DirectSound3D-vs-OpenAL choice (plus a cancel option)
+    # instead of ending the install, so a detected API can be overridden.
     # Sets OPENAL_NATIVE_MODE, which the "Audio Engine Selection" step alone
     # consumes to pick ENGINE_CHOICE=2 (the direct OpenAL Soft swap).
     OPENAL_NATIVE_MODE=""
@@ -919,7 +921,7 @@ confirm_continue_if_openal_native() {
     confirm "Would you like the script to attempt to automatically detect $game_name's audio API?" || attempt_auto_detect=0
 
     local json_available=0 match_count=0
-    local api="" matched=0 scanned=0 json_checked=0 declined=0
+    local api="" matched=0 scanned=0 json_checked=0 declined=0 overriding=0
     # The known-games entry's audio API for this store, exactly as stored —
     # the per-store override (stores.<store>.api) if present, else default_api,
     # else "" when the entry omits both. Distinct from $api, which is
@@ -1013,11 +1015,10 @@ confirm_continue_if_openal_native() {
         if [ "$api" == "openal" ]; then
             print_note "This game routes EAX through OpenAL rather than DirectSound3D, so kcat's" \
                 "OpenAL Soft will be deployed."
-            if ! confirm "Continue with OpenAL Soft deployment?"; then
-                echo -e "\n${WHITE}Install cancelled.${NC}"
-                exit 0
+            if confirm "Continue with OpenAL Soft deployment?"; then
+                OPENAL_NATIVE_MODE=1
+                return
             fi
-            OPENAL_NATIVE_MODE=1
         elif confirm "Continue with the DSOAL/DirectSound3D install?"; then
             # A known-games entry that resolves to "directsound3d" for this
             # store, or a single-API binary scan, is a positive identification — the
@@ -1028,11 +1029,14 @@ confirm_continue_if_openal_native() {
                { [ "$scanned" -eq 1 ] && [ "$api" == "directsound3d" ]; }; then
                 API_CONFIRMED_DS3D=1
             fi
-        else
-            echo -e "\n${WHITE}Install cancelled.${NC}"
-            exit 0
+            return
         fi
-        return
+        # Declined: the detected/documented API isn't the one the user wants
+        # (e.g. to test a game through the other path), so fall through to
+        # the manual choice below rather than cancelling the whole install.
+        overriding=1
+        print_paragraph "$game_name was detected as $api_display." \
+            "Which audio API would you like to install for instead?"
     fi
 
     # Nothing authoritative to go on — no known-games entry (or the database
@@ -1041,7 +1045,9 @@ confirm_continue_if_openal_native() {
     # out what couldn't be checked and let the user pick: the "Audio Engine
     # Selection" step only lists the DSOAL builds, so this prompt is also the
     # only way into OpenAL-native mode for a title the scan can't identify.
-    if [ "$scanned" -eq 1 ]; then
+    if [ "$overriding" -eq 1 ]; then
+        :
+    elif [ "$scanned" -eq 1 ]; then
         print_note_arrow "The scan found no OpenAL or DirectSound3D references in $game_name's" \
             "files, so its audio API couldn't be confirmed."
     elif [ "$declined" -eq 1 ]; then
@@ -1057,16 +1063,19 @@ confirm_continue_if_openal_native() {
             "scanned, so its audio API is unconfirmed."
     fi
 
-    echo -e "\n${WHITE}Almost every classic EAX title uses DirectSound3D; only a handful route"
-    echo -e "EAX through OpenAL natively. Choose DirectSound3D unless you know this"
-    echo -e "game is one of the exceptions.${NC}"
+    if [ "$overriding" -eq 0 ]; then
+        echo -e "\n${WHITE}Almost every classic EAX title uses DirectSound3D; only a handful route"
+        echo -e "EAX through OpenAL natively. Choose DirectSound3D unless you know this"
+        echo -e "game is one of the exceptions.${NC}"
+    fi
     echo ""
     print_option 1 "DirectSound3D / DSOAL   [default]"
     print_option 2 "OpenAL native           (deploy kcat's OpenAL Soft directly)"
+    print_option 3 "Cancel the install"
 
     local api_choice explicit=0
     while true; do
-        prompt "Selection (1 or 2) [Default: 1]: "
+        prompt "Selection [1-3] [Default: 1]: "
         # EOF / empty falls back to 1: DirectSound3D is the safe default for
         # the overwhelming majority of EAX titles. Only a typed "1" is an
         # explicit choice — an accepted default doesn't confirm the API, so
@@ -1074,9 +1083,14 @@ confirm_continue_if_openal_native() {
         read_answer api_choice || api_choice=""
         if [ "$api_choice" == "1" ]; then explicit=1; else explicit=0; fi
         api_choice="${api_choice:-1}"
-        [[ "$api_choice" =~ ^[12]$ ]] && break
-        print_result "That's not a valid option — please type 1 or 2." "$YELLOW"
+        [[ "$api_choice" =~ ^[123]$ ]] && break
+        print_result "That's not a valid option — please type 1, 2, or 3." "$YELLOW"
     done
+
+    if [ "$api_choice" == "3" ]; then
+        echo -e "\n${WHITE}Install cancelled.${NC}"
+        exit 0
+    fi
 
     if [ "$api_choice" == "2" ]; then
         print_status "Proceeding with kcat's OpenAL Soft." "$WHITE"
