@@ -623,7 +623,7 @@ resolve_exe_folder() {
     # legitimately hold real game exes for some titles too -- so this blocks
     # by the installer/utility's own distinctive basename instead, wherever
     # it's nested.
-    local junk_exe_re='^(unins(t(all)?)?[0-9]*|vc_?redist.*|(dx|directx)?setup|dxsetup|dxwebsetup|dx[0-9]+ger|dx[0-9]+ntger|dotnetfx.*|ndp[0-9].*|windowsdesktop-runtime.*|oalinst|physx.*|easyanticheat.*|eac_?setup.*|eaclauncher|be(service|daisy|launcher|_ex)[a-z0-9_]*|battleye.*|unitycrashhandler.*|crashreport(er|client)?|crash_?handler|crashpad_handler|bugsplat.*|epiconlineservices(installer)?|epicwebhelper.*|rockstar-games-launcher|social-club-setup|tagesclient.*|vulkanrt.*installer.*|gamingrepair(tool)?|registrationreminder|overlayinjector|cleanup|touchup|driverversionchecker|layerschecker|supporttool|dowser|iscopyfiles|ue3?redist.*|unrealfrontend|unrealconsole|uescriptprofiler|cookersync|testapp|.*oshelper)\.exe$'
+    local junk_exe_re='^(unins(t(all)?)?[0-9]*|vc_?redist.*|(dx|directx)?setup|dxsetup|dxwebsetup|dx[0-9]+ger|dx[0-9]+ntger|dotnetfx.*|ndp[0-9].*|windowsdesktop-runtime.*|oalinst|physx.*|easyanticheat.*|eac_?setup.*|eaclauncher|be(service|daisy|launcher|_ex)[a-z0-9_]*|battleye.*|unitycrashhandler.*|crashreport(er|client)?|crash_?handler|crashpad_handler|bugsplat.*|epiconlineservices(installer)?|epicwebhelper.*|rockstar-games-launcher|social-club-setup|tagesclient.*|vulkanrt.*installer.*|gamingrepair(tool)?|registrationreminder|overlayinjector|cleanup|touchup|driverversionchecker|layerschecker|supporttool|dowser|iscopyfiles|detectionui.*|eax[0-9]*unified_redist.*|reg|.*updatelauncher|adb?e?rdr.*|ue3?redist.*|unrealfrontend|unrealconsole|uescriptprofiler|cookersync|testapp|.*oshelper)\.exe$'
 
     # Up-front gate, same as the prefix stage's "attempt to automatically
     # find your Proton prefix?" -- a detected folder is still a guess, and
@@ -673,9 +673,14 @@ resolve_exe_folder() {
     # standalone numeral tokens) since sequel titles are commonly "Gothic II"
     # but "Gothic2.exe"/"gothic 2" in practice.
     # -mindepth 2 so the scanned root's own .exe files (already handled above)
-    # aren't re-listed here as if they lived in a nested folder.
+    # aren't re-listed here as if they lived in a nested folder. Sorted
+    # shallowest-first (then by path) rather than left in find's arbitrary
+    # directory order: the main .exe usually sits nearest the root, while
+    # deeper folders tend to hold bundled tools and editors -- e.g. Chaos
+    # Theory's System/ vs Utils/Detection/. This is only the tiebreak within
+    # each tier below; name-matched folders still come first.
     local all_exes=()
-    while IFS= read -r f; do all_exes+=("$f"); done < <(find "$root" -mindepth 2 -maxdepth 4 -type f -iname "*.exe" 2>/dev/null)
+    while IFS= read -r f; do all_exes+=("$f"); done < <(find "$root" -mindepth 2 -maxdepth 4 -type f -iname "*.exe" -printf '%d\t%p\n' 2>/dev/null | sort -t$'\t' -k1,1n -k2,2 | cut -f2-)
 
     local candidates=()
     for f in "${all_exes[@]}"; do
@@ -746,7 +751,9 @@ resolve_exe_folder() {
     # value. Declining opens a menu rather than dead-ending back at the
     # locate-the-game step: step through the other detected folders, type a
     # path, or go back to game selection.
-    echo -e "\n -> ${GREEN}Found the game executable:${NC} ${cand_exe_name[${cand_dirs[0]}]} ${DIM}in ${cand_dirs[0]}${NC}"
+    echo ""
+    print_status "${GREEN}Found the game executable:${NC} ${BOLD}${cand_exe_name[${cand_dirs[0]}]}${NC}" ""
+    echo -e "    ${DIM}in ${cand_dirs[0]}${NC}"
     if confirm "Use this location?"; then
         GAME_DIR="${cand_dirs[0]}"
         return 0
