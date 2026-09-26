@@ -280,7 +280,7 @@ handle_conflict() {
             record_deploy_failure "$target_file"
             return 1
         fi
-        echo -e "\n${YELLOW}$(basename "$existing")${NC} ${WHITE}already exists at $(dirname "$target_file").${NC}"
+        echo -e "\n${YELLOW}$(basename "$existing")${NC} ${WHITE}already exists at $(tilde_path "$(dirname "$target_file")").${NC}"
         while true; do
             prompt "What would you like to do? [o]verwrite, [b]ackup & overwrite (default), [s]kip: "
             read_answer C_CHOICE

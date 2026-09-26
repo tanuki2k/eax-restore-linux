@@ -16,6 +16,26 @@
 print_divider() { echo -e "${CYAN}----------------------------------------------------------${NC}"; }
 print_line() { print_divider; }
 
+# Usage: tilde_path "text"
+# Prints text with every "$HOME/..." path shortened to "~/...". Every helper
+# below runs its output through this, so a path shown anywhere in the script
+# reads the way the user would type it -- the absolute form is long, repeats
+# the username on every line, and ends up verbatim in shared bug-report logs.
+# Display only: callers keep the real path in their own variables. An
+# occurrence is left alone when the word it sits in already started as an
+# absolute path (e.g. /mnt/home/<user>/..., a different disk), and the whole
+# thing is skipped when HOME is empty or "/", where it would mangle every path.
+tilde_path() {
+    local t="$1" h="${HOME%/}/" out="" pre
+    if [ "$h" = "/" ]; then printf '%s' "$t"; return; fi
+    while [[ "$t" == *"$h"* ]]; do
+        pre="${t%%"$h"*}"
+        t="${t#*"$h"}"
+        if [[ "${pre##*[[:space:]]}" == /* ]]; then out+="$pre$h"; else out+="$pre~/"; fi
+    done
+    printf '%s' "$out$t"
+}
+
 # Usage: print_banner "LABEL" [COLOR=GREEN]
 # Emits the "--- LABEL ---" banner block: blank line, divider, label, divider.
 # No trailing blank — callers provide their own leading blank before the
@@ -60,7 +80,7 @@ print_step() {
 print_status() {
     local text="$1"
     local color="${2-$CYAN}"
-    echo -e " -> ${color}${text}${NC}"
+    echo -e " -> ${color}$(tilde_path "$text")${NC}"
 }
 
 # Usage: print_task "text"
@@ -71,7 +91,7 @@ print_status() {
 # stdout is captured redirects itself — print_task "..." >&2 — the same way
 # detection.sh's Heroic scanners already do.
 print_task() {
-    echo -e "\n${CYAN}STATUS: ${1}...${NC}"
+    echo -e "\n${CYAN}STATUS: $(tilde_path "$1")...${NC}"
 }
 
 # Usage: print_result "text" [COLOR=WHITE]
@@ -83,7 +103,7 @@ print_task() {
 print_result() {
     local text="$1"
     local color="${2:-$WHITE}"
-    echo -e "\n${color}${text}${NC}"
+    echo -e "\n${color}$(tilde_path "$text")${NC}"
 }
 
 # Usage: print_subheading "Label"
@@ -91,7 +111,7 @@ print_result() {
 # body — the GAME DETAILS block's Status:/Restoring EAX with:/Additional
 # steps:/Notes:/etc. labels.
 print_subheading() {
-    echo -e "\n${NOTE}  ${1}:${NC}"
+    echo -e "\n${NOTE}  $(tilde_path "$1"):${NC}"
 }
 
 # Usage: print_paragraph "line1" ["line2" ...]
@@ -106,7 +126,7 @@ print_paragraph() {
     local body="\n${WHITE}$1"
     shift
     for line in "$@"; do body+="\n${line}"; done
-    echo -e "${body}${NC}"
+    echo -e "$(tilde_path "$body")${NC}"
 }
 
 # Usage: print_note "text" ["more text" ...]
@@ -121,13 +141,13 @@ print_note() {
     local first="$1"; shift
     local body="\n${NOTE}Note: ${first}"
     for line in "$@"; do body+="\n${line}"; done
-    echo -e "${body}${NC}"
+    echo -e "$(tilde_path "$body")${NC}"
 }
 print_note_arrow() {
     local first="$1"; shift
     local body=" -> ${NOTE}Note: ${first}"
     for line in "$@"; do body+="\n${NOTE}${line}"; done
-    echo -e "${body}${NC}"
+    echo -e "$(tilde_path "$body")${NC}"
 }
 
 # Usage: print_warning "text" ["more text" ...]
@@ -142,14 +162,14 @@ print_warning() {
     RUN_WARNINGS+=("$first")
     local body="\n${YELLOW}${BOLD}Warning: ${first}"
     for line in "$@"; do body+="\n${line}"; done
-    echo -e "${body}${NC}"
+    echo -e "$(tilde_path "$body")${NC}"
 }
 print_warning_arrow() {
     local first="$1"; shift
     RUN_WARNINGS+=("$first")
     local body=" -> ${YELLOW}${BOLD}Warning: ${first}"
     for line in "$@"; do body+="\n${YELLOW}${BOLD}${line}"; done
-    echo -e "${body}${NC}"
+    echo -e "$(tilde_path "$body")${NC}"
 }
 
 # Usage: print_run_summary
@@ -166,7 +186,7 @@ print_run_summary() {
     echo -e "\n${YELLOW}${BOLD}${count} ${noun} occurred during this run:${NC}"
     local w
     for w in "${RUN_WARNINGS[@]}"; do
-        echo -e "  ${YELLOW}- ${w}${NC}"
+        echo -e "  ${YELLOW}- $(tilde_path "$w")${NC}"
     done
 }
 
@@ -178,13 +198,13 @@ print_error() {
     local first="$1"; shift
     local body="\n${YELLOW}${BOLD}Error: ${first}"
     for line in "$@"; do body+="\n${line}"; done
-    echo -e "${body}${NC}"
+    echo -e "$(tilde_path "$body")${NC}"
 }
 print_error_arrow() {
     local first="$1"; shift
     local body=" -> ${YELLOW}${BOLD}Error: ${first}"
     for line in "$@"; do body+="\n${YELLOW}${BOLD}${line}"; done
-    echo -e "${body}${NC}"
+    echo -e "$(tilde_path "$body")${NC}"
 }
 
 # Usage: print_wrapped "free text"
@@ -193,7 +213,7 @@ print_error_arrow() {
 # WHITE. Distinct from print_note/print_warning/print_error, whose multi-line
 # arguments are assumed already wrapped by the caller.
 print_wrapped() {
-    echo -e "${WHITE}$(printf '%s' "$1" | fold -s -w 76 | sed 's/^/  /')${NC}"
+    echo -e "${WHITE}$(tilde_path "$1" | fold -s -w 76 | sed 's/^/  /')${NC}"
 }
 
 # Usage: read_answer VAR
@@ -234,7 +254,7 @@ confirm() {
     local hint="(Y/n)"
     [[ "${default^^}" == "N" ]] && hint="(y/N)"
 
-    echo -e "\n${YELLOW}${question} ${hint}: ${NC}"
+    echo -e "\n${YELLOW}$(tilde_path "$question") ${hint}: ${NC}"
     echo -e -n "> "
     local answer
     # EOF (closed/exhausted stdin — a non-interactive run that's out of
@@ -256,7 +276,7 @@ confirm() {
 # these call sites need the raw typed value (menu numbers, free-text paths)
 # and usually loop on their own validation. Use confirm() for actual y/n.
 prompt() {
-    echo -e "\n${YELLOW}${1}${NC}"
+    echo -e "\n${YELLOW}$(tilde_path "$1")${NC}"
     echo -e -n "> "
 }
 
@@ -270,9 +290,9 @@ prompt() {
 print_option() {
     local n="$1" label="$2" detail="${3-}"
     if [ -n "$detail" ]; then
-        echo -e " ${n}) ${label}${DIM} ${detail}${NC}"
+        echo -e " ${n}) $(tilde_path "$label")${DIM} $(tilde_path "$detail")${NC}"
     else
-        echo -e " ${n}) ${label}"
+        echo -e " ${n}) $(tilde_path "$label")"
     fi
 }
 

@@ -66,7 +66,7 @@ get_game_directory() {
     OPENAL_NATIVE_MODE=""
 
     if [ "$SCRIPT_ACTION" == "u" ] && prompt_recent_game; then
-        echo -e "\n${GREEN}Using: $GAME_DIR${NC}"
+        echo -e "\n${GREEN}Using: $(tilde_path "$GAME_DIR")${NC}"
         record_recent_game "$GAME_DIR"
         return
     fi
@@ -138,7 +138,7 @@ get_game_directory() {
                     continue
                 fi
                 if scan_game_libraries; then
-                    echo -e "\n${GREEN}Using: $GAME_DIR${NC}"
+                    echo -e "\n${GREEN}Using: $(tilde_path "$GAME_DIR")${NC}"
                     record_recent_game "$GAME_DIR"
                     return
                 fi
@@ -772,7 +772,7 @@ resolve_exe_folder() {
     # path, or go back to game selection.
     echo ""
     print_status "${GREEN}Found the game executable:${NC} ${BOLD}${cand_exe_name[${cand_dirs[0]}]}${NC}" ""
-    echo -e "    ${DIM}in ${cand_dirs[0]}${NC}"
+    echo -e "    ${DIM}in $(tilde_path "${cand_dirs[0]}")${NC}"
     if confirm "Use this location?"; then
         GAME_DIR="${cand_dirs[0]}"
         return 0
@@ -1161,7 +1161,7 @@ detect_game_environment() {
             DETECTED_STEAM_PREFIX=$(protontricks -c 'echo $WINEPREFIX' "$APPID" 2>> "$EAX_LOG_FILE" | tee -a "$EAX_LOG_FILE" | grep "/pfx" | tail -n 1 | tr -d '\r')
 
             if [ -n "$DETECTED_STEAM_PREFIX" ] && [ -d "$DETECTED_STEAM_PREFIX" ]; then
-                echo -e " -> ${GREEN}Detected Prefix:${NC} $DETECTED_STEAM_PREFIX"
+                echo -e " -> ${GREEN}Detected Prefix:${NC} $(tilde_path "$DETECTED_STEAM_PREFIX")"
                 if confirm "Use this detected prefix?"; then
                     PREFIX_PATH="$DETECTED_STEAM_PREFIX"
                     ACF_FILE="${GAME_DIR%/common/*}/appmanifest_${APPID}.acf"
@@ -1236,7 +1236,7 @@ detect_game_environment() {
         HEROIC_EXPECTED_PREFIX="$DETECTED_PREFIX"
         if [ "$attempt_auto_detect" -eq 1 ]; then
             if [ -n "$DETECTED_PREFIX" ]; then
-                echo -e " -> ${GREEN}Detected Prefix:${NC} $DETECTED_PREFIX"
+                echo -e " -> ${GREEN}Detected Prefix:${NC} $(tilde_path "$DETECTED_PREFIX")"
                 [ "$HEROIC_PREFIX_SOURCE" == "shared" ] && print_status "This is Heroic's shared prefix, because ${HEROIC_GAME_TITLE:-this game} has no prefix of its own." "$DIM"
                 if confirm "Use this detected prefix?"; then
                     PREFIX_PATH="$DETECTED_PREFIX"

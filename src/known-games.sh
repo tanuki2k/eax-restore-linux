@@ -534,7 +534,7 @@ show_game_details_block() {
         echo -e " -> ${YELLOW}Audio API${NC}: ${WHITE}DirectSound3D${NC}"
     fi
     [ -n "$EAX_UNIFIED" ] && echo -e " -> ${YELLOW}EAX Unified${NC}: ${WHITE}Yes${NC}"
-    echo -e " -> ${YELLOW}Location${NC}:  ${DIM}${location}${NC}"
+    echo -e " -> ${YELLOW}Location${NC}:  ${DIM}$(tilde_path "$location")${NC}"
 
     # --- Blocks: status -> problem -> solution ---
     if [ "$eax_status" == "removed_by_patch" ] || [ "$eax_status" == "not_implemented" ]; then

@@ -208,6 +208,10 @@ for a new call site.
   de-emphasized ` detail` in `DIM` (e.g. `in /path/to/dir`, `(Steam)`). The caller
   still owns the menu's `${WHITE}` header line, its leading/trailing blank lines, and
   the `${YELLOW}` `Selection [...]:` prompt + `read_answer` loop.
+- `tilde_path "text"` — shortens every `$HOME/...` path in the text to `~/...` for
+  display. Every helper above and below already runs its text through it, so only a
+  raw `echo -e`/`printf` that prints a path needs to call it itself
+  (`"$(tilde_path "$GAME_DIR")"`). Display only — keep the real path in variables.
 - `print_wrapped "free text"` — wraps data-sourced prose (e.g. the `notes` field in
   `known-eax-games.json`, not already hand-wrapped script text) at 76 columns and
   indents it, in WHITE. Don't hardcode line breaks into stored data; wrap at render

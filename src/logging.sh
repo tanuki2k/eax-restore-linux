@@ -105,7 +105,21 @@ write_log_summary() {
             cat "$VCRUN_LOG"
             echo "--- end vcrun2022 installer output ---"
         fi
-    } >> "$EAX_LOG_FILE"
+    } | awk -v h="${HOME%/}/" '
+        # Same $HOME -> ~ shortening tilde_path gives the on-screen output
+        # (already in the log via tee), so paths read identically in both
+        # halves of a bug report -- including leaving /mnt/home/<user>/-style
+        # paths on another disk alone. index() is a literal match, unlike sed.
+        h != "/" {
+            out = ""; rest = $0
+            while ((i = index(rest, h)) > 0) {
+                pre = substr(rest, 1, i - 1); rest = substr(rest, i + length(h))
+                word = pre; sub(/.*[[:space:]]/, "", word)
+                out = out pre (substr(word, 1, 1) == "/" ? h : "~/")
+            }
+            $0 = out rest
+        }
+        { print }' >> "$EAX_LOG_FILE"
 }
 
 finish_run_log() {
@@ -116,7 +130,7 @@ finish_run_log() {
     end_phase_progress
     # Own line, with $HOME shown as ~, so the path fits the 76-column layout.
     echo -e "\n${WHITE}Log saved to:${NC}"
-    echo -e "  ${GREEN}${EAX_LOG_FILE/#$HOME/\~}${NC}"
+    echo -e "  ${GREEN}$(tilde_path "$EAX_LOG_FILE")${NC}"
     if [ "$rc" -ne 0 ]; then
         echo -e "\n${YELLOW}If something went wrong, please attach this log to a bug report:${NC}"
         echo -e "  ${WHITE}$BUG_REPORT_URL${NC}"

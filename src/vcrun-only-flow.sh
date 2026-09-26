@@ -42,7 +42,7 @@ if is_truthy "$EAX_RESTORE_VCRUN_ONLY"; then
     print_banner "READY"
     echo -e "\n${WHITE}This will attempt to install the MS VC++ 2022 Redistributable into:${NC}"
     [ "$LAUNCHER_TYPE" == "1" ] && echo -e "${WHITE} -> Steam AppID: ${BOLD}$APPID${NC}"
-    [ -n "$PREFIX_PATH" ] && echo -e "${WHITE} -> Prefix: ${BOLD}$PREFIX_PATH${NC}"
+    [ -n "$PREFIX_PATH" ] && echo -e "${WHITE} -> Prefix: ${BOLD}$(tilde_path "$PREFIX_PATH")${NC}"
     echo -e "\n${YELLOW}Proceed? (Y/n): ${NC}"
     echo -e -n "> "
     read_answer CONFIRM_VCRUN_ONLY

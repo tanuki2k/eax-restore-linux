@@ -130,9 +130,9 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         idx=1
         for f in "${FILES_TO_REMOVE[@]}"; do
             if [ "${HAS_BACKUP[$f]:-0}" == "1" ]; then
-                printf "%2d  %s  " "$idx" "$f"; echo -e "${GREEN}(original will be restored)${NC}"
+                printf "%2d  %s  " "$idx" "$(tilde_path "$f")"; echo -e "${GREEN}(original will be restored)${NC}"
             else
-                printf "%2d  %s\n" "$idx" "$f"
+                printf "%2d  %s\n" "$idx" "$(tilde_path "$f")"
             fi
             idx=$((idx + 1))
         done
