@@ -610,8 +610,16 @@ resolve_exe_folder() {
     # all -- the Windows build only comes down once the user opts into that
     # beta branch. Passed in by scan_game_libraries, which already knows the
     # matched game's known-games entry at this point.
+    #
+    # exe_hint (optional, from known-eax-games.json's stores.<store>.exe_path)
+    # is the main .exe's path relative to the install root, for titles whose
+    # layout defeats the heuristics below -- e.g. Double Agent, which ships a
+    # root launcher plus separate single-player and multiplayer builds. When
+    # that file exists its folder becomes the top pick; when it doesn't (a
+    # different build, a moved install) detection carries on as normal.
     local root="$1"
     local beta_branch="$2"
+    local exe_hint="$3"
     GAME_DIR=""
 
     print_step 2 "Locate Game Executable"
@@ -644,11 +652,20 @@ resolve_exe_folder() {
     local -a cand_dirs=()
     local -A cand_exe_name=()
 
+    # The database's own exe_path wins outright when it's actually there --
+    # it was checked against a real install, which no name heuristic can beat.
+    if [ -n "$exe_hint" ] && [ -f "$root/$exe_hint" ]; then
+        local hint_dir
+        hint_dir="$(dirname "$root/$exe_hint")"
+        cand_dirs+=("$hint_dir")
+        cand_exe_name["$hint_dir"]="$(basename "$exe_hint")"
+    fi
+
     # The scanned root itself, if it directly holds a real (non-junk) .exe.
     # Pick a representative name to show: prefer one that isn't on the junk
     # list and resembles the folder's own name, falling back to whatever's
     # there so this never reports nothing.
-    if find "$root" -maxdepth 1 -type f -iname "*.exe" -print -quit 2>/dev/null | grep -q .; then
+    if [ -z "${cand_exe_name[$root]:-}" ] && find "$root" -maxdepth 1 -type f -iname "*.exe" -print -quit 2>/dev/null | grep -q .; then
         local root_exes=() root_exe_name=""
         while IFS= read -r f; do root_exes+=("$f"); done < <(find "$root" -maxdepth 1 -type f -iname "*.exe" 2>/dev/null)
         for f in "${root_exes[@]}"; do
@@ -730,6 +747,8 @@ resolve_exe_folder() {
     done
     dirs=("${dirs_matched[@]}" "${dirs[@]}")
     for d in "${dirs[@]}"; do
+        # Already listed as the exe_path pick.
+        [ -n "${cand_exe_name[$d]:-}" ] && continue
         cand_dirs+=("$d")
         cand_exe_name["$d"]="${dir_exe_name[$d]}"
     done

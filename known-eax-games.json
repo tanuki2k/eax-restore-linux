@@ -644,7 +644,8 @@
           "api": null,
           "id_confidence": "storefront_verified",
           "store_details": null,
-          "patches": null
+          "patches": null,
+          "exe_path": "System/splintercell3.exe"
         }
       },
       "default_api": "directsound3d",
@@ -3030,7 +3031,8 @@
           "api": null,
           "id_confidence": "storefront_verified",
           "store_details": null,
-          "patches": null
+          "patches": null,
+          "exe_path": "SCDA-Offline/System/SplinterCell4.exe"
         }
       },
       "default_api": "directsound3d",
@@ -3046,7 +3048,7 @@
         "3.0",
         "4.0"
       ],
-      "notes": null
+      "notes": "Double Agent installs single-player and multiplayer as two separate builds — the multiplayer build (SCDA-Online) no longer works, so set up the single-player build in SCDA-Offline."
     },
     {
       "name": "TRON 2.0",

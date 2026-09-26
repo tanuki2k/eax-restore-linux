@@ -344,13 +344,16 @@ scan_game_libraries() {
 
     GAME_NAME="${meta_names[$idx]}"
 
-    local beta_branch=""
+    local beta_branch="" exe_path
     if [ "${stores[$idx]}" == "steam" ]; then
         beta_branch=$(jq -r --arg id "${ids[$idx]}" \
             '.games[] | select((.stores.steam.id // "") | tostring == $id) | .stores.steam.beta_branch // empty' \
             "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
     fi
-    resolve_exe_folder "${paths[$idx]}" "$beta_branch" || return 1
+    exe_path=$(jq -r --arg id "${ids[$idx]}" --arg store "${stores[$idx]}" \
+        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .stores[$store].exe_path // empty' \
+        "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+    resolve_exe_folder "${paths[$idx]}" "$beta_branch" "$exe_path" || return 1
 
     [ "${stores[$idx]}" == "steam" ] && SCANNED_APPID="${ids[$idx]}"
     return 0
