@@ -1977,7 +1977,7 @@ handle_conflict() {
         fi
         echo -e "\n${YELLOW}Conflict: $(basename "$existing")${NC} ${WHITE}already exists at $(dirname "$target_file").${NC}"
         while true; do
-            echo -e "\n${YELLOW}Action - [o]verwrite, [B]ackup & overwrite (default), [s]kip: ${NC}"
+            echo -e "\n${YELLOW}Action - [B]ackup & overwrite (default), [o]verwrite, [s]kip: ${NC}"
             echo -e -n "> "
             read_answer C_CHOICE
             C_CHOICE="${C_CHOICE:-b}"
@@ -2002,7 +2002,7 @@ handle_conflict() {
                     echo -e " -> Backed up original $(basename "$existing") to $(basename "$target_file").bak.${TIMESTAMP}"
                     return 0 ;;
                 s) echo -e " -> Skipped $(basename "$target_file")."; return 1 ;;
-                *) echo -e "${YELLOW}${BOLD}Invalid choice. Type o, b, or s.${NC}" ;;
+                *) echo -e "${YELLOW}${BOLD}Invalid choice. Type b, o, or s.${NC}" ;;
             esac
         done
     fi
