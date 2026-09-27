@@ -282,7 +282,7 @@ handle_conflict() {
         fi
         echo -e "\n${YELLOW}$(basename "$existing")${NC} ${WHITE}already exists at $(tilde_path "$(dirname "$target_file")").${NC}"
         while true; do
-            prompt "What would you like to do? [o]verwrite, [b]ackup & overwrite (default), [s]kip: "
+            prompt "What would you like to do? [B]ackup & overwrite (default), [o]verwrite, [s]kip: "
             read_answer C_CHOICE
             C_CHOICE="${C_CHOICE:-b}"
             case "${C_CHOICE,,}" in
@@ -307,7 +307,7 @@ handle_conflict() {
                     print_status "Backed up original $(basename "$existing") to $(basename "$target_file").bak.${TIMESTAMP}"
                     return 0 ;;
                 s) echo ""; print_status "Skipped $(basename "$target_file")."; return 1 ;;
-                *) print_result "That's not a valid option — please type o, b, or s." "$YELLOW" ;;
+                *) print_result "That's not a valid option — please type b, o, or s." "$YELLOW" ;;
             esac
         done
     fi

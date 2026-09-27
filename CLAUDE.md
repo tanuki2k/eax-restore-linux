@@ -296,7 +296,7 @@ prompts — see "Text/output style conventions" above for which helper/color to 
   e.g. `"Invalid selection. Please type 1, 2, or 3."` →
   `"That's not a valid option — please type 1, 2, or 3."`, or a bare
   `"Conflict: $(basename "$target_file")"` header → a question,
-  `"What would you like to do? [o]verwrite, [b]ackup & overwrite (default), [s]kip:"`.
+  `"What would you like to do? [B]ackup & overwrite (default), [o]verwrite, [s]kip:"`.
 - Join cause and effect with a contraction and a causal "so" clause instead of two
   clipped declarative sentences, e.g.
   `"...checksum verification. This engine will be unavailable this run."` →
