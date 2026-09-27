@@ -1,0 +1,9 @@
+{
+  "$schema": "../schema.json",
+  "name": "Postal 2",
+  "stores": {
+    "steam": { "id": 223470 },
+    "gog": { "id": 1207658755 }
+  },
+  "eax": { "api": "openal", "versions": ["1.0", "2.0", "3.0"] }
+}

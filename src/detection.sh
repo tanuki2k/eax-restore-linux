@@ -61,6 +61,7 @@ show_hidden_folder_tip_popup() {
 get_game_directory() {
     GAME_DIR=""
     GAME_NAME=""
+    GAME_INSTALL_ROOT=""
     SCANNED_APPID=""
     SCANNED_NOTES_SHOWN=""
     OPENAL_NATIVE_MODE=""
@@ -611,12 +612,13 @@ resolve_exe_folder() {
     # beta branch. Passed in by scan_game_libraries, which already knows the
     # matched game's known-games entry at this point.
     #
-    # exe_hint (optional, from known-eax-games.json's stores.<store>.exe_path)
-    # is the main .exe's path relative to the install root, for titles whose
-    # layout defeats the heuristics below -- e.g. Double Agent, which ships a
-    # root launcher plus separate single-player and multiplayer builds. When
-    # that file exists its folder becomes the top pick; when it doesn't (a
-    # different build, a moved install) detection carries on as normal.
+    # exe_hint (optional, from the known-games entry's `exe`) is the main
+    # .exe's file name. The shallowest folder under the install root holding
+    # a file of that name becomes the top pick -- this handles layouts that
+    # defeat the name heuristics below, e.g. Double Agent, which ships a root
+    # launcher plus separate single-player and multiplayer builds. When no
+    # such file exists (a different build, a moved install) detection
+    # carries on as normal.
     local root="$1"
     local beta_branch="$2"
     local exe_hint="$3"
@@ -652,13 +654,17 @@ resolve_exe_folder() {
     local -a cand_dirs=()
     local -A cand_exe_name=()
 
-    # The database's own exe_path wins outright when it's actually there --
+    # The database's own exe name wins outright when it's actually there --
     # it was checked against a real install, which no name heuristic can beat.
-    if [ -n "$exe_hint" ] && [ -f "$root/$exe_hint" ]; then
-        local hint_dir
-        hint_dir="$(dirname "$root/$exe_hint")"
-        cand_dirs+=("$hint_dir")
-        cand_exe_name["$hint_dir"]="$(basename "$exe_hint")"
+    # Case-insensitive, since Linux filesystems are case-sensitive and a
+    # store's build may not match the database's spelling exactly.
+    if [ -n "$exe_hint" ]; then
+        local hint_exe
+        hint_exe="$(find "$root" -maxdepth 4 -type f -iname "$exe_hint" -printf '%d\t%p\n' 2>/dev/null | sort -n | head -n 1 | cut -f2-)"
+        if [ -n "$hint_exe" ]; then
+            cand_dirs+=("$(dirname "$hint_exe")")
+            cand_exe_name["$(dirname "$hint_exe")"]="$(basename "$hint_exe")"
+        fi
     fi
 
     # The scanned root itself, if it directly holds a real (non-junk) .exe.
@@ -747,7 +753,7 @@ resolve_exe_folder() {
     done
     dirs=("${dirs_matched[@]}" "${dirs[@]}")
     for d in "${dirs[@]}"; do
-        # Already listed as the exe_path pick.
+        # Already listed as the database exe pick.
         [ -n "${cand_exe_name[$d]:-}" ] && continue
         cand_dirs+=("$d")
         cand_exe_name["$d"]="${dir_exe_name[$d]}"
@@ -826,6 +832,30 @@ resolve_exe_folder() {
     [ "$have_more" -eq 1 ] && choice=$((choice - 1))
     [ "$choice" -eq 1 ] && resolve_exe_manual_entry "$root" && return 0
     return 1
+}
+
+confirm_game_dir_has_exe() {
+    # Usage: confirm_game_dir_has_exe <id> <steam|gog> <game_name>
+    # When the known-games entry names the game's main .exe and GAME_DIR
+    # doesn't hold it (a hand-typed path one level off, say), offers to pick
+    # the right folder -- the DLLs and config fixes only work next to the
+    # real .exe. Keeps the current folder if the user declines or the new
+    # path isn't usable.
+    local exe_name
+    exe_name=$(jq -r --arg id "$1" --arg store "$2" \
+        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .exe // empty' \
+        "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+    [ -n "$exe_name" ] && [ -n "$GAME_DIR" ] || return 0
+    find "$GAME_DIR" -maxdepth 1 -type f -iname "$exe_name" -print -quit 2>/dev/null | grep -q . && return 0
+
+    print_warning "$exe_name isn't in $(tilde_path "$GAME_DIR")."
+    confirm "Choose the folder that contains $3's $exe_name?" Y || return 0
+    local previous="$GAME_DIR"
+    if resolve_exe_manual_entry ""; then
+        check_target_writable "$GAME_DIR" "game folder"
+    else
+        GAME_DIR="$previous"
+    fi
 }
 
 detect_api_from_binary() {
@@ -923,7 +953,7 @@ confirm_continue_if_openal_native() {
     local json_available=0 match_count=0
     local api="" matched=0 scanned=0 json_checked=0 declined=0 overriding=0
     # The known-games entry's audio API for this store, exactly as stored —
-    # the per-store override (stores.<store>.api) if present, else default_api,
+    # the per-store override (stores.<store>.api) if present, else eax.api,
     # else "" when the entry omits both. Distinct from $api, which is
     # defaulted to "directsound3d" for display. Only a literal "directsound3d"
     # here counts as confirmed.
@@ -990,9 +1020,10 @@ confirm_continue_if_openal_native() {
             match_count=$(jq -r --arg id "$1" --arg store "$store" '[.games[] | select((.stores[$store].id // "") | tostring == $id)] | length' "$KNOWN_GAMES_FILE" 2>/dev/null)
 
             if [ "${match_count:-0}" -gt 0 ]; then
-                db_api_raw=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | (.stores[$store].api // .default_api // "")' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+                db_api_raw=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | (.stores[$store].api // .eax.api // "")' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
                 api="${db_api_raw:-directsound3d}"
                 matched=1
+                confirm_game_dir_has_exe "$1" "$store" "$game_name"
             else
                 print_note "$game_name isn't in the known-games database."
             fi

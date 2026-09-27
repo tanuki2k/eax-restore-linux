@@ -1,0 +1,276 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/tanuki2k/eax-restore-linux/blob/dev/data/schema.json",
+  "title": "Known EAX game",
+  "description": "One game in the known-EAX-games database (data/games/<id>.json). The id is the file name. Optional fields are omitted when empty or at their default. See README.md, 'Contributing to the known games database'.",
+  "type": "object",
+  "required": ["name", "stores", "eax"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "name": {
+      "description": "Display name, as the stores list the game.",
+      "type": "string",
+      "minLength": 1
+    },
+    "exe": {
+      "description": "The main game executable's file name only (no folders), with its exact case, e.g. \"DeusEx.exe\". Used to pick the right folder when scanning an install.",
+      "type": "string",
+      "pattern": "^[^/\\\\]+\\.[eE][xX][eE]$"
+    },
+    "stores": {
+      "description": "Where the game is sold. Omit a store entirely when the game isn't sold there.",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "steam": { "$ref": "#/$defs/store" },
+        "gog": { "$ref": "#/$defs/store" }
+      }
+    },
+    "eax": {
+      "description": "How the game does 3D audio, which EAX versions it supports, and whether EAX works on the current build.",
+      "type": "object",
+      "required": ["api"],
+      "additionalProperties": false,
+      "properties": {
+        "api": { "$ref": "#/$defs/api" },
+        "versions": {
+          "description": "Supported EAX versions, from a verifiable source.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["1.0", "2.0", "3.0", "4.0", "5.0"] },
+          "default": []
+        },
+        "status": {
+          "description": "supported; removed_by_patch (an update stripped EAX from the current build); not_implemented (a remaster/rewrite that never had EAX).",
+          "enum": ["supported", "removed_by_patch", "not_implemented"],
+          "default": "supported"
+        },
+        "problem": {
+          "description": "Why the current build is in the state `status` describes.",
+          "type": "string"
+        },
+        "fix": {
+          "description": "How to get a build where EAX works.",
+          "type": "string"
+        },
+        "fix_in_place": {
+          "description": "true when `fix` works on the same install the script is pointed at (e.g. a Steam beta branch), so the script warns and offers to continue instead of blocking.",
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "install": {
+      "description": "What the install itself does differently for this game.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tweaks": {
+          "description": "Advanced Compatibility Tweaks recommended for this game (default-yes prompts).",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["eax_unified", "expand_audio_limits", "com_registry_routing"] },
+          "default": []
+        },
+        "alsoft_ini": {
+          "description": "Settings offered on top of the generated alsoft.ini (section -> key -> value). Only these keys are allowed.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "reverb": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "boost": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$" }
+              }
+            },
+            "general": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "sources": { "type": "string", "pattern": "^[0-9]+$" },
+                "frequency": { "type": "string", "pattern": "^[0-9]+$" },
+                "default-reverb": { "$ref": "#/$defs/value_string" },
+                "resampler": { "$ref": "#/$defs/value_string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "game_config": {
+      "description": "Changes to the game's own config files, offered in the Game Settings step.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "files": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "$ref": "#/$defs/config_file_name" },
+          "additionalProperties": { "$ref": "#/$defs/config_file" }
+        },
+        "audio_fixes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/fix" }
+        },
+        "extra_fixes": {
+          "description": "Optional fixes that aren't needed for EAX (e.g. low-res textures).",
+          "type": "array",
+          "items": { "$ref": "#/$defs/fix" }
+        }
+      },
+      "required": ["files"]
+    },
+    "sources": {
+      "description": "URLs backing this entry's claims.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^https?://" }
+    },
+    "notes": {
+      "description": "Caveats not covered by the other fields.",
+      "type": "string"
+    }
+  },
+  "$defs": {
+    "api": {
+      "enum": ["directsound3d", "openal"]
+    },
+    "store": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Steam AppID / GOG product ID, verified against the store.",
+          "type": "integer"
+        },
+        "delisted": {
+          "description": "Pulled from sale; existing owners keep access.",
+          "type": "boolean",
+          "default": false
+        },
+        "id_source": {
+          "enum": ["storefront_verified", "local_install_verified", "steamdb_historical"],
+          "default": "storefront_verified"
+        },
+        "api": {
+          "description": "Overrides eax.api for this store's build only.",
+          "$ref": "#/$defs/api"
+        },
+        "beta_branch": {
+          "description": "Steam only: the BetaKey of a branch that restores EAX.",
+          "type": "string"
+        },
+        "store_details": { "type": "string" },
+        "patches": { "type": "string" }
+      }
+    },
+    "name_part": {
+      "description": "A config section or key name.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._ -]+$"
+    },
+    "value_string": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._ ()-]*$"
+    },
+    "value": {
+      "description": "A string sets the value; true/false turns a dark_cfg flag on or off; null deletes the key.",
+      "anyOf": [
+        { "$ref": "#/$defs/value_string" },
+        { "type": "boolean" },
+        { "type": "null" }
+      ]
+    },
+    "config_file_name": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._ -]+\\.([iI][nN][iI]|[cC][fF][gG])$"
+    },
+    "config_file": {
+      "type": "object",
+      "required": ["format", "locations"],
+      "additionalProperties": false,
+      "properties": {
+        "format": {
+          "description": "ini: [Section] key=value. idtech_cfg: seta key \"value\". dark_cfg: NewDark key value, bare flags, ;flag = off.",
+          "enum": ["ini", "idtech_cfg", "dark_cfg"]
+        },
+        "locations": {
+          "description": "Where to look, in order, as \"base:path\". The first one that exists is used.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^(game|install|prefix_documents|prefix_appdata|prefix_localappdata):(?!/)(?!.*\\.\\.)[^\\\\]+\\.([iI][nN][iI]|[cC][fF][gG])$"
+          }
+        },
+        "if_missing": {
+          "description": "When no location exists. Omitted: tell the player to launch the game once and run this again. skip: skip this file's fixes silently. create: create it.",
+          "enum": ["skip", "create"]
+        }
+      }
+    },
+    "fix": {
+      "type": "object",
+      "required": ["title", "reason", "changes"],
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "description": "Enable / Fix / Remove / Raise + the result, e.g. \"Enable EAX reverb\".",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "reason": {
+          "description": "What the game does out of the box, in one or two short sentences.",
+          "type": "string",
+          "minLength": 1
+        },
+        "only_if": {
+          "description": "Conditions for offering the fix; it's skipped silently otherwise.",
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": false,
+          "properties": {
+            "stores": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "enum": ["steam", "gog"] }
+            },
+            "speakers": { "enum": ["stereo", "surround", "matrix"] }
+          }
+        },
+        "changes": {
+          "description": "file -> section -> key -> value for ini files; file -> key -> value for cfg files. Files must be defined in game_config.files.",
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "$ref": "#/$defs/config_file_name" },
+          "additionalProperties": {
+            "type": "object",
+            "minProperties": 1,
+            "propertyNames": { "$ref": "#/$defs/name_part" },
+            "additionalProperties": {
+              "anyOf": [
+                { "$ref": "#/$defs/value" },
+                {
+                  "type": "object",
+                  "minProperties": 1,
+                  "propertyNames": { "$ref": "#/$defs/name_part" },
+                  "additionalProperties": { "$ref": "#/$defs/value" }
+                }
+              ]
+            }
+          }
+        },
+        "follow_up": {
+          "description": "Something the player does after installing, shown in the final summary.",
+          "type": "string"
+        }
+      }
+    }
+  }
+}

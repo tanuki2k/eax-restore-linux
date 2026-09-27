@@ -1,0 +1,39 @@
+name: Known Games Database
+
+on:
+  push:
+    paths:
+      - "data/**"
+      - "tools/**"
+      - "known-eax-games.json"
+      - ".github/workflows/known-games.yml"
+  pull_request:
+    paths:
+      - "data/**"
+      - "tools/**"
+      - "known-eax-games.json"
+      - ".github/workflows/known-games.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install check-jsonschema
+        run: pipx install check-jsonschema
+
+      - name: Schema is valid
+        run: check-jsonschema --check-metaschema data/schema.json
+
+      - name: Game files match the schema
+        run: check-jsonschema --schemafile data/schema.json data/games/*.json
+
+      - name: Game files are formatted
+        run: tools/format-known-games.sh --check
+
+      - name: known-eax-games.json is up to date
+        run: tools/build-known-games.sh --check

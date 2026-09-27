@@ -1,0 +1,9 @@
+{
+  "$schema": "../schema.json",
+  "name": "Fallout Tactics: Brotherhood of Steel",
+  "stores": {
+    "steam": { "id": 38420 },
+    "gog": { "id": 1440163405 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0"] }
+}

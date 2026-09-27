@@ -12,9 +12,17 @@ calls into OpenAL — into both the game folder and the Wine/Proton prefix, with
 choice, architecture detection, prefix/library auto-detection, conflict backups, an
 install manifest for clean uninstall, and checksum-verified downloads with local
 caching. `known-eax-games.json` is the companion community-maintained database that
-drives library scanning and install-time compatibility notes for specific titles. See
-`README.md` for the full feature list and user-facing docs, and its "Contributing to
-the known games database" section for the JSON schema.
+drives library scanning, install-time compatibility notes and the Game Settings step
+(changes to a game's own config files) for specific titles. It's **generated**: each
+game is edited as `data/games/<id>.json`, defined by `data/schema.json`, and
+`tools/build-known-games.sh` combines them. See `README.md` for the full feature list
+and user-facing docs, and its "Contributing to the known games database" section for
+the fields.
+
+**Design rule: anything specific to a game or engine lives in the database, never as a
+special case in the script's code** — config edits, the audio API (and so the engine),
+alsoft.ini values, recommended tweaks. The script only knows how to read and edit the
+three config formats (`ini`, `idtech_cfg`, `dark_cfg`), not which game needs what.
 
 `eax-restore-linux.sh` is **not committed to the repo** — it's a generated build
 artifact. Its source lives split across `src/*.sh` (one file per functional group);
@@ -66,7 +74,13 @@ launcher hardcodes `releases/latest`).
   `src/globals.sh`) — handy locally; the `dev` workflow no longer needs them.
 - **Syntax-check after any edit:** `bash -n dist/eax-restore-linux.sh`
 - **Shellcheck (if installed):** `shellcheck dist/eax-restore-linux.sh`
-- **Validate the JSON database after editing it:** `jq empty known-eax-games.json`
+- **After editing the database** (`data/games/*.json`, never `known-eax-games.json`
+  directly): `tools/format-known-games.sh` (canonical key order, empty/default fields
+  dropped), then `tools/build-known-games.sh` (regenerates `known-eax-games.json`).
+  CI (`.github/workflows/known-games.yml`) runs `check-jsonschema --schemafile
+  data/schema.json data/games/*.json` plus both scripts' `--check` modes.
+  `tools/migrate-v2-to-v3.sh` is the one-off that split the old single-file (schema 2)
+  database; kept for reference only.
 - **Run the script:** `./dist/eax-restore-linux.sh` (interactive; requires `curl`, `unzip`,
   `file`, `jq`, plus `protontricks` for Steam games or `winetricks` for Heroic/GOG
   games — the script's own pre-flight check offers to install missing ones).
@@ -111,15 +125,22 @@ their execution order in the assembled script):
 8. **`known-games.sh`** — the `known-eax-games.json` helpers:
    `ensure_known_games_json`, `scan_game_libraries`, `show_known_game_notes`,
    `confirm_continue_if_eax_impossible`, etc.
-9. **`vcrun.sh`** — the standalone VC++ runtime installer: `verify_vcrun_files`,
+9. **`game-config.sh`** — the Game Settings feature: `config_get_key` /
+   `config_set_key` (awk readers/writers for the three config formats, keeping CRLF,
+   key spelling and spacing), `resolve_config_file`, `offer_alsoft_settings` (step 8),
+   `game_settings_step` (step 11), `apply_game_settings` (Phase 2, writes `CONFIG:`
+   manifest lines), `print_game_settings_summary`, `revert_game_settings`
+   (uninstall step 7). All of it driven by the entry's `game_config` /
+   `install.alsoft_ini`.
+10. **`vcrun.sh`** — the standalone VC++ runtime installer: `verify_vcrun_files`,
    `install_vcrun_dependencies`, `uninstall_vcrun_dependencies`, etc. —
    independently triggerable via `EAX_RESTORE_VCRUN_ONLY`, with its own `"VCRUN"`
    manifest entries.
-10. **`verify.sh`** — download verification: `verify_checksum`, `verify_or_confirm`,
+11. **`verify.sh`** — download verification: `verify_checksum`, `verify_or_confirm`,
     `get_asset_digest`, `confirm_unverified_download`.
-11. **`cache.sh`** — `update_local_cache` (the repository-cache step), plus
+12. **`cache.sh`** — `update_local_cache` (the repository-cache step), plus
     `handle_conflict` and `auto_backup_and_overwrite`.
-12. **`preflight.sh`** through **`install-flow.sh`** — top-level script flow:
+13. **`preflight.sh`** through **`install-flow.sh`** — top-level script flow:
     pre-flight dependency check, the `EAX_RESTORE_VCRUN_ONLY` early-exit path,
     `ACTION: UNINSTALL`, `ACTION: INSTALL`. The `ACTION: INSTALL` block itself
     spans two files sharing one `if [ "$SCRIPT_ACTION" == "i" ]` — opened in
@@ -138,7 +159,9 @@ version metadata (GitHub release `updated_at` / redirect-resolved tag) against a
 marker file, download only on change, verify integrity (`unzip -tq` + a pinned SHA256
 via `verify_checksum`, or a live GitHub-published digest via `verify_or_confirm`), and
 always preserve the existing cache rather than wiping it on a failed
-download/verification. `known-eax-games.json` is fetched separately by
+download/verification. `known-eax-games.json` is fetched separately (on dev, from the
+`dev` branch and cached as `known-eax-games.v3.json`, since schema 3 only exists there
+until 0.29 merges) by
 `ensure_known_games_json()` (called from `update_local_cache` and several other call
 sites — memoized per run) — it deliberately always fetches fresh (no staleness check)
 since it's a small, community-edited file where PRs should take effect immediately,
@@ -260,9 +283,9 @@ of prose in this repo, `known-eax-games.json`'s free-text fields and the script'
 own user-facing strings. Neither is enforceable by a linter, so match the examples
 below when writing or editing either.
 
-**`known-eax-games.json` prose fields** (`notes`, `store_details`, `patches`,
-`eax_status_details`, `restore_details` — see README's "Contributing to the known
-games database" for what belongs in which field):
+**Database prose fields** (`notes`, `store_details`, `patches`, `eax.problem`,
+`eax.fix`, and a fix's `title`, `reason` and `follow_up` — see README's "Contributing
+to the known games database" for what belongs in which field):
 
 - Keep each field to its one job; don't restate content that belongs in a sibling
   field just because it's related to the same title.
@@ -287,6 +310,46 @@ games database" for what belongs in which field):
   ("If you also own the classic build..."), one caveat or fact per note. E.g.
   "Bloodlines isn't documented (per PCGamingWiki) as having hardware EAX... That's
   expected, not a fault."
+
+**Game fix `title` and `reason`** (`game_config.audio_fixes` / `extra_fixes`). Players
+see these in the Game Settings step, directly above rows showing each file, setting,
+and its current → new value, read live from their own install.
+
+`title`:
+- A fixed verb + the result: **Enable** for a feature that's off, **Fix** for a bug,
+  **Remove** for something unwanted, **Raise** for a quality level. Sentence case, no
+  full stop, about 5 words at most.
+- Name the result the player gets, not the setting (`Enable EAX reverb`, not
+  `Set UseEAX to True`), even when the fix changes several settings — the rows list
+  them.
+- Reuse the same title for the same result across games.
+- Don't repeat the game name; the step's header already shows it.
+
+`reason`:
+- One sentence, or two short ones: what the game does out of the box, and what that
+  costs the player where it isn't obvious.
+- Start with the game's name. Name concrete files the game itself uses (e.g.
+  `DefOpenAL32.dll`, `OpenAL32.dll`), but never the script's own parts (DSOAL,
+  OpenAL Soft) or what it installs.
+- Be specific: never "any other" or "the other one"; name what it's chosen over
+  ("loads its bundled DefOpenAL32.dll instead of OpenAL32.dll").
+- Don't restate setting names, values or paths already shown in the rows, and don't
+  cite where a default was checked — the row's current value proves it. Cite a source
+  only for a claim the rows can't show, e.g. "(per PCGamingWiki)"; its URL goes in
+  `sources`.
+- Plain English for effects ("muffling of sounds through walls", not "occlusion").
+  Game menu labels may be quoted when they help a player find the same option in-game.
+- Only state what's verified by a real install, the game's own docs, or a cited source.
+
+Examples:
+- `Enable EAX reverb` — "Brothers in Arms ships with EAX and 3D sound off and loads its
+  bundled DefOpenAL32.dll instead of OpenAL32.dll."
+- `Enable EAX effects` — "Quake 4 ships with its EAX sound options off, so there's no
+  reverb and no muffling of sounds through walls."
+- `Fix low-res textures` — "Quake 4 can't detect how much memory modern graphics cards
+  have, so it loads its lowest-resolution textures (per PCGamingWiki)."
+- `Enable underwater reverb` — "Some System Shock 2 maps don't mark their underwater
+  areas, so they play the wrong reverb there (per NewDark's documentation)."
 
 **Script user-facing strings** (banners, `Note:`/`Warning:`/`Error:` messages,
 prompts — see "Text/output style conventions" above for which helper/color to use):
@@ -317,3 +380,7 @@ prompts — see "Text/output style conventions" above for which helper/color to 
   rather than a throat-clearing reasoning paragraph, e.g. "will silently fail to
   load the custom audio engine" → "the game will crash without showing an error
   message".
+- When the script detects a problem, state the problem and offer the fix — don't
+  explain what the script would otherwise fail to do. E.g. step 8's
+  `"Deus Ex's reverb is quiet at the default level."` + `"Raise the reverb boost to
+  +6 dB? (Y/n)"`, not a paragraph about why an unboosted reverb goes unnoticed.

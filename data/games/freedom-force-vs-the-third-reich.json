@@ -1,0 +1,8 @@
+{
+  "$schema": "../schema.json",
+  "name": "Freedom Force vs. the Third Reich",
+  "stores": {
+    "steam": { "id": 8890 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0"] }
+}

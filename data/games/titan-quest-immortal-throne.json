@@ -1,0 +1,9 @@
+{
+  "$schema": "../schema.json",
+  "name": "Titan Quest: Immortal Throne",
+  "stores": {
+    "steam": { "id": 4550, "delisted": true, "id_source": "steamdb_historical" }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0", "3.0", "4.0"] },
+  "notes": "Superseded for new purchases by Titan Quest Anniversary Edition, which is a separate entry in this file."
+}

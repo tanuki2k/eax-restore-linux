@@ -1,0 +1,8 @@
+{
+  "$schema": "../schema.json",
+  "name": "Messiah",
+  "stores": {
+    "gog": { "id": 7 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["2.0"] }
+}

@@ -1,0 +1,8 @@
+{
+  "$schema": "../schema.json",
+  "name": "Requiem: Avenging Angel",
+  "stores": {
+    "gog": { "id": 1449581489 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0"] }
+}

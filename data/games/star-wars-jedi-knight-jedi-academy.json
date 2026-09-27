@@ -1,0 +1,10 @@
+{
+  "$schema": "../schema.json",
+  "name": "Star Wars Jedi Knight: Jedi Academy",
+  "exe": "jasp.exe",
+  "stores": {
+    "steam": { "id": 6020 },
+    "gog": { "id": 1428935726 }
+  },
+  "eax": { "api": "openal", "versions": ["1.0", "2.0", "3.0", "4.0"] }
+}

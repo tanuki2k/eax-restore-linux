@@ -1,0 +1,8 @@
+{
+  "$schema": "../schema.json",
+  "name": "The Wheel of Time",
+  "stores": {
+    "gog": { "id": 1584652180 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0"] }
+}

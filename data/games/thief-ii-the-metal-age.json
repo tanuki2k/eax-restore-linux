@@ -1,0 +1,41 @@
+{
+  "$schema": "../schema.json",
+  "name": "Thief II: The Metal Age",
+  "exe": "Thief2.exe",
+  "stores": {
+    "steam": {
+      "id": 211740,
+      "store_details": "Still the original Dark Engine build, on DirectSound3D.",
+      "patches": "T2Fix bundles the NewDark engine patch along with a range of modern-system fixes, and is worth installing alongside EAX."
+    },
+    "gog": {
+      "id": 1207659001,
+      "api": "openal",
+      "store_details": "It comes with NewDark pre-installed, which runs positional audio and EAX reverb through OpenAL."
+    }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0"] },
+  "game_config": {
+    "files": {
+      "cam_ext.cfg": {
+        "format": "dark_cfg",
+        "locations": ["game:cam_ext.cfg"],
+        "if_missing": "skip"
+      }
+    },
+    "audio_fixes": [
+      {
+        "title": "Enable underwater reverb",
+        "reason": "Some Thief II maps don't mark their underwater areas, so they play the wrong reverb there (per NewDark's documentation).",
+        "changes": { "cam_ext.cfg": { "force_underwater_reverb": true } }
+      }
+    ],
+    "extra_fixes": [
+      {
+        "title": "Enable full-precision mouse look",
+        "reason": "Thief II reads mouse look through standard Windows input by default, which doesn't give high-resolution mice their full precision (per NewDark's documentation).",
+        "changes": { "cam_ext.cfg": { "use_raw_mouse_input": true } }
+      }
+    ]
+  }
+}

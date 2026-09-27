@@ -1,0 +1,10 @@
+{
+  "$schema": "../schema.json",
+  "name": "Hitman: Blood Money",
+  "exe": "HitmanBloodMoney.exe",
+  "stores": {
+    "steam": { "id": 6860 },
+    "gog": { "id": 1942346586 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["2.0", "3.0", "4.0"] }
+}

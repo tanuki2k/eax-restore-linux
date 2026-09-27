@@ -23,6 +23,7 @@ COMPONENTS=(
     logging.sh
     detection.sh
     known-games.sh
+    game-config.sh
     vcrun.sh
     verify.sh
     cache.sh

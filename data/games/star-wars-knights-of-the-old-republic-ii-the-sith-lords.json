@@ -1,0 +1,17 @@
+{
+  "$schema": "../schema.json",
+  "name": "Star Wars: Knights of the Old Republic II - The Sith Lords",
+  "exe": "swkotor2.exe",
+  "stores": {
+    "steam": { "id": 208580, "beta_branch": "legacypc" },
+    "gog": { "id": 1421404581 }
+  },
+  "eax": {
+    "api": "directsound3d",
+    "versions": ["1.0", "2.0", "3.0"],
+    "status": "removed_by_patch",
+    "problem": "The original release used DirectSound3D, but a later patch replaced it with a newer audio engine that dropped EAX entirely.",
+    "fix": "Steam beta branch 'legacypc' reverts to the pre-patch build with EAX intact (right-click the game -> Properties -> Betas).",
+    "fix_in_place": true
+  }
+}

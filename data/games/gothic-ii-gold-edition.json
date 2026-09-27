@@ -1,0 +1,10 @@
+{
+  "$schema": "../schema.json",
+  "name": "Gothic II: Gold Edition",
+  "exe": "Gothic2.exe",
+  "stores": {
+    "steam": { "id": 39510 },
+    "gog": { "id": 1207658718 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["2.0"] }
+}

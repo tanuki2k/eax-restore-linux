@@ -1,0 +1,15 @@
+{
+  "$schema": "../schema.json",
+  "name": "Baldur's Gate: Enhanced Edition",
+  "exe": "Baldur.exe",
+  "stores": {
+    "steam": { "id": 228280 },
+    "gog": { "id": 1207666353 }
+  },
+  "eax": {
+    "api": "directsound3d",
+    "status": "not_implemented",
+    "problem": "The Enhanced Edition runs on a from-scratch OpenAL engine, built for its native Linux and macOS ports — it never had DirectSound3D EAX to begin with."
+  },
+  "notes": "If you also own the classic build, it's a separate GOG product the scanner detects on its own — see the 'Baldur's Gate: The Original Saga' entry (gog_id 1207658886), which has real DirectSound3D EAX."
+}

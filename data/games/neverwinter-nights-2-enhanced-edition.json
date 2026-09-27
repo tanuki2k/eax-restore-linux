@@ -1,0 +1,14 @@
+{
+  "$schema": "../schema.json",
+  "name": "Neverwinter Nights 2: Enhanced Edition",
+  "stores": {
+    "steam": { "id": 2738630 },
+    "gog": { "id": 1993442013 }
+  },
+  "eax": {
+    "api": "directsound3d",
+    "status": "not_implemented",
+    "problem": "The 2025 Enhanced Edition (Aspyr) is a from-scratch engine rewrite — it never had DirectSound3D EAX to begin with."
+  },
+  "notes": "If you also own the classic build, it's a separate GOG product the scanner detects on its own — see the 'Neverwinter Nights 2' entry (gog_id 1207659162), which has real DirectSound3D EAX."
+}

@@ -1,0 +1,32 @@
+{
+  "$schema": "../schema.json",
+  "name": "Unreal Tournament: Game of the Year Edition",
+  "exe": "UnrealTournament.exe",
+  "stores": {
+    "steam": {
+      "id": 13240,
+      "delisted": true,
+      "store_details": "Delisted from Steam in December 2022, when Epic pulled the entire classic Unreal series from sale. OldUnreal (oldunreal.com) distributes a free, Epic-authorized copy of the full game.",
+      "patches": "Creative's official 'EAX Library Patch' (uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip) adds full EAX 2.0 reverb and occlusion to the original Deathmatch and Capture the Flag maps — historically mirrored at patches-scrolls.com; verify the mirror and files before installing. OldUnreal's own patches also add a selectable OpenAL-based 'ALAudio' renderer, a strong alternative if you'd rather use it than this script's approach."
+    }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0"] },
+  "game_config": {
+    "files": {
+      "UnrealTournament.ini": { "format": "ini", "locations": ["game:UnrealTournament.ini"] }
+    },
+    "audio_fixes": [
+      {
+        "title": "Enable EAX reverb",
+        "reason": "Unreal Tournament ships with its hardware sound option off, and it only plays EAX reverb with it on.",
+        "changes": {
+          "UnrealTournament.ini": {
+            "Engine.Engine": { "AudioDevice": "Galaxy.GalaxyAudioSubsystem" },
+            "Galaxy.GalaxyAudioSubsystem": { "Use3dHardware": "True", "UseReverb": "True" }
+          }
+        }
+      }
+    ]
+  },
+  "sources": ["https://www.oldunreal.com"]
+}

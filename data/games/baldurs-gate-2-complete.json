@@ -1,0 +1,13 @@
+{
+  "$schema": "../schema.json",
+  "name": "Baldur's Gate 2 Complete",
+  "exe": "BGMain.exe",
+  "stores": {
+    "gog": {
+      "id": 1207658893,
+      "delisted": true,
+      "store_details": "The classic pre-2013 build, sold by GOG as a standalone product separate from 'Baldur's Gate II: Enhanced Edition'. GOG's catalogue search doesn't surface it, but the product page and existing owners' libraries resolve normally. This build has real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite. Its EAX 2.0 environmental occlusion historically needed VxD drivers under Windows 9x (per the Vogons Wiki citation for this title), which is likely moot under Wine."
+    }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0"] }
+}

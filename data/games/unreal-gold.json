@@ -1,0 +1,38 @@
+{
+  "$schema": "../schema.json",
+  "name": "Unreal Gold",
+  "exe": "Unreal.exe",
+  "stores": {
+    "steam": {
+      "id": 13250,
+      "delisted": true,
+      "store_details": "Delisted from Steam in December 2022, when Epic pulled the entire classic Unreal series from sale. OldUnreal (oldunreal.com) distributes a free, Epic-authorized copy of the full game.",
+      "patches": "OldUnreal's v227 patch also adds a selectable OpenAL-based 'ALAudio' renderer — a strong alternative if you'd rather use it than this script's approach; it's a modern reimplementation of the game's audio, not the original DirectSound3D EAX path, so pick one or the other."
+    },
+    "gog": {
+      "id": 1207658679,
+      "delisted": true,
+      "store_details": "Delisted from GOG in December 2022, when Epic pulled the entire classic Unreal series from sale. OldUnreal (oldunreal.com) distributes a free, Epic-authorized copy of the full game.",
+      "patches": "OldUnreal's v227 patch also adds a selectable OpenAL-based 'ALAudio' renderer — a strong alternative if you'd rather use it than this script's approach; it's a modern reimplementation of the game's audio, not the original DirectSound3D EAX path, so pick one or the other."
+    }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0"] },
+  "game_config": {
+    "files": { "Unreal.ini": { "format": "ini", "locations": ["game:Unreal.ini"] } },
+    "audio_fixes": [
+      {
+        "title": "Enable EAX reverb",
+        "reason": "Unreal only plays EAX reverb when its hardware 3D sound, reverb and spatial sound options are all on.",
+        "changes": {
+          "Unreal.ini": {
+            "Galaxy.GalaxyAudioSubsystem": {
+              "Use3dHardware": "True",
+              "UseReverb": "True",
+              "UseSpatial": "True"
+            }
+          }
+        }
+      }
+    ]
+  }
+}

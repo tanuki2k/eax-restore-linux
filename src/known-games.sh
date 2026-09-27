@@ -64,8 +64,8 @@ ensure_known_games_json() {
     if ! jq -e --argjson want "$KNOWN_GAMES_SCHEMA_VERSION" \
         '(.schema_version // 1) >= $want' "$KNOWN_GAMES_FILE" >/dev/null 2>&1; then
         { echo ""; print_warning_arrow "$KNOWN_GAMES_FILE predates the schema this script version expects" \
-            "(no per-store 'stores' block) — it looks like an older database. Audio API" \
-            "Detection and some install-time notes won't work correctly until it updates."; } >&2
+            "— it looks like an older database. Audio API Detection, the game details and" \
+            "the Game Settings step won't work correctly until it updates."; } >&2
     fi
 
     return 0
@@ -138,7 +138,7 @@ prompt_recent_game() {
 block_if_eax_not_implemented() {
     # Usage: block_if_eax_not_implemented <id> <steam|gog> <game_name>
     # Early twin of confirm_continue_if_eax_impossible's hard-block branches
-    # (not_implemented, and removed_by_patch with no build_workaround_available)
+    # (not_implemented, and removed_by_patch without eax.fix_in_place)
     # — called right after the scan pick so a known dead end is caught before
     # wasting the user's time on AppID/prefix detection. On a match it hands
     # off to prompt_restart_or_quit, which either exits or sets
@@ -150,8 +150,8 @@ block_if_eax_not_implemented() {
     local store="steam"
     [ "$2" == "gog" ] && store="gog"
     local status workaround
-    status=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax_status // "supported"' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
-    workaround=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .build_workaround_available // false' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+    status=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.status // "supported"' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+    workaround=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.fix_in_place // false' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
 
     if [ "$status" == "not_implemented" ]; then
         print_error "$3 never implemented EAX/environmental audio in the first place, so" \
@@ -203,6 +203,7 @@ scan_game_libraries() {
     # normal manual/GUI-picker flow.
     GAME_DIR=""
     GAME_NAME=""
+    GAME_INSTALL_ROOT=""
     SCANNED_APPID=""
     SCANNED_NOTES_SHOWN=""
     OPENAL_NATIVE_MODE=""
@@ -359,16 +360,17 @@ scan_game_libraries() {
 
     GAME_NAME="${meta_names[$idx]}"
 
-    local beta_branch="" exe_path
+    local beta_branch="" exe_name
     if [ "${stores[$idx]}" == "steam" ]; then
         beta_branch=$(jq -r --arg id "${ids[$idx]}" \
             '.games[] | select((.stores.steam.id // "") | tostring == $id) | .stores.steam.beta_branch // empty' \
             "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
     fi
-    exe_path=$(jq -r --arg id "${ids[$idx]}" --arg store "${stores[$idx]}" \
-        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .stores[$store].exe_path // empty' \
+    exe_name=$(jq -r --arg id "${ids[$idx]}" --arg store "${stores[$idx]}" \
+        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .exe // empty' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
-    resolve_exe_folder "${paths[$idx]}" "$beta_branch" "$exe_path" || return 1
+    resolve_exe_folder "${paths[$idx]}" "$beta_branch" "$exe_name" || return 1
+    GAME_INSTALL_ROOT="${paths[$idx]}"
 
     [ "${stores[$idx]}" == "steam" ] && SCANNED_APPID="${ids[$idx]}"
     return 0
@@ -383,7 +385,7 @@ scan_game_libraries() {
 
 resolve_recommended_tweaks() {
     # Usage: resolve_recommended_tweaks <id> <steam|gog>
-    # Reads the known-games entry's recommended_tweaks array once and sets
+    # Reads the known-games entry's install.tweaks array once and sets
     # EAX_UNIFIED / RECOMMENDED_AUDIO_LIMITS / RECOMMENDED_COM_ROUTING to 1
     # (else "") based on membership of "eax_unified" / "expand_audio_limits" /
     # "com_registry_routing" respectively — the ~32 titles that reach EAX
@@ -404,7 +406,7 @@ resolve_recommended_tweaks() {
     [ "$2" == "gog" ] && store="gog"
     local tweaks
     tweaks=$(jq -r --arg id "$1" --arg store "$store" \
-        '[.games[] | select((.stores[$store].id // "") | tostring == $id)][0] | .recommended_tweaks // [] | .[]' \
+        '[.games[] | select((.stores[$store].id // "") | tostring == $id)][0] | .install.tweaks // [] | .[]' \
         "$KNOWN_GAMES_FILE" 2>/dev/null)
     [ -z "$tweaks" ] && return
     grep -qx "eax_unified" <<< "$tweaks" && EAX_UNIFIED=1
@@ -417,9 +419,9 @@ show_known_game_notes() {
     # Best-effort, install-only heads-up for well-known EAX titles, sourced
     # from the game-level `notes` field of known-eax-games.json. Notes are
     # stored as a single unwrapped line for easy editing, then word-wrapped to
-    # the script's usual prose width at display time. stores.<store>.listing
-    # ("delisted") is shown as an Availability line here too, EXCEPT when the
-    # caller already surfaced it in a GAME DETAILS block (show_game_details_block
+    # the script's usual prose width at display time. stores.<store>.delisted
+    # is shown as an Availability line here too, EXCEPT when the caller
+    # already surfaced it in a GAME DETAILS block (show_game_details_block
     # passes skip_availability=1 to avoid printing it twice) — call sites that
     # don't go through a GAME DETAILS block (e.g. an unmatched manual entry)
     # still need this fallback.
@@ -436,7 +438,7 @@ show_known_game_notes() {
     notes=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .notes // empty' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
 
     if [ -z "$3" ]; then
-        listing=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .stores[$store].listing // empty' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+        listing=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | (if .stores[$store].delisted then "delisted" else empty end)' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
         if [ "$listing" == "delisted" ]; then
             echo -e "\n${NOTE}  Note: this game is currently delisted from ${store_label}'s storefront —"
             echo -e "  existing owners keep access, but it can't be newly purchased there anymore.${NC}"
@@ -477,24 +479,24 @@ show_game_details_block() {
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | .name' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
     eax_versions=$(jq -r --arg id "$id" --arg store "$store" \
-        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax_versions // [] | join(", ")' \
+        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.versions // [] | join(", ")' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
     api=$(jq -r --arg id "$id" --arg store "$store" \
-        '.games[] | select((.stores[$store].id // "") | tostring == $id) | (.stores[$store].api // .default_api // "directsound3d")' \
+        '.games[] | select((.stores[$store].id // "") | tostring == $id) | (.stores[$store].api // .eax.api // "directsound3d")' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
     KNOWN_GAME_API="$api"
     listing=$(jq -r --arg id "$id" --arg store "$store" \
-        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .stores[$store].listing // empty' \
+        '.games[] | select((.stores[$store].id // "") | tostring == $id) | (if .stores[$store].delisted then "delisted" else empty end)' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
     eax_status=$(jq -r --arg id "$id" --arg store "$store" \
-        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax_status // "supported"' \
+        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.status // "supported"' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
     [ -z "$eax_status" ] && eax_status="supported"
     eax_status_details=$(jq -r --arg id "$id" --arg store "$store" \
-        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax_status_details // empty' \
+        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.problem // empty' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
     restore_details=$(jq -r --arg id "$id" --arg store "$store" \
-        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .restore_details // empty' \
+        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.fix // empty' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
     store_details=$(jq -r --arg id "$id" --arg store "$store" \
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | .stores[$store].store_details // empty' \
@@ -503,7 +505,7 @@ show_game_details_block() {
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | .stores[$store].patches // empty' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
     id_confidence=$(jq -r --arg id "$id" --arg store "$store" \
-        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .stores[$store].id_confidence // empty' \
+        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .stores[$store].id_source // empty' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
 
     resolve_recommended_tweaks "$id" "$store"
@@ -534,6 +536,17 @@ show_game_details_block() {
         echo -e " -> ${YELLOW}Audio API${NC}: ${WHITE}DirectSound3D${NC}"
     fi
     [ -n "$EAX_UNIFIED" ] && echo -e " -> ${YELLOW}EAX Unified${NC}: ${WHITE}Yes${NC}"
+    local fix_counts audio_fixes extra_fixes settings_line=""
+    fix_counts="$(count_game_fixes "$id" "$store")"
+    read -r audio_fixes extra_fixes <<< "${fix_counts:-0 0}"
+    if [ "${audio_fixes:-0}" -gt 0 ]; then
+        settings_line="$audio_fixes audio fix"; [ "$audio_fixes" -ne 1 ] && settings_line+="es"
+    fi
+    if [ "${extra_fixes:-0}" -gt 0 ]; then
+        [ -n "$settings_line" ] && settings_line+=", "
+        settings_line+="$extra_fixes optional fix"; [ "$extra_fixes" -ne 1 ] && settings_line+="es"
+    fi
+    [ -n "$settings_line" ] && echo -e " -> ${YELLOW}Game settings${NC}: ${WHITE}${settings_line}${NC}"
     echo -e " -> ${YELLOW}Location${NC}:  ${DIM}$(tilde_path "$location")${NC}"
 
     # --- Blocks: status -> problem -> solution ---
@@ -572,14 +585,14 @@ show_game_details_block() {
 
 confirm_continue_if_eax_impossible() {
     # Usage: confirm_continue_if_eax_impossible <id> <steam|gog> [acf_file]
-    # eax_status distinguishes two reasons this script has nothing to restore
+    # eax.status distinguishes two reasons this script has nothing to restore
     # on a build: "removed_by_patch" (a software update stripped EAX/A3D
     # calls from an otherwise-DirectSound3D game) vs. "not_implemented" (a
     # remaster/rewrite that never had EAX in the first place — no
     # build-level fix exists). "not_implemented" is an unconditional no-op,
     # so it skips straight to prompt_restart_or_quit. "removed_by_patch" is
     # only a confirmable warning ("install anyway" stays offered) when
-    # build_workaround_available is true — meaning restore_details documents
+    # eax.fix_in_place is true — meaning eax.fix documents
     # an in-place fix within this same store install (e.g. a Steam beta
     # branch) the user might already be on or willing to switch to;
     # otherwise (the field is absent) the only fix is a separate install this
@@ -596,8 +609,8 @@ confirm_continue_if_eax_impossible() {
 
     local status="" workaround="false" beta_branch=""
     if ensure_known_games_json; then
-        status=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax_status // "supported"' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
-        workaround=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .build_workaround_available // false' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+        status=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.status // "supported"' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+        workaround=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.fix_in_place // false' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
         beta_branch=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .stores[$store].beta_branch // empty' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
     elif [ "$store" != "gog" ] && [ -n "${EAX_IMPOSSIBLE_FALLBACK_STEAM[$1]:-}" ]; then
         # Only ever seeds Half-Life (AppID 70), which has no in-place

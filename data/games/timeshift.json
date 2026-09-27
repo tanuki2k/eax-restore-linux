@@ -1,0 +1,8 @@
+{
+  "$schema": "../schema.json",
+  "name": "TimeShift",
+  "stores": {
+    "steam": { "id": 10130 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["4.0", "5.0"] }
+}

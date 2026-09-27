@@ -1,0 +1,9 @@
+{
+  "$schema": "../schema.json",
+  "name": "Star Trek: Elite Force II",
+  "stores": {
+    "gog": { "id": 2125201406 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0", "3.0"] },
+  "notes": "Also supports A3D, per the Vogons Wiki citation for this title."
+}

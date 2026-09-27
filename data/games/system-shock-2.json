@@ -1,0 +1,44 @@
+{
+  "$schema": "../schema.json",
+  "name": "System Shock 2",
+  "exe": "SS2.exe",
+  "stores": {
+    "steam": {
+      "id": 238210,
+      "delisted": true,
+      "store_details": "The classic 1999 build was delisted from Steam in October 2025; Steam now sells only the 25th Anniversary Remaster, a separate ground-up rewrite with no DirectSound3D EAX support.",
+      "patches": "The System Shock 2 Community Patch (SCP) is worth pairing, though it's general bugfix/polish, not audio-specific."
+    },
+    "gog": {
+      "id": 1207659172,
+      "delisted": true,
+      "store_details": "The original 1999 build's own GOG listing was delisted in October 2025 — GOG now sells only the 25th Anniversary Remaster, a separate ground-up rewrite with no DirectSound3D EAX support — but existing owners of the classic build keep access.",
+      "patches": "The System Shock 2 Community Patch (SCP) is worth pairing, though it's general bugfix/polish, not audio-specific."
+    }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0"] },
+  "game_config": {
+    "files": {
+      "cam_ext.cfg": {
+        "format": "dark_cfg",
+        "locations": ["game:cam_ext.cfg"],
+        "if_missing": "skip"
+      }
+    },
+    "audio_fixes": [
+      {
+        "title": "Enable underwater reverb",
+        "reason": "Some System Shock 2 maps don't mark their underwater areas, so they play the wrong reverb there (per NewDark's documentation).",
+        "changes": { "cam_ext.cfg": { "force_underwater_reverb": true } }
+      }
+    ],
+    "extra_fixes": [
+      {
+        "title": "Enable full-precision mouse look",
+        "reason": "System Shock 2 reads mouse look through standard Windows input by default, which doesn't give high-resolution mice their full precision (per NewDark's documentation).",
+        "changes": { "cam_ext.cfg": { "use_raw_mouse_input": true } }
+      }
+    ]
+  },
+  "notes": "It comes with NewDark pre-installed, which has its own OpenAL Soft 'Hardware Acceleration' option in the in-game Audio menu — worth trying if EAX doesn't sound right."
+}

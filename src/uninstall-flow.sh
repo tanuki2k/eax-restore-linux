@@ -2,9 +2,10 @@
 # ACTION: UNINSTALL FROM GAME
 # ==============================================================================
 if [ "$SCRIPT_ACTION" == "u" ]; then
-    # Fixed step count for this flow (1-6) — read by print_step via the
-    # STEP_TOTAL global so headers show "N/6. Label" instead of just "N. Label".
-    STEP_TOTAL=6
+    # Fixed step count for this flow (1-7) — read by print_step via the
+    # STEP_TOTAL global so headers show "N/7. Label" instead of just "N. Label".
+    # Step 7 ("Game Settings") only appears when the install changed any.
+    STEP_TOTAL=7
 
     print_banner "UNINSTALL EAX FIX"
 
@@ -35,6 +36,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     REG_HAS_OVERRIDE="n"
     REG_OVERRIDE_DLL=""
     VCRUN_INSTALLED="n"
+    CONFIG_LINES=()
 
     if [ -s "$INSTALL_MANIFEST" ] && head -n 1 "$INSTALL_MANIFEST" | grep -q "^# EAX Restore: uninstalled"; then
         echo -e "\n${GREEN}This game was already uninstalled in a previous run — nothing left to remove.${NC}"
@@ -63,6 +65,9 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
                 "REGISTRY:OVERRIDE:dsound") REG_HAS_OVERRIDE="y"; REG_OVERRIDE_DLL="dsound"; continue ;;
                 "REGISTRY:OVERRIDE:openal32") REG_HAS_OVERRIDE="y"; REG_OVERRIDE_DLL="openal32"; continue ;;
                 "VCRUN") VCRUN_INSTALLED="y"; continue ;;
+                # Game settings changed in the game's own config files —
+                # reverted in step 7, never removed as files.
+                CONFIG:*) CONFIG_LINES+=("$manifest_entry"); continue ;;
             esac
             { [ -e "$manifest_entry" ] || [ -L "$manifest_entry" ]; } && FILES_TO_REMOVE+=("$manifest_entry")
         done < "$INSTALL_MANIFEST"
@@ -100,7 +105,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         VCRUN_PRESENT="y"
     fi
 
-    if [ ${#FILES_TO_REMOVE[@]} -eq 0 ] && [ "$REG_HAS_COM" == "n" ] && [ "$REG_HAS_OVERRIDE" == "n" ] && [ "$VCRUN_PRESENT" == "n" ]; then
+    if [ ${#FILES_TO_REMOVE[@]} -eq 0 ] && [ "$REG_HAS_COM" == "n" ] && [ "$REG_HAS_OVERRIDE" == "n" ] && [ "$VCRUN_PRESENT" == "n" ] && [ ${#CONFIG_LINES[@]} -eq 0 ]; then
         print_note "No EAX/DSOAL files were found in $GAME_DIR or the system prefix — nothing to remove."; exit 0
     fi
 
@@ -293,6 +298,23 @@ EOF
         fi
     else
         echo -e "\n${WHITE}No VC++ runtime recorded or detected in this prefix — nothing to do here.${NC}"
+    fi
+
+    revert_game_settings 7
+
+    # Settings the player chose to keep stay in the manifest, so a later
+    # uninstall can still put them back. If step 4 already replaced the
+    # manifest with the "uninstalled" marker, the kept lines replace the marker
+    # instead — that marker makes a later run stop before reaching step 7.
+    if [ ${#CONFIG_LINES[@]} -gt 0 ] && [ -f "$INSTALL_MANIFEST" ]; then
+        if head -n 1 "$INSTALL_MANIFEST" | grep -q "^# EAX Restore: uninstalled"; then
+            [ ${#GAME_SETTINGS_KEPT[@]} -gt 0 ] && printf '%s\n' "${GAME_SETTINGS_KEPT[@]}" > "$INSTALL_MANIFEST"
+        else
+            { grep -v '^CONFIG:' "$INSTALL_MANIFEST"
+              [ ${#GAME_SETTINGS_KEPT[@]} -gt 0 ] && printf '%s\n' "${GAME_SETTINGS_KEPT[@]}"
+              true
+            } > "$INSTALL_MANIFEST.tmp" && mv -f "$INSTALL_MANIFEST.tmp" "$INSTALL_MANIFEST"
+        fi
     fi
 
     print_run_summary

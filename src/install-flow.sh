@@ -59,8 +59,9 @@
 
     # One bar step per STATUS: header below: OpenAL runtime, game folder,
     # configurations, plus VC++ (installing it, or setting up one that's
-    # already there) and the prefix copy when those run.
+    # already there), the prefix copy and game settings when those run.
     phase_total=3
+    [ ${#GAME_SETTINGS_PLAN[@]} -gt 0 ] && phase_total=$(( phase_total + 1 ))
     { [[ "$INSTALL_VCRUN" =~ $YES_RE ]] || [ -n "${APPLY_VCRUN_OVERRIDES_NEEDED:-}" ]; } && phase_total=$(( phase_total + 1 ))
     [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows" ] && phase_total=$(( phase_total + 1 ))
     start_phase_progress "$phase_total"
@@ -121,10 +122,15 @@
     # manifest's file list BEFORE truncating it so conflict handling can
     # tell the two apart and skip a backup that would otherwise bury the
     # real original (if one exists) under a backup of our own DLL.
+    # Its CONFIG: lines (game settings changed last time) are kept too, so
+    # apply_game_settings can keep each setting's original value and carry
+    # over the ones still in effect.
     declare -A PREV_MANIFEST_FILES
+    PREV_CONFIG_LINES=()
     if [ -s "$INSTALL_MANIFEST" ]; then
         while IFS= read -r line; do
             [[ "$line" == /* ]] && PREV_MANIFEST_FILES["$line"]=1
+            [[ "$line" == CONFIG:* ]] && PREV_CONFIG_LINES+=("$line")
         done < "$INSTALL_MANIFEST"
     fi
 
@@ -411,6 +417,7 @@ EOF
             echo "$GAME_DIR/alsoft.ini" >> "$INSTALL_MANIFEST"
             if [[ "$ADVANCED_LIMITS" =~ $YES_RE ]]; then print_status "Generated: Advanced alsoft.ini with expanded channel limits"
             else print_status "Generated: Linux-optimised alsoft.ini"; fi
+            apply_alsoft_overrides
         else
             record_deploy_failure "$GAME_DIR/alsoft.ini"
         fi
@@ -489,6 +496,10 @@ EOF
         rm -f "$REG_FILE"
     fi
 
+    # Always runs, even with nothing new to apply: it also carries last
+    # install's still-active game settings over into the new manifest.
+    apply_game_settings
+
     end_phase_progress
     print_run_summary
 
@@ -528,4 +539,5 @@ EOF
         fi
     fi
     echo ""
+    print_game_settings_summary
 fi

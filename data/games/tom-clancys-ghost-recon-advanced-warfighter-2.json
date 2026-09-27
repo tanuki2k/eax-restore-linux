@@ -1,0 +1,12 @@
+{
+  "$schema": "../schema.json",
+  "name": "Tom Clancy's Ghost Recon: Advanced Warfighter 2",
+  "stores": {
+    "steam": {
+      "id": 13510,
+      "delisted": true,
+      "store_details": "Delisted from Steam around 2015, reportedly over expired licensing for the PC build's Diesel engine."
+    }
+  },
+  "eax": { "api": "openal", "versions": ["1.0", "2.0", "3.0", "4.0"] }
+}

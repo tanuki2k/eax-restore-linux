@@ -1,0 +1,15 @@
+{
+  "$schema": "../schema.json",
+  "name": "Condemned: Criminal Origins",
+  "stores": {
+    "steam": {
+      "id": 4720,
+      "delisted": true,
+      "store_details": "Delisted from Steam and the Microsoft Store at the end of October 2025, with no reason given."
+    }
+  },
+  "eax": { "api": "directsound3d", "versions": ["2.0", "3.0", "4.0"] },
+  "install": {
+    "tweaks": ["eax_unified"]
+  }
+}

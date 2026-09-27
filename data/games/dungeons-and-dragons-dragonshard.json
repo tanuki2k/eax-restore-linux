@@ -1,0 +1,10 @@
+{
+  "$schema": "../schema.json",
+  "name": "Dungeons & Dragons: Dragonshard",
+  "exe": "Dragonshard.exe",
+  "stores": {
+    "gog": { "id": 1207658928 }
+  },
+  "eax": { "api": "directsound3d" },
+  "notes": "The Vogons Wiki confirms a 'Creative EAX' toggle in the game's Audio Settings but doesn't record which EAX version(s) it covers."
+}

@@ -61,22 +61,25 @@ DSOAL_PINNED_REV="r693"
 DSOAL_PINNED_URL="https://github.com/kcat/dsoal/releases/download/archive/DSOAL_r693.zip"
 DSOAL_PINNED_SHA256="5abe990ff5692fa070d549a8c28df2435842c5d3f586a59b0da5281bc1cb6605"
 
-# Community-maintained database of well-known EAX games (see
-# known-eax-games.json in this repo). Powers both the install-time "Heads
-# up" notes and the opt-in library scanner. Fetched fresh each run so PRs
-# against the file take effect without users needing a new script version;
+# Community-maintained database of well-known EAX games (edited as
+# data/games/<id>.json in this repo; tools/build-known-games.sh combines them
+# into known-eax-games.json). Powers the install-time game details, the opt-in
+# library scanner and the Game Settings step. Fetched fresh each run so PRs
+# against the data take effect without users needing a new script version;
 # cached locally so a fetch failure (offline, rate-limited) degrades to the
 # last-known-good copy instead of losing the feature entirely.
-KNOWN_GAMES_URL="https://raw.githubusercontent.com/tanuki2k/eax-restore-linux/main/known-eax-games.json"
-KNOWN_GAMES_CACHE="$BASE_SHARE/known-eax-games.json"
+# Schema 3 only exists on dev, so dev fetches its own branch's copy and caches
+# it under its own name. Revisit when 0.29 merges into main.
+KNOWN_GAMES_URL="https://raw.githubusercontent.com/tanuki2k/eax-restore-linux/dev/known-eax-games.json"
+KNOWN_GAMES_CACHE="$BASE_SHARE/known-eax-games.v3.json"
 KNOWN_GAMES_FILE=""
 KNOWN_GAMES_ATTEMPTED=""
 # Schema version this script expects. ensure_known_games_json warns once if the
 # loaded copy is older (a branch that hasn't merged a schema bump yet, or a
 # stale offline cache) so the silent `//` fallbacks below are visible.
-KNOWN_GAMES_SCHEMA_VERSION=2
+KNOWN_GAMES_SCHEMA_VERSION=3
 # Set by resolve_recommended_tweaks / show_game_details_block from the picked
-# game's known-games entry's recommended_tweaks array. EAX_UNIFIED,
+# game's known-games entry's install.tweaks array. EAX_UNIFIED,
 # RECOMMENDED_AUDIO_LIMITS, and RECOMMENDED_COM_ROUTING mirror membership of
 # "eax_unified", "expand_audio_limits", and "com_registry_routing"
 # respectively. The Advanced Compatibility Tweaks step reads these to
@@ -98,6 +101,22 @@ RECOMMENDED_TWEAKS_RESOLVED=""
 # this to cross-check the documented value against a live file scan instead
 # of re-deriving it from scratch.
 KNOWN_GAME_API=""
+
+# Game Settings (src/game-config.sh). GAME_INSTALL_ROOT is the install folder
+# the library scan matched (for "install:" config locations). The rest are
+# filled in during Phase 1 and used by Phase 2, the final summary and
+# uninstall: accepted alsoft.ini values, accepted config rows, fixes whose
+# config file doesn't exist yet, follow-ups for the summary, fixes applied,
+# last install's CONFIG manifest lines, and (uninstall) this install's.
+GAME_INSTALL_ROOT=""
+ALSOFT_OVERRIDES=()
+GAME_SETTINGS_PLAN=()
+GAME_SETTINGS_MISSING=()
+GAME_SETTINGS_FOLLOW_UPS=()
+GAME_SETTINGS_APPLIED=()
+PREV_CONFIG_LINES=()
+CONFIG_LINES=()
+GAME_SETTINGS_KEPT=()
 
 # Set by prompt_restart_or_quit when the user, at an EAX-impossible dead end,
 # chooses to go back and pick a different game rather than quit. The config

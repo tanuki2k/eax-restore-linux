@@ -1,0 +1,9 @@
+{
+  "$schema": "../schema.json",
+  "name": "Star Wars: Republic Commando",
+  "stores": {
+    "steam": { "id": 6000 },
+    "gog": { "id": 1421405135 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["2.0", "3.0"] }
+}

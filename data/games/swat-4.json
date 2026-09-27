@@ -1,0 +1,27 @@
+{
+  "$schema": "../schema.json",
+  "name": "SWAT 4",
+  "exe": "Swat4.exe",
+  "stores": {
+    "gog": { "id": 1409964317, "store_details": "Sold only on GOG, as 'SWAT 4: Gold Edition'." }
+  },
+  "eax": { "api": "openal", "versions": ["1.0", "2.0", "3.0"] },
+  "game_config": {
+    "files": { "Swat4.ini": { "format": "ini", "locations": ["game:Swat4.ini"] } },
+    "audio_fixes": [
+      {
+        "title": "Enable EAX reverb",
+        "reason": "SWAT 4 ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of OpenAL32.dll.",
+        "changes": {
+          "Swat4.ini": {
+            "ALAudio.ALAudioSubsystem": {
+              "UseDefaultDriver": "False",
+              "UseEAX": "True",
+              "Use3DSound": "True"
+            }
+          }
+        }
+      }
+    ]
+  }
+}

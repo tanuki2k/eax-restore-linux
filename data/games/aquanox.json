@@ -1,0 +1,8 @@
+{
+  "$schema": "../schema.json",
+  "name": "AquaNox",
+  "stores": {
+    "steam": { "id": 39630 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0"] }
+}

@@ -2,12 +2,13 @@
 # ACTION: INSTALL (PHASE 1: CONFIGURATION)
 # ==============================================================================
 if [ "$SCRIPT_ACTION" == "i" ]; then
-    # Fixed step count for this flow (1-10, same regardless of launcher/engine
+    # Fixed step count for this flow (1-11, same regardless of launcher/engine
     # branch) — read by print_step via the STEP_TOTAL global so headers show
-    # "N/10. Label" instead of just "N. Label". Step 2 ("Locate Game
+    # "N/11. Label" instead of just "N. Label". Step 11 ("Game Settings") only
+    # appears for a known game with config fixes to offer. Step 2 ("Locate Game
     # Executable") only ever appears on the scan path — resolve_exe_folder
     # prints it itself — so browse/manual users jump straight from 1 to 3.
-    STEP_TOTAL=10
+    STEP_TOTAL=11
 
     EAX_RESTORE_SKIP_CACHE_CHECK="${EAX_RESTORE_SKIP_CACHE_CHECK:-}"
     if is_truthy "$EAX_RESTORE_SKIP_CACHE_CHECK"; then
@@ -252,6 +253,10 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         OUTPUT_MODE="matrix"
     fi
 
+    # The known-games entry's alsoft.ini values (e.g. a reverb boost) are
+    # OpenAL Soft settings, so they're offered here with the rest of them.
+    offer_alsoft_settings
+
     # 9. Advanced Compatibility Tweaks
     print_step 9 "Advanced Compatibility Tweaks"
     echo -e "\n${WHITE}These optional workarounds are designed for extremely stubborn games"
@@ -271,7 +276,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         COM_ROUTING_APPLICABLE=0
     fi
 
-    # known-eax-games.json's recommended_tweaks array (see
+    # the known-games entry's install.tweaks array (see
     # resolve_recommended_tweaks in known-games.sh) may flag any combination of
     # the three tweaks below for this game. Each flagged, applicable tweak is
     # decided here — before the generic opt-in gate further down — with a
@@ -312,7 +317,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         fi
     fi
 
-    # recommended_tweaks can flag Expand Audio Limits for a game independently
+    # install.tweaks can flag Expand Audio Limits for a game independently
     # verified to need it (e.g. F.E.A.R.'s audio dropping out during large
     # firefights). Applies to both engines, so — unlike the other two — it has
     # no applicability gate.
@@ -416,5 +421,10 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     echo -e "\n${YELLOW}Automatically set ${PRIMARY_DLL_FILENAME} override in Wine registry? (y/N): ${NC}"
     echo -e -n "> "
     read_answer AUTO_OVERRIDE
+
+    # 11. Game Settings — changes to the game's own config files, from its
+    # known-games entry. Last, since it's about the game rather than the
+    # audio fix, and the speaker answer from step 8 decides some of them.
+    game_settings_step 11
 
     # (continues below: "if" opened above closes at the bottom of install-flow.sh)
