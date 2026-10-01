@@ -54,8 +54,9 @@
 # * Advanced Tweaks: Optional EAX Unified dummies, COM registry routing,
 #   expanded audio limits, and HRTF headphone profiles.
 #
-# * Auto-Overrides: Injects WINEDLLOVERRIDES natively into the Wine registry,
-#   tracked so uninstall can clean it up automatically without re-prompting.
+# * Auto-Overrides: Sets WINEDLLOVERRIDES in the game's Steam launch options or
+#   Heroic environment variables (merged with what's already there), or in the
+#   Wine registry — tracked so uninstall can put it back automatically.
 #
 # * Hybrid Dependencies: Falls back to a direct Microsoft download for the
 #   VC++ 2022 Redistributable when winetricks/protontricks fails, verifying
@@ -1015,7 +1016,7 @@ detect_game_environment() {
         echo -e -n "> "
         read_answer DO_AUTO_H
 
-        HEROIC_GAME_ID=""; HEROIC_EXPECTED_PREFIX=""; HEROIC_PREFIX_SOURCE=""; HEROIC_GAME_TITLE=""; HEROIC_ROOT=""
+        HEROIC_GAME_ID=""; HEROIC_EXPECTED_PREFIX=""; HEROIC_PREFIX_SOURCE=""; HEROIC_GAME_TITLE=""; HEROIC_ROOT=""; HEROIC_RUNNER_TYPE=""
         DETECTED_PREFIX=""
         if [[ ! "$DO_AUTO_H" =~ ^[Nn]$ ]]; then
             IFS=$'\x1f' read -r DETECTED_PREFIX _ HEROIC_GAME_ID HEROIC_PREFIX_SOURCE HEROIC_GAME_TITLE HEROIC_ROOT \
@@ -1105,6 +1106,7 @@ resolve_heroic_runner() {
         IFS=$'\x1f' read -r runner_type runner_bin runner_name server_bin <<< "$(jq -r \
             'first(.[] | objects | select(.wineVersion?) | .wineVersion) | [.type // "", .bin // "", .name // "", .wineserver // ""] | join("\u001f")' \
             "$json" 2>/dev/null)"
+        HEROIC_RUNNER_TYPE="$runner_type"
         case "$runner_type" in
             proton)
                 IS_PROTON=1
@@ -1320,6 +1322,394 @@ verify_vcrun_files() {
     done
 
     [ "$core_ok" -eq 1 ] && VCRUN_SUCCESS=1
+}
+
+# ==============================================================================
+# DLL OVERRIDE VIA THE LAUNCHER (Steam launch options / Heroic env variables)
+# ==============================================================================
+# Step 8's "launcher" choice: the WINEDLLOVERRIDES rule goes where a player
+# would put it by hand — Steam's per-game launch options
+# (userdata/<account>/config/localconfig.vdf) or Heroic's per-game
+# environment variables (GamesConfig/<appName>.json, key "enviromentOptions",
+# Heroic's spelling). Both launchers keep these files in memory and write them
+# back themselves, so they must be closed while this edits them. Recorded in
+# the manifest as
+#   LAUNCHER:<steam|heroic>\t<file>\t<id>\t<old value|__ABSENT__>\t<new value>
+
+launcher_running() {
+    case "$1" in
+        steam) pgrep -x steam >/dev/null 2>&1 ;;
+        heroic) pgrep -f 'heroic-games-launcher|com\.heroicgameslauncher\.hgl|/heroic/heroic|Heroic[^/]*\.AppImage' >/dev/null 2>&1 ;;
+        *) return 1 ;;
+    esac
+}
+
+launcher_label() { [ "$1" == "steam" ] && echo "Steam" || echo "Heroic"; }
+
+runner_label() {
+    # "Proton" for Steam games and Heroic games that run on Proton, else
+    # "Wine" — what the player knows their game's prefix as.
+    if [ "$LAUNCHER_TYPE" == "1" ] || [ "${HEROIC_RUNNER_TYPE:-}" == "proton" ]; then echo "Proton"; else echo "Wine"; fi
+}
+
+merge_dll_override() {
+    # Usage: merge_dll_override <WINEDLLOVERRIDES value> <dll>
+    # Adds "<dll>=n,b", dropping any earlier rule for the same DLL and keeping
+    # every other rule as it was.
+    local list="$1" dll="${2,,}" entry names mode name kept out=""
+    local -a entries parts
+    IFS=';' read -ra entries <<< "$list"
+    for entry in "${entries[@]}"; do
+        [ -n "$entry" ] || continue
+        if [[ "$entry" == *=* ]]; then names="${entry%%=*}"; mode="=${entry#*=}"; else names="$entry"; mode=""; fi
+        kept=""
+        IFS=',' read -ra parts <<< "$names"
+        for name in "${parts[@]}"; do
+            [ -n "$name" ] && [ "${name,,}" != "$dll" ] && kept+="${kept:+,}$name"
+        done
+        [ -n "$kept" ] && out+="${out:+;}$kept$mode"
+    done
+    echo "${out:+$out;}$dll=n,b"
+}
+
+launch_options_with_override() {
+    # Usage: launch_options_with_override <Steam launch options> <dll>
+    # Keeps everything the player had: an existing WINEDLLOVERRIDES is merged
+    # into, other variables and arguments stay, and %command% is added if
+    # missing.
+    local opts="$1" dll="$2" re current merged
+    re='(^|[[:space:]])WINEDLLOVERRIDES=("([^"]*)"|'"'"'([^'"'"']*)'"'"'|([^[:space:]]*))'
+    if [[ "$opts" =~ $re ]]; then
+        current="${BASH_REMATCH[3]}${BASH_REMATCH[4]}${BASH_REMATCH[5]}"
+        merged="$(merge_dll_override "$current" "$dll")"
+        echo "${opts/"${BASH_REMATCH[0]}"/${BASH_REMATCH[1]}WINEDLLOVERRIDES=\"$merged\"}"
+    elif [[ "$opts" == *%command%* ]]; then
+        echo "WINEDLLOVERRIDES=\"$dll=n,b\" $opts"
+    elif [ -z "${opts//[[:space:]]/}" ]; then
+        echo "WINEDLLOVERRIDES=\"$dll=n,b\" %command%"
+    else
+        echo "WINEDLLOVERRIDES=\"$dll=n,b\" %command% $opts"
+    fi
+}
+
+# Tracks the VDF key path so only the game's own block under
+# UserLocalConfigStore/Software/Valve/Steam/apps is touched (the file has
+# other "apps" blocks elsewhere).
+_VDF_AWK_PATH='
+    function trim(s) { gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
+    function in_app() {
+        return depth == 6 && tolower(stack[1]) == "userlocalconfigstore" && tolower(stack[2]) == "software" \
+            && tolower(stack[3]) == "valve" && tolower(stack[4]) == "steam" && tolower(stack[5]) == "apps" \
+            && stack[6] == appid
+    }
+'
+
+vdf_get_raw_launch_options() {
+    LC_ALL=C awk -v appid="$2" "$_VDF_AWK_PATH"'
+        { line = trim($0) }
+        line == "{" { depth++; stack[depth] = pending; if (in_app()) seen = 1; next }
+        line == "}" { depth--; next }
+        line ~ /^"[^"]*"$/ { pending = substr(line, 2, length(line) - 2); next }
+        in_app() && tolower(line) ~ /^"launchoptions"[ \t]/ {
+            v = trim(substr(line, length("\"LaunchOptions\"") + 1))
+            print substr(v, 2, length(v) - 2); found = 1; exit
+        }
+        END { if (!found) print (seen ? "__ABSENT__" : "__NOAPP__") }
+    ' "$1"
+}
+
+vdf_get_launch_options() {
+    # Usage: vdf_get_launch_options <localconfig.vdf> <appid>
+    # The game's LaunchOptions (unescaped), __ABSENT__, or __NOAPP__ when
+    # Steam has no settings block for it. VDF's \" and \\ are undone in bash,
+    # since gawk and mawk treat backslashes in gsub differently.
+    local raw
+    raw="$(vdf_get_raw_launch_options "$@")"
+    case "$raw" in
+        __ABSENT__|__NOAPP__) echo "$raw"; return ;;
+    esac
+    raw="${raw//\\\\/$'\001'}"
+    raw="${raw//\\\"/\"}"
+    printf '%s\n' "${raw//$'\001'/\\}"
+}
+
+vdf_set_launch_options() {
+    # Usage: vdf_set_launch_options <localconfig.vdf> <appid> <value|__DELETE__>
+    # Replaces the game's LaunchOptions line, adds one at the end of its
+    # block, or removes it; the rest of the file stays byte for byte.
+    local file="$1" value="$3" tmp
+    if [ "$value" != "__DELETE__" ]; then
+        value="${value//\\/\\\\}"
+        value="${value//\"/\\\"}"
+    fi
+    tmp="$(mktemp "$(dirname "$file")/.eax-restore-vdf.XXXXXX" 2>/dev/null)" || return 1
+    VDF_VALUE="$value" LC_ALL=C awk -v appid="$2" "$_VDF_AWK_PATH"'
+        function entry_line(indent) { return indent "\"LaunchOptions\"\t\t\"" ENVIRON["VDF_VALUE"] "\"" }
+        BEGIN { del = (ENVIRON["VDF_VALUE"] == "__DELETE__") }
+        {
+            raw = $0; line = trim($0)
+            if (line == "{") { depth++; stack[depth] = pending; print raw; next }
+            if (line == "}") {
+                if (in_app() && !done && !del) { print entry_line(child_indent); done = 1 }
+                depth--; print raw; next
+            }
+            if (line ~ /^"[^"]*"$/) { pending = substr(line, 2, length(line) - 2) }
+            if (in_app()) {
+                if (child_indent == "") { match(raw, /^[ \t]*/); child_indent = substr(raw, 1, RLENGTH) }
+                if (tolower(line) ~ /^"launchoptions"[ \t]/) {
+                    done = 1
+                    if (del) next
+                    match(raw, /^[ \t]*/); print entry_line(substr(raw, 1, RLENGTH)); next
+                }
+            }
+            print raw
+        }
+    ' "$file" > "$tmp" || { rm -f "$tmp"; return 1; }
+    chmod --reference="$file" "$tmp" 2>/dev/null
+    mv -f "$tmp" "$file" 2>/dev/null || { rm -f "$tmp"; return 1; }
+}
+
+steam_localconfig_for_app() {
+    # Usage: steam_localconfig_for_app <appid>
+    # The localconfig.vdf (any Steam install, any account) with a settings
+    # block for the game — the most recently changed one if several do.
+    local appid="$1" label root f best="" best_t=0 t
+    local -a roots=()
+    [ -n "${STEAM_DIR:-}" ] && roots+=("$STEAM_DIR")
+    while IFS=$'\t' read -r label root; do roots+=("$root"); done < <(steam_roots)
+    for root in "${roots[@]}"; do
+        for f in "$root"/userdata/*/config/localconfig.vdf; do
+            [ -f "$f" ] || continue
+            [ "$(vdf_get_launch_options "$f" "$appid")" == "__NOAPP__" ] && continue
+            t="$(stat -c %Y "$f" 2>/dev/null || echo 0)"
+            if [ "$t" -gt "$best_t" ] || [ -z "$best" ]; then best="$f"; best_t="$t"; fi
+        done
+    done
+    echo "$best"
+}
+
+heroic_get_override() {
+    # Usage: heroic_get_override <GamesConfig file> <appName>
+    [ -f "$1" ] || { echo "__NOAPP__"; return; }
+    jq -r --arg a "$2" '
+        if (type == "object") and has($a) and (.[$a] | type == "object") then
+            ([(.[$a].enviromentOptions // [])[] | select(.key == "WINEDLLOVERRIDES") | .value] | first) // "__ABSENT__"
+        else "__NOAPP__" end' "$1" 2>/dev/null || echo "__NOAPP__"
+}
+
+heroic_set_override() {
+    # Usage: heroic_set_override <GamesConfig file> <appName> <value|__DELETE__>
+    # Heroic writes its files without a trailing newline; $(...) drops jq's
+    # so an untouched round trip stays byte-identical.
+    local file="$1" tmp out
+    tmp="$(mktemp "$(dirname "$file")/.eax-restore-heroic.XXXXXX" 2>/dev/null)" || return 1
+    out="$(jq --arg a "$2" --arg v "$3" '
+        .[$a].enviromentOptions = ((.[$a].enviromentOptions // [])
+            | if $v == "__DELETE__" then map(select(.key != "WINEDLLOVERRIDES"))
+              elif any(.[]; .key == "WINEDLLOVERRIDES") then map(if .key == "WINEDLLOVERRIDES" then .value = $v else . end)
+              else . + [{ key: "WINEDLLOVERRIDES", value: $v }] end)' "$file" 2>/dev/null)" \
+        || { rm -f "$tmp"; return 1; }
+    printf '%s' "$out" > "$tmp" || { rm -f "$tmp"; return 1; }
+    chmod --reference="$file" "$tmp" 2>/dev/null
+    mv -f "$tmp" "$file" 2>/dev/null || { rm -f "$tmp"; return 1; }
+}
+
+launcher_override_target() {
+    # Usage: launcher_override_target
+    # Sets OVERRIDE_LAUNCHER / OVERRIDE_FILE / OVERRIDE_ID for the picked
+    # game; returns 1 when its launcher has no settings for it to hold the
+    # override (a plain Wine prefix, or a Steam game never launched).
+    OVERRIDE_LAUNCHER=""; OVERRIDE_FILE=""; OVERRIDE_ID=""
+    if [ "$LAUNCHER_TYPE" == "1" ] && [ -n "${APPID:-}" ]; then
+        OVERRIDE_LAUNCHER="steam"; OVERRIDE_ID="$APPID"
+        OVERRIDE_FILE="$(steam_localconfig_for_app "$APPID")"
+    elif [ -n "${HEROIC_GAME_ID:-}" ] && [ -n "${HEROIC_ROOT:-}" ]; then
+        OVERRIDE_LAUNCHER="heroic"; OVERRIDE_ID="$HEROIC_GAME_ID"
+        OVERRIDE_FILE="$HEROIC_ROOT/GamesConfig/$HEROIC_GAME_ID.json"
+        [ "$(heroic_get_override "$OVERRIDE_FILE" "$OVERRIDE_ID")" == "__NOAPP__" ] && OVERRIDE_FILE=""
+    fi
+    [ -n "$OVERRIDE_FILE" ]
+}
+
+launcher_override_get() {
+    if [ "$OVERRIDE_LAUNCHER" == "steam" ]; then vdf_get_launch_options "$OVERRIDE_FILE" "$OVERRIDE_ID"
+    else heroic_get_override "$OVERRIDE_FILE" "$OVERRIDE_ID"; fi
+}
+launcher_override_set() {
+    if [ "$OVERRIDE_LAUNCHER" == "steam" ]; then vdf_set_launch_options "$OVERRIDE_FILE" "$OVERRIDE_ID" "$1"
+    else heroic_set_override "$OVERRIDE_FILE" "$OVERRIDE_ID" "$1"; fi
+}
+
+launcher_override_where() {
+    local name="${GAME_NAME:-${HEROIC_GAME_TITLE:-this game}}"
+    if [ "$OVERRIDE_LAUNCHER" == "steam" ]; then echo "Steam's launch options for $name"
+    else echo "Heroic's environment variables for $name"; fi
+}
+
+wait_for_launcher_closed() {
+    # Usage: wait_for_launcher_closed <steam|heroic> <what to type to give up>
+    # While the launcher is open, says so and waits for Enter. Returns 1 if
+    # the player typed something else (LAUNCHER_WAIT_ANSWER holds it).
+    local label answer
+    label="$(launcher_label "$1")"
+    LAUNCHER_WAIT_ANSWER=""
+    while launcher_running "$1"; do
+        echo -e "\n${YELLOW}${label} is open, and it would overwrite the change when it next saves its settings.${NC}"
+        echo -e "${YELLOW}Close ${label}, then press Enter, or $2:${NC}"
+        echo -e -n "> "
+        read_answer answer || { LAUNCHER_WAIT_ANSWER="eof"; return 1; }
+        [ -n "$answer" ] && { LAUNCHER_WAIT_ANSWER="$answer"; return 1; }
+    done
+    return 0
+}
+
+apply_launcher_override() {
+    # Usage: apply_launcher_override
+    # Phase 2 for OVERRIDE_METHOD=launcher: writes the merged override, reads
+    # it back, and records it in the manifest. Anything that stops it drops
+    # back to OVERRIDE_METHOD=manual so the final instructions are shown; a
+    # failed write also counts as a deploy failure.
+    [ "$OVERRIDE_METHOD" == "launcher" ] || return 0
+    echo -e "\n${CYAN}STATUS: Setting the DLL override in $(launcher_label "$OVERRIDE_LAUNCHER")...${NC}"
+    if ! wait_for_launcher_closed "$OVERRIDE_LAUNCHER" "type 's' to set it yourself instead"; then
+        echo -e " -> ${YELLOW}Skipped — the instructions to set it yourself are below.${NC}"
+        OVERRIDE_METHOD="manual"; return 0
+    fi
+    local old new
+    old="$(launcher_override_get)"
+    if [ "$old" == "__NOAPP__" ]; then
+        echo -e " -> ${YELLOW}${BOLD}Warning: $(launcher_label "$OVERRIDE_LAUNCHER") no longer has settings for this game, so the override wasn't added there.${NC}"
+        OVERRIDE_METHOD="manual"; return 0
+    fi
+    if [ "$OVERRIDE_LAUNCHER" == "steam" ]; then
+        new="$(launch_options_with_override "$( [ "$old" == "__ABSENT__" ] || echo "$old")" dsound)"
+        [ -e "$OVERRIDE_FILE.eax-restore.bak" ] || cp -p "$OVERRIDE_FILE" "$OVERRIDE_FILE.eax-restore.bak" 2>/dev/null
+    else
+        new="$(merge_dll_override "$( [ "$old" == "__ABSENT__" ] || echo "$old")" dsound)"
+    fi
+    if [ "$old" == "$new" ]; then
+        echo -e " -> Already set: $(launcher_override_where)"
+        return 0
+    fi
+    if ! launcher_override_set "$new" || [ "$(launcher_override_get)" != "$new" ]; then
+        echo -e " -> ${YELLOW}${BOLD}Error: Couldn't save the override to $(launcher_override_where), so it isn't set.${NC}"
+        echo -e "${WHITE}    The run log has the details.${NC}"
+        DEPLOY_FAILURES=$(( ${DEPLOY_FAILURES:-0} + 1 ))
+        OVERRIDE_PATCH_FAILED="1"
+        OVERRIDE_METHOD="manual"; return 0
+    fi
+    printf 'LAUNCHER:%s\t%s\t%s\t%s\t%s\n' "$OVERRIDE_LAUNCHER" "$OVERRIDE_FILE" "$OVERRIDE_ID" "$old" "$new" >> "$INSTALL_MANIFEST"
+    log_cmd "launcher override: $OVERRIDE_FILE [$OVERRIDE_ID] '$old' -> '$new'"
+    echo -e " -> Set: WINEDLLOVERRIDES in $(launcher_override_where)"
+}
+
+revert_launcher_overrides() {
+    # Usage: revert_launcher_overrides
+    # Uninstall: puts each LAUNCHER: line's setting back — only where it
+    # still holds what the install set. LAUNCHER_LINES_KEPT gets the ones
+    # left in place.
+    LAUNCHER_LINES_KEPT=()
+    [ ${#LAUNCHER_LINES[@]} -gt 0 ] || return 0
+    local line current target
+    local -a f
+    for line in "${LAUNCHER_LINES[@]}"; do
+        mapfile -t -d $'\t' f < <(printf '%s' "${line#LAUNCHER:}")
+        OVERRIDE_LAUNCHER="${f[0]}"; OVERRIDE_FILE="${f[1]}"; OVERRIDE_ID="${f[2]}"
+        [ -f "$OVERRIDE_FILE" ] || continue
+        if ! wait_for_launcher_closed "$OVERRIDE_LAUNCHER" "type 's' to leave it as it is"; then
+            echo -e " -> ${YELLOW}Left the DLL override in $(launcher_override_where).${NC}"
+            LAUNCHER_LINES_KEPT+=("$line"); continue
+        fi
+        current="$(launcher_override_get)"
+        if [ "$current" != "${f[4]}" ]; then
+            echo -e " -> ${DIM}Kept $(launcher_override_where) as they are — they've been changed since install.${NC}"
+            continue
+        fi
+        target="${f[3]}"
+        [ "$target" == "__ABSENT__" ] && target="__DELETE__"
+        if launcher_override_set "$target"; then
+            if [ "$target" == "__DELETE__" ]; then
+                echo -e " -> ${GREEN}Removed the DLL override from $(launcher_override_where).${NC}"
+            else
+                echo -e " -> ${GREEN}Put $(launcher_override_where) back as they were.${NC}"
+            fi
+        else
+            echo -e " -> ${YELLOW}${BOLD}Warning: Couldn't update $(launcher_override_where), so the DLL override is still there.${NC}"
+            LAUNCHER_LINES_KEPT+=("$line")
+        fi
+    done
+}
+
+choose_override_method() {
+    # Usage: choose_override_method
+    # Step 8's menu. Sets OVERRIDE_METHOD to registry | launcher | manual.
+    # Steam and Heroic games get 1) launcher (default) / 2) registry / 3) manual;
+    # a plain Wine prefix gets 1) registry (default) / 2) manual. Choosing the
+    # launcher when it hasn't saved any settings for the game yet works like
+    # the prefix step's "not found yet" check: explain, then offer to check
+    # again (No goes back to the menu). It also waits for the launcher to be
+    # closed, since it would otherwise overwrite the change.
+    OVERRIDE_METHOD=""
+    launcher_override_target
+    local has_launcher=0 max answer label name again
+    [ -n "$OVERRIDE_LAUNCHER" ] && has_launcher=1
+    label="$(launcher_label "$OVERRIDE_LAUNCHER")"
+    name="${GAME_NAME:-${HEROIC_GAME_TITLE:-this game}}"
+
+    while [ -z "$OVERRIDE_METHOD" ]; do
+        echo ""
+        if [ "$has_launcher" -eq 1 ]; then
+            echo -e " 1) $(launcher_override_where) ${DIM}(default)${NC}"
+            echo -e " 2) $(runner_label) prefix registry"
+            echo -e " 3) I'll do it myself ${DIM}(instructions at the end)${NC}"
+            max=3
+        else
+            echo -e " 1) $(runner_label) prefix registry ${DIM}(default)${NC}"
+            echo -e " 2) I'll do it myself ${DIM}(instructions at the end)${NC}"
+            max=2
+        fi
+        echo -e "\n${YELLOW}Selection [1-${max}, Default: 1]: ${NC}"
+        echo -e -n "> "
+        read_answer answer || answer="$max"
+        answer="${answer:-1}"
+        case "$has_launcher:$answer" in
+            1:1) OVERRIDE_METHOD="launcher" ;;
+            1:2|0:1) OVERRIDE_METHOD="registry" ;;
+            1:3|0:2) OVERRIDE_METHOD="manual" ;;
+        esac
+        if [ -z "$OVERRIDE_METHOD" ]; then
+            if [ "$has_launcher" -eq 1 ]; then
+                echo -e "${YELLOW}${BOLD}That's not a valid option — please type 1, 2, or 3.${NC}"
+            else
+                echo -e "${YELLOW}${BOLD}That's not a valid option — please type 1 or 2.${NC}"
+            fi
+            continue
+        fi
+        [ "$OVERRIDE_METHOD" == "launcher" ] || break
+
+        # The launcher has to have saved settings for the game to add to.
+        while [ -z "$OVERRIDE_FILE" ]; do
+            echo -e "\n${CYAN}Note: ${label} has no settings saved for ${name} yet.${NC}"
+            echo -e "\n${WHITE}If you just installed this game, ${label} hasn't created its settings yet."
+            echo -e "Please launch the game at least once, close it, and try again.${NC}"
+            echo -e "\n${YELLOW}Check ${label}'s settings for ${name} again? (Y/n): ${NC}"
+            echo -e -n "> "
+            read_answer again || again="n"
+            if [[ "$again" =~ ^[Nn] ]]; then
+                OVERRIDE_METHOD=""; break
+            fi
+            launcher_override_target
+        done
+        [ "$OVERRIDE_METHOD" == "launcher" ] || continue
+
+        if ! wait_for_launcher_closed "$OVERRIDE_LAUNCHER" "type 2 or 3 to choose another way"; then
+            case "$LAUNCHER_WAIT_ANSWER" in
+                2) OVERRIDE_METHOD="registry" ;;
+                3|eof) OVERRIDE_METHOD="manual" ;;
+                *) OVERRIDE_METHOD="" ;;
+            esac
+        fi
+    done
 }
 
 apply_vcrun_dll_overrides() {
@@ -2263,6 +2653,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     REG_HAS_COM="n"
     REG_HAS_OVERRIDE="n"
     VCRUN_INSTALLED="n"
+    LAUNCHER_LINES=()
 
     if [ -s "$INSTALL_MANIFEST" ] && head -n 1 "$INSTALL_MANIFEST" | grep -q "^# EAX Restore: uninstalled"; then
         echo -e "\n${GREEN}This game was already uninstalled in a previous run — nothing left to remove.${NC}"
@@ -2284,6 +2675,9 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
                 "REGISTRY:COM") REG_HAS_COM="y"; continue ;;
                 "REGISTRY:OVERRIDE") REG_HAS_OVERRIDE="y"; continue ;;
                 "VCRUN") VCRUN_INSTALLED="y"; continue ;;
+                # The DLL override added to Steam's launch options / Heroic's
+                # environment variables — reverted in step 5.
+                LAUNCHER:*) LAUNCHER_LINES+=("$manifest_entry"); continue ;;
             esac
             { [ -e "$manifest_entry" ] || [ -L "$manifest_entry" ]; } && FILES_TO_REMOVE+=("$manifest_entry")
         done < "$INSTALL_MANIFEST"
@@ -2321,7 +2715,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         VCRUN_PRESENT="y"
     fi
 
-    if [ ${#FILES_TO_REMOVE[@]} -eq 0 ] && [ "$REG_HAS_COM" == "n" ] && [ "$REG_HAS_OVERRIDE" == "n" ] && [ "$VCRUN_PRESENT" == "n" ]; then
+    if [ ${#FILES_TO_REMOVE[@]} -eq 0 ] && [ "$REG_HAS_COM" == "n" ] && [ "$REG_HAS_OVERRIDE" == "n" ] && [ "$VCRUN_PRESENT" == "n" ] && [ ${#LAUNCHER_LINES[@]} -eq 0 ]; then
         echo -e "\n${YELLOW}No EAX files found in $GAME_DIR or the system prefix.${NC}"; exit 0
     fi
 
@@ -2431,8 +2825,13 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
 
     echo ""
     print_divider
-    echo -e "${CYAN}5. Registry Cleanup${NC}"
+    echo -e "${CYAN}5. Registry and Launcher Cleanup${NC}"
     print_line
+
+    if [ ${#LAUNCHER_LINES[@]} -gt 0 ]; then
+        echo -e "\n${WHITE}The install manifest shows the DLL override was added to the game's launcher settings.${NC}"
+        revert_launcher_overrides
+    fi
 
     if [ "$MANIFEST_FOUND" -eq 1 ]; then
         if [[ "$REG_HAS_COM" == "y" || "$REG_HAS_OVERRIDE" == "y" ]]; then
@@ -2508,6 +2907,21 @@ EOF
         fi
     else
         echo -e "\n${WHITE}No VC++ runtime recorded or detected in this prefix — nothing to do here.${NC}"
+    fi
+
+    # Launcher overrides left in place in step 5 stay in the manifest, so a
+    # later uninstall can still put them back. If step 4 already replaced the
+    # manifest with the "uninstalled" marker, they replace the marker instead —
+    # that marker makes a later run stop before reaching step 5.
+    if [ ${#LAUNCHER_LINES[@]} -gt 0 ] && [ -f "$INSTALL_MANIFEST" ]; then
+        if head -n 1 "$INSTALL_MANIFEST" | grep -q "^# EAX Restore: uninstalled"; then
+            [ ${#LAUNCHER_LINES_KEPT[@]} -gt 0 ] && printf '%s\n' "${LAUNCHER_LINES_KEPT[@]}" > "$INSTALL_MANIFEST"
+        else
+            { grep -v '^LAUNCHER:' "$INSTALL_MANIFEST"
+              [ ${#LAUNCHER_LINES_KEPT[@]} -gt 0 ] && printf '%s\n' "${LAUNCHER_LINES_KEPT[@]}"
+              true
+            } > "$INSTALL_MANIFEST.tmp" && mv -f "$INSTALL_MANIFEST.tmp" "$INSTALL_MANIFEST"
+        fi
     fi
 
     echo ""
@@ -2794,15 +3208,17 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     # 8. Automatic DLL Override
     echo ""
     print_divider
-    echo -e "${CYAN}8. Automatic DLL Override${NC}"
+    echo -e "${CYAN}8. DLL Override${NC}"
     print_line
     echo ""
-    echo -e "${WHITE}Wine needs to be told to use the new dsound.dll file instead of its built-in one."
-    echo -e "We can inject this rule directly into the Wine prefix registry so you don't have to"
-    echo -e "manually type WINEDLLOVERRIDES=\"dsound=n,b\" %command% into your launcher.${NC}"
-    echo -e "\n${YELLOW}Automatically set dsound.dll override in Wine registry? (y/N): ${NC}"
-    echo -e -n "> "
-    read_answer AUTO_OVERRIDE
+    echo -e "${WHITE}$(runner_label) needs to be told to load the new dsound.dll instead of its built-in one."
+    echo -e "Where would you like to set that up?${NC}"
+
+    # The launcher choice (the default for Steam and Heroic games) writes the
+    # override where a player would by hand — Steam's launch options or
+    # Heroic's environment variables for this game — so it's visible there and
+    # easy to undo.
+    choose_override_method
 
     # ==============================================================================
     # PHASE 2: EXECUTION
@@ -3189,7 +3605,7 @@ EOF
         fi
     fi
 
-    if [[ "$ADVANCED_COM" =~ ^[Yy]$ ]] || [[ "$AUTO_OVERRIDE" =~ ^[Yy]$ ]]; then
+    if [[ "$ADVANCED_COM" =~ ^[Yy]$ ]] || [ "$OVERRIDE_METHOD" == "registry" ]; then
         REG_FILE="$GAME_DIR/dsoal_master_patch_$$.reg"
         echo "Windows Registry Editor Version 5.00" > "$REG_FILE"
         echo "" >> "$REG_FILE"
@@ -3211,7 +3627,7 @@ EOF
 EOF
         fi
 
-        if [[ "$AUTO_OVERRIDE" =~ ^[Yy]$ ]]; then
+        if [ "$OVERRIDE_METHOD" == "registry" ]; then
             cat <<EOF >> "$REG_FILE"
 [HKEY_CURRENT_USER\Software\Wine\DllOverrides]
 "dsound"="native,builtin"
@@ -3223,7 +3639,7 @@ EOF
         # partial import can still leave keys behind, and uninstall deleting
         # a key that was never set is harmless.
         [[ "$ADVANCED_COM" =~ ^[Yy]$ ]] && echo "REGISTRY:COM" >> "$INSTALL_MANIFEST"
-        [[ "$AUTO_OVERRIDE" =~ ^[Yy]$ ]] && echo "REGISTRY:OVERRIDE" >> "$INSTALL_MANIFEST"
+        [ "$OVERRIDE_METHOD" == "registry" ] && echo "REGISTRY:OVERRIDE" >> "$INSTALL_MANIFEST"
         # REG_STATUS: ok, failed (regedit itself), or missing (regedit
         # reported success but the override isn't in the prefix). The
         # override is the one registry change EAX can't work without, so
@@ -3232,14 +3648,14 @@ EOF
         REG_STATUS="ok"
         if ! apply_registry_patch "$REG_FILE"; then
             REG_STATUS="failed"
-        elif [[ "$AUTO_OVERRIDE" =~ ^[Yy]$ ]]; then
+        elif [ "$OVERRIDE_METHOD" == "registry" ]; then
             verify_dll_override "dsound"
             [ $? -eq 1 ] && REG_STATUS="missing"
         fi
 
         if [ "$REG_STATUS" == "ok" ]; then
             [[ "$ADVANCED_COM" =~ ^[Yy]$ ]] && echo -e " -> Injected: COM Registry Routing"
-            [[ "$AUTO_OVERRIDE" =~ ^[Yy]$ ]] && echo -e " -> Injected: WINEDLLOVERRIDES (native,builtin) into registry"
+            [ "$OVERRIDE_METHOD" == "registry" ] && echo -e " -> Injected: WINEDLLOVERRIDES (native,builtin) into registry"
         else
             if [ "$REG_STATUS" == "failed" ]; then
                 echo -e " -> ${YELLOW}${BOLD}Error: Couldn't write the registry changes to the Wine prefix, so they aren't applied.${NC}"
@@ -3251,11 +3667,15 @@ EOF
             DEPLOY_FAILURES=$(( ${DEPLOY_FAILURES:-0} + 1 ))
             # Show the manual WINEDLLOVERRIDES instructions instead of
             # claiming the override was handled automatically.
-            [[ "$AUTO_OVERRIDE" =~ ^[Yy]$ ]] && OVERRIDE_PATCH_FAILED="1"
-            AUTO_OVERRIDE="n"
+            [ "$OVERRIDE_METHOD" == "registry" ] && OVERRIDE_PATCH_FAILED="1"
+            [ "$OVERRIDE_METHOD" == "registry" ] && OVERRIDE_METHOD="manual"
         fi
         rm -f "$REG_FILE"
     fi
+
+    # Step 8's launcher choice: Steam launch options / Heroic environment
+    # variables. Drops back to manual instructions if it can't be written.
+    apply_launcher_override
 
     if [ "${DEPLOY_FAILURES:-0}" -gt 0 ]; then
         echo ""
@@ -3282,9 +3702,11 @@ EOF
     echo -e "${GREEN}${BOLD}--- INSTALLATION COMPLETE! ---${NC}"
     print_line
 
-    if [[ "$AUTO_OVERRIDE" =~ ^[Yy]$ ]]; then
+    if [ "$OVERRIDE_METHOD" == "registry" ] || [ "$OVERRIDE_METHOD" == "launcher" ]; then
+        override_where="the $(runner_label) prefix registry"
+        [ "$OVERRIDE_METHOD" == "launcher" ] && override_where="$(launcher_override_where)"
         echo -e "\n${YELLOW}${BOLD}Final Steps to activate EAX:${NC}"
-        echo -e " 1. ${YELLOW}${BOLD}Launch the game:${NC} ${WHITE}The DLL Override was handled automatically! Just hit Play.${NC}"
+        echo -e " 1. ${YELLOW}${BOLD}Launch the game:${NC} ${WHITE}The DLL Override is set in ${override_where}, so just hit Play.${NC}"
         echo -e " 2. ${YELLOW}${BOLD}In-Game Settings:${NC} ${WHITE}Go to Audio settings and enable 'EAX', '3D Sound', or 'Hardware Acceleration'.${NC}\n"
     else
         echo -e "\n${YELLOW}${BOLD}Final Steps to activate EAX:${NC}"
