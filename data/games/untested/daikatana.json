@@ -1,0 +1,10 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Daikatana",
+  "exe": "daikatana.exe",
+  "stores": {
+    "steam": { "id": 242980 },
+    "gog": { "id": 1207659168 }
+  },
+  "eax": { "api": "directsound3d" }
+}

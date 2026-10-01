@@ -1,0 +1,10 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Clive Barker's Undying",
+  "exe": "Undying.exe",
+  "stores": {
+    "gog": { "id": 1207659191, "store_details": "Sold only on GOG." }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0"] },
+  "notes": "Turn on the 'Enable 3D Hardware' option in the in-game audio settings. The game records whether EAX/A3D actually activated to Undying.log, which is handy for confirming it worked (per the Vogons Wiki citation for this title)."
+}

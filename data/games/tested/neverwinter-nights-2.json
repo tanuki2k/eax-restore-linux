@@ -1,0 +1,40 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Neverwinter Nights 2",
+  "exe": "nwn2main.exe",
+  "stores": {
+    "gog": {
+      "id": 1207659162,
+      "store_details": "The original 2006 Obsidian/Electron Engine build with DirectSound3D EAX, not 2025's OpenAL-native 'Enhanced Edition' rewrite."
+    }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0", "3.0"] },
+  "game_config": {
+    "files": {
+      "nwn2.ini": {
+        "format": "ini",
+        "locations": ["prefix_documents:Neverwinter Nights 2/nwn2.ini"]
+      }
+    },
+    "audio_fixes": [
+      {
+        "title": "Enable EAX reverb",
+        "reason": "Neverwinter Nights 2 ships with its environment effects off and a software sound provider that has no EAX.",
+        "changes": {
+          "nwn2.ini": {
+            "Sound Options": {
+              "3D Provider": "Creative Labs EAX 4 (TM)",
+              "Environment Effects": "1"
+            }
+          }
+        }
+      },
+      {
+        "title": "Enable 5.1 surround sound",
+        "reason": "Neverwinter Nights 2 plays in stereo unless its speaker type is set to 5.1.",
+        "only_if": { "speakers": "surround" },
+        "changes": { "nwn2.ini": { "Sound Options": { "Speaker Type": "4" } } }
+      }
+    ]
+  }
+}

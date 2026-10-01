@@ -1,0 +1,8 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Commandos: Strike Force",
+  "stores": {
+    "steam": { "id": 6820, "delisted": true, "id_source": "steamdb_historical" }
+  },
+  "eax": { "api": "directsound3d", "versions": ["3.0"] }
+}

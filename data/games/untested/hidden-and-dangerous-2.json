@@ -1,0 +1,9 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Hidden & Dangerous 2",
+  "stores": {
+    "steam": { "id": 703320 },
+    "gog": { "id": 1576810170 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["3.0"] }
+}

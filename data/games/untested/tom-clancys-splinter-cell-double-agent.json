@@ -1,0 +1,13 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Tom Clancy's Splinter Cell: Double Agent",
+  "exe": "SplinterCell4.exe",
+  "stores": {
+    "steam": { "id": 13580 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0", "3.0", "4.0"] },
+  "install": {
+    "tweaks": ["eax_unified"]
+  },
+  "notes": "Double Agent installs single-player and multiplayer as two separate builds — the multiplayer build (SCDA-Online) no longer works, so set up the single-player build in SCDA-Offline."
+}

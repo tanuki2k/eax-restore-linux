@@ -147,7 +147,13 @@ This list is deliberately small and hand-verified — it will only ever cover a 
 
 **Retail/CD copies and other non-Steam, non-Heroic installs** (e.g. an original pre-Steam Half-Life disc, run in a Wine prefix you set up yourself) aren't covered by the scanner at all, since there's no launcher library to scan — but the script still supports them. Point it at the game's `.exe` folder and provide the Wine prefix path manually when prompted.
 
-**Contributing to the known games database:** PRs adding or correcting games are welcome. Each game is its own file, `data/games/<id>.json`, where `<id>` is a kebab-case version of its name (`quake-4.json`, `thief-ii-the-metal-age.json`). The formal definition of every field is [`data/schema.json`](data/schema.json); pointing your editor at it (each file's `"$schema": "../schema.json"` line does this in VS Code and most JSON-aware editors) gives autocompletion and flags mistakes as you type. Don't edit `known-eax-games.json` by hand — it's generated from the per-game files. After editing, run:
+**Contributing to the known games database:** PRs adding or correcting games are welcome. Each game is its own file, `<id>.json`, where `<id>` is a kebab-case version of its name (`quake-4.json`, `thief-ii-the-metal-age.json`). Which folder it's in says how far it's got:
+
+- `data/games/tested/` — checked against a real install: its store IDs match, its `exe` exists, and any config files and settings it changes are where it says. Shipped.
+- `data/games/untested/` — not checked on a real install yet. Shipped all the same. New games go here.
+- `data/drafts/` — incomplete or doubtful entries. Checked against the schema and formatted, but **not** shipped.
+
+To promote a game, move its file (`git mv`) and re-run `tools/format-known-games.sh`, which also updates its `"$schema"` line for the new folder. The formal definition of every field is [`data/schema.json`](data/schema.json); pointing your editor at it (each file's `"$schema"` line does this in VS Code and most JSON-aware editors) gives autocompletion and flags mistakes as you type. Don't edit `known-eax-games.json` by hand — it's generated from the per-game files. After editing, run:
 
 ```bash
 tools/format-known-games.sh      # puts keys in the standard order and drops empty/default fields
@@ -156,11 +162,11 @@ tools/build-known-games.sh       # regenerates known-eax-games.json
 
 CI checks every file against the schema, that it's formatted, and that `known-eax-games.json` is up to date. Please only add a store `id` you've independently verified against the storefront's own page or API — a wrong ID would point the script at someone else's prefix. **Leave a field out when it's empty or at its default** — there are no `null`s in these files.
 
-A game file looks like this (see `data/games/` for more):
+A game file looks like this (see `data/games/tested/` for more):
 
 ```json
 {
-  "$schema": "../schema.json",
+  "$schema": "../../schema.json",
   "name": "Quake 4",
   "exe": "Quake4.exe",
   "stores": {

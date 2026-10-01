@@ -1,0 +1,8 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Dreamfall: The Longest Journey",
+  "stores": {
+    "steam": { "id": 6300 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["3.0", "4.0"] }
+}

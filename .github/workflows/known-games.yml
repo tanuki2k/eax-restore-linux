@@ -30,7 +30,9 @@ jobs:
         run: check-jsonschema --check-metaschema data/schema.json
 
       - name: Game files match the schema
-        run: check-jsonschema --schemafile data/schema.json data/games/*.json
+        run: |
+          shopt -s nullglob
+          check-jsonschema --schemafile data/schema.json data/games/tested/*.json data/games/untested/*.json data/drafts/*.json
 
       - name: Game files are formatted
         run: tools/format-known-games.sh --check

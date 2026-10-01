@@ -1,0 +1,9 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Psychonauts",
+  "stores": {
+    "steam": { "id": 3830 },
+    "gog": { "id": 1207658807 }
+  },
+  "eax": { "api": "openal", "versions": ["2.0", "3.0", "4.0"] }
+}

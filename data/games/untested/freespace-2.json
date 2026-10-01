@@ -1,0 +1,8 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Freespace 2",
+  "stores": {
+    "gog": { "id": 5 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0"] }
+}

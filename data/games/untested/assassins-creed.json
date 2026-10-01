@@ -1,0 +1,14 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Assassin's Creed",
+  "exe": "AssassinsCreed_Dx9.exe",
+  "stores": {
+    "steam": { "id": 15100 },
+    "gog": { "id": 1207659023 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0", "3.0", "4.0"] },
+  "install": {
+    "tweaks": ["eax_unified"]
+  },
+  "notes": "The PC 'Director's Cut Edition' sold on both stores isn't a remaster — it's the original 2008 PC port of the 2007 console game, with four PC-exclusive bonus missions and DirectX 10 support added on top."
+}

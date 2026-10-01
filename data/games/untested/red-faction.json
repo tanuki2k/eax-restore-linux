@@ -1,0 +1,11 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Red Faction",
+  "stores": {
+    "steam": { "id": 20530 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0"] },
+  "install": {
+    "tweaks": ["eax_unified"]
+  }
+}

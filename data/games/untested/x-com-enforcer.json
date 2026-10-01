@@ -1,0 +1,8 @@
+{
+  "$schema": "../../schema.json",
+  "name": "X-COM: Enforcer",
+  "stores": {
+    "steam": { "id": 7770 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0"] }
+}

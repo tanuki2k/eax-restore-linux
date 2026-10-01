@@ -1,8 +1,0 @@
-{
-  "$schema": "../schema.json",
-  "name": "Killing Floor",
-  "stores": {
-    "steam": { "id": 1250 }
-  },
-  "eax": { "api": "directsound3d", "versions": ["3.0"] }
-}

@@ -14,8 +14,10 @@ install manifest for clean uninstall, and checksum-verified downloads with local
 caching. `known-eax-games.json` is the companion community-maintained database that
 drives library scanning, install-time compatibility notes and the Game Settings step
 (changes to a game's own config files) for specific titles. It's **generated**: each
-game is edited as `data/games/<id>.json`, defined by `data/schema.json`, and
-`tools/build-known-games.sh` combines them. See `README.md` for the full feature list
+game is edited as `<id>.json` in `data/games/tested/` (checked against a real install)
+or `data/games/untested/` (not yet) — both shipped — or `data/drafts/` (never shipped),
+defined by `data/schema.json`; `tools/build-known-games.sh` combines the two shipped
+folders. See `README.md` for the full feature list
 and user-facing docs, and its "Contributing to the known games database" section for
 the fields.
 
@@ -74,11 +76,12 @@ launcher hardcodes `releases/latest`).
   `src/globals.sh`) — handy locally; the `dev` workflow no longer needs them.
 - **Syntax-check after any edit:** `bash -n dist/eax-restore-linux.sh`
 - **Shellcheck (if installed):** `shellcheck dist/eax-restore-linux.sh`
-- **After editing the database** (`data/games/*.json`, never `known-eax-games.json`
-  directly): `tools/format-known-games.sh` (canonical key order, empty/default fields
+- **After editing the database** (`data/games/{tested,untested}/*.json` or
+  `data/drafts/*.json`, never `known-eax-games.json` directly): `tools/format-known-games.sh` (canonical key order, empty/default fields
   dropped), then `tools/build-known-games.sh` (regenerates `known-eax-games.json`).
   CI (`.github/workflows/known-games.yml`) runs `check-jsonschema --schemafile
-  data/schema.json data/games/*.json` plus both scripts' `--check` modes.
+  data/schema.json` over all three folders plus both scripts' `--check` modes; the build
+  also fails if a game's file name is in more than one folder.
   `tools/migrate-v2-to-v3.sh` is the one-off that split the old single-file (schema 2)
   database; kept for reference only.
 - **Run the script:** `./dist/eax-restore-linux.sh` (interactive; requires `curl`, `unzip`,

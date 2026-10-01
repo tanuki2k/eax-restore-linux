@@ -1,0 +1,12 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Dungeon Siege",
+  "stores": {
+    "steam": { "id": 39190 },
+    "gog": {
+      "id": 1142020247,
+      "store_details": "GOG sells this as the 'Dungeon Siege Collection' — base game plus both expansions."
+    }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0"] }
+}

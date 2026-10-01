@@ -1,0 +1,11 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Aliens versus Predator Classic 2000",
+  "exe": "AvP_Classic.exe",
+  "stores": {
+    "steam": { "id": 3730 },
+    "gog": { "id": 1207665883 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0"] },
+  "notes": "Both stores label this 'Classic 2000' to set it apart from 2010's Aliens vs. Predator, an unrelated later game by a different developer."
+}

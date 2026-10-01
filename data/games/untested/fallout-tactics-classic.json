@@ -1,0 +1,12 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Fallout Tactics Classic",
+  "exe": "BOS.exe",
+  "stores": {
+    "gog": {
+      "id": 3,
+      "store_details": "GOG relisted the game at some point — this is the older 'Classic' product ID some existing owners' libraries still show, the same game as the 'Fallout Tactics: Brotherhood of Steel' entry (gog_id 1440163405), with the same EAX support."
+    }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0"] }
+}

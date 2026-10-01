@@ -1,0 +1,9 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Freedom Force",
+  "stores": {
+    "steam": { "id": 8880 },
+    "gog": { "id": 1445250806 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0"] }
+}

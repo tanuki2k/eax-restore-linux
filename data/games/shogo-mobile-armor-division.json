@@ -1,8 +1,0 @@
-{
-  "$schema": "../schema.json",
-  "name": "Shogo: Mobile Armor Division",
-  "stores": {
-    "gog": { "id": 1207658659 }
-  },
-  "eax": { "api": "directsound3d", "versions": ["1.0"] }
-}

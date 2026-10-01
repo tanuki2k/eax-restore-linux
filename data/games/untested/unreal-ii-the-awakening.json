@@ -1,0 +1,28 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Unreal II: The Awakening",
+  "exe": "Unreal2.exe",
+  "stores": {
+    "steam": {
+      "id": 13200,
+      "delisted": true,
+      "store_details": "Delisted from Steam in December 2022, when Epic pulled the entire classic Unreal series from sale."
+    },
+    "gog": {
+      "id": 1207658677,
+      "delisted": true,
+      "store_details": "Delisted from GOG in December 2022, when Epic pulled the entire classic Unreal series from sale."
+    }
+  },
+  "eax": { "api": "openal", "versions": ["1.0", "2.0", "3.0"] },
+  "game_config": {
+    "files": { "Unreal2.ini": { "format": "ini", "locations": ["game:Unreal2.ini"] } },
+    "audio_fixes": [
+      {
+        "title": "Enable EAX reverb",
+        "reason": "Unreal II ships with EAX off.",
+        "changes": { "Unreal2.ini": { "ALAudio.ALAudioSubsystem": { "UseEAX": "True" } } }
+      }
+    ]
+  }
+}

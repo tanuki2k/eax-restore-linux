@@ -1,0 +1,14 @@
+{
+  "$schema": "../../schema.json",
+  "name": "S.T.A.L.K.E.R.: Clear Sky",
+  "exe": "xrEngine.exe",
+  "stores": {
+    "steam": { "id": 20510 },
+    "gog": { "id": 1207660603 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0", "3.0"] },
+  "install": {
+    "tweaks": ["eax_unified"]
+  },
+  "notes": "Separate from 'S.T.A.L.K.E.R.: Clear Sky - Enhanced Edition', a different Steam/GOG listing this entry doesn't cover. The Vogons Wiki specifically warns against pairing this with Creative's ALchemy wrapper."
+}

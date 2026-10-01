@@ -1,0 +1,10 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Outcast",
+  "stores": {
+    "steam": { "id": 336610 },
+    "gog": { "id": 1207658853 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0"] },
+  "notes": "This is the 'Outcast 1.1' listing — a 2014 official update to the classic 1999 build, same engine. Separate from 2017's 'Outcast: Second Contact' and 2024's 'Outcast: A New Beginning' remakes, neither of which is covered here."
+}

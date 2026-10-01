@@ -1,0 +1,8 @@
+{
+  "$schema": "../../schema.json",
+  "name": "SimCity 3000: Unlimited",
+  "stores": {
+    "gog": { "id": 2086050016 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0"] }
+}

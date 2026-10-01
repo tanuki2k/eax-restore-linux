@@ -1,0 +1,9 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Gothic",
+  "exe": "GOTHIC.EXE",
+  "stores": {
+    "steam": { "id": 65540 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["2.0"] }
+}

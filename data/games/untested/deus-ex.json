@@ -1,0 +1,30 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Deus Ex",
+  "exe": "DeusEx.exe",
+  "stores": {
+    "steam": { "id": 6910 },
+    "gog": { "id": 1207658995 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0"] },
+  "install": {
+    "alsoft_ini": { "reverb": { "boost": "6" } }
+  },
+  "game_config": {
+    "files": { "DeusEx.ini": { "format": "ini", "locations": ["game:DeusEx.ini"] } },
+    "audio_fixes": [
+      {
+        "title": "Enable EAX reverb",
+        "reason": "Deus Ex ships with its hardware sound option off, and it only plays EAX reverb with it on.",
+        "changes": {
+          "DeusEx.ini": {
+            "Engine.Engine": { "AudioDevice": "Galaxy.GalaxyAudioSubsystem" },
+            "Galaxy.GalaxyAudioSubsystem": { "Use3dHardware": "True", "UseReverb": "True" }
+          }
+        }
+      }
+    ]
+  },
+  "sources": ["https://github.com/kcat/dsoal/issues/79"],
+  "notes": "Reverb is used sparingly and is quiet by default — Battery Park, the first mission, is a good place to hear it. The community ALAudio mod doesn't pass the game's EAX reverb through, so stay on the default Galaxy driver (per kcat/dsoal#79)."
+}

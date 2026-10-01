@@ -1,0 +1,11 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Tom Clancy's Rainbow Six: Vegas 2",
+  "stores": {
+    "steam": { "id": 15120 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0", "3.0", "4.0"] },
+  "install": {
+    "tweaks": ["eax_unified"]
+  }
+}

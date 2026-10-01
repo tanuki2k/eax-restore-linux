@@ -1,8 +1,0 @@
-{
-  "$schema": "../schema.json",
-  "name": "TRON 2.0",
-  "stores": {
-    "gog": { "id": 1655444396 }
-  },
-  "eax": { "api": "directsound3d", "versions": ["2.0", "3.0"] }
-}
