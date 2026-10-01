@@ -23,7 +23,7 @@
         "changes": {
           "nwn2.ini": {
             "Sound Options": {
-              "3D Provider": "Creative Labs EAX 4 (TM)",
+              "3D Provider": "Creative Labs EAX 3 (TM)",
               "Environment Effects": "1"
             }
           }
