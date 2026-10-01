@@ -118,6 +118,20 @@ PREV_CONFIG_LINES=()
 CONFIG_LINES=()
 GAME_SETTINGS_KEPT=()
 
+# DLL override (src/launcher-config.sh). OVERRIDE_METHOD is step 10's choice:
+# registry | launcher | manual. OVERRIDE_LAUNCHER / OVERRIDE_FILE / OVERRIDE_ID
+# name the launcher settings it goes into (Steam localconfig.vdf + AppID, or
+# Heroic GamesConfig file + app name). LAUNCHER_LINES / LAUNCHER_LINES_KEPT are
+# uninstall's LAUNCHER: manifest lines and the ones left in place.
+OVERRIDE_METHOD=""
+# "proton" or "wine", from the Heroic game's own settings (empty when unknown).
+HEROIC_RUNNER_TYPE=""
+OVERRIDE_LAUNCHER=""
+OVERRIDE_FILE=""
+OVERRIDE_ID=""
+LAUNCHER_LINES=()
+LAUNCHER_LINES_KEPT=()
+
 # Set by prompt_restart_or_quit when the user, at an EAX-impossible dead end,
 # chooses to go back and pick a different game rather than quit. The config
 # flow's Steps 1-2 loop and the functions between it and the check

@@ -37,6 +37,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     REG_OVERRIDE_DLL=""
     VCRUN_INSTALLED="n"
     CONFIG_LINES=()
+    LAUNCHER_LINES=()
 
     if [ -s "$INSTALL_MANIFEST" ] && head -n 1 "$INSTALL_MANIFEST" | grep -q "^# EAX Restore: uninstalled"; then
         echo -e "\n${GREEN}This game was already uninstalled in a previous run — nothing left to remove.${NC}"
@@ -68,6 +69,9 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
                 # Game settings changed in the game's own config files —
                 # reverted in step 7, never removed as files.
                 CONFIG:*) CONFIG_LINES+=("$manifest_entry"); continue ;;
+                # The DLL override added to Steam's launch options / Heroic's
+                # environment variables — reverted in step 5.
+                LAUNCHER:*) LAUNCHER_LINES+=("$manifest_entry"); continue ;;
             esac
             { [ -e "$manifest_entry" ] || [ -L "$manifest_entry" ]; } && FILES_TO_REMOVE+=("$manifest_entry")
         done < "$INSTALL_MANIFEST"
@@ -105,7 +109,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         VCRUN_PRESENT="y"
     fi
 
-    if [ ${#FILES_TO_REMOVE[@]} -eq 0 ] && [ "$REG_HAS_COM" == "n" ] && [ "$REG_HAS_OVERRIDE" == "n" ] && [ "$VCRUN_PRESENT" == "n" ] && [ ${#CONFIG_LINES[@]} -eq 0 ]; then
+    if [ ${#FILES_TO_REMOVE[@]} -eq 0 ] && [ "$REG_HAS_COM" == "n" ] && [ "$REG_HAS_OVERRIDE" == "n" ] && [ "$VCRUN_PRESENT" == "n" ] && [ ${#CONFIG_LINES[@]} -eq 0 ] && [ ${#LAUNCHER_LINES[@]} -eq 0 ]; then
         print_note "No EAX/DSOAL files were found in $GAME_DIR or the system prefix — nothing to remove."; exit 0
     fi
 
@@ -211,7 +215,12 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         echo "# EAX Restore: uninstalled on $(date -u +"%Y-%m-%dT%H:%M:%SZ"). Nothing left to remove." > "$INSTALL_MANIFEST"
     fi
 
-    print_step 5 "Registry Cleanup"
+    print_step 5 "Registry and Launcher Cleanup"
+
+    if [ ${#LAUNCHER_LINES[@]} -gt 0 ]; then
+        echo -e "\n${WHITE}The install manifest shows the DLL override was added to the game's launcher settings.${NC}"
+        revert_launcher_overrides
+    fi
 
     if [ "$MANIFEST_FOUND" -eq 1 ]; then
         if [[ "$REG_HAS_COM" == "y" || "$REG_HAS_OVERRIDE" == "y" ]]; then
@@ -306,12 +315,14 @@ EOF
     # uninstall can still put them back. If step 4 already replaced the
     # manifest with the "uninstalled" marker, the kept lines replace the marker
     # instead — that marker makes a later run stop before reaching step 7.
-    if [ ${#CONFIG_LINES[@]} -gt 0 ] && [ -f "$INSTALL_MANIFEST" ]; then
+    # The same goes for launcher overrides left in place in step 5.
+    kept_lines=("${GAME_SETTINGS_KEPT[@]}" "${LAUNCHER_LINES_KEPT[@]}")
+    if { [ ${#CONFIG_LINES[@]} -gt 0 ] || [ ${#LAUNCHER_LINES[@]} -gt 0 ]; } && [ -f "$INSTALL_MANIFEST" ]; then
         if head -n 1 "$INSTALL_MANIFEST" | grep -q "^# EAX Restore: uninstalled"; then
-            [ ${#GAME_SETTINGS_KEPT[@]} -gt 0 ] && printf '%s\n' "${GAME_SETTINGS_KEPT[@]}" > "$INSTALL_MANIFEST"
+            [ ${#kept_lines[@]} -gt 0 ] && printf '%s\n' "${kept_lines[@]}" > "$INSTALL_MANIFEST"
         else
-            { grep -v '^CONFIG:' "$INSTALL_MANIFEST"
-              [ ${#GAME_SETTINGS_KEPT[@]} -gt 0 ] && printf '%s\n' "${GAME_SETTINGS_KEPT[@]}"
+            { grep -v '^CONFIG:\|^LAUNCHER:' "$INSTALL_MANIFEST"
+              [ ${#kept_lines[@]} -gt 0 ] && printf '%s\n' "${kept_lines[@]}"
               true
             } > "$INSTALL_MANIFEST.tmp" && mv -f "$INSTALL_MANIFEST.tmp" "$INSTALL_MANIFEST"
         fi

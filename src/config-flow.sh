@@ -414,13 +414,15 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     fi
 
     # 10. Automatic DLL Override
-    print_step 10 "Automatic DLL Override"
-    print_paragraph "Wine needs to be told to use the new ${PRIMARY_DLL_FILENAME} file instead of its built-in one." \
-        "We can inject this rule directly into the Wine prefix registry so you don't have to" \
-        "manually type WINEDLLOVERRIDES=\"${PRIMARY_DLL_NAME}=n,b\" %command% into your launcher."
-    echo -e "\n${YELLOW}Automatically set ${PRIMARY_DLL_FILENAME} override in Wine registry? (y/N): ${NC}"
-    echo -e -n "> "
-    read_answer AUTO_OVERRIDE
+    print_step 10 "DLL Override"
+    print_paragraph "$(runner_label) needs to be told to load the new ${PRIMARY_DLL_FILENAME} instead of its built-in one." \
+        "Where would you like to set that up?"
+
+    # The launcher choice (the default for Steam and Heroic games) writes the
+    # override where a player would by hand — Steam's launch options or
+    # Heroic's environment variables for this game — so it's visible there and
+    # easy to undo.
+    choose_override_method
 
     # 11. Game Settings — changes to the game's own config files, from its
     # known-games entry. Last, since it's about the game rather than the

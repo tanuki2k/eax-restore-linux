@@ -61,6 +61,7 @@
     # configurations, plus VC++ (installing it, or setting up one that's
     # already there), the prefix copy and game settings when those run.
     phase_total=3
+    [ "$OVERRIDE_METHOD" == "launcher" ] && phase_total=$(( phase_total + 1 ))
     [ ${#GAME_SETTINGS_PLAN[@]} -gt 0 ] && phase_total=$(( phase_total + 1 ))
     { [[ "$INSTALL_VCRUN" =~ $YES_RE ]] || [ -n "${APPLY_VCRUN_OVERRIDES_NEEDED:-}" ]; } && phase_total=$(( phase_total + 1 ))
     [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows" ] && phase_total=$(( phase_total + 1 ))
@@ -423,7 +424,7 @@ EOF
         fi
     fi
 
-    if [[ "$ADVANCED_COM" =~ $YES_RE ]] || [[ "$AUTO_OVERRIDE" =~ $YES_RE ]]; then
+    if [[ "$ADVANCED_COM" =~ $YES_RE ]] || [ "$OVERRIDE_METHOD" == "registry" ]; then
         # Written into GAME_DIR rather than a temp dir: apply_registry_patch
         # (detection.sh) runs `protontricks -c` for Steam games, which
         # executes inside a Steam Runtime container that may not have /tmp
@@ -450,7 +451,7 @@ EOF
 EOF
         fi
 
-        if [[ "$AUTO_OVERRIDE" =~ $YES_RE ]]; then
+        if [ "$OVERRIDE_METHOD" == "registry" ]; then
             cat <<EOF >> "$REG_FILE"
 [HKEY_CURRENT_USER\Software\Wine\DllOverrides]
 "${PRIMARY_DLL_NAME}"="native,builtin"
@@ -462,7 +463,7 @@ EOF
         # partial import can still leave keys behind, and uninstall deleting
         # a key that was never set is harmless.
         [[ "$ADVANCED_COM" =~ $YES_RE ]] && echo "REGISTRY:COM" >> "$INSTALL_MANIFEST"
-        [[ "$AUTO_OVERRIDE" =~ $YES_RE ]] && echo "REGISTRY:OVERRIDE:${PRIMARY_DLL_NAME}" >> "$INSTALL_MANIFEST"
+        [ "$OVERRIDE_METHOD" == "registry" ] && echo "REGISTRY:OVERRIDE:${PRIMARY_DLL_NAME}" >> "$INSTALL_MANIFEST"
         # REG_STATUS: ok, failed (regedit itself), or missing (regedit
         # reported success but the override isn't in the prefix). The
         # override is the one registry change EAX can't work without, so
@@ -471,14 +472,14 @@ EOF
         REG_STATUS="ok"
         if ! apply_registry_patch "$REG_FILE"; then
             REG_STATUS="failed"
-        elif [[ "$AUTO_OVERRIDE" =~ $YES_RE ]]; then
+        elif [ "$OVERRIDE_METHOD" == "registry" ]; then
             verify_dll_override "$PRIMARY_DLL_NAME"
             [ $? -eq 1 ] && REG_STATUS="missing"
         fi
 
         if [ "$REG_STATUS" == "ok" ]; then
             [[ "$ADVANCED_COM" =~ $YES_RE ]] && print_status "Injected: COM Registry Routing"
-            [[ "$AUTO_OVERRIDE" =~ $YES_RE ]] && print_status "Injected: WINEDLLOVERRIDES (native,builtin) into registry"
+            [ "$OVERRIDE_METHOD" == "registry" ] && print_status "Injected: WINEDLLOVERRIDES (native,builtin) into registry"
         else
             if [ "$REG_STATUS" == "failed" ]; then
                 print_error_arrow "Couldn't write the registry changes to the Wine prefix, so they aren't applied." \
@@ -490,11 +491,15 @@ EOF
             DEPLOY_FAILURES=$(( ${DEPLOY_FAILURES:-0} + 1 ))
             # Show the manual WINEDLLOVERRIDES instructions below instead
             # of claiming the override was handled automatically.
-            [[ "$AUTO_OVERRIDE" =~ $YES_RE ]] && OVERRIDE_PATCH_FAILED="1"
-            AUTO_OVERRIDE="n"
+            [ "$OVERRIDE_METHOD" == "registry" ] && OVERRIDE_PATCH_FAILED="1"
+            [ "$OVERRIDE_METHOD" == "registry" ] && OVERRIDE_METHOD="manual"
         fi
         rm -f "$REG_FILE"
     fi
+
+    # Step 10's launcher choice: Steam launch options / Heroic environment
+    # variables. Drops back to manual instructions if it can't be written.
+    apply_launcher_override
 
     # Always runs, even with nothing new to apply: it also carries last
     # install's still-active game settings over into the new manifest.
@@ -518,9 +523,11 @@ EOF
 
     print_banner "INSTALLATION COMPLETE!"
 
-    if [[ "$AUTO_OVERRIDE" =~ $YES_RE ]]; then
+    if [ "$OVERRIDE_METHOD" == "registry" ] || [ "$OVERRIDE_METHOD" == "launcher" ]; then
+        override_where="the $(runner_label) prefix registry"
+        [ "$OVERRIDE_METHOD" == "launcher" ] && override_where="$(launcher_override_where)"
         echo -e "\n${YELLOW}${BOLD}Final Steps to activate EAX:${NC}"
-        echo -e " 1. ${YELLOW}${BOLD}Launch the game:${NC} ${WHITE}The DLL Override was handled automatically! Just hit Play.${NC}"
+        echo -e " 1. ${YELLOW}${BOLD}Launch the game:${NC} ${WHITE}The DLL Override is set in $(tilde_path "$override_where"), so just hit Play.${NC}"
         echo -e " 2. ${YELLOW}${BOLD}In-Game Settings:${NC} ${WHITE}Go to Audio settings and enable 'EAX', '3D Sound', or 'Hardware Acceleration'.${NC}\n"
     else
         echo -e "\n${YELLOW}${BOLD}Final Steps to activate EAX:${NC}"

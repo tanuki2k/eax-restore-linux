@@ -23,7 +23,7 @@ Because modern operating systems and Proton/Wine don't natively support this old
 * **Safe File Management:** Interactive conflict resolution safely backs up pre-existing files with timestamps so you never lose original game data. Every install writes a manifest of exactly what it deployed, so uninstall only ever removes what this script actually put there and restores your backups automatically.
 * **COM Registry Injection:** Optional routing of DirectSound CLSIDs directly in the Wine registry. This fixes the stubbornly grayed-out EAX menus in games like *Grand Theft Auto: San Andreas* or *Halo: Combat Evolved*.
 * **Advanced Engine Tweaks:** Optional EAX Unified dummy files (`eax.dll`/`eaxunified.dll`) and expanded audio limits to fix stuttering in chaotic, high-channel games like *F.E.A.R.*
-* **Native Auto-Overrides:** Injects the `dsound` override natively into the Wine registry so you don't have to clutter up your Steam launch options.
+* **Automatic DLL Overrides:** Sets the `dsound`/`openal32` override for you — in the game's Steam launch options or Heroic environment variables (the default, so it's visible and easy to undo there), or in the Wine prefix registry — or leaves it to you, with instructions. Existing launch options are kept, and uninstall puts them back.
 * **VC++ Runtime Handling:** Detects and installs the Microsoft VC++ 2022 Redistributable that older Proton/Wine builds need to load kcat's DSOAL / OpenAL Soft, falling back to a direct Microsoft download if winetricks/protontricks fails, and verifying the actual DLLs on disk rather than trusting exit codes.
 * **Safety Guards:** Refuses to run as root or from Steam's Gaming Mode, and won't auto-modify SteamOS's immutable filesystem.
 
@@ -137,7 +137,7 @@ As an alternative to the terminal steps above, [`eax-restore-linux.desktop`](eax
 Since the script itself refuses to run in Gaming Mode, this only works from Desktop Mode.
 
 ### Uninstallation
-Run the script, select **(u)ninstall**, and provide the game directory. The script will remove the EAX files, restore original backups, remove the registry overrides, optionally remove the VC++ runtime it installed, and offer to put back any game settings it changed (leaving alone anything you've changed yourself since).
+Run the script, select **(u)ninstall**, and provide the game directory. The script will remove the EAX files, restore original backups, remove the DLL override (from the registry or the launcher's settings), optionally remove the VC++ runtime it installed, and offer to put back any game settings it changed (leaving alone anything you've changed yourself since).
 
 ### Library Scanning & the Known Games Database
 

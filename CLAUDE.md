@@ -135,15 +135,23 @@ their execution order in the assembled script):
    manifest lines), `print_game_settings_summary`, `revert_game_settings`
    (uninstall step 7). All of it driven by the entry's `game_config` /
    `install.alsoft_ini`.
-10. **`vcrun.sh`** — the standalone VC++ runtime installer: `verify_vcrun_files`,
+10. **`launcher-config.sh`** — step 10's DLL override via the launcher: reads and
+   writes Steam's `localconfig.vdf` launch options (awk, scoped to the game's block
+   under `UserLocalConfigStore/Software/Valve/Steam/apps`) and Heroic's
+   `GamesConfig/<app>.json` `enviromentOptions` (jq), merging into any existing
+   `WINEDLLOVERRIDES`; `choose_override_method` (step 10's launcher / registry /
+   manual menu, launcher first), `apply_launcher_override` (Phase 2, writes `LAUNCHER:` manifest
+   lines), `revert_launcher_overrides` (uninstall step 5). Both launchers keep these
+   files in memory, so it waits for them to be closed first.
+11. **`vcrun.sh`** — the standalone VC++ runtime installer: `verify_vcrun_files`,
    `install_vcrun_dependencies`, `uninstall_vcrun_dependencies`, etc. —
    independently triggerable via `EAX_RESTORE_VCRUN_ONLY`, with its own `"VCRUN"`
    manifest entries.
-11. **`verify.sh`** — download verification: `verify_checksum`, `verify_or_confirm`,
+12. **`verify.sh`** — download verification: `verify_checksum`, `verify_or_confirm`,
     `get_asset_digest`, `confirm_unverified_download`.
-12. **`cache.sh`** — `update_local_cache` (the repository-cache step), plus
+13. **`cache.sh`** — `update_local_cache` (the repository-cache step), plus
     `handle_conflict` and `auto_backup_and_overwrite`.
-13. **`preflight.sh`** through **`install-flow.sh`** — top-level script flow:
+14. **`preflight.sh`** through **`install-flow.sh`** — top-level script flow:
     pre-flight dependency check, the `EAX_RESTORE_VCRUN_ONLY` early-exit path,
     `ACTION: UNINSTALL`, `ACTION: INSTALL`. The `ACTION: INSTALL` block itself
     spans two files sharing one `if [ "$SCRIPT_ACTION" == "i" ]` — opened in

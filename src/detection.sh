@@ -1267,7 +1267,7 @@ detect_game_environment() {
         LAUNCHER_TYPE="2"
         print_result "Non-Steam installation detected (Heroic/GOG, or a manually created Wine prefix)!" "$GREEN"
         HEROIC_APP_NAME=""
-        HEROIC_GAME_ID=""; HEROIC_EXPECTED_PREFIX=""; HEROIC_PREFIX_SOURCE=""; HEROIC_GAME_TITLE=""; HEROIC_ROOT=""
+        HEROIC_GAME_ID=""; HEROIC_EXPECTED_PREFIX=""; HEROIC_PREFIX_SOURCE=""; HEROIC_GAME_TITLE=""; HEROIC_ROOT=""; HEROIC_RUNNER_TYPE=""
         DETECTED_PREFIX=""; DETECTED_APP_NAME=""
         if [ "$attempt_auto_detect" -eq 1 ]; then
             IFS=$'\x1f' read -r DETECTED_PREFIX DETECTED_APP_NAME HEROIC_GAME_ID HEROIC_PREFIX_SOURCE HEROIC_GAME_TITLE HEROIC_ROOT \
@@ -1376,6 +1376,7 @@ resolve_heroic_runner() {
         IFS=$'\x1f' read -r runner_type runner_bin runner_name server_bin <<< "$(jq -r \
             'first(.[] | objects | select(.wineVersion?) | .wineVersion) | [.type // "", .bin // "", .name // "", .wineserver // ""] | join("\u001f")' \
             "$json" 2>/dev/null)"
+        HEROIC_RUNNER_TYPE="$runner_type"
         case "$runner_type" in
             proton)
                 dir=$(dirname "$runner_bin")

@@ -58,8 +58,9 @@
 # * Advanced Tweaks: Optional EAX Unified dummies, COM registry routing,
 #   expanded audio limits, and HRTF headphone output.
 #
-# * Auto-Overrides: Injects WINEDLLOVERRIDES natively into the Wine registry,
-#   tracked so uninstall can clean it up automatically without re-prompting.
+# * Auto-Overrides: Sets WINEDLLOVERRIDES in the game's Steam launch options or
+#   Heroic environment variables (merged with what's already there), or in the
+#   Wine registry — tracked so uninstall can put it back automatically.
 #
 # * Hybrid Dependencies: Falls back to a direct Microsoft download for the
 #   VC++ 2022 Redistributable when winetricks/protontricks fails, verifying
