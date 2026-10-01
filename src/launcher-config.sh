@@ -352,11 +352,11 @@ choose_override_method() {
         echo ""
         if [ "$has_launcher" -eq 1 ]; then
             print_option 1 "$(launcher_override_where)" "(default)"
-            print_option 2 "$(runner_label) prefix registry" "(applies whenever this prefix runs)"
+            print_option 2 "$(runner_label) prefix registry"
             print_option 3 "I'll do it myself" "(instructions at the end)"
             max=3
         else
-            print_option 1 "$(runner_label) prefix registry" "(applies whenever this prefix runs) (default)"
+            print_option 1 "$(runner_label) prefix registry" "(default)"
             print_option 2 "I'll do it myself" "(instructions at the end)"
             max=2
         fi
