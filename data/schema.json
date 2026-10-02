@@ -195,8 +195,8 @@
       "additionalProperties": false,
       "properties": {
         "format": {
-          "description": "ini: [Section] key=value. idtech_cfg: seta key \"value\". dark_cfg: NewDark key value, bare flags, ;flag = off.",
-          "enum": ["ini", "idtech_cfg", "dark_cfg"]
+          "description": "ini: [Section] key=value. flat_ini: key=value lines with no [sections]. idtech_cfg: seta key \"value\". dark_cfg: NewDark key value, bare flags, ;flag = off.",
+          "enum": ["ini", "flat_ini", "idtech_cfg", "dark_cfg"]
         },
         "locations": {
           "description": "Where to look, in order, as \"base:path\". The first one that exists is used.",

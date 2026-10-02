@@ -3,7 +3,7 @@
 # ==============================================================================
 # Everything the script changes in a game's own config files comes from that
 # game's known-games entry (game_config.audio_fixes / extra_fixes) — the script
-# itself only knows how to read and edit the three config formats, never which
+# itself only knows how to read and edit the four config formats, never which
 # game needs what. Decided in Phase 1 (Speaker Configuration offers the
 # alsoft.ini values, step 11 offers the game's own settings), applied in
 # Phase 2, recorded in the manifest as CONFIG: lines, reverted on uninstall.
@@ -13,7 +13,7 @@
 #   __DELETE__            remove the key (null in JSON)
 #   __ABSENT__            (read side only) the key isn't in the file
 
-# Usage: config_get_key <file> <ini|idtech_cfg|dark_cfg> <section> <key>
+# Usage: config_get_key <file> <ini|flat_ini|idtech_cfg|dark_cfg> <section> <key>
 # Prints the key's current value, __ABSENT__ if it isn't set, or (dark_cfg
 # only) __TRUE__ for an active bare flag and __FALSE__ for a flag that's only
 # present commented out. Section and key names match case-insensitively, like
@@ -24,8 +24,8 @@ config_get_key() {
     LC_ALL=C awk -v fmt="$fmt" -v sec="$sec" -v key="$key" '
         BEGIN { lsec = tolower(sec); lkey = tolower(key); insec = (fmt != "ini"); found = 0; commented = 0 }
         { sub(/\r$/, "") }
-        fmt == "ini" {
-            if ($0 ~ /^[ \t]*\[.*\][ \t]*$/) {
+        fmt == "ini" || fmt == "flat_ini" {
+            if (fmt == "ini" && $0 ~ /^[ \t]*\[.*\][ \t]*$/) {
                 s = $0; gsub(/^[ \t]*\[|\][ \t]*$/, "", s); insec = (tolower(s) == lsec); next
             }
             if (!insec) next
@@ -54,12 +54,13 @@ config_get_key() {
     ' "$file"
 }
 
-# Usage: config_set_key <file> <ini|idtech_cfg|dark_cfg> <section> <key> <value>
+# Usage: config_set_key <file> <ini|flat_ini|idtech_cfg|dark_cfg> <section> <key> <value>
 # Sets (or with __DELETE__ removes) one key, keeping everything else in the
 # file as it was — including CRLF line endings, the original spelling of an
 # existing key, and "key = value" spacing. A missing ini key goes at the end
-# of its section (or a new section at the end of the file); a missing cfg key
-# is appended. For dark_cfg, a commented-out example line is left in place and
+# of its section (or a new section at the end of the file); a missing flat_ini
+# or cfg key is appended. flat_ini is ini without [sections] — the whole file
+# is one section, so its rows carry no section name. For dark_cfg, a commented-out example line is left in place and
 # the active line is added right after it. Writes through a temp file in the
 # same folder and swaps it in, so a failure never leaves a half-written file.
 # Returns 1 if the file couldn't be written.
@@ -75,13 +76,13 @@ config_set_key() {
         function flush_blanks() { while (nb > 0) { out(""); nb-- } }
         function ini_line() { return key "=" val }
         BEGIN {
-            lsec = tolower(sec); lkey = tolower(key); insec = 0; seen_sec = 0; done = 0; nb = 0
+            lsec = tolower(sec); lkey = tolower(key); insec = (fmt == "flat_ini"); seen_sec = insec; done = 0; nb = 0
             del = (val == "__DELETE__")
             active = (current != "__ABSENT__" && current != "__FALSE__")
         }
         { sub(/\r$/, "") }
-        fmt == "ini" {
-            if ($0 ~ /^[ \t]*\[.*\][ \t]*$/) {
+        fmt == "ini" || fmt == "flat_ini" {
+            if (fmt == "ini" && $0 ~ /^[ \t]*\[.*\][ \t]*$/) {
                 if (insec && !done && !del) { out(ini_line()); done = 1 }
                 flush_blanks()
                 s = $0; gsub(/^[ \t]*\[|\][ \t]*$/, "", s); insec = (tolower(s) == lsec); if (insec) seen_sec = 1
@@ -130,7 +131,7 @@ config_set_key() {
             next
         }
         END {
-            if (fmt == "ini") {
+            if (fmt == "ini" || fmt == "flat_ini") {
                 if (insec && !done && !del) { out(ini_line()); done = 1 }
                 flush_blanks()
                 if (!seen_sec && !done && !del) {
@@ -277,7 +278,7 @@ load_game_config_rows() {
 config_row_is_safe() {
     local fmt="$1" locations="$2" sec="$3" key="$4" value="$5" loc
     local name_re='^[A-Za-z0-9._ -]+$' value_re='^[A-Za-z0-9._ ()-]*$'
-    [[ "$fmt" =~ ^(ini|idtech_cfg|dark_cfg)$ ]] || return 1
+    [[ "$fmt" =~ ^(ini|flat_ini|idtech_cfg|dark_cfg)$ ]] || return 1
     [ -n "$locations" ] || return 1
     IFS='|' read -ra locs <<< "$locations"
     for loc in "${locs[@]}"; do
