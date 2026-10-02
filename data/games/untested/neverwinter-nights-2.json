@@ -5,7 +5,7 @@
   "stores": {
     "gog": {
       "id": 1207659162,
-      "store_details": "The original 2006 Obsidian/Electron Engine build with DirectSound3D EAX, not 2025's OpenAL-native 'Enhanced Edition' rewrite."
+      "store_details": "The original 2006 Obsidian/Electron Engine build, not 2025's 'Enhanced Edition'."
     }
   },
   "eax": { "api": "directsound3d", "versions": ["1.0", "2.0", "3.0"] },

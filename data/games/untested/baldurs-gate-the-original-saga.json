@@ -6,7 +6,7 @@
     "gog": {
       "id": 1207658886,
       "delisted": true,
-      "store_details": "The classic pre-2012 build, sold by GOG as a standalone product separate from 'Baldur's Gate: Enhanced Edition'. GOG's catalogue search doesn't surface it, but the product page and existing owners' libraries resolve normally. This build has real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite."
+      "store_details": "The classic pre-2012 build, sold by GOG as a standalone product separate from 'Baldur's Gate: Enhanced Edition'. GOG's catalogue search doesn't surface it, but the product page and existing owners' libraries resolve normally."
     }
   },
   "eax": { "api": "directsound3d", "versions": ["1.0"] }
