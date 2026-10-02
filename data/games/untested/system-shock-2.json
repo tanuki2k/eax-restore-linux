@@ -6,13 +6,13 @@
     "steam": {
       "id": 238210,
       "delisted": true,
-      "store_details": "The classic 1999 build was delisted from Steam in October 2025; Steam now sells only the 25th Anniversary Remaster, a separate ground-up rewrite with no DirectSound3D EAX support.",
+      "store_details": "The classic 1999 build was delisted from Steam in October 2025; Steam now sells only the 25th Anniversary Remaster.",
       "patches": "The System Shock 2 Community Patch (SCP) is worth pairing, though it's general bugfix/polish, not audio-specific."
     },
     "gog": {
       "id": 1207659172,
       "delisted": true,
-      "store_details": "The original 1999 build's own GOG listing was delisted in October 2025 — GOG now sells only the 25th Anniversary Remaster, a separate ground-up rewrite with no DirectSound3D EAX support — but existing owners of the classic build keep access.",
+      "store_details": "The original 1999 build's own GOG listing was delisted in October 2025 — GOG now sells only the 25th Anniversary Remaster — but existing owners of the classic build keep access.",
       "patches": "The System Shock 2 Community Patch (SCP) is worth pairing, though it's general bugfix/polish, not audio-specific."
     }
   },

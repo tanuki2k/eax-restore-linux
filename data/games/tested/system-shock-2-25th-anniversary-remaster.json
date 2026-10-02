@@ -9,7 +9,7 @@
   "eax": {
     "api": "directsound3d",
     "status": "not_implemented",
-    "problem": "The 25th Anniversary Remaster runs on Nightdive's proprietary Kex Engine, a from-scratch rewrite — it never had DirectSound3D EAX to begin with."
+    "problem": "This is the 25th Anniversary Remaster, not the classic System Shock 2, and it has no EAX."
   },
-  "notes": "If you own the classic 1999 build, run this script against that installation instead — it has real DirectSound3D EAX support (plus NewDark's own OpenAL Soft 'Hardware Acceleration' option), neither of which this remaster's rewritten engine provides."
+  "notes": "If you also own the classic 1999 System Shock 2, that one has EAX — it's no longer sold, but existing owners keep it."
 }

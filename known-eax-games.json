@@ -1764,13 +1764,13 @@
         "steam": {
           "id": 238210,
           "delisted": true,
-          "store_details": "The classic 1999 build was delisted from Steam in October 2025; Steam now sells only the 25th Anniversary Remaster, a separate ground-up rewrite with no DirectSound3D EAX support.",
+          "store_details": "The classic 1999 build was delisted from Steam in October 2025; Steam now sells only the 25th Anniversary Remaster.",
           "patches": "The System Shock 2 Community Patch (SCP) is worth pairing, though it's general bugfix/polish, not audio-specific."
         },
         "gog": {
           "id": 1207659172,
           "delisted": true,
-          "store_details": "The original 1999 build's own GOG listing was delisted in October 2025 — GOG now sells only the 25th Anniversary Remaster, a separate ground-up rewrite with no DirectSound3D EAX support — but existing owners of the classic build keep access.",
+          "store_details": "The original 1999 build's own GOG listing was delisted in October 2025 — GOG now sells only the 25th Anniversary Remaster — but existing owners of the classic build keep access.",
           "patches": "The System Shock 2 Community Patch (SCP) is worth pairing, though it's general bugfix/polish, not audio-specific."
         }
       },
@@ -1830,9 +1830,9 @@
       "eax": {
         "api": "directsound3d",
         "status": "not_implemented",
-        "problem": "The 25th Anniversary Remaster runs on Nightdive's proprietary Kex Engine, a from-scratch rewrite — it never had DirectSound3D EAX to begin with."
+        "problem": "This is the 25th Anniversary Remaster, not the classic System Shock 2, and it has no EAX."
       },
-      "notes": "If you own the classic 1999 build, run this script against that installation instead — it has real DirectSound3D EAX support (plus NewDark's own OpenAL Soft 'Hardware Acceleration' option), neither of which this remaster's rewritten engine provides."
+      "notes": "If you also own the classic 1999 System Shock 2, that one has EAX — it's no longer sold, but existing owners keep it."
     },
     {
       "id": "the-wheel-of-time",
