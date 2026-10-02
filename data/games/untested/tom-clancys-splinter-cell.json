@@ -9,5 +9,21 @@
   "eax": { "api": "directsound3d", "versions": ["1.0", "2.0", "3.0"] },
   "install": {
     "tweaks": ["eax_unified"]
+  },
+  "game_config": {
+    "files": {
+      "SplinterCellUser.ini": { "format": "ini", "locations": ["game:SplinterCellUser.ini"] }
+    },
+    "audio_fixes": [
+      {
+        "title": "Enable EAX reverb",
+        "reason": "Splinter Cell ships with EAX and hardware 3D sound off.",
+        "changes": {
+          "SplinterCellUser.ini": {
+            "Engine.EPCGameOptions": { "EAX": "True", "Sound3DAcc": "True" }
+          }
+        }
+      }
+    ]
   }
 }

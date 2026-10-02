@@ -118,6 +118,29 @@
           "eax_unified"
         ]
       },
+      "game_config": {
+        "files": {
+          "cfg.ini": {
+            "format": "ini",
+            "locations": [
+              "game:cfg.ini"
+            ]
+          }
+        },
+        "audio_fixes": [
+          {
+            "title": "Enable EAX reverb",
+            "reason": "Arx Fatalis ships with EAX off.",
+            "changes": {
+              "cfg.ini": {
+                "AUDIO": {
+                  "EAX": "1"
+                }
+              }
+            }
+          }
+        ]
+      },
       "notes": "On Linux, the Arx Libertatis engine reimplementation (arx-libertatis.org) is a strong alternative: it runs natively without Wine or Proton, reuses your existing Arx Fatalis data files, and reproduces the game's environmental reverb through OpenAL Soft's EFX out of the box. It's self-contained, so use it or this script's approach, not both."
     },
     {
@@ -397,7 +420,31 @@
           "1.0"
         ]
       },
-      "notes": "Turn on the 'Enable 3D Hardware' option in the in-game audio settings. The game records whether EAX/A3D actually activated to Undying.log, which is handy for confirming it worked (per the Vogons Wiki citation for this title)."
+      "game_config": {
+        "files": {
+          "System.ini": {
+            "format": "ini",
+            "locations": [
+              "game:System.ini"
+            ]
+          }
+        },
+        "audio_fixes": [
+          {
+            "title": "Enable EAX reverb",
+            "reason": "Clive Barker's Undying only plays EAX reverb when its hardware 3D sound and spatial sound options are on.",
+            "changes": {
+              "System.ini": {
+                "Galaxy.GalaxyAudioSubsystem": {
+                  "Use3dHardware": "True",
+                  "UseSpatial": "True"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "notes": "The game records whether EAX/A3D actually activated to Undying.log, which is handy for confirming it worked (per the Vogons Wiki citation for this title)."
     },
     {
       "id": "condemned-criminal-origins",
@@ -1130,7 +1177,34 @@
           "3.0",
           "4.0"
         ]
-      }
+      },
+      "game_config": {
+        "files": {
+          "AudioSettings.ini": {
+            "format": "ini",
+            "locations": [
+              "game:AudioSettings.ini"
+            ],
+            "if_missing": "create"
+          }
+        },
+        "audio_fixes": [
+          {
+            "title": "Enable EAX reverb",
+            "reason": "Psychonauts ships with EAX off and has no in-game option to turn it on (per PCGamingWiki).",
+            "changes": {
+              "AudioSettings.ini": {
+                "AudioSettings": {
+                  "UseEAX": "true"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "sources": [
+        "https://www.pcgamingwiki.com/wiki/Psychonauts"
+      ]
     },
     {
       "id": "quake-4",
@@ -1371,11 +1445,33 @@
         }
       },
       "eax": {
-        "api": "directsound3d",
+        "api": "openal",
         "versions": [
           "3.0"
         ]
-      }
+      },
+      "game_config": {
+        "files": {
+          "sof2sp.cfg": {
+            "format": "idtech_cfg",
+            "locations": [
+              "game:base/sof2sp.cfg"
+            ]
+          }
+        },
+        "audio_fixes": [
+          {
+            "title": "Enable EAX reverb",
+            "reason": "Soldier of Fortune II plays its sound through snd_dsx86.dll out of the box, which has no EAX — only snd_alx86.dll does.",
+            "changes": {
+              "sof2sp.cfg": {
+                "snd_dll": "al"
+              }
+            }
+          }
+        ]
+      },
+      "notes": "Only single-player has EAX — multiplayer (SoF2MP.exe) has none."
     },
     {
       "id": "star-trek-elite-force-ii",
@@ -1467,6 +1563,37 @@
           "3.0",
           "4.0"
         ]
+      },
+      "game_config": {
+        "files": {
+          "jaconfig.cfg": {
+            "format": "idtech_cfg",
+            "locations": [
+              "game:base/jaconfig.cfg"
+            ]
+          },
+          "jampconfig.cfg": {
+            "format": "idtech_cfg",
+            "locations": [
+              "game:base/jampconfig.cfg"
+            ],
+            "if_missing": "skip"
+          }
+        },
+        "audio_fixes": [
+          {
+            "title": "Enable EAX reverb",
+            "reason": "Jedi Academy only plays EAX reverb through its OpenAL sound option, which ships off in both single-player and multiplayer.",
+            "changes": {
+              "jaconfig.cfg": {
+                "s_UseOpenAL": "1"
+              },
+              "jampconfig.cfg": {
+                "s_UseOpenAL": "1"
+              }
+            }
+          }
+        ]
       }
     },
     {
@@ -1542,6 +1669,7 @@
     {
       "id": "star-wars-republic-commando",
       "name": "Star Wars: Republic Commando",
+      "exe": "SWRepublicCommando.exe",
       "stores": {
         "steam": {
           "id": 6000
@@ -1551,10 +1679,36 @@
         }
       },
       "eax": {
-        "api": "directsound3d",
+        "api": "openal",
         "versions": [
           "2.0",
           "3.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "System.ini": {
+            "format": "ini",
+            "locations": [
+              "install:GameData/Save/System.ini"
+            ]
+          }
+        },
+        "audio_fixes": [
+          {
+            "title": "Enable EAX reverb",
+            "reason": "Republic Commando turns EAX and 3D sound off on its first launch and loads its bundled DefOpenAL32.dll instead of OpenAL32.dll.",
+            "changes": {
+              "System.ini": {
+                "ALAudio.ALAudioSubsystem": {
+                  "UseDefaultDriver": "False",
+                  "UseEAX": "True",
+                  "Use3DSound": "True",
+                  "SelectedEAXVersion": "3"
+                }
+              }
+            }
+          }
         ]
       }
     },
@@ -1683,6 +1837,7 @@
     {
       "id": "the-wheel-of-time",
       "name": "The Wheel of Time",
+      "exe": "WoT.exe",
       "stores": {
         "gog": {
           "id": 1584652180
@@ -1693,7 +1848,35 @@
         "versions": [
           "1.0"
         ]
-      }
+      },
+      "game_config": {
+        "files": {
+          "WoT.ini": {
+            "format": "ini",
+            "locations": [
+              "game:WoT.ini"
+            ]
+          }
+        },
+        "audio_fixes": [
+          {
+            "title": "Enable EAX reverb",
+            "reason": "The Wheel of Time only plays EAX reverb when its DirectSound, hardware 3D sound and spatial sound options are on (per PCGamingWiki).",
+            "changes": {
+              "WoT.ini": {
+                "Galaxy.GalaxyAudioSubsystem": {
+                  "UseDirectSound": "True",
+                  "Use3dHardware": "True",
+                  "UseSpatial": "True"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "sources": [
+        "https://www.pcgamingwiki.com/wiki/The_Wheel_of_Time"
+      ]
     },
     {
       "id": "the-witcher",
@@ -2005,6 +2188,30 @@
         "tweaks": [
           "eax_unified"
         ]
+      },
+      "game_config": {
+        "files": {
+          "SplinterCellUser.ini": {
+            "format": "ini",
+            "locations": [
+              "game:SplinterCellUser.ini"
+            ]
+          }
+        },
+        "audio_fixes": [
+          {
+            "title": "Enable EAX reverb",
+            "reason": "Splinter Cell ships with EAX and hardware 3D sound off.",
+            "changes": {
+              "SplinterCellUser.ini": {
+                "Engine.EPCGameOptions": {
+                  "EAX": "True",
+                  "Sound3DAcc": "True"
+                }
+              }
+            }
+          }
+        ]
       }
     },
     {
@@ -2313,6 +2520,7 @@
     {
       "id": "x-com-enforcer",
       "name": "X-COM: Enforcer",
+      "exe": "XCom.exe",
       "stores": {
         "steam": {
           "id": 7770
@@ -2322,6 +2530,30 @@
         "api": "directsound3d",
         "versions": [
           "1.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "XCom.ini": {
+            "format": "ini",
+            "locations": [
+              "game:XCom.ini"
+            ]
+          }
+        },
+        "audio_fixes": [
+          {
+            "title": "Enable EAX reverb",
+            "reason": "X-COM: Enforcer only plays EAX reverb when its hardware 3D sound and spatial sound options are on.",
+            "changes": {
+              "XCom.ini": {
+                "Galaxy.GalaxyAudioSubsystem": {
+                  "Use3dHardware": "True",
+                  "UseSpatial": "True"
+                }
+              }
+            }
+          }
         ]
       }
     }

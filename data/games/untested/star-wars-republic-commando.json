@@ -1,9 +1,31 @@
 {
   "$schema": "../../schema.json",
   "name": "Star Wars: Republic Commando",
+  "exe": "SWRepublicCommando.exe",
   "stores": {
     "steam": { "id": 6000 },
     "gog": { "id": 1421405135 }
   },
-  "eax": { "api": "directsound3d", "versions": ["2.0", "3.0"] }
+  "eax": { "api": "openal", "versions": ["2.0", "3.0"] },
+  "game_config": {
+    "files": {
+      "System.ini": { "format": "ini", "locations": ["install:GameData/Save/System.ini"] }
+    },
+    "audio_fixes": [
+      {
+        "title": "Enable EAX reverb",
+        "reason": "Republic Commando turns EAX and 3D sound off on its first launch and loads its bundled DefOpenAL32.dll instead of OpenAL32.dll.",
+        "changes": {
+          "System.ini": {
+            "ALAudio.ALAudioSubsystem": {
+              "UseDefaultDriver": "False",
+              "UseEAX": "True",
+              "Use3DSound": "True",
+              "SelectedEAXVersion": "3"
+            }
+          }
+        }
+      }
+    ]
+  }
 }

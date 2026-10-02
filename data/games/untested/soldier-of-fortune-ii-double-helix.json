@@ -5,5 +5,16 @@
   "stores": {
     "gog": { "id": 1228964594, "store_details": "Sold only on GOG, as the 'Gold Edition'." }
   },
-  "eax": { "api": "directsound3d", "versions": ["3.0"] }
+  "eax": { "api": "openal", "versions": ["3.0"] },
+  "game_config": {
+    "files": { "sof2sp.cfg": { "format": "idtech_cfg", "locations": ["game:base/sof2sp.cfg"] } },
+    "audio_fixes": [
+      {
+        "title": "Enable EAX reverb",
+        "reason": "Soldier of Fortune II plays its sound through snd_dsx86.dll out of the box, which has no EAX — only snd_alx86.dll does.",
+        "changes": { "sof2sp.cfg": { "snd_dll": "al" } }
+      }
+    ]
+  },
+  "notes": "Only single-player has EAX — multiplayer (SoF2MP.exe) has none."
 }

@@ -1,8 +1,23 @@
 {
   "$schema": "../../schema.json",
   "name": "X-COM: Enforcer",
+  "exe": "XCom.exe",
   "stores": {
     "steam": { "id": 7770 }
   },
-  "eax": { "api": "directsound3d", "versions": ["1.0"] }
+  "eax": { "api": "directsound3d", "versions": ["1.0"] },
+  "game_config": {
+    "files": { "XCom.ini": { "format": "ini", "locations": ["game:XCom.ini"] } },
+    "audio_fixes": [
+      {
+        "title": "Enable EAX reverb",
+        "reason": "X-COM: Enforcer only plays EAX reverb when its hardware 3D sound and spatial sound options are on.",
+        "changes": {
+          "XCom.ini": {
+            "Galaxy.GalaxyAudioSubsystem": { "Use3dHardware": "True", "UseSpatial": "True" }
+          }
+        }
+      }
+    ]
+  }
 }

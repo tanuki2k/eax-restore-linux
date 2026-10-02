@@ -6,5 +6,25 @@
     "steam": { "id": 6020 },
     "gog": { "id": 1428935726 }
   },
-  "eax": { "api": "openal", "versions": ["1.0", "2.0", "3.0", "4.0"] }
+  "eax": { "api": "openal", "versions": ["1.0", "2.0", "3.0", "4.0"] },
+  "game_config": {
+    "files": {
+      "jaconfig.cfg": { "format": "idtech_cfg", "locations": ["game:base/jaconfig.cfg"] },
+      "jampconfig.cfg": {
+        "format": "idtech_cfg",
+        "locations": ["game:base/jampconfig.cfg"],
+        "if_missing": "skip"
+      }
+    },
+    "audio_fixes": [
+      {
+        "title": "Enable EAX reverb",
+        "reason": "Jedi Academy only plays EAX reverb through its OpenAL sound option, which ships off in both single-player and multiplayer.",
+        "changes": {
+          "jaconfig.cfg": { "s_UseOpenAL": "1" },
+          "jampconfig.cfg": { "s_UseOpenAL": "1" }
+        }
+      }
+    ]
+  }
 }

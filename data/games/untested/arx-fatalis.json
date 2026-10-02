@@ -10,5 +10,15 @@
   "install": {
     "tweaks": ["eax_unified"]
   },
+  "game_config": {
+    "files": { "cfg.ini": { "format": "ini", "locations": ["game:cfg.ini"] } },
+    "audio_fixes": [
+      {
+        "title": "Enable EAX reverb",
+        "reason": "Arx Fatalis ships with EAX off.",
+        "changes": { "cfg.ini": { "AUDIO": { "EAX": "1" } } }
+      }
+    ]
+  },
   "notes": "On Linux, the Arx Libertatis engine reimplementation (arx-libertatis.org) is a strong alternative: it runs natively without Wine or Proton, reuses your existing Arx Fatalis data files, and reproduces the game's environmental reverb through OpenAL Soft's EFX out of the box. It's self-contained, so use it or this script's approach, not both."
 }

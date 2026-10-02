@@ -1,8 +1,28 @@
 {
   "$schema": "../../schema.json",
   "name": "The Wheel of Time",
+  "exe": "WoT.exe",
   "stores": {
     "gog": { "id": 1584652180 }
   },
-  "eax": { "api": "directsound3d", "versions": ["1.0"] }
+  "eax": { "api": "directsound3d", "versions": ["1.0"] },
+  "game_config": {
+    "files": { "WoT.ini": { "format": "ini", "locations": ["game:WoT.ini"] } },
+    "audio_fixes": [
+      {
+        "title": "Enable EAX reverb",
+        "reason": "The Wheel of Time only plays EAX reverb when its DirectSound, hardware 3D sound and spatial sound options are on (per PCGamingWiki).",
+        "changes": {
+          "WoT.ini": {
+            "Galaxy.GalaxyAudioSubsystem": {
+              "UseDirectSound": "True",
+              "Use3dHardware": "True",
+              "UseSpatial": "True"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "sources": ["https://www.pcgamingwiki.com/wiki/The_Wheel_of_Time"]
 }

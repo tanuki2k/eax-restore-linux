@@ -6,5 +6,19 @@
     "gog": { "id": 1207659191, "store_details": "Sold only on GOG." }
   },
   "eax": { "api": "directsound3d", "versions": ["1.0"] },
-  "notes": "Turn on the 'Enable 3D Hardware' option in the in-game audio settings. The game records whether EAX/A3D actually activated to Undying.log, which is handy for confirming it worked (per the Vogons Wiki citation for this title)."
+  "game_config": {
+    "files": { "System.ini": { "format": "ini", "locations": ["game:System.ini"] } },
+    "audio_fixes": [
+      {
+        "title": "Enable EAX reverb",
+        "reason": "Clive Barker's Undying only plays EAX reverb when its hardware 3D sound and spatial sound options are on.",
+        "changes": {
+          "System.ini": {
+            "Galaxy.GalaxyAudioSubsystem": { "Use3dHardware": "True", "UseSpatial": "True" }
+          }
+        }
+      }
+    ]
+  },
+  "notes": "The game records whether EAX/A3D actually activated to Undying.log, which is handy for confirming it worked (per the Vogons Wiki citation for this title)."
 }
