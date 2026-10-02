@@ -980,7 +980,13 @@ confirm_continue_if_openal_native() {
             print_task "Cross-checking $game_name's installed files against the documented $api_display API"
             local scan_result
             scan_result=$(detect_api_from_binary "$GAME_DIR")
-            if [ -z "$scan_result" ] || [ "$scan_result" == "both" ] || [ "$scan_result" == "$api" ]; then
+            if [ -z "$scan_result" ]; then
+                # Nothing found isn't agreement: a launcher picked as the game
+                # folder (no exe in the entry) scans clean too, and reporting
+                # that as "consistent" once let a wrong API through unnoticed.
+                print_note_arrow "No .exe or .dll in $GAME_DIR references OpenAL or" \
+                    "DirectSound, so the documented $api_display API couldn't be confirmed."
+            elif [ "$scan_result" == "both" ] || [ "$scan_result" == "$api" ]; then
                 print_status "Consistent with the known-games database." "$GREEN"
             else
                 local scan_display="DirectSound3D"
@@ -1101,7 +1107,7 @@ confirm_continue_if_openal_native() {
     fi
     echo ""
     print_option 1 "DirectSound3D / DSOAL   [default]"
-    print_option 2 "OpenAL native           (deploy kcat's OpenAL Soft directly)"
+    print_option 2 "OpenAL                  (deploy kcat's OpenAL Soft)"
     print_option 3 "Cancel the install"
 
     local api_choice explicit=0

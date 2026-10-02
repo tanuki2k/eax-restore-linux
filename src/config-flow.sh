@@ -58,6 +58,14 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     # 6. Engine Selection
     print_step 6 "Audio Engine Selection"
 
+    # Read before the branches below, not just for the menu: the run log's
+    # summary records these whichever way the engine gets picked.
+    DSOAL_DATE=$(cat "$DSOAL_SHARE/updated_at.txt" 2>/dev/null)
+    DSOAL_VER=${DSOAL_DATE%%T*}
+    [ -z "$DSOAL_VER" ] && DSOAL_VER="Unknown"
+    OAL_VER=$(cat "$OPENAL_SHARE/updated_at.txt" 2>/dev/null)
+    [ -z "$OAL_VER" ] && OAL_VER="Unknown"
+
     if [ -n "$OPENAL_NATIVE_MODE" ]; then
         ENGINE_CHOICE=2
         print_paragraph "$GAME_NAME uses OpenAL natively — deploying kcat's OpenAL Soft."
@@ -74,12 +82,6 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
             print_paragraph "$GAME_NAME uses DirectSound3D — deploying kcat DSOAL + OpenAL Soft."
         fi
     else
-    DSOAL_DATE=$(cat "$DSOAL_SHARE/updated_at.txt" 2>/dev/null)
-    DSOAL_VER=${DSOAL_DATE%%T*}
-    [ -z "$DSOAL_VER" ] && DSOAL_VER="Unknown"
-    OAL_VER=$(cat "$OPENAL_SHARE/updated_at.txt" 2>/dev/null)
-    [ -z "$OAL_VER" ] && OAL_VER="Unknown"
-
     echo -e "\n${WHITE}Before choosing, here is a quick breakdown of the available engines:\n${NC}"
     echo -e " * ${BOLD}kcat DSOAL + OpenAL Soft:${NC} The standard choice. Intercepts a game's"
     echo -e "   DirectSound3D/EAX calls and translates them to OpenAL — the right pick for the"
