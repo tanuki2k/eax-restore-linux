@@ -1,0 +1,8 @@
+{
+  "$schema": "../schema.json",
+  "name": "Ghost Master",
+  "stores": {
+    "steam": { "id": 6200 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["3.0"] }
+}

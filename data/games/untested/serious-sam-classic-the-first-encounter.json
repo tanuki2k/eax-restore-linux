@@ -1,9 +1,0 @@
-{
-  "$schema": "../../schema.json",
-  "name": "Serious Sam Classic: The First Encounter",
-  "stores": {
-    "steam": { "id": 41050 },
-    "gog": { "id": 1207658876 }
-  },
-  "eax": { "api": "directsound3d", "versions": ["2.0"] }
-}

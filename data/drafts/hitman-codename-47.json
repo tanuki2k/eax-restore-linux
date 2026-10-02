@@ -1,0 +1,13 @@
+{
+  "$schema": "../schema.json",
+  "name": "Hitman: Codename 47",
+  "exe": "Hitman.Exe",
+  "stores": {
+    "steam": { "id": 6900 },
+    "gog": { "id": 1207658996 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0"] },
+  "install": {
+    "tweaks": ["eax_unified"]
+  }
+}

@@ -382,91 +382,6 @@
       }
     },
     {
-      "id": "call-of-juarez",
-      "name": "Call of Juarez",
-      "stores": {
-        "steam": {
-          "id": 3020
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0",
-          "2.0",
-          "3.0"
-        ]
-      },
-      "install": {
-        "tweaks": [
-          "eax_unified"
-        ]
-      }
-    },
-    {
-      "id": "chaser",
-      "name": "Chaser",
-      "stores": {
-        "gog": {
-          "id": 1207658894
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "3.0"
-        ]
-      }
-    },
-    {
-      "id": "chrome",
-      "name": "Chrome",
-      "stores": {
-        "steam": {
-          "id": 46420,
-          "delisted": true,
-          "id_source": "steamdb_historical"
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0",
-          "2.0",
-          "3.0"
-        ]
-      },
-      "install": {
-        "tweaks": [
-          "eax_unified"
-        ]
-      }
-    },
-    {
-      "id": "chrome-specforce",
-      "name": "Chrome: SpecForce",
-      "stores": {
-        "steam": {
-          "id": 46430,
-          "delisted": true,
-          "id_source": "steamdb_historical"
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0",
-          "2.0",
-          "3.0"
-        ]
-      },
-      "install": {
-        "tweaks": [
-          "eax_unified"
-        ]
-      }
-    },
-    {
       "id": "clive-barkers-undying",
       "name": "Clive Barker's Undying",
       "exe": "Undying.exe",
@@ -483,41 +398,6 @@
         ]
       },
       "notes": "Turn on the 'Enable 3D Hardware' option in the in-game audio settings. The game records whether EAX/A3D actually activated to Undying.log, which is handy for confirming it worked (per the Vogons Wiki citation for this title)."
-    },
-    {
-      "id": "commandos-strike-force",
-      "name": "Commandos: Strike Force",
-      "stores": {
-        "steam": {
-          "id": 6820,
-          "delisted": true,
-          "id_source": "steamdb_historical"
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "3.0"
-        ]
-      }
-    },
-    {
-      "id": "company-of-heroes",
-      "name": "Company of Heroes",
-      "stores": {
-        "steam": {
-          "id": 228200
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "2.0",
-          "3.0",
-          "4.0"
-        ]
-      },
-      "notes": "Not on GOG. A 'Definitive Edition' remaster is announced but unreleased — this classic 2006 build is still the only Steam listing; worth rechecking this entry once that ships."
     },
     {
       "id": "condemned-criminal-origins",
@@ -541,37 +421,6 @@
         "tweaks": [
           "eax_unified"
         ]
-      }
-    },
-    {
-      "id": "crime-cities",
-      "name": "Crime Cities",
-      "stores": {
-        "gog": {
-          "id": 1485600994
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0"
-        ]
-      }
-    },
-    {
-      "id": "daikatana",
-      "name": "Daikatana",
-      "exe": "daikatana.exe",
-      "stores": {
-        "steam": {
-          "id": 242980
-        },
-        "gog": {
-          "id": 1207659168
-        }
-      },
-      "eax": {
-        "api": "directsound3d"
       }
     },
     {
@@ -870,28 +719,6 @@
       }
     },
     {
-      "id": "final-fantasy-viii",
-      "name": "Final Fantasy VIII",
-      "stores": {
-        "steam": {
-          "id": 39150,
-          "store_details": "The original 2013 PC port, not 2019's 'FINAL FANTASY VIII - REMASTERED'."
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0",
-          "2.0"
-        ]
-      },
-      "install": {
-        "tweaks": [
-          "eax_unified"
-        ]
-      }
-    },
-    {
       "id": "freedom-fighters",
       "name": "Freedom Fighters",
       "stores": {
@@ -915,199 +742,6 @@
           "eax_unified"
         ]
       }
-    },
-    {
-      "id": "freedom-force",
-      "name": "Freedom Force",
-      "stores": {
-        "steam": {
-          "id": 8880
-        },
-        "gog": {
-          "id": 1445250806
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0",
-          "2.0"
-        ]
-      }
-    },
-    {
-      "id": "freedom-force-vs-the-third-reich",
-      "name": "Freedom Force vs. the Third Reich",
-      "stores": {
-        "steam": {
-          "id": 8890
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0",
-          "2.0"
-        ]
-      }
-    },
-    {
-      "id": "freespace-2",
-      "name": "Freespace 2",
-      "stores": {
-        "gog": {
-          "id": 5
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0"
-        ]
-      }
-    },
-    {
-      "id": "frontlines-fuel-of-war",
-      "name": "Frontlines: Fuel of War",
-      "stores": {
-        "steam": {
-          "id": 9460
-        }
-      },
-      "eax": {
-        "api": "openal",
-        "versions": [
-          "3.0",
-          "4.0",
-          "5.0"
-        ]
-      }
-    },
-    {
-      "id": "full-spectrum-warrior",
-      "name": "Full Spectrum Warrior",
-      "stores": {
-        "steam": {
-          "id": 4520
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "3.0",
-          "4.0"
-        ]
-      }
-    },
-    {
-      "id": "full-spectrum-warrior-ten-hammers",
-      "name": "Full Spectrum Warrior: Ten Hammers",
-      "stores": {
-        "steam": {
-          "id": 4530
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "5.0"
-        ]
-      }
-    },
-    {
-      "id": "ghost-master",
-      "name": "Ghost Master",
-      "stores": {
-        "steam": {
-          "id": 6200
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "3.0"
-        ]
-      }
-    },
-    {
-      "id": "giants-citizen-kabuto",
-      "name": "Giants: Citizen Kabuto",
-      "stores": {
-        "gog": {
-          "id": 1207658650
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0",
-          "2.0"
-        ]
-      }
-    },
-    {
-      "id": "gothic",
-      "name": "Gothic",
-      "exe": "GOTHIC.EXE",
-      "stores": {
-        "steam": {
-          "id": 65540
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "2.0"
-        ]
-      }
-    },
-    {
-      "id": "gothic-ii-gold-edition",
-      "name": "Gothic II: Gold Edition",
-      "exe": "Gothic2.exe",
-      "stores": {
-        "steam": {
-          "id": 39510
-        },
-        "gog": {
-          "id": 1207658718
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "2.0"
-        ]
-      }
-    },
-    {
-      "id": "grand-theft-auto-san-andreas",
-      "name": "Grand Theft Auto: San Andreas",
-      "exe": "gta-sa.exe",
-      "stores": {
-        "steam": {
-          "id": 12120,
-          "delisted": true,
-          "store_details": "There's no in-game EAX toggle unlike GTA III and Vice City. The current build (v3.0 / 'NewSteam') is a from-scratch Xbox-based port; the EAX/NVIDIA splash only shows on a downgraded v1.0, though the EAX Unified code is present in every version.",
-          "patches": "SilentPatch SA is the usual companion fix. If the stock reverb is too faint to make out, the community ReverbSA plugin ('[SA|OpenAL] Reverb' on GTAForums) adds pervasive, clearly audible reverb."
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0",
-          "2.0",
-          "3.0",
-          "4.0"
-        ]
-      },
-      "install": {
-        "tweaks": [
-          "eax_unified",
-          "com_registry_routing"
-        ]
-      },
-      "notes": "EAX is used very sparingly here, so even a correct setup is subtle. The clearest place to check is the enclosed warehouse in the 'Robbing Uncle Sam' mission, ideally compared against toggling the audio override off."
     },
     {
       "id": "half-life",
@@ -1184,101 +818,6 @@
       }
     },
     {
-      "id": "hitman-2-silent-assassin",
-      "name": "Hitman 2: Silent Assassin",
-      "exe": "hitman2.exe",
-      "stores": {
-        "steam": {
-          "id": 6850
-        },
-        "gog": {
-          "id": 1207659002
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0",
-          "2.0",
-          "3.0"
-        ]
-      },
-      "install": {
-        "tweaks": [
-          "eax_unified"
-        ]
-      }
-    },
-    {
-      "id": "hitman-blood-money",
-      "name": "Hitman: Blood Money",
-      "exe": "HitmanBloodMoney.exe",
-      "stores": {
-        "steam": {
-          "id": 6860
-        },
-        "gog": {
-          "id": 1942346586
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "2.0",
-          "3.0",
-          "4.0"
-        ]
-      }
-    },
-    {
-      "id": "hitman-codename-47",
-      "name": "Hitman: Codename 47",
-      "exe": "Hitman.Exe",
-      "stores": {
-        "steam": {
-          "id": 6900
-        },
-        "gog": {
-          "id": 1207658996
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0",
-          "2.0"
-        ]
-      },
-      "install": {
-        "tweaks": [
-          "eax_unified"
-        ]
-      }
-    },
-    {
-      "id": "hitman-contracts",
-      "name": "Hitman: Contracts",
-      "exe": "HitmanContracts.exe",
-      "stores": {
-        "steam": {
-          "id": 247430
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0",
-          "2.0",
-          "3.0"
-        ]
-      },
-      "install": {
-        "tweaks": [
-          "eax_unified"
-        ]
-      }
-    },
-    {
       "id": "icewind-dale-complete",
       "name": "Icewind Dale Complete",
       "exe": "IDMain.exe",
@@ -1330,86 +869,6 @@
         "problem": "The Enhanced Edition runs on a from-scratch OpenAL engine, built for its native Linux and macOS ports — it never had DirectSound3D EAX to begin with."
       },
       "notes": "If you also own the classic build, it's a separate GOG product the scanner detects on its own — see the 'Icewind Dale Complete' entry (gog_id 1207658888), which has real DirectSound3D EAX."
-    },
-    {
-      "id": "incoming-forces",
-      "name": "Incoming Forces",
-      "stores": {
-        "gog": {
-          "id": 1207663873
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "2.0",
-          "3.0"
-        ]
-      }
-    },
-    {
-      "id": "infernal",
-      "name": "Infernal",
-      "stores": {
-        "steam": {
-          "id": 7060,
-          "delisted": true,
-          "id_source": "steamdb_historical"
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0",
-          "2.0",
-          "3.0",
-          "4.0"
-        ]
-      },
-      "install": {
-        "tweaks": [
-          "eax_unified"
-        ]
-      }
-    },
-    {
-      "id": "kane-and-lynch-dead-men",
-      "name": "Kane & Lynch: Dead Men",
-      "exe": "kaneandlynch.exe",
-      "stores": {
-        "steam": {
-          "id": 8080,
-          "delisted": true,
-          "store_details": "Square Enix removed it from sale on Steam in February 2021 and has said it has no plans to restore it."
-        },
-        "gog": {
-          "id": 1721096025
-        }
-      },
-      "eax": {
-        "api": "openal",
-        "versions": [
-          "2.0",
-          "3.0",
-          "4.0",
-          "5.0"
-        ]
-      }
-    },
-    {
-      "id": "killing-floor",
-      "name": "Killing Floor",
-      "stores": {
-        "steam": {
-          "id": 1250
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "3.0"
-        ]
-      }
     },
     {
       "id": "mafia",
@@ -1622,26 +1081,6 @@
       "notes": "This is the 'Outcast 1.1' listing — a 2014 official update to the classic 1999 build, same engine. Separate from 2017's 'Outcast: Second Contact' and 2024's 'Outcast: A New Beginning' remakes, neither of which is covered here."
     },
     {
-      "id": "painkiller-gold-edition",
-      "name": "Painkiller: Gold Edition",
-      "stores": {
-        "steam": {
-          "id": 3200,
-          "delisted": true,
-          "id_source": "local_install_verified"
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0",
-          "2.0",
-          "3.0"
-        ]
-      },
-      "notes": "Same original 2004 engine as the base game, not a remaster."
-    },
-    {
       "id": "planescape-torment",
       "name": "Planescape: Torment",
       "stores": {
@@ -1659,107 +1098,6 @@
       }
     },
     {
-      "id": "populous-the-beginning",
-      "name": "Populous: The Beginning",
-      "stores": {
-        "gog": {
-          "id": 1207659027
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0"
-        ]
-      }
-    },
-    {
-      "id": "postal-2",
-      "name": "Postal 2",
-      "stores": {
-        "steam": {
-          "id": 223470
-        },
-        "gog": {
-          "id": 1207658755
-        }
-      },
-      "eax": {
-        "api": "openal",
-        "versions": [
-          "1.0",
-          "2.0",
-          "3.0"
-        ]
-      }
-    },
-    {
-      "id": "prince-of-persia-the-sands-of-time",
-      "name": "Prince of Persia: The Sands of Time",
-      "stores": {
-        "steam": {
-          "id": 13600
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0",
-          "2.0",
-          "3.0"
-        ]
-      },
-      "install": {
-        "tweaks": [
-          "eax_unified"
-        ]
-      }
-    },
-    {
-      "id": "prince-of-persia-the-two-thrones",
-      "name": "Prince of Persia: The Two Thrones",
-      "stores": {
-        "steam": {
-          "id": 13530
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0",
-          "2.0",
-          "3.0"
-        ]
-      },
-      "install": {
-        "tweaks": [
-          "eax_unified"
-        ]
-      }
-    },
-    {
-      "id": "prince-of-persia-warrior-within",
-      "name": "Prince of Persia: Warrior Within",
-      "stores": {
-        "steam": {
-          "id": 13500
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0",
-          "2.0",
-          "3.0"
-        ]
-      },
-      "install": {
-        "tweaks": [
-          "eax_unified"
-        ]
-      }
-    },
-    {
       "id": "project-eden",
       "name": "Project Eden",
       "stores": {
@@ -1771,23 +1109,6 @@
         "api": "directsound3d",
         "versions": [
           "1.0"
-        ]
-      }
-    },
-    {
-      "id": "project-igi-2-covert-strike",
-      "name": "Project I.G.I.-2: Covert Strike",
-      "stores": {
-        "gog": {
-          "id": 1207658666
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0",
-          "2.0",
-          "3.0"
         ]
       }
     },
@@ -1889,23 +1210,6 @@
       ]
     },
     {
-      "id": "race-driver-grid",
-      "name": "Race Driver: GRID",
-      "stores": {
-        "gog": {
-          "id": 1207659233,
-          "delisted": true,
-          "store_details": "Delisted from GOG and other stores at the end of 2016; GOG attributed the removal to expired car and music licensing."
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "5.0"
-        ]
-      }
-    },
-    {
       "id": "red-faction",
       "name": "Red Faction",
       "stores": {
@@ -1938,37 +1242,6 @@
         "api": "directsound3d",
         "versions": [
           "1.0"
-        ]
-      }
-    },
-    {
-      "id": "resident-evil-2",
-      "name": "Resident Evil 2",
-      "stores": {
-        "gog": {
-          "id": 1534123252,
-          "store_details": "Sold only on GOG. Steam's 'Resident Evil 2' is the unrelated 2019 RE Engine remake, not the classic 1998 build this entry covers."
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0"
-        ]
-      }
-    },
-    {
-      "id": "rollercoaster-tycoon-3-complete-edition",
-      "name": "RollerCoaster Tycoon 3: Complete Edition",
-      "stores": {
-        "gog": {
-          "id": 1207659032
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "3.0"
         ]
       }
     },
@@ -2073,79 +1346,11 @@
       "notes": "The Vogons Wiki specifically warns against pairing this with Creative's ALchemy wrapper."
     },
     {
-      "id": "serious-sam-classic-the-first-encounter",
-      "name": "Serious Sam Classic: The First Encounter",
-      "stores": {
-        "steam": {
-          "id": 41050
-        },
-        "gog": {
-          "id": 1207658876
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "2.0"
-        ]
-      }
-    },
-    {
-      "id": "serious-sam-classic-the-second-encounter",
-      "name": "Serious Sam Classic: The Second Encounter",
-      "stores": {
-        "steam": {
-          "id": 41060
-        },
-        "gog": {
-          "id": 1207658877
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "2.0"
-        ]
-      }
-    },
-    {
       "id": "shogo-mobile-armor-division",
       "name": "Shogo: Mobile Armor Division",
       "stores": {
         "gog": {
           "id": 1207658659
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0"
-        ]
-      }
-    },
-    {
-      "id": "sid-meiers-pirates",
-      "name": "Sid Meier's Pirates!",
-      "stores": {
-        "steam": {
-          "id": 3920
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0",
-          "2.0",
-          "3.0"
-        ]
-      }
-    },
-    {
-      "id": "simcity-3000-unlimited",
-      "name": "SimCity 3000: Unlimited",
-      "stores": {
-        "gog": {
-          "id": 2086050016
         }
       },
       "eax": {
@@ -2171,23 +1376,6 @@
           "3.0"
         ]
       }
-    },
-    {
-      "id": "star-trek-bridge-commander",
-      "name": "Star Trek: Bridge Commander",
-      "stores": {
-        "gog": {
-          "id": 1478736295
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0",
-          "2.0"
-        ]
-      },
-      "notes": "Also supports A3D, per the Vogons Wiki citation for this title."
     },
     {
       "id": "star-trek-elite-force-ii",
@@ -2282,32 +1470,6 @@
       }
     },
     {
-      "id": "star-wars-battlefront-ii-classic-2005",
-      "name": "Star Wars: Battlefront II (Classic, 2005)",
-      "stores": {
-        "steam": {
-          "id": 6060
-        },
-        "gog": {
-          "id": 1421404701
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0",
-          "2.0",
-          "3.0",
-          "4.0"
-        ]
-      },
-      "install": {
-        "tweaks": [
-          "eax_unified"
-        ]
-      }
-    },
-    {
       "id": "star-wars-knights-of-the-old-republic",
       "name": "Star Wars: Knights of the Old Republic",
       "exe": "swkotor.exe",
@@ -2393,37 +1555,6 @@
         "versions": [
           "2.0",
           "3.0"
-        ]
-      }
-    },
-    {
-      "id": "stronghold",
-      "name": "Stronghold",
-      "stores": {
-        "gog": {
-          "id": 1207658712,
-          "store_details": "Sold only on GOG, as 'Stronghold HD' — the original 2001 Firefly Studios build. Steam delisted it in favour of the 2023 'Definitive Edition' remaster, which uses a different engine without DirectSound3D EAX."
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0"
-        ]
-      }
-    },
-    {
-      "id": "stubbs-the-zombie-in-rebel-without-a-pulse",
-      "name": "Stubbs the Zombie in Rebel Without a Pulse",
-      "stores": {
-        "steam": {
-          "id": 7800
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "4.0"
         ]
       }
     },
@@ -2548,38 +1679,6 @@
         "problem": "The 25th Anniversary Remaster runs on Nightdive's proprietary Kex Engine, a from-scratch rewrite — it never had DirectSound3D EAX to begin with."
       },
       "notes": "If you own the classic 1999 build, run this script against that installation instead — it has real DirectSound3D EAX support (plus NewDark's own OpenAL Soft 'Hardware Acceleration' option), neither of which this remaster's rewritten engine provides."
-    },
-    {
-      "id": "the-suffering",
-      "name": "The Suffering",
-      "exe": "SUFFERING.EXE",
-      "stores": {
-        "gog": {
-          "id": 1268478205,
-          "delisted": true,
-          "store_details": "Delisted from GOG on 1 September 2024 at Warner Bros.' request; GOG was the only storefront that carried it."
-        }
-      },
-      "eax": {
-        "api": "directsound3d"
-      },
-      "notes": "The Vogons Wiki confirms an 'Enable EAX' option in the game's configuration utility but doesn't record which EAX version(s) it covers."
-    },
-    {
-      "id": "the-suffering-ties-that-bind",
-      "name": "The Suffering: Ties That Bind",
-      "exe": "SufferingTTB.exe",
-      "stores": {
-        "gog": {
-          "id": 1578481504,
-          "delisted": true,
-          "store_details": "Delisted from GOG on 1 September 2024 at Warner Bros.' request; GOG was the only storefront that carried it."
-        }
-      },
-      "eax": {
-        "api": "directsound3d"
-      },
-      "notes": "The Vogons Wiki confirms an 'Enable EAX' option in the game's configuration utility but doesn't record which EAX version(s) it covers."
     },
     {
       "id": "the-wheel-of-time",
@@ -2773,28 +1872,6 @@
           "5.0"
         ]
       }
-    },
-    {
-      "id": "titan-quest-anniversary-edition",
-      "name": "Titan Quest Anniversary Edition",
-      "stores": {
-        "steam": {
-          "id": 475150
-        },
-        "gog": {
-          "id": 1196955511
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0",
-          "2.0",
-          "3.0",
-          "4.0"
-        ]
-      },
-      "notes": "Both stores now sell only this 2016 Anniversary Edition; no separate classic 2006 listing remains to compare against, and whether its audio path changed from the original hasn't been independently verified here."
     },
     {
       "id": "titan-quest-immortal-throne",
@@ -2996,55 +2073,6 @@
         "versions": [
           "2.0",
           "3.0"
-        ]
-      }
-    },
-    {
-      "id": "ufo-aftermath",
-      "name": "UFO: Aftermath",
-      "stores": {
-        "gog": {
-          "id": 1207658815
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0",
-          "2.0",
-          "3.0"
-        ]
-      }
-    },
-    {
-      "id": "ufo-aftershock",
-      "name": "UFO: Aftershock",
-      "stores": {
-        "gog": {
-          "id": 1207658816
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "2.0",
-          "3.0",
-          "4.0"
-        ]
-      }
-    },
-    {
-      "id": "ultima-9-ascension",
-      "name": "Ultima 9: Ascension",
-      "stores": {
-        "gog": {
-          "id": 1207659093
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0"
         ]
       }
     },
@@ -3261,76 +2289,11 @@
       ]
     },
     {
-      "id": "vampire-the-masquerade-bloodlines",
-      "name": "Vampire: The Masquerade - Bloodlines",
-      "stores": {
-        "steam": {
-          "id": 2600
-        },
-        "gog": {
-          "id": 1207659240
-        }
-      },
-      "eax": {
-        "api": "directsound3d"
-      },
-      "notes": "Bloodlines isn't documented (per PCGamingWiki) as having hardware EAX — its sound design is mostly scripted ambience rather than DirectSound3D reverb zones, so restoring EAX may make little to no audible difference here. That's expected, not a fault. (The earlier Vampire: The Masquerade – Redemption, 2000, is the EAX-capable one.)"
-    },
-    {
-      "id": "vampire-the-masquerade-redemption",
-      "name": "Vampire: The Masquerade - Redemption",
-      "stores": {
-        "gog": {
-          "id": 1207658831
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0",
-          "2.0"
-        ]
-      }
-    },
-    {
-      "id": "warhammer-40-000-fire-warrior",
-      "name": "Warhammer 40,000: Fire Warrior",
-      "stores": {
-        "gog": {
-          "id": 1394528466
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "3.0"
-        ]
-      }
-    },
-    {
       "id": "x-com-enforcer",
       "name": "X-COM: Enforcer",
       "stores": {
         "steam": {
           "id": 7770
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0"
-        ]
-      }
-    },
-    {
-      "id": "x2-the-threat",
-      "name": "X2: The Threat",
-      "stores": {
-        "steam": {
-          "id": 2800
-        },
-        "gog": {
-          "id": 1441032629
         }
       },
       "eax": {

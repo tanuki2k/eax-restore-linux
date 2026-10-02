@@ -1,0 +1,18 @@
+{
+  "$schema": "../schema.json",
+  "name": "Grand Theft Auto: San Andreas",
+  "exe": "gta-sa.exe",
+  "stores": {
+    "steam": {
+      "id": 12120,
+      "delisted": true,
+      "store_details": "There's no in-game EAX toggle unlike GTA III and Vice City. The current build (v3.0 / 'NewSteam') is a from-scratch Xbox-based port; the EAX/NVIDIA splash only shows on a downgraded v1.0, though the EAX Unified code is present in every version.",
+      "patches": "SilentPatch SA is the usual companion fix. If the stock reverb is too faint to make out, the community ReverbSA plugin ('[SA|OpenAL] Reverb' on GTAForums) adds pervasive, clearly audible reverb."
+    }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0", "3.0", "4.0"] },
+  "install": {
+    "tweaks": ["eax_unified", "com_registry_routing"]
+  },
+  "notes": "EAX is used very sparingly here, so even a correct setup is subtle. The clearest place to check is the enclosed warehouse in the 'Robbing Uncle Sam' mission, ideally compared against toggling the audio override off."
+}

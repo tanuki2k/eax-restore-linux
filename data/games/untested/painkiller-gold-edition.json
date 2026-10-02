@@ -1,9 +1,0 @@
-{
-  "$schema": "../../schema.json",
-  "name": "Painkiller: Gold Edition",
-  "stores": {
-    "steam": { "id": 3200, "delisted": true, "id_source": "local_install_verified" }
-  },
-  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0", "3.0"] },
-  "notes": "Same original 2004 engine as the base game, not a remaster."
-}

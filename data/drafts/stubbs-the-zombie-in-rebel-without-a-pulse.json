@@ -1,0 +1,8 @@
+{
+  "$schema": "../schema.json",
+  "name": "Stubbs the Zombie in Rebel Without a Pulse",
+  "stores": {
+    "steam": { "id": 7800 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["4.0"] }
+}

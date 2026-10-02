@@ -1,0 +1,8 @@
+{
+  "$schema": "../schema.json",
+  "name": "Giants: Citizen Kabuto",
+  "stores": {
+    "gog": { "id": 1207658650 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0"] }
+}

@@ -1,0 +1,9 @@
+{
+  "$schema": "../schema.json",
+  "name": "X2: The Threat",
+  "stores": {
+    "steam": { "id": 2800 },
+    "gog": { "id": 1441032629 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0"] }
+}

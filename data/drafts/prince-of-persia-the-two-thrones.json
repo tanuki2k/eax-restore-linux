@@ -1,0 +1,11 @@
+{
+  "$schema": "../schema.json",
+  "name": "Prince of Persia: The Two Thrones",
+  "stores": {
+    "steam": { "id": 13530 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0", "3.0"] },
+  "install": {
+    "tweaks": ["eax_unified"]
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "$schema": "../schema.json",
+  "name": "Incoming Forces",
+  "stores": {
+    "gog": { "id": 1207663873 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["2.0", "3.0"] }
+}
