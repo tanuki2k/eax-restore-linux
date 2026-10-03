@@ -105,7 +105,7 @@ KNOWN_GAME_API=""
 # Game Settings (src/game-config.sh). GAME_INSTALL_ROOT is the install folder
 # the library scan matched (for "install:" config locations). The rest are
 # filled in during Phase 1 and used by Phase 2, the final summary and
-# uninstall: accepted alsoft.ini values, accepted config rows, fixes whose
+# uninstall: accepted alsoft.ini values, accepted config rows, settings whose
 # config file doesn't exist yet, follow-ups for the summary, fixes applied,
 # last install's CONFIG manifest lines, and (uninstall) this install's.
 GAME_INSTALL_ROOT=""
@@ -114,7 +114,7 @@ GAME_SETTINGS_PLAN=()
 GAME_SETTINGS_MISSING=()
 GAME_SETTINGS_FOLLOW_UPS=()
 GAME_SETTINGS_APPLIED=()
-# The game's audio fixes this run (titles), and the ones already in place, so
+# The game's audio settings this run (titles), and the ones already in place, so
 # the closing steps can leave out "turn EAX on in the game" when it's done.
 GAME_AUDIO_FIX_TITLES=()
 GAME_AUDIO_FIX_ALREADY=()

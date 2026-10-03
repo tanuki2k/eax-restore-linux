@@ -111,14 +111,15 @@
           "propertyNames": { "$ref": "#/$defs/config_file_name" },
           "additionalProperties": { "$ref": "#/$defs/config_file" }
         },
-        "audio_fixes": {
+        "audio_settings": {
+          "description": "Settings that turn on EAX and 3D sound (or make them sound right), so the player doesn't have to.",
           "type": "array",
-          "items": { "$ref": "#/$defs/fix" }
+          "items": { "$ref": "#/$defs/setting" }
         },
-        "extra_fixes": {
-          "description": "Optional fixes that aren't needed for EAX (e.g. low-res textures).",
+        "optional_settings": {
+          "description": "Optional quality-of-life settings and fixes that aren't needed for EAX (e.g. Quake 4's low-res textures).",
           "type": "array",
-          "items": { "$ref": "#/$defs/fix" }
+          "items": { "$ref": "#/$defs/setting" }
         }
       },
       "required": ["files"]
@@ -232,7 +233,7 @@
         }
       }
     },
-    "fix": {
+    "setting": {
       "type": "object",
       "required": ["title", "reason", "changes"],
       "additionalProperties": false,
@@ -249,7 +250,7 @@
           "minLength": 1
         },
         "only_if": {
-          "description": "Conditions for offering the fix; it's skipped silently otherwise.",
+          "description": "Conditions for offering the setting; it's skipped silently otherwise.",
           "type": "object",
           "minProperties": 1,
           "additionalProperties": false,

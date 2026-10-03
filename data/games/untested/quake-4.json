@@ -16,7 +16,7 @@
         "if_missing": "create"
       }
     },
-    "audio_fixes": [
+    "audio_settings": [
       {
         "title": "Enable EAX effects",
         "reason": "Quake 4 ships with its EAX sound options off, so there's no reverb and no muffling of sounds through walls.",
@@ -35,7 +35,7 @@
         "changes": { "Quake4Config.cfg": { "s_numberOfSpeakers": "6" } }
       }
     ],
-    "extra_fixes": [
+    "optional_settings": [
       {
         "title": "Fix low-res textures",
         "reason": "Quake 4 can't detect how much memory modern graphics cards have, so it loads its lowest-resolution textures (per PCGamingWiki).",

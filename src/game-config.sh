@@ -2,7 +2,7 @@
 # GAME SETTINGS (known-games game_config / install.alsoft_ini)
 # ==============================================================================
 # Everything the script changes in a game's own config files comes from that
-# game's known-games entry (game_config.audio_fixes / extra_fixes) — the script
+# game's known-games entry (game_config.audio_settings / optional_settings) — the script
 # itself only knows how to read and edit the four config formats, never which
 # game needs what. Decided in Phase 1 (Speaker Configuration offers the
 # alsoft.ini values, step 11 offers the game's own settings), applied in
@@ -238,25 +238,25 @@ current_known_game() {
         'any(.games[]; (.stores[$store].id // "") | tostring == $id)' "$KNOWN_GAMES_FILE" >/dev/null 2>&1
 }
 
-# Usage: count_game_fixes <id> <steam|gog>
-# Prints "<audio> <extras>": fixes this store's build can be offered (only_if
+# Usage: count_game_settings <id> <steam|gog>
+# Prints "<audio> <optional>": settings this store's build can be offered (only_if
 # stores match). Used by the KNOWN GAMES DATABASE block's fix counts before the game folder is known.
-count_game_fixes() {
+count_game_settings() {
     jq -r --arg id "$1" --arg store "$2" '
         [.games[] | select((.stores[$store].id // "") | tostring == $id)][0].game_config // {}
         | def offered: [.[]? | select((.only_if.stores // [$store]) | index($store))] | length;
-          "\(.audio_fixes | offered) \(.extra_fixes | offered)"' "$KNOWN_GAMES_FILE" 2>/dev/null
+          "\(.audio_settings | offered) \(.optional_settings | offered)"' "$KNOWN_GAMES_FILE" 2>/dev/null
 }
 
-# Usage: game_fix_titles <id> <steam|gog>
-# One "audio|extras<TAB>title" line per fix count_game_fixes counts, audio
-# fixes first, for the known games database screen.
-game_fix_titles() {
+# Usage: game_setting_titles <id> <steam|gog>
+# One "audio|optional<TAB>title" line per setting count_game_settings counts,
+# audio settings first, for the known games database screen.
+game_setting_titles() {
     jq -r --arg id "$1" --arg store "$2" '
         [.games[] | select((.stores[$store].id // "") | tostring == $id)][0].game_config // {}
         | def offered: [.[]? | select((.only_if.stores // [$store]) | index($store))];
-          (.audio_fixes | offered | .[] | "audio\t\(.title)"),
-          (.extra_fixes | offered | .[] | "extras\t\(.title)")' "$KNOWN_GAMES_FILE" 2>/dev/null
+          (.audio_settings | offered | .[] | "audio\t\(.title)"),
+          (.optional_settings | offered | .[] | "optional\t\(.title)")' "$KNOWN_GAMES_FILE" 2>/dev/null
 }
 
 # Usage: load_game_config_rows <id> <steam|gog>
@@ -271,8 +271,8 @@ load_game_config_rows() {
                  elif . == null then "__DELETE__" else tostring end;
         [.games[] | select((.stores[$store].id // "") | tostring == $id)][0].game_config // empty
         | (.files // {}) as $files
-        | ((.audio_fixes // []) | to_entries[] | {cat: "audio", i: .key, f: .value}),
-          ((.extra_fixes // []) | to_entries[] | {cat: "extras", i: .key, f: .value})
+        | ((.audio_settings // []) | to_entries[] | {cat: "audio", i: .key, f: .value}),
+          ((.optional_settings // []) | to_entries[] | {cat: "optional", i: .key, f: .value})
         | .cat as $cat | .i as $i | .f as $f
         | $f.changes | to_entries[] | .key as $file | ($files[$file] // {}) as $def
         | (if $def.format == "ini"
@@ -395,7 +395,7 @@ apply_alsoft_overrides() {
 # Usage: game_settings_step <step_number>
 # Phase 1's Game Settings step. Reads each fix's config files as they are now,
 # so every row shows the real current → new value; nothing is written here.
-# Accepted rows go into GAME_SETTINGS_PLAN, fixes whose file doesn't exist
+# Accepted rows go into GAME_SETTINGS_PLAN, settings whose file doesn't exist
 # yet into GAME_SETTINGS_MISSING, both for Phase 2 and the final summary.
 # Prints nothing at all for a game with no fixes to offer.
 game_settings_step() {
@@ -525,7 +525,7 @@ game_settings_step() {
         fi
     done
     if [ "$any_audio" -eq 1 ]; then
-        echo -e "\n${WHITE}Recommended audio settings for ${GAME_NAME}:${NC}"
+        echo -e "\n${WHITE}Audio settings for ${GAME_NAME}:${NC}"
         for id in "${fix_order[@]}"; do
             [[ "$id" == audio:* ]] || continue
             case "${fix_status[$id]}" in
@@ -540,14 +540,14 @@ game_settings_step() {
         fi
     fi
 
-    local -a extras=()
+    local -a optional=()
     for id in "${fix_order[@]}"; do
-        [[ "$id" == extras:* ]] && [[ "${fix_status[$id]}" =~ ^(offer|already|missing)$ ]] && extras+=("$id")
+        [[ "$id" == optional:* ]] && [[ "${fix_status[$id]}" =~ ^(offer|already|missing)$ ]] && optional+=("$id")
     done
-    if [ ${#extras[@]} -gt 0 ]; then
-        echo -e "\n${WHITE}Optional fixes for ${GAME_NAME} — not needed for EAX:${NC}"
+    if [ ${#optional[@]} -gt 0 ]; then
+        echo -e "\n${WHITE}Optional settings for ${GAME_NAME} — not needed for EAX:${NC}"
         local -a offered=()
-        for id in "${extras[@]}"; do
+        for id in "${optional[@]}"; do
             if [ "${fix_status[$id]}" == "offer" ]; then
                 offered+=("$id")
                 echo ""
@@ -634,7 +634,7 @@ clear_crash_marker() {
 # Usage: apply_game_settings
 # Phase 2: writes GAME_SETTINGS_PLAN into the game's config files and records
 # each change in the manifest as
-#   CONFIG:<audio|extras>\t<title>\t<path>\t<format>\t<section>\t<key>\t<old>\t<new>
+#   CONFIG:<audio|optional>\t<title>\t<path>\t<format>\t<section>\t<key>\t<old>\t<new>
 # Each file is backed up once as <file>.eax-restore.bak before its first edit
 # ever, and re-read first so a change made since Phase 1 isn't clobbered
 # needlessly. On a reinstall, the old value recorded last time is kept (it's
@@ -708,12 +708,12 @@ apply_game_settings() {
     done
 }
 
-# Usage: game_audio_fixes_done
-# True when the game has audio fixes and every one of them is now in place
+# Usage: game_audio_settings_done
+# True when the game has audio settings and every one of them is now in place
 # (applied this run or already set), so EAX needs nothing more from the
 # player in the game's own menus. A declined fix, or one whose config file
 # doesn't exist yet, leaves it false.
-game_audio_fixes_done() {
+game_audio_settings_done() {
     [ ${#GAME_AUDIO_FIX_TITLES[@]} -gt 0 ] || return 1
     local t
     for t in "${GAME_AUDIO_FIX_TITLES[@]}"; do
@@ -750,7 +750,7 @@ print_game_settings_summary() {
 
 # Usage: revert_game_settings <step_number>
 # Uninstall's Game Settings step. Lists the manifest's CONFIG lines as
-# audio / optional fixes and puts back each chosen setting's original value —
+# audio / optional settings and puts back each chosen setting's original value —
 # but only where the setting still has the value this script set, so anything
 # the player changed since is left alone. Sets GAME_SETTINGS_KEPT to the
 # CONFIG lines left in place, so the manifest can keep them.
@@ -761,26 +761,27 @@ revert_game_settings() {
 
     print_step "$step" "Game Settings"
 
-    # Group lines by fix (category + title), keeping manifest order.
+    # Group lines by setting (category + title), keeping manifest order.
+    # Manifests written before the rename call optional settings "extras".
     local -a groups=()
     local -A group_lines=()
     local line g
     local -a f
     for line in "${CONFIG_LINES[@]}"; do
         mapfile -t -d $'\t' f < <(printf '%s' "${line#CONFIG:}")
-        g="${f[0]}"$'\x1f'"${f[1]}"
+        g="${f[0]/#extras/optional}"$'\x1f'"${f[1]}"
         [ -n "${group_lines[$g]+x}" ] || groups+=("$g")
         group_lines[$g]+="$line"$'\n'
     done
 
     local -a order=()
     local cat idx=1 label
-    for cat in audio extras; do
+    for cat in audio optional; do
         local header_shown=0
         for g in "${groups[@]}"; do
             [[ "$g" == "$cat"$'\x1f'* ]] || continue
             if [ "$header_shown" -eq 0 ]; then
-                [ "$cat" == "audio" ] && label="Audio settings" || label="Optional fixes"
+                [ "$cat" == "audio" ] && label="Audio settings" || label="Optional settings"
                 echo -e "\n${WHITE}${label}:${NC}"
                 header_shown=1
             fi

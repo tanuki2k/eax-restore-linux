@@ -19,7 +19,7 @@
   "eax": { "api": "directsound3d", "versions": ["1.0"] },
   "game_config": {
     "files": { "Unreal.ini": { "format": "ini", "locations": ["game:Unreal.ini"] } },
-    "audio_fixes": [
+    "audio_settings": [
       {
         "title": "Enable EAX reverb",
         "reason": "Unreal only plays EAX reverb when its hardware 3D sound, reverb and spatial sound options are all on.",

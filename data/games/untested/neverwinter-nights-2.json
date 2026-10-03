@@ -16,7 +16,7 @@
         "locations": ["prefix_documents:Neverwinter Nights 2/nwn2.ini"]
       }
     },
-    "audio_fixes": [
+    "audio_settings": [
       {
         "title": "Enable EAX reverb",
         "reason": "Neverwinter Nights 2 ships with its environment effects off and a software sound provider that has no EAX.",

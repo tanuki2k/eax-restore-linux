@@ -178,7 +178,7 @@ A game file looks like this (see `data/games/tested/` for more):
     "files": {
       "Quake4Config.cfg": { "format": "idtech_cfg", "locations": ["game:q4base/Quake4Config.cfg"] }
     },
-    "audio_fixes": [
+    "audio_settings": [
       {
         "title": "Enable EAX effects",
         "reason": "Quake 4 ships with its EAX sound options off, so there's no reverb and no muffling of sounds through walls.",
@@ -217,14 +217,14 @@ A game file looks like this (see `data/games/tested/` for more):
   - `files` — each config file, keyed by its file name:
     - `format` — `"ini"` (`[Section]` + `key=value`), `"flat_ini"` (`key=value` lines with no `[Section]` headers, e.g. Thief: Deadly Shadows' `options.ini`), `"idtech_cfg"` (`seta key "value"`, id Tech games) or `"dark_cfg"` (NewDark's `key value` lines, where a bare `key` turns a flag on and `;key` turns it off).
     - `locations` — where to look, in order, as `"base:path"`; the first that exists is used. Bases: `game` (the exe's folder), `install` (the install root), `prefix_documents`, `prefix_appdata`, `prefix_localappdata` (inside the Wine prefix's user folder). No `..`, leading `/` or backslashes.
-    - `if_missing` — what to do when the file doesn't exist. Omit it for files the game writes on first launch (the player is told to launch once and run the script again); `"skip"` for files only some builds have (NewDark's `cam_ext.cfg` isn't in the stock Steam Thief games) — their fixes are skipped silently; `"create"` to create it (e.g. Quake 4's `autoexec.cfg`).
+    - `if_missing` — what to do when the file doesn't exist. Omit it for files the game writes on first launch (the script asks the player to launch the game once, then checks again); `"skip"` for files only some builds have (NewDark's `cam_ext.cfg` isn't in the stock Steam Thief games) — their settings are skipped silently; `"create"` to create it (e.g. Quake 4's `autoexec.cfg`).
     - `crash_marker` — optional: the name of a file the game keeps next to this config file while it's running and deletes when quit from its own menu, which makes it reset the config file on its next start if left behind (BioShock's `Running.ini`). The script removes it, when the game isn't running, before changing the file, and never puts it back on uninstall.
-  - `audio_fixes` — fixes that make EAX work or sound right, confirmed together with one default-yes prompt.
-  - `extra_fixes` — optional fixes that aren't needed for EAX (e.g. low-res textures), offered separately so the player picks which to apply.
-  - Each fix has:
-    - `title` and `reason` — see CLAUDE.md's "Game fix `title` and `reason`" rules. In short: `title` is **Enable** / **Fix** / **Remove** / **Raise** plus the result the player gets (`"Enable EAX reverb"`), reused across games for the same result; `reason` is one or two short sentences, starting with the game's name, on what the game does out of the box — without repeating the settings the rows below it show.
+  - `audio_settings` — settings that turn on EAX and 3D sound (or make them sound right), so the player doesn't have to; confirmed together with one default-yes prompt.
+  - `optional_settings` — optional quality-of-life settings that aren't needed for EAX (e.g. Quake 4's low-res textures fix), offered separately so the player picks which to apply.
+  - Each setting has:
+    - `title` and `reason` — see CLAUDE.md's "Game setting `title` and `reason`" rules. In short: `title` is **Enable** / **Fix** / **Remove** / **Raise** plus the result the player gets (`"Enable EAX reverb"`), reused across games for the same result; `reason` is one or two short sentences, starting with the game's name, on what the game does out of the box — without repeating the settings the rows below it show.
     - `changes` — file → section → key → value for `ini` files, file → key → value for `flat_ini` and the cfg formats. Values are strings; `true`/`false` switches a `dark_cfg` flag; `null` removes the key. Every file must be listed in `files`.
-    - `only_if` — optional conditions: `{ "stores": ["gog"] }` and/or `{ "speakers": "stereo" | "surround" | "matrix" }` (the Speaker Configuration answer). Prefer `if_missing: "skip"` over a store condition when a fix depends on a file only some builds have.
+    - `only_if` — optional conditions: `{ "stores": ["gog"] }` and/or `{ "speakers": "stereo" | "surround" | "matrix" }` (the Speaker Configuration answer). Prefer `if_missing: "skip"` over a store condition when a setting depends on a file only some builds have.
     - `follow_up` — optional: something the player does after installing, shown in the final summary (`"Open Options -> Video and click Autodetect."`).
 - `sources` — pages backing the entry's claims (the short "(per PCGamingWiki)" citations in the prose point here). They're listed last on the script's known games database screen as clickable links. Give each a name with `{ "title": "PCGamingWiki: Quake 4", "url": "https://www.pcgamingwiki.com/wiki/Quake_4" }`; a bare URL string still works and shows the site's address.
 - `notes` — prose caveats not covered by the fields above: cross-references to sibling entries, limitation/expectation-setting caveats ("reverb here is subtle, that's expected not a bug"), controller/multiplayer/mod quirks.

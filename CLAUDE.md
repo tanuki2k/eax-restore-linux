@@ -301,7 +301,7 @@ own user-facing strings. Neither is enforceable by a linter, so match the exampl
 below when writing or editing either.
 
 **Database prose fields** (`notes`, `store_details`, `patches`, `eax.problem`,
-`eax.fix`, and a fix's `title`, `reason` and `follow_up` — see README's "Contributing
+`eax.fix`, and a game setting's `title`, `reason` and `follow_up` — see README's "Contributing
 to the known games database" for what belongs in which field):
 
 - Keep each field to its one job; don't restate content that belongs in a sibling
@@ -328,7 +328,8 @@ to the known games database" for what belongs in which field):
   "Bloodlines isn't documented (per PCGamingWiki) as having hardware EAX... That's
   expected, not a fault."
 
-**Game fix `title` and `reason`** (`game_config.audio_fixes` / `extra_fixes`). Players
+**Game setting `title` and `reason`** (`game_config.audio_settings` / `optional_settings`).
+They automate a change the player would otherwise make by hand. Players
 see these in the Game Settings step, directly above rows showing each file, setting,
 and its current → new value, read live from their own install.
 
@@ -337,7 +338,7 @@ and its current → new value, read live from their own install.
   **Remove** for something unwanted, **Raise** for a quality level. Sentence case, no
   full stop, about 5 words at most.
 - Name the result the player gets, not the setting (`Enable EAX reverb`, not
-  `Set UseEAX to True`), even when the fix changes several settings — the rows list
+  `Set UseEAX to True`), even when the setting changes several keys — the rows list
   them.
 - Reuse the same title for the same result across games.
 - Don't repeat the game name; the step's header already shows it.

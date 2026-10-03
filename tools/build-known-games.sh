@@ -31,7 +31,7 @@ fi
 errors="$(for f in "${all_files[@]}"; do
     jq -r --arg f "$f" '
         (.game_config.files // {} | keys) as $defined
-        | (.game_config.audio_fixes // []) + (.game_config.extra_fixes // [])
+        | (.game_config.audio_settings // []) + (.game_config.optional_settings // [])
         | .[] | .title as $title | .changes | keys[]
         | select(. as $file | $defined | index($file) | not)
         | "\($f): \"\($title)\" changes \(.), which isn'\''t defined in game_config.files"' "$f"

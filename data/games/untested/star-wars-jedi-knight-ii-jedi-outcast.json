@@ -16,7 +16,7 @@
         "if_missing": "skip"
       }
     },
-    "audio_fixes": [
+    "audio_settings": [
       {
         "title": "Enable EAX reverb",
         "reason": "Jedi Outcast only plays EAX reverb through its OpenAL sound option, which ships off in both single-player and multiplayer.",

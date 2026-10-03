@@ -15,7 +15,7 @@
     "files": {
       "DoomConfig.cfg": { "format": "idtech_cfg", "locations": ["game:base/DoomConfig.cfg"] }
     },
-    "audio_fixes": [
+    "audio_settings": [
       {
         "title": "Enable EAX reverb",
         "reason": "DOOM 3 ships with its EAX sound options off, so there's no reverb.",

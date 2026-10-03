@@ -23,14 +23,14 @@
         "if_missing": "skip"
       }
     },
-    "audio_fixes": [
+    "audio_settings": [
       {
         "title": "Enable underwater reverb",
         "reason": "Some Thief Gold maps don't mark their underwater areas, so they play the wrong reverb there (per NewDark's documentation).",
         "changes": { "cam_ext.cfg": { "force_underwater_reverb": true } }
       }
     ],
-    "extra_fixes": [
+    "optional_settings": [
       {
         "title": "Enable full-precision mouse look",
         "reason": "Thief Gold reads mouse look through standard Windows input by default, which doesn't give high-resolution mice their full precision (per NewDark's documentation).",

@@ -23,7 +23,7 @@
         "locations": ["install:save/SaveGames/User Options/options.ini"]
       }
     },
-    "audio_fixes": [
+    "audio_settings": [
       {
         "title": "Enable EAX reverb",
         "reason": "Thief: Deadly Shadows ships with 'Audio Hardware Mixing', 'EAX ADVANCED HD' and 'EAX Multiple Environments' off (per Creative's setup guide for the game).",

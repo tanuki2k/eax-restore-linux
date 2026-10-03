@@ -14,7 +14,7 @@
     "files": {
       "SplinterCellUser.ini": { "format": "ini", "locations": ["game:SplinterCellUser.ini"] }
     },
-    "audio_fixes": [
+    "audio_settings": [
       {
         "title": "Enable EAX reverb",
         "reason": "Splinter Cell ships with EAX and hardware 3D sound off.",

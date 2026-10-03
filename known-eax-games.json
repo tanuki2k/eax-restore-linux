@@ -127,7 +127,7 @@
             ]
           }
         },
-        "audio_fixes": [
+        "audio_settings": [
           {
             "title": "Enable EAX reverb",
             "reason": "Arx Fatalis ships with EAX off.",
@@ -307,7 +307,7 @@
             "crash_marker": "Running.ini"
           }
         },
-        "audio_fixes": [
+        "audio_settings": [
           {
             "title": "Enable EAX reverb",
             "reason": "BioShock ships with 'Use Creative EAX Audio' off, which keeps it on DirectSound with no EAX instead of the OpenAL32.dll this script installs (per Creative's audio guide for the game).",
@@ -359,7 +359,7 @@
             ]
           }
         },
-        "audio_fixes": [
+        "audio_settings": [
           {
             "title": "Enable EAX reverb",
             "reason": "Earned in Blood ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs.",
@@ -422,7 +422,7 @@
             ]
           }
         },
-        "audio_fixes": [
+        "audio_settings": [
           {
             "title": "Enable EAX reverb",
             "reason": "Brothers in Arms ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs.",
@@ -463,7 +463,7 @@
             ]
           }
         },
-        "audio_fixes": [
+        "audio_settings": [
           {
             "title": "Enable EAX reverb",
             "reason": "Clive Barker's Undying only plays EAX reverb when its hardware 3D sound and spatial sound options are on.",
@@ -557,7 +557,7 @@
             ]
           }
         },
-        "audio_fixes": [
+        "audio_settings": [
           {
             "title": "Enable EAX reverb",
             "reason": "Deus Ex ships with its hardware sound option off, and it only plays EAX reverb with it on.",
@@ -612,7 +612,7 @@
             ]
           }
         },
-        "audio_fixes": [
+        "audio_settings": [
           {
             "title": "Enable EAX reverb",
             "reason": "DOOM 3 ships with its EAX sound options off, so there's no reverb.",
@@ -1058,7 +1058,7 @@
             ]
           }
         },
-        "audio_fixes": [
+        "audio_settings": [
           {
             "title": "Enable EAX reverb",
             "reason": "Neverwinter Nights 2 ships with its environment effects off and a software sound provider that has no EAX.",
@@ -1224,7 +1224,7 @@
             "if_missing": "create"
           }
         },
-        "audio_fixes": [
+        "audio_settings": [
           {
             "title": "Enable EAX reverb",
             "reason": "Psychonauts ships with EAX off and has no in-game option to turn it on (per PCGamingWiki).",
@@ -1280,7 +1280,7 @@
             "if_missing": "create"
           }
         },
-        "audio_fixes": [
+        "audio_settings": [
           {
             "title": "Enable EAX effects",
             "reason": "Quake 4 ships with its EAX sound options off, so there's no reverb and no muffling of sounds through walls.",
@@ -1305,7 +1305,7 @@
             }
           }
         ],
-        "extra_fixes": [
+        "optional_settings": [
           {
             "title": "Fix low-res textures",
             "reason": "Quake 4 can't detect how much memory modern graphics cards have, so it loads its lowest-resolution textures (per PCGamingWiki).",
@@ -1499,7 +1499,7 @@
             ]
           }
         },
-        "audio_fixes": [
+        "audio_settings": [
           {
             "title": "Enable EAX reverb",
             "reason": "Soldier of Fortune II plays its sound through snd_dsx86.dll out of the box, which has no EAX — only snd_alx86.dll does.",
@@ -1567,7 +1567,7 @@
             "if_missing": "skip"
           }
         },
-        "audio_fixes": [
+        "audio_settings": [
           {
             "title": "Enable EAX reverb",
             "reason": "Jedi Outcast only plays EAX reverb through its OpenAL sound option, which ships off in both single-player and multiplayer.",
@@ -1620,7 +1620,7 @@
             "if_missing": "skip"
           }
         },
-        "audio_fixes": [
+        "audio_settings": [
           {
             "title": "Enable EAX reverb",
             "reason": "Jedi Academy only plays EAX reverb through its OpenAL sound option, which ships off in both single-player and multiplayer.",
@@ -1665,7 +1665,7 @@
             ]
           }
         },
-        "audio_fixes": [
+        "audio_settings": [
           {
             "title": "Enable EAX reverb",
             "reason": "KOTOR ships with EAX off.",
@@ -1734,7 +1734,7 @@
             ]
           }
         },
-        "audio_fixes": [
+        "audio_settings": [
           {
             "title": "Enable EAX reverb",
             "reason": "Republic Commando turns EAX and 3D sound off on its first launch and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs.",
@@ -1779,7 +1779,7 @@
             ]
           }
         },
-        "audio_fixes": [
+        "audio_settings": [
           {
             "title": "Enable EAX reverb",
             "reason": "SWAT 4 ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs.",
@@ -1830,7 +1830,7 @@
             "if_missing": "skip"
           }
         },
-        "audio_fixes": [
+        "audio_settings": [
           {
             "title": "Enable underwater reverb",
             "reason": "Some System Shock 2 maps don't mark their underwater areas, so they play the wrong reverb there (per NewDark's documentation).",
@@ -1841,7 +1841,7 @@
             }
           }
         ],
-        "extra_fixes": [
+        "optional_settings": [
           {
             "title": "Enable full-precision mouse look",
             "reason": "System Shock 2 reads mouse look through standard Windows input by default, which doesn't give high-resolution mice their full precision (per NewDark's documentation).",
@@ -1898,7 +1898,7 @@
             ]
           }
         },
-        "audio_fixes": [
+        "audio_settings": [
           {
             "title": "Enable EAX reverb",
             "reason": "The Wheel of Time only plays EAX reverb when its DirectSound, hardware 3D sound and spatial sound options are on (per PCGamingWiki).",
@@ -1972,7 +1972,7 @@
             "if_missing": "skip"
           }
         },
-        "audio_fixes": [
+        "audio_settings": [
           {
             "title": "Enable underwater reverb",
             "reason": "Some Thief Gold maps don't mark their underwater areas, so they play the wrong reverb there (per NewDark's documentation).",
@@ -1983,7 +1983,7 @@
             }
           }
         ],
-        "extra_fixes": [
+        "optional_settings": [
           {
             "title": "Enable full-precision mouse look",
             "reason": "Thief Gold reads mouse look through standard Windows input by default, which doesn't give high-resolution mice their full precision (per NewDark's documentation).",
@@ -2029,7 +2029,7 @@
             "if_missing": "skip"
           }
         },
-        "audio_fixes": [
+        "audio_settings": [
           {
             "title": "Enable underwater reverb",
             "reason": "Some Thief II maps don't mark their underwater areas, so they play the wrong reverb there (per NewDark's documentation).",
@@ -2040,7 +2040,7 @@
             }
           }
         ],
-        "extra_fixes": [
+        "optional_settings": [
           {
             "title": "Enable full-precision mouse look",
             "reason": "Thief II reads mouse look through standard Windows input by default, which doesn't give high-resolution mice their full precision (per NewDark's documentation).",
@@ -2088,7 +2088,7 @@
             ]
           }
         },
-        "audio_fixes": [
+        "audio_settings": [
           {
             "title": "Enable EAX reverb",
             "reason": "Thief: Deadly Shadows ships with 'Audio Hardware Mixing', 'EAX ADVANCED HD' and 'EAX Multiple Environments' off (per Creative's setup guide for the game).",
@@ -2239,7 +2239,7 @@
             ]
           }
         },
-        "audio_fixes": [
+        "audio_settings": [
           {
             "title": "Enable EAX reverb",
             "reason": "Splinter Cell ships with EAX and hardware 3D sound off.",
@@ -2379,7 +2379,7 @@
             ]
           }
         },
-        "audio_fixes": [
+        "audio_settings": [
           {
             "title": "Enable EAX reverb",
             "reason": "Unreal only plays EAX reverb when its hardware 3D sound, reverb and spatial sound options are all on.",
@@ -2429,7 +2429,7 @@
             ]
           }
         },
-        "audio_fixes": [
+        "audio_settings": [
           {
             "title": "Enable EAX reverb",
             "reason": "Unreal II ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs. In the game's options, only the EAX part is shown, as 'EAX 3.0 (Audigy only)'.",
@@ -2474,7 +2474,7 @@
             ]
           }
         },
-        "audio_fixes": [
+        "audio_settings": [
           {
             "title": "Enable EAX reverb",
             "reason": "UT2004 ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs. In the game's options, this is Audio Mode 'H/W 3D + EAX' with System Driver ticked.",
@@ -2518,7 +2518,7 @@
             ]
           }
         },
-        "audio_fixes": [
+        "audio_settings": [
           {
             "title": "Enable EAX reverb",
             "reason": "Unreal Tournament 3 asks for the 'Generic Software' device of its bundled OpenAL32.dll, so it has no sound with the OpenAL32.dll this script installs. In the game's options, this is 'Hardware OpenAL' ticked.",
@@ -2562,7 +2562,7 @@
             ]
           }
         },
-        "audio_fixes": [
+        "audio_settings": [
           {
             "title": "Enable EAX reverb",
             "reason": "Unreal Tournament ships with its hardware sound option off, and it only plays EAX reverb with it on.",
@@ -2611,7 +2611,7 @@
             ]
           }
         },
-        "audio_fixes": [
+        "audio_settings": [
           {
             "title": "Enable EAX reverb",
             "reason": "X-COM: Enforcer only plays EAX reverb when its hardware 3D sound and spatial sound options are on.",

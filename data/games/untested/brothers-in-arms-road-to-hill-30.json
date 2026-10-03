@@ -9,7 +9,7 @@
   "eax": { "api": "openal", "versions": ["2.0", "3.0", "4.0"] },
   "game_config": {
     "files": { "bia.ini": { "format": "ini", "locations": ["game:bia.ini"] } },
-    "audio_fixes": [
+    "audio_settings": [
       {
         "title": "Enable EAX reverb",
         "reason": "Brothers in Arms ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs.",

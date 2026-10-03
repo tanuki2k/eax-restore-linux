@@ -8,7 +8,7 @@
   "eax": { "api": "directsound3d", "versions": ["1.0"] },
   "game_config": {
     "files": { "XCom.ini": { "format": "ini", "locations": ["game:XCom.ini"] } },
-    "audio_fixes": [
+    "audio_settings": [
       {
         "title": "Enable EAX reverb",
         "reason": "X-COM: Enforcer only plays EAX reverb when its hardware 3D sound and spatial sound options are on.",

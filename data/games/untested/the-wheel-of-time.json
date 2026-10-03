@@ -8,7 +8,7 @@
   "eax": { "api": "directsound3d", "versions": ["1.0"] },
   "game_config": {
     "files": { "WoT.ini": { "format": "ini", "locations": ["game:WoT.ini"] } },
-    "audio_fixes": [
+    "audio_settings": [
       {
         "title": "Enable EAX reverb",
         "reason": "The Wheel of Time only plays EAX reverb when its DirectSound, hardware 3D sound and spatial sound options are on (per PCGamingWiki).",

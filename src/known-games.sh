@@ -513,11 +513,27 @@ show_game_details_block() {
     # --- Field lines: what the database has on file, then what was found here ---
     # Everything under "Game details" comes from known-eax-games.json, not
     # from the install, so it's kept apart from the two facts the library
-    # scan found on this system. Labels are padded to one width so the
-    # values line up.
-    _detail() { printf ' -> %b%s%b:%*s %b\n' "$YELLOW" "$1" "$NC" $(( 12 - ${#1} )) "" "$2"; }
+    # scan found on this system. The lines are collected first and printed
+    # together, so every value lines up after the longest label shown.
+    local -a detail_labels=() detail_values=()
+    _detail() { detail_labels+=("$1"); detail_values+=("$2"); }
+    _detail_heading() { detail_labels+=(""); detail_values+=("$1"); }
+    _print_details() {
+        local i width=0
+        for i in "${!detail_labels[@]}"; do
+            [ ${#detail_labels[$i]} -gt "$width" ] && width=${#detail_labels[$i]}
+        done
+        for i in "${!detail_labels[@]}"; do
+            if [ -z "${detail_labels[$i]}" ]; then
+                echo -e "\n${WHITE}${detail_values[$i]}:${NC}"
+            else
+                printf ' -> %b%s%b:%*s %b\n' "$YELLOW" "${detail_labels[$i]}" "$NC" \
+                    $(( width - ${#detail_labels[$i]} )) "" "${detail_values[$i]}"
+            fi
+        done
+    }
     print_banner "KNOWN GAMES DATABASE"
-    echo -e "\n${WHITE}Game details:${NC}"
+    _detail_heading "Game details"
     _detail "Name" "${BOLD}${name}${NC}"
     if [ "$listing" == "delisted" ]; then
         _detail "Availability" "${WHITE}Delisted from $store_label ${DIM}(existing owners keep access)${NC}"
@@ -541,15 +557,16 @@ show_game_details_block() {
         _detail "Audio API" "${WHITE}DirectSound3D${NC}"
     fi
     [ -n "$EAX_UNIFIED" ] && _detail "EAX Unified" "${WHITE}Yes${NC}"
-    local fix_counts audio_fixes extra_fixes
-    fix_counts="$(count_game_fixes "$id" "$store")"
-    read -r audio_fixes extra_fixes <<< "${fix_counts:-0 0}"
-    [ "${audio_fixes:-0}" -gt 0 ] && _detail "EAX fixes" "${WHITE}${audio_fixes}${NC}"
-    [ "${extra_fixes:-0}" -gt 0 ] && _detail "Game fixes" "${WHITE}${extra_fixes} ${DIM}(optional)${NC}"
+    local setting_counts audio_settings optional_settings
+    setting_counts="$(count_game_settings "$id" "$store")"
+    read -r audio_settings optional_settings <<< "${setting_counts:-0 0}"
+    [ "${audio_settings:-0}" -gt 0 ] && _detail "Audio settings" "${WHITE}${audio_settings}${NC}"
+    [ "${optional_settings:-0}" -gt 0 ] && _detail "Optional settings" "${WHITE}${optional_settings}${NC}"
 
-    echo -e "\n${WHITE}System details:${NC}"
+    _detail_heading "System details"
     _detail "Platform" "${GREEN}$store_label${NC}"
     _detail "Location" "${DIM}$(tilde_path "$location")${NC}"
+    _print_details
 
     # --- Blocks: status -> problem -> solution ---
     if [ "$eax_status" == "removed_by_patch" ] || [ "$eax_status" == "not_implemented" ]; then
@@ -576,13 +593,13 @@ show_game_details_block() {
     local -a eax_titles=() extra_titles=()
     while IFS=$'\t' read -r cat title; do
         [ "$cat" == "audio" ] && eax_titles+=("$title") || extra_titles+=("$title")
-    done < <(game_fix_titles "$id" "$store")
+    done < <(game_setting_titles "$id" "$store")
     if [ ${#eax_titles[@]} -gt 0 ]; then
-        print_subheading "EAX fixes"
+        print_subheading "Audio settings"
         for title in "${eax_titles[@]}"; do print_wrapped "$title"; done
     fi
     if [ ${#extra_titles[@]} -gt 0 ]; then
-        print_subheading "Optional game fixes"
+        print_subheading "Optional settings"
         for title in "${extra_titles[@]}"; do print_wrapped "$title"; done
     fi
     if [ -n "$restore_details" ]; then
