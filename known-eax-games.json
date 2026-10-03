@@ -1177,7 +1177,7 @@
       "stores": {
         "gog": {
           "id": 1207659162,
-          "store_details": "The original 2006 Obsidian/Electron Engine build, not 2025's 'Enhanced Edition'."
+          "store_details": "This is the original 2006 Neverwinter Nights 2 with its Mask of the Betrayer and Storm of Zehir expansions and the Mysteries of Westgate adventure pack, not 2025's 'Enhanced Edition'. GOG still sells it alongside the Enhanced Edition, and it's an ideal candidate for restoring EAX sound."
         }
       },
       "eax": {
@@ -1211,17 +1211,76 @@
             }
           },
           {
-            "title": "Enable 5.1 surround sound",
-            "reason": "Neverwinter Nights 2 plays in stereo unless its speaker type is set to 5.1.",
-            "only_if": {
-              "speakers": "surround"
+            "title": "Enable 4.0 surround sound",
+            "reason": "Neverwinter Nights 2 plays in stereo and has no in-game speaker option, so the rear speakers of a 4.0 setup get no sound.",
+            "changes": {
+              "nwn2.ini": {
+                "Sound Options": {
+                  "Speaker Type": "3"
+                }
+              }
             },
+            "only_if": {
+              "speakers": "quad"
+            }
+          },
+          {
+            "title": "Enable 5.1 surround sound",
+            "reason": "Neverwinter Nights 2 plays in stereo and has no in-game speaker option, so the rest of a 5.1 speaker setup gets no sound.",
             "changes": {
               "nwn2.ini": {
                 "Sound Options": {
                   "Speaker Type": "4"
                 }
               }
+            },
+            "only_if": {
+              "speakers": [
+                "surround51",
+                "surround61"
+              ]
+            }
+          },
+          {
+            "title": "Enable 7.1 surround sound",
+            "reason": "Neverwinter Nights 2 plays in stereo and has no in-game speaker option, so the rest of a 7.1 speaker setup gets no sound.",
+            "changes": {
+              "nwn2.ini": {
+                "Sound Options": {
+                  "Speaker Type": "5"
+                }
+              }
+            },
+            "only_if": {
+              "speakers": "surround71"
+            }
+          },
+          {
+            "title": "Enable Pro Logic surround",
+            "reason": "Neverwinter Nights 2 plays in stereo and has no in-game speaker option, so a Pro Logic receiver has no surround information to decode.",
+            "changes": {
+              "nwn2.ini": {
+                "Sound Options": {
+                  "Speaker Type": "2"
+                }
+              }
+            },
+            "only_if": {
+              "speakers": "matrix"
+            }
+          },
+          {
+            "title": "Enable headphone sound",
+            "reason": "Neverwinter Nights 2 plays in stereo and has no in-game speaker option, so its sound isn't mixed for headphones.",
+            "changes": {
+              "nwn2.ini": {
+                "Sound Options": {
+                  "Speaker Type": "1"
+                }
+              }
+            },
+            "only_if": {
+              "speakers": "headphones"
             }
           }
         ]
@@ -1253,7 +1312,7 @@
         "gog": {
           "id": 1207658890,
           "delisted": true,
-          "store_details": "The classic build (base game plus all three official expansions), sold by GOG as a standalone product separate from 'Neverwinter Nights: Enhanced Edition'. GOG's catalogue search doesn't surface it, but the product page and existing owners' libraries resolve normally."
+          "store_details": "This is the original 2002 Neverwinter Nights with both expansions and the premium modules, not 2018's 'Enhanced Edition'. Since October 2018, GOG only includes it as a bonus with the Enhanced Edition (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
         }
       },
       "eax": {
@@ -1263,7 +1322,110 @@
           "2.0",
           "3.0"
         ]
-      }
+      },
+      "game_config": {
+        "files": {
+          "nwn.ini": {
+            "format": "ini",
+            "locations": [
+              "game:nwn.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX reverb",
+            "reason": "Neverwinter Nights ships with EAX off and its 'DirectSound3D Hardware Support' sound provider, which has no EAX.",
+            "changes": {
+              "nwn.ini": {
+                "Sound Options": {
+                  "3D Provider": "Creative Labs EAX 3 (TM)",
+                  "Environment Effects": "1"
+                }
+              }
+            }
+          },
+          {
+            "title": "Enable 4.0 surround sound",
+            "reason": "Neverwinter Nights ships set to 2 speakers, so the rear speakers of a 4.0 setup get no sound.",
+            "changes": {
+              "nwn.ini": {
+                "Sound Options": {
+                  "Speaker Type": "3"
+                }
+              }
+            },
+            "only_if": {
+              "speakers": "quad"
+            }
+          },
+          {
+            "title": "Enable 5.1 surround sound",
+            "reason": "Neverwinter Nights ships set to 2 speakers, so the rest of a 5.1 speaker setup gets no sound.",
+            "changes": {
+              "nwn.ini": {
+                "Sound Options": {
+                  "Speaker Type": "4"
+                }
+              }
+            },
+            "only_if": {
+              "speakers": [
+                "surround51",
+                "surround61"
+              ]
+            }
+          },
+          {
+            "title": "Enable 7.1 surround sound",
+            "reason": "Neverwinter Nights ships set to 2 speakers, so the rest of a 7.1 speaker setup gets no sound.",
+            "changes": {
+              "nwn.ini": {
+                "Sound Options": {
+                  "Speaker Type": "5"
+                }
+              }
+            },
+            "only_if": {
+              "speakers": "surround71"
+            }
+          },
+          {
+            "title": "Enable Pro Logic surround",
+            "reason": "Neverwinter Nights ships set to 2 speakers, so a Pro Logic receiver has no surround information to decode.",
+            "changes": {
+              "nwn.ini": {
+                "Sound Options": {
+                  "Speaker Type": "2"
+                }
+              }
+            },
+            "only_if": {
+              "speakers": "matrix"
+            }
+          },
+          {
+            "title": "Enable headphone sound",
+            "reason": "Neverwinter Nights ships set to 2 speakers, so its sound isn't mixed for headphones.",
+            "changes": {
+              "nwn.ini": {
+                "Sound Options": {
+                  "Speaker Type": "1"
+                }
+              }
+            },
+            "only_if": {
+              "speakers": "headphones"
+            }
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "GOG: Neverwinter Nights: Enhanced Edition release post",
+          "url": "https://www.gog.com/forum/general/release_neverwinter_nights_enhanced_edition_c05bc"
+        }
+      ]
     },
     {
       "id": "neverwinter-nights-enhanced-edition",
