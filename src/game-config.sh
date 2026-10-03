@@ -543,6 +543,61 @@ game_settings_step() {
     unset -f _print_fix _plan_fix _print_status_line
 }
 
+# Usage: known_game_field <jq path, e.g. .exe>
+# One field of the current game's known-games entry (KG_ID / KG_STORE), or
+# nothing.
+known_game_field() {
+    jq -r --arg id "$KG_ID" --arg store "$KG_STORE" \
+        "[.games[] | select((.stores[\$store].id // \"\") | tostring == \$id)][0] | $1 // empty" \
+        "$KNOWN_GAMES_FILE" 2>/dev/null
+}
+
+# Usage: game_exe_running
+# True while the game's own exe (the entry's "exe") is running. Wine and
+# Proton keep the Windows path in the command line, so the name is matched
+# there, ignoring case as Windows does. This script's own process tree is
+# left out: a shell whose command line merely mentions the exe isn't the game.
+game_exe_running() {
+    local exe pid p
+    local -A ours=()
+    exe="$(known_game_field .exe)"
+    [ -n "$exe" ] || return 1
+    for (( p = $$; p > 1; p = $(awk '{print $4}' "/proc/$p/stat" 2>/dev/null || echo 1) )); do ours[$p]=1; done
+    while read -r pid; do
+        [ -n "${ours[$pid]:-}" ] && continue
+        for (( p = pid; p > 1; p = $(awk '{print $4}' "/proc/$p/stat" 2>/dev/null || echo 1) )); do
+            [ "$p" == "$$" ] && continue 2
+        done
+        return 0
+    done < <(pgrep -i -f "(\\\\|/)${exe//./\\.}( |$)" 2>/dev/null)
+    return 1
+}
+
+# Usage: clear_crash_marker <config file name in game_config.files> <path>
+# A config file can name a crash marker (game_config.files.<name>.crash_marker):
+# a file the game keeps next to it while running and deletes when quit
+# normally. Left behind, the game treats its last run as a crash and resets
+# the config file on its next start, undoing these changes, so it's removed
+# first. Only while the game isn't running, since then it's the game's own
+# live marker. Never recorded in the manifest: putting it back on uninstall
+# would cause exactly that reset.
+clear_crash_marker() {
+    local marker dir
+    marker="$(known_game_field ".game_config.files[\"$1\"].crash_marker")"
+    [ -n "$marker" ] || return 0
+    [[ "$marker" =~ ^[A-Za-z0-9._\ -]+$ ]] && [ "$marker" != "." ] && [ "$marker" != ".." ] || return 0
+    dir="$(dirname "$2")"
+    [ -e "$dir/$marker" ] || return 0
+    if game_exe_running; then
+        print_warning_arrow "$GAME_NAME is running, so it may undo this change when it closes."
+        return 0
+    fi
+    if rm -f "$dir/$marker" 2>/dev/null; then
+        log_cmd "removed crash marker $dir/$marker before changing $2"
+        print_status "Removed ${marker}, left over from a time $GAME_NAME didn't quit from its menu, so it won't reset $(basename "$2") on its next start."
+    fi
+}
+
 # Usage: apply_game_settings
 # Phase 2: writes GAME_SETTINGS_PLAN into the game's config files and records
 # each change in the manifest as
@@ -583,6 +638,7 @@ apply_game_settings() {
                     record_deploy_failure "$path"; continue
                 fi
             elif [ -z "${backed_up[$path]:-}" ]; then
+                clear_crash_marker "$file" "$path"
                 if [ ! -e "$path.eax-restore.bak" ] && [ -z "${PREV_MANIFEST_FILES[$path]:-}" ]; then
                     cp -p "$path" "$path.eax-restore.bak" 2>/dev/null \
                         && print_status "Backed up $(basename "$path") to $(basename "$path").eax-restore.bak"

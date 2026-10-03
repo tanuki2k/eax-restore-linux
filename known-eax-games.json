@@ -303,7 +303,8 @@
             "format": "ini",
             "locations": [
               "prefix_appdata:Bioshock/Bioshock.ini"
-            ]
+            ],
+            "crash_marker": "Running.ini"
           }
         },
         "audio_fixes": [
@@ -316,7 +317,8 @@
                   "bEAXEnabled": "True"
                 }
               }
-            }
+            },
+            "follow_up": "If BioShock starts with EAX turned off, make sure you quit the game from its main menu, otherwise it assumes the game crashed and resets Bioshock.ini to its previous state. If this happens, manually turn on 'Use Creative EAX Audio' in the game's audio settings."
           }
         ]
       },

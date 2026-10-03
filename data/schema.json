@@ -210,6 +210,12 @@
         "if_missing": {
           "description": "When no location exists. Omitted: tell the player to launch the game once and run this again. skip: skip this file's fixes silently. create: create it.",
           "enum": ["skip", "create"]
+        },
+        "crash_marker": {
+          "description": "A file in the same folder that the game creates while running and deletes when quit normally. If it's left behind, the game resets this config file on its next start, so it's removed (when the game isn't running) before this file is changed. Never restored on uninstall.",
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._ -]+$",
+          "not": { "enum": [".", ".."] }
         }
       }
     },

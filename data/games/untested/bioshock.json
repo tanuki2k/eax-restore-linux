@@ -11,13 +11,18 @@
   "eax": { "api": "openal", "versions": ["4.0", "5.0"] },
   "game_config": {
     "files": {
-      "Bioshock.ini": { "format": "ini", "locations": ["prefix_appdata:Bioshock/Bioshock.ini"] }
+      "Bioshock.ini": {
+        "format": "ini",
+        "locations": ["prefix_appdata:Bioshock/Bioshock.ini"],
+        "crash_marker": "Running.ini"
+      }
     },
     "audio_fixes": [
       {
         "title": "Enable EAX reverb",
         "reason": "BioShock ships with 'Use Creative EAX Audio' off, which keeps it on DirectSound with no EAX instead of the OpenAL32.dll this script installs (per Creative's audio guide for the game).",
-        "changes": { "Bioshock.ini": { "ShockGame.ShockUserSettings": { "bEAXEnabled": "True" } } }
+        "changes": { "Bioshock.ini": { "ShockGame.ShockUserSettings": { "bEAXEnabled": "True" } } },
+        "follow_up": "If BioShock starts with EAX turned off, make sure you quit the game from its main menu, otherwise it assumes the game crashed and resets Bioshock.ini to its previous state. If this happens, manually turn on 'Use Creative EAX Audio' in the game's audio settings."
       }
     ]
   },
