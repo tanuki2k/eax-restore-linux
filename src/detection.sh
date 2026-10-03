@@ -881,8 +881,10 @@ detect_api_from_binary() {
         case "$(basename "$f")" in
             dsound.dll|dsoal-aldrv.dll|OpenAL32.dll) continue ;;
         esac
-        grep -qa "OpenAL32\.dll" "$f" 2>/dev/null && has_openal=1
-        grep -qa "dsound\.dll" "$f" 2>/dev/null && has_dsound=1
+        # Case-insensitive, as Windows is: BioShock names "openal32.dll" in
+        # lowercase, which a case-sensitive match missed entirely.
+        grep -qai "OpenAL32\.dll" "$f" 2>/dev/null && has_openal=1
+        grep -qai "dsound\.dll" "$f" 2>/dev/null && has_dsound=1
     done < <(find "$dir" -maxdepth 2 -type f \( -iname "*.exe" -o -iname "*.dll" \) -print0 2>/dev/null)
 
     if [ "$has_openal" -eq 1 ] && [ "$has_dsound" -eq 1 ]; then
