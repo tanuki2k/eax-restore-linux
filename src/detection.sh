@@ -488,15 +488,33 @@ check_heroic_prefix_match() {
     fi
     [ -z "$reason" ] && return 0
 
+    # No prefix of its own: Heroic launches the game in its shared prefix, so
+    # that's simply where EAX has to go -- no reason to ask. If Heroic hasn't
+    # created it yet, the same launch-once-and-check-again loop as the prefix
+    # step; No keeps the prefix already chosen.
     if [ "$reason" == "shared" ]; then
-        print_warning "$title has no prefix of its own set" \
-            "in Heroic, so Heroic runs it in the shared prefix below instead of the" \
-            "one you entered, and EAX wouldn't reach the game:" \
+        while [ ! -d "$HEROIC_EXPECTED_PREFIX/drive_c" ]; do
+            print_note "$title has no prefix of its own in Heroic, so it runs in Heroic's" \
+                "shared prefix, which Heroic hasn't created yet:" \
+                "  $HEROIC_EXPECTED_PREFIX"
+            print_paragraph "Heroic creates it the first time it launches $title." \
+                "Please launch the game at least once, close it, and try again."
+            if ! confirm "Check for Heroic's shared prefix again?"; then
+                log_cmd "heroic prefix check: shared prefix $HEROIC_EXPECTED_PREFIX not created; user kept $PREFIX_PATH"
+                return 0
+            fi
+        done
+        print_note "$title has no prefix of its own in Heroic, so it runs in Heroic's" \
+            "shared prefix — using that one instead:" \
             "  $HEROIC_EXPECTED_PREFIX" \
-            "This happens with games added in Heroic 2.22.1. To give the game its" \
-            "own prefix, choose one in its Heroic settings (Settings -> WINE)," \
-            "launch it once, then run this script again."
-    elif [ "$reason" == "explicit" ]; then
+            "Other games without a prefix of their own use it too."
+        PREFIX_PATH="$HEROIC_EXPECTED_PREFIX"
+        print_status "Using: $PREFIX_PATH" "$GREEN"
+        log_cmd "heroic prefix check: no prefix of its own, switched to Heroic's shared prefix $PREFIX_PATH"
+        return 0
+    fi
+
+    if [ "$reason" == "explicit" ]; then
         print_warning "Heroic runs $title in a different prefix" \
             "from the one you entered, so EAX wouldn't reach the game from there:" \
             "  $HEROIC_EXPECTED_PREFIX"
@@ -509,16 +527,7 @@ check_heroic_prefix_match() {
 
     if [ -n "$HEROIC_EXPECTED_PREFIX" ] && [ -d "$HEROIC_EXPECTED_PREFIX/drive_c" ]; then
         [ "$reason" == "other" ] && print_status "A prefix named after $title exists: $HEROIC_EXPECTED_PREFIX" "$WHITE"
-        # The shared prefix is every such game's, so switching there puts
-        # the audio files and DLL override under all of them — opt-in only.
-        local switch_default="Y"
-        if [ "$reason" == "shared" ] || [ "$HEROIC_PREFIX_SOURCE" == "shared" ]; then
-            switch_default="N"
-            print_paragraph "Heroic's shared prefix is used by every game without a prefix of its own," \
-                "so installing there would apply the audio files and DLL override to all of" \
-                "them, not just $title."
-        fi
-        if confirm "Use the prefix Heroic uses for $title instead?" "$switch_default"; then
+        if confirm "Use the prefix Heroic uses for $title instead?" Y; then
             PREFIX_PATH="$HEROIC_EXPECTED_PREFIX"
             print_status "Using: $PREFIX_PATH" "$GREEN"
             log_cmd "heroic prefix check: switched to $PREFIX_PATH"
