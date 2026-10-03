@@ -142,7 +142,10 @@ their execution order in the assembled script):
    `WINEDLLOVERRIDES`; `choose_override_method` (step 10's launcher / registry /
    manual menu, launcher first), `apply_launcher_override` (Phase 2, writes `LAUNCHER:` manifest
    lines), `revert_launcher_overrides` (uninstall step 5). Both launchers keep these
-   files in memory, so it waits for them to be closed first.
+   files in memory, so before writing, `offer_close_launcher` offers to close the
+   copy that owns the file (`launcher_kind`: native/AppImage or Flatpak, from the
+   file's path) and `reopen_launchers` starts it again afterwards; declining, a
+   running game, or a timeout falls back to waiting for the player to close it.
 11. **`vcrun.sh`** — the standalone VC++ runtime installer: `verify_vcrun_files`,
    `install_vcrun_dependencies`, `uninstall_vcrun_dependencies`, etc. —
    independently triggerable via `EAX_RESTORE_VCRUN_ONLY`, with its own `"VCRUN"`

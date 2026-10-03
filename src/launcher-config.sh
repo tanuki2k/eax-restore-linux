@@ -7,7 +7,9 @@
 # Heroic's per-game environment variables (GamesConfig/<appName>.json, key
 # "enviromentOptions", Heroic's spelling). Both launchers keep these files in
 # memory and write them back themselves (Steam on exit, Heroic when a game's
-# settings change), so they must be closed while this edits them.
+# settings change), so they must be closed while this edits them: the script
+# offers to close the one that owns the file (native or Flatpak) and reopen it
+# afterwards, or waits for the player to close it.
 #
 # Values travel as plain strings plus two markers: __ABSENT__ (no launch
 # options line / no WINEDLLOVERRIDES variable) and __NOAPP__ (the launcher has
@@ -15,17 +17,174 @@
 # Changes are recorded in the manifest as
 #   LAUNCHER:<steam|heroic>\t<file>\t<id>\t<old value|__ABSENT__>\t<new value>
 
+HEROIC_PROC_RE='heroic-games-launcher|com\.heroicgameslauncher\.hgl|/heroic/heroic|Heroic[^/]*\.AppImage'
+
+# Usage: launcher_flatpak_id <steam|heroic>
+launcher_flatpak_id() { [ "$1" == "steam" ] && echo "com.valvesoftware.Steam" || echo "com.heroicgameslauncher.hgl"; }
+
+# Usage: launcher_kind <steam|heroic>
+# "flatpak" when the settings file being edited (OVERRIDE_FILE) belongs to the
+# Flatpak copy, "native" when it belongs to a native or AppImage one, "" when
+# there's no file yet. Decided by the file rather than by what's running, so a
+# player with both copies only ever has the one that owns it closed.
+launcher_kind() {
+    [ -n "${OVERRIDE_FILE:-}" ] || return 0
+    case "$OVERRIDE_FILE" in
+        "$HOME/.var/app/$(launcher_flatpak_id "$1")/"*) echo "flatpak" ;;
+        *) echo "native" ;;
+    esac
+}
+
+# Usage: launcher_native_pids <steam|heroic>
+# The launcher's processes outside any Flatpak sandbox: a sandboxed Steam is
+# also a process called "steam", so a plain pgrep can't tell the two apart,
+# but its cgroup can (app-flatpak-<id>-N.scope).
+launcher_native_pids() {
+    local pid
+    while read -r pid; do
+        grep -q 'app-flatpak-' "/proc/$pid/cgroup" 2>/dev/null || echo "$pid"
+    done < <(if [ "$1" == "steam" ]; then pgrep -x steam; else pgrep -f "$HEROIC_PROC_RE"; fi 2>/dev/null)
+}
+
 # Usage: launcher_running <steam|heroic>
 launcher_running() {
-    case "$1" in
-        steam) pgrep -x steam >/dev/null 2>&1 ;;
-        heroic) pgrep -f 'heroic-games-launcher|com\.heroicgameslauncher\.hgl|/heroic/heroic|Heroic[^/]*\.AppImage' >/dev/null 2>&1 ;;
+    case "$1:$(launcher_kind "$1")" in
+        *:flatpak) flatpak ps --columns=application 2>/dev/null | grep -qx "$(launcher_flatpak_id "$1")" ;;
+        *:native) [ -n "$(launcher_native_pids "$1")" ] ;;
+        steam:) pgrep -x steam >/dev/null 2>&1 ;;
+        heroic:) pgrep -f "$HEROIC_PROC_RE" >/dev/null 2>&1 ;;
         *) return 1 ;;
     esac
 }
 
 # Usage: launcher_label <steam|heroic>
 launcher_label() { [ "$1" == "steam" ] && echo "Steam" || echo "Heroic"; }
+
+# Usage: launcher_launch_cmd <steam|heroic>
+# How to start the launcher again the way it's running now, as \x1f-separated
+# words: "flatpak run <id>", the AppImage it was started from, or the command
+# on PATH. Prints nothing when there's no way to tell, and then the script
+# doesn't offer to close it.
+launcher_launch_cmd() {
+    local pid appimage=""
+    if [ "$(launcher_kind "$1")" == "flatpak" ]; then
+        command -v flatpak >/dev/null 2>&1 && printf 'flatpak\x1frun\x1f%s' "$(launcher_flatpak_id "$1")"
+        return 0
+    fi
+    for pid in $(launcher_native_pids "$1"); do
+        appimage="$( { tr '\0' '\n' < "/proc/$pid/environ"; } 2>/dev/null | sed -n 's/^APPIMAGE=//p' | head -n 1)"
+        [ -n "$appimage" ] && break
+    done
+    if [ -n "$appimage" ] && [ -x "$appimage" ]; then printf '%s' "$appimage"
+    elif command -v "$1" >/dev/null 2>&1; then printf '%s' "$1"
+    fi
+}
+
+# Usage: launcher_game_running <steam|heroic>
+# True while a game started from the launcher is still running, since closing
+# the launcher would quit it. Steam starts every game through its "reaper
+# SteamLaunch" process; Heroic's games run as Wine/Proton children of it.
+launcher_game_running() {
+    if [ "$1" == "steam" ]; then
+        pgrep -f 'reaper SteamLaunch' >/dev/null 2>&1
+        return
+    fi
+    local roots
+    roots="$(pgrep -f "$HEROIC_PROC_RE" 2>/dev/null | tr '\n' ' ')"
+    [ -n "$roots" ] || return 1
+    # This script's own processes are left out: a command line that happens
+    # to mention Heroic, or this check's own pattern, isn't a game.
+    ps -eo pid=,ppid=,args= 2>/dev/null | awk -v roots="$roots" -v self="$$" '
+        function ours(x) { for (; x > 1; x = ppid[x]) if (x == self) return 1; return 0 }
+        { p = $1; ppid[p] = $2; $1 = ""; $2 = ""; args[p] = $0 }
+        END {
+            n = split(roots, r, " "); for (i = 1; i <= n; i++) if (!ours(r[i])) heroic[r[i]] = 1
+            for (p in args) {
+                if (ours(p)) continue
+                if (args[p] !~ /wine|proton|\.exe/) continue
+                for (a = ppid[p]; a > 1; a = ppid[a]) if (a in heroic) { found = 1; break }
+                if (found) break
+            }
+            exit !found
+        }'
+}
+
+# Usage: _close_launcher_and_wait <steam|heroic> <seconds>
+# Asks the launcher to quit, then waits for it to be gone. Runs behind
+# run_with_spinner. Steam's own -shutdown hands the request to the running
+# Steam, which saves and exits; Heroic has no such switch, but it saves a
+# game's settings the moment they change, so stopping it loses nothing.
+_close_launcher_and_wait() {
+    local kind waited=0 pid
+    kind="$(launcher_kind "$1")"
+    case "$1:$kind" in
+        steam:flatpak) timeout 20 flatpak run com.valvesoftware.Steam -shutdown & ;;
+        steam:*) timeout 20 steam -shutdown & ;;
+        heroic:flatpak) flatpak kill com.heroicgameslauncher.hgl ;;
+        heroic:*)
+            for pid in $(launcher_native_pids heroic); do
+                tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null | grep -q -- '--type=' || kill -TERM "$pid" 2>/dev/null
+            done ;;
+    esac
+    while launcher_running "$1"; do
+        [ "$waited" -ge "$2" ] && return 1
+        sleep 1; waited=$(( waited + 1 ))
+    done
+}
+
+# Usage: print_launcher_open <label>
+# Why the launcher has to be closed, wrapped by hand to stay inside the
+# script's 76 columns.
+print_launcher_open() {
+    echo -e "\n${YELLOW}${1} is open, and it would overwrite the change when it next\nsaves its settings.${NC}"
+}
+
+# Usage: offer_close_launcher <steam|heroic>
+# When the launcher can safely be closed and started again, offers to do it.
+# Returns 0 once it's closed (and queues it in LAUNCHERS_TO_REOPEN), 1 if the
+# player has to close it themselves. Sets LAUNCHER_CLOSE_ASKED to 1 when it
+# showed the "is open" message and asked.
+offer_close_launcher() {
+    local label cmd
+    LAUNCHER_CLOSE_ASKED=0
+    label="$(launcher_label "$1")"
+    if launcher_game_running "$1"; then
+        print_note "A game is running from ${label}, so the script can't close ${label} for you."
+        return 1
+    fi
+    cmd="$(launcher_launch_cmd "$1")"
+    [ -n "$cmd" ] || return 1
+    print_launcher_open "$label"
+    LAUNCHER_CLOSE_ASKED=1
+    confirm "Close ${label} now and reopen it once that's done?" Y || return 1
+    if run_with_spinner "Waiting for ${label} to close..." "$EAX_LOG_FILE" _close_launcher_and_wait "$1" 30; then
+        log_cmd "closed $1 ($(launcher_kind "$1")); will reopen with: ${cmd//$'\x1f'/ }"
+        LAUNCHERS_TO_REOPEN+=("${label}"$'\x1f'"${cmd}")
+        print_status "Closed ${label}."
+        return 0
+    fi
+    print_warning_arrow "${label} didn't close in time."
+    return 1
+}
+
+# Usage: reopen_launchers
+# Starts every launcher offer_close_launcher closed, detached from this
+# terminal so it keeps running after the script ends.
+LAUNCHERS_TO_REOPEN=()
+reopen_launchers() {
+    local entry label
+    local -a cmd
+    for entry in "${LAUNCHERS_TO_REOPEN[@]}"; do
+        label="${entry%%$'\x1f'*}"
+        IFS=$'\x1f' read -r -a cmd <<< "${entry#*$'\x1f'}"
+        if setsid -f "${cmd[@]}" >/dev/null 2>&1 </dev/null; then
+            print_status "Reopened ${label}." "$GREEN"
+        else
+            print_warning_arrow "Couldn't reopen ${label}, so you'll need to start it yourself."
+        fi
+    done
+    LAUNCHERS_TO_REOPEN=()
+}
 
 # Usage: merge_dll_override <WINEDLLOVERRIDES value> <dll>
 # Adds "<dll>=n,b" to a ;-separated override list, dropping any earlier rule
@@ -240,17 +399,22 @@ launcher_override_where() {
 }
 
 # Usage: wait_for_launcher_closed <steam|heroic> <what to type to give up>
-# While the launcher is open, says so and waits for Enter. Returns 1 if the
-# player typed something else instead (sets LAUNCHER_WAIT_ANSWER to it).
+# While the launcher is open, first offers to close it (and reopen it later);
+# otherwise says so and waits for Enter. Returns 1 if the player typed
+# something else instead.
 wait_for_launcher_closed() {
-    local label answer
+    local label answer asked
     label="$(launcher_label "$1")"
-    LAUNCHER_WAIT_ANSWER=""
+    launcher_running "$1" || return 0
+    offer_close_launcher "$1" && return 0
+    # The offer already said it's open whenever it got as far as asking.
+    asked="$LAUNCHER_CLOSE_ASKED"
     while launcher_running "$1"; do
-        echo -e "\n${YELLOW}${label} is open, and it would overwrite the change when it next saves its settings.${NC}"
+        [ "$asked" -eq 1 ] || print_launcher_open "$label"
+        asked=0
         prompt "Close ${label}, then press Enter, or $2:"
-        read_answer answer || { LAUNCHER_WAIT_ANSWER="eof"; return 1; }
-        [ -n "$answer" ] && { LAUNCHER_WAIT_ANSWER="$answer"; return 1; }
+        read_answer answer || return 1
+        [ -n "$answer" ] && return 1
     done
     return 0
 }
@@ -260,8 +424,13 @@ wait_for_launcher_closed() {
 # launcher's settings, reads it back, and records it in the manifest. Any
 # reason it can't happen drops back to OVERRIDE_METHOD=manual so the final
 # instructions are shown; a failed write also counts as a deploy failure.
+# A launcher the script closed for this is reopened whichever way it ends.
 apply_launcher_override() {
     [ "$OVERRIDE_METHOD" == "launcher" ] || return 0
+    _apply_launcher_override
+    reopen_launchers
+}
+_apply_launcher_override() {
     print_phase_task "Setting the DLL override in $(launcher_label "$OVERRIDE_LAUNCHER")"
     if ! wait_for_launcher_closed "$OVERRIDE_LAUNCHER" "type 's' to set it yourself instead"; then
         print_status "Skipped — the instructions to set it yourself are below." "$YELLOW"
@@ -331,6 +500,9 @@ revert_launcher_overrides() {
             LAUNCHER_LINES_KEPT+=("$line")
         fi
     done
+    # Once, after every line, so a launcher with several lines is only
+    # closed and reopened once.
+    reopen_launchers
 }
 
 # Usage: choose_override_method
@@ -339,8 +511,7 @@ revert_launcher_overrides() {
 # plain Wine prefix gets 1) registry (default) / 2) manual. Choosing the launcher
 # when it hasn't saved any settings for the game yet works like the prefix
 # step's "not found yet" check: explain, then offer to check again (No goes
-# back to the menu). It also waits for the launcher to be closed, since it
-# would otherwise overwrite the change.
+# back to the menu).
 choose_override_method() {
     OVERRIDE_METHOD=""
     launcher_override_target
@@ -389,14 +560,8 @@ choose_override_method() {
                 OVERRIDE_METHOD=""; break
             fi
         done
-        [ "$OVERRIDE_METHOD" == "launcher" ] || continue
-
-        if ! wait_for_launcher_closed "$OVERRIDE_LAUNCHER" "type 2 or 3 to choose another way"; then
-            case "$LAUNCHER_WAIT_ANSWER" in
-                2) OVERRIDE_METHOD="registry" ;;
-                3|eof) OVERRIDE_METHOD="manual" ;;
-                *) OVERRIDE_METHOD="" ;;
-            esac
-        fi
+        # The launcher itself is dealt with when the override is written
+        # (apply_launcher_override offers to close and reopen it), so the
+        # player isn't asked to close it in the middle of configuring.
     done
 }
