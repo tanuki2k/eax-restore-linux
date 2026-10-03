@@ -296,19 +296,14 @@ config_row_is_safe() {
 }
 
 # Usage: print_config_rows <rows>
-# Prints a fix's changes, one per line: "file  [section]  key  old → new",
-# with the file/section shown only when it differs from the line above and
-# the keys lined up. <rows> is newline-separated \x1f rows of
+# Prints a fix's changes as a tree: the file on its own line, its [section]
+# under it (ini only), then one "key  old → new" line per change, with the
+# keys lined up. A file or section line is only printed when it differs from
+# the row above. <rows> is newline-separated \x1f rows of
 # file, section, key, old, new.
 print_config_rows() {
-    local r where prev="" key_w=0 file sec key old new
+    local r prev_file="" prev_sec="" file sec key old new indent
     local -a g
-    while IFS= read -r r; do
-        [ -n "$r" ] || continue
-        mapfile -t -d $'\x1f' g < <(printf '%s' "$r")
-        where="${g[0]}"; [ -n "${g[1]}" ] && where+="  [${g[1]}]"
-        [ ${#where} -gt $key_w ] && key_w=${#where}
-    done <<< "$1"
     local key_len=0
     while IFS= read -r r; do
         [ -n "$r" ] || continue
@@ -319,13 +314,18 @@ print_config_rows() {
         [ -n "$r" ] || continue
         mapfile -t -d $'\x1f' g < <(printf '%s' "$r")
         file="${g[0]}"; sec="${g[1]}"; key="${g[2]}"; old="${g[3]}"; new="${g[4]}"
-        where="$file"; [ -n "$sec" ] && where+="  [$sec]"
-        if [ "$where" == "$prev" ]; then
-            printf "    ${DIM}%-${key_w}s${NC}  ${WHITE}%-${key_len}s${NC}  %s → ${GREEN}%s${NC}\n" "" "$key" "$(config_display_value "$old")" "$(config_display_value "$new")"
-        else
-            printf "    ${DIM}%-${key_w}s${NC}  ${WHITE}%-${key_len}s${NC}  %s → ${GREEN}%s${NC}\n" "$where" "$key" "$(config_display_value "$old")" "$(config_display_value "$new")"
+        if [ "$file" != "$prev_file" ]; then
+            echo -e "    ${DIM}${file}${NC}"
+            prev_sec=""
         fi
-        prev="$where"
+        if [ -n "$sec" ]; then
+            [ "$sec" != "$prev_sec" ] && echo -e "      ${DIM}[${sec}]${NC}"
+            indent="        "
+        else
+            indent="      "
+        fi
+        printf "%s${WHITE}%-${key_len}s${NC}  %s → ${GREEN}%s${NC}\n" "$indent" "$key" "$(config_display_value "$old")" "$(config_display_value "$new")"
+        prev_file="$file"; prev_sec="$sec"
     done <<< "$1"
 }
 
@@ -462,6 +462,7 @@ game_settings_step() {
         local id="$1"
         echo -e "\n  ${BOLD}${fix_title[$id]}${NC}"
         echo -e "${WHITE}$(printf '%s' "${fix_reason[$id]}" | fold -s -w 74 | sed 's/^/    /')${NC}"
+        echo ""
         print_config_rows "$(fix_rows_for_display "${fix_rows[$id]}")"
     }
     _plan_fix() {
@@ -514,6 +515,7 @@ game_settings_step() {
                 echo ""
                 print_option "${#offered[@]}" "${fix_title[$id]}"
                 echo -e "${WHITE}$(printf '%s' "${fix_reason[$id]}" | fold -s -w 74 | sed 's/^/    /')${NC}"
+                echo ""
                 print_config_rows "$(fix_rows_for_display "${fix_rows[$id]}")"
             else
                 _print_status_line "$id"
