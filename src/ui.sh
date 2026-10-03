@@ -331,7 +331,9 @@ print_phase_progress() {
 # with a terminal scroll region (ESC[top;bottomr, the same trick and spot
 # apt uses), so the deployment output scrolls above it instead of each step
 # printing a bar of its own -- and, unlike pinning it to the top, nothing
-# already on screen has to be pushed away to make room. Only plain CSI sequences are used, which the
+# already on screen has to be pushed away to make room. The row above it is
+# kept blank, so the last line of output (a prompt's "> ", say) never sits
+# right on the bar. Only plain CSI sequences are used, which the
 # run log's writer strips. With no terminal (or a very short one) it falls
 # back to printing the bar under each step's header.
 PHASE_PINNED=""
@@ -348,14 +350,15 @@ start_phase_progress() {
     { [ -t 1 ] || [ -t 3 ]; } 2>/dev/null || return 0
     size=$(stty size < /dev/tty 2>/dev/null) || return 0
     rows="${size%% *}"
-    [[ "$rows" =~ ^[0-9]+$ ]] && [ "$rows" -ge 12 ] || return 0
+    [[ "$rows" =~ ^[0-9]+$ ]] && [ "$rows" -ge 13 ] || return 0
     PHASE_ROWS="$rows"
     {
-        # Newline then back up: frees the bottom row by scrolling exactly one
-        # line when the cursor is already on it, a no-op otherwise. Then set
-        # rows 1..bottom-1 as the scroll region -- which homes the cursor,
-        # hence the save/restore around it.
-        printf '\n\033[1A\033[s\033[1;%dr\033[u' "$(( rows - 1 ))"
+        # Two newlines then back up: frees the bottom two rows (the bar and
+        # the blank row above it) by scrolling only as far as needed when the
+        # cursor is near the bottom. Then set rows 1..bottom-2 as the scroll
+        # region -- which homes the cursor, hence the save/restore around it
+        # -- and clear the blank row once; nothing writes there after that.
+        printf '\n\n\033[2A\033[s\033[1;%dr\033[%d;1H\033[2K\033[u' "$(( rows - 2 ))" "$(( rows - 1 ))"
         _draw_pinned_phase_bar
     } > /dev/tty 2>/dev/null || return 0
     PHASE_PINNED=1
@@ -388,13 +391,13 @@ _draw_pinned_phase_bar() {
 
 # Usage: end_phase_progress
 # Releases the scroll region so what follows scrolls normally, and clears
-# the bar's row so that output can't land on top of a stale bar. Resetting
-# the region homes the cursor, hence the save/restore around it. Safe to
-# call when nothing is pinned.
+# the bar's row and the blank row above it so that output can't land on top
+# of a stale bar. Resetting the region homes the cursor, hence the
+# save/restore around it. Safe to call when nothing is pinned.
 end_phase_progress() {
     [ -n "$PHASE_PINNED" ] || return 0
     PHASE_PINNED=""
-    printf '\033[s\033[r\033[%d;1H\033[2K\033[u' "$PHASE_ROWS"
+    printf '\033[s\033[r\033[%d;1H\033[2K\033[%d;1H\033[2K\033[u' "$(( PHASE_ROWS - 1 ))" "$PHASE_ROWS"
 }
 
 # Runs "$@" in the background and redraws "$1"'s line until it finishes;
