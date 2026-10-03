@@ -4,7 +4,7 @@
   "stores": {
     "gog": {
       "id": 1207659126,
-      "store_details": "Sold only on GOG, as the 'War Chest' edition — the base game plus the Spearhead and Breakthrough expansions."
+      "store_details": "Sold as the 'War Chest' edition — the base game plus the Spearhead and Breakthrough expansions."
     }
   },
   "eax": { "api": "directsound3d", "versions": ["1.0", "2.0"] }

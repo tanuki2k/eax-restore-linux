@@ -20,7 +20,7 @@
           "1.0"
         ]
       },
-      "notes": "Both stores label this 'Classic 2000' to set it apart from 2010's Aliens vs. Predator, an unrelated later game by a different developer."
+      "notes": "Both stores label this 'Classic 2000' to set it apart from 2010's Aliens vs. Predator, a different game."
     },
     {
       "id": "alpha-centauri",
@@ -29,11 +29,11 @@
       "stores": {
         "steam": {
           "id": 2204130,
-          "store_details": "Steam sell this as the 'Planetary Pack', bundling the Alien Crossfire expansion."
+          "store_details": "Steam sells this as the 'Planetary Pack', bundling the Alien Crossfire expansion."
         },
         "gog": {
           "id": 1207658936,
-          "store_details": "GoG sell this as the 'Planetary Pack', bundling the Alien Crossfire expansion."
+          "store_details": "GOG sells this as the 'Planetary Pack', bundling the Alien Crossfire expansion."
         }
       },
       "eax": {
@@ -141,7 +141,7 @@
           }
         ]
       },
-      "notes": "On Linux, the Arx Libertatis engine reimplementation (arx-libertatis.org) is a strong alternative: it runs natively without Wine or Proton, reuses your existing Arx Fatalis data files, and reproduces the game's environmental reverb through OpenAL Soft's EFX out of the box. It's self-contained, so use it or this script's approach, not both."
+      "notes": "On Linux, the Arx Libertatis engine reimplementation (arx-libertatis.org) is a strong alternative: it runs natively without Wine or Proton, reuses your Arx Fatalis data files and plays the game's environmental reverb out of the box. Use it or EAX, not both."
     },
     {
       "id": "assassins-creed",
@@ -410,8 +410,7 @@
       "exe": "Undying.exe",
       "stores": {
         "gog": {
-          "id": 1207659191,
-          "store_details": "Sold only on GOG."
+          "id": 1207659191
         }
       },
       "eax": {
@@ -557,7 +556,7 @@
         "gog": {
           "id": 1492054092,
           "id_source": "local_install_verified",
-          "store_details": "GOG sells this bundled with the 2012 BFG Edition remaster, and Heroic installs the two as separate library entries — this one is the classic build (its folder ends '.../DOOM 3'). BFG Edition is a different game and isn't covered here."
+          "store_details": "GOG sells this bundled with the 2012 BFG Edition, and Heroic installs the two as separate library entries — this one is the classic game (its folder ends '.../DOOM 3'). The BFG Edition is a different game with no EAX."
         }
       },
       "eax": {
@@ -672,7 +671,7 @@
       "eax": {
         "api": "directsound3d"
       },
-      "notes": "The Vogons Wiki confirms a 'Creative EAX' toggle in the game's Audio Settings but doesn't record which EAX version(s) it covers."
+      "notes": "Turn on 'Creative EAX' in the game's Audio Settings (per the Vogons Wiki)."
     },
     {
       "id": "fear",
@@ -692,8 +691,7 @@
           "2.0",
           "3.0",
           "4.0"
-        ],
-        "fix": "If EAX audio drops out during large firefights, try the 'Expand Audio Limits' Advanced Compatibility Tweak (256 simultaneous sources, 48kHz)."
+        ]
       },
       "install": {
         "tweaks": [
@@ -709,7 +707,7 @@
       "stores": {
         "gog": {
           "id": 3,
-          "store_details": "GOG relisted the game at some point — this is the older 'Classic' product ID some existing owners' libraries still show, the same game as the 'Fallout Tactics: Brotherhood of Steel' entry (gog_id 1440163405), with the same EAX support."
+          "store_details": "This is the older 'Classic' GOG product some existing owners' libraries still show, from before GOG relisted the game. It's the same game, with the same EAX support."
         }
       },
       "eax": {
@@ -889,7 +887,7 @@
       "stores": {
         "gog": {
           "id": 1207658891,
-          "store_details": "Sold only on GOG, as 'Icewind Dale 2 Complete'. Beamdog never gave it the OpenAL-native 'Enhanced Edition' treatment the other Infinity Engine games got, so this is still the original DirectSound3D-EAX Infinity Engine build."
+          "store_details": "Sold as 'Icewind Dale 2 Complete'. There's no Enhanced Edition of Icewind Dale II, so this is the classic game."
         }
       },
       "eax": {
@@ -938,7 +936,7 @@
           "eax_unified"
         ]
       },
-      "notes": "The 2020 remake ('Mafia: Definitive Edition') is a different, from-scratch Hangar 13 game with no relation to this classic 2002 build — it isn't covered here."
+      "notes": "This is the classic 2002 game, not the 2020 remake 'Mafia: Definitive Edition'."
     },
     {
       "id": "max-payne-2-the-fall-of-max-payne",
@@ -969,7 +967,7 @@
       "stores": {
         "gog": {
           "id": 1207659126,
-          "store_details": "Sold only on GOG, as the 'War Chest' edition — the base game plus the Spearhead and Breakthrough expansions."
+          "store_details": "Sold as the 'War Chest' edition — the base game plus the Spearhead and Breakthrough expansions."
         }
       },
       "eax": {
@@ -1125,7 +1123,7 @@
           "1.0"
         ]
       },
-      "notes": "This is the 'Outcast 1.1' listing — a 2014 official update to the classic 1999 build, same engine. Separate from 2017's 'Outcast: Second Contact' and 2024's 'Outcast: A New Beginning' remakes, neither of which is covered here."
+      "notes": "This is the 'Outcast 1.1' listing — a 2014 official update to the classic 1999 game. 2017's 'Outcast: Second Contact' and 2024's 'Outcast: A New Beginning' are separate games."
     },
     {
       "id": "planescape-torment",
@@ -1134,7 +1132,7 @@
         "gog": {
           "id": 1207658887,
           "delisted": true,
-          "store_details": "The classic pre-2017 build, sold by GOG as a standalone product separate from 'Planescape: Torment: Enhanced Edition'. GOG's catalogue search doesn't surface it, but the product page and existing owners' libraries resolve normally. This build has real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite."
+          "store_details": "The classic pre-2017 build, sold by GOG as a standalone product separate from 'Planescape: Torment: Enhanced Edition'. GOG's catalogue search doesn't surface it, but the product page and existing owners' libraries resolve normally."
         }
       },
       "eax": {
@@ -1362,8 +1360,7 @@
         "tweaks": [
           "eax_unified"
         ]
-      },
-      "notes": "The Vogons Wiki specifically warns against pairing this with Creative's ALchemy wrapper."
+      }
     },
     {
       "id": "stalker-clear-sky",
@@ -1390,7 +1387,7 @@
           "eax_unified"
         ]
       },
-      "notes": "Separate from 'S.T.A.L.K.E.R.: Clear Sky - Enhanced Edition', a different Steam/GOG listing this entry doesn't cover. The Vogons Wiki specifically warns against pairing this with Creative's ALchemy wrapper."
+      "notes": "This is the original Clear Sky, not the separate 'S.T.A.L.K.E.R.: Clear Sky - Enhanced Edition' listing."
     },
     {
       "id": "stalker-shadow-of-chernobyl",
@@ -1416,8 +1413,7 @@
         "tweaks": [
           "eax_unified"
         ]
-      },
-      "notes": "The Vogons Wiki specifically warns against pairing this with Creative's ALchemy wrapper."
+      }
     },
     {
       "id": "shogo-mobile-armor-division",
@@ -1441,7 +1437,7 @@
       "stores": {
         "gog": {
           "id": 1228964594,
-          "store_details": "Sold only on GOG, as the 'Gold Edition'."
+          "store_details": "Sold as the 'Gold Edition'."
         }
       },
       "eax": {
@@ -1719,7 +1715,7 @@
       "stores": {
         "gog": {
           "id": 1409964317,
-          "store_details": "Sold only on GOG, as 'SWAT 4: Gold Edition'."
+          "store_details": "Sold as 'SWAT 4: Gold Edition'."
         }
       },
       "eax": {
@@ -1765,13 +1761,13 @@
           "id": 238210,
           "delisted": true,
           "store_details": "The classic 1999 build was delisted from Steam in October 2025; Steam now sells only the 25th Anniversary Remaster.",
-          "patches": "The System Shock 2 Community Patch (SCP) is worth pairing, though it's general bugfix/polish, not audio-specific."
+          "patches": "The System Shock 2 Community Patch (SCP) fixes bugs and polishes the game, and is worth installing alongside EAX."
         },
         "gog": {
           "id": 1207659172,
           "delisted": true,
           "store_details": "The original 1999 build's own GOG listing was delisted in October 2025 — GOG now sells only the 25th Anniversary Remaster — but existing owners of the classic build keep access.",
-          "patches": "The System Shock 2 Community Patch (SCP) is worth pairing, though it's general bugfix/polish, not audio-specific."
+          "patches": "The System Shock 2 Community Patch (SCP) fixes bugs and polishes the game, and is worth installing alongside EAX."
         }
       },
       "eax": {
@@ -1813,7 +1809,7 @@
           }
         ]
       },
-      "notes": "It comes with NewDark pre-installed, which has its own OpenAL Soft 'Hardware Acceleration' option in the in-game Audio menu — worth trying if EAX doesn't sound right."
+      "notes": "It comes with NewDark pre-installed, which has its own 'Hardware Acceleration' option in the in-game Audio menu — worth trying if EAX doesn't sound right."
     },
     {
       "id": "system-shock-2-25th-anniversary-remaster",
@@ -1895,7 +1891,7 @@
           "4.0"
         ]
       },
-      "notes": "Only EAX 4.0 is supported. The game's own readme.rtf ('Known Issues') and CD Projekt's forums document EAX / Creative X-Fi ALchemy caveats worth checking if audio isn't right."
+      "notes": "If audio isn't right, the game's readme.rtf ('Known Issues') lists EAX caveats."
     },
     {
       "id": "thief-gold",
@@ -1904,13 +1900,13 @@
       "stores": {
         "steam": {
           "id": 211600,
-          "store_details": "Still the original Dark Engine build, on DirectSound3D.",
+          "store_details": "The original build, without the NewDark engine patch.",
           "patches": "TFix bundles the NewDark engine patch along with a range of modern-system fixes, and is worth installing alongside EAX."
         },
         "gog": {
           "id": 1207658997,
           "api": "openal",
-          "store_details": "It comes with NewDark pre-installed, which runs positional audio and EAX reverb through OpenAL."
+          "store_details": "It comes with the NewDark engine patch pre-installed."
         }
       },
       "eax": {
@@ -1960,13 +1956,13 @@
       "stores": {
         "steam": {
           "id": 211740,
-          "store_details": "Still the original Dark Engine build, on DirectSound3D.",
+          "store_details": "The original build, without the NewDark engine patch.",
           "patches": "T2Fix bundles the NewDark engine patch along with a range of modern-system fixes, and is worth installing alongside EAX."
         },
         "gog": {
           "id": 1207659001,
           "api": "openal",
-          "store_details": "It comes with NewDark pre-installed, which runs positional audio and EAX reverb through OpenAL."
+          "store_details": "It comes with the NewDark engine patch pre-installed."
         }
       },
       "eax": {
@@ -2017,13 +2013,11 @@
       "stores": {
         "steam": {
           "id": 6980,
-          "store_details": "Runs on a modified Dark Engine build.",
-          "patches": "The unofficial 'Sneaky Upgrade' patch (works with the Steam and GOG releases) fixes a well-documented multi-core CPU issue and other modern-system quirks — worth pairing with EAX, much like TFix/T2Fix for the earlier Thief games."
+          "patches": "The unofficial 'Sneaky Upgrade' patch fixes a well-documented multi-core CPU problem and other modern-system quirks, and is worth installing alongside EAX."
         },
         "gog": {
           "id": 1207659036,
-          "store_details": "Runs on a modified Dark Engine build.",
-          "patches": "The unofficial 'Sneaky Upgrade' patch (works with the Steam and GOG releases) fixes a well-documented multi-core CPU issue and other modern-system quirks — worth pairing with EAX, much like TFix/T2Fix for the earlier Thief games."
+          "patches": "The unofficial 'Sneaky Upgrade' patch fixes a well-documented multi-core CPU problem and other modern-system quirks, and is worth installing alongside EAX."
         }
       },
       "eax": {
@@ -2097,7 +2091,7 @@
           "4.0"
         ]
       },
-      "notes": "Superseded for new purchases by Titan Quest Anniversary Edition, which is a separate entry in this file."
+      "notes": "New purchases get Titan Quest Anniversary Edition instead, which is a separate game."
     },
     {
       "id": "tom-clancys-ghost-recon-advanced-warfighter-2",
@@ -2106,7 +2100,7 @@
         "steam": {
           "id": 13510,
           "delisted": true,
-          "store_details": "Delisted from Steam around 2015, reportedly over expired licensing for the PC build's Diesel engine."
+          "store_details": "Delisted from Steam around 2015."
         }
       },
       "eax": {
@@ -2314,13 +2308,13 @@
           "id": 13250,
           "delisted": true,
           "store_details": "Delisted from Steam in December 2022, when Epic pulled the entire classic Unreal series from sale. OldUnreal (oldunreal.com) distributes a free, Epic-authorized copy of the full game.",
-          "patches": "OldUnreal's v227 patch also adds a selectable OpenAL-based 'ALAudio' renderer — a strong alternative if you'd rather use it than this script's approach; it's a modern reimplementation of the game's audio, not the original DirectSound3D EAX path, so pick one or the other."
+          "patches": "OldUnreal's v227 patch adds a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
         },
         "gog": {
           "id": 1207658679,
           "delisted": true,
           "store_details": "Delisted from GOG in December 2022, when Epic pulled the entire classic Unreal series from sale. OldUnreal (oldunreal.com) distributes a free, Epic-authorized copy of the full game.",
-          "patches": "OldUnreal's v227 patch also adds a selectable OpenAL-based 'ALAudio' renderer — a strong alternative if you'd rather use it than this script's approach; it's a modern reimplementation of the game's audio, not the original DirectSound3D EAX path, so pick one or the other."
+          "patches": "OldUnreal's v227 patch adds a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
         }
       },
       "eax": {
@@ -2411,8 +2405,8 @@
         "steam": {
           "id": 13230,
           "delisted": true,
-          "store_details": "Delisted from Steam in December 2022, when Epic pulled the entire classic Unreal series from sale. OldUnreal (oldunreal.com) distributes a free, Epic-authorized copy of the full game. Flathub's launcher for this game is a separate, actively-changing package, not necessarily the same build.",
-          "patches": "OldUnreal's patches add a selectable OpenAL-based 'ALAudio' renderer — a strong alternative if you'd rather use it than this script's approach."
+          "store_details": "Delisted from Steam in December 2022, when Epic pulled the entire classic Unreal series from sale. OldUnreal (oldunreal.com) distributes a free, Epic-authorized copy of the full game.",
+          "patches": "OldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
         }
       },
       "eax": {
@@ -2476,7 +2470,7 @@
           "id": 13240,
           "delisted": true,
           "store_details": "Delisted from Steam in December 2022, when Epic pulled the entire classic Unreal series from sale. OldUnreal (oldunreal.com) distributes a free, Epic-authorized copy of the full game.",
-          "patches": "Creative's official 'EAX Library Patch' (uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip) adds full EAX 2.0 reverb and occlusion to the original Deathmatch and Capture the Flag maps — historically mirrored at patches-scrolls.com; verify the mirror and files before installing. OldUnreal's own patches also add a selectable OpenAL-based 'ALAudio' renderer, a strong alternative if you'd rather use it than this script's approach."
+          "patches": "Creative's official 'EAX Library Patch' (uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip) adds full EAX 2.0 reverb and muffling of sounds through walls to the original Deathmatch and Capture the Flag maps — historically mirrored at patches-scrolls.com; verify the mirror and files before installing. OldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
         }
       },
       "eax": {

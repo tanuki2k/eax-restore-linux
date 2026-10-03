@@ -7,13 +7,13 @@
       "id": 238210,
       "delisted": true,
       "store_details": "The classic 1999 build was delisted from Steam in October 2025; Steam now sells only the 25th Anniversary Remaster.",
-      "patches": "The System Shock 2 Community Patch (SCP) is worth pairing, though it's general bugfix/polish, not audio-specific."
+      "patches": "The System Shock 2 Community Patch (SCP) fixes bugs and polishes the game, and is worth installing alongside EAX."
     },
     "gog": {
       "id": 1207659172,
       "delisted": true,
       "store_details": "The original 1999 build's own GOG listing was delisted in October 2025 — GOG now sells only the 25th Anniversary Remaster — but existing owners of the classic build keep access.",
-      "patches": "The System Shock 2 Community Patch (SCP) is worth pairing, though it's general bugfix/polish, not audio-specific."
+      "patches": "The System Shock 2 Community Patch (SCP) fixes bugs and polishes the game, and is worth installing alongside EAX."
     }
   },
   "eax": { "api": "directsound3d", "versions": ["1.0"] },
@@ -40,5 +40,5 @@
       }
     ]
   },
-  "notes": "It comes with NewDark pre-installed, which has its own OpenAL Soft 'Hardware Acceleration' option in the in-game Audio menu — worth trying if EAX doesn't sound right."
+  "notes": "It comes with NewDark pre-installed, which has its own 'Hardware Acceleration' option in the in-game Audio menu — worth trying if EAX doesn't sound right."
 }

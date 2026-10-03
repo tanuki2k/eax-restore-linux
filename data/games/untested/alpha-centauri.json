@@ -5,11 +5,11 @@
   "stores": {
     "steam": {
       "id": 2204130,
-      "store_details": "Steam sell this as the 'Planetary Pack', bundling the Alien Crossfire expansion."
+      "store_details": "Steam sells this as the 'Planetary Pack', bundling the Alien Crossfire expansion."
     },
     "gog": {
       "id": 1207658936,
-      "store_details": "GoG sell this as the 'Planetary Pack', bundling the Alien Crossfire expansion."
+      "store_details": "GOG sells this as the 'Planetary Pack', bundling the Alien Crossfire expansion."
     }
   },
   "eax": { "api": "directsound3d", "versions": ["1.0"] }

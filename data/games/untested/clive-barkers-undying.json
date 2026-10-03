@@ -3,7 +3,7 @@
   "name": "Clive Barker's Undying",
   "exe": "Undying.exe",
   "stores": {
-    "gog": { "id": 1207659191, "store_details": "Sold only on GOG." }
+    "gog": { "id": 1207659191 }
   },
   "eax": { "api": "directsound3d", "versions": ["1.0"] },
   "game_config": {

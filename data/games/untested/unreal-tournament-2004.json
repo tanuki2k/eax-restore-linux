@@ -6,8 +6,8 @@
     "steam": {
       "id": 13230,
       "delisted": true,
-      "store_details": "Delisted from Steam in December 2022, when Epic pulled the entire classic Unreal series from sale. OldUnreal (oldunreal.com) distributes a free, Epic-authorized copy of the full game. Flathub's launcher for this game is a separate, actively-changing package, not necessarily the same build.",
-      "patches": "OldUnreal's patches add a selectable OpenAL-based 'ALAudio' renderer — a strong alternative if you'd rather use it than this script's approach."
+      "store_details": "Delisted from Steam in December 2022, when Epic pulled the entire classic Unreal series from sale. OldUnreal (oldunreal.com) distributes a free, Epic-authorized copy of the full game.",
+      "patches": "OldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
     }
   },
   "eax": { "api": "openal", "versions": ["3.0", "5.0"] },

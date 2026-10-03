@@ -5,13 +5,13 @@
   "stores": {
     "steam": {
       "id": 211740,
-      "store_details": "Still the original Dark Engine build, on DirectSound3D.",
+      "store_details": "The original build, without the NewDark engine patch.",
       "patches": "T2Fix bundles the NewDark engine patch along with a range of modern-system fixes, and is worth installing alongside EAX."
     },
     "gog": {
       "id": 1207659001,
       "api": "openal",
-      "store_details": "It comes with NewDark pre-installed, which runs positional audio and EAX reverb through OpenAL."
+      "store_details": "It comes with the NewDark engine patch pre-installed."
     }
   },
   "eax": { "api": "directsound3d", "versions": ["1.0", "2.0"] },

@@ -5,7 +5,7 @@
   "stores": {
     "gog": {
       "id": 1207658891,
-      "store_details": "Sold only on GOG, as 'Icewind Dale 2 Complete'. Beamdog never gave it the OpenAL-native 'Enhanced Edition' treatment the other Infinity Engine games got, so this is still the original DirectSound3D-EAX Infinity Engine build."
+      "store_details": "Sold as 'Icewind Dale 2 Complete'. There's no Enhanced Edition of Icewind Dale II, so this is the classic game."
     }
   },
   "eax": { "api": "directsound3d", "versions": ["1.0"] }

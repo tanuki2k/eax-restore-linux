@@ -6,11 +6,7 @@
     "steam": { "id": 21090 },
     "gog": { "id": 1423058413 }
   },
-  "eax": {
-    "api": "directsound3d",
-    "versions": ["2.0", "3.0", "4.0"],
-    "fix": "If EAX audio drops out during large firefights, try the 'Expand Audio Limits' Advanced Compatibility Tweak (256 simultaneous sources, 48kHz)."
-  },
+  "eax": { "api": "directsound3d", "versions": ["2.0", "3.0", "4.0"] },
   "install": {
     "tweaks": ["eax_unified", "expand_audio_limits"]
   }

@@ -5,13 +5,11 @@
   "stores": {
     "steam": {
       "id": 6980,
-      "store_details": "Runs on a modified Dark Engine build.",
-      "patches": "The unofficial 'Sneaky Upgrade' patch (works with the Steam and GOG releases) fixes a well-documented multi-core CPU issue and other modern-system quirks — worth pairing with EAX, much like TFix/T2Fix for the earlier Thief games."
+      "patches": "The unofficial 'Sneaky Upgrade' patch fixes a well-documented multi-core CPU problem and other modern-system quirks, and is worth installing alongside EAX."
     },
     "gog": {
       "id": 1207659036,
-      "store_details": "Runs on a modified Dark Engine build.",
-      "patches": "The unofficial 'Sneaky Upgrade' patch (works with the Steam and GOG releases) fixes a well-documented multi-core CPU issue and other modern-system quirks — worth pairing with EAX, much like TFix/T2Fix for the earlier Thief games."
+      "patches": "The unofficial 'Sneaky Upgrade' patch fixes a well-documented multi-core CPU problem and other modern-system quirks, and is worth installing alongside EAX."
     }
   },
   "eax": { "api": "directsound3d", "versions": ["3.0", "4.0"] },

@@ -3,7 +3,7 @@
   "name": "Soldier of Fortune II: Double Helix",
   "exe": "SoF2.exe",
   "stores": {
-    "gog": { "id": 1228964594, "store_details": "Sold only on GOG, as the 'Gold Edition'." }
+    "gog": { "id": 1228964594, "store_details": "Sold as the 'Gold Edition'." }
   },
   "eax": { "api": "openal", "versions": ["3.0"] },
   "game_config": {

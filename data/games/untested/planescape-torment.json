@@ -5,7 +5,7 @@
     "gog": {
       "id": 1207658887,
       "delisted": true,
-      "store_details": "The classic pre-2017 build, sold by GOG as a standalone product separate from 'Planescape: Torment: Enhanced Edition'. GOG's catalogue search doesn't surface it, but the product page and existing owners' libraries resolve normally. This build has real DirectSound3D EAX, unlike the Enhanced Edition's OpenAL rewrite."
+      "store_details": "The classic pre-2017 build, sold by GOG as a standalone product separate from 'Planescape: Torment: Enhanced Edition'. GOG's catalogue search doesn't surface it, but the product page and existing owners' libraries resolve normally."
     }
   },
   "eax": { "api": "directsound3d", "versions": ["1.0"] }

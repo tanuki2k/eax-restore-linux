@@ -3,7 +3,7 @@
   "name": "SWAT 4",
   "exe": "Swat4.exe",
   "stores": {
-    "gog": { "id": 1409964317, "store_details": "Sold only on GOG, as 'SWAT 4: Gold Edition'." }
+    "gog": { "id": 1409964317, "store_details": "Sold as 'SWAT 4: Gold Edition'." }
   },
   "eax": { "api": "openal", "versions": ["1.0", "2.0", "3.0"] },
   "game_config": {

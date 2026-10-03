@@ -6,5 +6,5 @@
     "gog": { "id": 1207658924 }
   },
   "eax": { "api": "directsound3d", "versions": ["4.0"] },
-  "notes": "Only EAX 4.0 is supported. The game's own readme.rtf ('Known Issues') and CD Projekt's forums document EAX / Creative X-Fi ALchemy caveats worth checking if audio isn't right."
+  "notes": "If audio isn't right, the game's readme.rtf ('Known Issues') lists EAX caveats."
 }
