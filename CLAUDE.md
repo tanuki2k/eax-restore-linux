@@ -389,6 +389,13 @@ prompts — see "Text/output style conventions" above for which helper/color to 
   first time can't know what those are. Say what the choice means for their
   game instead, e.g. `"Use this detected runner for the registry and winetricks
   steps?"` → `"Use the same Wine version Heroic launches $GAME_NAME with?"`.
+- When something the script needs doesn't exist yet — a Wine/Proton prefix, the
+  launcher's saved settings for the game, a game config file it writes on first
+  launch — never tell the player to finish and run the script again. Do what the
+  prefix step (`src/detection.sh`) does: say what's missing and why ("If you just
+  installed …, it creates … the first time it runs."), ask them to launch the game
+  at least once and close it, then `confirm "Check … again?"` — Yes looks again,
+  No carries on without whatever needed it.
 - Name the actual subject instead of a generic stand-in wherever the variable is
   available — the real game name instead of "this edition", `$GAME_NAME`'s prefix
   instead of "this prefix".

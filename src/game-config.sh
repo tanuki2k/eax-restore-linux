@@ -432,7 +432,19 @@ game_settings_step() {
                 path="$(resolve_config_file "$locs" create)"
                 file_state[$file]="$( [ -n "$path" ] && echo create || echo missing )"
             elif [ "$ifmissing" == "skip" ]; then file_state[$file]="skip"
-            else file_state[$file]="missing"; fi
+            else
+                # The game writes it on first launch. Like the prefix step's
+                # "not found yet" check: explain, let the player launch the
+                # game, and look again; No carries on without this file's fixes.
+                while [ -z "$path" ]; do
+                    print_note "${GAME_NAME} hasn't created ${file} yet."
+                    print_paragraph "If you just installed ${GAME_NAME}, it creates ${file} the first time it runs." \
+                        "Please launch the game at least once, close it, and try again."
+                    confirm "Check for ${file} again?" || break
+                    path="$(resolve_config_file "$locs")"
+                done
+                file_state[$file]="$( [ -n "$path" ] && echo found || echo missing )"
+            fi
             file_path[$file]="$path"
         fi
         case "${file_state[$file]}" in
@@ -476,8 +488,7 @@ game_settings_step() {
         if [ "${fix_status[$id]}" == "already" ]; then
             echo -e "\n  ${GREEN}✓${NC} ${fix_title[$id]} ${DIM}— already set${NC}"
         else
-            echo -e "\n  ${BOLD}${fix_title[$id]}${NC}"
-            echo -e "${WHITE}$(printf '%s' "$GAME_NAME creates ${fix_missing_file[$id]} the first time it runs, so launch it once and run this again to apply this setting." | fold -s -w 74 | sed 's/^/    /')${NC}"
+            echo -e "\n  ${YELLOW}-${NC} ${fix_title[$id]} ${DIM}— skipped: ${GAME_NAME} hasn't created ${fix_missing_file[$id]} yet${NC}"
             GAME_SETTINGS_MISSING+=("${fix_title[$id]}"$'\x1f'"${fix_missing_file[$id]}")
         fi
     }
