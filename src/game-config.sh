@@ -647,11 +647,10 @@ print_game_settings_summary() {
             [ "$t" == "$title" ] && break
             fu=""
         done
-        if [ -n "$fu" ]; then
-            echo -e " ${GREEN}✓${NC} ${WHITE}${title}${NC} — ${fu}"
-        else
-            echo -e " ${GREEN}✓${NC} ${WHITE}${title}${NC}"
-        fi
+        echo -e " ${GREEN}✓${NC} ${WHITE}${title}${NC}"
+        # Under the title rather than after it: a follow-up can run to a few
+        # sentences, so it's wrapped and indented like a fix's reason.
+        [ -n "$fu" ] && echo -e "${WHITE}$(printf '%s' "$fu" | fold -s -w 74 | sed 's/^/    /; s/ *$//')${NC}"
     done
     for entry in "${GAME_SETTINGS_MISSING[@]}"; do
         IFS=$'\x1f' read -r title fu <<< "$entry"
