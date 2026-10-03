@@ -261,14 +261,16 @@ game_setting_titles() {
 
 # Usage: speakers_match <comma list>
 # True when the Speaker Configuration answer is one of the listed values:
-# stereo / matrix / surround (any layout) match OUTPUT_MODE, and an exact
-# layout (quad, surround51, ...) matches SURROUND_CHANNELS.
+# stereo / matrix / surround (any layout) match OUTPUT_MODE, headphones
+# matches the Stereo → Headphones answer (not Auto), and an exact layout
+# (quad, surround51, ...) matches SURROUND_CHANNELS.
 speakers_match() {
     local v
     local -a wanted
     IFS=',' read -ra wanted <<< "$1"
     for v in "${wanted[@]}"; do
         [ "$v" == "$OUTPUT_MODE" ] && return 0
+        [ "$v" == "headphones" ] && [ "$OUTPUT_MODE" == "stereo" ] && [ "${STEREO_MODE:-}" == "headphones" ] && return 0
         [ "$OUTPUT_MODE" == "surround" ] && [ "$v" == "${SURROUND_CHANNELS:-}" ] && return 0
     done
     return 1
