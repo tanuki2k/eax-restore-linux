@@ -398,6 +398,16 @@ game_settings_step() {
     while IFS= read -r row; do [ -n "$row" ] && rows+=("$row"); done < <(load_game_config_rows "$KG_ID" "$KG_STORE")
     [ ${#rows[@]} -eq 0 ] && return
 
+    # The step's heading, printed the first time something needs it: the
+    # missing-file prompt below can come before the fix list, and a game with
+    # nothing to show gets no heading at all.
+    local heading_shown=0
+    _game_settings_heading() {
+        [ "$heading_shown" -eq 1 ] && return
+        print_step "$step" "Game Settings"
+        heading_shown=1
+    }
+
     # Per-fix state, keyed "category:number" in database order.
     local -a fix_order=()
     local -A fix_title=() fix_reason=() fix_follow=() fix_status=() fix_rows=() fix_missing_file=()
@@ -437,6 +447,7 @@ game_settings_step() {
                 # "not found yet" check: explain, let the player launch the
                 # game, and look again; No carries on without this file's fixes.
                 while [ -z "$path" ]; do
+                    _game_settings_heading
                     print_note "${GAME_NAME} hasn't created ${file} yet."
                     print_paragraph "If you just installed ${GAME_NAME}, it creates ${file} the first time it runs." \
                         "Please launch the game at least once, close it, and try again."
@@ -468,7 +479,7 @@ game_settings_step() {
     done
     [ "$shown" -eq 0 ] && return
 
-    print_step "$step" "Game Settings"
+    _game_settings_heading
 
     # Prints one fix: title, reason, and each row's current → new value.
     _print_fix() {
