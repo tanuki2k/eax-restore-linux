@@ -1047,7 +1047,7 @@
         "gog": {
           "id": 1207658888,
           "delisted": true,
-          "store_details": "The classic pre-2014 build, sold by GOG as a standalone product separate from 'Icewind Dale: Enhanced Edition'. GOG's catalogue search doesn't surface it, but the product page and existing owners' libraries resolve normally."
+          "store_details": "This is the original 2000 Icewind Dale with its Heart of Winter and Trials of the Luremaster expansions, not 2014's 'Enhanced Edition'. GOG had stopped selling it by November 2016 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
         }
       },
       "eax": {
@@ -1055,7 +1055,13 @@
         "versions": [
           "1.0"
         ]
-      }
+      },
+      "sources": [
+        {
+          "title": "GOG forum: BGEE, BG2EE, IWEE vs originals",
+          "url": "https://www.gog.com/forum/baldurs_gate_series/bgee_bg2ee_iwee_vs_originals"
+        }
+      ]
     },
     {
       "id": "icewind-dale-ii",
@@ -1471,7 +1477,7 @@
         "gog": {
           "id": 1207658887,
           "delisted": true,
-          "store_details": "The classic pre-2017 build, sold by GOG as a standalone product separate from 'Planescape: Torment: Enhanced Edition'. GOG's catalogue search doesn't surface it, but the product page and existing owners' libraries resolve normally."
+          "store_details": "This is the original 1999 Planescape: Torment, not 2017's 'Enhanced Edition'. GOG stopped selling it on its own when the Enhanced Edition came out in April 2017 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
         }
       },
       "eax": {
@@ -1479,7 +1485,13 @@
         "versions": [
           "1.0"
         ]
-      }
+      },
+      "sources": [
+        {
+          "title": "GOG forum: Planescape: Torment: Enhanced Edition announcement",
+          "url": "https://www.gog.com/forum/planescape_torment/planescape_torment_enhanced_edition_1"
+        }
+      ]
     },
     {
       "id": "project-eden",
