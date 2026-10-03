@@ -186,7 +186,7 @@ A game file looks like this (see `data/games/tested/` for more):
       }
     ]
   },
-  "sources": ["https://www.pcgamingwiki.com/wiki/Quake_4"]
+  "sources": [{ "title": "PCGamingWiki: Quake 4", "url": "https://www.pcgamingwiki.com/wiki/Quake_4" }]
 }
 ```
 
@@ -226,7 +226,7 @@ A game file looks like this (see `data/games/tested/` for more):
     - `changes` — file → section → key → value for `ini` files, file → key → value for `flat_ini` and the cfg formats. Values are strings; `true`/`false` switches a `dark_cfg` flag; `null` removes the key. Every file must be listed in `files`.
     - `only_if` — optional conditions: `{ "stores": ["gog"] }` and/or `{ "speakers": "stereo" | "surround" | "matrix" }` (the Speaker Configuration answer). Prefer `if_missing: "skip"` over a store condition when a fix depends on a file only some builds have.
     - `follow_up` — optional: something the player does after installing, shown in the final summary (`"Open Options -> Video and click Autodetect."`).
-- `sources` — URLs backing the entry's claims (the short "(per PCGamingWiki)" citations in the prose point here).
+- `sources` — pages backing the entry's claims (the short "(per PCGamingWiki)" citations in the prose point here). They're listed last on the script's known games database screen as clickable links. Give each a name with `{ "title": "PCGamingWiki: Quake 4", "url": "https://www.pcgamingwiki.com/wiki/Quake_4" }`; a bare URL string still works and shows the site's address.
 - `notes` — prose caveats not covered by the fields above: cross-references to sibling entries, limitation/expectation-setting caveats ("reverb here is subtle, that's expected not a bug"), controller/multiplayer/mod quirks.
 
 ### Environment Variables

@@ -24,5 +24,10 @@
       }
     ]
   },
-  "sources": ["https://www.pcgamingwiki.com/wiki/The_Wheel_of_Time"]
+  "sources": [
+    {
+      "title": "PCGamingWiki: The Wheel of Time",
+      "url": "https://www.pcgamingwiki.com/wiki/The_Wheel_of_Time"
+    }
+  ]
 }

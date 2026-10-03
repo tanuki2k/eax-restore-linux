@@ -72,6 +72,15 @@ print_step() {
     print_line
 }
 
+# Usage: print_link "title" "url"
+# One line of a print_subheading section, indented like print_wrapped, whose
+# title is a clickable terminal hyperlink (OSC 8) to the url. A terminal
+# without hyperlink support shows just the title; the run log rewrites it as
+# "title (url)" so the address survives there.
+print_link() {
+    printf '  %b\e]8;;%s\e\\%s\e]8;;\e\\%b\n' "$WHITE" "$2" "$1" "$NC"
+}
+
 # Usage: print_detected "Label" "value"
 # A " -> Label: value" line reporting what auto-detection found, with the
 # label in GREEN, just before the confirm that asks whether to use it (e.g.

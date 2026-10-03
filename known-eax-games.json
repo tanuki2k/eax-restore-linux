@@ -287,7 +287,7 @@
       "stores": {
         "steam": {
           "id": 7670,
-          "store_details": "The original 2007 game, not 2016's 'BioShock Remastered'."
+          "store_details": "This is the original 2007 BioShock. Unlike 2016's 'BioShock Remastered', which dropped EAX and its reverb (per PCGamingWiki), it's an ideal candidate for restoring EAX sound."
         }
       },
       "eax": {
@@ -323,7 +323,14 @@
         ]
       },
       "sources": [
-        "https://web.archive.org/web/20080514015042/http://www.soundblaster.com/products/gaming/article.asp?articleID=71545&categoryID=13"
+        {
+          "title": "Creative's BioShock audio guide (archived)",
+          "url": "https://web.archive.org/web/20080514015042/http://www.soundblaster.com/products/gaming/article.asp?articleID=71545&categoryID=13"
+        },
+        {
+          "title": "PCGamingWiki: BioShock Remastered",
+          "url": "https://www.pcgamingwiki.com/wiki/BioShock_Remastered"
+        }
       ]
     },
     {
@@ -569,7 +576,10 @@
         ]
       },
       "sources": [
-        "https://github.com/kcat/dsoal/issues/79"
+        {
+          "title": "DSOAL issue #79",
+          "url": "https://github.com/kcat/dsoal/issues/79"
+        }
       ],
       "notes": "Reverb is used sparingly and is quiet by default — Battery Park, the first mission, is a good place to hear it. The community ALAudio mod doesn't pass the game's EAX reverb through, so stay on the default Galaxy driver (per kcat/dsoal#79)."
     },
@@ -1229,7 +1239,10 @@
         ]
       },
       "sources": [
-        "https://www.pcgamingwiki.com/wiki/Psychonauts"
+        {
+          "title": "PCGamingWiki: Psychonauts",
+          "url": "https://www.pcgamingwiki.com/wiki/Psychonauts"
+        }
       ]
     },
     {
@@ -1306,7 +1319,10 @@
         ]
       },
       "sources": [
-        "https://www.pcgamingwiki.com/wiki/Quake_4"
+        {
+          "title": "PCGamingWiki: Quake 4",
+          "url": "https://www.pcgamingwiki.com/wiki/Quake_4"
+        }
       ]
     },
     {
@@ -1899,7 +1915,10 @@
         ]
       },
       "sources": [
-        "https://www.pcgamingwiki.com/wiki/The_Wheel_of_Time"
+        {
+          "title": "PCGamingWiki: The Wheel of Time",
+          "url": "https://www.pcgamingwiki.com/wiki/The_Wheel_of_Time"
+        }
       ]
     },
     {
@@ -2562,7 +2581,10 @@
         ]
       },
       "sources": [
-        "https://www.oldunreal.com"
+        {
+          "title": "OldUnreal",
+          "url": "https://www.oldunreal.com"
+        }
       ]
     },
     {

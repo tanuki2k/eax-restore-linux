@@ -5,7 +5,7 @@
   "stores": {
     "steam": {
       "id": 7670,
-      "store_details": "The original 2007 game, not 2016's 'BioShock Remastered'."
+      "store_details": "This is the original 2007 BioShock. Unlike 2016's 'BioShock Remastered', which dropped EAX and its reverb (per PCGamingWiki), it's an ideal candidate for restoring EAX sound."
     }
   },
   "eax": { "api": "openal", "versions": ["4.0", "5.0"] },
@@ -27,6 +27,13 @@
     ]
   },
   "sources": [
-    "https://web.archive.org/web/20080514015042/http://www.soundblaster.com/products/gaming/article.asp?articleID=71545&categoryID=13"
+    {
+      "title": "Creative's BioShock audio guide (archived)",
+      "url": "https://web.archive.org/web/20080514015042/http://www.soundblaster.com/products/gaming/article.asp?articleID=71545&categoryID=13"
+    },
+    {
+      "title": "PCGamingWiki: BioShock Remastered",
+      "url": "https://www.pcgamingwiki.com/wiki/BioShock_Remastered"
+    }
   ]
 }

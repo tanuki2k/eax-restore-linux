@@ -595,6 +595,18 @@ show_game_details_block() {
         print_subheading "Suggested community patches"
         print_wrapped "$patches"
     fi
+    # Always the last section: the pages behind the entry's claims, as
+    # clickable names. A bare URL is shown by its site's address.
+    local src_title src_url shown_sources=0
+    while IFS=$'\t' read -r src_title src_url; do
+        [ -n "$src_url" ] || continue
+        [ "$shown_sources" -eq 0 ] && print_subheading "Sources"
+        print_link "$src_title" "$src_url"
+        shown_sources=1
+    done < <(jq -r --arg id "$id" --arg store "$store" '
+        [.games[] | select((.stores[$store].id // "") | tostring == $id)][0].sources // [] | .[]
+        | if type == "string" then [(capture("^https?://(www\\.)?(?<h>[^/]+)").h), .] else [.title, .url] end
+        | join("\t")' "$KNOWN_GAMES_FILE" 2>/dev/null)
     echo ""
 }
 

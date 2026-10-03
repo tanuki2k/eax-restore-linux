@@ -124,10 +124,23 @@
       "required": ["files"]
     },
     "sources": {
-      "description": "URLs backing this entry's claims.",
+      "description": "Pages backing this entry's claims, listed as links at the end of the known games database screen. Each is a URL, or {title, url} to show a name instead of the site's address.",
       "type": "array",
       "uniqueItems": true,
-      "items": { "type": "string", "pattern": "^https?://" }
+      "items": {
+        "anyOf": [
+          { "type": "string", "pattern": "^https?://[^\\s]+$" },
+          {
+            "type": "object",
+            "required": ["title", "url"],
+            "additionalProperties": false,
+            "properties": {
+              "title": { "type": "string", "minLength": 1 },
+              "url": { "type": "string", "pattern": "^https?://[^\\s]+$" }
+            }
+          }
+        ]
+      }
     },
     "notes": {
       "description": "Caveats not covered by the other fields.",

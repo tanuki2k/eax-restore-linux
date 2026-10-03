@@ -160,7 +160,7 @@ if ! is_truthy "${EAX_RESTORE_NO_LOG:-}" && mkdir -p "$LOG_DIR" 2>/dev/null; the
     # written; the writer's PID is recorded so finish_run_log can wait for
     # it to drain.
     exec 3>&1 4>&2
-    exec > >(exec setsid bash -c 'exec tee >(echo "$BASHPID" > "$1.pid"; exec sed -u -e "s/\x1b\]7137;\([^\x07]*\)\x07/\1/g" -e "s/\x1b\[[0-9;]*[A-Za-z]//g" -e "s/.*\r//" >> "$1")' _ "$EAX_LOG_FILE") 2>&1
+    exec > >(exec setsid bash -c 'exec tee >(echo "$BASHPID" > "$1.pid"; exec sed -u -e "s/\x1b\]8;;\([^\x1b]*\)\x1b\\\\\([^\x1b]*\)\x1b\]8;;\x1b\\\\/\2 (\1)/g" -e "s/\x1b\]7137;\([^\x07]*\)\x07/\1/g" -e "s/\x1b\[[0-9;]*[A-Za-z]//g" -e "s/.*\r//" >> "$1")' _ "$EAX_LOG_FILE") 2>&1
     trap finish_run_log EXIT
     # Turn Ctrl-C / kill into a normal exit with the conventional status, so
     # the EXIT trap above records the real exit code (not the last command's).

@@ -22,5 +22,7 @@
       }
     ]
   },
-  "sources": ["https://www.pcgamingwiki.com/wiki/Psychonauts"]
+  "sources": [
+    { "title": "PCGamingWiki: Psychonauts", "url": "https://www.pcgamingwiki.com/wiki/Psychonauts" }
+  ]
 }

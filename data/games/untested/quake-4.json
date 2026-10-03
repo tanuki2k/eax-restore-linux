@@ -44,5 +44,7 @@
       }
     ]
   },
-  "sources": ["https://www.pcgamingwiki.com/wiki/Quake_4"]
+  "sources": [
+    { "title": "PCGamingWiki: Quake 4", "url": "https://www.pcgamingwiki.com/wiki/Quake_4" }
+  ]
 }

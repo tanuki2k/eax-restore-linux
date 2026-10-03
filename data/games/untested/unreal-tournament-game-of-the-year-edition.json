@@ -28,5 +28,5 @@
       }
     ]
   },
-  "sources": ["https://www.oldunreal.com"]
+  "sources": [{ "title": "OldUnreal", "url": "https://www.oldunreal.com" }]
 }

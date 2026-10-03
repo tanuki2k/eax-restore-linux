@@ -25,6 +25,6 @@
       }
     ]
   },
-  "sources": ["https://github.com/kcat/dsoal/issues/79"],
+  "sources": [{ "title": "DSOAL issue #79", "url": "https://github.com/kcat/dsoal/issues/79" }],
   "notes": "Reverb is used sparingly and is quiet by default — Battery Park, the first mission, is a good place to hear it. The community ALAudio mod doesn't pass the game's EAX reverb through, so stay on the default Galaxy driver (per kcat/dsoal#79)."
 }
