@@ -209,7 +209,7 @@ for a new call site.
 
 - `print_banner "LABEL" [COLOR=GREEN]` — the `--- LABEL ---` section banner (blank
   line, divider, bold label, divider, blank line), e.g. `--- PHASE 1: CONFIGURATION ---`,
-  `--- GAME DETAILS ---`.
+  `--- KNOWN GAMES DATABASE ---`.
 - `print_step N "Label"` — the same banner wrapper for a numbered, non-dashed,
   non-bold CYAN sub-step header, e.g. `2. Launcher Identification`.
 - `print_status "text" [COLOR=CYAN]` — an ` -> ` arrow sub-step/result line.

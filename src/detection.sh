@@ -971,7 +971,7 @@ confirm_continue_if_openal_native() {
     local db_api_raw=""
 
     if [ -n "$KNOWN_GAME_API" ]; then
-        # Already resolved and displayed in the GAME DETAILS block shown
+        # Already resolved and displayed in the KNOWN GAMES DATABASE block shown
         # earlier this run (show_game_details_block sets this alongside
         # SCANNED_NOTES_SHOWN) -- no need to re-query the database from
         # scratch. The gate above still governs whether it's cross-checked

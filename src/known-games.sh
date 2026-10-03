@@ -421,9 +421,9 @@ show_known_game_notes() {
     # stored as a single unwrapped line for easy editing, then word-wrapped to
     # the script's usual prose width at display time. stores.<store>.delisted
     # is shown as an Availability line here too, EXCEPT when the caller
-    # already surfaced it in a GAME DETAILS block (show_game_details_block
+    # already surfaced it in a KNOWN GAMES DATABASE block (show_game_details_block
     # passes skip_availability=1 to avoid printing it twice) — call sites that
-    # don't go through a GAME DETAILS block (e.g. an unmatched manual entry)
+    # don't go through a KNOWN GAMES DATABASE block (e.g. an unmatched manual entry)
     # still need this fallback.
     [ "$SCRIPT_ACTION" == "i" ] || return
     [ -z "$1" ] && return
@@ -452,7 +452,7 @@ show_known_game_notes() {
 
 show_game_details_block() {
     # Usage: show_game_details_block <id> <steam|gog> <location>
-    # The richer "--- GAME DETAILS ---" banner scan_game_libraries shows when
+    # The richer "--- KNOWN GAMES DATABASE ---" banner scan_game_libraries shows when
     # a game is picked from a library scan, factored out so the manual/GUI
     # path can show the same thing once detect_game_environment has confirmed
     # a prefix and therefore knows the id to look this up by. Only prints
@@ -510,44 +510,46 @@ show_game_details_block() {
 
     resolve_recommended_tweaks "$id" "$store"
 
-    # --- Field lines: identity, then how EAX stands on this build ---
-    print_banner "GAME DETAILS"
-    echo -e "\n -> ${YELLOW}Name${NC}:      ${BOLD}${name}${NC}"
-    echo -e " -> ${YELLOW}Platform${NC}:  ${GREEN}$store_label${NC}"
+    # --- Field lines: what the database has on file, then what was found here ---
+    # Everything under "Game details" comes from known-eax-games.json, not
+    # from the install, so it's kept apart from the two facts the library
+    # scan found on this system. Labels are padded to one width so the
+    # values line up.
+    _detail() { printf ' -> %b%s%b:%*s %b\n' "$YELLOW" "$1" "$NC" $(( 12 - ${#1} )) "" "$2"; }
+    print_banner "KNOWN GAMES DATABASE"
+    echo -e "\n${WHITE}Game details:${NC}"
+    _detail "Name" "${BOLD}${name}${NC}"
     if [ "$listing" == "delisted" ]; then
-        echo -e " -> ${YELLOW}Availability${NC}: ${WHITE}Delisted from $store_label ${DIM}(existing owners keep access)${NC}"
+        _detail "Availability" "${WHITE}Delisted from $store_label ${DIM}(existing owners keep access)${NC}"
     fi
     if [ "$id_confidence" == "steamdb_historical" ]; then
-        echo -e " -> ${YELLOW}ID source${NC}: ${WHITE}SteamDB records ${DIM}(not verified against a local install)${NC}"
+        _detail "ID source" "${WHITE}SteamDB records ${DIM}(not verified against a local install)${NC}"
     fi
     # eax_versions sits in the same slot for every game — the qualifier for a
     # patch-removed build comes after the list, not in place of it.
     local ver_display="${eax_versions:-Unknown}"
     if [ "$eax_status" == "supported" ]; then
-        echo -e " -> ${YELLOW}EAX Support${NC}: ${GREEN}${BOLD}${ver_display}${NC}"
+        _detail "EAX Support" "${GREEN}${BOLD}${ver_display}${NC}"
     elif [ "$eax_status" == "removed_by_patch" ]; then
-        echo -e " -> ${YELLOW}EAX Support${NC}: ${YELLOW}${BOLD}${ver_display}${NC} ${DIM}(originally supported)${NC}"
+        _detail "EAX Support" "${YELLOW}${BOLD}${ver_display}${NC} ${DIM}(originally supported)${NC}"
     else
-        echo -e " -> ${YELLOW}EAX Support${NC}: ${YELLOW}${BOLD}None${NC}"
+        _detail "EAX Support" "${YELLOW}${BOLD}None${NC}"
     fi
     if [ "$api" == "openal" ]; then
-        echo -e " -> ${YELLOW}Audio API${NC}: ${WHITE}OpenAL${NC}"
+        _detail "Audio API" "${WHITE}OpenAL${NC}"
     else
-        echo -e " -> ${YELLOW}Audio API${NC}: ${WHITE}DirectSound3D${NC}"
+        _detail "Audio API" "${WHITE}DirectSound3D${NC}"
     fi
-    [ -n "$EAX_UNIFIED" ] && echo -e " -> ${YELLOW}EAX Unified${NC}: ${WHITE}Yes${NC}"
-    local fix_counts audio_fixes extra_fixes settings_line=""
+    [ -n "$EAX_UNIFIED" ] && _detail "EAX Unified" "${WHITE}Yes${NC}"
+    local fix_counts audio_fixes extra_fixes
     fix_counts="$(count_game_fixes "$id" "$store")"
     read -r audio_fixes extra_fixes <<< "${fix_counts:-0 0}"
-    if [ "${audio_fixes:-0}" -gt 0 ]; then
-        settings_line="$audio_fixes audio fix"; [ "$audio_fixes" -ne 1 ] && settings_line+="es"
-    fi
-    if [ "${extra_fixes:-0}" -gt 0 ]; then
-        [ -n "$settings_line" ] && settings_line+=", "
-        settings_line+="$extra_fixes optional fix"; [ "$extra_fixes" -ne 1 ] && settings_line+="es"
-    fi
-    [ -n "$settings_line" ] && echo -e " -> ${YELLOW}Game settings${NC}: ${WHITE}${settings_line}${NC}"
-    echo -e " -> ${YELLOW}Location${NC}:  ${DIM}$(tilde_path "$location")${NC}"
+    [ "${audio_fixes:-0}" -gt 0 ] && _detail "EAX fixes" "${WHITE}${audio_fixes}${NC}"
+    [ "${extra_fixes:-0}" -gt 0 ] && _detail "Game fixes" "${WHITE}${extra_fixes} ${DIM}(optional)${NC}"
+
+    echo -e "\n${WHITE}System details:${NC}"
+    _detail "Platform" "${GREEN}$store_label${NC}"
+    _detail "Location" "${DIM}$(tilde_path "$location")${NC}"
 
     # --- Blocks: status -> problem -> solution ---
     if [ "$eax_status" == "removed_by_patch" ] || [ "$eax_status" == "not_implemented" ]; then
@@ -569,6 +571,19 @@ show_game_details_block() {
         [ "$api" == "openal" ] && solution="OpenAL Soft"
         print_subheading "Restoring EAX with"
         print_wrapped "$solution"
+    fi
+    local cat title
+    local -a eax_titles=() extra_titles=()
+    while IFS=$'\t' read -r cat title; do
+        [ "$cat" == "audio" ] && eax_titles+=("$title") || extra_titles+=("$title")
+    done < <(game_fix_titles "$id" "$store")
+    if [ ${#eax_titles[@]} -gt 0 ]; then
+        print_subheading "EAX fixes"
+        for title in "${eax_titles[@]}"; do print_wrapped "$title"; done
+    fi
+    if [ ${#extra_titles[@]} -gt 0 ]; then
+        print_subheading "Optional game fixes"
+        for title in "${extra_titles[@]}"; do print_wrapped "$title"; done
     fi
     if [ -n "$restore_details" ]; then
         print_subheading "Additional steps"

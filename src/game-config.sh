@@ -240,12 +240,23 @@ current_known_game() {
 
 # Usage: count_game_fixes <id> <steam|gog>
 # Prints "<audio> <extras>": fixes this store's build can be offered (only_if
-# stores match). Used by the GAME DETAILS line before the game folder is known.
+# stores match). Used by the KNOWN GAMES DATABASE block's fix counts before the game folder is known.
 count_game_fixes() {
     jq -r --arg id "$1" --arg store "$2" '
         [.games[] | select((.stores[$store].id // "") | tostring == $id)][0].game_config // {}
         | def offered: [.[]? | select((.only_if.stores // [$store]) | index($store))] | length;
           "\(.audio_fixes | offered) \(.extra_fixes | offered)"' "$KNOWN_GAMES_FILE" 2>/dev/null
+}
+
+# Usage: game_fix_titles <id> <steam|gog>
+# One "audio|extras<TAB>title" line per fix count_game_fixes counts, audio
+# fixes first, for the known games database screen.
+game_fix_titles() {
+    jq -r --arg id "$1" --arg store "$2" '
+        [.games[] | select((.stores[$store].id // "") | tostring == $id)][0].game_config // {}
+        | def offered: [.[]? | select((.only_if.stores // [$store]) | index($store))];
+          (.audio_fixes | offered | .[] | "audio\t\(.title)"),
+          (.extra_fixes | offered | .[] | "extras\t\(.title)")' "$KNOWN_GAMES_FILE" 2>/dev/null
 }
 
 # Usage: load_game_config_rows <id> <steam|gog>

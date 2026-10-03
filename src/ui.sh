@@ -41,7 +41,7 @@ tilde_path() {
 # No trailing blank — callers provide their own leading blank before the
 # first content line (most already do via "echo -e \"\n...\""), so the
 # helper doesn't double it up. Used for both "--- PHASE N: X ---"-style
-# banners and richer blocks like "--- GAME DETAILS ---".
+# banners and richer blocks like "--- KNOWN GAMES DATABASE ---".
 print_banner() {
     local label="$1"
     local color="${2:-$GREEN}"
@@ -117,7 +117,7 @@ print_result() {
 
 # Usage: print_subheading "Label"
 # A "\n${NOTE}  Label:${NC}" section-header line introducing a print_wrapped
-# body — the GAME DETAILS block's Status:/Restoring EAX with:/Additional
+# body — the KNOWN GAMES DATABASE block's Status:/Restoring EAX with:/Additional
 # steps:/Notes:/etc. labels.
 print_subheading() {
     echo -e "\n${NOTE}  $(tilde_path "$1"):${NC}"

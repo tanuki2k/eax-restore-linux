@@ -96,7 +96,7 @@ RECOMMENDED_COM_ROUTING=""
 RECOMMENDED_TWEAKS_RESOLVED=""
 
 # Set by show_game_details_block to the known-games entry's resolved audio
-# API (the same value it displays as "Audio API" in the GAME DETAILS block),
+# API (the same value it displays as "Audio API" in the KNOWN GAMES DATABASE block),
 # "" when no match was found/shown. confirm_continue_if_openal_native reads
 # this to cross-check the documented value against a live file scan instead
 # of re-deriving it from scratch.
