@@ -149,6 +149,9 @@
     }
   },
   "$defs": {
+    "speaker_choice": {
+      "enum": ["stereo", "surround", "matrix", "quad", "surround51", "surround61", "surround71"]
+    },
     "api": {
       "enum": ["directsound3d", "openal"]
     },
@@ -261,7 +264,13 @@
               "uniqueItems": true,
               "items": { "enum": ["steam", "gog"] }
             },
-            "speakers": { "enum": ["stereo", "surround", "matrix"] }
+            "speakers": {
+              "description": "The Speaker Configuration answer: stereo, matrix, surround (any surround layout), or one exact layout (quad, surround51, surround61, surround71). A list matches any of its values.",
+              "anyOf": [
+                { "$ref": "#/$defs/speaker_choice" },
+                { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/speaker_choice" } }
+              ]
+            }
           }
         },
         "changes": {

@@ -259,10 +259,25 @@ game_setting_titles() {
           (.optional_settings | offered | .[] | "optional\t\(.title)")' "$KNOWN_GAMES_FILE" 2>/dev/null
 }
 
+# Usage: speakers_match <comma list>
+# True when the Speaker Configuration answer is one of the listed values:
+# stereo / matrix / surround (any layout) match OUTPUT_MODE, and an exact
+# layout (quad, surround51, ...) matches SURROUND_CHANNELS.
+speakers_match() {
+    local v
+    local -a wanted
+    IFS=',' read -ra wanted <<< "$1"
+    for v in "${wanted[@]}"; do
+        [ "$v" == "$OUTPUT_MODE" ] && return 0
+        [ "$OUTPUT_MODE" == "surround" ] && [ "$v" == "${SURROUND_CHANNELS:-}" ] && return 0
+    done
+    return 1
+}
+
 # Usage: load_game_config_rows <id> <steam|gog>
 # Flattens the entry's fixes into one \x1f-separated row per changed key:
 # category, fix number, title, reason, only_if stores (comma list),
-# only_if speakers, follow_up, file, format, if_missing, locations
+# only_if speakers (comma list), follow_up, file, format, if_missing, locations
 # (|-joined), section ("" for cfg formats), key, value (with the markers
 # above). \x1f rather than tabs so empty fields survive `read`.
 load_game_config_rows() {
@@ -279,7 +294,7 @@ load_game_config_rows() {
              then (.value | to_entries[] | .key as $sec | .value | to_entries[] | [$sec, .key, .value])
              else (.value | to_entries[] | ["", .key, .value]) end) as $kv
         | [$cat, ($i | tostring), $f.title, $f.reason, (($f.only_if.stores // []) | join(",")),
-           ($f.only_if.speakers // ""), ($f.follow_up // ""), $file, ($def.format // ""),
+           ([$f.only_if.speakers // empty] | flatten | join(",")), ($f.follow_up // ""), $file, ($def.format // ""),
            ($def.if_missing // ""), (($def.locations // []) | join("|")), $kv[0], $kv[1], ($kv[2] | enc)]
         | join("\u001f")' "$KNOWN_GAMES_FILE" 2>/dev/null
 }
@@ -436,7 +451,7 @@ game_settings_step() {
             fix_order+=("$id"); fix_title[$id]="$title"; fix_reason[$id]="$reason"; fix_follow[$id]="$follow"
             fix_status[$id]="already"; fix_rows[$id]=""
             if [ -n "$stores" ] && [[ ",$stores," != *",$KG_STORE,"* ]]; then fix_status[$id]="skip"; fi
-            if [ -n "$speakers" ] && [ "$speakers" != "$OUTPUT_MODE" ]; then fix_status[$id]="skip"; fi
+            if [ -n "$speakers" ] && ! speakers_match "$speakers"; then fix_status[$id]="skip"; fi
         fi
         [[ "${fix_status[$id]}" =~ ^(skip|invalid)$ ]] && continue
 
