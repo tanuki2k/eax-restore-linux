@@ -72,6 +72,15 @@ print_step() {
     print_line
 }
 
+# Usage: print_detected "Label" "value"
+# A " -> Label: value" line reporting what auto-detection found, with the
+# label in GREEN, just before the confirm that asks whether to use it (e.g.
+# "Detected Prefix:", "Detected Architecture:"). Paths in the value are
+# shortened to ~/.
+print_detected() {
+    echo -e " -> ${GREEN}${1}:${NC} $(tilde_path "$2")"
+}
+
 # Usage: print_status "text" [COLOR=CYAN]
 # The " -> text" arrow sub-step line used for progress/result output. Pass ""
 # explicitly (not just omitting the arg) for plain/uncolored text — needed

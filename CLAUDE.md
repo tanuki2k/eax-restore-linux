@@ -213,6 +213,9 @@ for a new call site.
 - `print_step N "Label"` — the same banner wrapper for a numbered, non-dashed,
   non-bold CYAN sub-step header, e.g. `2. Launcher Identification`.
 - `print_status "text" [COLOR=CYAN]` — an ` -> ` arrow sub-step/result line.
+- `print_detected "Label" "value"` — the ` -> Label: value` line (label in GREEN)
+  reporting what auto-detection found, right before the `confirm` asking whether
+  to use it, e.g. `Detected Prefix:`, `Detected Architecture:`.
 - `print_task "text"` — the `\n${CYAN}STATUS: text...${NC}` header announcing a chunk
   of work about to run (a scan, a download, a deploy step). Own leading blank line;
   the trailing `...` is added by the helper, so pass just the phrase. A capturing

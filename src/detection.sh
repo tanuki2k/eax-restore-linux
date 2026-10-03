@@ -1223,7 +1223,7 @@ detect_game_environment() {
             DETECTED_STEAM_PREFIX=$(protontricks -c 'echo $WINEPREFIX' "$APPID" 2>> "$EAX_LOG_FILE" | tee -a "$EAX_LOG_FILE" | grep "/pfx" | tail -n 1 | tr -d '\r')
 
             if [ -n "$DETECTED_STEAM_PREFIX" ] && [ -d "$DETECTED_STEAM_PREFIX" ]; then
-                echo -e " -> ${GREEN}Detected Prefix:${NC} $(tilde_path "$DETECTED_STEAM_PREFIX")"
+                print_detected "Detected Prefix" "$DETECTED_STEAM_PREFIX"
                 if confirm "Use this detected prefix?"; then
                     PREFIX_PATH="$DETECTED_STEAM_PREFIX"
                     ACF_FILE="${GAME_DIR%/common/*}/appmanifest_${APPID}.acf"
@@ -1298,7 +1298,7 @@ detect_game_environment() {
         HEROIC_EXPECTED_PREFIX="$DETECTED_PREFIX"
         if [ "$attempt_auto_detect" -eq 1 ]; then
             if [ -n "$DETECTED_PREFIX" ]; then
-                echo -e " -> ${GREEN}Detected Prefix:${NC} $(tilde_path "$DETECTED_PREFIX")"
+                print_detected "Detected Prefix" "$DETECTED_PREFIX"
                 [ "$HEROIC_PREFIX_SOURCE" == "shared" ] && print_status "This is Heroic's shared prefix, because ${HEROIC_GAME_TITLE:-this game} has no prefix of its own." "$DIM"
                 if confirm "Use this detected prefix?"; then
                     PREFIX_PATH="$DETECTED_PREFIX"
@@ -1531,7 +1531,8 @@ select_architecture() {
                 DETECTED="UNKNOWN"
             fi
             if [ "$DETECTED" != "UNKNOWN" ]; then
-                if confirm "Detected ${DETECTED}-bit. Continue?"; then ARCH="$DETECTED"; fi
+                print_detected "Detected Architecture" "${DETECTED}-bit"
+                if confirm "Use this detected architecture?"; then ARCH="$DETECTED"; fi
             fi
         fi
     fi
