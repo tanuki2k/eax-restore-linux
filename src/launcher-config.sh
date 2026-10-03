@@ -132,14 +132,22 @@ _close_launcher_and_wait() {
     done
 }
 
-# Usage: print_launcher_open <label>
-# Why the launcher has to be closed, wrapped by hand to stay inside the
-# script's 76 columns.
+# Usage: print_launcher_open <steam|heroic> <add|remove>
+# The problem and what it's holding up: the launcher is running, so the
+# override can't be added or removed yet. Wrapped at the script's 76 columns,
+# since the game name's length varies.
 print_launcher_open() {
-    echo -e "\n${YELLOW}${1} is open, and it would overwrite the change when it next\nsaves its settings.${NC}"
+    local label text
+    label="$(launcher_label "$1")"
+    if [ "$2" == "remove" ]; then
+        text="${label} is running, so the script can't remove the DLL override from $(launcher_override_where)."
+    else
+        text="${label} is running, so the script can't add the DLL override to $(launcher_override_where)."
+    fi
+    echo -e "\n${YELLOW}$(printf '%s' "$text" | fold -s -w 76 | sed 's/ $//')${NC}"
 }
 
-# Usage: offer_close_launcher <steam|heroic>
+# Usage: offer_close_launcher <steam|heroic> <add|remove>
 # When the launcher can safely be closed and started again, offers to do it.
 # Returns 0 once it's closed (and queues it in LAUNCHERS_TO_REOPEN), 1 if the
 # player has to close it themselves. Sets LAUNCHER_CLOSE_ASKED to 1 when it
@@ -154,9 +162,9 @@ offer_close_launcher() {
     fi
     cmd="$(launcher_launch_cmd "$1")"
     [ -n "$cmd" ] || return 1
-    print_launcher_open "$label"
+    print_launcher_open "$1" "$2"
     LAUNCHER_CLOSE_ASKED=1
-    confirm "Close ${label} now and reopen it once that's done?" Y || return 1
+    confirm "Close ${label}, $2 the override, then reopen ${label}?" Y || return 1
     if run_with_spinner "Waiting for ${label} to close..." "$EAX_LOG_FILE" _close_launcher_and_wait "$1" 30; then
         log_cmd "closed $1 ($(launcher_kind "$1")); will reopen with: ${cmd//$'\x1f'/ }"
         LAUNCHERS_TO_REOPEN+=("${label}"$'\x1f'"${cmd}")
@@ -398,7 +406,7 @@ launcher_override_where() {
     else echo "Heroic's environment variables for $GAME_NAME"; fi
 }
 
-# Usage: wait_for_launcher_closed <steam|heroic> <what to type to give up>
+# Usage: wait_for_launcher_closed <steam|heroic> <add|remove> <what to type to give up>
 # While the launcher is open, first offers to close it (and reopen it later);
 # otherwise says so and waits for Enter. Returns 1 if the player typed
 # something else instead.
@@ -406,13 +414,13 @@ wait_for_launcher_closed() {
     local label answer asked
     label="$(launcher_label "$1")"
     launcher_running "$1" || return 0
-    offer_close_launcher "$1" && return 0
+    offer_close_launcher "$1" "$2" && return 0
     # The offer already said it's open whenever it got as far as asking.
     asked="$LAUNCHER_CLOSE_ASKED"
     while launcher_running "$1"; do
-        [ "$asked" -eq 1 ] || print_launcher_open "$label"
+        [ "$asked" -eq 1 ] || print_launcher_open "$1" "$2"
         asked=0
-        prompt "Close ${label}, then press Enter, or $2:"
+        prompt "Close ${label}, then press Enter, or $3:"
         read_answer answer || return 1
         [ -n "$answer" ] && return 1
     done
@@ -432,7 +440,7 @@ apply_launcher_override() {
 }
 _apply_launcher_override() {
     print_phase_task "Setting the DLL override in $(launcher_label "$OVERRIDE_LAUNCHER")"
-    if ! wait_for_launcher_closed "$OVERRIDE_LAUNCHER" "type 's' to set it yourself instead"; then
+    if ! wait_for_launcher_closed "$OVERRIDE_LAUNCHER" add "type 's' to set it yourself instead"; then
         print_status "Skipped — the instructions to set it yourself are below." "$YELLOW"
         OVERRIDE_METHOD="manual"; return 0
     fi
@@ -478,7 +486,7 @@ revert_launcher_overrides() {
         mapfile -t -d $'\t' f < <(printf '%s' "${line#LAUNCHER:}")
         OVERRIDE_LAUNCHER="${f[0]}"; OVERRIDE_FILE="${f[1]}"; OVERRIDE_ID="${f[2]}"
         if [ ! -f "$OVERRIDE_FILE" ]; then continue; fi
-        if ! wait_for_launcher_closed "$OVERRIDE_LAUNCHER" "type 's' to leave it as it is"; then
+        if ! wait_for_launcher_closed "$OVERRIDE_LAUNCHER" remove "type 's' to leave it as it is"; then
             print_status "Left the DLL override in $(launcher_override_where)." "$YELLOW"
             LAUNCHER_LINES_KEPT+=("$line"); continue
         fi
