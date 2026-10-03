@@ -114,6 +114,10 @@ GAME_SETTINGS_PLAN=()
 GAME_SETTINGS_MISSING=()
 GAME_SETTINGS_FOLLOW_UPS=()
 GAME_SETTINGS_APPLIED=()
+# The game's audio fixes this run (titles), and the ones already in place, so
+# the closing steps can leave out "turn EAX on in the game" when it's done.
+GAME_AUDIO_FIX_TITLES=()
+GAME_AUDIO_FIX_ALREADY=()
 PREV_CONFIG_LINES=()
 CONFIG_LINES=()
 GAME_SETTINGS_KEPT=()

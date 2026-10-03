@@ -390,6 +390,7 @@ apply_alsoft_overrides() {
 game_settings_step() {
     local step="$1"
     GAME_SETTINGS_PLAN=(); GAME_SETTINGS_MISSING=(); GAME_SETTINGS_FOLLOW_UPS=()
+    GAME_AUDIO_FIX_TITLES=(); GAME_AUDIO_FIX_ALREADY=()
     current_known_game || return
 
     local -a rows=()
@@ -485,6 +486,10 @@ game_settings_step() {
     for id in "${fix_order[@]}"; do
         [[ "$id" == audio:* ]] && [[ "${fix_status[$id]}" =~ ^(offer|already|missing)$ ]] && any_audio=1
         [[ "$id" == audio:* ]] && [ "${fix_status[$id]}" == "offer" ] && audio_offer=1
+        if [[ "$id" == audio:* ]] && [[ "${fix_status[$id]}" =~ ^(offer|already|missing)$ ]]; then
+            GAME_AUDIO_FIX_TITLES+=("${fix_title[$id]}")
+            [ "${fix_status[$id]}" == "already" ] && GAME_AUDIO_FIX_ALREADY+=("${fix_title[$id]}")
+        fi
     done
     if [ "$any_audio" -eq 1 ]; then
         echo -e "\n${WHITE}Recommended audio settings for ${GAME_NAME}:${NC}"
@@ -611,6 +616,19 @@ apply_game_settings() {
         [ -f "${f[2]}" ] || continue
         config_values_equal "${f[3]}" "$(config_get_key "${f[2]}" "${f[3]}" "${f[4]}" "${f[5]}")" "${f[7]}" \
             && echo "$line" >> "$INSTALL_MANIFEST"
+    done
+}
+
+# Usage: game_audio_fixes_done
+# True when the game has audio fixes and every one of them is now in place
+# (applied this run or already set), so EAX needs nothing more from the
+# player in the game's own menus. A declined fix, or one whose config file
+# doesn't exist yet, leaves it false.
+game_audio_fixes_done() {
+    [ ${#GAME_AUDIO_FIX_TITLES[@]} -gt 0 ] || return 1
+    local t
+    for t in "${GAME_AUDIO_FIX_TITLES[@]}"; do
+        [[ " ${GAME_SETTINGS_APPLIED[*]-} ${GAME_AUDIO_FIX_ALREADY[*]-} " == *" $t "* ]] || return 1
     done
 }
 
