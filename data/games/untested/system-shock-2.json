@@ -28,17 +28,23 @@
     "audio_settings": [
       {
         "title": "Enable underwater reverb",
-        "reason": "Some System Shock 2 maps don't mark their underwater areas, so they play the wrong reverb there (per NewDark's documentation).",
+        "reason": "Some System Shock 2 maps don't mark their underwater areas, so they play the wrong reverb there.",
         "changes": { "cam_ext.cfg": { "force_underwater_reverb": true } }
       }
     ],
     "optional_settings": [
       {
         "title": "Enable full-precision mouse look",
-        "reason": "System Shock 2 reads mouse look through standard Windows input by default, which doesn't give high-resolution mice their full precision (per NewDark's documentation).",
+        "reason": "System Shock 2 reads mouse look through standard Windows input by default, which doesn't give high-resolution mice their full precision.",
         "changes": { "cam_ext.cfg": { "use_raw_mouse_input": true } }
       }
     ]
   },
+  "sources": [
+    {
+      "title": "NewDark's config documentation (new_config_vars.txt)",
+      "url": "https://github.com/JarrodDoyle/rogue-patcher/blob/0e355105dd7d520d0364c5f96d03ae7f9d437353/Resources/NewDark/Docs/NewDark/new_config_vars.txt"
+    }
+  ],
   "notes": "It comes with NewDark pre-installed, which has its own 'Hardware Acceleration' option in the in-game Audio menu — worth trying if EAX doesn't sound right."
 }

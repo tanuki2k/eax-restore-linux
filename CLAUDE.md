@@ -316,9 +316,11 @@ to the known games database" for what belongs in which field):
   different store's block, since a user only ever sees one block at a time.
 - State only what's actually verified, and say exactly what was checked — avoid
   hedge words ("probably", "should") where a concrete fact is possible, and don't
-  imply an install was checked locally if it wasn't. Cite a source in parentheses
-  when the claim is non-obvious, e.g. "(per the Vogons Wiki citation for this
-  title)", "(per PCGamingWiki)", "(per Creative's setup guide for the game)".
+  imply an install was checked locally if it wasn't. In `store_details`, `notes`,
+  `patches` and `eax.problem`/`eax.fix` — shown on the known games database screen,
+  above its Sources section — cite a source in parentheses when the claim is
+  non-obvious, e.g. "(per PCGamingWiki)", and put its page in `sources`. Never in a
+  game setting's `title`, `reason` or `follow_up` (see below).
 - Be concrete and current rather than generic — name the actual tweak label,
   mission, mod, or date — but keep each note to 1-3 sentences confined to its
   field's job; don't pad it with everything known about the title.
@@ -354,12 +356,14 @@ and its current → new value, read live from their own install.
   ("loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script
   installs").
 - Don't restate setting names, values or paths already shown in the rows, and don't
-  cite where a default was checked — the row's current value proves it. Cite a source
-  only for a claim the rows can't show, e.g. "(per PCGamingWiki)"; its URL goes in
-  `sources`.
+  cite where a default was checked — the row's current value proves it. Never cite a
+  source in a reason ("(per PCGamingWiki)" and the like): players read it at the
+  Game Settings step, where they can't see or check it. A claim that needs a source
+  gets its page in `sources`, which the known games database screen lists.
 - Plain English for effects ("muffling of sounds through walls", not "occlusion").
   Game menu labels may be quoted when they help a player find the same option in-game.
-- Only state what's verified by a real install, the game's own docs, or a cited source.
+- Only state what's verified by a real install, the game's own docs, or a source in
+  `sources`.
 
 Examples:
 - `Enable EAX reverb` — "Brothers in Arms ships with EAX and 3D sound off and loads its
@@ -367,9 +371,9 @@ Examples:
 - `Enable EAX effects` — "Quake 4 ships with its EAX sound options off, so there's no
   reverb and no muffling of sounds through walls."
 - `Fix low-res textures` — "Quake 4 can't detect how much memory modern graphics cards
-  have, so it loads its lowest-resolution textures (per PCGamingWiki)."
+  have, so it loads its lowest-resolution textures."
 - `Enable underwater reverb` — "Some System Shock 2 maps don't mark their underwater
-  areas, so they play the wrong reverb there (per NewDark's documentation)."
+  areas, so they play the wrong reverb there."
 
 **Script user-facing strings** (banners, `Note:`/`Warning:`/`Error:` messages,
 prompts — see "Text/output style conventions" above for which helper/color to use):

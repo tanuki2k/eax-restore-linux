@@ -310,7 +310,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX reverb",
-            "reason": "BioShock ships with 'Use Creative EAX Audio' off, which keeps it on DirectSound with no EAX instead of the OpenAL32.dll this script installs (per Creative's audio guide for the game).",
+            "reason": "BioShock ships with 'Use Creative EAX Audio' off, which keeps it on DirectSound with no EAX instead of the OpenAL32.dll this script installs.",
             "changes": {
               "Bioshock.ini": {
                 "ShockGame.ShockUserSettings": {
@@ -1227,7 +1227,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX reverb",
-            "reason": "Psychonauts ships with EAX off and has no in-game option to turn it on (per PCGamingWiki).",
+            "reason": "Psychonauts ships with EAX off and has no in-game option to turn it on.",
             "changes": {
               "AudioSettings.ini": {
                 "AudioSettings": {
@@ -1308,7 +1308,7 @@
         "optional_settings": [
           {
             "title": "Fix low-res textures",
-            "reason": "Quake 4 can't detect how much memory modern graphics cards have, so it loads its lowest-resolution textures (per PCGamingWiki).",
+            "reason": "Quake 4 can't detect how much memory modern graphics cards have, so it loads its lowest-resolution textures.",
             "changes": {
               "autoexec.cfg": {
                 "sys_videoRam": "512"
@@ -1833,7 +1833,7 @@
         "audio_settings": [
           {
             "title": "Enable underwater reverb",
-            "reason": "Some System Shock 2 maps don't mark their underwater areas, so they play the wrong reverb there (per NewDark's documentation).",
+            "reason": "Some System Shock 2 maps don't mark their underwater areas, so they play the wrong reverb there.",
             "changes": {
               "cam_ext.cfg": {
                 "force_underwater_reverb": true
@@ -1844,7 +1844,7 @@
         "optional_settings": [
           {
             "title": "Enable full-precision mouse look",
-            "reason": "System Shock 2 reads mouse look through standard Windows input by default, which doesn't give high-resolution mice their full precision (per NewDark's documentation).",
+            "reason": "System Shock 2 reads mouse look through standard Windows input by default, which doesn't give high-resolution mice their full precision.",
             "changes": {
               "cam_ext.cfg": {
                 "use_raw_mouse_input": true
@@ -1853,6 +1853,12 @@
           }
         ]
       },
+      "sources": [
+        {
+          "title": "NewDark's config documentation (new_config_vars.txt)",
+          "url": "https://github.com/JarrodDoyle/rogue-patcher/blob/0e355105dd7d520d0364c5f96d03ae7f9d437353/Resources/NewDark/Docs/NewDark/new_config_vars.txt"
+        }
+      ],
       "notes": "It comes with NewDark pre-installed, which has its own 'Hardware Acceleration' option in the in-game Audio menu — worth trying if EAX doesn't sound right."
     },
     {
@@ -1901,7 +1907,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX reverb",
-            "reason": "The Wheel of Time only plays EAX reverb when its DirectSound, hardware 3D sound and spatial sound options are on (per PCGamingWiki).",
+            "reason": "The Wheel of Time only plays EAX reverb when its DirectSound, hardware 3D sound and spatial sound options are on.",
             "changes": {
               "WoT.ini": {
                 "Galaxy.GalaxyAudioSubsystem": {
@@ -1975,7 +1981,7 @@
         "audio_settings": [
           {
             "title": "Enable underwater reverb",
-            "reason": "Some Thief Gold maps don't mark their underwater areas, so they play the wrong reverb there (per NewDark's documentation).",
+            "reason": "Some Thief Gold maps don't mark their underwater areas, so they play the wrong reverb there.",
             "changes": {
               "cam_ext.cfg": {
                 "force_underwater_reverb": true
@@ -1986,7 +1992,7 @@
         "optional_settings": [
           {
             "title": "Enable full-precision mouse look",
-            "reason": "Thief Gold reads mouse look through standard Windows input by default, which doesn't give high-resolution mice their full precision (per NewDark's documentation).",
+            "reason": "Thief Gold reads mouse look through standard Windows input by default, which doesn't give high-resolution mice their full precision.",
             "changes": {
               "cam_ext.cfg": {
                 "use_raw_mouse_input": true
@@ -1994,7 +2000,13 @@
             }
           }
         ]
-      }
+      },
+      "sources": [
+        {
+          "title": "NewDark's config documentation (new_config_vars.txt)",
+          "url": "https://github.com/JarrodDoyle/rogue-patcher/blob/0e355105dd7d520d0364c5f96d03ae7f9d437353/Resources/NewDark/Docs/NewDark/new_config_vars.txt"
+        }
+      ]
     },
     {
       "id": "thief-ii-the-metal-age",
@@ -2032,7 +2044,7 @@
         "audio_settings": [
           {
             "title": "Enable underwater reverb",
-            "reason": "Some Thief II maps don't mark their underwater areas, so they play the wrong reverb there (per NewDark's documentation).",
+            "reason": "Some Thief II maps don't mark their underwater areas, so they play the wrong reverb there.",
             "changes": {
               "cam_ext.cfg": {
                 "force_underwater_reverb": true
@@ -2043,7 +2055,7 @@
         "optional_settings": [
           {
             "title": "Enable full-precision mouse look",
-            "reason": "Thief II reads mouse look through standard Windows input by default, which doesn't give high-resolution mice their full precision (per NewDark's documentation).",
+            "reason": "Thief II reads mouse look through standard Windows input by default, which doesn't give high-resolution mice their full precision.",
             "changes": {
               "cam_ext.cfg": {
                 "use_raw_mouse_input": true
@@ -2051,7 +2063,13 @@
             }
           }
         ]
-      }
+      },
+      "sources": [
+        {
+          "title": "NewDark's config documentation (new_config_vars.txt)",
+          "url": "https://github.com/JarrodDoyle/rogue-patcher/blob/0e355105dd7d520d0364c5f96d03ae7f9d437353/Resources/NewDark/Docs/NewDark/new_config_vars.txt"
+        }
+      ]
     },
     {
       "id": "thief-deadly-shadows",
@@ -2091,7 +2109,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX reverb",
-            "reason": "Thief: Deadly Shadows ships with 'Audio Hardware Mixing', 'EAX ADVANCED HD' and 'EAX Multiple Environments' off (per Creative's setup guide for the game).",
+            "reason": "Thief: Deadly Shadows ships with 'Audio Hardware Mixing', 'EAX ADVANCED HD' and 'EAX Multiple Environments' off.",
             "changes": {
               "options.ini": {
                 "UseHWMixing": "1",
@@ -2101,7 +2119,13 @@
             }
           }
         ]
-      }
+      },
+      "sources": [
+        {
+          "title": "Creative's Thief: Deadly Shadows EAX guide (archived)",
+          "url": "https://web.archive.org/web/20060114204401/http://www.soundblaster.com/resources/read.asp?articleid=53835&cat=1"
+        }
+      ]
     },
     {
       "id": "timeshift",

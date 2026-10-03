@@ -38,7 +38,7 @@
     "optional_settings": [
       {
         "title": "Fix low-res textures",
-        "reason": "Quake 4 can't detect how much memory modern graphics cards have, so it loads its lowest-resolution textures (per PCGamingWiki).",
+        "reason": "Quake 4 can't detect how much memory modern graphics cards have, so it loads its lowest-resolution textures.",
         "changes": { "autoexec.cfg": { "sys_videoRam": "512" } },
         "follow_up": "Open Options -> Video and click Autodetect."
       }

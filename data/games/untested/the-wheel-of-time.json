@@ -11,7 +11,7 @@
     "audio_settings": [
       {
         "title": "Enable EAX reverb",
-        "reason": "The Wheel of Time only plays EAX reverb when its DirectSound, hardware 3D sound and spatial sound options are on (per PCGamingWiki).",
+        "reason": "The Wheel of Time only plays EAX reverb when its DirectSound, hardware 3D sound and spatial sound options are on.",
         "changes": {
           "WoT.ini": {
             "Galaxy.GalaxyAudioSubsystem": {

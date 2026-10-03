@@ -26,11 +26,17 @@
     "audio_settings": [
       {
         "title": "Enable EAX reverb",
-        "reason": "Thief: Deadly Shadows ships with 'Audio Hardware Mixing', 'EAX ADVANCED HD' and 'EAX Multiple Environments' off (per Creative's setup guide for the game).",
+        "reason": "Thief: Deadly Shadows ships with 'Audio Hardware Mixing', 'EAX ADVANCED HD' and 'EAX Multiple Environments' off.",
         "changes": {
           "options.ini": { "UseHWMixing": "1", "UseEAX": "1", "EAXMultipleEnvironments": "1" }
         }
       }
     ]
-  }
+  },
+  "sources": [
+    {
+      "title": "Creative's Thief: Deadly Shadows EAX guide (archived)",
+      "url": "https://web.archive.org/web/20060114204401/http://www.soundblaster.com/resources/read.asp?articleid=53835&cat=1"
+    }
+  ]
 }
