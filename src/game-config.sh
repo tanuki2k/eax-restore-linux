@@ -159,6 +159,7 @@ config_values_equal() {
 config_display_value() {
     case "$1" in
         __ABSENT__) echo "(not set)" ;;
+        "") echo "(empty)" ;;
         __TRUE__) echo "on" ;;
         __FALSE__) echo "off" ;;
         __DELETE__) echo "(removed)" ;;

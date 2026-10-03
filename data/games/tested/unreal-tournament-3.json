@@ -1,0 +1,32 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Unreal Tournament 3",
+  "exe": "UT3.exe",
+  "stores": {
+    "steam": {
+      "id": 13210,
+      "delisted": true,
+      "store_details": "Delisted from Steam in December 2022, along with the rest of the Unreal series."
+    }
+  },
+  "eax": { "api": "openal", "versions": ["4.0", "5.0"] },
+  "game_config": {
+    "files": {
+      "UTEngine.ini": {
+        "format": "ini",
+        "locations": ["prefix_documents:My Games/Unreal Tournament 3/UTGame/Config/UTEngine.ini"]
+      }
+    },
+    "audio_fixes": [
+      {
+        "title": "Enable EAX reverb",
+        "reason": "Unreal Tournament 3 asks for the 'Generic Software' device of its bundled OpenAL32.dll, so it has no sound with the OpenAL32.dll this script installs. In the game's options, this is 'Hardware OpenAL' ticked.",
+        "changes": {
+          "UTEngine.ini": {
+            "ALAudio.ALAudioDevice": { "DeviceName": "", "UseEffectsProcessing": "True" }
+          }
+        }
+      }
+    ]
+  }
+}

@@ -340,10 +340,12 @@ and its current → new value, read live from their own install.
 - One sentence, or two short ones: what the game does out of the box, and what that
   costs the player where it isn't obvious.
 - Start with the game's name. Name concrete files the game itself uses (e.g.
-  `DefOpenAL32.dll`, `OpenAL32.dll`), but never the script's own parts (DSOAL,
-  OpenAL Soft) or what it installs.
+  `DefOpenAL32.dll`). When the game passes over a file the script installs, name
+  that file and say the script installs it ("the OpenAL32.dll this script
+  installs"), but never name the script's own parts (DSOAL, OpenAL Soft).
 - Be specific: never "any other" or "the other one"; name what it's chosen over
-  ("loads its bundled DefOpenAL32.dll instead of OpenAL32.dll").
+  ("loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script
+  installs").
 - Don't restate setting names, values or paths already shown in the rows, and don't
   cite where a default was checked — the row's current value proves it. Cite a source
   only for a claim the rows can't show, e.g. "(per PCGamingWiki)"; its URL goes in
@@ -354,7 +356,7 @@ and its current → new value, read live from their own install.
 
 Examples:
 - `Enable EAX reverb` — "Brothers in Arms ships with EAX and 3D sound off and loads its
-  bundled DefOpenAL32.dll instead of OpenAL32.dll."
+  bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs."
 - `Enable EAX effects` — "Quake 4 ships with its EAX sound options off, so there's no
   reverb and no muffling of sounds through walls."
 - `Fix low-res textures` — "Quake 4 can't detect how much memory modern graphics cards

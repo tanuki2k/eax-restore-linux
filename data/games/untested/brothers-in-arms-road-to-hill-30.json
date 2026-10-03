@@ -12,7 +12,7 @@
     "audio_fixes": [
       {
         "title": "Enable EAX reverb",
-        "reason": "Brothers in Arms ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of OpenAL32.dll.",
+        "reason": "Brothers in Arms ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs.",
         "changes": {
           "bia.ini": {
             "ALAudio.ALAudioSubsystem": {

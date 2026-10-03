@@ -327,7 +327,7 @@
         "audio_fixes": [
           {
             "title": "Enable EAX reverb",
-            "reason": "Earned in Blood ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of OpenAL32.dll.",
+            "reason": "Earned in Blood ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs.",
             "changes": {
               "EiB.ini": {
                 "ALAudio.ALAudioSubsystem": {
@@ -390,7 +390,7 @@
         "audio_fixes": [
           {
             "title": "Enable EAX reverb",
-            "reason": "Brothers in Arms ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of OpenAL32.dll.",
+            "reason": "Brothers in Arms ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs.",
             "changes": {
               "bia.ini": {
                 "ALAudio.ALAudioSubsystem": {
@@ -1693,7 +1693,7 @@
         "audio_fixes": [
           {
             "title": "Enable EAX reverb",
-            "reason": "Republic Commando turns EAX and 3D sound off on its first launch and loads its bundled DefOpenAL32.dll instead of OpenAL32.dll.",
+            "reason": "Republic Commando turns EAX and 3D sound off on its first launch and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs.",
             "changes": {
               "System.ini": {
                 "ALAudio.ALAudioSubsystem": {
@@ -1738,7 +1738,7 @@
         "audio_fixes": [
           {
             "title": "Enable EAX reverb",
-            "reason": "SWAT 4 ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of OpenAL32.dll.",
+            "reason": "SWAT 4 ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs.",
             "changes": {
               "Swat4.ini": {
                 "ALAudio.ALAudioSubsystem": {
@@ -2428,7 +2428,7 @@
         "audio_fixes": [
           {
             "title": "Enable EAX reverb",
-            "reason": "UT2004 ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of OpenAL32.dll. In the game's options, this is Audio Mode 'H/W 3D + EAX' with System Driver ticked.",
+            "reason": "UT2004 ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs. In the game's options, this is Audio Mode 'H/W 3D + EAX' with System Driver ticked.",
             "changes": {
               "UT2004.ini": {
                 "ALAudio.ALAudioSubsystem": {
@@ -2458,6 +2458,30 @@
         "versions": [
           "4.0",
           "5.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "UTEngine.ini": {
+            "format": "ini",
+            "locations": [
+              "prefix_documents:My Games/Unreal Tournament 3/UTGame/Config/UTEngine.ini"
+            ]
+          }
+        },
+        "audio_fixes": [
+          {
+            "title": "Enable EAX reverb",
+            "reason": "Unreal Tournament 3 asks for the 'Generic Software' device of its bundled OpenAL32.dll, so it has no sound with the OpenAL32.dll this script installs. In the game's options, this is 'Hardware OpenAL' ticked.",
+            "changes": {
+              "UTEngine.ini": {
+                "ALAudio.ALAudioDevice": {
+                  "DeviceName": "",
+                  "UseEffectsProcessing": "True"
+                }
+              }
+            }
+          }
         ]
       }
     },

@@ -16,7 +16,7 @@
     "audio_fixes": [
       {
         "title": "Enable EAX reverb",
-        "reason": "UT2004 ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of OpenAL32.dll. In the game's options, this is Audio Mode 'H/W 3D + EAX' with System Driver ticked.",
+        "reason": "UT2004 ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs. In the game's options, this is Audio Mode 'H/W 3D + EAX' with System Driver ticked.",
         "changes": {
           "UT2004.ini": {
             "ALAudio.ALAudioSubsystem": {
