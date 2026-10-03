@@ -2385,11 +2385,13 @@
         "audio_fixes": [
           {
             "title": "Enable EAX reverb",
-            "reason": "Unreal II ships with EAX off.",
+            "reason": "Unreal II ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs. In the game's options, only the EAX part is shown, as 'EAX 3.0 (Audigy only)'.",
             "changes": {
               "Unreal2.ini": {
                 "ALAudio.ALAudioSubsystem": {
-                  "UseEAX": "True"
+                  "UseDefaultDriver": "False",
+                  "UseEAX": "True",
+                  "Use3DSound": "True"
                 }
               }
             }
