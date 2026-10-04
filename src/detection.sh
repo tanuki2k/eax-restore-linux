@@ -87,47 +87,66 @@ get_game_directory() {
         echo ""
     fi
 
-    echo -e "${WHITE}Common game locations:${NC}\n"
-    echo -e "${WHITE} Linux Desktop (Steam): ~/.local/share/Steam/steamapps/common/[Game]${NC}"
-    echo -e "${WHITE} Steam Deck (SD Card):  /run/media/mmcblk0p1/steamapps/common/[Game]${NC}"
-    echo -e "${WHITE} Heroic / GOG:          ~/Games/Heroic/[Game]${NC}\n"
-
     local have_gui_picker=0
-    if command -v zenity &>/dev/null || command -v kdialog &>/dev/null; then
-        have_gui_picker=1
-    fi
+    gui_picker_available && have_gui_picker=1
+
+    # The main menu's choice (S/B/M) is used once, on the first pass, in
+    # place of this step's own menu. A retry — a scan that came up empty, a
+    # folder that isn't there, the steps 1-2 restart loop — gets the menu.
+    local preset="${LOCATE_METHOD:-}"
+    LOCATE_METHOD=""
+    [ "$preset" == "scan" ] && [ "$can_scan" -eq 0 ] && preset=""
+    [ "$preset" == "gui" ] && [ "$have_gui_picker" -eq 0 ] && preset=""
+
+    local locations_shown=0
+    _show_common_locations() {
+        [ "$locations_shown" -eq 1 ] && return
+        echo -e "${WHITE}Common game locations:${NC}\n"
+        echo -e "${WHITE} Linux Desktop (Steam): ~/.local/share/Steam/steamapps/common/[Game]${NC}"
+        echo -e "${WHITE} Steam Deck (SD Card):  /run/media/mmcblk0p1/steamapps/common/[Game]${NC}"
+        echo -e "${WHITE} Heroic / GOG:          ~/Games/Heroic/[Game]${NC}"
+        locations_shown=1
+    }
 
     while [ -z "$GAME_DIR" ]; do
-        # Build the menu fresh each pass: which options apply can shrink
-        # (e.g. a scan that just came up empty stays offered — the user
-        # might pick something else next time), and skipping straight to
-        # the one available action avoids asking a one-choice "choice".
-        local -a menu_actions=()
-        if [ "$have_gui_picker" -eq 1 ]; then
-            print_option "$((${#menu_actions[@]} + 1))" "Browse for the folder using a graphical file picker"
-            menu_actions+=("gui")
-        fi
-        if [ "$can_scan" -eq 1 ]; then
-            print_option "$((${#menu_actions[@]} + 1))" "Scan your Steam/Heroic library for known EAX games"
-            menu_actions+=("scan")
-        fi
-        print_option "$((${#menu_actions[@]} + 1))" "Enter the path manually"
-        menu_actions+=("manual")
-
-        local action
-        if [ "${#menu_actions[@]}" -eq 1 ]; then
-            action="${menu_actions[0]}"
+        local action=""
+        if [ -n "$preset" ]; then
+            action="$preset"; preset=""
+            [ "$action" == "scan" ] || _show_common_locations
         else
-            local choice
-            while true; do
-                prompt "How would you like to locate the game? [1-${#menu_actions[@]}]: "
-                read_answer choice
-                if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#menu_actions[@]}" ]; then
-                    break
-                fi
-                print_result "Invalid selection. Please enter a number 1-${#menu_actions[@]}." "$YELLOW"
-            done
-            action="${menu_actions[$((choice - 1))]}"
+            _show_common_locations
+            echo ""
+            # Build the menu fresh each pass: which options apply can shrink
+            # (e.g. a scan that just came up empty stays offered — the user
+            # might pick something else next time), and skipping straight to
+            # the one available action avoids asking a one-choice "choice".
+            local -a menu_keys=() menu_actions=()
+            if [ "$can_scan" -eq 1 ]; then
+                print_key_option "[S]can your Steam/Heroic library"
+                menu_keys+=("s"); menu_actions+=("scan")
+            fi
+            if [ "$have_gui_picker" -eq 1 ]; then
+                print_key_option "[B]rowse for the game folder"
+                menu_keys+=("b"); menu_actions+=("gui")
+            fi
+            print_key_option "[M]anually type the game path"
+            menu_keys+=("m"); menu_actions+=("manual")
+
+            if [ "${#menu_actions[@]}" -eq 1 ]; then
+                action="${menu_actions[0]}"
+            else
+                local choice keys i
+                keys="$(IFS=/; echo "${menu_keys[*]}")"
+                while [ -z "$action" ]; do
+                    prompt "How would you like to locate the game? [${keys}]: "
+                    read_answer choice || exit 0
+                    choice="${choice,,}"
+                    for i in "${!menu_keys[@]}"; do
+                        [ "$choice" == "${menu_keys[$i]}" ] && action="${menu_actions[$i]}"
+                    done
+                    [ -n "$action" ] || print_result "That's not a valid option — please type $(join_choices "${menu_keys[@]}")." "$YELLOW"
+                done
+            fi
         fi
 
         case "$action" in
@@ -187,7 +206,15 @@ get_game_directory() {
         fi
     done
 
+    unset -f _show_common_locations
     record_recent_game "$GAME_DIR"
+}
+
+# Usage: gui_picker_available
+# True when a graphical folder picker (zenity or kdialog) is installed, so the
+# menus can offer "[B]rowse for the game folder".
+gui_picker_available() {
+    command -v zenity &>/dev/null || command -v kdialog &>/dev/null
 }
 
 steam_roots() {

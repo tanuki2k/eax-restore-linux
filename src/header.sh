@@ -82,13 +82,14 @@
 #   in place of the rolling latest-master. A break-glass lever for when a
 #   daily build regresses a game — pairs the pinned DSOAL with the current
 #   OpenAL Soft so only the one variable changes. Also selects the DSOAL
-#   engine and skips the (i)nstall/(u)ninstall menu (goes straight to
+#   engine and skips the main menu (goes straight to
 #   install) and the engine-selection prompt.
 #
 # * EAX_RESTORE_VCRUN_ONLY=1  Skips the full install/uninstall flow and just
 #   (re)installs the MS VC++ 2022 Redistributable into a game's prefix.
 #   Useful if you skipped that step during a normal install and want to go
 #   back for it without redoing everything else.
+#   The main menu's Utilities → [V]C++ runtime install does the same.
 #
 # * EAX_RESTORE_SKIP_CACHE_CHECK=1  Skips the REPOSITORY CACHE CHECK step
 #   (the GitHub update check/download for DSOAL and OpenAL Soft), trusting

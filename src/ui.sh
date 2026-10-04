@@ -314,6 +314,26 @@ print_option() {
     fi
 }
 
+# Usage: print_key_option "[S]can your Steam/Heroic library"
+# One row of a letter menu, where the bracketed letter is what to type. Same
+# indent as print_option; the caller owns the header, blank lines and prompt.
+print_key_option() {
+    echo -e " $(tilde_path "$1")"
+}
+
+# Usage: join_choices s b m
+# "s, b or m" — the letters a letter menu accepts, for its "please type" line.
+join_choices() {
+    local n=$# out="" i=1 c
+    for c in "$@"; do
+        if [ "$i" -eq 1 ]; then out="$c"
+        elif [ "$i" -eq "$n" ]; then out+=" or $c"
+        else out+=", $c"; fi
+        i=$((i + 1))
+    done
+    printf '%s' "$out"
+}
+
 # ==============================================================================
 # PROGRESS HELPERS
 # ==============================================================================

@@ -155,6 +155,11 @@ declare -A LAUNCHER_CLOSE_ANSWER=()
 # on this instead of the script exiting.
 RESTART_REQUESTED=""
 
+# The main menu's install choice — scan, gui or manual — so step 1 goes
+# straight to it instead of asking again. get_game_directory uses it once and
+# clears it.
+LOCATE_METHOD=""
+
 # Minimal hardcoded safety net for confirm_continue_if_eax_impossible, used
 # only if ensure_known_games_json can't produce a file at all (e.g. first
 # run, offline, no cache yet). Keeps the "this install is a functional

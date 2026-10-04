@@ -67,8 +67,18 @@ unzip, file, protontricks, winetricks, wine, and jq are already available.[0m
 [0;32m[1m--- SELECT OPERATION ---[0m
 [0;36m----------------------------------------------------------[0m
 
-[1;33mWould you like to (i)nstall or (u)ninstall the EAX audio fix? (i/u): [0m
-> 
+[1;37mWhat would you like to do?[0m
+
+ [S]can your Steam/Heroic library
+ [B]rowse for the game folder
+ [M]anually type the game path
+
+ [R]emove the EAX fix
+ [U]tilities
+ [Q]uit
+
+[1;33mSelection [s/b/m/r/u/q]: [0m
+> m
 [0;94mNote: EAX_RESTORE_SKIP_CACHE_CHECK is set — skipping the REPOSITORY CACHE CHECK
 and trusting whatever DSOAL/OpenAL Soft builds are already cached.[0m
 
@@ -77,11 +87,8 @@ and trusting whatever DSOAL/OpenAL Soft builds are already cached.[0m
 [0;36m----------------------------------------------------------[0m
 
 [0;36m----------------------------------------------------------[0m
-[0;36m1/9. Game Location[0m
+[0;36m1/11. Game Location[0m
 [0;36m----------------------------------------------------------[0m
-
-[0;94mNote: Library scanning needs the known-EAX-games database,
-which isn't available this run — skipping straight to manual entry.[0m
 
 [1;37mCommon game locations:[0m
 
@@ -89,10 +96,7 @@ which isn't available this run — skipping straight to manual entry.[0m
 [1;37m Steam Deck (SD Card):  /run/media/mmcblk0p1/steamapps/common/[Game][0m
 [1;37m Heroic / GOG:          ~/Games/Heroic/[Game][0m
 
- 1) Browse for the folder using a graphical file picker
- 2) Enter the path manually
-
-[1;33mHow would you like to locate the game? [1-2]: [0m
+[1;33mEnter the full path to the game's .exe folder:[0m
 > 
 
 ```
@@ -124,7 +128,7 @@ chmod +x eax-restore-linux.sh
 ```
 
 **4. Follow the prompts:**
-Choose to install or uninstall, provide the game directory, and select your preferred audio configuration.
+Pick from the main menu — scan your Steam/Heroic library, browse for the game folder, or type its path to install; or remove the fix, or open Utilities — then follow the steps for your game and select your preferred audio configuration.
 
 ### Steam Deck Quick Install (Desktop Mode)
 
@@ -137,7 +141,7 @@ As an alternative to the terminal steps above, [`eax-restore-linux.desktop`](eax
 Since the script itself refuses to run in Gaming Mode, this only works from Desktop Mode.
 
 ### Uninstallation
-Run the script, select **(u)ninstall**, and provide the game directory. The script will remove the EAX files, restore original backups, remove the DLL override (from the registry or the launcher's settings), optionally remove the VC++ runtime it installed, and offer to put back any game settings it changed (leaving alone anything you've changed yourself since). Like the install, it asks everything first — which files to remove, whether to close a running launcher, the VC++ runtime, which game settings to put back — and changes nothing until you confirm with one final "Proceed?".
+Run the script, choose **[R]emove the EAX fix**, and provide the game directory. The script will remove the EAX files, restore original backups, remove the DLL override (from the registry or the launcher's settings), optionally remove the VC++ runtime it installed, and offer to put back any game settings it changed (leaving alone anything you've changed yourself since). Like the install, it asks everything first — which files to remove, whether to close a running launcher, the VC++ runtime, which game settings to put back — and changes nothing until you confirm with one final "Proceed?".
 
 ### Library Scanning & the Known Games Database
 
@@ -237,7 +241,7 @@ For repeat runs or scripting, these can be set to skip prompts:
 | --- | --- |
 | `EAX_RESTORE_SKIP_PREFLIGHT=1` | Skips the pre-flight tool scan, trusting that `curl`, `unzip`, `file`, `protontricks`, `winetricks`, and `wine` are already available. |
 | `EAX_RESTORE_DSOAL_PIN=1` | Installs a frozen, known-good `kcat/dsoal` build (the revision pinned in the script, from kcat's `archive` release) instead of the rolling `latest-master` — a break-glass lever for when a daily build regresses a game. Pairs the pinned DSOAL with the current OpenAL Soft, selects the DSOAL engine, and jumps straight to install. |
-| `EAX_RESTORE_VCRUN_ONLY=1` | Skips the full install/uninstall flow and just (re)installs the MS VC++ 2022 Redistributable into a game's prefix. |
+| `EAX_RESTORE_VCRUN_ONLY=1` | Skips the full install/uninstall flow and just (re)installs the MS VC++ 2022 Redistributable into a game's prefix. The main menu offers the same under **Utilities → [V]C++ runtime install**. |
 | `EAX_RESTORE_SKIP_CACHE_CHECK=1` | Skips the repository cache check (the GitHub update check/download for DSOAL and OpenAL Soft), trusting whatever's already in the local cache. |
 | `EAX_RESTORE_KNOWN_GAMES_FILE=/path/to/known-eax-games.json` | Uses a local file (e.g. one you built with `tools/build-known-games.sh`) instead of fetching `known-eax-games.json` — mainly for testing edits to the database itself before they're pushed. |
 | `EAX_RESTORE_NO_LOG=1` | Turns off the per-run log file (see [Logs & Bug Reports](#logs--bug-reports)). |
