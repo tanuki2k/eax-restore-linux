@@ -2,7 +2,8 @@
   "$schema": "../../schema.json",
   "name": "Red Faction",
   "stores": {
-    "steam": { "id": 20530 }
+    "steam": { "id": 20530 },
+    "gog": { "id": 1207660623 }
   },
   "eax": { "api": "directsound3d", "versions": ["1.0", "2.0"] },
   "install": {

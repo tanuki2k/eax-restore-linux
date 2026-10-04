@@ -161,7 +161,7 @@
       "additionalProperties": false,
       "properties": {
         "id": {
-          "description": "Steam AppID / GOG product ID, verified against the store.",
+          "description": "Steam AppID / GOG game ID, verified against the store. For GOG, use the game's own ID as Heroic installs it (its appName, the same as the gameId in the game's goggame-<id>.info) — for a game sold inside a pack or collection, the game inside it, never the pack.",
           "type": "integer"
         },
         "delisted": {

@@ -3,7 +3,8 @@
   "name": "X-COM: Enforcer",
   "exe": "XCom.exe",
   "stores": {
-    "steam": { "id": 7770 }
+    "steam": { "id": 7770 },
+    "gog": { "id": 1445249599 }
   },
   "eax": { "api": "directsound3d", "versions": ["1.0"] },
   "game_config": {

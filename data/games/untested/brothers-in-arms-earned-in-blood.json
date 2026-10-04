@@ -3,7 +3,8 @@
   "name": "Brothers in Arms: Earned in Blood",
   "exe": "EiB.exe",
   "stores": {
-    "steam": { "id": 19800 }
+    "steam": { "id": 19800 },
+    "gog": { "id": 1239584357 }
   },
   "eax": { "api": "openal", "versions": ["2.0", "3.0", "4.0"] },
   "game_config": {

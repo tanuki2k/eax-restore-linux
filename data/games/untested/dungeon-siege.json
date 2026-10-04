@@ -4,8 +4,8 @@
   "stores": {
     "steam": { "id": 39190 },
     "gog": {
-      "id": 1142020247,
-      "store_details": "GOG sells this as the 'Dungeon Siege Collection' — base game plus both expansions."
+      "id": 1185868626,
+      "store_details": "GOG sells this only in the 'Dungeon Siege Collection', together with Dungeon Siege II and Dungeon Siege III."
     }
   },
   "eax": { "api": "directsound3d", "versions": ["1.0"] }

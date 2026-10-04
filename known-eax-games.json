@@ -477,6 +477,9 @@
       "stores": {
         "steam": {
           "id": 19800
+        },
+        "gog": {
+          "id": 1239584357
         }
       },
       "eax": {
@@ -520,6 +523,9 @@
       "stores": {
         "steam": {
           "id": 15390
+        },
+        "gog": {
+          "id": 1796017250
         }
       },
       "eax": {
@@ -805,8 +811,8 @@
           "id": 39190
         },
         "gog": {
-          "id": 1142020247,
-          "store_details": "GOG sells this as the 'Dungeon Siege Collection' — base game plus both expansions."
+          "id": 1185868626,
+          "store_details": "GOG sells this only in the 'Dungeon Siege Collection', together with Dungeon Siege II and Dungeon Siege III."
         }
       },
       "eax": {
@@ -822,6 +828,10 @@
       "stores": {
         "steam": {
           "id": 39200
+        },
+        "gog": {
+          "id": 1837106902,
+          "store_details": "GOG sells this only in the 'Dungeon Siege Collection', together with Dungeon Siege and Dungeon Siege III."
         }
       },
       "eax": {
@@ -1008,7 +1018,7 @@
           "id": 38420
         },
         "gog": {
-          "id": 1440163405
+          "id": 1440152063
         }
       },
       "eax": {
@@ -1795,6 +1805,9 @@
       "stores": {
         "steam": {
           "id": 20530
+        },
+        "gog": {
+          "id": 1207660623
         }
       },
       "eax": {
@@ -3082,6 +3095,9 @@
       "stores": {
         "steam": {
           "id": 7770
+        },
+        "gog": {
+          "id": 1445249599
         }
       },
       "eax": {

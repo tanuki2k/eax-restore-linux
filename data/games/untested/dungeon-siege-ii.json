@@ -2,7 +2,11 @@
   "$schema": "../../schema.json",
   "name": "Dungeon Siege II",
   "stores": {
-    "steam": { "id": 39200 }
+    "steam": { "id": 39200 },
+    "gog": {
+      "id": 1837106902,
+      "store_details": "GOG sells this only in the 'Dungeon Siege Collection', together with Dungeon Siege and Dungeon Siege III."
+    }
   },
   "eax": { "api": "directsound3d", "versions": ["1.0", "2.0", "3.0", "4.0"] }
 }
