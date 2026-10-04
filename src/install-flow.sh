@@ -150,11 +150,18 @@
         DEPLOY_DEST_NAME=("dsound.dll" "dsoal-aldrv.dll")
     fi
 
-    for i in "${!DEPLOY_SRC[@]}"; do
-        DEPLOY_DEST="$GAME_DIR/${DEPLOY_DEST_NAME[$i]}"
-        if handle_conflict "$DEPLOY_DEST"; then
-            deploy_copy "${DEPLOY_SRC[$i]}" "$DEPLOY_DEST" "Copied"
-        fi
+    # GAME_DIR plus any extra exe folders from the known-games entry (see
+    # resolve_extra_exe_folders) — each exe loads these from its own folder.
+    # The manifest stays in GAME_DIR; its absolute paths cover the rest.
+    GAME_DIRS=("$GAME_DIR" "${EXTRA_GAME_DIRS[@]}")
+
+    for deploy_dir in "${GAME_DIRS[@]}"; do
+        for i in "${!DEPLOY_SRC[@]}"; do
+            DEPLOY_DEST="$deploy_dir/${DEPLOY_DEST_NAME[$i]}"
+            if handle_conflict "$DEPLOY_DEST"; then
+                deploy_copy "${DEPLOY_SRC[$i]}" "$DEPLOY_DEST" "Copied"
+            fi
+        done
     done
 
     if [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows" ]; then
@@ -187,18 +194,16 @@
         # unlock its EAX menu. If a genuine eax.dll/eaxunified.dll is already
         # there the game ships and loads its own — shadowing it with a
         # zero-byte file can stop it booting — so leave a real one alone.
-        if is_genuine_dll "$(find_existing_variant "$GAME_DIR/eax.dll")"; then
-            print_status "Kept: existing eax.dll (game ships its own — dummy skipped)"
-        elif handle_conflict "$GAME_DIR/eax.dll"; then
-            if touch "$GAME_DIR/eax.dll"; then echo "$GAME_DIR/eax.dll" >> "$INSTALL_MANIFEST"; print_status "Created: eax.dll dummy"
-            else record_deploy_failure "$GAME_DIR/eax.dll"; fi
-        fi
-        if is_genuine_dll "$(find_existing_variant "$GAME_DIR/eaxunified.dll")"; then
-            print_status "Kept: existing eaxunified.dll (game ships its own — dummy skipped)"
-        elif handle_conflict "$GAME_DIR/eaxunified.dll"; then
-            if touch "$GAME_DIR/eaxunified.dll"; then echo "$GAME_DIR/eaxunified.dll" >> "$INSTALL_MANIFEST"; print_status "Created: eaxunified.dll dummy"
-            else record_deploy_failure "$GAME_DIR/eaxunified.dll"; fi
-        fi
+        for deploy_dir in "${GAME_DIRS[@]}"; do
+            for dummy in eax.dll eaxunified.dll; do
+                if is_genuine_dll "$(find_existing_variant "$deploy_dir/$dummy")"; then
+                    print_status "Kept: existing $dummy in $(basename "$deploy_dir") (game ships its own — dummy skipped)"
+                elif handle_conflict "$deploy_dir/$dummy"; then
+                    if touch "$deploy_dir/$dummy"; then echo "$deploy_dir/$dummy" >> "$INSTALL_MANIFEST"; print_status "Created: $dummy dummy in $(basename "$deploy_dir")"
+                    else record_deploy_failure "$deploy_dir/$dummy"; fi
+                fi
+            done
+        done
     fi
 
     if handle_conflict "$GAME_DIR/alsoft.ini"; then
@@ -412,6 +417,12 @@ EOF
             if [[ "$ADVANCED_LIMITS" =~ $YES_RE ]]; then print_status "Generated: Advanced alsoft.ini with expanded channel limits"
             else print_status "Generated: Linux-optimised alsoft.ini"; fi
             apply_alsoft_overrides
+            # Copied after the overrides so every exe gets the same settings.
+            for deploy_dir in "${EXTRA_GAME_DIRS[@]}"; do
+                if handle_conflict "$deploy_dir/alsoft.ini"; then
+                    deploy_copy "$GAME_DIR/alsoft.ini" "$deploy_dir/alsoft.ini" "Copied"
+                fi
+            done
         else
             record_deploy_failure "$GAME_DIR/alsoft.ini"
         fi

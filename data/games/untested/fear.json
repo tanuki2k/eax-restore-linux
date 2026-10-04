@@ -3,11 +3,16 @@
   "name": "F.E.A.R.",
   "exe": "FEAR.exe",
   "stores": {
-    "steam": { "id": 21090 },
-    "gog": { "id": 1423058413 }
+    "steam": {
+      "id": 21090,
+      "store_details": "Steam lists the Extraction Point and Perseus Mandate expansions as separate games in the library, so each one is set up on its own."
+    }
   },
   "eax": { "api": "directsound3d", "versions": ["2.0", "3.0", "4.0"] },
   "install": {
     "tweaks": ["eax_unified", "expand_audio_limits"]
-  }
+  },
+  "sources": [
+    { "title": "PCGamingWiki: F.E.A.R.", "url": "https://www.pcgamingwiki.com/wiki/F.E.A.R." }
+  ]
 }

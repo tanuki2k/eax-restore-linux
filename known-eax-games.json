@@ -854,10 +854,8 @@
       "exe": "FEAR.exe",
       "stores": {
         "steam": {
-          "id": 21090
-        },
-        "gog": {
-          "id": 1423058413
+          "id": 21090,
+          "store_details": "Steam lists the Extraction Point and Perseus Mandate expansions as separate games in the library, so each one is set up on its own."
         }
       },
       "eax": {
@@ -873,7 +871,116 @@
           "eax_unified",
           "expand_audio_limits"
         ]
-      }
+      },
+      "sources": [
+        {
+          "title": "PCGamingWiki: F.E.A.R.",
+          "url": "https://www.pcgamingwiki.com/wiki/F.E.A.R."
+        }
+      ]
+    },
+    {
+      "id": "fear-extraction-point",
+      "name": "F.E.A.R. Extraction Point",
+      "exe": "FEARXP.exe",
+      "stores": {
+        "steam": {
+          "id": 21110,
+          "patches": "The English version loses some radio voices when hardware sound is on, and the unofficial 'F.E.A.R. Extraction Point EAX Fix' brings them back (per PCGamingWiki)."
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "2.0",
+          "4.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified",
+          "expand_audio_limits"
+        ]
+      },
+      "sources": [
+        {
+          "title": "PCGamingWiki: F.E.A.R.",
+          "url": "https://www.pcgamingwiki.com/wiki/F.E.A.R."
+        },
+        {
+          "title": "F.E.A.R. Extraction Point EAX Fix",
+          "url": "https://community.pcgamingwiki.com/files/file/2600-fear-extraction-point-eax-fix"
+        }
+      ]
+    },
+    {
+      "id": "fear-perseus-mandate",
+      "name": "F.E.A.R. Perseus Mandate",
+      "exe": "FEARXP2.exe",
+      "stores": {
+        "steam": {
+          "id": 21120
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "2.0",
+          "4.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified",
+          "expand_audio_limits"
+        ]
+      },
+      "sources": [
+        {
+          "title": "PCGamingWiki: F.E.A.R. Perseus Mandate",
+          "url": "https://www.pcgamingwiki.com/wiki/F.E.A.R._Perseus_Mandate"
+        }
+      ]
+    },
+    {
+      "id": "fear-platinum",
+      "name": "F.E.A.R. Platinum",
+      "exe": "FEAR.exe",
+      "stores": {
+        "gog": {
+          "id": 1423058413,
+          "extra_exe_folders": [
+            "FEARXP",
+            "FEARXP2"
+          ],
+          "store_details": "This bundles F.E.A.R. with its Extraction Point and Perseus Mandate expansions in one install, each with its own exe.",
+          "patches": "The English version of Extraction Point loses some radio voices when hardware sound is on, and the unofficial 'F.E.A.R. Extraction Point EAX Fix' brings them back (per PCGamingWiki)."
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "2.0",
+          "3.0",
+          "4.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified",
+          "expand_audio_limits"
+        ]
+      },
+      "sources": [
+        {
+          "title": "PCGamingWiki: F.E.A.R.",
+          "url": "https://www.pcgamingwiki.com/wiki/F.E.A.R."
+        },
+        {
+          "title": "F.E.A.R. Extraction Point EAX Fix",
+          "url": "https://community.pcgamingwiki.com/files/file/2600-fear-extraction-point-eax-fix"
+        }
+      ]
     },
     {
       "id": "fallout-tactics-classic",

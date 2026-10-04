@@ -181,6 +181,13 @@
           "description": "Steam only: the BetaKey of a branch that restores EAX.",
           "type": "string"
         },
+        "extra_exe_folders": {
+          "description": "GOG only: other folders under the game's exe folder that hold their own exe (e.g. expansions launched from the same title) and get the same game-folder files.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^(?!/)(?!.*\\.\\.)[^\\\\]+$" },
+          "default": []
+        },
         "store_details": { "type": "string" },
         "patches": { "type": "string" }
       }

@@ -62,6 +62,7 @@ get_game_directory() {
     GAME_DIR=""
     GAME_NAME=""
     GAME_INSTALL_ROOT=""
+    EXTRA_GAME_DIRS=()
     SCANNED_APPID=""
     SCANNED_NOTES_SHOWN=""
     OPENAL_NATIVE_MODE=""

@@ -39,6 +39,21 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         break
     done
 
+    # A title that launches more than one exe from its own folders (GOG's
+    # F.E.A.R. Platinum and its expansions) gets the game-folder files in
+    # each of them too — checked for write access now, like GAME_DIR above.
+    if [ "$LAUNCHER_TYPE" == "1" ]; then
+        resolve_extra_exe_folders "$APPID" "steam"
+    else
+        resolve_extra_exe_folders "${HEROIC_APP_NAME:-}" "gog"
+    fi
+    if [ ${#EXTRA_GAME_DIRS[@]} -gt 0 ]; then
+        for extra_dir in "${EXTRA_GAME_DIRS[@]}"; do
+            check_target_writable "$extra_dir" "game folder"
+        done
+        print_status "$GAME_NAME also starts games from $(extra_exe_folders_list), so they get the same files."
+    fi
+
     # 4. Audio API Detection
     print_step 4 "Audio API Detection"
     print_paragraph "This step works out whether the game plays its 3D sound through DirectSound3D or" \

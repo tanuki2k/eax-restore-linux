@@ -1,0 +1,22 @@
+{
+  "$schema": "../../schema.json",
+  "name": "F.E.A.R. Extraction Point",
+  "exe": "FEARXP.exe",
+  "stores": {
+    "steam": {
+      "id": 21110,
+      "patches": "The English version loses some radio voices when hardware sound is on, and the unofficial 'F.E.A.R. Extraction Point EAX Fix' brings them back (per PCGamingWiki)."
+    }
+  },
+  "eax": { "api": "directsound3d", "versions": ["2.0", "4.0"] },
+  "install": {
+    "tweaks": ["eax_unified", "expand_audio_limits"]
+  },
+  "sources": [
+    { "title": "PCGamingWiki: F.E.A.R.", "url": "https://www.pcgamingwiki.com/wiki/F.E.A.R." },
+    {
+      "title": "F.E.A.R. Extraction Point EAX Fix",
+      "url": "https://community.pcgamingwiki.com/files/file/2600-fear-extraction-point-eax-fix"
+    }
+  ]
+}

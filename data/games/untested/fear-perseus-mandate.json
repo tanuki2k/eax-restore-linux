@@ -1,0 +1,18 @@
+{
+  "$schema": "../../schema.json",
+  "name": "F.E.A.R. Perseus Mandate",
+  "exe": "FEARXP2.exe",
+  "stores": {
+    "steam": { "id": 21120 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["2.0", "4.0"] },
+  "install": {
+    "tweaks": ["eax_unified", "expand_audio_limits"]
+  },
+  "sources": [
+    {
+      "title": "PCGamingWiki: F.E.A.R. Perseus Mandate",
+      "url": "https://www.pcgamingwiki.com/wiki/F.E.A.R._Perseus_Mandate"
+    }
+  ]
+}

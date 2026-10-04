@@ -414,6 +414,41 @@ resolve_recommended_tweaks() {
     grep -qx "com_registry_routing" <<< "$tweaks" && RECOMMENDED_COM_ROUTING=1
 }
 
+resolve_extra_exe_folders() {
+    # Usage: resolve_extra_exe_folders <id> <steam|gog>
+    # Sets EXTRA_GAME_DIRS to the store's extra_exe_folders that exist under
+    # GAME_DIR (matched case-insensitively, like the DLLs). These are folders
+    # holding another exe launched from the same title — e.g. GOG's F.E.A.R.
+    # Platinum starts its expansions from FEARXP/ and FEARXP2/ — so each needs
+    # its own copy of the game-folder files, while the prefix, registry and
+    # launcher override are already shared. A folder missing from this build
+    # is skipped without a word.
+    EXTRA_GAME_DIRS=()
+    [ -n "$1" ] && [ -n "$GAME_DIR" ] || return 0
+    ensure_known_games_json || return 0
+    local rel dir
+    while IFS= read -r rel; do
+        [ -n "$rel" ] || continue
+        [[ "$rel" == /* || "$rel" == *..* || "$rel" == *\\* ]] && continue
+        dir="$(find_existing_variant "$GAME_DIR/$rel")"
+        [ -n "$dir" ] && [ -d "$dir" ] && EXTRA_GAME_DIRS+=("$dir")
+    done < <(jq -r --arg id "$1" --arg store "$2" \
+        '[.games[] | select((.stores[$store].id // "") | tostring == $id)][0] | .stores[$store].extra_exe_folders // [] | .[]' \
+        "$KNOWN_GAMES_FILE" 2>/dev/null)
+}
+
+# Usage: extra_exe_folders_list
+# The EXTRA_GAME_DIRS folder names joined for prose: "A", "A and B", "A, B and C".
+extra_exe_folders_list() {
+    local n=${#EXTRA_GAME_DIRS[@]} i out=""
+    for (( i = 0; i < n; i++ )); do
+        if [ "$i" -eq 0 ]; then out="$(basename "${EXTRA_GAME_DIRS[$i]}")"
+        elif [ "$i" -eq $((n - 1)) ]; then out+=" and $(basename "${EXTRA_GAME_DIRS[$i]}")"
+        else out+=", $(basename "${EXTRA_GAME_DIRS[$i]}")"; fi
+    done
+    echo "$out"
+}
+
 show_known_game_notes() {
     # Usage: show_known_game_notes <id> <steam|gog> [skip_availability]
     # Best-effort, install-only heads-up for well-known EAX titles, sourced

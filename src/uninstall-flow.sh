@@ -81,12 +81,21 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
 
         TARGET_FILES=("dsound.dll" "dsoal-aldrv.dll" "dsound.vxd" "OpenAL32.dll" "eax.dll" "eaxunified.dll" "alsoft.ini")
 
-        # Check standard game folder
-        for file in "${TARGET_FILES[@]}"; do
-            [ -e "$GAME_DIR/$file" ] && FILES_TO_REMOVE+=("$GAME_DIR/$file")
-            [ -L "$GAME_DIR/$file" ] && FILES_TO_REMOVE+=("$GAME_DIR/$file")
+        # Check the game folder, plus any extra exe folders the known-games
+        # entry lists (GOG's F.E.A.R. Platinum expansions), which an install
+        # fills the same way
+        if [ "$LAUNCHER_TYPE" == "1" ]; then
+            resolve_extra_exe_folders "$APPID" "steam"
+        else
+            resolve_extra_exe_folders "${HEROIC_APP_NAME:-}" "gog"
+        fi
+        for scan_dir in "$GAME_DIR" "${EXTRA_GAME_DIRS[@]}"; do
+            for file in "${TARGET_FILES[@]}"; do
+                [ -e "$scan_dir/$file" ] && FILES_TO_REMOVE+=("$scan_dir/$file")
+                [ -L "$scan_dir/$file" ] && FILES_TO_REMOVE+=("$scan_dir/$file")
+            done
+            [ -d "$scan_dir/OpenAL" ] && FILES_TO_REMOVE+=("$scan_dir/OpenAL")
         done
-        [ -d "$GAME_DIR/OpenAL" ] && FILES_TO_REMOVE+=("$GAME_DIR/OpenAL")
 
         # Check prefix system folders
         if [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows" ]; then
