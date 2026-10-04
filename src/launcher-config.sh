@@ -171,7 +171,8 @@ offer_close_launcher() {
         *)
             print_launcher_open "$1" "$2"
             LAUNCHER_CLOSE_ASKED=1
-            confirm "Close ${label}, $2 the override, then reopen ${label}?" Y || { LAUNCHER_CLOSE_DECLINED=1; return 1; } ;;
+            confirm_countdown "Close ${label}, $2 the override, then reopen ${label}?" Y 25 || { LAUNCHER_CLOSE_DECLINED=1; return 1; }
+            [ "$CONFIRM_TIMED_OUT" -eq 1 ] && print_status "No answer after 25 seconds, so closing ${label}." ;;
     esac
     if run_with_spinner "Waiting for ${label} to close..." "$EAX_LOG_FILE" _close_launcher_and_wait "$1" 30; then
         log_cmd "closed $1 ($(launcher_kind "$1")); will reopen with: ${cmd//$'\x1f'/ }"
@@ -196,8 +197,9 @@ ask_close_launcher_early() {
     [ -n "$(launcher_launch_cmd "$1")" ] || return 0
     label="$(launcher_label "$1")"
     print_launcher_open "$1" "$2"
-    if confirm "Close ${label}, $2 the override, then reopen ${label}?" Y; then
+    if confirm_countdown "Close ${label}, $2 the override, then reopen ${label}?" Y 25; then
         LAUNCHER_CLOSE_ANSWER[$1]="y"
+        [ "$CONFIRM_TIMED_OUT" -eq 1 ] && print_status "No answer after 25 seconds, so ${label} will be closed and reopened."
     else
         LAUNCHER_CLOSE_ANSWER[$1]="n"
     fi
@@ -438,15 +440,37 @@ launcher_override_where() {
 # While the launcher is open, first offers to close it (and reopen it later) —
 # one question, where No skips the override. Only when the script can't close
 # it (a game is running from it, or it didn't close in time) does it say so and
-# wait for Enter. Returns 1 if the player skipped.
+# wait for the player to close it, carrying on by itself once it's gone (piped
+# input still presses Enter). Returns 1 if the player skipped.
 wait_for_launcher_closed() {
-    local label answer asked
+    local label answer asked key rest rc
     label="$(launcher_label "$1")"
     launcher_running "$1" || return 0
     offer_close_launcher "$1" "$2" && return 0
     [ "$LAUNCHER_CLOSE_DECLINED" -eq 1 ] && return 1
     # The offer already said it's open whenever it got as far as asking.
     asked="$LAUNCHER_CLOSE_ASKED"
+    if interactive_tty; then
+        [ "$asked" -eq 1 ] || print_launcher_open "$1" "$2"
+        prompt "Close ${label} and the script will carry on by itself, or $3:"
+        # Checked once a second. No timeout: the script couldn't close it
+        # because a game is running from it, so waiting is all it can do.
+        # Enter just checks again; anything else typed skips, as before.
+        while launcher_running "$1"; do
+            printf '\r\033[K> %b(waiting for %s to close…)%b' "$DIM" "$label" "$NC"
+            read -r -s -n 1 -t 1 key; rc=$?
+            [ "$rc" -gt 128 ] && continue
+            [ "$rc" -eq 0 ] || { printf '\r\033[K> \n'; return 1; }
+            [ -n "$key" ] || continue
+            printf '\r\033[K> %s' "$key"
+            read -r rest || rest=""
+            _log_answer "$rest" 0
+            return 1
+        done
+        printf '\r\033[K> \n'
+        print_status "${label} is closed."
+        return 0
+    fi
     while launcher_running "$1"; do
         [ "$asked" -eq 1 ] || print_launcher_open "$1" "$2"
         asked=0

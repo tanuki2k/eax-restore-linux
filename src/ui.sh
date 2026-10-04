@@ -244,19 +244,24 @@ print_wrapped() {
 # the newline it needs to flush the prompt line. Piped (non-tty) answers
 # weren't echoed at all, so they're just printed. EOF returns 1, like read.
 read_answer() {
-    local __ra_rc __ra_val
+    local __ra_rc
     read -r "$1"; __ra_rc=$?
-    __ra_val="${!1//[[:cntrl:]]/}"
-    if [ "$EAX_LOG_FILE" != "/dev/null" ]; then
-        if [ "$__ra_rc" -ne 0 ]; then
-            echo ""
-        elif [ ! -t 0 ]; then
-            printf '%s\n' "$__ra_val"
-        elif [ "$TERM" != "linux" ]; then
-            printf '\e]7137;%s\a\e[1A\n' "$__ra_val"
-        fi
-    fi
+    _log_answer "${!1}" "$__ra_rc"
     return "$__ra_rc"
+}
+
+# Usage: _log_answer <answer> <read's exit code>
+# The run-log half of read_answer, shared with confirm_countdown.
+_log_answer() {
+    local val="${1//[[:cntrl:]]/}"
+    [ "$EAX_LOG_FILE" != "/dev/null" ] || return 0
+    if [ "$2" -ne 0 ]; then
+        echo ""
+    elif [ ! -t 0 ]; then
+        printf '%s\n' "$val"
+    elif [ "$TERM" != "linux" ]; then
+        printf '\e]7137;%s\a\e[1A\n' "$val"
+    fi
 }
 
 # Usage: confirm "Question?" [default=Y|N]
@@ -281,6 +286,63 @@ confirm() {
     # ever respond to.
     read_answer answer || return 1
 
+    if [[ "${default^^}" == "N" ]]; then
+        [[ "$answer" =~ $YES_RE ]]
+    else
+        [[ ! "$answer" =~ $NO_RE ]]
+    fi
+}
+
+# Usage: interactive_tty
+# True when someone's typing at a terminal and seeing the output. stdout is
+# the run log's tee during a run, so this also accepts fd 3, where the log
+# keeps the real terminal.
+interactive_tty() {
+    { [ -t 0 ] && { [ -t 1 ] || [ -t 3 ]; }; } 2>/dev/null
+}
+
+# Usage: confirm_countdown "Question?" [default=Y|N] [seconds=25]
+# confirm() that answers itself: the "> " line counts down ("(Yes in 25s)")
+# and, if nothing is typed in time, takes the default and sets
+# CONFIRM_TIMED_OUT=1 so the caller can say so. For a question whose default
+# is safe to act on unattended (closing a launcher with no game running), so
+# a player who's walked away doesn't come back to a stalled run. The first
+# key typed stops the countdown and the answer is read as normal. The
+# countdown redraws its line with \r, which the run log collapses to the
+# final state. Piped (non-tty) input has nobody to count down for, so it's
+# plain confirm().
+confirm_countdown() {
+    local question="$1" default="${2:-Y}" seconds="${3:-25}"
+    local hint="(Y/n)" word="Yes" answer="" key="" rest="" rc
+    CONFIRM_TIMED_OUT=0
+    interactive_tty || { confirm "$question" "$default"; return; }
+    [[ "${default^^}" == "N" ]] && { hint="(y/N)"; word="No"; }
+    echo -e "\n${YELLOW}$(tilde_path "$question") ${hint}: ${NC}"
+    while [ "$seconds" -gt 0 ]; do
+        printf '\r\033[K> %b(%s in %ds)%b' "$DIM" "$word" "$seconds" "$NC"
+        read -r -s -n 1 -t 1 key; rc=$?
+        [ "$rc" -eq 0 ] && break
+        # >128 is the one-second timeout; anything else is EOF.
+        [ "$rc" -gt 128 ] || { printf '\r\033[K> \n'; return 1; }
+        seconds=$(( seconds - 1 ))
+    done
+    if [ "$seconds" -eq 0 ]; then
+        CONFIRM_TIMED_OUT=1
+        printf '\r\033[K> \n'
+        [[ "${default^^}" != "N" ]]
+        return
+    fi
+    # read -n 1 returns an empty key for Enter; otherwise show the key and
+    # read the rest of the line. The "> " line printed here is already in the
+    # log; only what the terminal echoes (the rest of the line) needs logging.
+    if [ -n "$key" ]; then
+        printf '\r\033[K> %s' "$key"
+        read -r rest || rest=""
+        _log_answer "$rest" 0
+        answer="${key}${rest}"
+    else
+        printf '\r\033[K> \n'
+    fi
     if [[ "${default^^}" == "N" ]]; then
         [[ "$answer" =~ $YES_RE ]]
     else

@@ -240,6 +240,12 @@ for a new call site.
 - `confirm "Question?" [default=Y|N]` — the two-line `(Y/n)`/`(y/N)` prompt (question
   line, then a separate `"> "` read line), returns 0/1. Only for actual yes/no
   confirms.
+- `confirm_countdown "Question?" [default=Y|N] [seconds=25]` — `confirm` that
+  counts down on the `"> "` line (`(Yes in 25s)`) and takes the default when
+  nothing is typed, setting `CONFIRM_TIMED_OUT=1` so the caller can say so. Only
+  for a default that's safe to act on unattended (closing a launcher with no
+  game running, in `offer_close_launcher` / `ask_close_launcher_early`).
+  Non-tty input falls back to plain `confirm`.
 - `prompt "question text: "` — the non-yes/no counterpart of `confirm`: a leading
   blank line, the `${YELLOW}` question line, then the separate `"> "` read line — but
   **no `read`**, because these call sites need the raw typed value (menu numbers,
