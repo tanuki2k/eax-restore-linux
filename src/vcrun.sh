@@ -3,11 +3,11 @@ verify_vcrun_files() {
     # Checks the actual VC++ 2015-2022 Redistributable DLLs in the prefix
     # (not just one file) and prints a per-file status table, so a "success"
     # can be confirmed by more than a single DLL's presence. Critically, this
-    # uses is_genuine_dll rather than a plain existence check: Wine places a
-    # same-named "fake DLL" placeholder for every one of these by default in
-    # every prefix, so file presence alone is not evidence the real thing is
+    # uses is_genuine_dll rather than a plain existence check: Wine places its
+    # own same-named built-in version of every one of these by default in
+    # every prefix, so file presence alone is not evidence Microsoft's file is
     # installed — that was a real bug in an earlier version of this check,
-    # which could report [OK] for Wine's own empty placeholder and never
+    # which could report [OK] for Wine's built-in version and never
     # actually catch that the genuine runtime was missing. Uses ARCH and
     # PREFIX_PATH from the enclosing install flow. Sets VCRUN_SUCCESS=1 if
     # the core runtime files are genuinely present, 0 otherwise.
@@ -36,7 +36,7 @@ verify_vcrun_files() {
         if is_genuine_dll "$target_dir/$f"; then
             echo -e "      ${GREEN}[OK]${NC}      $f"
         elif [ -s "$target_dir/$f" ]; then
-            echo -e "      ${YELLOW}[FAKE]${NC}    $f ${WHITE}(Wine's own placeholder, not the genuine file)${NC}"
+            echo -e "      ${YELLOW}[WINE]${NC}    $f ${WHITE}(Wine's built-in version, not Microsoft's)${NC}"
             core_ok=0
         else
             echo -e "      ${YELLOW}[MISSING]${NC} $f"
@@ -47,7 +47,7 @@ verify_vcrun_files() {
         if is_genuine_dll "$target_dir/$f"; then
             echo -e "      ${GREEN}[OK]${NC}      $f"
         elif [ -s "$target_dir/$f" ]; then
-            echo -e "      ${YELLOW}[FAKE]${NC}    $f ${WHITE}(optional, Wine's own placeholder)${NC}"
+            echo -e "      ${YELLOW}[WINE]${NC}    $f ${WHITE}(optional, Wine's built-in version)${NC}"
         else
             echo -e "      ${YELLOW}[MISSING]${NC} $f ${WHITE}(optional, not always required)${NC}"
         fi
@@ -338,7 +338,7 @@ uninstall_vcrun_dependencies() {
         # 2. Direct removal — the reliable part. Matches VCRUN_DLL_NAMES
         # (every DLL install could have set an override for), not a
         # shorter ad-hoc list. Only genuine Microsoft files: Wine's own
-        # same-named placeholders aren't ours to remove.
+        # same-named built-in versions aren't ours to remove.
         for dll in "${VCRUN_DLL_NAMES[@]}"; do
             f="$dir/${dll}.dll"
             if is_genuine_dll "$f" && rm -f "$f"; then
