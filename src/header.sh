@@ -14,8 +14,9 @@
 #
 # * Engine Choice: kcat's DSOAL + OpenAL Soft (translates DirectSound3D/EAX
 #   to OpenAL), or a direct OpenAL Soft swap for games that call OpenAL
-#   natively. EAX_RESTORE_DSOAL_PIN swaps in a frozen known-good DSOAL
-#   revision when a rolling build regresses.
+#   natively. Pick Stable (a tested DSOAL revision + OpenAL Soft's newest
+#   release) or Latest (DSOAL's newest build + OpenAL Soft's pre-release),
+#   or each separately; only the builds picked are downloaded.
 #
 # * Recent Games: Remembers game folders you've used before and offers them
 #   as a quick pick, without giving up the option to enter a new path.
@@ -77,13 +78,11 @@
 #   winetricks, and wine are already available. Speeds up repeat runs on a
 #   machine you've already verified.
 #
-# * EAX_RESTORE_DSOAL_PIN=1  Installs a frozen, known-good kcat/dsoal build
-#   (the revision pinned in the script, taken from kcat's "archive" release)
-#   in place of the rolling latest-master. A break-glass lever for when a
-#   daily build regresses a game — pairs the pinned DSOAL with the current
-#   OpenAL Soft so only the one variable changes. Also selects the DSOAL
-#   engine and skips the main menu (goes straight to
-#   install) and the engine-selection prompt.
+# * EAX_RESTORE_DSOAL_PIN=1  Uses the stable kcat/dsoal build (the revision
+#   pinned in the script, taken from kcat's "archive" release) without
+#   asking, so only the OpenAL Soft build is chosen. Also selects the DSOAL
+#   engine and skips the main menu (goes straight to install) and the
+#   engine-selection prompt.
 #
 # * EAX_RESTORE_VCRUN_ONLY=1  Skips the full install/uninstall flow and just
 #   (re)installs the MS VC++ 2022 Redistributable into a game's prefix.
@@ -91,11 +90,10 @@
 #   back for it without redoing everything else.
 #   The main menu's Utilities → [V]C++ runtime install does the same.
 #
-# * EAX_RESTORE_SKIP_CACHE_CHECK=1  Skips the REPOSITORY CACHE CHECK step
-#   (the GitHub update check/download for DSOAL and OpenAL Soft), trusting
-#   whatever's already in the local cache. Speeds up repeat runs on a
-#   machine with a cache you know is current; if a needed engine build
-#   isn't cached yet, deployment will fail later with nothing to install.
+# * EAX_RESTORE_SKIP_CACHE_CHECK=1  Doesn't contact GitHub for DSOAL or
+#   OpenAL Soft at all: step 6 only offers the builds already in the local
+#   cache. Speeds up repeat runs on a machine with a cache you know is
+#   current.
 #
 # * EAX_RESTORE_NO_LOG=1  Turns off the per-run log file. Normally every run
 #   is logged to ~/.local/state/eax-restore-linux/logs/ (newest 10 kept,

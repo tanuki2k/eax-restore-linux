@@ -14,24 +14,17 @@
     # a failure never leaves the prefix half-set-up (and its error isn't
     # shown under an unrelated step's header).
 
-    # Engine-specific paths. Engine 1 always takes soft_oal.dll from the
-    # kcat OpenAL Soft cache; EAX_RESTORE_DSOAL_PIN only swaps the source of
-    # dsound.dll (the DSOAL half) to the frozen archive revision, so the pin
-    # is a pure DSOAL rollback with OpenAL Soft held constant.
+    # Engine-specific paths, from the builds chosen in step 6 (stable or
+    # latest, per component — see dsoal_source_dir / openal_source_dll).
+    # Engine 1 deploys DSOAL's dsound.dll plus OpenAL Soft as
+    # dsoal-aldrv.dll; engine 2 deploys only OpenAL Soft, as OpenAL32.dll.
     case "$ENGINE_CHOICE" in
         1)
-            if is_truthy "$EAX_RESTORE_DSOAL_PIN"; then
-                TARGET_DSOAL=$(find "$DSOAL_PINNED" -type d -ipath "*/${ARCH_FOLDER}" | head -n 1)
-            else
-                TARGET_DSOAL=$(find "$DSOAL_OFFICIAL" -type d -ipath "*/${ARCH_FOLDER}" | head -n 1)
-            fi
-            TARGET_OAL=$(find "$OPENAL_OFFICIAL" -type d -ipath "*/bin/${ARCH_FOLDER}" | head -n 1)
-            DSOUND_SRC="$TARGET_DSOAL/dsound.dll"
-            DSOAL_SRC="$TARGET_OAL/soft_oal.dll"
+            DSOUND_SRC="$(dsoal_source_dir)/dsound.dll"
+            DSOAL_SRC="$(openal_source_dll)"
             ;;
         2)
-            TARGET_OAL=$(find "$OPENAL_OFFICIAL" -type d -ipath "*/bin/${ARCH_FOLDER}" | head -n 1)
-            OPENAL_SRC="$TARGET_OAL/soft_oal.dll"
+            OPENAL_SRC="$(openal_source_dll)"
             ;;
     esac
 
@@ -39,14 +32,14 @@
         if [ ! -f "$OPENAL_SRC" ]; then
             print_error "Required OpenAL Soft source file was not found in the cache."
             echo -e "\n${WHITE}This usually means the download failed or was incomplete earlier in this run"
-            echo -e "(check the REPOSITORY CACHE CHECK output above), or the ${ARCH_FOLDER} build isn't present in it."
+            echo -e "(check the Audio Engine Selection step's download output above), or the ${ARCH_FOLDER} build isn't present in it."
             echo -e "Re-run the script to retry the download.${NC}"
             exit 1
         fi
     elif [ ! -f "$DSOUND_SRC" ] || [ ! -f "$DSOAL_SRC" ]; then
         print_error "Required source files for the selected engine were not found in the cache."
         echo -e "\n${WHITE}This usually means the download for this engine failed or was incomplete earlier in this run"
-        echo -e "(check the REPOSITORY CACHE CHECK output above), or the ${ARCH_FOLDER} build isn't present in it."
+        echo -e "(check the Audio Engine Selection step's download output above), or the ${ARCH_FOLDER} build isn't present in it."
         echo -e "Re-run the script to retry the download, or choose a different engine.${NC}"
         exit 1
     fi

@@ -38,6 +38,7 @@ DSOAL_OFFICIAL="$DSOAL_SHARE/official"
 DSOAL_PINNED="$DSOAL_SHARE/pinned"
 OPENAL_SHARE="$BASE_SHARE/openal-soft"
 OPENAL_OFFICIAL="$OPENAL_SHARE/official"
+OPENAL_PRERELEASE="$OPENAL_SHARE/prerelease"
 
 # Matches exactly what winetricks' own vcrun2022 verb overrides — Wine prefers
 # its own (partial, ~80%-complete) builtin implementations of these DLLs over
@@ -49,14 +50,30 @@ VCRUN_DLL_NAMES=("concrt140" "msvcp140" "msvcp140_1" "msvcp140_2" "msvcp140_atom
 
 DSOAL_OFFICIAL_URL="https://github.com/kcat/dsoal/releases/download/latest-master/DSOAL.zip"
 DSOAL_OFFICIAL_API_URL="https://api.github.com/repos/kcat/dsoal/releases/tags/latest-master"
+# kcat's "archive" release: every DSOAL_r<N>.zip CI has built. Used to find the
+# newest build when latest-master is missing upstream (see ensure_dsoal_build).
+DSOAL_ARCHIVE_API_URL="https://api.github.com/repos/kcat/dsoal/releases/tags/archive"
 
-# Frozen fallback, fetched only when EAX_RESTORE_DSOAL_PIN is set: one pinned
-# DSOAL revision from kcat's own "archive" release tag. CI keeps re-uploading
+# OpenAL Soft: the newest tagged release (resolved via its redirect) is the
+# stable build; the rolling "latest" pre-release, rebuilt from master, is the
+# latest build. Each has its own cache folder (they're laid out differently).
+OPENAL_LATEST_RELEASE_URL="https://github.com/kcat/openal-soft/releases/latest"
+OPENAL_PRERELEASE_API_URL="https://api.github.com/repos/kcat/openal-soft/releases/tags/latest"
+# Probed at the start of an install to tell "offline" from "online".
+GITHUB_PROBE_URL="https://api.github.com"
+GITHUB_REACHABLE=0
+# Step 6's build choice: stable or latest, per component.
+DSOAL_BUILD="stable"
+OAL_BUILD="stable"
+
+# The stable DSOAL build (step 6's default; EAX_RESTORE_DSOAL_PIN presets it):
+# one pinned, tested DSOAL revision from kcat's own "archive" release tag. CI keeps re-uploading
 # the newest revision's asset with a fresher OpenAL Soft, but every
 # already-superseded revision is static forever — so a non-newest asset has a
 # stable SHA256 and can be hard-verified, unlike the rolling latest-master
 # build above. To advance the pin, bump all three of these together (pick a
-# revision that is no longer the newest one in the archive release).
+# revision that is no longer the newest one in the archive release), after
+# testing it — advancing the pin is part of the release routine.
 DSOAL_PINNED_REV="r693"
 DSOAL_PINNED_URL="https://github.com/kcat/dsoal/releases/download/archive/DSOAL_r693.zip"
 DSOAL_PINNED_SHA256="5abe990ff5692fa070d549a8c28df2435842c5d3f586a59b0da5281bc1cb6605"

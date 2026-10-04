@@ -13,7 +13,7 @@ Because modern operating systems and Proton/Wine don't natively support this old
 ## Features
 
 * **Dual-Copy Deployment:** Deploys DSOAL/OpenAL files to both your local game folder *and* the Wine/Proton prefix's system folders, with conflict backups on both — not just the game folder.
-* **Engine Choice:** kcat's DSOAL + OpenAL Soft (translates DirectSound3D/EAX to OpenAL) for the vast majority of games, or a direct OpenAL Soft swap for the handful that call OpenAL natively. When the Audio API Detection step has already pinned down which one the game uses, the engine menu is skipped automatically; you're only asked to pick when the API couldn't be confirmed. `EAX_RESTORE_DSOAL_PIN` swaps in a frozen known-good DSOAL revision if a rolling build ever regresses.
+* **Engine Choice:** kcat's DSOAL + OpenAL Soft (translates DirectSound3D/EAX to OpenAL) for the vast majority of games, or a direct OpenAL Soft swap for the handful that call OpenAL natively. When the Audio API Detection step has already pinned down which one the game uses, the engine menu is skipped automatically; you're only asked to pick when the API couldn't be confirmed. You then pick the builds: **Stable** (a tested DSOAL revision + OpenAL Soft's newest release, the default), **Latest** (DSOAL's newest build + OpenAL Soft's pre-release), or each separately. Only the builds you pick are downloaded, and every download is checked against its SHA256.
 * **Dynamic HRTF Integration:** Automatically generates an `alsoft.ini` tuned to your output (stereo/headphones/surround/matrix), enabling OpenAL Soft's HRTF binaural rendering for headphone users.
 * **Smart Architecture Scanner:** Automatically detects whether the game executable is 32-bit or 64-bit and grabs the exact right dependencies so the game doesn't crash on launch.
 * **Intelligent Prefix Routing:** Opt-in auto-detection for Steam AppIDs and Heroic Prefix paths, making it easy to find where your game is actually installed. Recently used game folders are remembered and offered as a quick pick on future runs.
@@ -48,7 +48,7 @@ The script checks for these dependencies and offers to install them if they are 
 
 ### What it looks like
 
-A real terminal session, from launch through the first configuration step (`EAX_RESTORE_SKIP_PREFLIGHT`/`EAX_RESTORE_SKIP_CACHE_CHECK` used here only to keep this excerpt short and reproducible — a normal run also includes the pre-flight tool scan and repository cache check before reaching this point):
+A real terminal session, from launch through the first configuration step (`EAX_RESTORE_SKIP_PREFLIGHT`/`EAX_RESTORE_SKIP_CACHE_CHECK` used here only to keep this excerpt short and reproducible — a normal run also includes the pre-flight tool scan before reaching this point):
 
 ```ansi
 [0;36m[1m==========================================================[0m
@@ -79,8 +79,6 @@ unzip, file, protontricks, winetricks, wine, and jq are already available.[0m
 
 [1;33mSelection [s/b/m/r/u/q]: [0m
 > m
-[0;94mNote: EAX_RESTORE_SKIP_CACHE_CHECK is set — skipping the REPOSITORY CACHE CHECK
-and trusting whatever DSOAL/OpenAL Soft builds are already cached.[0m
 
 [0;36m----------------------------------------------------------[0m
 [0;32m[1m--- PHASE 1: CONFIGURATION ---[0m
@@ -240,9 +238,9 @@ For repeat runs or scripting, these can be set to skip prompts:
 | Variable | Effect |
 | --- | --- |
 | `EAX_RESTORE_SKIP_PREFLIGHT=1` | Skips the pre-flight tool scan, trusting that `curl`, `unzip`, `file`, `protontricks`, `winetricks`, and `wine` are already available. |
-| `EAX_RESTORE_DSOAL_PIN=1` | Installs a frozen, known-good `kcat/dsoal` build (the revision pinned in the script, from kcat's `archive` release) instead of the rolling `latest-master` — a break-glass lever for when a daily build regresses a game. Pairs the pinned DSOAL with the current OpenAL Soft, selects the DSOAL engine, and jumps straight to install. |
+| `EAX_RESTORE_DSOAL_PIN=1` | Uses the stable `kcat/dsoal` build (the revision pinned in the script, from kcat's `archive` release) without asking, so only the OpenAL Soft build is chosen. Also selects the DSOAL engine and jumps straight to install. |
 | `EAX_RESTORE_VCRUN_ONLY=1` | Skips the full install/uninstall flow and just (re)installs the MS VC++ 2022 Redistributable into a game's prefix. The main menu offers the same under **Utilities → [V]C++ runtime install**. |
-| `EAX_RESTORE_SKIP_CACHE_CHECK=1` | Skips the repository cache check (the GitHub update check/download for DSOAL and OpenAL Soft), trusting whatever's already in the local cache. |
+| `EAX_RESTORE_SKIP_CACHE_CHECK=1` | Doesn't contact GitHub for DSOAL or OpenAL Soft: the build choice only offers what's already in the local cache. |
 | `EAX_RESTORE_KNOWN_GAMES_FILE=/path/to/known-eax-games.json` | Uses a local file (e.g. one you built with `tools/build-known-games.sh`) instead of fetching `known-eax-games.json` — mainly for testing edits to the database itself before they're pushed. |
 | `EAX_RESTORE_NO_LOG=1` | Turns off the per-run log file (see [Logs & Bug Reports](#logs--bug-reports)). |
 
@@ -258,7 +256,7 @@ If something goes wrong, please [open a bug report](https://github.com/tanuki2k/
 
 This script automates the deployment of the following projects:
 
-* **kcat (Christopher Robinson)** - [DSOAL](https://github.com/kcat/dsoal) and [OpenAL Soft](https://github.com/kcat/openal-soft). The script deploys kcat's own `latest-master` DSOAL build and stable OpenAL Soft release, with `EAX_RESTORE_DSOAL_PIN` falling back to a pinned revision from the [`archive`](https://github.com/kcat/dsoal/releases/tag/archive) release when needed.
+* **kcat (Christopher Robinson)** - [DSOAL](https://github.com/kcat/dsoal) and [OpenAL Soft](https://github.com/kcat/openal-soft). The script deploys kcat's own builds: a pinned, tested DSOAL revision from the [`archive`](https://github.com/kcat/dsoal/releases/tag/archive) release or the newest `latest-master`/archive build, with OpenAL Soft's newest release or its rolling pre-release.
 * **ThreeDeeJay** - upstreamed the Win32/Win64 packaging pipeline that kcat's daily DSOAL builds are now produced by.
 
 ## License

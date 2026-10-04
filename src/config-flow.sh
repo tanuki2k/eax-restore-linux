@@ -10,13 +10,10 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     # prints it itself — so browse/manual users jump straight from 1 to 3.
     STEP_TOTAL=11
 
-    EAX_RESTORE_SKIP_CACHE_CHECK="${EAX_RESTORE_SKIP_CACHE_CHECK:-}"
-    if is_truthy "$EAX_RESTORE_SKIP_CACHE_CHECK"; then
-        print_note "EAX_RESTORE_SKIP_CACHE_CHECK is set — skipping the REPOSITORY CACHE CHECK" \
-            "and trusting whatever DSOAL/OpenAL Soft builds are already cached."
-    else
-        update_local_cache
-    fi
+    # Nothing is downloaded yet: step 6 fetches only the builds that get
+    # picked. This only checks GitHub can be reached, and stops now if it
+    # can't and nothing usable is cached.
+    check_download_readiness
 
     print_banner "PHASE 1: CONFIGURATION"
 
@@ -58,14 +55,6 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     # 6. Engine Selection
     print_step 6 "Audio Engine Selection"
 
-    # Read before the branches below, not just for the menu: the run log's
-    # summary records these whichever way the engine gets picked.
-    DSOAL_DATE=$(cat "$DSOAL_SHARE/updated_at.txt" 2>/dev/null)
-    DSOAL_VER=${DSOAL_DATE%%T*}
-    [ -z "$DSOAL_VER" ] && DSOAL_VER="Unknown"
-    OAL_VER=$(cat "$OPENAL_SHARE/updated_at.txt" 2>/dev/null)
-    [ -z "$OAL_VER" ] && OAL_VER="Unknown"
-
     if [ -n "$OPENAL_NATIVE_MODE" ]; then
         ENGINE_CHOICE=2
         print_paragraph "$GAME_NAME uses OpenAL natively — deploying kcat's OpenAL Soft."
@@ -73,59 +62,42 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         # The Audio API Detection step positively identified this as a
         # DirectSound3D title, so there's no menu to show — OpenAL-native
         # would be a silent no-op here (the game never loads OpenAL32.dll).
-        # Mirrors the OPENAL_NATIVE_MODE branch above. EAX_RESTORE_DSOAL_PIN
-        # lands on ENGINE_CHOICE=1 too, so it only changes the wording.
+        # Mirrors the OPENAL_NATIVE_MODE branch above.
         ENGINE_CHOICE=1
-        if is_truthy "$EAX_RESTORE_DSOAL_PIN"; then
-            print_paragraph "$GAME_NAME uses DirectSound3D — deploying kcat DSOAL (pinned [$DSOAL_PINNED_REV]) + OpenAL Soft."
-        else
-            print_paragraph "$GAME_NAME uses DirectSound3D — deploying kcat DSOAL + OpenAL Soft."
-        fi
+        print_paragraph "$GAME_NAME uses DirectSound3D — deploying kcat DSOAL + OpenAL Soft."
     else
     echo -e "\n${WHITE}Before choosing, here is a quick breakdown of the available engines:\n${NC}"
     echo -e " * ${BOLD}kcat DSOAL + OpenAL Soft:${NC} The standard choice. Intercepts a game's"
     echo -e "   DirectSound3D/EAX calls and translates them to OpenAL — the right pick for the"
     echo -e "   vast majority of classic Windows games."
-    if is_truthy "$EAX_RESTORE_DSOAL_PIN"; then
-        echo -e "   ${DIM}EAX_RESTORE_DSOAL_PIN is set: the frozen [$DSOAL_PINNED_REV] DSOAL build will be used"
-        echo -e "   in place of the rolling one.${NC}"
-    fi
     echo ""
     echo -e " * ${BOLD}OpenAL native:${NC} Only for the handful of games that already call OpenAL directly"
     echo -e "   (no DirectSound3D layer to intercept) — swaps OpenAL Soft in as OpenAL32.dll.\n"
 
     if is_truthy "$EAX_RESTORE_DSOAL_PIN"; then
         ENGINE_CHOICE=1
-        echo -e "${GREEN}EAX_RESTORE_DSOAL_PIN is set — using kcat DSOAL (pinned [$DSOAL_PINNED_REV]) + OpenAL Soft.${NC}"
+        echo -e "${GREEN}EAX_RESTORE_DSOAL_PIN is set — using kcat DSOAL + OpenAL Soft.${NC}"
     else
         echo -e "${YELLOW}Selection (1 or 2) [Default: 1]: ${NC}"
         echo ""
-        # Engine 1 stays the default even when its download failed -- engine
-        # 2 is only right for OpenAL-native games, so it's never picked for
-        # the user; an unavailable engine is shown but refused instead.
-        print_option 1 "kcat DSOAL + OpenAL Soft    [DSOAL: $DSOAL_VER | OAL: $OAL_VER]$(engine_available 1 || echo -e " ${YELLOW}[unavailable this run]${NC}")"
+        print_option 1 "kcat DSOAL + OpenAL Soft"
         print_option 2 "OpenAL native (direct OpenAL32.dll swap)"
 
         while true; do
             echo -e -n "\n> "
-            read_answer ENGINE_CHOICE
+            read_answer ENGINE_CHOICE || exit 0
             ENGINE_CHOICE="${ENGINE_CHOICE:-1}"
-            if [[ ! "$ENGINE_CHOICE" =~ ^[12]$ ]]; then print_result "That's not a valid option — please type 1 or 2." "$YELLOW"
-            elif ! engine_available "$ENGINE_CHOICE"; then print_warning "kcat DSOAL couldn't be downloaded this run (see the Repository Cache Check above)." \
-                "Pick 2 only if this game uses OpenAL natively; otherwise quit and re-run later."
-            else break; fi
+            if [[ "$ENGINE_CHOICE" =~ ^[12]$ ]]; then break; fi
+            print_result "That's not a valid option — please type 1 or 2." "$YELLOW"
         done
     fi
     fi
 
-    # Covers the paths above that pick engine 1 without the menu (a confirmed
-    # DirectSound3D game, or EAX_RESTORE_DSOAL_PIN) -- stop here rather than
-    # after the rest of the configuration steps.
-    if ! engine_available "$ENGINE_CHOICE"; then
-        print_error "kcat DSOAL couldn't be downloaded this run, and this game needs it."
-        echo -e "${WHITE}Check the Repository Cache Check output above, then re-run the script later.${NC}"
-        exit 1
-    fi
+    # Which builds to deploy, then download just those (choose_builds).
+    choose_builds
+    # Read here, not earlier: the run log's summary records the builds chosen.
+    DSOAL_VER="${DSOAL_BUILD} ${DSOAL_SELECTED_LABEL:-}"
+    OAL_VER="${OAL_BUILD} ${OAL_SELECTED_LABEL:-}"
 
     # The Wine DLL override this install ultimately needs — dsound.dll for
     # engine 1 (DSOAL intercepts DirectSound3D), OpenAL32.dll for engine 2

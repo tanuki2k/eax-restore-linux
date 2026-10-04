@@ -1,183 +1,400 @@
-dsoal_official_cached() {
-    [ -d "$DSOAL_OFFICIAL" ] && [ -n "$(ls -A "$DSOAL_OFFICIAL" 2>/dev/null)" ]
-}
+# ==============================================================================
+# BUILD DOWNLOADS (DSOAL and OpenAL Soft, stable or latest)
+# ==============================================================================
+# Nothing is downloaded up front. check_download_readiness runs at the start of
+# the install and only works out whether GitHub can be reached; step 6 (Audio
+# Engine Selection) asks which builds to use (choose_builds) and then fetches
+# just those (ensure_dsoal_build / ensure_openal_build), into the script's own
+# cache — never the game or prefix.
+#
+#   DSOAL stable  = the pinned, tested archive revision ($DSOAL_PINNED_REV).
+#                   Advance it after testing a newer build.
+#   DSOAL latest  = kcat's latest-master, or the newest archive build while
+#                   latest-master is missing upstream.
+#   OpenAL stable = the newest tagged OpenAL Soft release.
+#   OpenAL latest = OpenAL Soft's rolling "latest" pre-release (master).
 
-engine_available() {
-    # Usage: engine_available <1|2>  (the ENGINE_CHOICE numbering)
-    # Engine 1 needs DSOAL (the pinned build when EAX_RESTORE_DSOAL_PIN is
-    # set) plus OpenAL Soft; engine 2 needs only OpenAL Soft.
-    [ -n "$(ls -A "$OPENAL_OFFICIAL" 2>/dev/null)" ] || return 1
-    case "$1" in
-        1) if is_truthy "$EAX_RESTORE_DSOAL_PIN"; then [ -n "$(ls -A "$DSOAL_PINNED" 2>/dev/null)" ]; else dsoal_official_cached; fi ;;
-        2) return 0 ;;
-        *) return 1 ;;
-    esac
-}
+# Usage: build_cached <dir>
+build_cached() { [ -d "$1" ] && [ -n "$(ls -A "$1" 2>/dev/null)" ]; }
 
-fetch_pinned_dsoal_into_official() {
-    # Used when the rolling latest-master build can't be obtained and there's
-    # no cache (kcat's CI deletes latest-master before re-creating it, so a
-    # failed CI run leaves it gone): installs the pinned archive revision into
-    # the same $DSOAL_OFFICIAL folder, so the rest of the script needs no
-    # special casing. Records "archive-<rev>" as the cached date, which can
-    # never match a real latest-master updated_at, so the next run that can
-    # reach latest-master upgrades to it automatically.
-    print_status "Falling back to kcat's archived DSOAL build [$DSOAL_PINNED_REV]..."
-    if fetch_with_progress "$DSOAL_PINNED_URL" "$DSOAL_SHARE/pinned.zip" && unzip -tq "$DSOAL_SHARE/pinned.zip" &>/dev/null; then
-        if verify_checksum "$DSOAL_SHARE/pinned.zip" "$DSOAL_PINNED_SHA256"; then
-            rm -rf "$DSOAL_OFFICIAL"; mkdir -p "$DSOAL_OFFICIAL"
-            unzip -q "$DSOAL_SHARE/pinned.zip" -d "$DSOAL_OFFICIAL"
-            NESTED=$(find "$DSOAL_OFFICIAL" -maxdepth 1 -name "DSOAL_*.zip" | head -n 1)
-            if [ -n "$NESTED" ] && unzip -tq "$NESTED" &>/dev/null; then unzip -q "$NESTED" -d "$DSOAL_OFFICIAL"; fi
-            echo "archive-$DSOAL_PINNED_REV" > "$DSOAL_SHARE/updated_at.txt"; rm -f "$DSOAL_SHARE/pinned.zip"; print_status "Done." "$GREEN"
-            return 0
-        fi
-        rm -f "$DSOAL_SHARE/pinned.zip"
-        print_error_arrow "The archived build failed checksum verification, so kcat DSOAL will be unavailable" \
-            "this run — the OpenAL native engine still works."
+# Usage: check_download_readiness
+# Start of the install: can GitHub be reached? Sets GITHUB_REACHABLE (1/0).
+# Offline with no OpenAL Soft at all there's nothing any engine could deploy,
+# so this stops now, before any questions, with the manual-install folders.
+# EAX_RESTORE_SKIP_CACHE_CHECK skips the probe and uses only cached builds.
+check_download_readiness() {
+    mkdir -p "$DSOAL_SHARE" "$OPENAL_SHARE"
+    GITHUB_REACHABLE=0
+    if is_truthy "${EAX_RESTORE_SKIP_CACHE_CHECK:-}"; then
+        print_note "EAX_RESTORE_SKIP_CACHE_CHECK is set, so only DSOAL/OpenAL Soft builds already" \
+            "downloaded will be used — nothing is checked or fetched."
+    elif curl -s -o /dev/null -m 10 "$GITHUB_PROBE_URL"; then
+        GITHUB_REACHABLE=1
+        return 0
     else
-        rm -f "$DSOAL_SHARE/pinned.zip"
-        print_error_arrow "The archived build couldn't be downloaded, so kcat DSOAL will be unavailable" \
-            "this run — the OpenAL native engine still works."
+        print_note "GitHub can't be reached, so only the builds already downloaded can be used this run."
     fi
+    if ! build_cached "$OPENAL_OFFICIAL" && ! build_cached "$OPENAL_PRERELEASE"; then
+        print_error "No OpenAL Soft build has been downloaded yet, so there's nothing to install."
+        print_offline_instructions
+        exit 1
+    fi
+}
+
+# Usage: lookup_build_versions
+# Fills the version labels step 6 shows for each build, without downloading
+# anything: online from the release pages, offline from what's cached. A label
+# is empty when the build can't be had this run (offline and not cached).
+lookup_build_versions() {
+    local json marker
+    DSOAL_STABLE_LABEL=""; DSOAL_LATEST_LABEL=""; OAL_STABLE_LABEL=""; OAL_LATEST_LABEL=""
+
+    if [ "$GITHUB_REACHABLE" -eq 1 ] || build_cached "$DSOAL_PINNED"; then
+        DSOAL_STABLE_LABEL="$DSOAL_PINNED_REV"
+    fi
+
+    if [ "$GITHUB_REACHABLE" -eq 1 ]; then
+        DSOAL_OFFICIAL_JSON=$(curl -s "$DSOAL_OFFICIAL_API_URL")
+        DSOAL_LATEST_DATE=$(printf '%s' "$DSOAL_OFFICIAL_JSON" | jq -r '.updated_at // empty' 2>/dev/null)
+        if [ -n "$DSOAL_LATEST_DATE" ]; then
+            DSOAL_LATEST_LABEL=$(printf '%s' "$DSOAL_OFFICIAL_JSON" | jq -r '.name // empty' | grep -o 'r[0-9]\+' | head -n 1)
+            [ -n "$DSOAL_LATEST_LABEL" ] || DSOAL_LATEST_LABEL="${DSOAL_LATEST_DATE%%T*}"
+        elif newest_archive_dsoal; then
+            DSOAL_LATEST_LABEL="$ARCHIVE_REV"
+        fi
+    fi
+    if [ -z "$DSOAL_LATEST_LABEL" ] && build_cached "$DSOAL_OFFICIAL"; then
+        marker=$(cat "$DSOAL_SHARE/updated_at.txt" 2>/dev/null)
+        DSOAL_LATEST_LABEL="${marker#archive-}"; DSOAL_LATEST_LABEL="${DSOAL_LATEST_LABEL%%T*}"
+        [ -n "$DSOAL_LATEST_LABEL" ] || DSOAL_LATEST_LABEL="cached"
+    fi
+
+    if [ "$GITHUB_REACHABLE" -eq 1 ]; then
+        # The /releases/latest redirect names the newest tagged release
+        # without spending an API call.
+        OAL_STABLE_TAG=$(curl -sI "$OPENAL_LATEST_RELEASE_URL" | grep -i "^location:" | awk -F '/' '{print $NF}' | tr -d '\r')
+        OAL_STABLE_LABEL="$OAL_STABLE_TAG"
+        OAL_PRERELEASE_JSON=$(curl -s "$OPENAL_PRERELEASE_API_URL")
+        OAL_LATEST_LABEL=$(printf '%s' "$OAL_PRERELEASE_JSON" | jq -r '
+            (.name // "" | sub("^OpenAL Soft v"; "")) as $v
+            | ((.assets // [])[] | select(.name == "OpenALSoft.zip") | .updated_at[0:10]) as $d
+            | if $v != "" then "\($v) (\($d))" else empty end' 2>/dev/null | head -n 1)
+    fi
+    if [ -z "$OAL_STABLE_LABEL" ] && build_cached "$OPENAL_OFFICIAL"; then
+        OAL_STABLE_LABEL=$(cat "$OPENAL_SHARE/updated_at.txt" 2>/dev/null); OAL_STABLE_LABEL="${OAL_STABLE_LABEL:-cached}"
+    fi
+    if [ -z "$OAL_LATEST_LABEL" ] && build_cached "$OPENAL_PRERELEASE"; then
+        OAL_LATEST_LABEL=$(sed -n 2p "$OPENAL_PRERELEASE/.version" 2>/dev/null); OAL_LATEST_LABEL="${OAL_LATEST_LABEL:-cached}"
+    fi
+}
+
+# Usage: install_dsoal_zip_into_official <zip> <cache marker>
+# Unpacks a downloaded kcat DSOAL zip into $DSOAL_OFFICIAL (replacing what was
+# there), records the marker in updated_at.txt and deletes the zip.
+install_dsoal_zip_into_official() {
+    unpack_dsoal_zip "$1" "$DSOAL_OFFICIAL"
+    echo "$2" > "$DSOAL_SHARE/updated_at.txt"
+}
+
+# Usage: unpack_dsoal_zip <zip> <dir>
+# kcat's zips sometimes wrap their real contents in a further nested
+# DSOAL_*.zip, so a second extraction pass is needed to reach the DLLs.
+unpack_dsoal_zip() {
+    local zip="$1" dir="$2" nested
+    rm -rf "$dir"; mkdir -p "$dir"
+    unzip -q "$zip" -d "$dir"
+    nested=$(find "$dir" -maxdepth 1 -name "DSOAL_*.zip" | head -n 1)
+    if [ -n "$nested" ] && unzip -tq "$nested" &>/dev/null; then unzip -q "$nested" -d "$dir"; fi
+    rm -f "$zip"
+}
+
+# Usage: newest_archive_dsoal
+# Looks up the newest DSOAL_r<N>.zip in kcat's "archive" release. Sets
+# ARCHIVE_REV (e.g. r695), ARCHIVE_URL and ARCHIVE_DIGEST (GitHub's SHA256 for
+# the asset, empty if it has none). Returns 1 if the release can't be read or
+# has no DSOAL build.
+newest_archive_dsoal() {
+    local json line
+    ARCHIVE_REV=""; ARCHIVE_URL=""; ARCHIVE_DIGEST=""
+    json=$(curl -s "$DSOAL_ARCHIVE_API_URL") || return 1
+    line=$(printf '%s' "$json" | jq -r '
+        [(.assets // [])[] | select(.name | test("^DSOAL_r[0-9]+\\.zip$"))
+         | {rev: (.name | capture("^DSOAL_r(?<n>[0-9]+)").n | tonumber),
+            url: .browser_download_url, digest: (.digest // "" | sub("^sha256:"; ""))}]
+        | sort_by(.rev) | last // empty
+        | "r\(.rev)\t\(.url)\t\(.digest)"' 2>/dev/null)
+    [ -n "$line" ] || return 1
+    IFS=$'\t' read -r ARCHIVE_REV ARCHIVE_URL ARCHIVE_DIGEST <<< "$line"
+    [ -n "$ARCHIVE_REV" ] && [ -n "$ARCHIVE_URL" ]
+}
+
+# Usage: ensure_dsoal_build <stable|latest>
+# Makes sure the chosen DSOAL build is in the cache, downloading it if it's
+# missing or out of date. Returns 1 if it can't be had this run.
+ensure_dsoal_build() {
+    local local_date
+    if [ "$1" == "stable" ]; then
+        if build_cached "$DSOAL_PINNED"; then
+            print_status "DSOAL stable [$DSOAL_PINNED_REV]: up to date" "$GREEN"; return 0
+        fi
+        [ "$GITHUB_REACHABLE" -eq 1 ] || return 1
+        print_status "DSOAL stable [$DSOAL_PINNED_REV]: downloading..."
+        if fetch_with_progress "$DSOAL_PINNED_URL" "$DSOAL_SHARE/pinned.zip" && unzip -tq "$DSOAL_SHARE/pinned.zip" &>/dev/null; then
+            # Hard-fails on mismatch: a frozen, already-superseded archive
+            # asset has a stable SHA256, so a mismatch means the file is wrong.
+            if verify_checksum "$DSOAL_SHARE/pinned.zip" "$DSOAL_PINNED_SHA256"; then
+                unpack_dsoal_zip "$DSOAL_SHARE/pinned.zip" "$DSOAL_PINNED"
+                print_status "Done." "$GREEN"; return 0
+            fi
+            print_error_arrow "The stable DSOAL build failed checksum verification."
+        else
+            print_error_arrow "The stable DSOAL build couldn't be downloaded."
+        fi
+        rm -f "$DSOAL_SHARE/pinned.zip"; rm -rf "$DSOAL_PINNED"
+        return 1
+    fi
+
+    local_date=$(cat "$DSOAL_SHARE/updated_at.txt" 2>/dev/null)
+    if [ "$GITHUB_REACHABLE" -ne 1 ]; then
+        build_cached "$DSOAL_OFFICIAL" || return 1
+        print_status "DSOAL latest [$DSOAL_LATEST_LABEL]: using the cached build (offline)" "$YELLOW"; return 0
+    fi
+    if [ -z "$DSOAL_LATEST_DATE" ]; then
+        # latest-master is missing upstream. kcat's nightly CI deletes it
+        # before re-creating it, and when that last step fails (as it has
+        # every night since 2026-09-23, when a commit title with quote marks
+        # broke its release notes — kcat/dsoal#191) only the "archive"
+        # release still gets the new build. Follow the newest archived build
+        # until latest-master is back: its "archive-r<N>" marker never
+        # matches a real latest-master updated_at, so the next run that finds
+        # latest-master switches back.
+        if [ -z "$ARCHIVE_REV" ] && ! newest_archive_dsoal; then
+            build_cached "$DSOAL_OFFICIAL" || return 1
+            print_status "DSOAL latest: couldn't check for updates, so using the cached build [${local_date%%T*}]" "$YELLOW"; return 0
+        fi
+        if [ "$local_date" == "archive-$ARCHIVE_REV" ] && build_cached "$DSOAL_OFFICIAL"; then
+            print_status "DSOAL latest [$ARCHIVE_REV]: up to date (latest-master is missing upstream, so this is kcat's newest archived build)" "$GREEN"; return 0
+        fi
+        print_status "DSOAL latest [$ARCHIVE_REV]: downloading kcat's newest archived build (latest-master is missing upstream)..."
+        if fetch_with_progress "$ARCHIVE_URL" "$DSOAL_SHARE/dsoal.zip" && unzip -tq "$DSOAL_SHARE/dsoal.zip" &>/dev/null \
+            && verify_or_confirm "$DSOAL_SHARE/dsoal.zip" "$ARCHIVE_DIGEST" "kcat archived DSOAL [$ARCHIVE_REV]"; then
+            install_dsoal_zip_into_official "$DSOAL_SHARE/dsoal.zip" "archive-$ARCHIVE_REV"
+            print_status "Done." "$GREEN"; return 0
+        fi
+    else
+        if [ "$DSOAL_LATEST_DATE" == "$local_date" ] && build_cached "$DSOAL_OFFICIAL"; then
+            print_status "DSOAL latest [$DSOAL_LATEST_LABEL]: up to date" "$GREEN"; return 0
+        fi
+        print_status "DSOAL latest [$DSOAL_LATEST_LABEL]: downloading..."
+        if fetch_with_progress "$DSOAL_OFFICIAL_URL" "$DSOAL_SHARE/dsoal.zip" && unzip -tq "$DSOAL_SHARE/dsoal.zip" &>/dev/null \
+            && verify_or_confirm "$DSOAL_SHARE/dsoal.zip" "$(get_asset_digest "$DSOAL_OFFICIAL_JSON" "DSOAL.zip")" "kcat DSOAL [$DSOAL_LATEST_LABEL]"; then
+            install_dsoal_zip_into_official "$DSOAL_SHARE/dsoal.zip" "$DSOAL_LATEST_DATE"
+            print_status "Done." "$GREEN"; return 0
+        fi
+    fi
+    rm -f "$DSOAL_SHARE/dsoal.zip"
+    if build_cached "$DSOAL_OFFICIAL"; then
+        print_warning_arrow "Couldn't get the new build, so keeping the cached one [${local_date#archive-}]."
+        return 0
+    fi
+    print_error_arrow "The latest DSOAL build couldn't be downloaded."
     return 1
 }
 
-update_local_cache() {
-    print_banner "REPOSITORY CACHE CHECK"
-    mkdir -p "$DSOAL_SHARE" "$OPENAL_SHARE"
-
-    echo -e "\n${CYAN}Checking kcat Official DSOAL repository...${NC}"
-    # curl -s without -f still succeeds on an HTTP error, so a failure here
-    # means GitHub is genuinely unreachable -- as opposed to reachable but
-    # without an updated_at (latest-master missing upstream, or API rate limit).
-    DSOAL_API_REACHABLE=1
-    DSOAL_OFFICIAL_JSON=$(curl -s "$DSOAL_OFFICIAL_API_URL") || DSOAL_API_REACHABLE=0
-    LATEST_DATE=$(echo "$DSOAL_OFFICIAL_JSON" | grep -m 1 '"updated_at"' | cut -d '"' -f 4)
-    LOCAL_DATE=$(cat "$DSOAL_SHARE/updated_at.txt" 2>/dev/null)
-    if [ -z "$LATEST_DATE" ]; then
-        if dsoal_official_cached; then
-            if [ "$DSOAL_API_REACHABLE" -eq 1 ]; then print_status "Couldn't check for updates. Using cached version [${LOCAL_DATE%%T*}]" "$YELLOW"
-            else print_status "Offline. Using cached version [${LOCAL_DATE%%T*}]" "$YELLOW"; fi
-        elif [ "$DSOAL_API_REACHABLE" -eq 1 ]; then
-            print_warning_arrow "kcat's latest-master build is unavailable upstream right now."
-            fetch_pinned_dsoal_into_official
-        else
-            print_error_arrow "Offline and no cache found. kcat DSOAL will be unavailable this run."
+# Usage: ensure_openal_build <stable|latest>
+# Same as ensure_dsoal_build, for OpenAL Soft. The two builds are laid out
+# differently: stable is openal-soft-<v>-bin/bin/<Arch>/soft_oal.dll, the
+# pre-release is <Arch>/OpenAL32.dll (see openal_source_dll).
+ensure_openal_build() {
+    local local_tag asset url digest updated version
+    if [ "$1" == "stable" ]; then
+        local_tag=$(cat "$OPENAL_SHARE/updated_at.txt" 2>/dev/null)
+        if [ "$GITHUB_REACHABLE" -ne 1 ] || [ -z "${OAL_STABLE_TAG:-}" ]; then
+            build_cached "$OPENAL_OFFICIAL" || return 1
+            print_status "OpenAL Soft stable [$local_tag]: using the cached build" "$YELLOW"; return 0
         fi
-    elif [ "$LATEST_DATE" != "$LOCAL_DATE" ] || [ ! -d "$DSOAL_OFFICIAL" ]; then
-        print_status "Updates found! Downloading latest build..."
-        if fetch_with_progress "$DSOAL_OFFICIAL_URL" "$DSOAL_SHARE/dsoal.zip" && unzip -tq "$DSOAL_SHARE/dsoal.zip" &>/dev/null; then
-            DSOAL_OFFICIAL_DIGEST=$(get_asset_digest "$DSOAL_OFFICIAL_JSON" "DSOAL.zip")
-            if verify_or_confirm "$DSOAL_SHARE/dsoal.zip" "$DSOAL_OFFICIAL_DIGEST" "kcat Official DSOAL"; then
-                rm -rf "$DSOAL_OFFICIAL"; mkdir -p "$DSOAL_OFFICIAL"
-                unzip -q "$DSOAL_SHARE/dsoal.zip" -d "$DSOAL_OFFICIAL"
-                # kcat's DSOAL.zip release asset sometimes wraps its real
-                # contents in a further nested DSOAL_*.zip, so a second
-                # extraction pass is needed to actually reach the DLLs.
-                NESTED=$(find "$DSOAL_OFFICIAL" -maxdepth 1 -name "DSOAL_*.zip" | head -n 1)
-                if [ -n "$NESTED" ] && unzip -tq "$NESTED" &>/dev/null; then unzip -q "$NESTED" -d "$DSOAL_OFFICIAL"; fi
-                echo "$LATEST_DATE" > "$DSOAL_SHARE/updated_at.txt"; rm -f "$DSOAL_SHARE/dsoal.zip"; print_status "Done." "$GREEN"
-            else
-                rm -f "$DSOAL_SHARE/dsoal.zip"
-                if [ -d "$DSOAL_OFFICIAL" ] && [ "$(ls -A "$DSOAL_OFFICIAL" 2>/dev/null)" ]; then
-                    print_warning_arrow "Skipping this download. Keeping existing cache [${LOCAL_DATE%%T*}]."
-                else
-                    print_error_arrow "Could not verify or confirm this download, and no usable cache exists."
-                    fetch_pinned_dsoal_into_official
-                fi
-            fi
-        else
-            rm -f "$DSOAL_SHARE/dsoal.zip"
-            if [ -d "$DSOAL_OFFICIAL" ] && [ "$(ls -A "$DSOAL_OFFICIAL" 2>/dev/null)" ]; then
-                print_warning_arrow "Download failed or file was corrupt. Keeping existing cache [${LOCAL_DATE%%T*}]."
-            else
-                print_error_arrow "Download failed and no usable cache exists."
-                fetch_pinned_dsoal_into_official
-            fi
+        if [ "$OAL_STABLE_TAG" == "$local_tag" ] && build_cached "$OPENAL_OFFICIAL"; then
+            print_status "OpenAL Soft stable [$local_tag]: up to date" "$GREEN"; return 0
         fi
-    else print_status "Up to date [${LOCAL_DATE%%T*}]" "$GREEN"; fi
-
-    echo -e "\n${CYAN}Checking kcat OpenAL Soft repository...${NC}"
-    # Unlike DSOAL_OFFICIAL_API_URL above, this resolves the tag via the
-    # /releases/latest redirect rather than the Releases API. DSOAL is
-    # pinned to the rolling "latest-master" tag (not a real "latest
-    # release"), so the redirect trick can't resolve it there and the API
-    # must be queried by tag name directly. OpenAL Soft does publish normal
-    # dated releases, so the cheaper redirect trick works here.
-    OAL_TAG=$(curl -sI https://github.com/kcat/openal-soft/releases/latest | grep -i "^location:" | awk -F '/' '{print $NF}' | tr -d '\r')
-    LOCAL_OAL_TAG=$(cat "$OPENAL_SHARE/updated_at.txt" 2>/dev/null)
-    if [ -z "$OAL_TAG" ]; then
-        if [ -d "$OPENAL_OFFICIAL" ]; then print_status "Offline. Using cached version [${LOCAL_OAL_TAG}]" "$YELLOW"
-        else print_error_arrow "OpenAL cache missing."; print_offline_instructions; exit 1; fi
-    elif [ "$OAL_TAG" != "$LOCAL_OAL_TAG" ] || [ ! -d "$OPENAL_OFFICIAL" ]; then
-        print_status "Updates found! Downloading OpenAL Soft [${OAL_TAG}]..."
-        OAL_ASSET_NAME="openal-soft-${OAL_TAG}-bin.zip"
-        OAL_URL="https://github.com/kcat/openal-soft/releases/download/${OAL_TAG}/${OAL_ASSET_NAME}"
-        if fetch_with_progress "$OAL_URL" "$OPENAL_SHARE/openal.zip" && unzip -tq "$OPENAL_SHARE/openal.zip" &>/dev/null; then
-            OPENAL_OFFICIAL_JSON=$(curl -s "https://api.github.com/repos/kcat/openal-soft/releases/tags/${OAL_TAG}")
-            OAL_DIGEST=$(get_asset_digest "$OPENAL_OFFICIAL_JSON" "$OAL_ASSET_NAME")
-            if verify_or_confirm "$OPENAL_SHARE/openal.zip" "$OAL_DIGEST" "kcat OpenAL Soft [$OAL_TAG]"; then
+        print_status "OpenAL Soft stable [$OAL_STABLE_TAG]: downloading..."
+        asset="openal-soft-${OAL_STABLE_TAG}-bin.zip"
+        url="https://github.com/kcat/openal-soft/releases/download/${OAL_STABLE_TAG}/${asset}"
+        if fetch_with_progress "$url" "$OPENAL_SHARE/openal.zip" && unzip -tq "$OPENAL_SHARE/openal.zip" &>/dev/null; then
+            digest=$(get_asset_digest "$(curl -s "https://api.github.com/repos/kcat/openal-soft/releases/tags/${OAL_STABLE_TAG}")" "$asset")
+            if verify_or_confirm "$OPENAL_SHARE/openal.zip" "$digest" "kcat OpenAL Soft [$OAL_STABLE_TAG]"; then
                 rm -rf "$OPENAL_OFFICIAL"; mkdir -p "$OPENAL_OFFICIAL"
                 unzip -q "$OPENAL_SHARE/openal.zip" -d "$OPENAL_OFFICIAL"
-                echo "$OAL_TAG" > "$OPENAL_SHARE/updated_at.txt"; rm -f "$OPENAL_SHARE/openal.zip"; print_status "Done." "$GREEN"
-            else
-                rm -f "$OPENAL_SHARE/openal.zip"
-                if [ -d "$OPENAL_OFFICIAL" ] && [ "$(ls -A "$OPENAL_OFFICIAL" 2>/dev/null)" ]; then
-                    print_warning_arrow "Skipping this download. Keeping existing cache [${LOCAL_OAL_TAG}]."
-                else
-                    print_error_arrow "Could not verify or confirm this download, and no usable cache exists."; exit 1
-                fi
-            fi
-        else
-            rm -f "$OPENAL_SHARE/openal.zip"
-            if [ -d "$OPENAL_OFFICIAL" ] && [ "$(ls -A "$OPENAL_OFFICIAL" 2>/dev/null)" ]; then
-                print_warning_arrow "Download failed or file was corrupt. Keeping existing cache [${LOCAL_OAL_TAG}]."
-            else
-                print_error_arrow "Download failed and no usable cache exists."; exit 1
+                echo "$OAL_STABLE_TAG" > "$OPENAL_SHARE/updated_at.txt"; rm -f "$OPENAL_SHARE/openal.zip"
+                print_status "Done." "$GREEN"; return 0
             fi
         fi
-    else print_status "Up to date [${LOCAL_OAL_TAG}]" "$GREEN"; fi
-
-    # Only fetched when the user asks for the frozen fallback build. It's a
-    # break-glass lever for when a rolling latest-master build regresses a
-    # game, so there's no reason to pull it on every run.
-    if is_truthy "$EAX_RESTORE_DSOAL_PIN"; then
-        echo -e "\n${CYAN}Checking pinned kcat DSOAL [$DSOAL_PINNED_REV]...${NC}"
-        if [ ! -d "$DSOAL_PINNED" ]; then
-            print_status "Cache missing. Downloading pinned build [$DSOAL_PINNED_REV]..."
-            mkdir -p "$DSOAL_PINNED"
-            if fetch_with_progress "$DSOAL_PINNED_URL" "$DSOAL_SHARE/pinned.zip" && unzip -tq "$DSOAL_SHARE/pinned.zip" &>/dev/null; then
-                # Hard-fails on mismatch, unlike verify_or_confirm's softer
-                # handling of the rolling latest-master download: a frozen,
-                # already-superseded archive asset has a stable SHA256, so a
-                # mismatch here means the file is genuinely wrong, not just
-                # that GitHub hasn't published a digest yet.
-                if verify_checksum "$DSOAL_SHARE/pinned.zip" "$DSOAL_PINNED_SHA256"; then
-                    rm -rf "$DSOAL_PINNED"; mkdir -p "$DSOAL_PINNED"
-                    unzip -q "$DSOAL_SHARE/pinned.zip" -d "$DSOAL_PINNED"
-                    # Same nested DSOAL_*.zip wrapping as the latest-master asset.
-                    NESTED=$(find "$DSOAL_PINNED" -maxdepth 1 -name "DSOAL_*.zip" | head -n 1)
-                    if [ -n "$NESTED" ] && unzip -tq "$NESTED" &>/dev/null; then unzip -q "$NESTED" -d "$DSOAL_PINNED"; fi
-                    rm -f "$DSOAL_SHARE/pinned.zip"; print_status "Done." "$GREEN"
-                else
-                    rm -f "$DSOAL_SHARE/pinned.zip"; rm -rf "$DSOAL_PINNED"
-                    print_error_arrow "The pinned build failed checksum verification, so it will be unavailable this run."
-                fi
-            else
-                rm -f "$DSOAL_SHARE/pinned.zip"; rm -rf "$DSOAL_PINNED"
-                print_error_arrow "The pinned build download failed or the file was corrupt, so it will be unavailable this run."
-            fi
-        else print_status "Available in cache." "$GREEN"; fi
+        rm -f "$OPENAL_SHARE/openal.zip"
+        if build_cached "$OPENAL_OFFICIAL"; then
+            print_warning_arrow "Couldn't get the new build, so keeping the cached one [$local_tag]."
+            return 0
+        fi
+        print_error_arrow "The stable OpenAL Soft build couldn't be downloaded."
+        return 1
     fi
 
-    echo -e "\n${CYAN}Checking known EAX games database...${NC}"
-    if ensure_known_games_json; then
-        GAME_COUNT=$(jq '.games | length' "$KNOWN_GAMES_FILE" 2>/dev/null)
-        print_status "Loaded (${GAME_COUNT:-0} games)." "$GREEN"
+    # Pre-release: the marker is the asset's upload time (it's rebuilt in
+    # place, so the tag never changes) plus the version to show.
+    local_tag=$(sed -n 1p "$OPENAL_PRERELEASE/.version" 2>/dev/null)
+    if [ "$GITHUB_REACHABLE" -ne 1 ] || [ -z "${OAL_PRERELEASE_JSON:-}" ]; then
+        build_cached "$OPENAL_PRERELEASE" || return 1
+        print_status "OpenAL Soft latest [$OAL_LATEST_LABEL]: using the cached build" "$YELLOW"; return 0
+    fi
+    IFS=$'\t' read -r url digest updated version < <(printf '%s' "$OAL_PRERELEASE_JSON" | jq -r '
+        (.name // "" | sub("^OpenAL Soft v"; "")) as $v
+        | (.assets // [])[] | select(.name == "OpenALSoft.zip")
+        | "\(.browser_download_url)\t\(.digest // "" | sub("^sha256:"; ""))\t\(.updated_at)\t\($v)"' 2>/dev/null)
+    if [ -z "$url" ]; then
+        build_cached "$OPENAL_PRERELEASE" || { print_error_arrow "OpenAL Soft's pre-release build isn't available right now."; return 1; }
+        print_status "OpenAL Soft latest: couldn't check for updates, so using the cached build" "$YELLOW"; return 0
+    fi
+    if [ "$updated" == "$local_tag" ] && build_cached "$OPENAL_PRERELEASE"; then
+        print_status "OpenAL Soft latest [$OAL_LATEST_LABEL]: up to date" "$GREEN"; return 0
+    fi
+    print_status "OpenAL Soft latest [$OAL_LATEST_LABEL]: downloading..."
+    if fetch_with_progress "$url" "$OPENAL_SHARE/prerelease.zip" && unzip -tq "$OPENAL_SHARE/prerelease.zip" &>/dev/null \
+        && verify_or_confirm "$OPENAL_SHARE/prerelease.zip" "$digest" "kcat OpenAL Soft pre-release [$version]"; then
+        rm -rf "$OPENAL_PRERELEASE"; mkdir -p "$OPENAL_PRERELEASE"
+        unzip -q "$OPENAL_SHARE/prerelease.zip" -d "$OPENAL_PRERELEASE"
+        printf '%s\n%s\n' "$updated" "$OAL_LATEST_LABEL" > "$OPENAL_PRERELEASE/.version"
+        rm -f "$OPENAL_SHARE/prerelease.zip"
+        print_status "Done." "$GREEN"; return 0
+    fi
+    rm -f "$OPENAL_SHARE/prerelease.zip"
+    if build_cached "$OPENAL_PRERELEASE"; then
+        print_warning_arrow "Couldn't get the new build, so keeping the cached one."
+        return 0
+    fi
+    print_error_arrow "OpenAL Soft's pre-release build couldn't be downloaded."
+    return 1
+}
+
+# Usage: dsoal_source_dir / openal_source_dll
+# Where Phase 2 copies the chosen builds from, for the architecture picked.
+dsoal_source_dir() {
+    local root="$DSOAL_OFFICIAL"
+    local dir
+    [ "$DSOAL_BUILD" == "stable" ] && root="$DSOAL_PINNED"
+    # The zip has DSOAL/<Arch> and DSOAL+HRTF/<Arch>; prefer the plain one.
+    dir=$(find "$root" -type d -ipath "*/DSOAL/${ARCH_FOLDER}" | head -n 1)
+    [ -n "$dir" ] || dir=$(find "$root" -type d -ipath "*/${ARCH_FOLDER}" | head -n 1)
+    echo "$dir"
+}
+openal_source_dll() {
+    if [ "$OAL_BUILD" == "latest" ]; then
+        echo "$OPENAL_PRERELEASE/$ARCH_FOLDER/OpenAL32.dll"
     else
-        print_error_arrow "Game database is unavailable. Download failed or the file was corrupt."
+        echo "$(find "$OPENAL_OFFICIAL" -type d -ipath "*/bin/${ARCH_FOLDER}" | head -n 1)/soft_oal.dll"
     fi
+}
+
+# Usage: choose_builds
+# Step 6, once the engine is settled: asks which builds to deploy — both
+# stable, both latest, or each chosen separately — then downloads just those.
+# Sets DSOAL_BUILD / OAL_BUILD (stable|latest) and DSOAL_SELECTED_LABEL /
+# OAL_SELECTED_LABEL. An option that can't be had this run (offline and never
+# downloaded) is shown as "[not downloaded]" and refused.
+choose_builds() {
+    local needs_dsoal=0 answer
+    [ "$ENGINE_CHOICE" == "1" ] && needs_dsoal=1
+    print_task "Checking which DSOAL and OpenAL Soft builds are available"
+    lookup_build_versions
+
+    _label() { if [ -n "$1" ]; then printf '%s' "$1"; else printf '%s' "${YELLOW}[not downloaded]${NC}"; fi; }
+
+    # Usage: _ask_component <name> <stable label> <latest label> <latest note>
+    # One component's Stable/Latest question; sets ASKED_BUILD. (Not run in a
+    # $(...) capture: read_answer writes the answer to stdout for the run log.)
+    _ask_component() {
+        local name="$1" st="$2" lt="$3" note="$4" a
+        echo -e "\n${WHITE}${name}${NC}\n"
+        print_key_option "[S]table  $(_label "$st")"
+        print_key_option "[L]atest  $(_label "$lt")${note}"
+        while true; do
+            prompt "Selection [s/l, Default: s]: "
+            read_answer a || exit 0
+            a="${a,,}"; a="${a:-s}"
+            case "$a" in
+                s) [ -n "$st" ] && { ASKED_BUILD="stable"; return; } ;;
+                l) [ -n "$lt" ] && { ASKED_BUILD="latest"; return; } ;;
+                *) print_result "That's not a valid option — please type s or l." "$YELLOW"; continue ;;
+            esac
+            print_result "That build hasn't been downloaded and GitHub can't be reached, so it can't be used this run." "$YELLOW"
+        done
+    }
+
+    local pre=" (pre-release)"
+    if [ "$needs_dsoal" -eq 1 ] && is_truthy "$EAX_RESTORE_DSOAL_PIN"; then
+        DSOAL_BUILD="stable"
+        print_status "EAX_RESTORE_DSOAL_PIN is set, so DSOAL uses the stable build [$DSOAL_PINNED_REV]." "$GREEN"
+        _ask_component "Which OpenAL Soft build?" "$OAL_STABLE_LABEL" "$OAL_LATEST_LABEL" "$pre"; OAL_BUILD="$ASKED_BUILD"
+    elif [ "$needs_dsoal" -eq 0 ]; then
+        _ask_component "Which OpenAL Soft build?" "$OAL_STABLE_LABEL" "$OAL_LATEST_LABEL" "$pre"; OAL_BUILD="$ASKED_BUILD"
+    else
+        local stable_ok=0 latest_ok=0
+        [ -n "$DSOAL_STABLE_LABEL" ] && [ -n "$OAL_STABLE_LABEL" ] && stable_ok=1
+        [ -n "$DSOAL_LATEST_LABEL" ] && [ -n "$OAL_LATEST_LABEL" ] && latest_ok=1
+        echo -e "\n${WHITE}Which builds?${NC}\n"
+        print_key_option "[S]table  DSOAL $(_label "$DSOAL_STABLE_LABEL") + OpenAL Soft $(_label "$OAL_STABLE_LABEL")"
+        print_key_option "[L]atest  DSOAL $(_label "$DSOAL_LATEST_LABEL") + OpenAL Soft $(_label "$OAL_LATEST_LABEL")${pre}"
+        print_key_option "[C]hoose each separately"
+        while true; do
+            prompt "Selection [s/l/c, Default: s]: "
+            read_answer answer || exit 0
+            answer="${answer,,}"; answer="${answer:-s}"
+            case "$answer" in
+                s) if [ "$stable_ok" -eq 1 ]; then DSOAL_BUILD="stable"; OAL_BUILD="stable"; break; fi ;;
+                l) if [ "$latest_ok" -eq 1 ]; then DSOAL_BUILD="latest"; OAL_BUILD="latest"; break; fi ;;
+                c)
+                    _ask_component "Which DSOAL build?" "$DSOAL_STABLE_LABEL" "$DSOAL_LATEST_LABEL" ""; DSOAL_BUILD="$ASKED_BUILD"
+                    _ask_component "Which OpenAL Soft build?" "$OAL_STABLE_LABEL" "$OAL_LATEST_LABEL" "$pre"; OAL_BUILD="$ASKED_BUILD"
+                    break ;;
+                *) print_result "That's not a valid option — please type s, l or c." "$YELLOW"; continue ;;
+            esac
+            print_result "Part of that pair hasn't been downloaded and GitHub can't be reached — try [C] to pick what's available." "$YELLOW"
+        done
+    fi
+
+    print_task "Getting the chosen builds"
+    if [ "$needs_dsoal" -eq 1 ]; then
+        _ensure_or_switch dsoal || {
+            print_error "kcat DSOAL couldn't be downloaded this run, and this game needs it."
+            echo -e "${WHITE}Check your connection, then run the script again later.${NC}"
+            exit 1
+        }
+    fi
+    _ensure_or_switch openal || {
+        print_error "OpenAL Soft couldn't be downloaded this run, and every engine needs it."
+        echo -e "${WHITE}Check your connection, then run the script again later.${NC}"
+        exit 1
+    }
+    DSOAL_SELECTED_LABEL="$DSOAL_STABLE_LABEL"; [ "$DSOAL_BUILD" == "latest" ] && DSOAL_SELECTED_LABEL="$DSOAL_LATEST_LABEL"
+    OAL_SELECTED_LABEL="$OAL_STABLE_LABEL"; [ "$OAL_BUILD" == "latest" ] && OAL_SELECTED_LABEL="$OAL_LATEST_LABEL"
+    unset -f _label _ask_component
+}
+
+# Usage: _ensure_or_switch <dsoal|openal>
+# Gets the chosen build of one component; if that fails, offers the other
+# build of it when that one can be had. Returns 1 when neither works.
+_ensure_or_switch() {
+    local var other label name fn
+    if [ "$1" == "dsoal" ]; then var="DSOAL_BUILD"; name="DSOAL"; fn="ensure_dsoal_build"
+    else var="OAL_BUILD"; name="OpenAL Soft"; fn="ensure_openal_build"; fi
+    "$fn" "${!var}" && return 0
+    other="latest"; [ "${!var}" == "latest" ] && other="stable"
+    if [ "$1" == "dsoal" ]; then
+        label="$DSOAL_STABLE_LABEL"; [ "$other" == "latest" ] && label="$DSOAL_LATEST_LABEL"
+    else
+        label="$OAL_STABLE_LABEL"; [ "$other" == "latest" ] && label="$OAL_LATEST_LABEL"
+    fi
+    [ -n "$label" ] || return 1
+    confirm "Use the ${other} ${name} build [${label}] instead?" Y || return 1
+    printf -v "$var" '%s' "$other"
+    "$fn" "$other"
 }
 
 find_existing_variant() {

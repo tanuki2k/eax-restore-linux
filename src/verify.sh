@@ -1,10 +1,11 @@
 print_offline_instructions() {
     print_banner "OFFLINE MODE INSTRUCTIONS" "$YELLOW"
     echo -e "\n${WHITE}GitHub is unreachable and no local cache was found.${NC}"
-    echo -e "${WHITE}Manually extract release .zips into these folders:${NC}\n"
-    echo -e "${CYAN}1. kcat DSOAL (latest-master):${NC} ${GREEN}$(tilde_path "$DSOAL_OFFICIAL")${NC}"
-    echo -e "${CYAN}2. kcat OpenAL Soft:${NC}          ${GREEN}$(tilde_path "$OPENAL_OFFICIAL")${NC}"
-    echo -e "${DIM}   (pinned fallback, only when EAX_RESTORE_DSOAL_PIN is set): $(tilde_path "$DSOAL_PINNED")${NC}\n"
+    echo -e "${WHITE}Manually extract release .zips into these folders (one DSOAL and one OpenAL Soft is enough):${NC}\n"
+    echo -e "${CYAN}1. kcat DSOAL stable (archive/DSOAL_${DSOAL_PINNED_REV}.zip):${NC} ${GREEN}$(tilde_path "$DSOAL_PINNED")${NC}"
+    echo -e "${CYAN}2. kcat DSOAL latest:${NC}                    ${GREEN}$(tilde_path "$DSOAL_OFFICIAL")${NC}"
+    echo -e "${CYAN}3. kcat OpenAL Soft stable (…-bin.zip):${NC}   ${GREEN}$(tilde_path "$OPENAL_OFFICIAL")${NC}"
+    echo -e "${CYAN}4. kcat OpenAL Soft pre-release (OpenALSoft.zip):${NC} ${GREEN}$(tilde_path "$OPENAL_PRERELEASE")${NC}\n"
 }
 
 verify_checksum() {

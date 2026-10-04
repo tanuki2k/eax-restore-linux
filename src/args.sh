@@ -26,9 +26,9 @@ launches an interactive install/uninstall flow. Configuration beyond the
 prompts is done via environment variables:
 
   EAX_RESTORE_SKIP_PREFLIGHT=1        Skip the dependency scan
-  EAX_RESTORE_DSOAL_PIN=1             Use the frozen known-good DSOAL build
+  EAX_RESTORE_DSOAL_PIN=1             Use the stable DSOAL build without asking
   EAX_RESTORE_VCRUN_ONLY=1            Only (re)install the VC++ runtime
-  EAX_RESTORE_SKIP_CACHE_CHECK=1      Trust the existing local cache
+  EAX_RESTORE_SKIP_CACHE_CHECK=1      Only use builds already downloaded
   EAX_RESTORE_KNOWN_GAMES_FILE=PATH   Use a local known-games JSON file
   EAX_RESTORE_NO_LOG=1                Don't write a run log (normally saved to
                                       ~/.local/state/eax-restore-linux/logs/)

@@ -171,16 +171,20 @@ function and read by another) rather than function parameters/return values — 
 convention is unchanged from before the split and spans file boundaries same as it
 previously spanned banner sections within the one file.
 
-**Caching model:** `update_local_cache()` (the `--- REPOSITORY CACHE CHECK ---` step)
-owns fetch/verify/cache for the DSOAL and OpenAL Soft binary bundles: check remote
-version metadata (GitHub release `updated_at` / redirect-resolved tag) against a local
-marker file, download only on change, verify integrity (`unzip -tq` + a pinned SHA256
-via `verify_checksum`, or a live GitHub-published digest via `verify_or_confirm`), and
-always preserve the existing cache rather than wiping it on a failed
-download/verification. `known-eax-games.json` is fetched separately (on dev, from the
+**Caching model:** nothing is downloaded up front. `check_download_readiness()` (start
+of the install) only probes GitHub, and stops early when it's offline with no OpenAL
+Soft cached. Step 6's `choose_builds()` asks Stable / Latest / each separately, then
+`ensure_dsoal_build()` / `ensure_openal_build()` fetch just the chosen builds: check
+remote version metadata (release `updated_at`, the redirect-resolved tag, or the newest
+`archive` asset while `latest-master` is missing upstream) against a local marker,
+download only on change, verify integrity (`unzip -tq` + the pinned SHA256 via
+`verify_checksum`, or a live GitHub-published digest via `verify_or_confirm`), and keep
+the existing cache on a failed download. Stable DSOAL is the pinned
+`DSOAL_PINNED_REV` (`src/globals.sh`): advancing it after testing a newer archive build
+is part of the release routine. `known-eax-games.json` is fetched separately (on dev, from the
 `dev` branch and cached as `known-eax-games.v3.json`, since schema 3 only exists there
 until 0.29 merges) by
-`ensure_known_games_json()` (called from `update_local_cache` and several other call
+`ensure_known_games_json()` (called on demand from step 1's scan and several other call
 sites — memoized per run) — it deliberately always fetches fresh (no staleness check)
 since it's a small, community-edited file where PRs should take effect immediately,
 unlike the large versioned binary bundles; a fetch failure falls back to the last
