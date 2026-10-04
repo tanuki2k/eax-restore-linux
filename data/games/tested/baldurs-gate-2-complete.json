@@ -11,9 +11,7 @@
   },
   "eax": { "api": "directsound3d", "versions": ["1.0", "2.0"] },
   "game_config": {
-    "files": {
-      "baldur.ini": { "format": "ini", "locations": ["game:baldur.ini"], "if_missing": "skip" }
-    },
+    "files": { "baldur.ini": { "format": "ini", "locations": ["game:baldur.ini"] } },
     "audio_settings": [
       {
         "title": "Enable EAX reverb",

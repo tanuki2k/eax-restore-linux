@@ -213,8 +213,7 @@
             "format": "ini",
             "locations": [
               "game:baldur.ini"
-            ],
-            "if_missing": "skip"
+            ]
           }
         },
         "audio_settings": [
@@ -299,8 +298,7 @@
             "format": "ini",
             "locations": [
               "game:Baldur.ini"
-            ],
-            "if_missing": "skip"
+            ]
           }
         },
         "audio_settings": [
@@ -1056,6 +1054,29 @@
           "1.0"
         ]
       },
+      "game_config": {
+        "files": {
+          "icewind.ini": {
+            "format": "ini",
+            "locations": [
+              "game:icewind.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX reverb",
+            "reason": "Icewind Dale turns on 'Environmental Audio' by itself the first time it starts.",
+            "changes": {
+              "icewind.ini": {
+                "Game Options": {
+                  "Environmental Audio": "1"
+                }
+              }
+            }
+          }
+        ]
+      },
       "sources": [
         {
           "title": "GOG forum: BGEE, BG2EE, IWEE vs originals",
@@ -1077,6 +1098,29 @@
         "api": "directsound3d",
         "versions": [
           "1.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "icewind2.ini": {
+            "format": "ini",
+            "locations": [
+              "game:icewind2.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX reverb",
+            "reason": "Icewind Dale II ships with 'Environmental Audio' off, so there's no reverb.",
+            "changes": {
+              "icewind2.ini": {
+                "Game Options": {
+                  "Environmental Audio": "1"
+                }
+              }
+            }
+          }
         ]
       }
     },

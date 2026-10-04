@@ -8,5 +8,15 @@
       "store_details": "Sold as 'Icewind Dale 2 Complete'. There's no Enhanced Edition of Icewind Dale II, so this is the classic game."
     }
   },
-  "eax": { "api": "directsound3d", "versions": ["1.0"] }
+  "eax": { "api": "directsound3d", "versions": ["1.0"] },
+  "game_config": {
+    "files": { "icewind2.ini": { "format": "ini", "locations": ["game:icewind2.ini"] } },
+    "audio_settings": [
+      {
+        "title": "Enable EAX reverb",
+        "reason": "Icewind Dale II ships with 'Environmental Audio' off, so there's no reverb.",
+        "changes": { "icewind2.ini": { "Game Options": { "Environmental Audio": "1" } } }
+      }
+    ]
+  }
 }
