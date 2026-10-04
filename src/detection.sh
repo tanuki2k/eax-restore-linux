@@ -76,16 +76,9 @@ get_game_directory() {
     local can_scan=0
     if [ "$SCRIPT_ACTION" == "i" ] && ensure_known_games_json; then
         can_scan=1
-        echo ""
     elif [ "$SCRIPT_ACTION" == "i" ]; then
         print_note "Library scanning needs the known-EAX-games database," \
             "which isn't available this run — skipping straight to manual entry."
-        echo ""
-    else
-        # SCRIPT_ACTION == "u" reaching here (prompt_recent_game found no
-        # match) — neither branch above ran, so nothing has separated this
-        # from print_step's divider yet.
-        echo ""
     fi
 
     local have_gui_picker=0
@@ -102,6 +95,10 @@ get_game_directory() {
     local locations_shown=0
     _show_common_locations() {
         [ "$locations_shown" -eq 1 ] && return
+        # Its own leading blank line, like print_note: it can follow the step
+        # divider or a note directly, while a scan going straight to its own
+        # note shouldn't get an extra one.
+        echo ""
         echo -e "${WHITE}Common game locations:${NC}\n"
         echo -e "${WHITE} Linux Desktop (Steam): ~/.local/share/Steam/steamapps/common/[Game]${NC}"
         echo -e "${WHITE} Steam Deck (SD Card):  /run/media/mmcblk0p1/steamapps/common/[Game]${NC}"
