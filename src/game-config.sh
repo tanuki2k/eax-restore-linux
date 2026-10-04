@@ -412,12 +412,17 @@ apply_alsoft_overrides() {
 # Usage: game_settings_step <step_number>
 # Phase 1's Game Settings step. Reads each fix's config files as they are now,
 # so every row shows the real current → new value; nothing is written here.
-# Accepted rows go into GAME_SETTINGS_PLAN, settings whose file doesn't exist
-# yet into GAME_SETTINGS_MISSING, both for Phase 2 and the final summary.
+# Accepted rows go into GAME_SETTINGS_PLAN for Phase 2. For the final summary,
+# settings whose file doesn't exist yet go into GAME_SETTINGS_MISSING, ones the
+# player turns down into GAME_SETTINGS_DECLINED, and ones left out because this
+# build has no such file (if_missing "skip") into GAME_SETTINGS_ABSENT. A
+# skipped file only drops its own rows; a setting is left out entirely when
+# every file it changes is skipped, and either way the player is told.
 # Prints nothing at all for a game with no fixes to offer.
 game_settings_step() {
     local step="$1"
     GAME_SETTINGS_PLAN=(); GAME_SETTINGS_MISSING=(); GAME_SETTINGS_FOLLOW_UPS=()
+    GAME_SETTINGS_DECLINED=(); GAME_SETTINGS_ABSENT=()
     GAME_AUDIO_FIX_TITLES=(); GAME_AUDIO_FIX_ALREADY=()
     current_known_game || return
 
@@ -439,6 +444,9 @@ game_settings_step() {
     # Per-fix state, keyed "category:number" in database order.
     local -a fix_order=()
     local -A fix_title=() fix_reason=() fix_follow=() fix_status=() fix_rows=() fix_missing_file=()
+    # Per fix: |-joined files it changes that this build doesn't have, whether
+    # any of its files was found, and the files its offered rows change.
+    local -A fix_absent_files=() fix_has_file=() fix_files=()
     local -A file_path=() file_state=()
     local cat idx title reason stores speakers follow file fmt ifmissing locs sec key value id path old
     local -a f
@@ -487,10 +495,14 @@ game_settings_step() {
             file_path[$file]="$path"
         fi
         case "${file_state[$file]}" in
-            skip) fix_status[$id]="skip"; continue ;;
+            skip)
+                [[ "|${fix_absent_files[$id]:-}|" == *"|$file|"* ]] \
+                    || fix_absent_files[$id]+="${fix_absent_files[$id]:+|}$file"
+                continue ;;
             missing) fix_status[$id]="missing"; fix_missing_file[$id]="$file"; continue ;;
         esac
         [ "${fix_status[$id]}" == "missing" ] && continue
+        fix_has_file[$id]=1
 
         path="${file_path[$file]}"
         old="$(config_get_key "$path" "$fmt" "$sec" "$key")"
@@ -498,12 +510,19 @@ game_settings_step() {
         if [ "$value" == "__DELETE__" ] && [ "$old" == "__ABSENT__" ]; then continue; fi
         config_values_equal "$fmt" "$old" "$value" && continue
         fix_status[$id]="offer"
+        [[ "|${fix_files[$id]:-}|" == *"|$file|"* ]] || fix_files[$id]+="${fix_files[$id]:+|}$file"
         fix_rows[$id]+="$cat"$'\x1f'"$title"$'\x1f'"$path"$'\x1f'"$fmt"$'\x1f'"$sec"$'\x1f'"$key"$'\x1f'"$value"$'\x1f'"$file"$'\x1f'"$old"$'\x1f'"${file_state[$file]}"$'\n'
+    done
+
+    # Every file this setting changes is one this build doesn't have.
+    for id in "${fix_order[@]}"; do
+        [ "${fix_status[$id]}" == "already" ] && [ -n "${fix_absent_files[$id]:-}" ] \
+            && [ -z "${fix_has_file[$id]:-}" ] && fix_status[$id]="absent"
     done
 
     local shown=0
     for id in "${fix_order[@]}"; do
-        [[ "${fix_status[$id]}" =~ ^(offer|already|missing)$ ]] && shown=1
+        [[ "${fix_status[$id]}" =~ ^(offer|already|missing|absent)$ ]] && shown=1
     done
     [ "$shown" -eq 0 ] && return
 
@@ -516,6 +535,18 @@ game_settings_step() {
         echo -e "${WHITE}$(printf '%s' "${fix_reason[$id]}" | fold -s -w 74 | sed 's/^/    /')${NC}"
         echo ""
         print_config_rows "$(fix_rows_for_display "${fix_rows[$id]}")"
+        _print_absent_note "$id"
+    }
+    # A setting that still applies, minus the part for a file this build
+    # doesn't have.
+    _print_absent_note() {
+        local id="$1"
+        [ -n "${fix_absent_files[$id]:-}" ] || return 0
+        echo -e "${DIM}    ${GAME_NAME} has no ${fix_absent_files[$id]//|/ or }, so that part is left out.${NC}"
+    }
+    # Remembers settings the player turned down, for the final summary.
+    _decline_fix() {
+        GAME_SETTINGS_DECLINED+=("${fix_title[$1]}"$'\x1f'"${fix_files[$1]//|/ and }")
     }
     _plan_fix() {
         local id="$1" r
@@ -526,6 +557,10 @@ game_settings_step() {
         local id="$1"
         if [ "${fix_status[$id]}" == "already" ]; then
             echo -e "\n  ${GREEN}✓${NC} ${fix_title[$id]} ${DIM}— already set${NC}"
+            _print_absent_note "$id"
+        elif [ "${fix_status[$id]}" == "absent" ]; then
+            echo -e "\n  ${YELLOW}-${NC} ${fix_title[$id]} ${DIM}— left out: ${GAME_NAME} has no ${fix_absent_files[$id]//|/ or }${NC}"
+            GAME_SETTINGS_ABSENT+=("${fix_title[$id]}"$'\x1f'"${fix_absent_files[$id]//|/ or }")
         else
             echo -e "\n  ${YELLOW}-${NC} ${fix_title[$id]} ${DIM}— skipped: ${GAME_NAME} hasn't created ${fix_missing_file[$id]} yet${NC}"
             GAME_SETTINGS_MISSING+=("${fix_title[$id]}"$'\x1f'"${fix_missing_file[$id]}")
@@ -534,7 +569,7 @@ game_settings_step() {
 
     local any_audio=0 audio_offer=0
     for id in "${fix_order[@]}"; do
-        [[ "$id" == audio:* ]] && [[ "${fix_status[$id]}" =~ ^(offer|already|missing)$ ]] && any_audio=1
+        [[ "$id" == audio:* ]] && [[ "${fix_status[$id]}" =~ ^(offer|already|missing|absent)$ ]] && any_audio=1
         [[ "$id" == audio:* ]] && [ "${fix_status[$id]}" == "offer" ] && audio_offer=1
         if [[ "$id" == audio:* ]] && [[ "${fix_status[$id]}" =~ ^(offer|already|missing)$ ]]; then
             GAME_AUDIO_FIX_TITLES+=("${fix_title[$id]}")
@@ -547,19 +582,22 @@ game_settings_step() {
             [[ "$id" == audio:* ]] || continue
             case "${fix_status[$id]}" in
                 offer) _print_fix "$id" ;;
-                already|missing) _print_status_line "$id" ;;
+                already|missing|absent) _print_status_line "$id" ;;
             esac
         done
-        if [ "$audio_offer" -eq 1 ] && confirm "Apply these settings?" Y; then
+        if [ "$audio_offer" -eq 1 ]; then
+            local accepted=0
+            confirm "Apply these settings?" Y && accepted=1
             for id in "${fix_order[@]}"; do
-                [[ "$id" == audio:* ]] && [ "${fix_status[$id]}" == "offer" ] && _plan_fix "$id"
+                [[ "$id" == audio:* ]] && [ "${fix_status[$id]}" == "offer" ] || continue
+                if [ "$accepted" -eq 1 ]; then _plan_fix "$id"; else _decline_fix "$id"; fi
             done
         fi
     fi
 
     local -a optional=()
     for id in "${fix_order[@]}"; do
-        [[ "$id" == optional:* ]] && [[ "${fix_status[$id]}" =~ ^(offer|already|missing)$ ]] && optional+=("$id")
+        [[ "$id" == optional:* ]] && [[ "${fix_status[$id]}" =~ ^(offer|already|missing|absent)$ ]] && optional+=("$id")
     done
     if [ ${#optional[@]} -gt 0 ]; then
         echo -e "\n${WHITE}Optional settings for ${GAME_NAME} — not needed for EAX:${NC}"
@@ -572,6 +610,7 @@ game_settings_step() {
                 echo -e "${WHITE}$(printf '%s' "${fix_reason[$id]}" | fold -s -w 74 | sed 's/^/    /')${NC}"
                 echo ""
                 print_config_rows "$(fix_rows_for_display "${fix_rows[$id]}")"
+                _print_absent_note "$id"
             else
                 _print_status_line "$id"
             fi
@@ -582,15 +621,17 @@ game_settings_step() {
             prompt "Press Enter to apply all, type the numbers you want (e.g. \"$example\"), or 'n' to skip:"
             local answer i
             read_answer answer || answer="n"
-            if [[ ! "$answer" =~ $NO_RE ]]; then
+            if [[ "$answer" =~ $NO_RE ]]; then
+                for i in "${!offered[@]}"; do _decline_fix "${offered[$i]}"; done
+            else
                 parse_selection "${#offered[@]}" "$answer"
                 for i in "${!offered[@]}"; do
-                    [ "${SELECTED[$((i + 1))]}" == "1" ] && _plan_fix "${offered[$i]}"
+                    if [ "${SELECTED[$((i + 1))]}" == "1" ]; then _plan_fix "${offered[$i]}"; else _decline_fix "${offered[$i]}"; fi
                 done
             fi
         fi
     fi
-    unset -f _print_fix _plan_fix _print_status_line
+    unset -f _print_fix _print_absent_note _decline_fix _plan_fix _print_status_line
 }
 
 # Usage: known_game_field <jq path, e.g. .exe>
@@ -740,11 +781,25 @@ game_audio_settings_done() {
 
 # Usage: print_game_settings_summary
 # INSTALLATION COMPLETE's "Game settings" section: fixes applied (with any
-# follow-up the player still has to do) and fixes skipped because the game
-# hasn't created its config file yet.
+# follow-up the player still has to do), and every setting that wasn't — its
+# config file doesn't exist yet, the player turned it down, or this build has
+# no such file. Game Settings only save the player time, so one that wasn't
+# applied is theirs to set by hand; this never asks them to run the script
+# again.
 print_game_settings_summary() {
-    [ ${#GAME_SETTINGS_APPLIED[@]} -gt 0 ] || [ ${#GAME_SETTINGS_MISSING[@]} -gt 0 ] || return
-    local title entry fu t
+    [ ${#GAME_SETTINGS_APPLIED[@]} -gt 0 ] || [ ${#GAME_SETTINGS_MISSING[@]} -gt 0 ] \
+        || [ ${#GAME_SETTINGS_DECLINED[@]} -gt 0 ] || [ ${#GAME_SETTINGS_ABSENT[@]} -gt 0 ] || return
+    local title entry fu t files
+    # One " - " line, wrapped with its continuation lines under the text.
+    _summary_skipped() {
+        local text first rest
+        text="$(printf '%s' "$1" | fold -s -w 74 | sed 's/ *$//')"
+        first="${text%%$'\n'*}"; rest=""
+        [ "$first" != "$text" ] && rest="$(printf '%s' "${text#*$'\n'}" | sed 's/^/   /')"
+        echo -e " ${YELLOW}-${NC} ${WHITE}${first}${NC}"
+        [ -n "$rest" ] && echo -e "${WHITE}${rest}${NC}"
+        return 0
+    }
     echo -e "${YELLOW}${BOLD}Game settings:${NC}"
     for title in "${GAME_SETTINGS_APPLIED[@]}"; do
         fu=""
@@ -758,10 +813,19 @@ print_game_settings_summary() {
         # sentences, so it's wrapped and indented like a fix's reason.
         [ -n "$fu" ] && echo -e "${WHITE}$(printf '%s' "$fu" | fold -s -w 74 | sed 's/^/    /; s/ *$//')${NC}"
     done
-    for entry in "${GAME_SETTINGS_MISSING[@]}"; do
-        IFS=$'\x1f' read -r title fu <<< "$entry"
-        echo -e " ${YELLOW}-${NC} ${WHITE}${title}${NC} — launch ${GAME_NAME} once, then run this again."
+    for entry in "${GAME_SETTINGS_DECLINED[@]}"; do
+        IFS=$'\x1f' read -r title files <<< "$entry"
+        _summary_skipped "${title} wasn't applied, so you'll have to turn it on manually in ${GAME_NAME}'s in-game settings or by editing ${files}."
     done
+    for entry in "${GAME_SETTINGS_MISSING[@]}"; do
+        IFS=$'\x1f' read -r title files <<< "$entry"
+        _summary_skipped "${GAME_NAME} hasn't created ${files} yet, so ${title} wasn't applied. You'll have to turn it on manually in the game's in-game settings or by editing ${files}."
+    done
+    for entry in "${GAME_SETTINGS_ABSENT[@]}"; do
+        IFS=$'\x1f' read -r title files <<< "$entry"
+        _summary_skipped "${title} — left out: ${GAME_NAME} has no ${files}."
+    done
+    unset -f _summary_skipped
     echo ""
 }
 

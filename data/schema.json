@@ -225,7 +225,7 @@
           }
         },
         "if_missing": {
-          "description": "When no location exists. Omitted: tell the player to launch the game once and run this again. skip: skip this file's fixes silently. create: create it.",
+          "description": "When no location exists. Omitted: ask the player to launch the game once, then check again. skip: leave out this file's part of each setting and tell the player. create: create it.",
           "enum": ["skip", "create"]
         },
         "crash_marker": {

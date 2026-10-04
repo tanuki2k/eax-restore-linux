@@ -106,12 +106,16 @@ KNOWN_GAME_API=""
 # the library scan matched (for "install:" config locations). The rest are
 # filled in during Phase 1 and used by Phase 2, the final summary and
 # uninstall: accepted alsoft.ini values, accepted config rows, settings whose
-# config file doesn't exist yet, follow-ups for the summary, fixes applied,
-# last install's CONFIG manifest lines, and (uninstall) this install's.
+# config file doesn't exist yet, settings the player turned down, settings
+# left out because this build has no such file, follow-ups for the summary,
+# fixes applied, last install's CONFIG manifest lines, and (uninstall) this
+# install's.
 GAME_INSTALL_ROOT=""
 ALSOFT_OVERRIDES=()
 GAME_SETTINGS_PLAN=()
 GAME_SETTINGS_MISSING=()
+GAME_SETTINGS_DECLINED=()
+GAME_SETTINGS_ABSENT=()
 GAME_SETTINGS_FOLLOW_UPS=()
 GAME_SETTINGS_APPLIED=()
 # The game's audio settings this run (titles), and the ones already in place, so
