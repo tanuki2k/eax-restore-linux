@@ -151,10 +151,12 @@ print_launcher_open() {
 # When the launcher can safely be closed and started again, offers to do it.
 # Returns 0 once it's closed (and queues it in LAUNCHERS_TO_REOPEN), 1 if the
 # player has to close it themselves. Sets LAUNCHER_CLOSE_ASKED to 1 when it
-# showed the "is open" message and asked.
+# showed the "is open" message and asked, and LAUNCHER_CLOSE_DECLINED to 1
+# when the player said No, which means skip the override rather than close it
+# themselves.
 offer_close_launcher() {
     local label cmd
-    LAUNCHER_CLOSE_ASKED=0
+    LAUNCHER_CLOSE_ASKED=0; LAUNCHER_CLOSE_DECLINED=0
     label="$(launcher_label "$1")"
     if launcher_game_running "$1"; then
         print_note "A game is running from ${label}, so the script can't close ${label} for you."
@@ -164,7 +166,7 @@ offer_close_launcher() {
     [ -n "$cmd" ] || return 1
     print_launcher_open "$1" "$2"
     LAUNCHER_CLOSE_ASKED=1
-    confirm "Close ${label}, $2 the override, then reopen ${label}?" Y || return 1
+    confirm "Close ${label}, $2 the override, then reopen ${label}?" Y || { LAUNCHER_CLOSE_DECLINED=1; return 1; }
     if run_with_spinner "Waiting for ${label} to close..." "$EAX_LOG_FILE" _close_launcher_and_wait "$1" 30; then
         log_cmd "closed $1 ($(launcher_kind "$1")); will reopen with: ${cmd//$'\x1f'/ }"
         LAUNCHERS_TO_REOPEN+=("${label}"$'\x1f'"${cmd}")
@@ -407,14 +409,16 @@ launcher_override_where() {
 }
 
 # Usage: wait_for_launcher_closed <steam|heroic> <add|remove> <what to type to give up>
-# While the launcher is open, first offers to close it (and reopen it later);
-# otherwise says so and waits for Enter. Returns 1 if the player typed
-# something else instead.
+# While the launcher is open, first offers to close it (and reopen it later) —
+# one question, where No skips the override. Only when the script can't close
+# it (a game is running from it, or it didn't close in time) does it say so and
+# wait for Enter. Returns 1 if the player skipped.
 wait_for_launcher_closed() {
     local label answer asked
     label="$(launcher_label "$1")"
     launcher_running "$1" || return 0
     offer_close_launcher "$1" "$2" && return 0
+    [ "$LAUNCHER_CLOSE_DECLINED" -eq 1 ] && return 1
     # The offer already said it's open whenever it got as far as asking.
     asked="$LAUNCHER_CLOSE_ASKED"
     while launcher_running "$1"; do
