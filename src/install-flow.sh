@@ -536,7 +536,6 @@ EOF
         # game's own settings, so there's nothing left to do in its menus.
         game_audio_settings_done \
             || echo -e " 2. ${YELLOW}${BOLD}In-Game Settings:${NC} ${WHITE}Go to Audio settings and enable 'EAX', '3D Sound', or 'Hardware Acceleration'.${NC}"
-        echo ""
     else
         echo -e "\n${YELLOW}${BOLD}Final Steps to activate EAX:${NC}"
         echo -e " 1. ${YELLOW}${BOLD}Set the Override:${NC} ${WHITE}Apply the WINEDLLOVERRIDES rule (see below).${NC}"
@@ -555,6 +554,7 @@ EOF
             echo -e "Value: ${CYAN}$OVERRIDE_VALUE${NC}"
         fi
     fi
-    echo ""
+    # Each block below brings its own leading blank line (the game settings
+    # summary, then the run log's "Log saved to:"), so none is added here.
     print_game_settings_summary
 fi

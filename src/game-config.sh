@@ -800,7 +800,7 @@ print_game_settings_summary() {
         [ -n "$rest" ] && echo -e "${WHITE}${rest}${NC}"
         return 0
     }
-    echo -e "${YELLOW}${BOLD}Game settings:${NC}"
+    echo -e "\n${YELLOW}${BOLD}Game settings:${NC}"
     for title in "${GAME_SETTINGS_APPLIED[@]}"; do
         fu=""
         for entry in "${GAME_SETTINGS_FOLLOW_UPS[@]}"; do
@@ -826,7 +826,6 @@ print_game_settings_summary() {
         _summary_skipped "${title} — left out: ${GAME_NAME} has no ${files}."
     done
     unset -f _summary_skipped
-    echo ""
 }
 
 # Usage: choose_game_settings_to_revert <step_number>
