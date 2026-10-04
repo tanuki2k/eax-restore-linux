@@ -137,7 +137,7 @@ As an alternative to the terminal steps above, [`eax-restore-linux.desktop`](eax
 Since the script itself refuses to run in Gaming Mode, this only works from Desktop Mode.
 
 ### Uninstallation
-Run the script, select **(u)ninstall**, and provide the game directory. The script will remove the EAX files, restore original backups, remove the DLL override (from the registry or the launcher's settings), optionally remove the VC++ runtime it installed, and offer to put back any game settings it changed (leaving alone anything you've changed yourself since).
+Run the script, select **(u)ninstall**, and provide the game directory. The script will remove the EAX files, restore original backups, remove the DLL override (from the registry or the launcher's settings), optionally remove the VC++ runtime it installed, and offer to put back any game settings it changed (leaving alone anything you've changed yourself since). Like the install, it asks everything first — which files to remove, whether to close a running launcher, the VC++ runtime, which game settings to put back — and changes nothing until you confirm with one final "Proceed?".
 
 ### Library Scanning & the Known Games Database
 

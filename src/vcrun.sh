@@ -306,8 +306,6 @@ uninstall_vcrun_dependencies() {
         return
     fi
 
-    print_task "Removing MS VC++ 2022 Redistributable"
-
     local vcrun_share="$BASE_SHARE/vcrun2022"
     mkdir -p "$vcrun_share"
     local dir arch vcrun_exe dll f

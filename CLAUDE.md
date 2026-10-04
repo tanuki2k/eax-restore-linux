@@ -160,7 +160,11 @@ their execution order in the assembled script):
     spans two files sharing one `if [ "$SCRIPT_ACTION" == "i" ]` — opened in
     `config-flow.sh` (Phase 1: Configuration, all the interactive prompts)
     and closed in `install-flow.sh` (Phase 2: Execution, actually deploying
-    files/running protontricks/winetricks).
+    files/running protontricks/winetricks). `uninstall-flow.sh` follows the
+    same split in one file: Phase 1 (steps 1-7) only asks and records answers
+    (e.g. `choose_game_settings_to_revert`, `ask_close_launcher_early`), then
+    one "Proceed?" and Phase 2 makes every change under the phase progress bar.
+    Keep new uninstall questions in Phase 1.
 
 All of the above communicate via shared globals (from `globals.sh`, or set by one
 function and read by another) rather than function parameters/return values — that

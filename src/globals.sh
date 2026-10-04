@@ -125,6 +125,10 @@ GAME_AUDIO_FIX_ALREADY=()
 PREV_CONFIG_LINES=()
 CONFIG_LINES=()
 GAME_SETTINGS_KEPT=()
+# Uninstall: the game settings chosen in Phase 1 to put back in Phase 2
+# (see choose_game_settings_to_revert), and whether to remove the VC++ runtime.
+GAME_SETTINGS_REVERT_GROUPS=()
+UNINSTALL_VCRUN="n"
 
 # DLL override (src/launcher-config.sh). OVERRIDE_METHOD is step 10's choice:
 # registry | launcher | manual. OVERRIDE_LAUNCHER / OVERRIDE_FILE / OVERRIDE_ID
@@ -139,6 +143,10 @@ OVERRIDE_FILE=""
 OVERRIDE_ID=""
 LAUNCHER_LINES=()
 LAUNCHER_LINES_KEPT=()
+# Uninstall: the answer to "Close <launcher>, …?" given in Phase 1 for a
+# launcher that was running then (y or n), keyed steam/heroic, so Phase 2
+# doesn't ask again. Empty during install, which asks when it gets there.
+declare -A LAUNCHER_CLOSE_ANSWER=()
 
 # Set by prompt_restart_or_quit when the user, at an EAX-impossible dead end,
 # chooses to go back and pick a different game rather than quit. The config

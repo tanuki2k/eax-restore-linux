@@ -829,18 +829,19 @@ print_game_settings_summary() {
     echo ""
 }
 
-# Usage: revert_game_settings <step_number>
-# Uninstall's Game Settings step. Lists the manifest's CONFIG lines as
-# audio / optional settings and puts back each chosen setting's original value —
-# but only where the setting still has the value this script set, so anything
-# the player changed since is left alone. Sets GAME_SETTINGS_KEPT to the
-# CONFIG lines left in place, so the manifest can keep them.
-revert_game_settings() {
+# Usage: choose_game_settings_to_revert <step_number>
+# Uninstall's Game Settings step (Phase 1). Lists the manifest's CONFIG lines
+# as audio / optional settings and asks which to put back; nothing is written
+# here. Sets GAME_SETTINGS_REVERT_GROUPS to the chosen settings (each entry is
+# "category\x1ftitle\x1f" followed by that setting's CONFIG lines, one per line)
+# and GAME_SETTINGS_KEPT to the CONFIG lines of the ones left in place.
+choose_game_settings_to_revert() {
     local step="$1"
-    GAME_SETTINGS_KEPT=()
-    [ ${#CONFIG_LINES[@]} -gt 0 ] || return
+    GAME_SETTINGS_KEPT=(); GAME_SETTINGS_REVERT_GROUPS=()
+    [ ${#CONFIG_LINES[@]} -gt 0 ] || return 0
 
     print_step "$step" "Game Settings"
+    print_task "Reading the game settings this install changed"
 
     # Group lines by setting (category + title), keeping manifest order.
     # Manifests written before the rename call optional settings "extras".
@@ -854,6 +855,11 @@ revert_game_settings() {
         [ -n "${group_lines[$g]+x}" ] || groups+=("$g")
         group_lines[$g]+="$line"$'\n'
     done
+
+    local titles="" noun="settings"
+    for g in "${groups[@]}"; do titles+="${titles:+, }${g#*$'\x1f'}"; done
+    [ ${#groups[@]} -eq 1 ] && noun="setting"
+    print_status "${#groups[@]} ${noun} changed: ${titles}" ""
 
     local -a order=()
     local cat idx=1 label
@@ -887,15 +893,28 @@ revert_game_settings() {
         return
     fi
     parse_selection "${#order[@]}" "$answer"
-
-    echo ""
-    local current restored
     for i in "${!order[@]}"; do
         g="${order[$i]}"
-        if [ "${SELECTED[$((i + 1))]}" != "1" ]; then
+        if [ "${SELECTED[$((i + 1))]}" == "1" ]; then
+            GAME_SETTINGS_REVERT_GROUPS+=("$g"$'\x1f'"${group_lines[$g]}")
+        else
             while IFS= read -r line; do [ -n "$line" ] && GAME_SETTINGS_KEPT+=("$line"); done <<< "${group_lines[$g]}"
-            continue
         fi
+    done
+}
+
+# Usage: revert_game_settings
+# Uninstall Phase 2: puts back the original value of each setting chosen in
+# choose_game_settings_to_revert — but only where the setting still has the
+# value this script set, so anything the player changed since is left alone.
+# A setting that can't be written stays in GAME_SETTINGS_KEPT, so the manifest
+# keeps it.
+revert_game_settings() {
+    local entry g lines line current restored target
+    local -a f
+    for entry in "${GAME_SETTINGS_REVERT_GROUPS[@]}"; do
+        g="${entry%%$'\x1f'*}"$'\x1f'; lines="${entry#*$'\x1f'}"; g+="${lines%%$'\x1f'*}"
+        lines="${lines#*$'\x1f'}"
         restored=0
         while IFS= read -r line; do
             [ -n "$line" ] || continue
@@ -906,7 +925,7 @@ revert_game_settings() {
                 print_status "Kept ${f[5]} in $(basename "${f[2]}") — it's been changed since install." "$DIM"
                 continue
             fi
-            local target="${f[6]}"
+            target="${f[6]}"
             [ "$target" == "__ABSENT__" ] && target="__DELETE__"
             if config_set_key "${f[2]}" "${f[3]}" "${f[4]}" "${f[5]}" "$target"; then
                 restored=$((restored + 1))
@@ -914,7 +933,7 @@ revert_game_settings() {
                 print_error_arrow "Couldn't write $(basename "${f[2]}"), so ${f[5]} wasn't put back."
                 GAME_SETTINGS_KEPT+=("$line")
             fi
-        done <<< "${group_lines[$g]}"
+        done <<< "$lines"
         [ "$restored" -gt 0 ] && print_status "Put back: ${g#*$'\x1f'}"
     done
 }
