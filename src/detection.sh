@@ -99,7 +99,7 @@ get_game_directory() {
     BUILT_IN_CONFIRMED=""
     OPENAL_NATIVE_MODE=""
 
-    if { [ "$SCRIPT_ACTION" == "u" ] || [ -n "$SETTINGS_TOOL_MODE" ]; } && prompt_installed_game; then
+    if wants_installed_list && prompt_installed_game; then
         echo -e "\n${GREEN}Using: $(tilde_path "$GAME_DIR")${NC}"
         note_game_used "$GAME_DIR"
         return

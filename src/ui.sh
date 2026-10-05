@@ -395,6 +395,16 @@ return_menu_label() {
     fi
 }
 
+# Usage: wants_installed_list
+# True when step 1 should open with the installed-games list
+# (prompt_installed_game): uninstall and every Tools item. Not for an install,
+# or for EAX_RESTORE_VCRUN_ONLY's VC++ install, which has no Tools to come
+# from.
+wants_installed_list() {
+    [ "$SCRIPT_ACTION" == "u" ] || [ -n "${SETTINGS_TOOL_MODE:-}" ] \
+        || [ -n "${DSOAL_LOG_MODE:-}" ] || [ "${VCRUN_ONLY_MODE:-}" == "menu" ]
+}
+
 # Usage: tool_gate "line" ["line" ...] || { OPEN_TOOLS_MENU=1; continue; }
 # A Tools item's opening: what it does, then "Continue?" (default yes). False
 # on No, so the caller goes back to the Tools menu.
