@@ -71,55 +71,132 @@ ensure_known_games_json() {
     return 0
 }
 
-record_recent_game() {
-    # Usage: record_recent_game <path>
-    # Adds/moves a game directory to the top of the recent-games history
-    # (most-recently-used first), deduped, capped at 10 entries. Best-effort
-    # — never blocks anything if it fails to write.
-    local path="$1"
-    mkdir -p "$BASE_SHARE" 2>/dev/null
-    local tmp
-    tmp=$(mktemp 2>/dev/null) || return
-    { echo "$path"; [ -f "$RECENT_GAMES_FILE" ] && grep -Fxv "$path" "$RECENT_GAMES_FILE"; } | head -n 10 > "$tmp" 2>/dev/null
-    mv "$tmp" "$RECENT_GAMES_FILE" 2>/dev/null
+# Usage: manifest_is_live <game dir>
+# True when the folder holds this script's install: a non-empty manifest that
+# isn't the "uninstalled" marker.
+manifest_is_live() {
+    local m="$1/.eax-restore-manifest.txt"
+    [ -s "$m" ] && ! head -n 1 "$m" | grep -q "^# EAX Restore: uninstalled"
 }
 
-prompt_recent_game() {
-    # Usage: prompt_recent_game
-    # If a recent-games history exists, offers a numbered pick list plus the
-    # option to enter a new path. For uninstall specifically, the list is
-    # filtered to only games that actually have something installed via
-    # this script right now — a folder with no manifest, or one that's just
-    # the "already uninstalled" sentinel, has nothing to act on and would
-    # only clutter the picker. Install shows every visited folder, since
-    # revisiting any of them (installed before or not) is meaningful there.
-    # Sets GAME_DIR and returns 0 if the user picked an existing entry;
-    # returns 1 with RESTART_REQUESTED set for [R]eturn to the main menu;
+# Usage: steam_library_dirs
+# Every Steam library's steamapps folder, one per line: each Steam root's own
+# plus the "path" entries in its libraryfolders.vdf, without repeats.
+steam_library_dirs() {
+    local root vdf extra
+    local -A seen=()
+    for root in "$HOME/.local/share/Steam" "$HOME/.var/app/com.valvesoftware.Steam/.local/share/Steam"; do
+        if [ -d "$root/steamapps" ] && [ -z "${seen["$root/steamapps"]:-}" ]; then
+            printf '%s\n' "$root/steamapps"; seen["$root/steamapps"]=1
+        fi
+        vdf="$root/steamapps/libraryfolders.vdf"
+        [ -f "$vdf" ] || continue
+        while IFS= read -r extra; do
+            [ -n "$extra" ] || continue
+            if [ -d "$extra/steamapps" ] && [ -z "${seen["$extra/steamapps"]:-}" ]; then
+                printf '%s\n' "$extra/steamapps"; seen["$extra/steamapps"]=1
+            fi
+        done < <(sed -n 's/^[[:space:]]*"path"[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$vdf" 2>/dev/null)
+    done
+}
+
+# Usage: find_installed_game_dirs
+# Every game folder holding this script's live install, found on disk: under
+# each Steam library's steamapps/common, and under every Heroic game folder —
+# its default install folder plus the GOG, Epic and sideloaded installs it
+# records (native and Flatpak). One folder per line.
+find_installed_game_dirs() {
+    local lib conf m
+    {
+        while IFS= read -r lib; do
+            find "$lib/common" -mindepth 2 -maxdepth 5 -name .eax-restore-manifest.txt 2>/dev/null
+        done < <(steam_library_dirs)
+        for conf in "$HOME/.config/heroic" "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic"; do
+            [ -d "$conf" ] || continue
+            {
+                jq -r '.defaultSettings.defaultInstallPath // empty' "$conf/config.json" 2>/dev/null
+                jq -r '.installed[]?.install_path // empty' "$conf/gog_store/installed.json" 2>/dev/null
+                jq -r '.[]?.install_path // empty' "$conf/legendaryConfig/legendary/installed.json" 2>/dev/null
+                jq -r '.games[]?.folder_name // empty' "$conf/sideload_apps/library.json" 2>/dev/null
+            } | sort -u | while IFS= read -r lib; do
+                [ -d "$lib" ] && find "$lib" -maxdepth 5 -name .eax-restore-manifest.txt 2>/dev/null
+            done
+        done
+    } | while IFS= read -r m; do
+        m="$(dirname "$m")"
+        manifest_is_live "$m" && printf '%s\n' "$m"
+    done | sort -u
+}
+
+# Usage: note_game_used <game dir>
+# Moves a game folder to the top of INSTALLED_GAMES_FILE (most recently used
+# first, no repeats, no limit), which only orders the installed-games list;
+# what's installed comes from the manifests (installed_game_dirs).
+# Best-effort: never blocks anything if it can't write.
+note_game_used() {
+    local path="$1" tmp
+    [ -n "$path" ] || return 0
+    mkdir -p "$(dirname "$INSTALLED_GAMES_FILE")" 2>/dev/null || return 0
+    tmp=$(mktemp 2>/dev/null) || return 0
+    { printf '%s\n' "$path"; [ -f "$INSTALLED_GAMES_FILE" ] && grep -Fxv -- "$path" "$INSTALLED_GAMES_FILE"; } > "$tmp" 2>/dev/null
+    mv "$tmp" "$INSTALLED_GAMES_FILE" 2>/dev/null || rm -f "$tmp"
+}
+
+# Usage: installed_game_dirs
+# The games this script is installed in, one folder per line: the ones in
+# INSTALLED_GAMES_FILE first, in its most-recently-used order, then any
+# found on disk (find_installed_game_dirs) it doesn't list yet, by name.
+# Folders whose install is gone drop out, and the file is rewritten to match.
+# The first run takes its order from the old recent-games history
+# ($BASE_SHARE/recent_games.txt) and deletes it.
+installed_game_dirs() {
+    local old="$BASE_SHARE/recent_games.txt" p tmp
+    local -a ordered=() found=()
+    local -A seen=()
+    if [ ! -f "$INSTALLED_GAMES_FILE" ] && [ -f "$old" ]; then
+        mkdir -p "$(dirname "$INSTALLED_GAMES_FILE")" 2>/dev/null \
+            && cp "$old" "$INSTALLED_GAMES_FILE" 2>/dev/null && rm -f "$old"
+    fi
+    if [ -f "$INSTALLED_GAMES_FILE" ]; then
+        while IFS= read -r p; do
+            if [ -n "$p" ] && [ -z "${seen[$p]:-}" ] && manifest_is_live "$p"; then
+                ordered+=("$p"); seen[$p]=1
+            fi
+        done < "$INSTALLED_GAMES_FILE"
+    fi
+    while IFS= read -r p; do
+        [ -n "$p" ] && [ -z "${seen[$p]:-}" ] || continue
+        identify_game_dir "$p"
+        found+=("${GAME_ID_NAME:-$(basename "$p")}"$'\t'"$p"); seen[$p]=1
+    done < <(find_installed_game_dirs)
+    if [ ${#found[@]} -gt 0 ]; then
+        while IFS=$'\t' read -r _ p; do ordered+=("$p"); done < <(printf '%s\n' "${found[@]}" | sort -f -t$'\t' -k1,1)
+    fi
+    if mkdir -p "$(dirname "$INSTALLED_GAMES_FILE")" 2>/dev/null && tmp=$(mktemp 2>/dev/null); then
+        [ ${#ordered[@]} -gt 0 ] && printf '%s\n' "${ordered[@]}" > "$tmp"
+        mv "$tmp" "$INSTALLED_GAMES_FILE" 2>/dev/null || rm -f "$tmp"
+    fi
+    [ ${#ordered[@]} -gt 0 ] && printf '%s\n' "${ordered[@]}"
+    return 0
+}
+
+prompt_installed_game() {
+    # Usage: prompt_installed_game
+    # Uninstall's and Tools' game list: the games this script is installed in
+    # (installed_game_dirs), most recently used first, plus the options to
+    # browse for or type another folder.
+    # Sets GAME_DIR and returns 0 if the user picked an entry;
+    # returns 1 with RESTART_REQUESTED set for [R]eturn;
     # returns 1 with LOCATE_METHOD set (gui or manual) for [B]rowse or
     # [M]anually, so get_game_directory goes straight there; returns 1 with
-    # neither when there's no usable history, and step 1's menu is shown.
+    # neither when nothing is installed, and step 1's menu is shown.
     GAME_DIR=""
-    [ -f "$RECENT_GAMES_FILE" ] || return 1
-
-    local paths=()
-    local p manifest
-    while IFS= read -r p; do
-        [ -n "$p" ] && [ -d "$p" ] || continue
-        if [ "$SCRIPT_ACTION" == "u" ] || [ -n "$SETTINGS_TOOL_MODE" ]; then
-            manifest="$p/.eax-restore-manifest.txt"
-            [ -s "$manifest" ] || continue
-            head -n 1 "$manifest" | grep -q "^# EAX Restore: uninstalled" && continue
-        fi
-        paths+=("$p")
-    done < "$RECENT_GAMES_FILE"
-
+    local -a paths=()
+    local p
+    while IFS= read -r p; do [ -n "$p" ] && paths+=("$p"); done < <(installed_game_dirs)
     [ ${#paths[@]} -eq 0 ] && return 1
 
-    if [ "$SCRIPT_ACTION" == "u" ] || [ -n "$SETTINGS_TOOL_MODE" ]; then
-        echo -e "${WHITE}Games with something installed via this script:${NC}"
-    else
-        echo -e "${WHITE}Previously used game folders:${NC}"
-    fi
+    echo -e "${WHITE}Games with something installed via this script:${NC}"
     # One line per game, its name and storefront like the library scan's
     # list; a folder is added only under entries that would otherwise read
     # the same, and shown on its own for a folder that can't be placed.
@@ -302,27 +379,11 @@ scan_game_libraries() {
     local steam_ids
     steam_ids=$(jq -r '.games[] | select(.stores.steam.id != null) | .stores.steam.id' "$KNOWN_GAMES_FILE" 2>/dev/null)
     if [ -n "$steam_ids" ]; then
-        local steam_roots=("$HOME/.local/share/Steam" "$HOME/.var/app/com.valvesoftware.Steam/.local/share/Steam")
-        local -A lib_seen=()
-        local libs=()
-        local root vdf extra
-        for root in "${steam_roots[@]}"; do
-            if [ -d "$root/steamapps" ] && [ -z "${lib_seen["$root/steamapps"]:-}" ]; then
-                libs+=("$root/steamapps"); lib_seen["$root/steamapps"]=1
-            fi
-            vdf="$root/steamapps/libraryfolders.vdf"
-            [ -f "$vdf" ] || continue
-            while IFS= read -r extra; do
-                [ -n "$extra" ] || continue
-                if [ -d "$extra/steamapps" ] && [ -z "${lib_seen["$extra/steamapps"]:-}" ]; then
-                    libs+=("$extra/steamapps"); lib_seen["$extra/steamapps"]=1
-                fi
-            done < <(sed -n 's/^[[:space:]]*"path"[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$vdf" 2>/dev/null)
-        done
-
+        local libs=() lib
+        while IFS= read -r lib; do libs+=("$lib"); done < <(steam_library_dirs)
         print_status "Checking ${#libs[@]} Steam library folder(s)..." ""
 
-        local lib acf appid installdir name meta_name
+        local acf appid installdir name meta_name
         for lib in "${libs[@]}"; do
             for acf in "$lib"/appmanifest_*.acf; do
                 [ -f "$acf" ] || continue

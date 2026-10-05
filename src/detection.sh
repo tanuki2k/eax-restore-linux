@@ -99,9 +99,9 @@ get_game_directory() {
     BUILT_IN_CONFIRMED=""
     OPENAL_NATIVE_MODE=""
 
-    if { [ "$SCRIPT_ACTION" == "u" ] || [ -n "$SETTINGS_TOOL_MODE" ]; } && prompt_recent_game; then
+    if { [ "$SCRIPT_ACTION" == "u" ] || [ -n "$SETTINGS_TOOL_MODE" ]; } && prompt_installed_game; then
         echo -e "\n${GREEN}Using: $(tilde_path "$GAME_DIR")${NC}"
-        record_recent_game "$GAME_DIR"
+        note_game_used "$GAME_DIR"
         return
     fi
     [ -n "$RESTART_REQUESTED" ] && return
@@ -211,7 +211,7 @@ get_game_directory() {
                 fi
                 if scan_game_libraries; then
                     echo -e "\n${GREEN}Using: $(tilde_path "$GAME_DIR")${NC}"
-                    record_recent_game "$GAME_DIR"
+                    note_game_used "$GAME_DIR"
                     return
                 fi
                 # The list's [M]anually / [R]eturn (see SCAN_NEXT).
@@ -278,7 +278,7 @@ get_game_directory() {
     done
 
     unset -f _show_common_locations
-    record_recent_game "$GAME_DIR"
+    note_game_used "$GAME_DIR"
 }
 
 # Usage: gui_picker_available

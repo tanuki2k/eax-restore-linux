@@ -32,7 +32,10 @@ NO_RE='^[Nn][Oo]?$'
 
 # Paths
 BASE_SHARE="$HOME/.local/share/eax-restore-linux"
-RECENT_GAMES_FILE="$BASE_SHARE/recent_games.txt"
+# The order of uninstall's and Tools' game list (most recently used first);
+# which games are on it comes from their install manifests. See
+# installed_game_dirs. State, so under $XDG_STATE_HOME like the run logs.
+INSTALLED_GAMES_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/eax-restore-linux/installed-games.txt"
 DSOAL_SHARE="$BASE_SHARE/dsoal"
 DSOAL_OFFICIAL="$DSOAL_SHARE/official"
 DSOAL_PINNED="$DSOAL_SHARE/pinned"
