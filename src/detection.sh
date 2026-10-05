@@ -610,6 +610,63 @@ find_heroic_install_path() {
     done | head -n 1
 }
 
+# Usage: identify_game_dir <dir>
+# Which game is installed in <dir> (or a folder of it), from the install
+# itself: Steam's appmanifest for a folder under steamapps/common, or a GOG
+# install's goggame-<id>.info (the base game's, not a DLC's) within three
+# levels up. Sets GAME_ID_STORE (steam / gog, or empty), GAME_ID (AppID or GOG
+# game ID), GAME_ID_NAME (the store's name for it) and GAME_ID_ROOT (the
+# game's install folder). Returns 1 when neither is found.
+identify_game_dir() {
+    local dir="${1%/}" acf want installdir name info level id
+    GAME_ID_STORE=""; GAME_ID=""; GAME_ID_NAME=""; GAME_ID_ROOT=""
+    if [[ "$dir" == */steamapps/common/* ]]; then
+        want="${dir#*/steamapps/common/}"; want="${want%%/*}"
+        for acf in "${dir%%/common/*}"/appmanifest_*.acf; do
+            [ -f "$acf" ] || continue
+            installdir=$(sed -n 's/^[[:space:]]*"installdir"[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$acf" 2>/dev/null | head -n 1)
+            [ "$installdir" == "$want" ] || continue
+            GAME_ID_STORE="steam"
+            GAME_ID="$(basename "$acf" | tr -dc '0-9')"
+            GAME_ID_NAME=$(sed -n 's/^[[:space:]]*"name"[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$acf" 2>/dev/null | head -n 1)
+            GAME_ID_ROOT="${dir%%/common/*}/common/$want"
+            return 0
+        done
+    fi
+    for ((level = 0; level <= 3; level++)); do
+        [ -n "$dir" ] && [ "$dir" != "$HOME" ] && [ "$dir" != "/" ] || break
+        for info in "$dir"/goggame-*.info; do
+            [ -f "$info" ] || continue
+            id="$(jq -r 'if .gameId == .rootGameId then .gameId else empty end' "$info" 2>/dev/null)"
+            if [ -n "$id" ] || [ -z "$GAME_ID" ]; then
+                GAME_ID="$(jq -r '.gameId // empty' "$info" 2>/dev/null)"
+                GAME_ID_NAME="$(jq -r '.name // empty' "$info" 2>/dev/null)"
+            fi
+            [ -n "$id" ] && break
+        done
+        if [ -n "$GAME_ID" ]; then
+            GAME_ID_STORE="gog"; GAME_ID_ROOT="$dir"
+            # Heroic's own record of the install wins: its appName is the ID
+            # the database uses, and a few info files carry another one
+            # (Fallout Tactics' says 3).
+            id="$(find "$HOME/.config/heroic/gog_store" "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic/gog_store" \
+                -maxdepth 1 -name installed.json -exec jq -r --arg p "$dir" \
+                '.installed[]? | select((.install_path // "" | rtrimstr("/")) == $p) | .appName // empty' {} + 2>/dev/null | head -n 1)"
+            [ -n "$id" ] && GAME_ID="$id"
+            return 0
+        fi
+        dir="${dir%/*}"
+    done
+    return 1
+}
+
+# Usage: game_name_for_dir <dir>
+# The name of the game installed in <dir> (see identify_game_dir), for lists
+# that only have a path. Prints nothing when it can't tell.
+game_name_for_dir() {
+    identify_game_dir "$1" && printf '%s' "$GAME_ID_NAME"
+}
+
 normalize_game_name() {
     # Usage: normalize_game_name <string>
     # Lowercases, converts standalone (word-bounded) roman numerals II-IX to

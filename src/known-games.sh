@@ -95,8 +95,9 @@ prompt_recent_game() {
     # revisiting any of them (installed before or not) is meaningful there.
     # Sets GAME_DIR and returns 0 if the user picked an existing entry;
     # returns 1 with RESTART_REQUESTED set for [R]eturn to the main menu;
-    # returns 1 (GAME_DIR left empty) if they chose to enter a new path, or
-    # if there's no usable history — callers fall through to manual entry.
+    # returns 1 with LOCATE_METHOD set (gui or manual) for [B]rowse or
+    # [M]anually, so get_game_directory goes straight there; returns 1 with
+    # neither when there's no usable history, and step 1's menu is shown.
     GAME_DIR=""
     [ -f "$RECENT_GAMES_FILE" ] || return 1
 
@@ -119,31 +120,52 @@ prompt_recent_game() {
     else
         echo -e "${WHITE}Previously used game folders:${NC}"
     fi
-    local i
+    # The game's name, with its folder dimmed underneath; just the folder
+    # when the install doesn't say what it is.
+    local i name
     for i in "${!paths[@]}"; do
-        print_option "$((i + 1))" "${paths[$i]}"
+        name="$(game_name_for_dir "${paths[$i]}")"
+        if [ -n "$name" ]; then
+            print_option "$((i + 1))" "$name"
+            echo -e "    ${DIM}$(tilde_path "${paths[$i]}")${NC}"
+        else
+            print_option "$((i + 1))" "${paths[$i]}"
+        fi
     done
-    print_option 0 "Enter a different path"
+    # Another game: the same ways step 1's own menu offers, chosen here so
+    # get_game_directory goes straight to it (LOCATE_METHOD).
+    local -a keys=()
+    echo ""
+    if gui_picker_available; then
+        print_key_option "[B]rowse for the game folder"; keys+=(b)
+    fi
+    print_key_option "[M]anually type the game path"; keys+=(m)
     # The way back to the main menu, as step 1's own menu offers it (see
     # MAIN_MENU_SHOWN); get_game_directory unwinds on RESTART_REQUESTED.
-    local keys="0-${#paths[@]}"
     if [ -n "$MAIN_MENU_SHOWN" ]; then
         echo ""
-        print_key_option "[R]eturn to the main menu"
-        keys+=", r"
+        print_key_option "[R]eturn to the main menu"; keys+=(r)
     fi
 
-    prompt "Selection [${keys}]: "
     local choice
-    read_answer choice
-
-    if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#paths[@]} ]; then
-        GAME_DIR="${paths[$((choice - 1))]}"
-        return 0
-    fi
-    if [ -n "$MAIN_MENU_SHOWN" ] && [ "${choice,,}" == "r" ]; then
-        RESTART_REQUESTED=1
-    fi
+    while true; do
+        local nums="1-${#paths[@]}"
+        [ ${#paths[@]} -eq 1 ] && nums="1"
+        prompt "Selection [${nums}/$(IFS=/; echo "${keys[*]}")]: "
+        read_answer choice || return 1
+        choice="${choice,,}"
+        if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#paths[@]} ]; then
+            GAME_DIR="${paths[$((choice - 1))]}"
+            return 0
+        fi
+        [[ " ${keys[*]} " == *" $choice "* ]] && break
+        print_result "That's not a valid option — please type $( [ ${#paths[@]} -eq 1 ] && echo "1" || echo "a number from 1-${#paths[@]}"), or $(join_choices "${keys[@]}")." "$YELLOW"
+    done
+    case "$choice" in
+        b) LOCATE_METHOD="gui" ;;
+        m) LOCATE_METHOD="manual" ;;
+        r) RESTART_REQUESTED=1 ;;
+    esac
     return 1
 }
 
