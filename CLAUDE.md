@@ -24,7 +24,7 @@ the fields.
 **Design rule: anything specific to a game or engine lives in the database, never as a
 special case in the script's code** — config edits, the audio API (and so the engine),
 alsoft.ini values, recommended tweaks. The script only knows how to read and edit the
-five config formats (`ini`, `flat_ini`, `idtech_cfg`, `dark_cfg`, and the binary `gadb`),
+six config formats (`ini`, `flat_ini`, `idtech_cfg`, `dark_cfg`, `brace_cfg`, and the binary `gadb`),
 not which game needs what.
 
 `eax-restore-linux.sh` is **not committed to the repo** — it's a generated build
@@ -130,7 +130,7 @@ their execution order in the assembled script):
    `ensure_known_games_json`, `scan_game_libraries`, `show_known_game_notes`,
    `confirm_continue_if_eax_impossible`, etc.
 9. **`game-config.sh`** — the Game Settings feature: `config_get_key` /
-   `config_set_key` (awk readers/writers for the four text config formats, keeping CRLF,
+   `config_set_key` (awk readers/writers for the five text config formats, keeping CRLF,
    key spelling and spacing, plus `_gadb_find`/`_gadb_set`, which switch an on/off
    setting in place in Monolith's binary `gadb` profile), `resolve_config_file`, `offer_alsoft_settings` (step 8),
    `game_settings_step` (step 11), `apply_game_settings` (Phase 2, writes `CONFIG:`

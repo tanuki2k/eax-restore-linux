@@ -1134,6 +1134,27 @@
           "1.0",
           "2.0"
         ]
+      },
+      "game_config": {
+        "files": {
+          "bos.cfg": {
+            "format": "brace_cfg",
+            "locations": [
+              "game:core/bos.cfg"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX reverb",
+            "reason": "Fallout Tactics starts on Miles' 2D positional audio, so there's no 3D sound and no reverb.",
+            "changes": {
+              "bos.cfg": {
+                "sound.provider": "Creative Labs EAX 2 (TM)"
+              }
+            }
+          }
+        ]
       }
     },
     {
@@ -1152,6 +1173,27 @@
         "versions": [
           "1.0",
           "2.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "bos.cfg": {
+            "format": "brace_cfg",
+            "locations": [
+              "game:core/bos.cfg"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX reverb",
+            "reason": "Fallout Tactics starts on Miles' 2D positional audio, so there's no 3D sound and no reverb.",
+            "changes": {
+              "bos.cfg": {
+                "sound.provider": "Creative Labs EAX 2 (TM)"
+              }
+            }
+          }
         ]
       }
     },

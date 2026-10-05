@@ -3,7 +3,7 @@
 # ==============================================================================
 # Everything the script changes in a game's own config files comes from that
 # game's known-games entry (game_config.audio_settings / optional_settings) — the script
-# itself only knows how to read and edit the five config formats, never which
+# itself only knows how to read and edit the six config formats, never which
 # game needs what. Decided in Phase 1 (Speaker Configuration offers the
 # alsoft.ini values, step 11 offers the game's own settings), applied in
 # Phase 2, recorded in the manifest as CONFIG: lines, reverted on uninstall.
@@ -44,11 +44,12 @@ _gadb_find() {
         }'
 }
 
-# Usage: config_get_key <file> <ini|flat_ini|idtech_cfg|dark_cfg|gadb> <section> <key>
+# Usage: config_get_key <file> <ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gadb> <section> <key>
 # Prints the key's current value, __ABSENT__ if it isn't set, or (dark_cfg
 # only) __TRUE__ for an active bare flag and __FALSE__ for a flag that's only
 # present commented out. Section and key names match case-insensitively, like
-# the games themselves read them. A gadb key is one on/off setting, 0 or 1.
+# the games themselves read them. brace_cfg is Fallout Tactics' "{key} = {value}"
+# lines. A gadb key is one on/off setting, 0 or 1.
 config_get_key() {
     local file="$1" fmt="$2" sec="$3" key="$4" found
     [ -f "$file" ] || { echo "__ABSENT__"; return; }
@@ -86,6 +87,13 @@ config_get_key() {
             v = substr(line, length(a[1]) + 1); gsub(/^[ \t]+|[ \t]+$/, "", v)
             print (v == "" ? "__TRUE__" : v); found = 1; exit
         }
+        fmt == "brace_cfg" {
+            if (!match($0, /^[ \t]*\{[^}]*\}[ \t]*=[ \t]*\{/)) next
+            k = substr($0, 1, RLENGTH); sub(/^[ \t]*\{[ \t]*/, "", k); sub(/[ \t]*\}.*$/, "", k)
+            if (tolower(k) != lkey) next
+            v = substr($0, RLENGTH + 1); sub(/\}[ \t]*$/, "", v)
+            print v; found = 1; exit
+        }
         END { if (!found) print ((fmt == "dark_cfg" && commented) ? "__FALSE__" : "__ABSENT__") }
     ' "$file"
 }
@@ -112,12 +120,13 @@ _gadb_set() {
     return 1
 }
 
-# Usage: config_set_key <file> <ini|flat_ini|idtech_cfg|dark_cfg|gadb> <section> <key> <value>
+# Usage: config_set_key <file> <ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gadb> <section> <key> <value>
 # Sets (or with __DELETE__ removes) one key, keeping everything else in the
 # file as it was — including CRLF line endings, the original spelling of an
 # existing key, and "key = value" spacing. A missing ini key goes at the end
 # of its section (or a new section at the end of the file); a missing flat_ini
-# or cfg key is appended. flat_ini is ini without [sections] — the whole file
+# or cfg key is appended. An existing brace_cfg key only has the text between
+# its value's braces replaced. flat_ini is ini without [sections] — the whole file
 # is one section, so its rows carry no section name. For dark_cfg, a commented-out example line is left in place and
 # the active line is added right after it. gadb only switches an existing
 # on/off setting (see _gadb_set). Writes through a temp file in the
@@ -190,6 +199,14 @@ config_set_key() {
             }
             next
         }
+        fmt == "brace_cfg" {
+            if (!done && match($0, /^[ \t]*\{[^}]*\}[ \t]*=[ \t]*\{/)) {
+                head = substr($0, 1, RLENGTH); k = head
+                sub(/^[ \t]*\{[ \t]*/, "", k); sub(/[ \t]*\}.*$/, "", k)
+                if (tolower(k) == lkey) { done = 1; if (!del) out(head val "}"); next }
+            }
+            out($0); next
+        }
         END {
             if (fmt == "ini" || fmt == "flat_ini") {
                 if (insec && !done && !del) { out(ini_line()); done = 1 }
@@ -200,6 +217,7 @@ config_set_key() {
                 }
             } else if (!done && !del && val != "__FALSE__") {
                 if (fmt == "idtech_cfg") out("seta " key " \"" val "\"")
+                else if (fmt == "brace_cfg") out("{" key "} = {" val "}")
                 else out(val == "__TRUE__" ? key : key " " val)
             }
         }
@@ -372,7 +390,7 @@ load_game_config_rows() {
 config_row_is_safe() {
     local fmt="$1" locations="$2" sec="$3" key="$4" value="$5" loc
     local name_re='^[A-Za-z0-9._ -]+$' value_re='^[A-Za-z0-9._ ()-]*$'
-    [[ "$fmt" =~ ^(ini|flat_ini|idtech_cfg|dark_cfg|gadb)$ ]] || return 1
+    [[ "$fmt" =~ ^(ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gadb)$ ]] || return 1
     [ -n "$locations" ] || return 1
     IFS='|' read -ra locs <<< "$locations"
     for loc in "${locs[@]}"; do

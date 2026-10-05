@@ -1,0 +1,22 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Fallout Tactics Classic",
+  "exe": "BOS.exe",
+  "stores": {
+    "gog": {
+      "id": 3,
+      "store_details": "This is the older 'Classic' GOG product some existing owners' libraries still show, from before GOG relisted the game. It's the same game, with the same EAX support."
+    }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0"] },
+  "game_config": {
+    "files": { "bos.cfg": { "format": "brace_cfg", "locations": ["game:core/bos.cfg"] } },
+    "audio_settings": [
+      {
+        "title": "Enable EAX reverb",
+        "reason": "Fallout Tactics starts on Miles' 2D positional audio, so there's no 3D sound and no reverb.",
+        "changes": { "bos.cfg": { "sound.provider": "Creative Labs EAX 2 (TM)" } }
+      }
+    ]
+  }
+}
