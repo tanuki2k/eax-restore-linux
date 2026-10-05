@@ -461,37 +461,64 @@ scan_game_libraries() {
     names=("${s_names[@]}"); meta_names=("${s_meta[@]}"); paths=("${s_paths[@]}")
     stores=("${s_stores[@]}"); ids=("${s_ids[@]}")
 
-    print_result "Known EAX games found in your libraries:"
-    local store_label
-    for i in "${!names[@]}"; do
-        store_label="Steam"
-        [ "${stores[$i]}" == "gog" ] && store_label="GOG"
-        print_option "$((i + 1))" "${names[$i]}" "(${store_label})"
-    done
-    # Not in the list: type the path instead, or go back (SCAN_NEXT tells
-    # get_game_directory which).
-    local -a keys=(m)
-    echo ""
-    print_key_option "[M]anually type the game path"
-    if [ -n "$MAIN_MENU_SHOWN" ]; then
-        echo ""
-        print_key_option "[R]eturn to the $(return_menu_label)"; keys+=(r)
+    # Pages as tall as the terminal allows (at least 10 games), so the top of
+    # a long list doesn't scroll away; numbers run on across pages and any of
+    # them works from any page. No terminal (piped answers): one page.
+    local total=${#names[@]}
+    local per_page=$total rows page=0 pages first last
+    rows="$(stty size < /dev/tty 2>/dev/null | cut -d' ' -f1)"
+    if [ -t 0 ] && [[ "$rows" =~ ^[0-9]+$ ]]; then
+        per_page=$(( rows - 12 ))
+        [ "$per_page" -lt 10 ] && per_page=10
     fi
+    pages=$(( (total + per_page - 1) / per_page ))
 
-    local choice
+    local choice store_label
+    local -a keys
     while true; do
-        prompt "Selection [1-${#names[@]}/$(IFS=/; echo "${keys[*]}")]: "
-        read_answer choice || exit 0
-        choice="${choice,,}"
-        if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#names[@]} ]; then
-            break
+        first=$(( page * per_page )); last=$(( first + per_page - 1 ))
+        [ "$last" -ge "$total" ] && last=$(( total - 1 ))
+        if [ "$pages" -gt 1 ]; then
+            print_result "Known EAX games found in your libraries (page $((page + 1)) of ${pages}):"
+        else
+            print_result "Known EAX games found in your libraries:"
         fi
-        case " ${keys[*]} " in
-            *" $choice "*)
-                [ "$choice" == "m" ] && SCAN_NEXT="manual" || SCAN_NEXT="return"
-                return 1 ;;
-        esac
-        print_result "That's not a valid option — please type a number from 1-${#names[@]}, $(join_choices "${keys[@]}")." "$YELLOW"
+        for ((i = first; i <= last; i++)); do
+            store_label="Steam"
+            [ "${stores[$i]}" == "gog" ] && store_label="GOG"
+            print_option "$((i + 1))" "${names[$i]}" "(${store_label})"
+        done
+        # Not in the list: type the path instead, or go back (SCAN_NEXT
+        # tells get_game_directory which).
+        keys=()
+        echo ""
+        [ "$page" -lt $(( pages - 1 )) ] && { print_key_option "[N]ext page"; keys+=(n); }
+        [ "$page" -gt 0 ] && { print_key_option "[P]revious page"; keys+=(p); }
+        print_key_option "[M]anually type the game path"; keys+=(m)
+        if [ -n "$MAIN_MENU_SHOWN" ]; then
+            echo ""
+            print_key_option "[R]eturn to the $(return_menu_label)"; keys+=(r)
+        fi
+
+        while true; do
+            prompt "Selection [1-${total}/$(IFS=/; echo "${keys[*]}")]: "
+            read_answer choice || exit 0
+            choice="${choice,,}"
+            if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "$total" ]; then
+                break 2
+            fi
+            case " ${keys[*]} " in
+                *" $choice "*)
+                    case "$choice" in
+                        n) page=$(( page + 1 )); continue 2 ;;
+                        p) page=$(( page - 1 )); continue 2 ;;
+                        m) SCAN_NEXT="manual"; return 1 ;;
+                        r) SCAN_NEXT="return"; return 1 ;;
+                    esac
+                    ;;
+            esac
+            print_result "That's not a valid option — please type a number from 1-${total}, $(join_choices "${keys[@]}")." "$YELLOW"
+        done
     done
 
     local idx=$((choice - 1))
