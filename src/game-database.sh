@@ -29,23 +29,45 @@ ensure_game_database() {
             return 1
         fi
     else
-        # Small (~100 KB), so a status line before and the result after
-        # rather than a progress bar — enough to explain a slow network's
-        # pause. On stderr, like this function's other messages, since some
-        # callers capture stdout.
-        local tmp
+        # Small (~100 KB, ~13 KB compressed), so a status line before and
+        # the result after rather than a progress bar — enough to explain a
+        # slow network's pause. On stderr, like this function's other
+        # messages, since some callers capture stdout.
+        # Only fetched when it changed: GitHub sends an ETag with the file,
+        # kept next to the cache, and answers a request carrying it with an
+        # empty 304 when nothing changed. --compressed asks for gzip.
+        local tmp hdr code etag="" cache_ok=0
+        local -a if_changed=()
         # The cache's name before the database was renamed; nothing reads it.
         rm -f "$BASE_SHARE/known-eax-games.v3.json" 2>/dev/null
         print_task "Updating the game database" >&2
-        tmp=$(mktemp 2>/dev/null)
-        if [ -n "$tmp" ] && curl -fsSL --max-time 10 "$GAME_DATABASE_URL" -o "$tmp" 2>/dev/null && jq empty "$tmp" 2>/dev/null; then
+        [ -s "$GAME_DATABASE_CACHE" ] && jq empty "$GAME_DATABASE_CACHE" 2>/dev/null && cache_ok=1
+        [ "$cache_ok" -eq 1 ] && etag="$(cat "$GAME_DATABASE_CACHE.etag" 2>/dev/null)"
+        [ -n "$etag" ] && if_changed=(-H "If-None-Match: $etag")
+        tmp=$(mktemp 2>/dev/null); hdr=$(mktemp 2>/dev/null)
+        code=""
+        if [ -n "$tmp" ] && [ -n "$hdr" ]; then
+            code=$(curl -fsSL --compressed --max-time 10 "${if_changed[@]}" -D "$hdr" -o "$tmp" \
+                -w '%{http_code}' "$GAME_DATABASE_URL" 2>/dev/null)
+        fi
+        if [ "$code" == "200" ] && jq empty "$tmp" 2>/dev/null; then
             mkdir -p "$BASE_SHARE" 2>/dev/null
             mv "$tmp" "$GAME_DATABASE_CACHE"
+            etag="$(grep -i '^etag:' "$hdr" | tail -n 1 | sed 's/^[^:]*:[[:space:]]*//' | tr -d '\r')"
+            if [ -n "$etag" ]; then printf '%s\n' "$etag" > "$GAME_DATABASE_CACHE.etag"
+            else rm -f "$GAME_DATABASE_CACHE.etag"; fi
+            rm -f "$hdr"
             GAME_DATABASE_FILE="$GAME_DATABASE_CACHE"
             print_status "Updated: $(jq '.games | length' "$GAME_DATABASE_FILE" 2>/dev/null) games" "$GREEN" >&2
+        elif [ "$code" == "304" ] && [ "$cache_ok" -eq 1 ]; then
+            # Unchanged: the cache's date now says when it was last checked.
+            rm -f "$tmp" "$hdr"
+            touch "$GAME_DATABASE_CACHE" 2>/dev/null
+            GAME_DATABASE_FILE="$GAME_DATABASE_CACHE"
+            print_status "Up to date: $(jq '.games | length' "$GAME_DATABASE_FILE" 2>/dev/null) games" "$GREEN" >&2
         else
-            rm -f "$tmp" 2>/dev/null
-            if [ -s "$GAME_DATABASE_CACHE" ] && jq empty "$GAME_DATABASE_CACHE" 2>/dev/null; then
+            rm -f "$tmp" "$hdr" 2>/dev/null
+            if [ "$cache_ok" -eq 1 ]; then
                 GAME_DATABASE_FILE="$GAME_DATABASE_CACHE"
                 print_status "Couldn't reach GitHub, so the copy from $(date -r "$GAME_DATABASE_CACHE" +%F) is used." "$YELLOW" >&2
             else
