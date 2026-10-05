@@ -2685,11 +2685,10 @@
         "audio_settings": [
           {
             "title": "Enable EAX reverb",
-            "reason": "The Wheel of Time only plays EAX reverb when its DirectSound, hardware 3D sound and spatial sound options are on.",
+            "reason": "The Wheel of Time only plays its 3D sound through hardware when its hardware 3D sound and spatial sound options are on.",
             "changes": {
               "WoT.ini": {
                 "Galaxy.GalaxyAudioSubsystem": {
-                  "UseDirectSound": "True",
                   "Use3dHardware": "True",
                   "UseSpatial": "True"
                 }
@@ -2727,6 +2726,17 @@
               "WoT.ini": {
                 "WinDrv.WindowsClient": {
                   "FullscreenColorBits": "32"
+                }
+              }
+            }
+          },
+          {
+            "title": "Enable detail textures",
+            "reason": "The Wheel of Time leaves detail textures off in its Direct3D renderer, so floors and walls look flat and blurry up close.",
+            "changes": {
+              "WoT.ini": {
+                "D3DDrv.D3DRenderDevice": {
+                  "DetailTextures": "True"
                 }
               }
             }
