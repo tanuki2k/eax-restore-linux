@@ -165,6 +165,8 @@ tools/build-known-games.sh       # regenerates known-eax-games.json
 
 CI checks every file against the schema, that it's formatted, and that `known-eax-games.json` is up to date. Please only add a store `id` you've independently verified against the storefront's own page or API — a wrong ID would point the script at someone else's prefix. **Leave a field out when it's empty or at its default** — there are no `null`s in these files.
 
+To find what a game setting should change, `tools/probe-game.sh` helps: `scan <game dir> [prefix]` lists the game's config files and the setting names in its exes, and `snap`/`diff` show exactly which lines change when you switch an option in-game (snap, run the game and change it, snap again, diff).
+
 A game file looks like this (see `data/games/tested/` for more):
 
 ```json

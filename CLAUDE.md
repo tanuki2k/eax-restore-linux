@@ -83,6 +83,13 @@ launcher hardcodes `releases/latest`).
   CI (`.github/workflows/known-games.yml`) runs `check-jsonschema --schemafile
   data/schema.json` over all three folders plus both scripts' `--check` modes; the build
   also fails if a game's file name is in more than one folder.
+  `tools/probe-game.sh` (dev-only, read-only towards the game) finds what a new
+  game setting should change: `scan <game dir> [prefix]` lists config files with
+  line endings, setting names in the exes, the bundled OpenAL and Miles 3D
+  providers; `snap <name> [<game dir> [prefix]]` copies the config files into
+  numbered snapshots under `~/.cache/eax-probe/<name>/`, and `diff <name>` shows
+  what changed between the last two. Snap before the first launch, after
+  quitting at the main menu (defaults), and after switching the option in-game.
   `tools/migrate-v2-to-v3.sh` is the one-off that split the old single-file (schema 2)
   database; kept for reference only.
 - **Run the script:** `./dist/eax-restore-linux.sh` (interactive; requires `curl`, `unzip`,
