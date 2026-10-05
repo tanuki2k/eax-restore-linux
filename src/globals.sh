@@ -197,6 +197,10 @@ LOCATE_METHOD=""
 # own menu there and a retry can't loop back to a menu that never shows.
 MAIN_MENU_SHOWN=""
 
+# Set by a Tools item left without finishing, so the next pass of the
+# main-menu loop opens the Tools menu instead of the main menu.
+OPEN_TOOLS_MENU=""
+
 # Which Tools → Game settings item is running: "optional" (Optional settings)
 # or "speakers" (Speaker configuration), empty otherwise. See settings-flow.sh.
 SETTINGS_TOOL_MODE=""

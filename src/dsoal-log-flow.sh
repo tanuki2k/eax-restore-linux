@@ -11,8 +11,9 @@
 # and uninstall drops the variables along with the DLL override.
 if [ -n "$DSOAL_LOG_MODE" ]; then
     print_banner "DSOAL LOGGING"
-    echo -e "\n${WHITE}This turns DSOAL's own log on or off for one game. It records what the game asks${NC}"
-    echo -e "${WHITE}DSOAL to do, which helps when EAX doesn't sound right or for a bug report.${NC}"
+    tool_gate "This turns DSOAL's own log on or off for one game. It records what the game asks" \
+        "DSOAL to do, which helps when EAX doesn't sound right or for a bug report." \
+        || { OPEN_TOOLS_MENU=1; continue; }
 
     SCRIPT_ACTION="i"
     STEP_TOTAL=3
@@ -23,8 +24,8 @@ if [ -n "$DSOAL_LOG_MODE" ]; then
 
         print_step 1 "Game Location"
         get_game_directory ""
-        # Only step 1's [R]eturn to the main menu sets it here.
-        [ -n "$RESTART_REQUESTED" ] && continue 2
+        # Only step 1's [R]eturn sets it here: back to the Tools menu.
+        [ -n "$RESTART_REQUESTED" ] && { OPEN_TOOLS_MENU=1; continue 2; }
 
         print_step 2 "Launcher Identification"
         detect_game_environment

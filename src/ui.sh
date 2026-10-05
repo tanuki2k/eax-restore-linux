@@ -383,6 +383,26 @@ print_key_option() {
     echo -e " $(tilde_path "$1")"
 }
 
+# Usage: return_menu_label
+# Where a flow's [R]eturn option goes: "Tools menu" inside a tool (Optional
+# settings, Speaker configuration, VC++ install, DSOAL logging), "main menu"
+# otherwise.
+return_menu_label() {
+    if [ -n "${SETTINGS_TOOL_MODE:-}" ] || [ -n "${DSOAL_LOG_MODE:-}" ] || [ "${VCRUN_ONLY_MODE:-}" == "menu" ]; then
+        printf 'Tools menu'
+    else
+        printf 'main menu'
+    fi
+}
+
+# Usage: tool_gate "line" ["line" ...] || { OPEN_TOOLS_MENU=1; continue; }
+# A Tools item's opening: what it does, then "Continue?" (default yes). False
+# on No, so the caller goes back to the Tools menu.
+tool_gate() {
+    print_paragraph "$@"
+    confirm "Continue?" Y
+}
+
 # Usage: join_choices s b m
 # "s, b or m" — the letters a letter menu accepts, for its "please type" line.
 join_choices() {

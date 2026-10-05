@@ -19,7 +19,38 @@ EAX_RESTORE_DSOAL_PIN="${EAX_RESTORE_DSOAL_PIN:-}"
 # install step 1 can come back here (see MAIN_MENU_SHOWN): it's opened here
 # and closed at the very bottom of install-flow.sh, the same way the install
 # "if" spans config-flow.sh and install-flow.sh. Every flow ends in exit, so
-# a pass only repeats when the install flow's step 1 asks for the menu.
+# a pass only repeats when the install flow's step 1 asks for the menu, or a
+# tool is left without finishing (OPEN_TOOLS_MENU: back to the Tools menu).
+
+# Usage: tools_menu
+# The Tools submenu: changing an installed game's settings, then the runtime
+# helpers, each group under its own heading. Sets the chosen tool's mode, or
+# shows the SELECT OPERATION banner again for [R]eturn to the main menu.
+tools_menu() {
+    print_banner "TOOLS"
+    while true; do
+        echo -e "\n${WHITE}Game settings:${NC}"
+        print_key_option "[O]ptional settings"
+        print_key_option "[S]peaker configuration"
+        echo -e "\n${WHITE}Runtime:${NC}"
+        print_key_option "[V]C++ install"
+        print_key_option "[D]SOAL logging"
+        echo ""
+        print_key_option "[R]eturn to the main menu"
+        prompt "Selection [o/s/v/d/r]: "
+        read_answer menu_choice || exit 0
+        menu_choice="${menu_choice,,}"
+        case "$menu_choice" in
+            o) SETTINGS_TOOL_MODE="optional"; return ;;
+            s) SETTINGS_TOOL_MODE="speakers"; return ;;
+            v) VCRUN_ONLY_MODE="menu"; return ;;
+            d) DSOAL_LOG_MODE=1; return ;;
+            r|"") print_banner "SELECT OPERATION"; return ;;
+            *) print_result "That's not a valid option — please type o, s, v, d or r." "$YELLOW" ;;
+        esac
+    done
+}
+
 while true; do
 VCRUN_ONLY_MODE=""
 DSOAL_LOG_MODE=""
@@ -29,7 +60,7 @@ RESTART_REQUESTED=""
 if is_truthy "$EAX_RESTORE_VCRUN_ONLY"; then
     VCRUN_ONLY_MODE="env"
 else
-    print_banner "SELECT OPERATION"
+    [ -n "$OPEN_TOOLS_MENU" ] || print_banner "SELECT OPERATION"
     if is_truthy "$EAX_RESTORE_DSOAL_PIN"; then
         SCRIPT_ACTION="i"
         print_result "EAX_RESTORE_DSOAL_PIN is set, so proceeding straight to install." "$GREEN"
@@ -38,6 +69,12 @@ else
         MAIN_MENU_SHOWN=1
         while [ -z "$SCRIPT_ACTION" ] && [ -z "$VCRUN_ONLY_MODE" ] && [ -z "$DSOAL_LOG_MODE" ] \
             && [ -z "$SETTINGS_TOOL_MODE" ]; do
+            # A tool left without finishing comes back to the Tools menu.
+            if [ -n "$OPEN_TOOLS_MENU" ]; then
+                OPEN_TOOLS_MENU=""
+                tools_menu
+                continue
+            fi
             menu_keys=(s)
             echo -e "\n${WHITE}What would you like to do?${NC}\n"
             print_key_option "[S]can your Steam/Heroic library"
@@ -61,32 +98,7 @@ else
                 m) SCRIPT_ACTION="i"; LOCATE_METHOD="manual" ;;
                 u) SCRIPT_ACTION="u" ;;
                 q) exit 0 ;;
-                t)
-                    # Changing an installed game's settings, then the runtime
-                    # helpers, each group under its own heading.
-                    print_banner "TOOLS"
-                    while true; do
-                        echo -e "\n${WHITE}Game settings:${NC}"
-                        print_key_option "[O]ptional settings"
-                        print_key_option "[S]peaker configuration"
-                        echo -e "\n${WHITE}Runtime:${NC}"
-                        print_key_option "[V]C++ install"
-                        print_key_option "[D]SOAL logging"
-                        echo ""
-                        print_key_option "[R]eturn to the main menu"
-                        prompt "Selection [o/s/v/d/r]: "
-                        read_answer menu_choice || exit 0
-                        menu_choice="${menu_choice,,}"
-                        case "$menu_choice" in
-                            o) SETTINGS_TOOL_MODE="optional"; break ;;
-                            s) SETTINGS_TOOL_MODE="speakers"; break ;;
-                            v) VCRUN_ONLY_MODE="menu"; break ;;
-                            d) DSOAL_LOG_MODE=1; break ;;
-                            r|"") print_banner "SELECT OPERATION"; break ;;
-                            *) print_result "That's not a valid option — please type o, s, v, d or r." "$YELLOW" ;;
-                        esac
-                    done
-                    ;;
+                t) tools_menu ;;
                 *) print_result "That's not a valid option — please type $(join_choices "${menu_keys[@]}")." "$YELLOW" ;;
             esac
         done
@@ -105,8 +117,9 @@ if [ -n "$VCRUN_ONLY_MODE" ]; then
         echo -e "OpenAL Soft, alsoft.ini, registry overrides) will be touched.${NC}"
         echo -e "\n${WHITE}Unset EAX_RESTORE_VCRUN_ONLY to return to the normal install/uninstall flow.${NC}"
     else
-        echo -e "\n${WHITE}This run only installs the MS VC++ 2022 Redistributable into a game's prefix —"
-        echo -e "DSOAL, OpenAL Soft, alsoft.ini and registry overrides aren't touched.${NC}"
+        tool_gate "This installs the MS VC++ 2022 Redistributable into a game's prefix —" \
+            "DSOAL, OpenAL Soft, alsoft.ini and registry overrides aren't touched." \
+            || { OPEN_TOOLS_MENU=1; continue; }
     fi
 
     SCRIPT_ACTION="i"
@@ -123,8 +136,8 @@ if [ -n "$VCRUN_ONLY_MODE" ]; then
 
         print_step 1 "Game Location"
         get_game_directory ""
-        # Only step 1's [R]eturn to the main menu sets it here.
-        [ -n "$RESTART_REQUESTED" ] && continue 2
+        # Only step 1's [R]eturn sets it here: back to the Tools menu.
+        [ -n "$RESTART_REQUESTED" ] && { OPEN_TOOLS_MENU=1; continue 2; }
 
         print_step 2 "Launcher Identification"
         detect_game_environment

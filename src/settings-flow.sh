@@ -12,13 +12,15 @@
 if [ -n "$SETTINGS_TOOL_MODE" ]; then
     if [ "$SETTINGS_TOOL_MODE" == "speakers" ]; then
         print_banner "SPEAKER CONFIGURATION"
-        print_paragraph "This changes the speaker setup for a game the EAX fix is installed in, and any of" \
-            "the game's own settings that go with it. Nothing else is touched."
+        tool_gate "This changes the speaker setup for a game the EAX fix is installed in, and any of" \
+            "the game's own settings that go with it. Nothing else is touched." \
+            || { OPEN_TOOLS_MENU=1; continue; }
         STEP_TOTAL=3
     else
         print_banner "OPTIONAL SETTINGS"
-        print_paragraph "This turns a game's optional settings on or off after the EAX fix is installed." \
-            "Turning one off puts back the value the game had before."
+        tool_gate "This turns a game's optional settings on or off after the EAX fix is installed." \
+            "Turning one off puts back the value the game had before." \
+            || { OPEN_TOOLS_MENU=1; continue; }
         STEP_TOTAL=2
     fi
     SCRIPT_ACTION="i"
@@ -31,8 +33,9 @@ if [ -n "$SETTINGS_TOOL_MODE" ]; then
 
         print_step 1 "Game Location"
         get_game_directory ""
-        # Step 1's [R]eturn to the main menu, or a retry handed back to it.
-        [ -n "$RESTART_REQUESTED" ] && continue 2
+        # Step 1's [R]eturn, or a retry handed back: back to the Tools menu,
+        # as every way out of these tools short of finishing is.
+        [ -n "$RESTART_REQUESTED" ] && { OPEN_TOOLS_MENU=1; continue 2; }
 
         # The game folder has to hold this script's install; with no manifest
         # there's nothing to change, so it's back to the main menu.
@@ -47,6 +50,7 @@ if [ -n "$SETTINGS_TOOL_MODE" ]; then
             || { [ "$SETTINGS_TOOL_MODE" == "speakers" ] && [ ${#settings_alsoft_files[@]} -eq 0 ]; }; then
             print_note "The EAX fix isn't installed in $(tilde_path "$GAME_DIR")."
             print_paragraph "Install it first (Scan, Browse or Manually on the main menu), then come back here."
+            OPEN_TOOLS_MENU=1
             continue 2
         fi
 
@@ -131,11 +135,13 @@ if [ -n "$SETTINGS_TOOL_MODE" ]; then
         fi
         if [ "${settings_optional:-0}" -eq 0 ]; then
             print_note "${GAME_NAME} has no optional settings."
+            OPEN_TOOLS_MENU=1
             continue
         fi
         GAME_SETTINGS_EDIT_OPTIONAL=1 game_settings_step 2
         if [ -n "$GAME_SETTINGS_CANCELLED" ]; then
             print_result "Nothing was changed." "$YELLOW"
+            OPEN_TOOLS_MENU=1
             continue
         fi
     fi
@@ -143,6 +149,7 @@ if [ -n "$SETTINGS_TOOL_MODE" ]; then
     if [ "$settings_speakers_changed" -eq 0 ] && [ ${#GAME_SETTINGS_PLAN[@]} -eq 0 ] \
         && [ ${#GAME_SETTINGS_REVERT_GROUPS[@]} -eq 0 ]; then
         print_result "Nothing changed." "$GREEN"
+        OPEN_TOOLS_MENU=1
         continue
     fi
 
@@ -164,6 +171,7 @@ if [ -n "$SETTINGS_TOOL_MODE" ]; then
     done
     if ! confirm "Ready to change ${GAME_NAME}. Proceed?"; then
         print_result "Cancelled — nothing was changed." "$YELLOW"
+        OPEN_TOOLS_MENU=1
         continue
     fi
 

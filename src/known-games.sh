@@ -149,7 +149,7 @@ prompt_recent_game() {
     # MAIN_MENU_SHOWN); get_game_directory unwinds on RESTART_REQUESTED.
     if [ -n "$MAIN_MENU_SHOWN" ]; then
         echo ""
-        print_key_option "[R]eturn to the main menu"; keys+=(r)
+        print_key_option "[R]eturn to the $(return_menu_label)"; keys+=(r)
     fi
 
     local choice

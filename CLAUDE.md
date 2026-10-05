@@ -197,7 +197,10 @@ their execution order in the assembled script):
     back to the main menu: when the menu was shown (`MAIN_MENU_SHOWN`), a "no"
     while picking a game sets `RESTART_REQUESTED` and the steps 1-2 loop does
     `continue 2`. Uninstall, VC++ runtime install and DSOAL logging keep step
-    1's own menu, which then offers "[R]eturn to the main menu" the same way. `config-flow.sh` also defines
+    1's own menu, which then offers "[R]eturn to the main menu" the same way.
+    The Tools items go back to the Tools menu instead (`OPEN_TOOLS_MENU`, set
+    before each way out short of finishing; their [R]eturn label comes from
+    `return_menu_label`). `config-flow.sh` also defines
     `print_choices_summary`, the recap of every Phase 1 answer shown under
     "Configuration finished!" before the "Proceed?" — a new Phase 1 question
     should add its answer there. `uninstall-flow.sh` follows the

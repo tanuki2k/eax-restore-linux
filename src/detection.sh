@@ -142,7 +142,7 @@ get_game_directory() {
             # back to it (see MAIN_MENU_SHOWN).
             if [ -n "$MAIN_MENU_SHOWN" ]; then
                 echo ""
-                print_key_option "[R]eturn to the main menu"
+                print_key_option "[R]eturn to the $(return_menu_label)"
                 menu_keys+=("r"); menu_actions+=("main_menu")
             fi
 
