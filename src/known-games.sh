@@ -525,6 +525,7 @@ show_game_details_block() {
     # manual pick has nothing to show, same as before this existed.
     local id="$1" store="$2" location="$3"
     KNOWN_GAME_API=""
+    KNOWN_GAME_PATCHES=""
     [ "$SCRIPT_ACTION" == "i" ] || return
     [ -z "$id" ] && return
     ensure_known_games_json || return
@@ -566,9 +567,12 @@ show_game_details_block() {
     store_details=$(jq -r --arg id "$id" --arg store "$store" \
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | .stores[$store].store_details // empty' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+    # The first match's whole text, not its first line: patches can hold a
+    # line break between suggestions.
     patches=$(jq -r --arg id "$id" --arg store "$store" \
-        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .stores[$store].patches // empty' \
-        "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+        '[.games[] | select((.stores[$store].id // "") | tostring == $id)][0].stores[$store].patches // empty' \
+        "$KNOWN_GAMES_FILE" 2>/dev/null)
+    KNOWN_GAME_PATCHES="$patches"
     id_confidence=$(jq -r --arg id "$id" --arg store "$store" \
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | .stores[$store].id_source // empty' \
         "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
@@ -693,6 +697,16 @@ show_game_details_block() {
         | if type == "string" then [(capture("^https?://(www\\.)?(?<h>[^/]+)").h), .] else [.title, .url] end
         | join("\t")' "$KNOWN_GAMES_FILE" 2>/dev/null)
     echo ""
+}
+
+# Usage: print_community_patches_summary
+# INSTALLATION COMPLETE's "Suggested community patches" section: the same text
+# the KNOWN GAMES DATABASE block showed, repeated where the player will still
+# see it when they go to play.
+print_community_patches_summary() {
+    [ -n "$KNOWN_GAME_PATCHES" ] || return 0
+    echo -e "\n${YELLOW}${BOLD}Suggested community patches:${NC}"
+    print_wrapped "$KNOWN_GAME_PATCHES"
 }
 
 confirm_continue_if_eax_impossible() {

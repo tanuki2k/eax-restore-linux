@@ -119,6 +119,12 @@ RECOMMENDED_TWEAKS_RESOLVED=""
 # of re-deriving it from scratch.
 KNOWN_GAME_API=""
 
+# Set by show_game_details_block to the entry's "Suggested community patches"
+# text for this store, "" when there's none. print_community_patches_summary
+# shows it again at INSTALLATION COMPLETE, since the details block is long
+# scrolled away by then.
+KNOWN_GAME_PATCHES=""
+
 # Game Settings (src/game-config.sh). GAME_INSTALL_ROOT is the install folder
 # the library scan matched (for "install:" config locations). The rest are
 # filled in during Phase 1 and used by Phase 2, the final summary and
