@@ -33,6 +33,23 @@
           }
         }
       }
+    ],
+    "optional_settings": [
+      {
+        "title": "Raise sound quality",
+        "reason": "Unreal Gold mixes its sound at a low sample rate, which dulls high-pitched sounds.",
+        "changes": { "Unreal.ini": { "Galaxy.GalaxyAudioSubsystem": { "OutputRate": "48000Hz" } } }
+      },
+      {
+        "title": "Raise texture filtering",
+        "reason": "Unreal Gold filters textures at a low level, so a visible line shows where each floor and wall texture switches to a blurrier version.",
+        "changes": { "Unreal.ini": { "D3DDrv.D3DRenderDevice": { "UseTrilinear": "True" } } }
+      },
+      {
+        "title": "Raise color depth",
+        "reason": "Unreal Gold runs fullscreen with a reduced color range, so smooth shading like skies and shadows shows visible bands.",
+        "changes": { "Unreal.ini": { "WinDrv.WindowsClient": { "FullscreenColorBits": "32" } } }
+      }
     ]
   }
 }

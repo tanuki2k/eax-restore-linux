@@ -18,6 +18,23 @@
           }
         }
       }
+    ],
+    "optional_settings": [
+      {
+        "title": "Raise sound quality",
+        "reason": "Clive Barker's Undying mixes its sound at a low sample rate, which dulls high-pitched sounds.",
+        "changes": { "System.ini": { "Galaxy.GalaxyAudioSubsystem": { "OutputRate": "48000Hz" } } }
+      },
+      {
+        "title": "Raise texture filtering",
+        "reason": "Clive Barker's Undying filters textures at a low level, so a visible line shows where each floor and wall texture switches to a blurrier version.",
+        "changes": { "System.ini": { "D3DDrv.D3DRenderDevice": { "UseTrilinear": "True" } } }
+      },
+      {
+        "title": "Raise color depth",
+        "reason": "Clive Barker's Undying runs fullscreen with a reduced color range, so smooth shading like skies and shadows shows visible bands.",
+        "changes": { "System.ini": { "WinDrv.WindowsClient": { "FullscreenColorBits": "32" } } }
+      }
     ]
   },
   "notes": "The game records whether EAX/A3D actually activated to Undying.log, which is handy for confirming it worked (per the Vogons Wiki citation for this title)."

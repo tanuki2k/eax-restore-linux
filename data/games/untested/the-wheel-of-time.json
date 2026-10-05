@@ -22,6 +22,23 @@
           }
         }
       }
+    ],
+    "optional_settings": [
+      {
+        "title": "Raise sound quality",
+        "reason": "The Wheel of Time mixes its sound at a lower rate than most sound systems play at, so it's resampled before you hear it.",
+        "changes": { "WoT.ini": { "Galaxy.GalaxyAudioSubsystem": { "OutputRate": "48000Hz" } } }
+      },
+      {
+        "title": "Raise texture filtering",
+        "reason": "The Wheel of Time filters textures at a low level, so a visible line shows where each floor and wall texture switches to a blurrier version.",
+        "changes": { "WoT.ini": { "D3DDrv.D3DRenderDevice": { "UseTrilinear": "True" } } }
+      },
+      {
+        "title": "Raise color depth",
+        "reason": "The Wheel of Time runs fullscreen with a reduced color range, so smooth shading like skies and shadows shows visible bands.",
+        "changes": { "WoT.ini": { "WinDrv.WindowsClient": { "FullscreenColorBits": "32" } } }
+      }
     ]
   },
   "sources": [

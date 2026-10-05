@@ -23,6 +23,23 @@
           }
         }
       }
+    ],
+    "optional_settings": [
+      {
+        "title": "Raise sound quality",
+        "reason": "Deus Ex mixes its sound at a lower rate than most sound systems play at, so it's resampled before you hear it.",
+        "changes": { "DeusEx.ini": { "Galaxy.GalaxyAudioSubsystem": { "OutputRate": "48000Hz" } } }
+      },
+      {
+        "title": "Raise texture filtering",
+        "reason": "Deus Ex filters textures at a low level, so a visible line shows where each floor and wall texture switches to a blurrier version.",
+        "changes": { "DeusEx.ini": { "D3DDrv.D3DRenderDevice": { "UseTrilinear": "True" } } }
+      },
+      {
+        "title": "Raise color depth",
+        "reason": "Deus Ex runs fullscreen with a reduced color range, so smooth shading like skies and shadows shows visible bands.",
+        "changes": { "DeusEx.ini": { "WinDrv.WindowsClient": { "FullscreenColorBits": "32" } } }
+      }
     ]
   },
   "sources": [{ "title": "DSOAL issue #79", "url": "https://github.com/kcat/dsoal/issues/79" }],

@@ -19,6 +19,23 @@
           }
         }
       }
+    ],
+    "optional_settings": [
+      {
+        "title": "Raise sound quality",
+        "reason": "X-COM: Enforcer mixes its sound at a low sample rate, which dulls high-pitched sounds.",
+        "changes": { "XCom.ini": { "Galaxy.GalaxyAudioSubsystem": { "OutputRate": "48000Hz" } } }
+      },
+      {
+        "title": "Raise texture filtering",
+        "reason": "X-COM: Enforcer filters textures at a low level, so a visible line shows where each floor and wall texture switches to a blurrier version.",
+        "changes": { "XCom.ini": { "D3DDrv.D3DRenderDevice": { "UseTrilinear": "True" } } }
+      },
+      {
+        "title": "Raise color depth",
+        "reason": "X-COM: Enforcer runs fullscreen with a reduced color range, so smooth shading like skies and shadows shows visible bands.",
+        "changes": { "XCom.ini": { "WinDrv.WindowsClient": { "FullscreenColorBits": "32" } } }
+      }
     ]
   }
 }

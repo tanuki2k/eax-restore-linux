@@ -619,6 +619,41 @@
               }
             }
           }
+        ],
+        "optional_settings": [
+          {
+            "title": "Raise sound quality",
+            "reason": "Clive Barker's Undying mixes its sound at a low sample rate, which dulls high-pitched sounds.",
+            "changes": {
+              "System.ini": {
+                "Galaxy.GalaxyAudioSubsystem": {
+                  "OutputRate": "48000Hz"
+                }
+              }
+            }
+          },
+          {
+            "title": "Raise texture filtering",
+            "reason": "Clive Barker's Undying filters textures at a low level, so a visible line shows where each floor and wall texture switches to a blurrier version.",
+            "changes": {
+              "System.ini": {
+                "D3DDrv.D3DRenderDevice": {
+                  "UseTrilinear": "True"
+                }
+              }
+            }
+          },
+          {
+            "title": "Raise color depth",
+            "reason": "Clive Barker's Undying runs fullscreen with a reduced color range, so smooth shading like skies and shadows shows visible bands.",
+            "changes": {
+              "System.ini": {
+                "WinDrv.WindowsClient": {
+                  "FullscreenColorBits": "32"
+                }
+              }
+            }
+          }
         ]
       },
       "notes": "The game records whether EAX/A3D actually activated to Undying.log, which is handy for confirming it worked (per the Vogons Wiki citation for this title)."
@@ -712,6 +747,41 @@
                 "Galaxy.GalaxyAudioSubsystem": {
                   "Use3dHardware": "True",
                   "UseReverb": "True"
+                }
+              }
+            }
+          }
+        ],
+        "optional_settings": [
+          {
+            "title": "Raise sound quality",
+            "reason": "Deus Ex mixes its sound at a lower rate than most sound systems play at, so it's resampled before you hear it.",
+            "changes": {
+              "DeusEx.ini": {
+                "Galaxy.GalaxyAudioSubsystem": {
+                  "OutputRate": "48000Hz"
+                }
+              }
+            }
+          },
+          {
+            "title": "Raise texture filtering",
+            "reason": "Deus Ex filters textures at a low level, so a visible line shows where each floor and wall texture switches to a blurrier version.",
+            "changes": {
+              "DeusEx.ini": {
+                "D3DDrv.D3DRenderDevice": {
+                  "UseTrilinear": "True"
+                }
+              }
+            }
+          },
+          {
+            "title": "Raise color depth",
+            "reason": "Deus Ex runs fullscreen with a reduced color range, so smooth shading like skies and shadows shows visible bands.",
+            "changes": {
+              "DeusEx.ini": {
+                "WinDrv.WindowsClient": {
+                  "FullscreenColorBits": "32"
                 }
               }
             }
@@ -2626,6 +2696,41 @@
               }
             }
           }
+        ],
+        "optional_settings": [
+          {
+            "title": "Raise sound quality",
+            "reason": "The Wheel of Time mixes its sound at a lower rate than most sound systems play at, so it's resampled before you hear it.",
+            "changes": {
+              "WoT.ini": {
+                "Galaxy.GalaxyAudioSubsystem": {
+                  "OutputRate": "48000Hz"
+                }
+              }
+            }
+          },
+          {
+            "title": "Raise texture filtering",
+            "reason": "The Wheel of Time filters textures at a low level, so a visible line shows where each floor and wall texture switches to a blurrier version.",
+            "changes": {
+              "WoT.ini": {
+                "D3DDrv.D3DRenderDevice": {
+                  "UseTrilinear": "True"
+                }
+              }
+            }
+          },
+          {
+            "title": "Raise color depth",
+            "reason": "The Wheel of Time runs fullscreen with a reduced color range, so smooth shading like skies and shadows shows visible bands.",
+            "changes": {
+              "WoT.ini": {
+                "WinDrv.WindowsClient": {
+                  "FullscreenColorBits": "32"
+                }
+              }
+            }
+          }
         ]
       },
       "sources": [
@@ -3125,6 +3230,41 @@
               }
             }
           }
+        ],
+        "optional_settings": [
+          {
+            "title": "Raise sound quality",
+            "reason": "Unreal Gold mixes its sound at a low sample rate, which dulls high-pitched sounds.",
+            "changes": {
+              "Unreal.ini": {
+                "Galaxy.GalaxyAudioSubsystem": {
+                  "OutputRate": "48000Hz"
+                }
+              }
+            }
+          },
+          {
+            "title": "Raise texture filtering",
+            "reason": "Unreal Gold filters textures at a low level, so a visible line shows where each floor and wall texture switches to a blurrier version.",
+            "changes": {
+              "Unreal.ini": {
+                "D3DDrv.D3DRenderDevice": {
+                  "UseTrilinear": "True"
+                }
+              }
+            }
+          },
+          {
+            "title": "Raise color depth",
+            "reason": "Unreal Gold runs fullscreen with a reduced color range, so smooth shading like skies and shadows shows visible bands.",
+            "changes": {
+              "Unreal.ini": {
+                "WinDrv.WindowsClient": {
+                  "FullscreenColorBits": "32"
+                }
+              }
+            }
+          }
         ]
       }
     },
@@ -3275,7 +3415,7 @@
           "id": 13240,
           "delisted": true,
           "store_details": "Delisted from Steam in December 2022, when Epic pulled the entire classic Unreal series from sale. OldUnreal (oldunreal.com) distributes a free, Epic-authorized copy of the full game.",
-          "patches": "Creative's official 'EAX Library Patch' (uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip) adds full EAX 2.0 reverb and muffling of sounds through walls to the original Deathmatch and Capture the Flag maps — historically mirrored at patches-scrolls.com; verify the mirror and files before installing. OldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
+          "patches": "Creative's official 'EAX Library Patch' (uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip) adds full EAX 2.0 reverb and muffling of sounds through walls to the original Deathmatch and Capture the Flag maps — historically mirrored at patches-scrolls.com.\nOldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
         }
       },
       "eax": {
@@ -3306,6 +3446,41 @@
                 "Galaxy.GalaxyAudioSubsystem": {
                   "Use3dHardware": "True",
                   "UseReverb": "True"
+                }
+              }
+            }
+          }
+        ],
+        "optional_settings": [
+          {
+            "title": "Raise sound quality",
+            "reason": "Unreal Tournament: Game of the Year Edition mixes its sound at a low sample rate, which dulls high-pitched sounds.",
+            "changes": {
+              "UnrealTournament.ini": {
+                "Galaxy.GalaxyAudioSubsystem": {
+                  "OutputRate": "48000Hz"
+                }
+              }
+            }
+          },
+          {
+            "title": "Raise texture filtering",
+            "reason": "Unreal Tournament: Game of the Year Edition filters textures at a low level, so a visible line shows where each floor and wall texture switches to a blurrier version.",
+            "changes": {
+              "UnrealTournament.ini": {
+                "D3DDrv.D3DRenderDevice": {
+                  "UseTrilinear": "True"
+                }
+              }
+            }
+          },
+          {
+            "title": "Raise color depth",
+            "reason": "Unreal Tournament: Game of the Year Edition runs fullscreen with a reduced color range, so smooth shading like skies and shadows shows visible bands.",
+            "changes": {
+              "UnrealTournament.ini": {
+                "WinDrv.WindowsClient": {
+                  "FullscreenColorBits": "32"
                 }
               }
             }
@@ -3355,6 +3530,41 @@
                 "Galaxy.GalaxyAudioSubsystem": {
                   "Use3dHardware": "True",
                   "UseSpatial": "True"
+                }
+              }
+            }
+          }
+        ],
+        "optional_settings": [
+          {
+            "title": "Raise sound quality",
+            "reason": "X-COM: Enforcer mixes its sound at a low sample rate, which dulls high-pitched sounds.",
+            "changes": {
+              "XCom.ini": {
+                "Galaxy.GalaxyAudioSubsystem": {
+                  "OutputRate": "48000Hz"
+                }
+              }
+            }
+          },
+          {
+            "title": "Raise texture filtering",
+            "reason": "X-COM: Enforcer filters textures at a low level, so a visible line shows where each floor and wall texture switches to a blurrier version.",
+            "changes": {
+              "XCom.ini": {
+                "D3DDrv.D3DRenderDevice": {
+                  "UseTrilinear": "True"
+                }
+              }
+            }
+          },
+          {
+            "title": "Raise color depth",
+            "reason": "X-COM: Enforcer runs fullscreen with a reduced color range, so smooth shading like skies and shadows shows visible bands.",
+            "changes": {
+              "XCom.ini": {
+                "WinDrv.WindowsClient": {
+                  "FullscreenColorBits": "32"
                 }
               }
             }
