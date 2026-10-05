@@ -120,21 +120,25 @@ prompt_recent_game() {
     else
         echo -e "${WHITE}Previously used game folders:${NC}"
     fi
-    # The game's name, with its folder dimmed underneath for uninstall, or
-    # its storefront like the library scan's list for Tools; just the folder
-    # when the install doesn't say what it is.
-    local i store
+    # One line per game, its name and storefront like the library scan's
+    # list; a folder is added only under entries that would otherwise read
+    # the same, and shown on its own for a folder that can't be placed.
+    local i
+    local -a labels=() details=()
+    local -A seen=()
     for i in "${!paths[@]}"; do
         if identify_game_dir "${paths[$i]}" && [ -n "$GAME_ID_NAME" ]; then
-            if [ -n "$SETTINGS_TOOL_MODE" ]; then
-                store="Steam"; [ "$GAME_ID_STORE" == "gog" ] && store="GOG"
-                print_option "$((i + 1))" "$GAME_ID_NAME" "($store)"
-            else
-                print_option "$((i + 1))" "$GAME_ID_NAME"
-                echo -e "    ${DIM}$(tilde_path "${paths[$i]}")${NC}"
-            fi
+            labels[i]="$GAME_ID_NAME"
+            details[i]="(Steam)"; [ "$GAME_ID_STORE" == "gog" ] && details[i]="(GOG)"
         else
-            print_option "$((i + 1))" "${paths[$i]}"
+            labels[i]="${paths[$i]}"; details[i]=""
+        fi
+        seen["${labels[i]}${details[i]}"]=$(( ${seen["${labels[i]}${details[i]}"]:-0} + 1 ))
+    done
+    for i in "${!paths[@]}"; do
+        print_option "$((i + 1))" "${labels[i]}" "${details[i]}"
+        if [ -n "${details[i]}" ] && [ "${seen["${labels[i]}${details[i]}"]}" -gt 1 ]; then
+            echo -e "    ${DIM}$(tilde_path "${paths[$i]}")${NC}"
         fi
     done
     # Another game: the same ways step 1's own menu offers, chosen here so
