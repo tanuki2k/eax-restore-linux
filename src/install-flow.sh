@@ -5,6 +5,7 @@
     # ==============================================================================
     print_banner "PHASE 2: EXECUTION"
     echo -e "\n${CYAN}${BOLD}Configuration finished!${NC}"
+    print_choices_summary
     if ! confirm "Ready to deploy the audio files to your game and system prefix. Proceed?"; then
         echo -e "\n${YELLOW}Installation aborted.${NC}"
         exit 0

@@ -1,6 +1,110 @@
 # ==============================================================================
 # ACTION: INSTALL (PHASE 1: CONFIGURATION)
 # ==============================================================================
+
+# Usage: print_choices_summary
+# Phase 2's "Configuration finished!" recap of every Phase 1 answer, shown
+# before the player confirms the deploy so they can check it all in one place.
+# Labels line up like the KNOWN GAMES DATABASE details; a value with more than
+# one line (the game settings list) continues under the first.
+print_choices_summary() {
+    local -a labels=() values=()
+    _choice() { labels+=("$1"); values+=("$2"); }
+
+    _choice "Game" "${BOLD}${GAME_NAME}${NC}"
+    _choice "Location" "$(tilde_path "$GAME_DIR")"
+    if [ "$LAUNCHER_TYPE" == "1" ]; then _choice "Launcher" "Steam"
+    elif [ -n "${HEROIC_APP_NAME:-}" ]; then _choice "Launcher" "Heroic"
+    else _choice "Launcher" "Wine prefix"; fi
+    [ -n "$PREFIX_PATH" ] && _choice "Prefix" "$(tilde_path "$PREFIX_PATH")"
+    _choice "Architecture" "${ARCH}-bit"
+
+    if [ "$ENGINE_CHOICE" == "2" ]; then
+        _choice "Audio engine" "OpenAL Soft as OpenAL32.dll"
+        _choice "Builds" "OpenAL Soft ${OAL_BUILD^} ${DIM}(${OAL_SELECTED_LABEL:-unknown})${NC}"
+    else
+        _choice "Audio engine" "DSOAL + OpenAL Soft"
+        _choice "Builds" "DSOAL ${DSOAL_BUILD^} ${DIM}(${DSOAL_SELECTED_LABEL:-unknown})${NC}"$'\n'"OpenAL Soft ${OAL_BUILD^} ${DIM}(${OAL_SELECTED_LABEL:-unknown})${NC}"
+    fi
+
+    if [ "$INSTALL_VCRUN" == "y" ]; then _choice "VC++ runtimes" "Install"
+    elif [ "${APPLY_VCRUN_OVERRIDES_NEEDED:-0}" == "1" ]; then _choice "VC++ runtimes" "Already in the prefix"
+    else _choice "VC++ runtimes" "Skip"; fi
+
+    local speakers
+    case "$OUTPUT_MODE" in
+        stereo)
+            case "$STEREO_MODE" in
+                speakers) speakers="Stereo speakers" ;;
+                headphones) speakers="Headphones" ;;
+                *) speakers="Stereo (OpenAL Soft decides)" ;;
+            esac
+            [[ "$ENABLE_HRTF" =~ $YES_RE ]] && speakers+=", HRTF on"
+            ;;
+        surround)
+            case "$SURROUND_CHANNELS" in
+                quad) speakers="Quad (4.0)" ;;
+                surround51) speakers="Surround 5.1" ;;
+                surround61) speakers="Surround 6.1" ;;
+                *) speakers="Surround 7.1" ;;
+            esac
+            ;;
+        *) speakers="Matrix encoding" ;;
+    esac
+    _choice "Speakers" "$speakers"
+
+    local entry sec key value line list=""
+    for entry in "${ALSOFT_OVERRIDES[@]}"; do
+        IFS=$'\x1f' read -r sec key value <<< "$entry"
+        if [ "$sec/$key" == "reverb/boost" ]; then list+="${list:+$'\n'}Reverb boost +${value} dB"
+        else list+="${list:+$'\n'}${key} = ${value}"; fi
+    done
+    [ -n "$list" ] && _choice "alsoft.ini" "$list"
+
+    list=""
+    [ "$ADVANCED_DUMMY" == "y" ] && list+="${list:+$'\n'}EAX Unified dummy files"
+    [ "$ADVANCED_LIMITS" == "y" ] && list+="${list:+$'\n'}Expand audio limits"
+    [ "$ADVANCED_COM" == "y" ] && list+="${list:+$'\n'}COM registry routing"
+    _choice "Advanced tweaks" "${list:-None}"
+
+    case "$OVERRIDE_METHOD" in
+        launcher) _choice "DLL override" "$(launcher_override_where)" ;;
+        registry) _choice "DLL override" "$(runner_label) prefix registry" ;;
+        *) _choice "DLL override" "You'll set it yourself (instructions at the end)" ;;
+    esac
+
+    # Only for a game that offered settings: the ones chosen, in order.
+    if [ ${#GAME_SETTINGS_PLAN[@]} -gt 0 ] || [ ${#GAME_SETTINGS_DECLINED[@]} -gt 0 ]; then
+        local title
+        local -a f
+        list=""
+        for line in "${GAME_SETTINGS_PLAN[@]}"; do
+            mapfile -t -d $'\x1f' f < <(printf '%s' "$line")
+            title="${f[1]}"
+            [[ $'\n'"$list"$'\n' == *$'\n'"$title"$'\n'* ]] || list+="${list:+$'\n'}${title}"
+        done
+        _choice "Game settings" "${list:-None}"
+    fi
+
+    local i width=0 first rest pad
+    for i in "${!labels[@]}"; do
+        [ ${#labels[$i]} -gt "$width" ] && width=${#labels[$i]}
+    done
+    echo -e "\n${WHITE}Your choices:${NC}"
+    for i in "${!labels[@]}"; do
+        first="${values[$i]%%$'\n'*}"
+        printf ' -> %b%s%b:%*s %b%b%b\n' "$YELLOW" "${labels[$i]}" "$NC" \
+            $(( width - ${#labels[$i]} )) "" "$WHITE" "$first" "$NC"
+        [ "$first" == "${values[$i]}" ] && continue
+        printf -v pad '%*s' $(( width + 6 )) ""
+        rest="${values[$i]#*$'\n'}"
+        while IFS= read -r line; do
+            echo -e "${pad}${WHITE}${line}${NC}"
+        done <<< "$rest"
+    done
+    unset -f _choice
+}
+
 if [ "$SCRIPT_ACTION" == "i" ]; then
     # Fixed step count for this flow (1-11, same regardless of launcher/engine
     # branch) — read by print_step via the STEP_TOTAL global so headers show
