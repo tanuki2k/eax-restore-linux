@@ -23,6 +23,8 @@ if [ -n "$DSOAL_LOG_MODE" ]; then
 
         print_step 1 "Game Location"
         get_game_directory ""
+        # Only step 1's [R]eturn to the main menu sets it here.
+        [ -n "$RESTART_REQUESTED" ] && continue 2
 
         print_step 2 "Launcher Identification"
         detect_game_environment

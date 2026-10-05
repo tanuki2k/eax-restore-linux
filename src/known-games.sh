@@ -94,6 +94,7 @@ prompt_recent_game() {
     # only clutter the picker. Install shows every visited folder, since
     # revisiting any of them (installed before or not) is meaningful there.
     # Sets GAME_DIR and returns 0 if the user picked an existing entry;
+    # returns 1 with RESTART_REQUESTED set for [R]eturn to the main menu;
     # returns 1 (GAME_DIR left empty) if they chose to enter a new path, or
     # if there's no usable history — callers fall through to manual entry.
     GAME_DIR=""
@@ -123,14 +124,25 @@ prompt_recent_game() {
         print_option "$((i + 1))" "${paths[$i]}"
     done
     print_option 0 "Enter a different path"
+    # The way back to the main menu, as step 1's own menu offers it (see
+    # MAIN_MENU_SHOWN); get_game_directory unwinds on RESTART_REQUESTED.
+    local keys="0-${#paths[@]}"
+    if [ -n "$MAIN_MENU_SHOWN" ]; then
+        echo ""
+        print_key_option "[R]eturn to the main menu"
+        keys+=", r"
+    fi
 
-    prompt "Selection [0-${#paths[@]}]: "
+    prompt "Selection [${keys}]: "
     local choice
     read_answer choice
 
     if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#paths[@]} ]; then
         GAME_DIR="${paths[$((choice - 1))]}"
         return 0
+    fi
+    if [ -n "$MAIN_MENU_SHOWN" ] && [ "${choice,,}" == "r" ]; then
+        RESTART_REQUESTED=1
     fi
     return 1
 }

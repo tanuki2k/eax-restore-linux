@@ -12,15 +12,18 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     print_banner "UNINSTALL — PHASE 1: CONFIGURATION"
 
     # Steps 1-2 loop: same restart-on-dead-end mechanism as the install flow
-    # (see the comment in config-flow.sh). The only thing that sets
-    # RESTART_REQUESTED here is the no-prefix / no-AppID dead end in
-    # detect_game_environment — the EAX-impossible checks are install-only.
+    # (see the comment in config-flow.sh). Two things set RESTART_REQUESTED
+    # here: step 1's [R]eturn to the main menu (continue 2, back to it) and
+    # the no-prefix / no-AppID dead end in detect_game_environment (back to
+    # step 1) — the EAX-impossible checks are install-only.
     while true; do
         RESTART_REQUESTED=""
 
         print_step 1 "Game Location"
         get_game_directory ""
-        [ -n "$RESTART_REQUESTED" ] || check_target_writable "$GAME_DIR" "game folder"
+        # Only step 1's [R]eturn to the main menu sets it here.
+        [ -n "$RESTART_REQUESTED" ] && continue 2
+        check_target_writable "$GAME_DIR" "game folder"
 
         print_step 2 "Launcher Identification"
         detect_game_environment

@@ -179,7 +179,8 @@ their execution order in the assembled script):
     (`break; done`) at the bottom of `install-flow.sh` lets install step 1 go
     back to the main menu: when the menu was shown (`MAIN_MENU_SHOWN`), a "no"
     while picking a game sets `RESTART_REQUESTED` and the steps 1-2 loop does
-    `continue 2`. `config-flow.sh` also defines
+    `continue 2`. Uninstall, VC++ runtime install and DSOAL logging keep step
+    1's own menu, which then offers "[R]eturn to the main menu" the same way. `config-flow.sh` also defines
     `print_choices_summary`, the recap of every Phase 1 answer shown under
     "Configuration finished!" before the "Proceed?" — a new Phase 1 question
     should add its answer there. `uninstall-flow.sh` follows the

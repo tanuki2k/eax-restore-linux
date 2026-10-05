@@ -73,6 +73,7 @@ get_game_directory() {
         record_recent_game "$GAME_DIR"
         return
     fi
+    [ -n "$RESTART_REQUESTED" ] && return
 
     local can_scan=0
     if [ "$SCRIPT_ACTION" == "i" ] && ensure_known_games_json; then
@@ -136,6 +137,14 @@ get_game_directory() {
             fi
             print_key_option "[M]anually type the game path"
             menu_keys+=("m"); menu_actions+=("manual")
+            # Uninstall, VC++ runtime install and DSOAL logging come here
+            # from the main menu without a locate method, so they get a way
+            # back to it (see MAIN_MENU_SHOWN).
+            if [ -n "$MAIN_MENU_SHOWN" ]; then
+                echo ""
+                print_key_option "[R]eturn to the main menu"
+                menu_keys+=("r"); menu_actions+=("main_menu")
+            fi
 
             if [ "${#menu_actions[@]}" -eq 1 ]; then
                 action="${menu_actions[0]}"
@@ -155,6 +164,11 @@ get_game_directory() {
         fi
 
         case "$action" in
+            main_menu)
+                RESTART_REQUESTED=1
+                unset -f _show_common_locations
+                return
+                ;;
             scan)
                 print_note "the known-EAX-games list is a small, hand-verified, work-in-progress" \
                     "set — it doesn't cover every EAX game. A game you own may still support EAX" \
@@ -837,9 +851,11 @@ resolve_exe_folder() {
     if [ "$have_more" -eq 1 ]; then
         print_option 1 "Choose from the other detected folders"
         print_option 2 "Enter the game's .exe folder path manually"
+        echo ""
         print_option 3 "Go back and choose a different game"
     else
         print_option 1 "Enter the game's .exe folder path manually"
+        echo ""
         print_option 2 "Go back and choose a different game"
     fi
     local choice
@@ -1156,6 +1172,7 @@ confirm_continue_if_openal_native() {
     echo ""
     print_option 1 "DirectSound3D / DSOAL   [default]"
     print_option 2 "OpenAL                  (deploy kcat's OpenAL Soft)"
+    echo ""
     print_option 3 "Cancel the install"
 
     local api_choice explicit=0

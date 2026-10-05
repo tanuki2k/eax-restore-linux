@@ -46,6 +46,7 @@ else
             echo ""
             print_key_option "[R]emove the EAX fix"
             print_key_option "[U]tilities"
+            echo ""
             print_key_option "[Q]uit"
             menu_keys+=(r u q)
             prompt "Selection [$(IFS=/; echo "${menu_keys[*]}")]: "
@@ -64,15 +65,16 @@ else
                         echo ""
                         print_key_option "[V]C++ runtime install"
                         print_key_option "[D]SOAL logging for a game"
-                        print_key_option "[B]ack to the main menu"
-                        prompt "Selection [v/d/b]: "
+                        echo ""
+                        print_key_option "[R]eturn to the main menu"
+                        prompt "Selection [v/d/r]: "
                         read_answer menu_choice || exit 0
                         menu_choice="${menu_choice,,}"
                         case "$menu_choice" in
                             v) VCRUN_ONLY_MODE="menu"; break ;;
                             d) DSOAL_LOG_MODE=1; break ;;
-                            b|"") print_banner "SELECT OPERATION"; break ;;
-                            *) print_result "That's not a valid option — please type v, d or b." "$YELLOW" ;;
+                            r|"") print_banner "SELECT OPERATION"; break ;;
+                            *) print_result "That's not a valid option — please type v, d or r." "$YELLOW" ;;
                         esac
                     done
                     ;;
@@ -112,6 +114,8 @@ if [ -n "$VCRUN_ONLY_MODE" ]; then
 
         print_step 1 "Game Location"
         get_game_directory ""
+        # Only step 1's [R]eturn to the main menu sets it here.
+        [ -n "$RESTART_REQUESTED" ] && continue 2
 
         print_step 2 "Launcher Identification"
         detect_game_environment
