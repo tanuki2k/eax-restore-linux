@@ -15,6 +15,7 @@ EAX_RESTORE_DSOAL_PIN="${EAX_RESTORE_DSOAL_PIN:-}"
 # Utilities submenu, and quitting. Skipped when an environment variable has
 # already decided the run.
 VCRUN_ONLY_MODE=""
+DSOAL_LOG_MODE=""
 if is_truthy "$EAX_RESTORE_VCRUN_ONLY"; then
     VCRUN_ONLY_MODE="env"
 else
@@ -24,7 +25,7 @@ else
         print_result "EAX_RESTORE_DSOAL_PIN is set, so proceeding straight to install." "$GREEN"
     else
         SCRIPT_ACTION=""
-        while [ -z "$SCRIPT_ACTION" ] && [ -z "$VCRUN_ONLY_MODE" ]; do
+        while [ -z "$SCRIPT_ACTION" ] && [ -z "$VCRUN_ONLY_MODE" ] && [ -z "$DSOAL_LOG_MODE" ]; do
             menu_keys=(s)
             echo -e "\n${WHITE}What would you like to do?${NC}\n"
             print_key_option "[S]can your Steam/Heroic library"
@@ -52,14 +53,16 @@ else
                     while true; do
                         echo ""
                         print_key_option "[V]C++ runtime install"
+                        print_key_option "[D]SOAL logging for a game"
                         print_key_option "[B]ack to the main menu"
-                        prompt "Selection [v/b]: "
+                        prompt "Selection [v/d/b]: "
                         read_answer menu_choice || exit 0
                         menu_choice="${menu_choice,,}"
                         case "$menu_choice" in
                             v) VCRUN_ONLY_MODE="menu"; break ;;
+                            d) DSOAL_LOG_MODE=1; break ;;
                             b|"") print_banner "SELECT OPERATION"; break ;;
-                            *) print_result "That's not a valid option — please type v or b." "$YELLOW" ;;
+                            *) print_result "That's not a valid option — please type v, d or b." "$YELLOW" ;;
                         esac
                     done
                     ;;

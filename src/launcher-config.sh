@@ -132,18 +132,33 @@ _close_launcher_and_wait() {
     done
 }
 
+# What the launcher-closing messages say is being changed: the DLL override
+# (install and uninstall), or "dsoal_log" for the DSOAL logging utility.
+LAUNCHER_CHANGE=""
+
+# Usage: launcher_change_text <add|remove> <short|where>
+# The change, for the launcher-closing messages: "add the override" (short,
+# for the question) or "add the DLL override to" (where, followed by
+# launcher_override_where), or the DSOAL logging equivalents.
+launcher_change_text() {
+    if [ "$LAUNCHER_CHANGE" == "dsoal_log" ]; then
+        local onoff="on"; [ "$1" == "remove" ] && onoff="off"
+        if [ "$2" == "where" ]; then echo "turn ${onoff} DSOAL logging in"; else echo "turn DSOAL logging ${onoff}"; fi
+    elif [ "$2" == "where" ]; then
+        if [ "$1" == "remove" ]; then echo "remove the DLL override from"; else echo "add the DLL override to"; fi
+    else
+        echo "$1 the override"
+    fi
+}
+
 # Usage: print_launcher_open <steam|heroic> <add|remove>
 # The problem and what it's holding up: the launcher is running, so the
-# override can't be added or removed yet. Wrapped at the script's 76 columns,
-# since the game name's length varies.
+# change can't be made yet. Wrapped at the script's 76 columns, since the
+# game name's length varies.
 print_launcher_open() {
     local label text
     label="$(launcher_label "$1")"
-    if [ "$2" == "remove" ]; then
-        text="${label} is running, so the script can't remove the DLL override from $(launcher_override_where)."
-    else
-        text="${label} is running, so the script can't add the DLL override to $(launcher_override_where)."
-    fi
+    text="${label} is running, so the script can't $(launcher_change_text "$2" where) $(launcher_override_where)."
     echo -e "\n${YELLOW}$(printf '%s' "$text" | fold -s -w 76 | sed 's/ $//')${NC}"
 }
 
@@ -171,7 +186,7 @@ offer_close_launcher() {
         *)
             print_launcher_open "$1" "$2"
             LAUNCHER_CLOSE_ASKED=1
-            confirm_countdown "Close ${label}, $2 the override, then reopen ${label}?" Y 25 || { LAUNCHER_CLOSE_DECLINED=1; return 1; }
+            confirm_countdown "Close ${label}, $(launcher_change_text "$2" short), then reopen ${label}?" Y 25 || { LAUNCHER_CLOSE_DECLINED=1; return 1; }
             [ "$CONFIRM_TIMED_OUT" -eq 1 ] && print_status "No answer after 25 seconds, so closing ${label}." ;;
     esac
     if run_with_spinner "Waiting for ${label} to close..." "$EAX_LOG_FILE" _close_launcher_and_wait "$1" 30; then
@@ -197,7 +212,7 @@ ask_close_launcher_early() {
     [ -n "$(launcher_launch_cmd "$1")" ] || return 0
     label="$(launcher_label "$1")"
     print_launcher_open "$1" "$2"
-    if confirm_countdown "Close ${label}, $2 the override, then reopen ${label}?" Y 25; then
+    if confirm_countdown "Close ${label}, $(launcher_change_text "$2" short), then reopen ${label}?" Y 25; then
         LAUNCHER_CLOSE_ANSWER[$1]="y"
         [ "$CONFIRM_TIMED_OUT" -eq 1 ] && print_status "No answer after 25 seconds, so ${label} will be closed and reopened."
     else
@@ -263,6 +278,54 @@ launch_options_with_override() {
     else
         echo "WINEDLLOVERRIDES=\"$dll=n,b\" %command% $opts"
     fi
+}
+
+# Usage: launch_options_without_dsoal_log <Steam launch options>
+# The launch options with any DSOAL_LOGLEVEL=… / DSOAL_LOGFILE=… removed
+# (bare, "…" or '…' values), everything else left as it was.
+launch_options_without_dsoal_log() {
+    local opts="$1" re
+    re='(^|[[:space:]]+)DSOAL_LOG(LEVEL|FILE)=("[^"]*"|'"'"'[^'"'"']*'"'"'|[^[:space:]]*)'
+    while [[ "$opts" =~ $re ]]; do
+        opts="${opts/"${BASH_REMATCH[0]}"/}"
+    done
+    echo "${opts#"${opts%%[![:space:]]*}"}"
+}
+
+# Usage: launch_options_with_dsoal_log <Steam launch options> <level> <log file>
+# Returns the launch options with DSOAL's logging variables placed right
+# before %command% (replacing any already there), adding %command% the same
+# way launch_options_with_override does when it's missing.
+launch_options_with_dsoal_log() {
+    local opts vars
+    opts="$(launch_options_without_dsoal_log "$1")"
+    vars="DSOAL_LOGLEVEL=$2 DSOAL_LOGFILE=\"$3\""
+    if [[ "$opts" == *%command%* ]]; then
+        echo "${opts/\%command\%/$vars %command%}"
+    elif [ -z "${opts//[[:space:]]/}" ]; then
+        echo "$vars %command%"
+    else
+        echo "$vars %command% $opts"
+    fi
+}
+
+# Usage: dsoal_log_path_for_wine <folder>
+# The Windows path DSOAL_LOGFILE needs for dsoal.log in <folder>: Wine maps
+# Z: to /, and accepts forward slashes. Absolute, so the log lands in that
+# folder whichever directory the launcher starts the game in.
+dsoal_log_path_for_wine() { echo "Z:$1/dsoal.log"; }
+
+# Usage: dsoal_log_path_for_linux <DSOAL_LOGFILE value>
+# Where a DSOAL_LOGFILE value points on this machine: a Z: path maps back to
+# /, and a bare name (as typed by hand) sits in the game folder, the folder
+# Steam starts the game in.
+dsoal_log_path_for_linux() {
+    local p="${1//\\//}"
+    case "$p" in
+        [Zz]:/*) echo "${p:2}" ;;
+        [A-Za-z]:*) echo "$p" ;;
+        *) echo "$GAME_DIR/$p" ;;
+    esac
 }
 
 # Usage: steam_localconfig_for_app <appid>
@@ -365,33 +428,39 @@ vdf_set_launch_options() {
     mv -f "$tmp" "$file" 2>/dev/null || { rm -f "$tmp"; return 1; }
 }
 
-# Usage: heroic_get_override <GamesConfig file> <appName>
-# Prints the game's WINEDLLOVERRIDES environment value, __ABSENT__, or
+# Usage: heroic_get_env <GamesConfig file> <appName> <variable>
+# Prints the game's value for an environment variable, __ABSENT__, or
 # __NOAPP__ when the file or the game's settings are missing.
-heroic_get_override() {
+heroic_get_env() {
     [ -f "$1" ] || { echo "__NOAPP__"; return; }
-    jq -r --arg a "$2" '
+    jq -r --arg a "$2" --arg k "$3" '
         if (type == "object") and has($a) and (.[$a] | type == "object") then
-            ([(.[$a].enviromentOptions // [])[] | select(.key == "WINEDLLOVERRIDES") | .value] | first) // "__ABSENT__"
+            ([(.[$a].enviromentOptions // [])[] | select(.key == $k) | .value] | first) // "__ABSENT__"
         else "__NOAPP__" end' "$1" 2>/dev/null || echo "__NOAPP__"
 }
 
-# Usage: heroic_set_override <GamesConfig file> <appName> <value|__DELETE__>
-heroic_set_override() {
+# Usage: heroic_set_env <GamesConfig file> <appName> <variable> <value|__DELETE__>
+heroic_set_env() {
     local file="$1" tmp out
     tmp="$(mktemp "$(dirname "$file")/.eax-restore-heroic.XXXXXX" 2>/dev/null)" || return 1
     # Heroic writes its files without a trailing newline; $(...) drops jq's so
     # an untouched round trip stays byte-identical.
-    out="$(jq --arg a "$2" --arg v "$3" '
+    out="$(jq --arg a "$2" --arg k "$3" --arg v "$4" '
         .[$a].enviromentOptions = ((.[$a].enviromentOptions // [])
-            | if $v == "__DELETE__" then map(select(.key != "WINEDLLOVERRIDES"))
-              elif any(.[]; .key == "WINEDLLOVERRIDES") then map(if .key == "WINEDLLOVERRIDES" then .value = $v else . end)
-              else . + [{ key: "WINEDLLOVERRIDES", value: $v }] end)' "$file" 2>/dev/null)" \
+            | if $v == "__DELETE__" then map(select(.key != $k))
+              elif any(.[]; .key == $k) then map(if .key == $k then .value = $v else . end)
+              else . + [{ key: $k, value: $v }] end)' "$file" 2>/dev/null)" \
         || { rm -f "$tmp"; return 1; }
     printf '%s' "$out" > "$tmp" || { rm -f "$tmp"; return 1; }
     chmod --reference="$file" "$tmp" 2>/dev/null
     mv -f "$tmp" "$file" 2>/dev/null || { rm -f "$tmp"; return 1; }
 }
+
+# Usage: heroic_get_override <GamesConfig file> <appName>
+# Usage: heroic_set_override <GamesConfig file> <appName> <value|__DELETE__>
+# The game's WINEDLLOVERRIDES variable.
+heroic_get_override() { heroic_get_env "$1" "$2" WINEDLLOVERRIDES; }
+heroic_set_override() { heroic_set_env "$1" "$2" WINEDLLOVERRIDES "$3"; }
 
 # Usage: launcher_override_target
 # Sets OVERRIDE_LAUNCHER (steam|heroic), OVERRIDE_FILE and OVERRIDE_ID for the
@@ -547,7 +616,21 @@ revert_launcher_overrides() {
             print_status "Left the DLL override in $(launcher_override_where)." "$YELLOW"
             LAUNCHER_LINES_KEPT+=("$line"); continue
         fi
+        # DSOAL's logging variables don't count as a change since install:
+        # the logging utility adds them, and with DSOAL gone they're pointless,
+        # so reverting drops them too (Steam's go with the restored launch
+        # options; Heroic's are removed below).
         current="$(launcher_override_get)"
+        [ "$OVERRIDE_LAUNCHER" == "steam" ] && current="$(launch_options_without_dsoal_log "$current")"
+        if [ "$OVERRIDE_LAUNCHER" == "heroic" ]; then
+            local var
+            for var in DSOAL_LOGLEVEL DSOAL_LOGFILE; do
+                case "$(heroic_get_env "$OVERRIDE_FILE" "$OVERRIDE_ID" "$var")" in
+                    __ABSENT__|__NOAPP__) ;;
+                    *) heroic_set_env "$OVERRIDE_FILE" "$OVERRIDE_ID" "$var" __DELETE__ ;;
+                esac
+            done
+        fi
         if [ "$current" != "${f[4]}" ]; then
             print_status "Kept $(launcher_override_where) as they are — they've been changed since install." "$DIM"
             continue

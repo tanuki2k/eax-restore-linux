@@ -30,6 +30,7 @@ COMPONENTS=(
     cache.sh
     preflight.sh
     vcrun-only-flow.sh
+    dsoal-log-flow.sh
     uninstall-flow.sh
     config-flow.sh
     install-flow.sh

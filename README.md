@@ -24,6 +24,7 @@ Because modern operating systems and Proton/Wine don't natively support this old
 * **COM Registry Injection:** Optional routing of DirectSound CLSIDs directly in the Wine registry. This fixes the stubbornly grayed-out EAX menus in games like *Grand Theft Auto: San Andreas* or *Halo: Combat Evolved*.
 * **Advanced Engine Tweaks:** Optional EAX Unified dummy files (`eax.dll`/`eaxunified.dll`) and expanded audio limits to fix stuttering in chaotic, high-channel games like *F.E.A.R.*
 * **Automatic DLL Overrides:** Sets the `dsound`/`openal32` override for you — in the game's Steam launch options or Heroic environment variables (the default, so it's visible and easy to undo there), or in the Wine prefix registry — or leaves it to you, with instructions. Existing launch options are kept, and uninstall puts them back.
+* **DSOAL Logging:** Utilities → **[D]SOAL logging for a game** turns DSOAL's own log on or off for one game, without editing launch options by hand. Useful for checking which EAX version a game really uses, or for a bug report.
 * **VC++ Runtime Handling:** Detects and installs the Microsoft VC++ 2022 Redistributable that older Proton/Wine builds need to load kcat's DSOAL / OpenAL Soft, falling back to a direct Microsoft download if winetricks/protontricks fails, and verifying the actual DLLs on disk rather than trusting exit codes.
 * **Safety Guards:** Refuses to run as root or from Steam's Gaming Mode, and won't auto-modify SteamOS's immutable filesystem.
 
@@ -250,6 +251,8 @@ For repeat runs or scripting, these can be set to skip prompts:
 Every run is saved to a log file in `~/.local/state/eax-restore-linux/logs/`, and the script prints its path when the run finishes. Each run gets its own timestamped file (the newest 10 are kept), and `latest.log` always points at the most recent one. Dev builds log separately, to `~/.local/state/eax-restore-linux/logs/dev/`.
 
 The log contains everything shown on screen and your answers to the script's prompts, plus details useful for troubleshooting: your distro, kernel, and Wine/winetricks/protontricks versions, the output of the Wine, winetricks, and protontricks commands the script runs, and a summary of the detected game, prefix, runner (Proton/Wine version), architecture, and chosen engine.
+
+For problems with how a game *sounds* once it's running, DSOAL's own log helps more. **Utilities → [D]SOAL logging for a game** adds `DSOAL_LOGLEVEL` and `DSOAL_LOGFILE` to the game's Steam launch options or Heroic environment variables, so DSOAL writes `dsoal.log` to the game folder each time the game starts. **Full** (level 4) logs every EAX call the game makes, which shows which EAX version it actually uses, but the log grows fast and the game may stutter. **Basic** (level 3) only covers startup and which EAX versions the game asks for. Run the utility again to turn it off; uninstalling the fix turns it off too.
 
 If something goes wrong, please [open a bug report](https://github.com/tanuki2k/eax-restore-linux/issues/new?template=bug_report.md) and attach `~/.local/state/eax-restore-linux/logs/latest.log`. The log includes local file paths, which contain your username — feel free to redact them.
 

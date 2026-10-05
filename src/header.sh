@@ -63,6 +63,10 @@
 #   Heroic environment variables (merged with what's already there), or in the
 #   Wine registry — tracked so uninstall can put it back automatically.
 #
+# * DSOAL Logging: Utilities → [D]SOAL logging turns DSOAL's own log on or off
+#   for a game (DSOAL_LOGLEVEL/DSOAL_LOGFILE in its Steam launch options or
+#   Heroic environment variables), writing dsoal.log to the game folder.
+#
 # * Hybrid Dependencies: Falls back to a direct Microsoft download for the
 #   VC++ 2022 Redistributable when winetricks/protontricks fails, verifying
 #   the actual runtime DLLs on disk rather than trusting exit codes. Uninstall

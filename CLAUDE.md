@@ -148,6 +148,10 @@ their execution order in the assembled script):
    copy that owns the file (`launcher_kind`: native/AppImage or Flatpak, from the
    file's path) and `reopen_launchers` starts it again afterwards; declining, a
    running game, or a timeout falls back to waiting for the player to close it.
+   Those messages name the change through `LAUNCHER_CHANGE` (empty: the DLL
+   override; `dsoal_log`: DSOAL logging). Also holds the DSOAL logging helpers
+   (`launch_options_with_dsoal_log` / `_without_`, `heroic_get_env` /
+   `heroic_set_env`); uninstall's revert ignores and drops those variables.
 11. **`vcrun.sh`** — the standalone VC++ runtime installer: `verify_vcrun_files`,
    `install_vcrun_dependencies`, `uninstall_vcrun_dependencies`, etc. —
    independently triggerable via `EAX_RESTORE_VCRUN_ONLY`, with its own `"VCRUN"`
@@ -157,8 +161,9 @@ their execution order in the assembled script):
 13. **`cache.sh`** — `update_local_cache` (the repository-cache step), plus
     `handle_conflict` and `auto_backup_and_overwrite`.
 14. **`preflight.sh`** through **`install-flow.sh`** — top-level script flow:
-    pre-flight dependency check, the `EAX_RESTORE_VCRUN_ONLY` early-exit path,
-    `ACTION: UNINSTALL`, `ACTION: INSTALL`. The `ACTION: INSTALL` block itself
+    pre-flight dependency check, the main menu and the `EAX_RESTORE_VCRUN_ONLY`
+    early-exit path (`vcrun-only-flow.sh`), Utilities → DSOAL logging
+    (`dsoal-log-flow.sh`, another early exit), `ACTION: UNINSTALL`, `ACTION: INSTALL`. The `ACTION: INSTALL` block itself
     spans two files sharing one `if [ "$SCRIPT_ACTION" == "i" ]` — opened in
     `config-flow.sh` (Phase 1: Configuration, all the interactive prompts)
     and closed in `install-flow.sh` (Phase 2: Execution, actually deploying
