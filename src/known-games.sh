@@ -134,6 +134,24 @@ find_installed_game_dirs() {
     done | sort -u
 }
 
+# Usage: migrate_recent_games
+# Moves the old recent-games history ($BASE_SHARE/recent_games.txt) into
+# INSTALLED_GAMES_FILE once: entries already in the new file stay first (they
+# were used since), then the old file's in their order; the old file is then
+# deleted. Run by both note_game_used and installed_game_dirs, so whichever
+# comes first in a run does it.
+migrate_recent_games() {
+    local old="$BASE_SHARE/recent_games.txt" tmp
+    [ -f "$old" ] || return 0
+    mkdir -p "$(dirname "$INSTALLED_GAMES_FILE")" 2>/dev/null || return 0
+    tmp=$(mktemp 2>/dev/null) || return 0
+    {
+        [ -f "$INSTALLED_GAMES_FILE" ] && cat "$INSTALLED_GAMES_FILE"
+        if [ -s "$INSTALLED_GAMES_FILE" ]; then grep -Fxv -f "$INSTALLED_GAMES_FILE" -- "$old"; else cat "$old"; fi
+    } > "$tmp" 2>/dev/null
+    if mv "$tmp" "$INSTALLED_GAMES_FILE" 2>/dev/null; then rm -f "$old"; else rm -f "$tmp"; fi
+}
+
 # Usage: note_game_used <game dir>
 # Moves a game folder to the top of INSTALLED_GAMES_FILE (most recently used
 # first, no repeats, no limit), which only orders the installed-games list;
@@ -142,6 +160,7 @@ find_installed_game_dirs() {
 note_game_used() {
     local path="$1" tmp
     [ -n "$path" ] || return 0
+    migrate_recent_games
     mkdir -p "$(dirname "$INSTALLED_GAMES_FILE")" 2>/dev/null || return 0
     tmp=$(mktemp 2>/dev/null) || return 0
     { printf '%s\n' "$path"; [ -f "$INSTALLED_GAMES_FILE" ] && grep -Fxv -- "$path" "$INSTALLED_GAMES_FILE"; } > "$tmp" 2>/dev/null
@@ -153,16 +172,12 @@ note_game_used() {
 # INSTALLED_GAMES_FILE first, in its most-recently-used order, then any
 # found on disk (find_installed_game_dirs) it doesn't list yet, by name.
 # Folders whose install is gone drop out, and the file is rewritten to match.
-# The first run takes its order from the old recent-games history
-# ($BASE_SHARE/recent_games.txt) and deletes it.
+# The old recent-games history is folded in first (migrate_recent_games).
 installed_game_dirs() {
-    local old="$BASE_SHARE/recent_games.txt" p tmp
+    local p tmp
     local -a ordered=() found=()
     local -A seen=()
-    if [ ! -f "$INSTALLED_GAMES_FILE" ] && [ -f "$old" ]; then
-        mkdir -p "$(dirname "$INSTALLED_GAMES_FILE")" 2>/dev/null \
-            && cp "$old" "$INSTALLED_GAMES_FILE" 2>/dev/null && rm -f "$old"
-    fi
+    migrate_recent_games
     if [ -f "$INSTALLED_GAMES_FILE" ]; then
         while IFS= read -r p; do
             if [ -n "$p" ] && [ -z "${seen[$p]:-}" ] && manifest_is_live "$p"; then
