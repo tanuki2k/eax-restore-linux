@@ -560,3 +560,7 @@ EOF
     print_game_settings_summary
     print_community_patches_summary
 fi
+
+# Closes the main-menu loop opened above the main menu in vcrun-only-flow.sh.
+break
+done

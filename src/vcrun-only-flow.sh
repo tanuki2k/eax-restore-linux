@@ -14,8 +14,17 @@ EAX_RESTORE_DSOAL_PIN="${EAX_RESTORE_DSOAL_PIN:-}"
 # how to find the game, so it doesn't ask again), removing the fix, the
 # Utilities submenu, and quitting. Skipped when an environment variable has
 # already decided the run.
+#
+# Everything from here to the end of install-flow.sh runs inside one loop, so
+# install step 1 can come back here (see MAIN_MENU_SHOWN): it's opened here
+# and closed at the very bottom of install-flow.sh, the same way the install
+# "if" spans config-flow.sh and install-flow.sh. Every flow ends in exit, so
+# a pass only repeats when the install flow's step 1 asks for the menu.
+while true; do
 VCRUN_ONLY_MODE=""
 DSOAL_LOG_MODE=""
+LOCATE_METHOD=""
+RESTART_REQUESTED=""
 if is_truthy "$EAX_RESTORE_VCRUN_ONLY"; then
     VCRUN_ONLY_MODE="env"
 else
@@ -25,6 +34,7 @@ else
         print_result "EAX_RESTORE_DSOAL_PIN is set, so proceeding straight to install." "$GREEN"
     else
         SCRIPT_ACTION=""
+        MAIN_MENU_SHOWN=1
         while [ -z "$SCRIPT_ACTION" ] && [ -z "$VCRUN_ONLY_MODE" ] && [ -z "$DSOAL_LOG_MODE" ]; do
             menu_keys=(s)
             echo -e "\n${WHITE}What would you like to do?${NC}\n"

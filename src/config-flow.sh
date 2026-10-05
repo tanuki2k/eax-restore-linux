@@ -123,22 +123,32 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
 
     # Steps 1-2 loop: at an EAX-impossible dead end (see prompt_restart_or_quit)
     # the user can choose to go back and pick a different game instead of the
-    # script exiting. get_game_directory / scan_game_libraries /
-    # detect_game_environment all unwind on RESTART_REQUESTED; this re-runs
-    # them from the top with a clean slate (get_game_directory resets the
-    # per-game globals on entry).
+    # script exiting, and step 1 hands a "no" while picking a game back the
+    # same way. get_game_directory / scan_game_libraries /
+    # detect_game_environment all unwind on RESTART_REQUESTED. When the main
+    # menu was shown, continue 2 goes back to it (the loop around the main
+    # menu, see vcrun-only-flow.sh); otherwise this re-runs them from the top
+    # with a clean slate (get_game_directory resets the per-game globals on
+    # entry).
     while true; do
         RESTART_REQUESTED=""
 
         # 1. Game Location
         print_step 1 "Game Location"
         get_game_directory ""
-        [ -n "$RESTART_REQUESTED" ] || check_target_writable "$GAME_DIR" "game folder"
+        if [ -n "$RESTART_REQUESTED" ]; then
+            [ -n "$MAIN_MENU_SHOWN" ] && continue 2
+            continue
+        fi
+        check_target_writable "$GAME_DIR" "game folder"
 
         # 3. Game Identification & Launcher Auto-Detect
         print_step 3 "Launcher Identification"
         detect_game_environment
-        [ -n "$RESTART_REQUESTED" ] && continue
+        if [ -n "$RESTART_REQUESTED" ]; then
+            [ -n "$MAIN_MENU_SHOWN" ] && continue 2
+            continue
+        fi
 
         break
     done

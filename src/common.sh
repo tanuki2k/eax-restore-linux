@@ -6,7 +6,8 @@ prompt_restart_or_quit() {
     # remaster that never implemented it, or a build a patch stripped it
     # from). Rather than ending the script outright, offer to go back to game
     # selection: sets RESTART_REQUESTED so the caller chain unwinds to the
-    # config flow's Step 1 loop. On a "quit" answer it exits with the given
+    # flow's Step 1 loop (for an install started from the main menu, on to the
+    # main menu itself, see MAIN_MENU_SHOWN). On a "quit" answer it exits with the given
     # code (default 0) — passed as 1 by the not_implemented hard-blocks so
     # they keep their non-zero status. Defaults to "yes" (go back to game
     # selection): reaching this dead end almost always means the user picked

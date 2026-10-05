@@ -174,7 +174,12 @@ their execution order in the assembled script):
     spans two files sharing one `if [ "$SCRIPT_ACTION" == "i" ]` — opened in
     `config-flow.sh` (Phase 1: Configuration, all the interactive prompts)
     and closed in `install-flow.sh` (Phase 2: Execution, actually deploying
-    files/running protontricks/winetricks). `config-flow.sh` also defines
+    files/running protontricks/winetricks). Around all of that, a `while true`
+    loop opened just above the main menu in `vcrun-only-flow.sh` and closed
+    (`break; done`) at the bottom of `install-flow.sh` lets install step 1 go
+    back to the main menu: when the menu was shown (`MAIN_MENU_SHOWN`), a "no"
+    while picking a game sets `RESTART_REQUESTED` and the steps 1-2 loop does
+    `continue 2`. `config-flow.sh` also defines
     `print_choices_summary`, the recap of every Phase 1 answer shown under
     "Configuration finished!" before the "Proceed?" — a new Phase 1 question
     should add its answer there. `uninstall-flow.sh` follows the

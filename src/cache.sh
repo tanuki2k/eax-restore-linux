@@ -23,6 +23,9 @@ build_cached() { [ -d "$1" ] && [ -n "$(ls -A "$1" 2>/dev/null)" ]; }
 # so this stops now, before any questions, with the manual-install folders.
 # EAX_RESTORE_SKIP_CACHE_CHECK skips the probe and uses only cached builds.
 check_download_readiness() {
+    # Once per run: going back to the main menu runs Phase 1's start again.
+    [ -n "${DOWNLOAD_READINESS_CHECKED:-}" ] && return 0
+    DOWNLOAD_READINESS_CHECKED=1
     mkdir -p "$DSOAL_SHARE" "$OPENAL_SHARE"
     GITHUB_REACHABLE=0
     if is_truthy "${EAX_RESTORE_SKIP_CACHE_CHECK:-}"; then

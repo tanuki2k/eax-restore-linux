@@ -92,6 +92,11 @@ get_game_directory() {
     LOCATE_METHOD=""
     [ "$preset" == "scan" ] && [ "$can_scan" -eq 0 ] && preset=""
     [ "$preset" == "gui" ] && [ "$have_gui_picker" -eq 0 ] && preset=""
+    # An install started from the main menu's Scan/Browse/Manual has that
+    # menu to go back to, so a retry returns there (RESTART_REQUESTED, see
+    # MAIN_MENU_SHOWN) instead of showing this step's own menu.
+    local back_to_main_menu=0
+    [ -n "$preset" ] && [ -n "$MAIN_MENU_SHOWN" ] && back_to_main_menu=1
 
     local locations_shown=0
     _show_common_locations() {
@@ -110,6 +115,10 @@ get_game_directory() {
         local action=""
         if [ -n "$preset" ]; then
             action="$preset"; preset=""
+        elif [ "$back_to_main_menu" -eq 1 ]; then
+            RESTART_REQUESTED=1
+            unset -f _show_common_locations
+            return
         else
             echo ""
             # Build the menu fresh each pass: which options apply can shrink
@@ -162,6 +171,8 @@ get_game_directory() {
                 # pick where the user chose "different game") drops back to
                 # this menu on its own — clear the restart flag so it can't
                 # leak past a later successful pick into the Step 1-2 loop.
+                # (Started from the main menu, the next pass sets it again
+                # to go back there.)
                 RESTART_REQUESTED=""
                 continue
                 ;;

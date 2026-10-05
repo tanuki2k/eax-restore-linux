@@ -183,6 +183,13 @@ RESTART_REQUESTED=""
 # clears it.
 LOCATE_METHOD=""
 
+# Set each time the main menu is shown. Install step 1 then hands every retry
+# (a "no" while picking a game, a cancelled browse, a folder that isn't there)
+# back to the main menu instead of showing its own Scan/Browse/Manual menu.
+# Stays empty when an environment variable skips the menu, so step 1 keeps its
+# own menu there and a retry can't loop back to a menu that never shows.
+MAIN_MENU_SHOWN=""
+
 # Minimal hardcoded safety net for confirm_continue_if_eax_impossible, used
 # only if ensure_known_games_json can't produce a file at all (e.g. first
 # run, offline, no cache yet). Keeps the "this install is a functional
