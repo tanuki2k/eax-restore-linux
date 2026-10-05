@@ -1,5 +1,5 @@
 # ==============================================================================
-# DSOAL LOGGING (Utilities → [D]SOAL logging for a game)
+# DSOAL LOGGING (Tools → [D]SOAL logging)
 # ==============================================================================
 # Turns DSOAL's own log on or off for one game by setting DSOAL_LOGLEVEL and
 # DSOAL_LOGFILE in its Steam launch options or Heroic environment variables —

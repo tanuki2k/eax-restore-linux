@@ -1,7 +1,7 @@
 # Set EAX_RESTORE_VCRUN_ONLY=1 to skip everything else and just (re)install the
 # MS VC++ 2022 Redistributable into a game's prefix — e.g. if you skipped it
 # during a normal install and want to go back for it without redoing the rest.
-# The main menu offers the same thing under Utilities.
+# The main menu offers the same thing under Tools.
 EAX_RESTORE_VCRUN_ONLY="${EAX_RESTORE_VCRUN_ONLY:-}"
 # Guarded here (the earliest point it's read) so cache.sh and config-flow.sh
 # downstream can test it freely.
@@ -11,8 +11,8 @@ EAX_RESTORE_DSOAL_PIN="${EAX_RESTORE_DSOAL_PIN:-}"
 # MAIN MENU (SELECT OPERATION)
 # ==============================================================================
 # One letter menu for everything: the three install paths (each tells step 1
-# how to find the game, so it doesn't ask again), removing the fix, the
-# Utilities submenu, and quitting. Skipped when an environment variable has
+# how to find the game, so it doesn't ask again), uninstalling the fix, the
+# Tools submenu, and quitting. Skipped when an environment variable has
 # already decided the run.
 #
 # Everything from here to the end of install-flow.sh runs inside one loop, so
@@ -23,6 +23,7 @@ EAX_RESTORE_DSOAL_PIN="${EAX_RESTORE_DSOAL_PIN:-}"
 while true; do
 VCRUN_ONLY_MODE=""
 DSOAL_LOG_MODE=""
+SETTINGS_TOOL_MODE=""
 LOCATE_METHOD=""
 RESTART_REQUESTED=""
 if is_truthy "$EAX_RESTORE_VCRUN_ONLY"; then
@@ -35,7 +36,8 @@ else
     else
         SCRIPT_ACTION=""
         MAIN_MENU_SHOWN=1
-        while [ -z "$SCRIPT_ACTION" ] && [ -z "$VCRUN_ONLY_MODE" ] && [ -z "$DSOAL_LOG_MODE" ]; do
+        while [ -z "$SCRIPT_ACTION" ] && [ -z "$VCRUN_ONLY_MODE" ] && [ -z "$DSOAL_LOG_MODE" ] \
+            && [ -z "$SETTINGS_TOOL_MODE" ]; do
             menu_keys=(s)
             echo -e "\n${WHITE}What would you like to do?${NC}\n"
             print_key_option "[S]can your Steam/Heroic library"
@@ -44,11 +46,11 @@ else
             fi
             print_key_option "[M]anually type the game path"; menu_keys+=(m)
             echo ""
-            print_key_option "[R]emove the EAX fix"
-            print_key_option "[U]tilities"
+            print_key_option "[U]ninstall the EAX fix"
+            print_key_option "[T]ools"
             echo ""
             print_key_option "[Q]uit"
-            menu_keys+=(r u q)
+            menu_keys+=(u t q)
             prompt "Selection [$(IFS=/; echo "${menu_keys[*]}")]: "
             read_answer menu_choice || exit 0
             menu_choice="${menu_choice,,}"
@@ -57,24 +59,31 @@ else
                 s) SCRIPT_ACTION="i"; LOCATE_METHOD="scan" ;;
                 b) SCRIPT_ACTION="i"; LOCATE_METHOD="gui" ;;
                 m) SCRIPT_ACTION="i"; LOCATE_METHOD="manual" ;;
-                r) SCRIPT_ACTION="u" ;;
+                u) SCRIPT_ACTION="u" ;;
                 q) exit 0 ;;
-                u)
-                    print_banner "UTILITIES"
+                t)
+                    # Changing an installed game's settings, then the runtime
+                    # helpers, each group under its own heading.
+                    print_banner "TOOLS"
                     while true; do
-                        echo ""
-                        print_key_option "[V]C++ runtime install"
-                        print_key_option "[D]SOAL logging for a game"
+                        echo -e "\n${WHITE}Game settings:${NC}"
+                        print_key_option "[O]ptional settings"
+                        print_key_option "[S]peaker configuration"
+                        echo -e "\n${WHITE}Runtime:${NC}"
+                        print_key_option "[V]C++ install"
+                        print_key_option "[D]SOAL logging"
                         echo ""
                         print_key_option "[R]eturn to the main menu"
-                        prompt "Selection [v/d/r]: "
+                        prompt "Selection [o/s/v/d/r]: "
                         read_answer menu_choice || exit 0
                         menu_choice="${menu_choice,,}"
                         case "$menu_choice" in
+                            o) SETTINGS_TOOL_MODE="optional"; break ;;
+                            s) SETTINGS_TOOL_MODE="speakers"; break ;;
                             v) VCRUN_ONLY_MODE="menu"; break ;;
                             d) DSOAL_LOG_MODE=1; break ;;
                             r|"") print_banner "SELECT OPERATION"; break ;;
-                            *) print_result "That's not a valid option — please type v, d or r." "$YELLOW" ;;
+                            *) print_result "That's not a valid option — please type o, s, v, d or r." "$YELLOW" ;;
                         esac
                     done
                     ;;
@@ -87,7 +96,7 @@ fi
 # ==============================================================================
 # STANDALONE VC++ RUNTIME INSTALL
 # ==============================================================================
-# Utilities → [V]C++ runtime install, or EAX_RESTORE_VCRUN_ONLY=1.
+# Tools → [V]C++ install, or EAX_RESTORE_VCRUN_ONLY=1.
 if [ -n "$VCRUN_ONLY_MODE" ]; then
     print_banner "VC++ RUNTIME ONLY MODE"
     if [ "$VCRUN_ONLY_MODE" == "env" ]; then

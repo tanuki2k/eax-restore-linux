@@ -148,7 +148,14 @@ their execution order in the assembled script):
    `game_settings_step` (step 11), `apply_game_settings` (Phase 2, writes `CONFIG:`
    manifest lines), `print_game_settings_summary`, `revert_game_settings`
    (uninstall step 7). All of it driven by the entry's `game_config` /
-   `install.alsoft_ini`.
+   `install.alsoft_ini`. The speaker step lives here too, shared by install
+   step 8 and Tools → Speaker configuration: `ask_speaker_configuration` (the
+   questions), `speaker_alsoft_values` (answers → alsoft.ini values),
+   `speaker_label` and `speaker_config_from_alsoft` (reads them back). The Tools
+   items change an installed game through `game_settings_step`'s two modes
+   (`GAME_SETTINGS_SPEAKERS_ONLY`, `GAME_SETTINGS_EDIT_OPTIONAL`) and
+   `update_game_settings_in_manifest`, which puts settings back and rewrites the
+   manifest the way a reinstall does.
 10. **`launcher-config.sh`** — step 10's DLL override via the launcher: reads and
    writes Steam's `localconfig.vdf` launch options (awk, scoped to the game's block
    under `UserLocalConfigStore/Software/Valve/Steam/apps`) and Heroic's
@@ -174,8 +181,11 @@ their execution order in the assembled script):
     `handle_conflict` and `auto_backup_and_overwrite`.
 14. **`preflight.sh`** through **`install-flow.sh`** — top-level script flow:
     pre-flight dependency check, the main menu and the `EAX_RESTORE_VCRUN_ONLY`
-    early-exit path (`vcrun-only-flow.sh`), Utilities → DSOAL logging
-    (`dsoal-log-flow.sh`, another early exit), `ACTION: UNINSTALL`, `ACTION: INSTALL`. The `ACTION: INSTALL` block itself
+    early-exit path (`vcrun-only-flow.sh`), Tools → DSOAL logging
+    (`dsoal-log-flow.sh`, another early exit), Tools → Optional settings /
+    Speaker configuration (`settings-flow.sh`, which identifies the game from
+    its own folder with `identify_game_dir` and the prefix from the manifest,
+    so it has no launcher step), `ACTION: UNINSTALL`, `ACTION: INSTALL`. The `ACTION: INSTALL` block itself
     spans two files sharing one `if [ "$SCRIPT_ACTION" == "i" ]` — opened in
     `config-flow.sh` (Phase 1: Configuration, all the interactive prompts)
     and closed in `install-flow.sh` (Phase 2: Execution, actually deploying

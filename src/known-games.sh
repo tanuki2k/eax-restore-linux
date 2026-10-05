@@ -105,7 +105,7 @@ prompt_recent_game() {
     local p manifest
     while IFS= read -r p; do
         [ -n "$p" ] && [ -d "$p" ] || continue
-        if [ "$SCRIPT_ACTION" == "u" ]; then
+        if [ "$SCRIPT_ACTION" == "u" ] || [ -n "$SETTINGS_TOOL_MODE" ]; then
             manifest="$p/.eax-restore-manifest.txt"
             [ -s "$manifest" ] || continue
             head -n 1 "$manifest" | grep -q "^# EAX Restore: uninstalled" && continue
@@ -115,7 +115,7 @@ prompt_recent_game() {
 
     [ ${#paths[@]} -eq 0 ] && return 1
 
-    if [ "$SCRIPT_ACTION" == "u" ]; then
+    if [ "$SCRIPT_ACTION" == "u" ] || [ -n "$SETTINGS_TOOL_MODE" ]; then
         echo -e "${WHITE}Games with something installed via this script:${NC}"
     else
         echo -e "${WHITE}Previously used game folders:${NC}"

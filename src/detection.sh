@@ -68,7 +68,7 @@ get_game_directory() {
     BUILT_IN_CONFIRMED=""
     OPENAL_NATIVE_MODE=""
 
-    if [ "$SCRIPT_ACTION" == "u" ] && prompt_recent_game; then
+    if { [ "$SCRIPT_ACTION" == "u" ] || [ -n "$SETTINGS_TOOL_MODE" ]; } && prompt_recent_game; then
         echo -e "\n${GREEN}Using: $(tilde_path "$GAME_DIR")${NC}"
         record_recent_game "$GAME_DIR"
         return

@@ -63,7 +63,11 @@
 #   Heroic environment variables (merged with what's already there), or in the
 #   Wine registry — tracked so uninstall can put it back automatically.
 #
-# * DSOAL Logging: Utilities → [D]SOAL logging turns DSOAL's own log on or off
+# * Change an installed game: Tools → [O]ptional settings turns its optional
+#   game settings on or off, and [S]peaker configuration switches its speaker
+#   setup and the game settings that go with it, without reinstalling.
+#
+# * DSOAL Logging: Tools → [D]SOAL logging turns DSOAL's own log on or off
 #   for a game (DSOAL_LOGLEVEL/DSOAL_LOGFILE in its Steam launch options or
 #   Heroic environment variables), writing dsoal.log to the game folder.
 #
@@ -92,7 +96,7 @@
 #   (re)installs the MS VC++ 2022 Redistributable into a game's prefix.
 #   Useful if you skipped that step during a normal install and want to go
 #   back for it without redoing everything else.
-#   The main menu's Utilities → [V]C++ runtime install does the same.
+#   The main menu's Tools → [V]C++ install does the same.
 #
 # * EAX_RESTORE_SKIP_CACHE_CHECK=1  Doesn't contact GitHub for DSOAL or
 #   OpenAL Soft at all: step 6 only offers the builds already in the local

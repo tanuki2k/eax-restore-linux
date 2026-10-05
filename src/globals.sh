@@ -151,6 +151,11 @@ GAME_SETTINGS_KEPT=()
 # Uninstall: the game settings chosen in Phase 1 to put back in Phase 2
 # (see choose_game_settings_to_revert), and whether to remove the VC++ runtime.
 GAME_SETTINGS_REVERT_GROUPS=()
+# Tools → Optional settings: each setting this script applied (by title) → its
+# manifest CONFIG lines, newline-joined. See game_settings_step.
+declare -A GAME_SETTINGS_RECORDED=()
+# Set by game_settings_step once it has printed its step heading.
+GAME_SETTINGS_STEP_SHOWN=""
 UNINSTALL_VCRUN="n"
 
 # DLL override (src/launcher-config.sh). OVERRIDE_METHOD is step 10's choice:
@@ -189,6 +194,14 @@ LOCATE_METHOD=""
 # Stays empty when an environment variable skips the menu, so step 1 keeps its
 # own menu there and a retry can't loop back to a menu that never shows.
 MAIN_MENU_SHOWN=""
+
+# Which Tools → Game settings item is running: "optional" (Optional settings)
+# or "speakers" (Speaker configuration), empty otherwise. See settings-flow.sh.
+SETTINGS_TOOL_MODE=""
+
+# checklist_select's starting ticks, set by a caller just before it (1/0 per
+# item); empty means everything starts ticked.
+CHECKLIST_INITIAL=()
 
 # Minimal hardcoded safety net for confirm_continue_if_eax_impossible, used
 # only if ensure_known_games_json can't produce a file at all (e.g. first

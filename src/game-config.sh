@@ -454,6 +454,179 @@ fix_rows_for_display() {
     done <<< "$1"
 }
 
+# Usage: ask_speaker_configuration
+# Step 8's speaker questions, shared with Tools → Speaker configuration. Sets
+# OUTPUT_MODE (stereo / surround / matrix), STEREO_MODE (stereo only),
+# ENABLE_HRTF (the y/n answer) and SURROUND_CHANNELS (surround only).
+ask_speaker_configuration() {
+    echo -e "\n${WHITE}What kind of audio output are you using?${NC}\n"
+    print_option 1 "Stereo (headphones or 2-speaker setup)"
+    print_option 2 "Surround Sound (4.0/5.1/6.1/7.1 speaker setup)"
+    print_option 3 "Matrix Encoding (stereo output decoded to surround by a receiver/soundbar)"
+
+    while true; do
+        prompt "Selection [1-3, Default: 1]: "
+        read_answer OUTPUT_MODE_CHOICE
+        OUTPUT_MODE_CHOICE="${OUTPUT_MODE_CHOICE:-1}"
+        if [[ "$OUTPUT_MODE_CHOICE" =~ ^[123]$ ]]; then break; else print_result "That's not a valid option — please type 1, 2, or 3." "$YELLOW"; fi
+    done
+
+    ENABLE_HRTF=""
+    SURROUND_CHANNELS=""
+
+    if [ "$OUTPUT_MODE_CHOICE" == "1" ]; then
+        OUTPUT_MODE="stereo"
+
+        echo ""
+        echo -e "${WHITE}What are you listening on?${NC}\n"
+        print_option 1 "Auto (let OpenAL Soft decide)"
+        print_option 2 "Speakers"
+        print_option 3 "Headphones"
+
+        while true; do
+            prompt "Selection [1-3, Default: 1]: "
+            read_answer STEREO_MODE_CHOICE
+            STEREO_MODE_CHOICE="${STEREO_MODE_CHOICE:-1}"
+            if [[ "$STEREO_MODE_CHOICE" =~ ^[123]$ ]]; then break; else print_result "That's not a valid option — please type 1, 2, or 3." "$YELLOW"; fi
+        done
+
+        case "$STEREO_MODE_CHOICE" in
+            1) STEREO_MODE="auto" ;;
+            2) STEREO_MODE="speakers" ;;
+            3) STEREO_MODE="headphones" ;;
+        esac
+
+        if [ "$STEREO_MODE_CHOICE" == "2" ]; then
+            # HRTF is a headphone-only binaural technique — meaningless (and
+            # actively harmful to positional accuracy) over real speakers.
+            ENABLE_HRTF="n"
+        else
+            echo ""
+            echo -e "${CYAN}Headphones Configuration (HRTF)${NC}\n"
+            echo -e "${WHITE}Head-Related Transfer Function (HRTF) translates 3D positional audio into a binaural"
+            echo -e "format specifically designed for standard stereo headphones. Turning this on will"
+            echo -e "allow you to hear exactly whether a sound is coming from above, below, or behind you.${NC}\n"
+            echo -e "${YELLOW}Do you want to enable HRTF for headphones? (y/N): ${NC}"
+            echo -e -n "> "
+            read_answer ENABLE_HRTF
+        fi
+    elif [ "$OUTPUT_MODE_CHOICE" == "2" ]; then
+        OUTPUT_MODE="surround"
+
+        echo ""
+        echo -e "${WHITE}Select your speaker channel configuration:${NC}\n"
+        print_option 1 "Quad       (4.0)"
+        print_option 2 "Surround51 (5.1)"
+        print_option 3 "Surround61 (6.1)"
+        print_option 4 "Surround71 (7.1)"
+
+        while true; do
+            prompt "Selection [1-4]: "
+            read_answer SURROUND_CHOICE || exit 0
+            case "$SURROUND_CHOICE" in
+                1) SURROUND_CHANNELS="quad"; break ;;
+                2) SURROUND_CHANNELS="surround51"; break ;;
+                3) SURROUND_CHANNELS="surround61"; break ;;
+                4) SURROUND_CHANNELS="surround71"; break ;;
+                *) print_result "That's not a valid option — please type 1, 2, 3, or 4." "$YELLOW" ;;
+            esac
+        done
+    else
+        OUTPUT_MODE="matrix"
+    fi
+}
+
+# Usage: speaker_alsoft_values
+# The alsoft.ini values for the speaker answers (see ask_speaker_configuration):
+# sets ALSOFT_CHANNELS, STEREO_MODE (auto for surround and matrix),
+# STEREO_ENCODING, HRTF_MODE and HRTF_MODE_PREFIX ("# " comments hrtf-mode out
+# when HRTF is off). Used by the install's alsoft.ini and by Tools → Speaker
+# configuration.
+speaker_alsoft_values() {
+    if [ "$OUTPUT_MODE" == "surround" ]; then
+        # Surround speaker setups bypass HRTF (headphone-only binaural
+        # processing) and stereo-only encodings entirely.
+        ALSOFT_CHANNELS="$SURROUND_CHANNELS"
+        STEREO_MODE="auto"
+        STEREO_ENCODING="basic"
+        HRTF_MODE=""
+    elif [ "$OUTPUT_MODE" == "matrix" ]; then
+        # Matrix-encoded stereo output also bypasses HRTF — the
+        # matrix decoder (tsme) needs an unprocessed stereo signal.
+        ALSOFT_CHANNELS="stereo"
+        STEREO_MODE="auto"
+        STEREO_ENCODING="tsme"
+        HRTF_MODE=""
+    elif [[ "$ENABLE_HRTF" =~ $YES_RE ]]; then
+        ALSOFT_CHANNELS="stereo"
+        STEREO_ENCODING="hrtf"
+        HRTF_MODE="full"
+    else
+        ALSOFT_CHANNELS="stereo"
+        STEREO_ENCODING="basic"
+        HRTF_MODE=""
+    fi
+
+    if [ -n "$HRTF_MODE" ]; then
+        HRTF_MODE_PREFIX=""
+    else
+        HRTF_MODE_PREFIX="# "
+        HRTF_MODE="full"
+    fi
+}
+
+# Usage: speaker_label
+# The speaker answers in a few words ("Headphones, HRTF on", "Surround 5.1"),
+# for the install's choices recap and Tools → Speaker configuration.
+speaker_label() {
+    local speakers
+    case "$OUTPUT_MODE" in
+        stereo)
+            case "$STEREO_MODE" in
+                speakers) speakers="Stereo speakers" ;;
+                headphones) speakers="Headphones" ;;
+                *) speakers="Stereo (OpenAL Soft decides)" ;;
+            esac
+            [[ "$ENABLE_HRTF" =~ $YES_RE ]] && speakers+=", HRTF on"
+            ;;
+        surround)
+            case "$SURROUND_CHANNELS" in
+                quad) speakers="Quad (4.0)" ;;
+                surround51) speakers="Surround 5.1" ;;
+                surround61) speakers="Surround 6.1" ;;
+                *) speakers="Surround 7.1" ;;
+            esac
+            ;;
+        *) speakers="Matrix encoding" ;;
+    esac
+    printf '%s' "$speakers"
+}
+
+# Usage: speaker_config_from_alsoft <alsoft.ini>
+# The reverse of speaker_alsoft_values: reads a generated alsoft.ini's
+# channels, stereo-mode and stereo-encoding back into OUTPUT_MODE,
+# STEREO_MODE, ENABLE_HRTF and SURROUND_CHANNELS. Returns 1 when the file
+# doesn't say (no channels line).
+speaker_config_from_alsoft() {
+    local file="$1" channels encoding
+    channels="$(config_get_key "$file" ini general channels)"
+    [ "$channels" == "__ABSENT__" ] && return 1
+    encoding="$(config_get_key "$file" ini general stereo-encoding)"
+    STEREO_MODE="$(config_get_key "$file" ini general stereo-mode)"
+    [ "$STEREO_MODE" == "__ABSENT__" ] && STEREO_MODE="auto"
+    ENABLE_HRTF="n"; SURROUND_CHANNELS=""
+    case "$channels" in
+        quad|surround51|surround61|surround71) OUTPUT_MODE="surround"; SURROUND_CHANNELS="$channels" ;;
+        *)
+            if [ "$encoding" == "tsme" ]; then OUTPUT_MODE="matrix"
+            else
+                OUTPUT_MODE="stereo"
+                [ "$encoding" == "hrtf" ] && ENABLE_HRTF="y"
+            fi
+            ;;
+    esac
+}
+
 # Usage: offer_alsoft_settings
 # Speaker Configuration's last question: the known-games entry's
 # install.alsoft_ini values, each stated as a fact about the game plus a
@@ -504,6 +677,12 @@ apply_alsoft_overrides() {
 # skipped file only drops its own rows; a setting is left out entirely when
 # every file it changes is skipped, and either way the player is told.
 # Prints nothing at all for a game with no fixes to offer.
+# Tools → Game settings runs it in one of two modes (see settings-flow.sh):
+# GAME_SETTINGS_SPEAKERS_ONLY=1 offers only the settings tied to a speaker
+# layout; GAME_SETTINGS_EDIT_OPTIONAL=1 offers only the optional settings,
+# with the ones this script already applied (GAME_SETTINGS_RECORDED: title →
+# its manifest CONFIG lines) ticked, and unticking one queues its CONFIG lines
+# in GAME_SETTINGS_REVERT_GROUPS to be put back.
 game_settings_step() {
     local step="$1"
     GAME_SETTINGS_PLAN=(); GAME_SETTINGS_MISSING=(); GAME_SETTINGS_FOLLOW_UPS=()
@@ -520,10 +699,12 @@ game_settings_step() {
     # missing-file prompt below can come before the fix list, and a game with
     # nothing to show gets no heading at all.
     local heading_shown=0
+    GAME_SETTINGS_STEP_SHOWN=""
     _game_settings_heading() {
         [ "$heading_shown" -eq 1 ] && return
         print_step "$step" "Game Settings"
         heading_shown=1
+        GAME_SETTINGS_STEP_SHOWN=1
     }
 
     # Per-fix state, keyed "category:number" in database order.
@@ -547,6 +728,8 @@ game_settings_step() {
             fix_status[$id]="already"; fix_rows[$id]=""
             if [ -n "$stores" ] && [[ ",$stores," != *",$KG_STORE,"* ]]; then fix_status[$id]="skip"; fi
             if [ -n "$speakers" ] && ! speakers_match "$speakers"; then fix_status[$id]="skip"; fi
+            [ -n "${GAME_SETTINGS_SPEAKERS_ONLY:-}" ] && [ -z "$speakers" ] && fix_status[$id]="skip"
+            [ -n "${GAME_SETTINGS_EDIT_OPTIONAL:-}" ] && [ "$cat" != "optional" ] && fix_status[$id]="skip"
         fi
         [[ "${fix_status[$id]}" =~ ^(skip|invalid)$ ]] && continue
 
@@ -604,10 +787,18 @@ game_settings_step() {
         [ "${fix_status[$id]}" == "already" ] && [ -n "${fix_absent_files[$id]:-}" ] \
             && [ -z "${fix_has_file[$id]:-}" ] && fix_status[$id]="absent"
     done
+    # Tools → Optional settings: in place because this script put it there,
+    # so it can be turned off again (put back from the manifest).
+    if [ -n "${GAME_SETTINGS_EDIT_OPTIONAL:-}" ]; then
+        for id in "${fix_order[@]}"; do
+            [ "${fix_status[$id]}" == "already" ] && [ -n "${GAME_SETTINGS_RECORDED[${fix_title[$id]}]:-}" ] \
+                && fix_status[$id]="applied"
+        done
+    fi
 
     local shown=0
     for id in "${fix_order[@]}"; do
-        [[ "${fix_status[$id]}" =~ ^(offer|already|missing|absent)$ ]] && shown=1
+        [[ "${fix_status[$id]}" =~ ^(offer|applied|already|missing|absent)$ ]] && shown=1
     done
     [ "$shown" -eq 0 ] && return
 
@@ -621,6 +812,21 @@ game_settings_step() {
         echo ""
         print_config_rows "$(fix_rows_for_display "${fix_rows[$id]}")"
         _print_absent_note "$id"
+    }
+    # Tools → Optional settings: one this script applied, with each key's
+    # original value (from the manifest) → the value it has now.
+    _print_applied_fix() {
+        local id="$1" line display_rows=""
+        local -a c
+        echo -e "\n  ${BOLD}${fix_title[$id]}${NC} ${DIM}— on now${NC}"
+        echo -e "${WHITE}$(printf '%s' "${fix_reason[$id]}" | fold -s -w 74 | sed 's/^/    /')${NC}"
+        echo ""
+        while IFS= read -r line; do
+            [ -n "$line" ] || continue
+            mapfile -t -d $'\t' c < <(printf '%s' "${line#CONFIG:}")
+            display_rows+="$(basename "${c[2]}")"$'\x1f'"${c[4]}"$'\x1f'"${c[5]}"$'\x1f'"${c[6]}"$'\x1f'"${c[7]}"$'\n'
+        done <<< "${GAME_SETTINGS_RECORDED[${fix_title[$id]}]}"
+        print_config_rows "$display_rows"
     }
     # A setting that still applies, minus the part for a file this build
     # doesn't have.
@@ -682,15 +888,18 @@ game_settings_step() {
 
     local -a optional=()
     for id in "${fix_order[@]}"; do
-        [[ "$id" == optional:* ]] && [[ "${fix_status[$id]}" =~ ^(offer|already|missing|absent)$ ]] && optional+=("$id")
+        [[ "$id" == optional:* ]] && [[ "${fix_status[$id]}" =~ ^(offer|applied|already|missing|absent)$ ]] && optional+=("$id")
     done
     if [ ${#optional[@]} -gt 0 ]; then
         echo -e "\n${WHITE}Optional settings for ${GAME_NAME} — not needed for EAX:${NC}"
-        local -a offered=() offered_titles=()
+        local -a offered=() offered_titles=() initial=()
         for id in "${optional[@]}"; do
             if [ "${fix_status[$id]}" == "offer" ]; then
-                offered+=("$id"); offered_titles+=("${fix_title[$id]}")
+                offered+=("$id"); offered_titles+=("${fix_title[$id]}"); initial+=(0)
                 _print_fix "$id"
+            elif [ "${fix_status[$id]}" == "applied" ]; then
+                offered+=("$id"); offered_titles+=("${fix_title[$id]}"); initial+=(1)
+                _print_applied_fix "$id"
             else
                 _print_status_line "$id"
             fi
@@ -698,14 +907,29 @@ game_settings_step() {
         if [ ${#offered[@]} -gt 0 ]; then
             local example="1" i
             [ ${#offered[@]} -gt 1 ] && example="1 2"
-            checklist_select "Press Enter to apply all, type the numbers you want (e.g. \"$example\"), or 'n' to skip:" \
-                "${offered_titles[@]}"
-            for i in "${!offered[@]}"; do
-                if [ "${SELECTED[$((i + 1))]}" == "1" ]; then _plan_fix "${offered[$i]}"; else _decline_fix "${offered[$i]}"; fi
-            done
+            if [ -n "${GAME_SETTINGS_EDIT_OPTIONAL:-}" ]; then
+                # Starts from what's on now; nothing is declined, only changed.
+                CHECKLIST_INITIAL=("${initial[@]}")
+                checklist_select "Press Enter to keep these as they are, type the numbers you want on (e.g. \"$example\"), or 'n' for none:" \
+                    "${offered_titles[@]}"
+                for i in "${!offered[@]}"; do
+                    id="${offered[$i]}"
+                    if [ "${fix_status[$id]}" == "offer" ] && [ "${SELECTED[$((i + 1))]}" == "1" ]; then
+                        _plan_fix "$id"
+                    elif [ "${fix_status[$id]}" == "applied" ] && [ "${SELECTED[$((i + 1))]}" == "0" ]; then
+                        GAME_SETTINGS_REVERT_GROUPS+=("optional"$'\x1f'"${fix_title[$id]}"$'\x1f'"${GAME_SETTINGS_RECORDED[${fix_title[$id]}]}")
+                    fi
+                done
+            else
+                checklist_select "Press Enter to apply all, type the numbers you want (e.g. \"$example\"), or 'n' to skip:" \
+                    "${offered_titles[@]}"
+                for i in "${!offered[@]}"; do
+                    if [ "${SELECTED[$((i + 1))]}" == "1" ]; then _plan_fix "${offered[$i]}"; else _decline_fix "${offered[$i]}"; fi
+                done
+            fi
         fi
     fi
-    unset -f _print_fix _print_absent_note _decline_fix _plan_fix _print_status_line
+    unset -f _print_fix _print_applied_fix _print_absent_note _decline_fix _plan_fix _print_status_line
 }
 
 # Usage: known_game_field <jq path, e.g. .exe>
@@ -838,6 +1062,45 @@ apply_game_settings() {
         config_values_equal "${f[3]}" "$(config_get_key "${f[2]}" "${f[3]}" "${f[4]}" "${f[5]}")" "${f[7]}" \
             && echo "$line" >> "$INSTALL_MANIFEST"
     done
+}
+
+# Usage: update_game_settings_in_manifest
+# Tools → Game settings' Phase 2, for a game that's already installed: puts
+# back GAME_SETTINGS_REVERT_GROUPS (revert_game_settings), then rewrites
+# INSTALL_MANIFEST the way a reinstall does — every non-CONFIG line kept, the
+# CONFIG lines of the settings just put back dropped (a failed put-back stays,
+# via GAME_SETTINGS_KEPT), and apply_game_settings writes GAME_SETTINGS_PLAN,
+# keeping each key's original value, and carries over the rest still in
+# effect. Returns 1 if the manifest couldn't be rewritten.
+update_game_settings_in_manifest() {
+    local entry lines line tmp
+    local -A dropped=()
+    GAME_SETTINGS_KEPT=()
+    DEPLOY_FAILURES=0
+    revert_game_settings
+    for entry in "${GAME_SETTINGS_REVERT_GROUPS[@]}"; do
+        lines="${entry#*$'\x1f'}"; lines="${lines#*$'\x1f'}"
+        while IFS= read -r line; do [ -n "$line" ] && dropped["$line"]=1; done <<< "$lines"
+    done
+    for line in "${GAME_SETTINGS_KEPT[@]}"; do unset 'dropped[$line]'; done
+
+    declare -gA PREV_MANIFEST_FILES=()
+    PREV_CONFIG_LINES=()
+    tmp="$(mktemp "$(dirname "$INSTALL_MANIFEST")/.eax-restore-manifest.XXXXXX" 2>/dev/null)" || {
+        record_deploy_failure "$INSTALL_MANIFEST"; return 1; }
+    while IFS= read -r line; do
+        if [[ "$line" == CONFIG:* ]]; then
+            [ -n "${dropped[$line]:-}" ] || PREV_CONFIG_LINES+=("$line")
+        else
+            printf '%s\n' "$line"
+            [[ "$line" == /* ]] && PREV_MANIFEST_FILES["$line"]=1
+        fi
+    done < "$INSTALL_MANIFEST" > "$tmp"
+    chmod --reference="$INSTALL_MANIFEST" "$tmp" 2>/dev/null
+    if ! mv "$tmp" "$INSTALL_MANIFEST" 2>/dev/null; then
+        rm -f "$tmp"; record_deploy_failure "$INSTALL_MANIFEST"; return 1
+    fi
+    apply_game_settings
 }
 
 # Usage: game_audio_settings_done

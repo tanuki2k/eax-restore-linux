@@ -31,27 +31,7 @@ print_choices_summary() {
     elif [ "${APPLY_VCRUN_OVERRIDES_NEEDED:-0}" == "1" ]; then _choice "VC++ runtimes" "Already in the prefix"
     else _choice "VC++ runtimes" "Skip"; fi
 
-    local speakers
-    case "$OUTPUT_MODE" in
-        stereo)
-            case "$STEREO_MODE" in
-                speakers) speakers="Stereo speakers" ;;
-                headphones) speakers="Headphones" ;;
-                *) speakers="Stereo (OpenAL Soft decides)" ;;
-            esac
-            [[ "$ENABLE_HRTF" =~ $YES_RE ]] && speakers+=", HRTF on"
-            ;;
-        surround)
-            case "$SURROUND_CHANNELS" in
-                quad) speakers="Quad (4.0)" ;;
-                surround51) speakers="Surround 5.1" ;;
-                surround61) speakers="Surround 6.1" ;;
-                *) speakers="Surround 7.1" ;;
-            esac
-            ;;
-        *) speakers="Matrix encoding" ;;
-    esac
-    _choice "Speakers" "$speakers"
+    _choice "Speakers" "$(speaker_label)"
 
     local entry sec key value line list=""
     for entry in "${ALSOFT_OVERRIDES[@]}"; do
@@ -280,81 +260,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
 
     # 8. Audio Configuration
     print_step 8 "Speaker Configuration"
-    echo -e "\n${WHITE}What kind of audio output are you using?${NC}\n"
-    print_option 1 "Stereo (headphones or 2-speaker setup)"
-    print_option 2 "Surround Sound (4.0/5.1/6.1/7.1 speaker setup)"
-    print_option 3 "Matrix Encoding (stereo output decoded to surround by a receiver/soundbar)"
-
-    while true; do
-        prompt "Selection [1-3, Default: 1]: "
-        read_answer OUTPUT_MODE_CHOICE
-        OUTPUT_MODE_CHOICE="${OUTPUT_MODE_CHOICE:-1}"
-        if [[ "$OUTPUT_MODE_CHOICE" =~ ^[123]$ ]]; then break; else print_result "That's not a valid option — please type 1, 2, or 3." "$YELLOW"; fi
-    done
-
-    ENABLE_HRTF=""
-    SURROUND_CHANNELS=""
-
-    if [ "$OUTPUT_MODE_CHOICE" == "1" ]; then
-        OUTPUT_MODE="stereo"
-
-        echo ""
-        echo -e "${WHITE}What are you listening on?${NC}\n"
-        print_option 1 "Auto (let OpenAL Soft decide)"
-        print_option 2 "Speakers"
-        print_option 3 "Headphones"
-
-        while true; do
-            prompt "Selection [1-3, Default: 1]: "
-            read_answer STEREO_MODE_CHOICE
-            STEREO_MODE_CHOICE="${STEREO_MODE_CHOICE:-1}"
-            if [[ "$STEREO_MODE_CHOICE" =~ ^[123]$ ]]; then break; else print_result "That's not a valid option — please type 1, 2, or 3." "$YELLOW"; fi
-        done
-
-        case "$STEREO_MODE_CHOICE" in
-            1) STEREO_MODE="auto" ;;
-            2) STEREO_MODE="speakers" ;;
-            3) STEREO_MODE="headphones" ;;
-        esac
-
-        if [ "$STEREO_MODE_CHOICE" == "2" ]; then
-            # HRTF is a headphone-only binaural technique — meaningless (and
-            # actively harmful to positional accuracy) over real speakers.
-            ENABLE_HRTF="n"
-        else
-            echo ""
-            echo -e "${CYAN}Headphones Configuration (HRTF)${NC}\n"
-            echo -e "${WHITE}Head-Related Transfer Function (HRTF) translates 3D positional audio into a binaural"
-            echo -e "format specifically designed for standard stereo headphones. Turning this on will"
-            echo -e "allow you to hear exactly whether a sound is coming from above, below, or behind you.${NC}\n"
-            echo -e "${YELLOW}Do you want to enable HRTF for headphones? (y/N): ${NC}"
-            echo -e -n "> "
-            read_answer ENABLE_HRTF
-        fi
-    elif [ "$OUTPUT_MODE_CHOICE" == "2" ]; then
-        OUTPUT_MODE="surround"
-
-        echo ""
-        echo -e "${WHITE}Select your speaker channel configuration:${NC}\n"
-        print_option 1 "Quad       (4.0)"
-        print_option 2 "Surround51 (5.1)"
-        print_option 3 "Surround61 (6.1)"
-        print_option 4 "Surround71 (7.1)"
-
-        while true; do
-            prompt "Selection [1-4]: "
-            read_answer SURROUND_CHOICE || exit 0
-            case "$SURROUND_CHOICE" in
-                1) SURROUND_CHANNELS="quad"; break ;;
-                2) SURROUND_CHANNELS="surround51"; break ;;
-                3) SURROUND_CHANNELS="surround61"; break ;;
-                4) SURROUND_CHANNELS="surround71"; break ;;
-                *) print_result "That's not a valid option — please type 1, 2, 3, or 4." "$YELLOW" ;;
-            esac
-        done
-    else
-        OUTPUT_MODE="matrix"
-    fi
+    ask_speaker_configuration
 
     # The known-games entry's alsoft.ini values (e.g. a reverb boost) are
     # OpenAL Soft settings, so they're offered here with the rest of them.

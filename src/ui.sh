@@ -406,12 +406,16 @@ join_choices() {
 # terminal to drive it (piped answers), it numbers the titles and asks the
 # fallback prompt, read like a typed selection: Enter for all, numbers for
 # some (see parse_selection), n for none.
+# A caller can set CHECKLIST_INITIAL=(1 0 …) first to start some items
+# unticked (Tools → Optional settings starts from what's on now); Enter then
+# keeps that state, in the fallback too. It's cleared after each use.
 checklist_select() {
     local fallback="$1"; shift
-    local -a items=("$@")
+    local -a items=("$@") initial=("${CHECKLIST_INITIAL[@]}")
     local n=${#items[@]} i
+    CHECKLIST_INITIAL=()
     SELECTED=()
-    for ((i = 1; i <= n; i++)); do SELECTED[i]=1; done
+    for ((i = 1; i <= n; i++)); do SELECTED[i]="${initial[$((i - 1))]:-1}"; done
 
     if [ ! -t 0 ] || [ "${TERM:-dumb}" == "dumb" ] || ! { : > /dev/tty; } 2>/dev/null; then
         echo ""
@@ -421,7 +425,7 @@ checklist_select() {
         read_answer answer || answer="n"
         if [[ "$answer" =~ $NO_RE ]]; then
             for ((i = 1; i <= n; i++)); do SELECTED[i]=0; done
-        else
+        elif [ -n "$answer" ] || [ ${#initial[@]} -eq 0 ]; then
             parse_selection "$n" "$answer"
         fi
         return 0
