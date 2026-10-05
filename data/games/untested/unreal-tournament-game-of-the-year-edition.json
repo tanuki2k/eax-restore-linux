@@ -13,7 +13,8 @@
   "eax": { "api": "directsound3d", "versions": ["1.0", "2.0"] },
   "game_config": {
     "files": {
-      "UnrealTournament.ini": { "format": "ini", "locations": ["game:UnrealTournament.ini"] }
+      "UnrealTournament.ini": { "format": "ini", "locations": ["game:UnrealTournament.ini"] },
+      "User.ini": { "format": "ini", "locations": ["game:User.ini"] }
     },
     "audio_settings": [
       {
@@ -47,6 +48,27 @@
         "reason": "Unreal Tournament: Game of the Year Edition runs fullscreen with a reduced color range, so smooth shading like skies and shadows shows visible bands.",
         "changes": {
           "UnrealTournament.ini": { "WinDrv.WindowsClient": { "FullscreenColorBits": "32" } }
+        }
+      },
+      {
+        "title": "Enable WASD controls",
+        "reason": "Unreal Tournament moves with the arrow keys out of the box, and its Ctrl key jumps instead of crouching.",
+        "changes": {
+          "User.ini": {
+            "Engine.Input": {
+              "W": "MoveForward",
+              "A": "StrafeLeft",
+              "S": "MoveBackward",
+              "D": "StrafeRight",
+              "E": "InventoryActivate",
+              "C": "Duck",
+              "Ctrl": "Duck",
+              "RightMouse": "AltFire",
+              "MiddleMouse": "",
+              "MouseWheelUp": "PrevWeapon",
+              "MouseWheelDown": "NextWeapon"
+            }
+          }
         }
       }
     ]

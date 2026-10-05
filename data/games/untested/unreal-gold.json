@@ -18,7 +18,10 @@
   },
   "eax": { "api": "directsound3d", "versions": ["1.0"] },
   "game_config": {
-    "files": { "Unreal.ini": { "format": "ini", "locations": ["game:Unreal.ini"] } },
+    "files": {
+      "Unreal.ini": { "format": "ini", "locations": ["game:Unreal.ini"] },
+      "User.ini": { "format": "ini", "locations": ["game:User.ini"] }
+    },
     "audio_settings": [
       {
         "title": "Enable EAX reverb",
@@ -49,6 +52,27 @@
         "title": "Raise color depth",
         "reason": "Unreal Gold runs fullscreen with a reduced color range, so smooth shading like skies and shadows shows visible bands.",
         "changes": { "Unreal.ini": { "WinDrv.WindowsClient": { "FullscreenColorBits": "32" } } }
+      },
+      {
+        "title": "Enable WASD controls",
+        "reason": "Unreal Gold moves with the arrow keys out of the box, and its right mouse button jumps instead of using the weapon's alternate fire.",
+        "changes": {
+          "User.ini": {
+            "Engine.Input": {
+              "W": "MoveForward",
+              "A": "StrafeLeft",
+              "S": "MoveBackward",
+              "D": "StrafeRight",
+              "E": "InventoryActivate",
+              "C": "Duck",
+              "Ctrl": "Duck",
+              "RightMouse": "AltFire",
+              "MiddleMouse": "",
+              "MouseWheelUp": "PrevWeapon",
+              "MouseWheelDown": "NextWeapon"
+            }
+          }
+        }
       }
     ]
   }
