@@ -396,6 +396,90 @@ join_choices() {
     printf '%s' "$out"
 }
 
+# Usage: checklist_select "<fallback prompt>" <title> [<title> ...]
+# A tick list for choosing any of several items, every one ticked to start:
+# ↑/↓ (or k/j) move, Space ticks or unticks, a ticks all, n unticks all,
+# Enter confirms. Fills SELECTED[1..N] (1 = ticked), like parse_selection.
+# The list is drawn straight to /dev/tty, since stdout runs through the run
+# log's tee and a redraw per keypress would fill the log; once confirmed it's
+# erased and the final list is printed once through stdout instead. Without a
+# terminal to drive it (piped answers), it numbers the titles and asks the
+# fallback prompt, read like a typed selection: Enter for all, numbers for
+# some (see parse_selection), n for none.
+checklist_select() {
+    local fallback="$1"; shift
+    local -a items=("$@")
+    local n=${#items[@]} i
+    SELECTED=()
+    for ((i = 1; i <= n; i++)); do SELECTED[i]=1; done
+
+    if [ ! -t 0 ] || [ "${TERM:-dumb}" == "dumb" ] || ! { : > /dev/tty; } 2>/dev/null; then
+        echo ""
+        for i in "${!items[@]}"; do print_option "$((i + 1))" "${items[$i]}"; done
+        prompt "$fallback"
+        local answer
+        read_answer answer || answer="n"
+        if [[ "$answer" =~ $NO_RE ]]; then
+            for ((i = 1; i <= n; i++)); do SELECTED[i]=0; done
+        else
+            parse_selection "$n" "$answer"
+        fi
+        return 0
+    fi
+
+    local cur=1 key rest tty_fd drawn=0
+    exec {tty_fd}>/dev/tty
+    # Let tee finish putting the rows above on screen before drawing under them.
+    sleep 0.1
+    _checklist_draw() {
+        local j box
+        # Back over the question and the list, then down again from there.
+        [ "$drawn" -eq 1 ] && printf '\e[%dA\r\e[J' "$((n + 1))" >&"$tty_fd"
+        printf '%b\n' "${YELLOW}Choose with ↑/↓, Space to tick or untick, Enter to confirm:${NC}" >&"$tty_fd"
+        for ((j = 1; j <= n; j++)); do
+            box="[ ]"; [ "${SELECTED[$j]}" == "1" ] && box="[${GREEN}x${NC}]"
+            if [ "$j" -eq "$cur" ]; then
+                printf '%b\n' " > ${box} ${BOLD}${items[$((j - 1))]}${NC}" >&"$tty_fd"
+            else
+                printf '%b\n' "   ${box} ${items[$((j - 1))]}" >&"$tty_fd"
+            fi
+        done
+        drawn=1
+    }
+    printf '\n' >&"$tty_fd"
+    while true; do
+        _checklist_draw
+        IFS= read -rsn1 key || exit 0
+        case "$key" in
+            "") break ;;
+            " ") SELECTED[cur]=$(( 1 - SELECTED[cur] )) ;;
+            k|K) [ "$cur" -gt 1 ] && cur=$((cur - 1)) ;;
+            j|J) [ "$cur" -lt "$n" ] && cur=$((cur + 1)) ;;
+            a|A) for ((i = 1; i <= n; i++)); do SELECTED[i]=1; done ;;
+            n|N) for ((i = 1; i <= n; i++)); do SELECTED[i]=0; done ;;
+            $'\e')
+                rest=""; IFS= read -rsn2 -t 0.05 rest
+                case "$rest" in
+                    "[A"|"OA") [ "$cur" -gt 1 ] && cur=$((cur - 1)) ;;
+                    "[B"|"OB") [ "$cur" -lt "$n" ] && cur=$((cur + 1)) ;;
+                esac
+                ;;
+        esac
+    done
+    # Erase the blank line, the question and the list; the record goes to stdout.
+    printf '\e[%dA\r\e[J' "$((n + 2))" >&"$tty_fd"
+    exec {tty_fd}>&-
+    unset -f _checklist_draw
+    echo ""
+    for ((i = 1; i <= n; i++)); do
+        if [ "${SELECTED[$i]}" == "1" ]; then
+            echo -e " [${GREEN}x${NC}] ${items[$((i - 1))]}"
+        else
+            echo -e " [ ] ${items[$((i - 1))]}"
+        fi
+    done
+}
+
 # ==============================================================================
 # PROGRESS HELPERS
 # ==============================================================================

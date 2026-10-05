@@ -126,7 +126,12 @@ their execution order in the assembled script):
    `print_status`, `print_note`/`print_warning`/`print_error` and their `_arrow`
    variants, `print_wrapped`, `confirm`, `read_answer`, plus `print_divider`/`print_line`). Sourced
    right after `globals.sh` since every helper depends on the colour vars defined
-   there. See "Text/output style conventions" below.
+   there. See "Text/output style conventions" below. Also `checklist_select`, the
+   tick list (↑/↓, Space, Enter; all ticked to start) for picking any of several
+   items: the optional game settings and uninstall's settings to put back. Use it
+   for any new multi-pick. It draws to `/dev/tty` so the run log only gets the
+   final list, and falls back to a numbered "type the numbers" prompt when stdin
+   isn't a terminal.
 5. **`common.sh`** — small helpers used throughout every other file: `is_truthy`,
    `is_genuine_dll`, `parse_selection`.
 6. **`guards.sh`** — refuses root / Steam Gaming Mode, runs before any real work

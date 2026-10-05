@@ -686,34 +686,23 @@ game_settings_step() {
     done
     if [ ${#optional[@]} -gt 0 ]; then
         echo -e "\n${WHITE}Optional settings for ${GAME_NAME} — not needed for EAX:${NC}"
-        local -a offered=()
+        local -a offered=() offered_titles=()
         for id in "${optional[@]}"; do
             if [ "${fix_status[$id]}" == "offer" ]; then
-                offered+=("$id")
-                echo ""
-                print_option "${#offered[@]}" "${fix_title[$id]}"
-                echo -e "${WHITE}$(printf '%s' "${fix_reason[$id]}" | fold -s -w 74 | sed 's/^/    /')${NC}"
-                echo ""
-                print_config_rows "$(fix_rows_for_display "${fix_rows[$id]}")"
-                _print_absent_note "$id"
+                offered+=("$id"); offered_titles+=("${fix_title[$id]}")
+                _print_fix "$id"
             else
                 _print_status_line "$id"
             fi
         done
         if [ ${#offered[@]} -gt 0 ]; then
-            local example="1"
+            local example="1" i
             [ ${#offered[@]} -gt 1 ] && example="1 2"
-            prompt "Press Enter to apply all, type the numbers you want (e.g. \"$example\"), or 'n' to skip:"
-            local answer i
-            read_answer answer || answer="n"
-            if [[ "$answer" =~ $NO_RE ]]; then
-                for i in "${!offered[@]}"; do _decline_fix "${offered[$i]}"; done
-            else
-                parse_selection "${#offered[@]}" "$answer"
-                for i in "${!offered[@]}"; do
-                    if [ "${SELECTED[$((i + 1))]}" == "1" ]; then _plan_fix "${offered[$i]}"; else _decline_fix "${offered[$i]}"; fi
-                done
-            fi
+            checklist_select "Press Enter to apply all, type the numbers you want (e.g. \"$example\"), or 'n' to skip:" \
+                "${offered_titles[@]}"
+            for i in "${!offered[@]}"; do
+                if [ "${SELECTED[$((i + 1))]}" == "1" ]; then _plan_fix "${offered[$i]}"; else _decline_fix "${offered[$i]}"; fi
+            done
         fi
     fi
     unset -f _print_fix _print_absent_note _decline_fix _plan_fix _print_status_line
@@ -946,7 +935,7 @@ choose_game_settings_to_revert() {
     print_status "${#groups[@]} ${noun} changed: ${titles}" ""
 
     local -a order=()
-    local cat idx=1 label
+    local cat label
     for cat in audio optional; do
         local header_shown=0
         for g in "${groups[@]}"; do
@@ -957,7 +946,7 @@ choose_game_settings_to_revert() {
                 header_shown=1
             fi
             order+=("$g")
-            print_option "$idx" "${g#*$'\x1f'}"
+            echo -e "\n  ${BOLD}${g#*$'\x1f'}${NC}"
             local display_rows=""
             while IFS= read -r line; do
                 [ -n "$line" ] || continue
@@ -965,18 +954,14 @@ choose_game_settings_to_revert() {
                 display_rows+="$(basename "${f[2]}")"$'\x1f'"${f[4]}"$'\x1f'"${f[5]}"$'\x1f'"${f[7]}"$'\x1f'"${f[6]}"$'\n'
             done <<< "${group_lines[$g]}"
             print_config_rows "$display_rows"
-            idx=$((idx + 1))
         done
     done
 
-    prompt "Press Enter to put all of these back, type the numbers you want (e.g. \"1\"), or 'n' to keep them:"
-    local answer i
-    read_answer answer || answer="n"
-    if [[ "$answer" =~ $NO_RE ]]; then
-        GAME_SETTINGS_KEPT=("${CONFIG_LINES[@]}")
-        return
-    fi
-    parse_selection "${#order[@]}" "$answer"
+    local -a pick_titles=()
+    local i
+    for g in "${order[@]}"; do pick_titles+=("${g#*$'\x1f'}"); done
+    checklist_select "Press Enter to put all of these back, type the numbers you want (e.g. \"1\"), or 'n' to keep them:" \
+        "${pick_titles[@]}"
     for i in "${!order[@]}"; do
         g="${order[$i]}"
         if [ "${SELECTED[$((i + 1))]}" == "1" ]; then
