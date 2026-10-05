@@ -83,9 +83,9 @@ show_hidden_folder_tip_popup() {
     # is set, so zenity or kdialog is already known to be present.
     local msg="Pick the folder with the game's .exe.\nSteam games are in a hidden folder: press Ctrl+H to show it."
     if command -v zenity &>/dev/null; then
-        zenity --info --title="Choose the game folder" --text="$msg" --ok-label="Open" --width=350 2>/dev/null
+        zenity --info --title="Choose the game folder" --text="$msg" --ok-label="Continue" --width=350 2>/dev/null
     elif command -v kdialog &>/dev/null; then
-        kdialog --msgbox "$msg" --title "Choose the game folder" 2>/dev/null
+        kdialog --msgbox "$msg" --title "Choose the game folder" --ok-label "Continue" 2>/dev/null
     fi
 }
 
