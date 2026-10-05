@@ -97,8 +97,7 @@ get_game_directory() {
     _show_common_locations() {
         [ "$locations_shown" -eq 1 ] && return
         # Its own leading blank line, like print_note: it can follow the step
-        # divider or a note directly, while a scan going straight to its own
-        # note shouldn't get an extra one.
+        # divider, the menu's answer or a note directly.
         echo ""
         echo -e "${WHITE}Common game locations:${NC}\n"
         echo -e "${WHITE} Linux Desktop (Steam): ~/.local/share/Steam/steamapps/common/[Game]${NC}"
@@ -111,9 +110,7 @@ get_game_directory() {
         local action=""
         if [ -n "$preset" ]; then
             action="$preset"; preset=""
-            [ "$action" == "scan" ] || _show_common_locations
         else
-            _show_common_locations
             echo ""
             # Build the menu fresh each pass: which options apply can shrink
             # (e.g. a scan that just came up empty stays offered — the user
@@ -180,6 +177,9 @@ get_game_directory() {
                 print_status "Selected: $GAME_DIR" "$DIM"
                 ;;
             manual)
+                # Only here, where the player has to type a path: the menu,
+                # a scan and the folder picker don't need it.
+                _show_common_locations
                 prompt_manual_game_dir || true
                 ;;
         esac
