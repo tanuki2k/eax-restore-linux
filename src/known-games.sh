@@ -29,17 +29,23 @@ ensure_known_games_json() {
             return 1
         fi
     else
+        # Small (~100 KB), so a status line before and the result after
+        # rather than a progress bar — enough to explain a slow network's
+        # pause. On stderr, like this function's other messages, since some
+        # callers capture stdout.
         local tmp
+        print_task "Updating the known-games database" >&2
         tmp=$(mktemp 2>/dev/null)
         if [ -n "$tmp" ] && curl -fsSL --max-time 10 "$KNOWN_GAMES_URL" -o "$tmp" 2>/dev/null && jq empty "$tmp" 2>/dev/null; then
             mkdir -p "$BASE_SHARE" 2>/dev/null
             mv "$tmp" "$KNOWN_GAMES_CACHE"
             KNOWN_GAMES_FILE="$KNOWN_GAMES_CACHE"
+            print_status "Updated: $(jq '.games | length' "$KNOWN_GAMES_FILE" 2>/dev/null) games" "$GREEN" >&2
         else
             rm -f "$tmp" 2>/dev/null
             if [ -s "$KNOWN_GAMES_CACHE" ] && jq empty "$KNOWN_GAMES_CACHE" 2>/dev/null; then
                 KNOWN_GAMES_FILE="$KNOWN_GAMES_CACHE"
-                { echo ""; print_status "Couldn't refresh the known-games database. Using cached copy." "$YELLOW"; } >&2
+                print_status "Couldn't reach GitHub, so the copy from $(date -r "$KNOWN_GAMES_CACHE" +%F) is used." "$YELLOW" >&2
             else
                 # No message here — every caller that has something
                 # meaningful to say about a missing database says it
