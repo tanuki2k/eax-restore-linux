@@ -151,7 +151,7 @@
         DEPLOY_DEST_NAME=("dsound.dll" "dsoal-aldrv.dll")
     fi
 
-    # GAME_DIR plus any extra exe folders from the known-games entry (see
+    # GAME_DIR plus any extra exe folders from the game profile (see
     # resolve_extra_exe_folders) — each exe loads these from its own folder.
     # The manifest stays in GAME_DIR; its absolute paths cover the rest.
     GAME_DIRS=("$GAME_DIR" "${EXTRA_GAME_DIRS[@]}")
@@ -504,7 +504,7 @@ EOF
         [ "$OVERRIDE_METHOD" == "launcher" ] && override_where="$(launcher_override_where)"
         echo -e "\n${YELLOW}${BOLD}Final Steps to activate EAX:${NC}"
         echo -e " 1. ${YELLOW}${BOLD}Launch the game:${NC} ${WHITE}The DLL Override is set in $(tilde_path "$override_where"), so just hit Play.${NC}"
-        # The known-games entry's audio settings already switched EAX on in the
+        # The game profile's audio settings already switched EAX on in the
         # game's own settings, so there's nothing left to do in its menus.
         game_audio_settings_done \
             || echo -e " 2. ${YELLOW}${BOLD}In-Game Settings:${NC} ${WHITE}Go to Audio settings and enable 'EAX', '3D Sound', or 'Hardware Acceleration'.${NC}"

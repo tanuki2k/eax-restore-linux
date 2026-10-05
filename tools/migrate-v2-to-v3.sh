@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-off: splits the v2 known-eax-games.json (one big file, schema_version 2)
+# One-off: splits the v2 game-database.json (one big file, schema_version 2)
 # into v3 per-game files under data/games/, renaming fields to the v3 names and
 # dropping empty/default values. Kept in the repo for reference; not part of
 # the normal build.
@@ -8,7 +8,7 @@
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
-src="${1:-known-eax-games.json}"
+src="${1:-game-database.json}"
 jq -e '.schema_version == 2' "$src" >/dev/null || { echo "$src isn't a schema_version 2 file" >&2; exit 1; }
 
 mkdir -p data/games
@@ -16,7 +16,7 @@ mkdir -p data/games
 # Emits two lines per game: the id, then the v3 game as one line of JSON. The
 # id is a kebab-case slug of the name ("&" -> "and", apostrophes/dots dropped,
 # anything else non-alphanumeric -> "-").
-jq -r -L tools 'include "known-games";
+jq -r -L tools 'include "game-database";
     def slug: ascii_downcase | gsub("&"; " and ") | gsub("['\''’.]"; "") | gsub("[^a-z0-9]+"; "-") | ltrimstr("-") | rtrimstr("-");
     .games[] | (.name | slug), ({
             "$schema": "../schema.json",
@@ -42,7 +42,7 @@ jq -r -L tools 'include "known-games";
 while IFS= read -r id && IFS= read -r game; do
     out="data/games/$id.json"
     [ -e "$out" ] && { echo "Duplicate id: $id" >&2; exit 1; }
-    printf '%s' "$game" | jq -r -L tools 'include "known-games"; render_game' > "$out"
+    printf '%s' "$game" | jq -r -L tools 'include "game-database"; render_game' > "$out"
 done
 
 echo "Wrote $(ls data/games/*.json | wc -l) game files to data/games/"

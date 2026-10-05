@@ -37,8 +37,8 @@ jobs:
       - name: Syntax check
         run: bash -n dist/eax-restore-linux.sh
 
-      - name: Validate known-games JSON
-        run: jq empty known-eax-games.json
+      - name: Validate the game database
+        run: jq empty game-database.json
 
       - name: Publish rolling dev prerelease
         env:

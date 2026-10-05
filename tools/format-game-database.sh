@@ -5,8 +5,8 @@
 # data/schema.json from wherever the file sits, so moving a game between
 # folders only needs a re-run of this.
 #
-# Usage: tools/format-known-games.sh           # rewrite files in place
-#        tools/format-known-games.sh --check   # exit 1 (listing files) if any would change
+# Usage: tools/format-game-database.sh           # rewrite files in place
+#        tools/format-game-database.sh --check   # exit 1 (listing files) if any would change
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
@@ -20,7 +20,7 @@ for f in data/games/tested/*.json data/games/untested/*.json data/drafts/*.json;
         data/games/*) schema="../../schema.json" ;;
         *) schema="../schema.json" ;;
     esac
-    formatted="$(jq -r -L tools --arg schema "$schema" 'include "known-games"; .["$schema"] = $schema | normalize_game | render_game' "$f")"
+    formatted="$(jq -r -L tools --arg schema "$schema" 'include "game-database"; .["$schema"] = $schema | normalize_game | render_game' "$f")"
     if [ "$formatted" != "$(cat "$f")" ]; then
         if [ "$check" -eq 1 ]; then
             unformatted+=("$f")
@@ -31,7 +31,7 @@ for f in data/games/tested/*.json data/games/untested/*.json data/drafts/*.json;
 done
 
 if [ "$check" -eq 1 ] && [ ${#unformatted[@]} -gt 0 ]; then
-    echo "These game files aren't in canonical form (run tools/format-known-games.sh):" >&2
+    echo "These game files aren't in canonical form (run tools/format-game-database.sh):" >&2
     printf '  %s\n' "${unformatted[@]}" >&2
     exit 1
 fi

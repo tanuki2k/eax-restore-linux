@@ -63,7 +63,7 @@ else
     if command -v jq &> /dev/null; then
         echo -e "${GREEN}FOUND${NC}"
     else
-        echo -e "${YELLOW}MISSING (required for checksum verification and the known-EAX-games database)${NC}"
+        echo -e "${YELLOW}MISSING (required for checksum verification and the game database)${NC}"
         MISSING_BASE_PKGS+=("jq")
     fi
 

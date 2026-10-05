@@ -11,14 +11,14 @@ Linux. It deploys [DSOAL](https://github.com/kcat/dsoal) and
 calls into OpenAL — into both the game folder and the Wine/Proton prefix, with engine
 choice, architecture detection, prefix/library auto-detection, conflict backups, an
 install manifest for clean uninstall, and checksum-verified downloads with local
-caching. `known-eax-games.json` is the companion community-maintained database that
+caching. `game-database.json` is the companion community-maintained database that
 drives library scanning, install-time compatibility notes and the Game Settings step
 (changes to a game's own config files) for specific titles. It's **generated**: each
 game is edited as `<id>.json` in `data/games/tested/` (checked against a real install)
 or `data/games/untested/` (not yet) — both shipped — or `data/drafts/` (never shipped),
-defined by `data/schema.json`; `tools/build-known-games.sh` combines the two shipped
+defined by `data/schema.json`; `tools/build-game-database.sh` combines the two shipped
 folders. See `README.md` for the full feature list
-and user-facing docs, and its "Contributing to the known games database" section for
+and user-facing docs, and its "Contributing to the game database" section for
 the fields.
 
 **Design rule: anything specific to a game or engine lives in the database, never as a
@@ -78,9 +78,9 @@ launcher hardcodes `releases/latest`).
 - **Syntax-check after any edit:** `bash -n dist/eax-restore-linux.sh`
 - **Shellcheck (if installed):** `shellcheck dist/eax-restore-linux.sh`
 - **After editing the database** (`data/games/{tested,untested}/*.json` or
-  `data/drafts/*.json`, never `known-eax-games.json` directly): `tools/format-known-games.sh` (canonical key order, empty/default fields
-  dropped), then `tools/build-known-games.sh` (regenerates `known-eax-games.json`).
-  CI (`.github/workflows/known-games.yml`) runs `check-jsonschema --schemafile
+  `data/drafts/*.json`, never `game-database.json` directly): `tools/format-game-database.sh` (canonical key order, empty/default fields
+  dropped), then `tools/build-game-database.sh` (regenerates `game-database.json`).
+  CI (`.github/workflows/game-database.yml`) runs `check-jsonschema --schemafile
   data/schema.json` over all three folders plus both scripts' `--check` modes; the build
   also fails if a game's file name is in more than one folder.
   `tools/probe-game.sh` (dev-only, read-only towards the game) finds what a new
@@ -96,7 +96,7 @@ launcher hardcodes `releases/latest`).
   `file`, `jq`, plus `protontricks` for Steam games or `winetricks` for Heroic/GOG
   games — the script's own pre-flight check offers to install missing ones).
   `EAX_RESTORE_SKIP_PREFLIGHT=1`, `EAX_RESTORE_SKIP_CACHE_CHECK=1`, and
-  `EAX_RESTORE_KNOWN_GAMES_FILE=/path/to/file.json` (point at a local JSON edit before
+  `EAX_RESTORE_GAME_DATABASE_FILE=/path/to/file.json` (point at a local JSON edit before
   it's pushed) are useful when iterating — see the script's own
   `--- Environment Variables ---` header comment for the full list.
 - There is no test suite or CI test job; verification is manual (`bash -n`, running the
@@ -114,7 +114,7 @@ their execution order in the assembled script):
    `README.md`'s Environment Variables table whenever a var is added/changed — every
    existing var should be documented in both places.
 2. **`globals.sh`** — `SCRIPT_VERSION`, colour vars, `BASE_SHARE` and friends
-   (`DSOAL_SHARE`, `OPENAL_SHARE`, `KNOWN_GAMES_*`), pinned download URLs/SHA256s,
+   (`DSOAL_SHARE`, `OPENAL_SHARE`, `GAME_DATABASE_*`), pinned download URLs/SHA256s,
    `VCRUN_DLL_NAMES`, `EAX_IMPOSSIBLE_FALLBACK_STEAM`. Pure variable/array
    assignments only — safe to source before the guards run.
 3. **`args.sh`** — `-h`/`--help` and `-v`/`--version` command-line flag handling
@@ -140,8 +140,8 @@ their execution order in the assembled script):
    starts.
 7. **`detection.sh`** — Steam AppID / Heroic prefix / architecture detection,
    `get_game_directory`, `detect_game_environment`, `select_architecture`, etc.
-8. **`known-games.sh`** — the `known-eax-games.json` helpers:
-   `ensure_known_games_json`, `scan_game_libraries`, `show_known_game_notes`,
+8. **`game-database.sh`** — the `game-database.json` helpers:
+   `ensure_game_database`, `scan_game_libraries`, `show_profile_notes`,
    `confirm_continue_if_eax_impossible`, etc.
 9. **`game-config.sh`** — the Game Settings feature: `config_get_key` /
    `config_set_key` (awk readers/writers for the five text config formats, keeping CRLF,
@@ -224,10 +224,10 @@ download only on change, verify integrity (`unzip -tq` + the pinned SHA256 via
 `verify_checksum`, or a live GitHub-published digest via `verify_or_confirm`), and keep
 the existing cache on a failed download. Stable DSOAL is the pinned
 `DSOAL_PINNED_REV` (`src/globals.sh`): advancing it after testing a newer archive build
-is part of the release routine. `known-eax-games.json` is fetched separately (on dev, from the
-`dev` branch and cached as `known-eax-games.v3.json`, since schema 3 only exists there
+is part of the release routine. `game-database.json` is fetched separately (on dev, from the
+`dev` branch and cached as `game-database.v3.json`, since schema 3 only exists there
 until 0.29 merges) by
-`ensure_known_games_json()` (called on demand from step 1's scan and several other call
+`ensure_game_database()` (called on demand from step 1's scan and several other call
 sites — memoized per run) — it deliberately always fetches fresh (no staleness check)
 since it's a small, community-edited file where PRs should take effect immediately,
 unlike the large versioned binary bundles; a fetch failure falls back to the last
@@ -271,7 +271,7 @@ for a new call site.
 
 - `print_banner "LABEL" [COLOR=GREEN]` — the `--- LABEL ---` section banner (blank
   line, divider, bold label, divider, blank line), e.g. `--- PHASE 1: CONFIGURATION ---`,
-  `--- KNOWN GAMES DATABASE ---`.
+  `--- GAME PROFILE ---`.
 - `print_step N "Label"` — the same banner wrapper for a numbered, non-dashed,
   non-bold CYAN sub-step header, e.g. `2. Launcher Identification`.
 - `print_status "text" [COLOR=CYAN]` — an ` -> ` arrow sub-step/result line.
@@ -321,7 +321,7 @@ for a new call site.
   raw `echo -e`/`printf` that prints a path needs to call it itself
   (`"$(tilde_path "$GAME_DIR")"`). Display only — keep the real path in variables.
 - `print_wrapped "free text"` — wraps data-sourced prose (e.g. the `notes` field in
-  `known-eax-games.json`, not already hand-wrapped script text) at 76 columns and
+  `game-database.json`, not already hand-wrapped script text) at 76 columns and
   indents it, in WHITE. Don't hardcode line breaks into stored data; wrap at render
   time instead.
 
@@ -344,7 +344,7 @@ Color meaning, unchanged by the helpers:
   `YELLOW` family) prefixes a routine "the preferred path wasn't available, here's the
   automatic fallback" notice — distinct from `Warning:`/`Error:` (something to flag or
   that failed) and from the `YELLOW` `(Y/n)` prompts themselves: nothing is broken,
-  this is expected, ordinary branching (e.g. the known-games database being
+  this is expected, ordinary branching (e.g. the game database being
   unavailable and falling back to manual entry, or reusing a stale cache while
   offline).
 - `WHITE` — general prose/body text and prompts.
@@ -352,7 +352,7 @@ Color meaning, unchanged by the helpers:
   status line.
 - Diagnostic/warning output that shouldn't pollute stdout capture is sent to stderr
   by redirecting the call site itself (`print_status "..." >&2`, or a raw
-  `echo -e ... >&2`) — used throughout `ensure_known_games_json`,
+  `echo -e ... >&2`) — used throughout `ensure_game_database`,
   `detect_heroic_prefix_verbose`, and similar functions whose own stdout is captured
   via `$(...)`. The helpers themselves always write to stdout; there's no separate
   `_err` helper family.
@@ -364,13 +364,13 @@ Color meaning, unchanged by the helpers:
 
 The section above covers *mechanics* — which helper/color to use. This one covers
 *wording*: the tone and voice established over many past commits for the two kinds
-of prose in this repo, `known-eax-games.json`'s free-text fields and the script's
+of prose in this repo, `game-database.json`'s free-text fields and the script's
 own user-facing strings. Neither is enforceable by a linter, so match the examples
 below when writing or editing either.
 
 **Database prose fields** (`notes`, `store_details`, `patches`, `eax.problem`,
 `eax.fix`, and a game setting's `title`, `reason` and `follow_up` — see README's "Contributing
-to the known games database" for what belongs in which field):
+to the game database" for what belongs in which field):
 
 - Keep each field to its one job; don't restate content that belongs in a sibling
   field just because it's related to the same title.
@@ -385,7 +385,7 @@ to the known games database" for what belongs in which field):
 - State only what's actually verified, and say exactly what was checked — avoid
   hedge words ("probably", "should") where a concrete fact is possible, and don't
   imply an install was checked locally if it wasn't. In `store_details`, `notes`,
-  `patches` and `eax.problem`/`eax.fix` — shown on the known games database screen,
+  `patches` and `eax.problem`/`eax.fix` — shown on the game profile screen,
   above its Sources section — cite a source in parentheses when the claim is
   non-obvious, e.g. "(per PCGamingWiki)", and put its page in `sources`. Never in a
   game setting's `title`, `reason` or `follow_up` (see below).
@@ -427,7 +427,7 @@ and its current → new value, read live from their own install.
   cite where a default was checked — the row's current value proves it. Never cite a
   source in a reason ("(per PCGamingWiki)" and the like): players read it at the
   Game Settings step, where they can't see or check it. A claim that needs a source
-  gets its page in `sources`, which the known games database screen lists.
+  gets its page in `sources`, which the game profile screen lists.
 - Plain English for effects ("muffling of sounds through walls", not "occlusion").
   Game menu labels may be quoted when they help a player find the same option in-game.
 - Only state what's verified by a real install, the game's own docs, or a source in

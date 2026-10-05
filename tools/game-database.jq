@@ -1,6 +1,6 @@
-# Shared jq helpers for the known-games database tooling (data/games/*.json).
-# Used by tools/format-known-games.sh, tools/build-known-games.sh and the
-# one-off tools/migrate-v2-to-v3.sh via `jq -L tools 'include "known-games"; ...'`.
+# Shared jq helpers for the game database tooling (data/games/*.json).
+# Used by tools/format-game-database.sh, tools/build-game-database.sh and the
+# one-off tools/migrate-v2-to-v3.sh via `jq -L tools 'include "game-database"; ...'`.
 
 # Rebuilds an object with the listed keys first, in that order, followed by
 # any other keys in their existing order (the schema rejects unknown keys, so

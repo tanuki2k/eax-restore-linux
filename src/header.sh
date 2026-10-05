@@ -22,7 +22,7 @@
 #   as a quick pick, without giving up the option to enter a new path.
 #
 # * Smart Detection: Opt-in auto-detection for Steam AppIDs and Heroic Wine
-#   prefixes, plus an opt-in library scan that finds known EAX games already
+#   prefixes, plus an opt-in library scan that finds games with a profile already
 #   installed via Steam or Heroic and lets you pick one instead of browsing.
 #
 # * Proton Detection: Identifies Proton runners even within Heroic environments.
@@ -107,8 +107,8 @@
 #   is logged to ~/.local/state/eax-restore-linux/logs/ (newest 10 kept,
 #   latest.log points at the most recent) for attaching to bug reports.
 #
-# * EAX_RESTORE_KNOWN_GAMES_FILE=/path/to/file.json  Uses a local file instead
-#   of fetching known-eax-games.json from GitHub. For testing schema/data
+# * EAX_RESTORE_GAME_DATABASE_FILE=/path/to/file.json  Uses a local file instead
+#   of fetching game-database.json from GitHub. For testing schema/data
 #   edits to the database before they've been pushed to the branch it's
 #   normally fetched from.
 #

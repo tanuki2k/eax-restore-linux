@@ -86,25 +86,25 @@ DSOAL_PINNED_REV="r693"
 DSOAL_PINNED_URL="https://github.com/kcat/dsoal/releases/download/archive/DSOAL_r693.zip"
 DSOAL_PINNED_SHA256="5abe990ff5692fa070d549a8c28df2435842c5d3f586a59b0da5281bc1cb6605"
 
-# Community-maintained database of well-known EAX games (edited as
-# data/games/<id>.json in this repo; tools/build-known-games.sh combines them
-# into known-eax-games.json). Powers the install-time game details, the opt-in
+# The game database: community-maintained profiles of EAX games (edited as
+# data/games/<id>.json in this repo; tools/build-game-database.sh combines them
+# into game-database.json). Powers the install-time game details, the opt-in
 # library scanner and the Game Settings step. Fetched fresh each run so PRs
 # against the data take effect without users needing a new script version;
 # cached locally so a fetch failure (offline, rate-limited) degrades to the
 # last-known-good copy instead of losing the feature entirely.
 # Schema 3 only exists on dev, so dev fetches its own branch's copy and caches
 # it under its own name. Revisit when 0.29 merges into main.
-KNOWN_GAMES_URL="https://raw.githubusercontent.com/tanuki2k/eax-restore-linux/dev/known-eax-games.json"
-KNOWN_GAMES_CACHE="$BASE_SHARE/known-eax-games.v3.json"
-KNOWN_GAMES_FILE=""
-KNOWN_GAMES_ATTEMPTED=""
-# Schema version this script expects. ensure_known_games_json warns once if the
+GAME_DATABASE_URL="https://raw.githubusercontent.com/tanuki2k/eax-restore-linux/dev/game-database.json"
+GAME_DATABASE_CACHE="$BASE_SHARE/game-database.v3.json"
+GAME_DATABASE_FILE=""
+GAME_DATABASE_ATTEMPTED=""
+# Schema version this script expects. ensure_game_database warns once if the
 # loaded copy is older (a branch that hasn't merged a schema bump yet, or a
 # stale offline cache) so the silent `//` fallbacks below are visible.
-KNOWN_GAMES_SCHEMA_VERSION=3
+GAME_DATABASE_SCHEMA_VERSION=3
 # Set by resolve_recommended_tweaks / show_game_details_block from the picked
-# game's known-games entry's install.tweaks array. EAX_UNIFIED,
+# game profile's install.tweaks array. EAX_UNIFIED,
 # RECOMMENDED_AUDIO_LIMITS, and RECOMMENDED_COM_ROUTING mirror membership of
 # "eax_unified", "expand_audio_limits", and "com_registry_routing"
 # respectively. The Advanced Compatibility Tweaks step reads these to
@@ -120,18 +120,18 @@ RECOMMENDED_COM_ROUTING=""
 # can't disambiguate that now that more than one of them exists.
 RECOMMENDED_TWEAKS_RESOLVED=""
 
-# Set by show_game_details_block to the known-games entry's resolved audio
-# API (the same value it displays as "Audio API" in the KNOWN GAMES DATABASE block),
+# Set by show_game_details_block to the game profile's resolved audio
+# API (the same value it displays as "Audio API" in the GAME PROFILE block),
 # "" when no match was found/shown. confirm_continue_if_openal_native reads
 # this to cross-check the documented value against a live file scan instead
 # of re-deriving it from scratch.
-KNOWN_GAME_API=""
+PROFILE_API=""
 
 # Set by show_game_details_block to the entry's "Suggested community patches"
 # text for this store, "" when there's none. print_community_patches_summary
 # shows it again at INSTALLATION COMPLETE, since the details block is long
 # scrolled away by then.
-KNOWN_GAME_PATCHES=""
+PROFILE_PATCHES=""
 
 # Game Settings (src/game-config.sh). GAME_INSTALL_ROOT is the install folder
 # the library scan matched (for "install:" config locations). The rest are
@@ -224,7 +224,7 @@ CHECKLIST_INITIAL=()
 CHECKLIST_DETAILS=()
 
 # Minimal hardcoded safety net for confirm_continue_if_eax_impossible, used
-# only if ensure_known_games_json can't produce a file at all (e.g. first
+# only if ensure_game_database can't produce a file at all (e.g. first
 # run, offline, no cache yet). Keeps the "this install is a functional
 # no-op" warning working even before the JSON database is ever reachable.
 # AppID 70 is Half-Life, whose original DirectSound3D/EAX audio was

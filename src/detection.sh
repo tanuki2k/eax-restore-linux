@@ -107,10 +107,10 @@ get_game_directory() {
     [ -n "$RESTART_REQUESTED" ] && return
 
     local can_scan=0
-    if [ "$SCRIPT_ACTION" == "i" ] && ensure_known_games_json; then
+    if [ "$SCRIPT_ACTION" == "i" ] && ensure_game_database; then
         can_scan=1
     elif [ "$SCRIPT_ACTION" == "i" ]; then
-        print_note "Library scanning needs the known-EAX-games database," \
+        print_note "Library scanning needs the game database," \
             "which isn't available this run — skipping straight to manual entry."
     fi
 
@@ -203,7 +203,7 @@ get_game_directory() {
                 return
                 ;;
             scan)
-                print_note "the known-EAX-games list is a small, hand-verified, work-in-progress" \
+                print_note "the game database is a small, hand-verified, work-in-progress" \
                     "set — it doesn't cover every EAX game. A game you own may still support EAX" \
                     "even if it's not (yet) listed."
                 if ! confirm "Understood — it's a work in progress?"; then
@@ -519,7 +519,7 @@ detect_heroic_prefix_verbose() {
             fi
         fi
 
-        # Callers treat the returned app_name as a GOG ID (known-games lookups,
+        # Callers treat the returned app_name as a GOG ID (game database lookups,
         # find_heroic_install_path). A sideloaded game's app_name is a random
         # Heroic-generated ID, so hand back an empty one for those.
         m_label+=("$label"); m_root+=("$root"); m_id+=("$id"); m_gog+=("$gog")
@@ -730,12 +730,12 @@ normalize_game_name() {
 resolve_exe_manual_entry() {
     # Usage: resolve_exe_manual_entry <scanned_root>
     # Prompts for a game .exe folder, validates it exists, and warns when it
-    # falls outside the scanned install (the known-game notes may not apply).
+    # falls outside the scanned install (the profile notes may not apply).
     # Returns 0 with GAME_DIR set, 1 otherwise (GAME_DIR cleared). Shared by
     # every "enter a path manually" branch of resolve_exe_folder so declining
     # a detected folder drops the user straight onto a path prompt instead of
     # unwinding to the top-level locate-the-game menu (which throws away the
-    # scanned AppID and its known-games notes).
+    # scanned AppID and its profile notes).
     local root="$1"
     prompt_manual_game_dir || return 1
     if [ ! -d "$GAME_DIR" ]; then
@@ -744,7 +744,7 @@ resolve_exe_manual_entry() {
         return 1
     fi
     [[ "$GAME_DIR" == "$root"* ]] || print_warning "That path is outside the scanned install." \
-        "The known-game notes for this title may not apply to it."
+        "The profile notes for this title may not apply to it."
     return 0
 }
 
@@ -762,14 +762,14 @@ resolve_exe_folder() {
     # selection -- rather than dead-ending. Returns 1 (GAME_DIR left empty)
     # if the user declines/goes back at any point.
     #
-    # beta_branch (optional, from known-eax-games.json's stores.steam.beta_branch)
+    # beta_branch (optional, from game-database.json's stores.steam.beta_branch)
     # tailors the "no .exe found" case: some titles (e.g. KOTOR2) ship a
     # native Linux port that Steam installs by default, which has no .exe at
     # all -- the Windows build only comes down once the user opts into that
     # beta branch. Passed in by scan_game_libraries, which already knows the
-    # matched game's known-games entry at this point.
+    # matched game's profile at this point.
     #
-    # exe_hint (optional, from the known-games entry's `exe`) is the main
+    # exe_hint (optional, from the game profile's `exe`) is the main
     # .exe's file name. The shallowest folder under the install root holding
     # a file of that name becomes the top pick -- this handles layouts that
     # defeat the name heuristics below, e.g. Double Agent, which ships a root
@@ -995,7 +995,7 @@ resolve_exe_folder() {
 
 confirm_game_dir_has_exe() {
     # Usage: confirm_game_dir_has_exe <id> <steam|gog> <game_name>
-    # When the known-games entry names the game's main .exe and GAME_DIR
+    # When the game profile names the game's main .exe and GAME_DIR
     # doesn't hold it (a hand-typed path one level off, say), offers to pick
     # the right folder -- the DLLs and config fixes only work next to the
     # real .exe. Keeps the current folder if the user declines or the new
@@ -1003,7 +1003,7 @@ confirm_game_dir_has_exe() {
     local exe_name
     exe_name=$(jq -r --arg id "$1" --arg store "$2" \
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | .exe // empty' \
-        "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
     [ -n "$exe_name" ] && [ -n "$GAME_DIR" ] || return 0
     find "$GAME_DIR" -maxdepth 1 -type f -iname "$exe_name" -print -quit 2>/dev/null | grep -q . && return 0
 
@@ -1019,7 +1019,7 @@ confirm_game_dir_has_exe() {
 
 detect_api_from_binary() {
     # Usage: detect_api_from_binary <game_dir>
-    # Fallback heuristic for games with no known-eax-games.json entry: greps
+    # Fallback heuristic for games with no game-database.json entry: greps
     # the game's own .exe/.dll files for the literal ASCII import-table
     # strings "OpenAL32.dll" / "dsound.dll" — the same signature-grepping
     # trick is_genuine_dll() uses on PE binaries, and the same `file`-based
@@ -1064,14 +1064,14 @@ confirm_continue_if_openal_native() {
     # hard stop. Opens with a single upfront gate ("attempt to automatically
     # detect $game_name's audio API?") governing everything below it -- when
     # show_game_details_block already showed this game's documented API
-    # (KNOWN_GAME_API set), accepting the gate cross-checks that value
+    # (PROFILE_API set), accepting the gate cross-checks that value
     # against a live file scan instead of re-querying the database from
     # scratch (the user was already told the answer), while declining it
     # just trusts the documented value as-is with no file scan. When nothing
-    # is already known, the same gate governs the known-games database check
+    # is already known, the same gate governs the game database check
     # and detect_api_from_binary()'s lower-confidence
     # filesystem guess whenever there's no authoritative JSON answer to go
-    # on — either the game isn't in known-eax-games.json, OR the database
+    # on — either the game isn't in game-database.json, OR the database
     # itself couldn't be loaded at all (offline, not yet merged to the
     # branch it's fetched from, etc.). When even that comes back empty (scan
     # declined, or ran but matched neither import string), it spells out what
@@ -1082,7 +1082,7 @@ confirm_continue_if_openal_native() {
     # explaining what was checked and what was concluded; this step should
     # never end in total silence, which reads as broken rather than "nothing
     # to do."
-    # A confirmed known-games match still gets a (Y/n) before continuing,
+    # A confirmed game database match still gets a (Y/n) before continuing,
     # same as the openal/binary-scan branches below it — it's still an
     # auto-detected value driving what the script does next. Declining it
     # opens the same DirectSound3D-vs-OpenAL choice (plus a cancel option)
@@ -1091,7 +1091,7 @@ confirm_continue_if_openal_native() {
     # consumes to pick ENGINE_CHOICE=2 (the direct OpenAL Soft swap).
     OPENAL_NATIVE_MODE=""
     # Set only when the API is *positively* identified as DirectSound3D (a
-    # known-games entry that resolves to "directsound3d" for this store, a
+    # game profile that resolves to "directsound3d" for this store, a
     # single-API binary scan, or the user explicitly choosing DirectSound3D
     # at the fallback prompt below). The "Audio Engine Selection" step skips
     # its menu when this is set, the same way OPENAL_NATIVE_MODE forces the
@@ -1113,20 +1113,20 @@ confirm_continue_if_openal_native() {
 
     local json_available=0 match_count=0
     local api="" matched=0 scanned=0 json_checked=0 declined=0 overriding=0
-    # The known-games entry's audio API for this store, exactly as stored —
+    # The game profile's audio API for this store, exactly as stored —
     # the per-store override (stores.<store>.api) if present, else eax.api,
     # else "" when the entry omits both. Distinct from $api, which is
     # defaulted to "directsound3d" for display. Only a literal "directsound3d"
     # here counts as confirmed.
     local db_api_raw=""
 
-    if [ -n "$KNOWN_GAME_API" ]; then
-        # Already resolved and displayed in the KNOWN GAMES DATABASE block shown
+    if [ -n "$PROFILE_API" ]; then
+        # Already resolved and displayed in the GAME PROFILE block shown
         # earlier this run (show_game_details_block sets this alongside
         # SCANNED_NOTES_SHOWN) -- no need to re-query the database from
         # scratch. The gate above still governs whether it's cross-checked
         # against the installed files or simply trusted as-is.
-        api="$KNOWN_GAME_API"
+        api="$PROFILE_API"
         db_api_raw="$api"
         matched=1
         json_checked=1
@@ -1135,7 +1135,7 @@ confirm_continue_if_openal_native() {
         [ "$api" == "openal" ] && api_display="OpenAL"
 
         if [ "$attempt_auto_detect" -eq 0 ]; then
-            print_note "Skipping the file cross-check -- using the known-games database's documented" \
+            print_note "Skipping the file cross-check -- using its profile's documented" \
                 "$api_display API as-is."
         elif [ -n "$GAME_DIR" ] && [ -d "$GAME_DIR" ]; then
             print_task "Cross-checking $game_name's installed files against the documented $api_display API"
@@ -1148,13 +1148,13 @@ confirm_continue_if_openal_native() {
                 print_note_arrow "No .exe or .dll in $GAME_DIR references OpenAL or" \
                     "DirectSound, so the documented $api_display API couldn't be confirmed."
             elif [ "$scan_result" == "both" ] || [ "$scan_result" == "$api" ]; then
-                print_status "Consistent with the known-games database." "$GREEN"
+                print_status "Consistent with its profile." "$GREEN"
             else
                 local scan_display="DirectSound3D"
                 [ "$scan_result" == "openal" ] && scan_display="OpenAL"
                 print_warning "$game_name's installed files appear to reference $scan_display, which" \
-                    "conflicts with the known-games database's documented $api_display."
-                if ! confirm "Trust the known-games database ($api_display) over the file scan?"; then
+                    "conflicts with its profile's documented $api_display."
+                if ! confirm "Trust the profile ($api_display) over the file scan?"; then
                     api="$scan_result"
                     scanned=1
                 fi
@@ -1170,29 +1170,29 @@ confirm_continue_if_openal_native() {
         # CHECK step fetches/memoizes it before Phase 1 even starts), so
         # there's nothing further to ask permission for here — the gate
         # above already covers it.
-        ensure_known_games_json && json_available=1
+        ensure_game_database && json_available=1
 
         if [ "$json_available" -eq 0 ]; then
             json_checked=1
-            print_note "known-eax-games.json isn't available this run."
+            print_note "game-database.json isn't available this run."
         elif [ -z "$1" ]; then
             json_checked=1
             print_note "$game_name's store ID isn't known, so it can't be looked up in the" \
-                "known-games database."
+                "game database."
         else
             json_checked=1
             echo ""
-            print_status "Checking known-games database for $game_name's audio API..."
+            print_status "Checking the game database for $game_name's audio API..."
 
-            match_count=$(jq -r --arg id "$1" --arg store "$store" '[.games[] | select((.stores[$store].id // "") | tostring == $id)] | length' "$KNOWN_GAMES_FILE" 2>/dev/null)
+            match_count=$(jq -r --arg id "$1" --arg store "$store" '[.games[] | select((.stores[$store].id // "") | tostring == $id)] | length' "$GAME_DATABASE_FILE" 2>/dev/null)
 
             if [ "${match_count:-0}" -gt 0 ]; then
-                db_api_raw=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | (.stores[$store].api // .eax.api // "")' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+                db_api_raw=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | (.stores[$store].api // .eax.api // "")' "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
                 api="${db_api_raw:-directsound3d}"
                 matched=1
                 confirm_game_dir_has_exe "$1" "$store" "$game_name"
             else
-                print_note "$game_name isn't in the known-games database."
+                print_note "$game_name has no profile in the game database."
             fi
         fi
     fi
@@ -1218,7 +1218,7 @@ confirm_continue_if_openal_native() {
                 return
             fi
         elif confirm "Continue with the DSOAL/DirectSound3D install?"; then
-            # A known-games entry that resolves to "directsound3d" for this
+            # A game profile that resolves to "directsound3d" for this
             # store, or a single-API binary scan, is a positive identification — the
             # engine-selection menu can be skipped. A "both" scan result
             # references both APIs and stays low-confidence, so the menu is
@@ -1237,7 +1237,7 @@ confirm_continue_if_openal_native() {
             "Which audio API would you like to install for instead?"
     fi
 
-    # Nothing authoritative to go on — no known-games entry (or the database
+    # Nothing authoritative to go on — no game profile (or the database
     # wasn't available), and the file scan was either declined or turned up
     # neither import string. Rather than assume DirectSound3D outright, spell
     # out what couldn't be checked and let the user pick: the "Audio Engine
@@ -1251,13 +1251,13 @@ confirm_continue_if_openal_native() {
     elif [ "$declined" -eq 1 ]; then
         print_note_arrow "Auto-detection was skipped, so $game_name's audio API is unconfirmed."
     elif [ "$json_checked" -eq 0 ]; then
-        print_note_arrow "The known-games check was skipped and $game_name's files couldn't be" \
+        print_note_arrow "The game database check was skipped and $game_name's files couldn't be" \
             "scanned, so its audio API is unconfirmed."
     elif [ "$json_available" -eq 0 ]; then
-        print_note_arrow "known-eax-games.json isn't available this run and $game_name's files" \
+        print_note_arrow "game-database.json isn't available this run and $game_name's files" \
             "couldn't be scanned, so its audio API is unconfirmed."
     else
-        print_note_arrow "$game_name isn't in the known-games database and its files couldn't be" \
+        print_note_arrow "$game_name has no profile in the game database and its files couldn't be" \
             "scanned, so its audio API is unconfirmed."
     fi
 
@@ -1414,11 +1414,11 @@ detect_game_environment() {
                 print_error "Proton prefix not found for AppID ${APPID}."
                 echo -e "\n${WHITE}If you just installed this game, Proton has not generated the prefix yet."
                 echo -e "Please launch the game at least once, close it, and try again.${NC}"
-                if ensure_known_games_json; then
+                if ensure_game_database; then
                     local beta_branch
                     beta_branch=$(jq -r --arg id "$APPID" \
                         '.games[] | select((.stores.steam.id // "") | tostring == $id) | .stores.steam.beta_branch // empty' \
-                        "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+                        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
                     if [ -n "$beta_branch" ]; then
                         print_note "no prefix at all can also mean Steam installed a native Linux build" \
                             "instead of Windows — no Proton is used for that. Opting into the" \

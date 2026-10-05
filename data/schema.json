@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/tanuki2k/eax-restore-linux/blob/dev/data/schema.json",
-  "title": "Known EAX game",
-  "description": "One game in the known-EAX-games database (data/games/<id>.json). The id is the file name. Optional fields are omitted when empty or at their default. See README.md, 'Contributing to the known games database'.",
+  "title": "Game profile",
+  "description": "One game's profile in the game database (data/games/<id>.json). The id is the file name. Optional fields are omitted when empty or at their default. See README.md, 'Contributing to the game database'.",
   "type": "object",
   "required": ["name", "stores", "eax"],
   "additionalProperties": false,
@@ -125,7 +125,7 @@
       "required": ["files"]
     },
     "sources": {
-      "description": "Pages backing this entry's claims, listed as links at the end of the known games database screen. Each is a URL, or {title, url} to show a name instead of the site's address.",
+      "description": "Pages backing this entry's claims, listed as links at the end of the game profile screen. Each is a URL, or {title, url} to show a name instead of the site's address.",
       "type": "array",
       "uniqueItems": true,
       "items": {

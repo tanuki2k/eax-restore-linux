@@ -1,8 +1,8 @@
 # ==============================================================================
-# GAME SETTINGS (known-games game_config / install.alsoft_ini)
+# GAME SETTINGS (game profile game_config / install.alsoft_ini)
 # ==============================================================================
 # Everything the script changes in a game's own config files comes from that
-# game's known-games entry (game_config.audio_settings / optional_settings) — the script
+# game's profile (game_config.audio_settings / optional_settings) — the script
 # itself only knows how to read and edit the six config formats, never which
 # game needs what. Decided in Phase 1 (Speaker Configuration offers the
 # alsoft.ini values, step 11 offers the game's own settings), applied in
@@ -309,37 +309,37 @@ resolve_config_file() {
     done
 }
 
-# Usage: current_known_game
+# Usage: current_profile
 # Sets KG_ID / KG_STORE to the picked game's store id, and returns 1 when
-# there's no known-games entry for it.
-current_known_game() {
+# there's no game profile for it.
+current_profile() {
     KG_ID=""; KG_STORE=""
     if [ "$LAUNCHER_TYPE" == "1" ]; then KG_ID="$APPID"; KG_STORE="steam"
     else KG_ID="${HEROIC_APP_NAME:-}"; KG_STORE="gog"; fi
-    [ -n "$KG_ID" ] && ensure_known_games_json || return 1
+    [ -n "$KG_ID" ] && ensure_game_database || return 1
     jq -e --arg id "$KG_ID" --arg store "$KG_STORE" \
-        'any(.games[]; (.stores[$store].id // "") | tostring == $id)' "$KNOWN_GAMES_FILE" >/dev/null 2>&1
+        'any(.games[]; (.stores[$store].id // "") | tostring == $id)' "$GAME_DATABASE_FILE" >/dev/null 2>&1
 }
 
 # Usage: count_game_settings <id> <steam|gog>
 # Prints "<audio> <optional>": settings this store's build can be offered (only_if
-# stores match). Used by the KNOWN GAMES DATABASE block's fix counts before the game folder is known.
+# stores match). Used by the GAME PROFILE block's fix counts before the game folder is known.
 count_game_settings() {
     jq -r --arg id "$1" --arg store "$2" '
         [.games[] | select((.stores[$store].id // "") | tostring == $id)][0].game_config // {}
         | def offered: [.[]? | select((.only_if.stores // [$store]) | index($store))] | length;
-          "\(.audio_settings | offered) \(.optional_settings | offered)"' "$KNOWN_GAMES_FILE" 2>/dev/null
+          "\(.audio_settings | offered) \(.optional_settings | offered)"' "$GAME_DATABASE_FILE" 2>/dev/null
 }
 
 # Usage: game_setting_titles <id> <steam|gog>
 # One "audio|optional<TAB>title" line per setting count_game_settings counts,
-# audio settings first, for the known games database screen.
+# audio settings first, for the game profile screen.
 game_setting_titles() {
     jq -r --arg id "$1" --arg store "$2" '
         [.games[] | select((.stores[$store].id // "") | tostring == $id)][0].game_config // {}
         | def offered: [.[]? | select((.only_if.stores // [$store]) | index($store))];
           (.audio_settings | offered | .[] | "audio\t\(.title)"),
-          (.optional_settings | offered | .[] | "optional\t\(.title)")' "$KNOWN_GAMES_FILE" 2>/dev/null
+          (.optional_settings | offered | .[] | "optional\t\(.title)")' "$GAME_DATABASE_FILE" 2>/dev/null
 }
 
 # Usage: speakers_match <comma list>
@@ -381,7 +381,7 @@ load_game_config_rows() {
         | [$cat, ($i | tostring), $f.title, $f.reason, (($f.only_if.stores // []) | join(",")),
            ([$f.only_if.speakers // empty] | flatten | join(",")), ($f.follow_up // ""), $file, ($def.format // ""),
            ($def.if_missing // ""), (($def.locations // []) | join("|")), $kv[0], $kv[1], ($kv[2] | enc)]
-        | join("\u001f")' "$KNOWN_GAMES_FILE" 2>/dev/null
+        | join("\u001f")' "$GAME_DATABASE_FILE" 2>/dev/null
 }
 
 # Usage: config_row_is_safe <format> <locations> <section> <key> <value>
@@ -628,14 +628,14 @@ speaker_config_from_alsoft() {
 }
 
 # Usage: offer_alsoft_settings
-# Speaker Configuration's last question: the known-games entry's
+# Speaker Configuration's last question: the game profile's
 # install.alsoft_ini values, each stated as a fact about the game plus a
 # default-yes offer. Accepted ones land in ALSOFT_OVERRIDES
 # ("section\x1fkey\x1fvalue") for Phase 2 to write into the generated
 # alsoft.ini.
 offer_alsoft_settings() {
     ALSOFT_OVERRIDES=()
-    current_known_game || return
+    current_profile || return
     local sec key value
     while IFS=$'\x1f' read -r sec key value; do
         [ -n "$key" ] || continue
@@ -650,7 +650,7 @@ offer_alsoft_settings() {
     done < <(jq -r --arg id "$KG_ID" --arg store "$KG_STORE" '
         [.games[] | select((.stores[$store].id // "") | tostring == $id)][0].install.alsoft_ini // {}
         | to_entries[] | .key as $sec | .value | to_entries[] | [$sec, .key, (.value | tostring)] | join("\u001f")' \
-        "$KNOWN_GAMES_FILE" 2>/dev/null)
+        "$GAME_DATABASE_FILE" 2>/dev/null)
 }
 
 # Usage: apply_alsoft_overrides
@@ -689,7 +689,7 @@ game_settings_step() {
     GAME_SETTINGS_DECLINED=(); GAME_SETTINGS_ABSENT=()
     GAME_AUDIO_FIX_TITLES=(); GAME_AUDIO_FIX_ALREADY=()
     GAME_SETTINGS_CANCELLED=""
-    current_known_game || return
+    current_profile || return
 
     local -a rows=()
     local row
@@ -946,13 +946,13 @@ game_settings_step() {
     unset -f _print_fix _fix_body _applied_fix_body _print_absent_note _decline_fix _plan_fix _print_status_line
 }
 
-# Usage: known_game_field <jq path, e.g. .exe>
-# One field of the current game's known-games entry (KG_ID / KG_STORE), or
+# Usage: profile_field <jq path, e.g. .exe>
+# One field of the current game's profile (KG_ID / KG_STORE), or
 # nothing.
-known_game_field() {
+profile_field() {
     jq -r --arg id "$KG_ID" --arg store "$KG_STORE" \
         "[.games[] | select((.stores[\$store].id // \"\") | tostring == \$id)][0] | $1 // empty" \
-        "$KNOWN_GAMES_FILE" 2>/dev/null
+        "$GAME_DATABASE_FILE" 2>/dev/null
 }
 
 # Usage: game_exe_running
@@ -963,7 +963,7 @@ known_game_field() {
 game_exe_running() {
     local exe pid p
     local -A ours=()
-    exe="$(known_game_field .exe)"
+    exe="$(profile_field .exe)"
     [ -n "$exe" ] || return 1
     for (( p = $$; p > 1; p = $(awk '{print $4}' "/proc/$p/stat" 2>/dev/null || echo 1) )); do ours[$p]=1; done
     while read -r pid; do
@@ -986,7 +986,7 @@ game_exe_running() {
 # would cause exactly that reset.
 clear_crash_marker() {
     local marker dir
-    marker="$(known_game_field ".game_config.files[\"$1\"].crash_marker")"
+    marker="$(profile_field ".game_config.files[\"$1\"].crash_marker")"
     [ -n "$marker" ] || return 0
     [[ "$marker" =~ ^[A-Za-z0-9._\ -]+$ ]] && [ "$marker" != "." ] && [ "$marker" != ".." ] || return 0
     dir="$(dirname "$2")"

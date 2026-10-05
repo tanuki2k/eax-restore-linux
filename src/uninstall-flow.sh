@@ -86,7 +86,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
 
         TARGET_FILES=("dsound.dll" "dsoal-aldrv.dll" "dsound.vxd" "OpenAL32.dll" "eax.dll" "eaxunified.dll" "alsoft.ini")
 
-        # Check the game folder, plus any extra exe folders the known-games
+        # Check the game folder, plus any extra exe folders the game profile
         # entry lists (GOG's F.E.A.R. Platinum expansions), which an install
         # fills the same way
         if [ "$LAUNCHER_TYPE" == "1" ]; then

@@ -102,7 +102,7 @@ if [ -n "$SETTINGS_TOOL_MODE" ]; then
         # switching to headphones). Found by title among the entry's
         # speaker-dependent settings.
         declare -A settings_speaker_rule=()
-        if current_known_game; then
+        if current_profile; then
             while IFS= read -r row; do
                 mapfile -t -d $'\x1f' settings_f < <(printf '%s' "$row")
                 [ -n "${settings_f[5]}" ] && settings_speaker_rule[${settings_f[2]}]="${settings_f[5]}"
@@ -130,7 +130,7 @@ if [ -n "$SETTINGS_TOOL_MODE" ]; then
             [ "${settings_cat[$settings_title]}" == "optional" ] && GAME_SETTINGS_RECORDED[$settings_title]="${settings_lines[$settings_title]}"
         done
         settings_optional=0
-        if current_known_game; then
+        if current_profile; then
             read -r _ settings_optional <<< "$(count_game_settings "$KG_ID" "$KG_STORE")"
         fi
         if [ "${settings_optional:-0}" -eq 0 ]; then

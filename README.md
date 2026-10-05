@@ -17,7 +17,7 @@ Because modern operating systems and Proton/Wine don't natively support this old
 * **Dynamic HRTF Integration:** Automatically generates an `alsoft.ini` tuned to your output (stereo/headphones/surround/matrix), enabling OpenAL Soft's HRTF binaural rendering for headphone users.
 * **Smart Architecture Scanner:** Automatically detects whether the game executable is 32-bit or 64-bit and grabs the exact right dependencies so the game doesn't crash on launch.
 * **Intelligent Prefix Routing:** Opt-in auto-detection for Steam AppIDs and Heroic Prefix paths, making it easy to find where your game is actually installed. Uninstall and Tools list every game this script is installed in, most recently used first, found from the install records in your Steam and Heroic folders.
-* **Library Scanning:** Opt-in scan of your Steam and Heroic libraries against a community-maintained list of known EAX games — pick a match from the list instead of hunting down the install folder yourself.
+* **Library Scanning:** Opt-in scan of your Steam and Heroic libraries against the community-maintained game database — pick a match from the list instead of hunting down the install folder yourself.
 * **Deep Prefix Validation:** Verifies Steam AppIDs via Protontricks and ensures Heroic prefixes are fully initialized before touching any files.
 * **Cache & Offline Mode:** Smart GitHub API downloading with local caching, so if you install the fix to multiple games, it only downloads the files once. Pinned/live checksum verification guards against corrupt or tampered downloads.
 * **Safe File Management:** Interactive conflict resolution safely backs up pre-existing files with timestamps so you never lose original game data. Every install writes a manifest of exactly what it deployed, so uninstall only ever removes what this script actually put there and restores your backups automatically.
@@ -38,7 +38,7 @@ The script checks for these dependencies and offers to install them if they are 
 * **Steam Games:** Requires `protontricks`.
 * **Heroic/GOG Games:** Requires `winetricks`.
 
-`jq` powers checksum verification for kcat's official builds, as well as the known-EAX-games database used for install-time notes and library scanning (see below).
+`jq` powers checksum verification for kcat's official builds, as well as the game database used for install-time notes and library scanning (see below).
 
 ## Usage
 
@@ -144,28 +144,28 @@ Since the script itself refuses to run in Gaming Mode, this only works from Desk
 ### Uninstallation
 Run the script, choose **[U]ninstall the EAX fix**, and provide the game directory. The script will remove the EAX files, restore original backups, remove the DLL override (from the registry or the launcher's settings), optionally remove the VC++ runtime it installed, and offer to put back any game settings it changed (leaving alone anything you've changed yourself since). Like the install, it asks everything first — which files to remove, whether to close a running launcher, the VC++ runtime, which game settings to put back — and changes nothing until you confirm with one final "Proceed?".
 
-### Library Scanning & the Known Games Database
+### Library Scanning & the Game Database
 
-During install, the script can optionally scan your Steam and Heroic libraries for titles it recognises, so you can pick a game from a list instead of browsing to its folder manually. Matches are checked against [`known-eax-games.json`](known-eax-games.json), a community-maintained database in this repo (built from the per-game files in [`data/games/`](data/games/)) that's fetched fresh on every run (and cached locally so a later offline run still works). The same database also drives the install-time "Heads up" notes, the "this install would be a no-op" warnings, the delisted-storefront notice, the OpenAL-vs-DirectSound3D compatibility check ("Audio API Detection") for specific titles, and the **Game Settings** step: for games that ship with EAX (or other things) switched off in their own config files, it shows each setting's current and recommended value and applies the ones you accept — audio fixes together, optional non-audio fixes (like Quake 4's low-res textures) one by one.
+During install, the script can optionally scan your Steam and Heroic libraries for titles it recognises, so you can pick a game from a list instead of browsing to its folder manually. Matches are checked against [`game-database.json`](game-database.json), a community-maintained database in this repo (built from the per-game files in [`data/games/`](data/games/)) that's fetched fresh on every run (and cached locally so a later offline run still works). The same database also drives the install-time "Heads up" notes, the "this install would be a no-op" warnings, the delisted-storefront notice, the OpenAL-vs-DirectSound3D compatibility check ("Audio API Detection") for specific titles, and the **Game Settings** step: for games that ship with EAX (or other things) switched off in their own config files, it shows each setting's current and recommended value and applies the ones you accept — audio fixes together, optional non-audio fixes (like Quake 4's low-res textures) one by one.
 
 This list is deliberately small and hand-verified — it will only ever cover a fraction of EAX-capable games. If your game isn't in it, the OpenAL-vs-DirectSound3D check falls back to scanning the game's own `.exe`/`.dll` files for `OpenAL32.dll`/`dsound.dll` references — a lower-confidence guess, clearly flagged as such. When even that is inconclusive (or you skip the scan), the script asks you to pick between DirectSound3D/DSOAL and OpenAL native rather than silently assuming DirectSound3D — DirectSound3D is the default, and this prompt is also the only way to select OpenAL-native mode for a game nothing could identify.
 
 **Retail/CD copies and other non-Steam, non-Heroic installs** (e.g. an original pre-Steam Half-Life disc, run in a Wine prefix you set up yourself) aren't covered by the scanner at all, since there's no launcher library to scan — but the script still supports them. Point it at the game's `.exe` folder and provide the Wine prefix path manually when prompted.
 
-**Contributing to the known games database:** PRs adding or correcting games are welcome. Each game is its own file, `<id>.json`, where `<id>` is a kebab-case version of its name (`quake-4.json`, `thief-ii-the-metal-age.json`). Which folder it's in says how far it's got:
+**Contributing to the game database:** PRs adding or correcting games are welcome. Each game is its own file, `<id>.json`, where `<id>` is a kebab-case version of its name (`quake-4.json`, `thief-ii-the-metal-age.json`). Which folder it's in says how far it's got:
 
 - `data/games/tested/` — checked against a real install: its store IDs match, its `exe` exists, and any config files and settings it changes are where it says. Shipped.
 - `data/games/untested/` — not checked on a real install yet. Shipped all the same. New games go here.
 - `data/drafts/` — incomplete or doubtful entries. Checked against the schema and formatted, but **not** shipped.
 
-To promote a game, move its file (`git mv`) and re-run `tools/format-known-games.sh`, which also updates its `"$schema"` line for the new folder. The formal definition of every field is [`data/schema.json`](data/schema.json); pointing your editor at it (each file's `"$schema"` line does this in VS Code and most JSON-aware editors) gives autocompletion and flags mistakes as you type. Don't edit `known-eax-games.json` by hand — it's generated from the per-game files. After editing, run:
+To promote a game, move its file (`git mv`) and re-run `tools/format-game-database.sh`, which also updates its `"$schema"` line for the new folder. The formal definition of every field is [`data/schema.json`](data/schema.json); pointing your editor at it (each file's `"$schema"` line does this in VS Code and most JSON-aware editors) gives autocompletion and flags mistakes as you type. Don't edit `game-database.json` by hand — it's generated from the per-game files. After editing, run:
 
 ```bash
-tools/format-known-games.sh      # puts keys in the standard order and drops empty/default fields
-tools/build-known-games.sh       # regenerates known-eax-games.json
+tools/format-game-database.sh      # puts keys in the standard order and drops empty/default fields
+tools/build-game-database.sh       # regenerates game-database.json
 ```
 
-CI checks every file against the schema, that it's formatted, and that `known-eax-games.json` is up to date. Please only add a store `id` you've independently verified against the storefront's own page or API — a wrong ID would point the script at someone else's prefix. **Leave a field out when it's empty or at its default** — there are no `null`s in these files.
+CI checks every file against the schema, that it's formatted, and that `game-database.json` is up to date. Please only add a store `id` you've independently verified against the storefront's own page or API — a wrong ID would point the script at someone else's prefix. **Leave a field out when it's empty or at its default** — there are no `null`s in these files.
 
 To find what a game setting should change, `tools/probe-game.sh` helps: `scan <game dir> [prefix]` lists the game's config files and the setting names in its exes, and `snap`/`diff` show exactly which lines change when you switch an option in-game (snap, run the game and change it, snap again, diff).
 
@@ -234,7 +234,7 @@ A game file looks like this (see `data/games/tested/` for more):
     - `changes` — file → section → key → value for `ini` files, file → key → value for `flat_ini` and the cfg formats. Values are strings; `true`/`false` switches a `dark_cfg` flag; `null` removes the key. Every file must be listed in `files`.
     - `only_if` — optional conditions: `{ "stores": ["gog"] }` and/or `{ "speakers": ... }` (the Speaker Configuration answer): `"stereo"`, `"headphones"` (Stereo, then Headphones), `"matrix"`, `"surround"` (any surround layout) or one exact layout, `"quad"` / `"surround51"` / `"surround61"` / `"surround71"`; a list such as `["surround51", "surround61"]` matches any of them. Prefer `if_missing: "skip"` over a store condition when a setting depends on a file only some builds have.
     - `follow_up` — optional: something the player does after installing, shown in the final summary (`"Open Options -> Video and click Autodetect."`).
-- `sources` — pages backing the entry's claims (the short "(per PCGamingWiki)" citations in the prose point here). They're listed last on the script's known games database screen as clickable links. Give each a name with `{ "title": "PCGamingWiki: Quake 4", "url": "https://www.pcgamingwiki.com/wiki/Quake_4" }`; a bare URL string still works and shows the site's address.
+- `sources` — pages backing the entry's claims (the short "(per PCGamingWiki)" citations in the prose point here). They're listed last on the script's game profile screen as clickable links. Give each a name with `{ "title": "PCGamingWiki: Quake 4", "url": "https://www.pcgamingwiki.com/wiki/Quake_4" }`; a bare URL string still works and shows the site's address.
 - `notes` — prose caveats not covered by the fields above: cross-references to sibling entries, limitation/expectation-setting caveats ("reverb here is subtle, that's expected not a bug"), controller/multiplayer/mod quirks.
 
 ### Environment Variables
@@ -247,7 +247,7 @@ For repeat runs or scripting, these can be set to skip prompts:
 | `EAX_RESTORE_DSOAL_PIN=1` | Uses the stable `kcat/dsoal` build (the revision pinned in the script, from kcat's `archive` release) without asking, so only the OpenAL Soft build is chosen. Also selects the DSOAL engine and jumps straight to install. |
 | `EAX_RESTORE_VCRUN_ONLY=1` | Skips the full install/uninstall flow and just (re)installs the MS VC++ 2022 Redistributable into a game's prefix. The main menu offers the same under **Tools → [V]C++ install**. |
 | `EAX_RESTORE_SKIP_CACHE_CHECK=1` | Doesn't contact GitHub for DSOAL or OpenAL Soft: the build choice only offers what's already in the local cache. |
-| `EAX_RESTORE_KNOWN_GAMES_FILE=/path/to/known-eax-games.json` | Uses a local file (e.g. one you built with `tools/build-known-games.sh`) instead of fetching `known-eax-games.json` — mainly for testing edits to the database itself before they're pushed. |
+| `EAX_RESTORE_GAME_DATABASE_FILE=/path/to/game-database.json` | Uses a local file (e.g. one you built with `tools/build-game-database.sh`) instead of fetching `game-database.json` — mainly for testing edits to the database itself before they're pushed. |
 | `EAX_RESTORE_NO_LOG=1` | Turns off the per-run log file (see [Logs & Bug Reports](#logs--bug-reports)). |
 
 ### Logs & Bug Reports

@@ -5,7 +5,7 @@
 # Usage: print_choices_summary
 # Phase 2's "Configuration finished!" recap of every Phase 1 answer, shown
 # before the player confirms the deploy so they can check it all in one place.
-# Labels line up like the KNOWN GAMES DATABASE details; a value with more than
+# Labels line up like the GAME PROFILE details; a value with more than
 # one line (the game settings list) continues under the first.
 print_choices_summary() {
     local -a labels=() values=()
@@ -89,7 +89,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     # Fixed step count for this flow (1-11, same regardless of launcher/engine
     # branch) — read by print_step via the STEP_TOTAL global so headers show
     # "N/11. Label" instead of just "N. Label". Step 11 ("Game Settings") only
-    # appears for a known game with config fixes to offer. Step 2 ("Locate Game
+    # appears for a game whose profile has config fixes to offer. Step 2 ("Locate Game
     # Executable") only ever appears on the scan path — resolve_exe_folder
     # prints it itself — so browse/manual users jump straight from 1 to 3.
     STEP_TOTAL=11
@@ -262,7 +262,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     print_step 8 "Speaker Configuration"
     ask_speaker_configuration
 
-    # The known-games entry's alsoft.ini values (e.g. a reverb boost) are
+    # The game profile's alsoft.ini values (e.g. a reverb boost) are
     # OpenAL Soft settings, so they're offered here with the rest of them.
     offer_alsoft_settings
 
@@ -285,8 +285,8 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         COM_ROUTING_APPLICABLE=0
     fi
 
-    # the known-games entry's install.tweaks array (see
-    # resolve_recommended_tweaks in known-games.sh) may flag any combination of
+    # the game profile's install.tweaks array (see
+    # resolve_recommended_tweaks in game-database.sh) may flag any combination of
     # the three tweaks below for this game. Each flagged, applicable tweak is
     # decided here — before the generic opt-in gate further down — with a
     # default-Y prompt instead of the generic default-N one, since the
@@ -334,7 +334,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         echo -e "\n${CYAN}${BOLD}Expand Audio Limits${NC}"
         echo -e "${WHITE}Forces the engine to handle 256 simultaneous sounds and locks the sample rate to 48kHz."
         echo -e "Fixes audio dropping out in chaotic games (like F.E.A.R. or Thief), but uses more CPU.${NC}"
-        if confirm "Expand OpenAL audio limits? $GAME_NAME is flagged in the known-games database as benefiting from this." Y; then
+        if confirm "Expand OpenAL audio limits? $GAME_NAME is flagged in its profile as benefiting from this." Y; then
             ADVANCED_LIMITS="y"
         else
             ADVANCED_LIMITS="n"
@@ -349,7 +349,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         echo -e "\n${CYAN}${BOLD}COM Registry Routing${NC}"
         echo -e "${WHITE}Explicitly forces the Windows registry to point directly to our custom dsound.dll."
         echo -e "Beneficial for stubborn late-90s and early-2000s games that actively ignore local DLL files.${NC}"
-        if confirm "Inject COM registry routing? $GAME_NAME is flagged in the known-games database as needing this." Y; then
+        if confirm "Inject COM registry routing? $GAME_NAME is flagged in its profile as needing this." Y; then
             ADVANCED_COM="y"
         else
             ADVANCED_COM="n"
@@ -434,7 +434,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     choose_override_method
 
     # 11. Game Settings — changes to the game's own config files, from its
-    # known-games entry. Last, since it's about the game rather than the
+    # game profile. Last, since it's about the game rather than the
     # audio fix, and the speaker answer from step 8 decides some of them.
     game_settings_step 11
 

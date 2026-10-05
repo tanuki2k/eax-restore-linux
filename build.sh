@@ -22,7 +22,7 @@ COMPONENTS=(
     guards.sh
     logging.sh
     detection.sh
-    known-games.sh
+    game-database.sh
     game-config.sh
     launcher-config.sh
     vcrun.sh

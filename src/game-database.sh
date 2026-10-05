@@ -1,31 +1,31 @@
-ensure_known_games_json() {
-    # Usage: ensure_known_games_json
-    # Fetches known-eax-games.json fresh into a temp file, validates it's
+ensure_game_database() {
+    # Usage: ensure_game_database
+    # Fetches game-database.json fresh into a temp file, validates it's
     # well-formed JSON, then promotes it over the cached copy — never
     # overwrites a good cache with a truncated/bad response. Falls back to
     # the last-good cache if the fetch or validation fails, and to nothing
-    # (KNOWN_GAMES_FILE stays empty, return 1) if there's no usable cache
-    # either. Memoized per run via KNOWN_GAMES_FILE on success — but this
+    # (GAME_DATABASE_FILE stays empty, return 1) if there's no usable cache
+    # either. Memoized per run via GAME_DATABASE_FILE on success — but this
     # function is called several times per install (notes, no-op warning,
     # Audio API Detection), so a *failure* is memoized too via
-    # KNOWN_GAMES_ATTEMPTED, otherwise a genuinely offline run retries the
+    # GAME_DATABASE_ATTEMPTED, otherwise a genuinely offline run retries the
     # full fetch (10s timeout each) and reprints the same failure message
     # on every single call instead of once.
     #
-    # EAX_RESTORE_KNOWN_GAMES_FILE points this at a local file instead of
-    # fetching — for testing schema/data edits to known-eax-games.json
-    # before they've been pushed to the branch KNOWN_GAMES_URL fetches from.
-    [ -n "$KNOWN_GAMES_FILE" ] && return 0
-    [ -n "$KNOWN_GAMES_ATTEMPTED" ] && return 1
-    KNOWN_GAMES_ATTEMPTED=1
+    # EAX_RESTORE_GAME_DATABASE_FILE points this at a local file instead of
+    # fetching — for testing schema/data edits to game-database.json
+    # before they've been pushed to the branch GAME_DATABASE_URL fetches from.
+    [ -n "$GAME_DATABASE_FILE" ] && return 0
+    [ -n "$GAME_DATABASE_ATTEMPTED" ] && return 1
+    GAME_DATABASE_ATTEMPTED=1
     command -v jq &> /dev/null || return 1
 
-    if [ -n "${EAX_RESTORE_KNOWN_GAMES_FILE:-}" ]; then
-        if [ -s "$EAX_RESTORE_KNOWN_GAMES_FILE" ] && jq empty "$EAX_RESTORE_KNOWN_GAMES_FILE" 2>/dev/null; then
-            KNOWN_GAMES_FILE="$EAX_RESTORE_KNOWN_GAMES_FILE"
-            print_note "Using local known-games file:" "$EAX_RESTORE_KNOWN_GAMES_FILE" >&2
+    if [ -n "${EAX_RESTORE_GAME_DATABASE_FILE:-}" ]; then
+        if [ -s "$EAX_RESTORE_GAME_DATABASE_FILE" ] && jq empty "$EAX_RESTORE_GAME_DATABASE_FILE" 2>/dev/null; then
+            GAME_DATABASE_FILE="$EAX_RESTORE_GAME_DATABASE_FILE"
+            print_note "Using a local game database file:" "$EAX_RESTORE_GAME_DATABASE_FILE" >&2
         else
-            print_error "EAX_RESTORE_KNOWN_GAMES_FILE is set but the file is missing or not valid JSON." >&2
+            print_error "EAX_RESTORE_GAME_DATABASE_FILE is set but the file is missing or not valid JSON." >&2
             return 1
         fi
     else
@@ -34,18 +34,20 @@ ensure_known_games_json() {
         # pause. On stderr, like this function's other messages, since some
         # callers capture stdout.
         local tmp
-        print_task "Updating the known-games database" >&2
+        # The cache's name before the database was renamed; nothing reads it.
+        rm -f "$BASE_SHARE/known-eax-games.v3.json" 2>/dev/null
+        print_task "Updating the game database" >&2
         tmp=$(mktemp 2>/dev/null)
-        if [ -n "$tmp" ] && curl -fsSL --max-time 10 "$KNOWN_GAMES_URL" -o "$tmp" 2>/dev/null && jq empty "$tmp" 2>/dev/null; then
+        if [ -n "$tmp" ] && curl -fsSL --max-time 10 "$GAME_DATABASE_URL" -o "$tmp" 2>/dev/null && jq empty "$tmp" 2>/dev/null; then
             mkdir -p "$BASE_SHARE" 2>/dev/null
-            mv "$tmp" "$KNOWN_GAMES_CACHE"
-            KNOWN_GAMES_FILE="$KNOWN_GAMES_CACHE"
-            print_status "Updated: $(jq '.games | length' "$KNOWN_GAMES_FILE" 2>/dev/null) games" "$GREEN" >&2
+            mv "$tmp" "$GAME_DATABASE_CACHE"
+            GAME_DATABASE_FILE="$GAME_DATABASE_CACHE"
+            print_status "Updated: $(jq '.games | length' "$GAME_DATABASE_FILE" 2>/dev/null) games" "$GREEN" >&2
         else
             rm -f "$tmp" 2>/dev/null
-            if [ -s "$KNOWN_GAMES_CACHE" ] && jq empty "$KNOWN_GAMES_CACHE" 2>/dev/null; then
-                KNOWN_GAMES_FILE="$KNOWN_GAMES_CACHE"
-                print_status "Couldn't reach GitHub, so the copy from $(date -r "$KNOWN_GAMES_CACHE" +%F) is used." "$YELLOW" >&2
+            if [ -s "$GAME_DATABASE_CACHE" ] && jq empty "$GAME_DATABASE_CACHE" 2>/dev/null; then
+                GAME_DATABASE_FILE="$GAME_DATABASE_CACHE"
+                print_status "Couldn't reach GitHub, so the copy from $(date -r "$GAME_DATABASE_CACHE" +%F) is used." "$YELLOW" >&2
             else
                 # No message here — every caller that has something
                 # meaningful to say about a missing database says it
@@ -67,9 +69,9 @@ ensure_known_games_json() {
     # jq's `//` can't tell "key legitimately absent" from "key doesn't
     # exist in this schema yet" apart. Warn once so that's visible instead
     # of a checkbox that quietly never fires.
-    if ! jq -e --argjson want "$KNOWN_GAMES_SCHEMA_VERSION" \
-        '(.schema_version // 1) >= $want' "$KNOWN_GAMES_FILE" >/dev/null 2>&1; then
-        { echo ""; print_warning_arrow "$KNOWN_GAMES_FILE predates the schema this script version expects" \
+    if ! jq -e --argjson want "$GAME_DATABASE_SCHEMA_VERSION" \
+        '(.schema_version // 1) >= $want' "$GAME_DATABASE_FILE" >/dev/null 2>&1; then
+        { echo ""; print_warning_arrow "$GAME_DATABASE_FILE predates the schema this script version expects" \
             "— it looks like an older database. Audio API Detection, the game details and" \
             "the Game Settings step won't work correctly until it updates."; } >&2
     fi
@@ -280,7 +282,7 @@ game_eax_status() {
     # Usage: game_eax_status <id> <steam|gog>
     # The entry's eax.status ("supported" when it has none), or nothing when
     # the game isn't in the database.
-    jq -r --arg id "$1" --arg store "$2" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.status // "supported"' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1
+    jq -r --arg id "$1" --arg store "$2" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.status // "supported"' "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1
 }
 
 confirm_built_in_install() {
@@ -311,13 +313,13 @@ block_if_eax_not_implemented() {
     # RESTART_REQUESTED for scan_game_libraries to unwind on.
     [ "$SCRIPT_ACTION" == "i" ] || return
     [ -z "$1" ] && return
-    ensure_known_games_json || return
+    ensure_game_database || return
 
     local store="steam"
     [ "$2" == "gog" ] && store="gog"
     local status workaround
-    status=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.status // "supported"' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
-    workaround=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.fix_in_place // false' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+    status=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.status // "supported"' "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
+    workaround=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.fix_in_place // false' "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
 
     if [ "$status" == "not_implemented" ]; then
         print_error "$3 never implemented EAX/environmental audio in the first place, so" \
@@ -360,7 +362,7 @@ detect_steam_beta_branch() {
 scan_game_libraries() {
     # Usage: scan_game_libraries
     # Opt-in alternative to browsing/typing a path: scans Steam and Heroic
-    # libraries for games present in known-eax-games.json, lists the
+    # libraries for games present in game-database.json, lists the
     # matches, and resolves the pick's actual .exe folder (via
     # resolve_exe_folder) into GAME_DIR. Also sets SCANNED_APPID so
     # detect_game_environment's Steam branch can skip its own redundant
@@ -380,15 +382,15 @@ scan_game_libraries() {
     RECOMMENDED_COM_ROUTING=""
     RECOMMENDED_TWEAKS_RESOLVED=""
 
-    if ! ensure_known_games_json; then
-        print_note "library scanning needs the known-EAX-games database, which isn't available this run."
+    if ! ensure_game_database; then
+        print_note "library scanning needs the game database, which isn't available this run."
         echo ""
         return 1
     fi
 
-    print_task "Scanning Steam and Heroic libraries for known EAX games"
+    print_task "Scanning Steam and Heroic libraries for games with a profile"
 
-    # names[] is the curated known-eax-games.json display name, used only for
+    # names[] is the curated game-database.json display name, used only for
     # the pick-list menu below. meta_names[] is the name as reported by the
     # game's OWN install metadata (the Steam appmanifest's "name" key, or the
     # GOG/Heroic install folder itself) — sourced the same way appid/gog_id
@@ -398,7 +400,7 @@ scan_game_libraries() {
 
     # --- Steam ---
     local steam_ids
-    steam_ids=$(jq -r '.games[] | select(.stores.steam.id != null) | .stores.steam.id' "$KNOWN_GAMES_FILE" 2>/dev/null)
+    steam_ids=$(jq -r '.games[] | select(.stores.steam.id != null) | .stores.steam.id' "$GAME_DATABASE_FILE" 2>/dev/null)
     if [ -n "$steam_ids" ]; then
         local libs=() lib
         while IFS= read -r lib; do libs+=("$lib"); done < <(steam_library_dirs)
@@ -413,7 +415,7 @@ scan_game_libraries() {
                 echo "$steam_ids" | grep -qx "$appid" || continue
                 installdir=$(sed -n 's/^[[:space:]]*"installdir"[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$acf" 2>/dev/null | head -n 1)
                 [ -n "$installdir" ] && [ -d "$lib/common/$installdir" ] || continue
-                name=$(jq -r --arg id "$appid" '.games[] | select((.stores.steam.id | tostring) == $id) | .name' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+                name=$(jq -r --arg id "$appid" '.games[] | select((.stores.steam.id | tostring) == $id) | .name' "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
                 [ -z "$name" ] && name="AppID $appid"
                 meta_name=$(sed -n 's/^[[:space:]]*"name"[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$acf" 2>/dev/null | head -n 1)
                 [ -z "$meta_name" ] && meta_name="AppID $appid"
@@ -428,7 +430,7 @@ scan_game_libraries() {
 
     # --- Heroic ---
     local gog_ids
-    gog_ids=$(jq -r '.games[] | select(.stores.gog.id != null) | .stores.gog.id' "$KNOWN_GAMES_FILE" 2>/dev/null)
+    gog_ids=$(jq -r '.games[] | select(.stores.gog.id != null) | .stores.gog.id' "$GAME_DATABASE_FILE" 2>/dev/null)
     if [ -n "$gog_ids" ]; then
         local installed_jsons
         installed_jsons=$(find "$HOME/.config/heroic" "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic" -type f -name "installed.json" 2>/dev/null)
@@ -440,7 +442,7 @@ scan_game_libraries() {
                 [ -z "$install_path" ] || [ -z "$app_name" ] && continue
                 echo "$gog_ids" | grep -qx "$app_name" || continue
                 [ -d "$install_path" ] || continue
-                name=$(jq -r --arg id "$app_name" '.games[] | select((.stores.gog.id | tostring) == $id) | .name' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+                name=$(jq -r --arg id "$app_name" '.games[] | select((.stores.gog.id | tostring) == $id) | .name' "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
                 [ -z "$name" ] && name="GOG ID $app_name"
                 meta_name="$(basename "$install_path")"
                 [ -z "$meta_name" ] && meta_name="GOG ID $app_name"
@@ -454,8 +456,8 @@ scan_game_libraries() {
     fi
 
     if [ ${#names[@]} -eq 0 ]; then
-        print_warning "No known EAX games were found in your Steam or Heroic libraries."
-        print_note "this only checks the community-maintained known-games list, which currently" \
+        print_warning "No games with a profile were found in your Steam or Heroic libraries."
+        print_note "this only checks the community-maintained game database, which currently" \
             "covers a small, hand-verified set of titles — it will grow over time. A game" \
             "you own may still support EAX even if it's not listed yet."
         return 1
@@ -494,9 +496,9 @@ scan_game_libraries() {
         first=$(( page * per_page )); last=$(( first + per_page - 1 ))
         [ "$last" -ge "$total" ] && last=$(( total - 1 ))
         if [ "$pages" -gt 1 ]; then
-            print_result "Known EAX games found in your libraries (page $((page + 1)) of ${pages}):"
+            print_result "Games with a profile in your libraries (page $((page + 1)) of ${pages}):"
         else
-            print_result "Known EAX games found in your libraries:"
+            print_result "Games with a profile in your libraries:"
         fi
         for ((i = first; i <= last; i++)); do
             store_label="Steam"
@@ -556,11 +558,11 @@ scan_game_libraries() {
     if [ "${stores[$idx]}" == "steam" ]; then
         beta_branch=$(jq -r --arg id "${ids[$idx]}" \
             '.games[] | select((.stores.steam.id // "") | tostring == $id) | .stores.steam.beta_branch // empty' \
-            "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+            "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
     fi
     exe_name=$(jq -r --arg id "${ids[$idx]}" --arg store "${stores[$idx]}" \
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | .exe // empty' \
-        "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
     resolve_exe_folder "${paths[$idx]}" "$beta_branch" "$exe_name" || return 1
     GAME_INSTALL_ROOT="${paths[$idx]}"
 
@@ -569,15 +571,15 @@ scan_game_libraries() {
 }
 
 # Per-game notes and EAX-impossible flags now live in the community-
-# maintained known-eax-games.json (see ensure_known_games_json above and
-# known-eax-games.json in this repo) rather than hardcoded here, so entries
+# maintained game-database.json (see ensure_game_database above and
+# game-database.json in this repo) rather than hardcoded here, so entries
 # can be added/corrected via PR without touching this script. Entries are
 # still only added when independently verified against the storefront's
 # own API — a wrong/stale ID would misdirect users to the wrong game.
 
 resolve_recommended_tweaks() {
     # Usage: resolve_recommended_tweaks <id> <steam|gog>
-    # Reads the known-games entry's install.tweaks array once and sets
+    # Reads the game profile's install.tweaks array once and sets
     # EAX_UNIFIED / RECOMMENDED_AUDIO_LIMITS / RECOMMENDED_COM_ROUTING to 1
     # (else "") based on membership of "eax_unified" / "expand_audio_limits" /
     # "com_registry_routing" respectively — the ~32 titles that reach EAX
@@ -593,13 +595,13 @@ resolve_recommended_tweaks() {
     RECOMMENDED_COM_ROUTING=""
     RECOMMENDED_TWEAKS_RESOLVED=1
     [ -z "$1" ] && return
-    ensure_known_games_json || return
+    ensure_game_database || return
     local store="steam"
     [ "$2" == "gog" ] && store="gog"
     local tweaks
     tweaks=$(jq -r --arg id "$1" --arg store "$store" \
         '[.games[] | select((.stores[$store].id // "") | tostring == $id)][0] | .install.tweaks // [] | .[]' \
-        "$KNOWN_GAMES_FILE" 2>/dev/null)
+        "$GAME_DATABASE_FILE" 2>/dev/null)
     [ -z "$tweaks" ] && return
     grep -qx "eax_unified" <<< "$tweaks" && EAX_UNIFIED=1
     grep -qx "expand_audio_limits" <<< "$tweaks" && RECOMMENDED_AUDIO_LIMITS=1
@@ -617,7 +619,7 @@ resolve_extra_exe_folders() {
     # is skipped without a word.
     EXTRA_GAME_DIRS=()
     [ -n "$1" ] && [ -n "$GAME_DIR" ] || return 0
-    ensure_known_games_json || return 0
+    ensure_game_database || return 0
     local rel dir
     while IFS= read -r rel; do
         [ -n "$rel" ] || continue
@@ -626,7 +628,7 @@ resolve_extra_exe_folders() {
         [ -n "$dir" ] && [ -d "$dir" ] && EXTRA_GAME_DIRS+=("$dir")
     done < <(jq -r --arg id "$1" --arg store "$2" \
         '[.games[] | select((.stores[$store].id // "") | tostring == $id)][0] | .stores[$store].extra_exe_folders // [] | .[]' \
-        "$KNOWN_GAMES_FILE" 2>/dev/null)
+        "$GAME_DATABASE_FILE" 2>/dev/null)
 }
 
 # Usage: extra_exe_folders_list
@@ -641,20 +643,20 @@ extra_exe_folders_list() {
     echo "$out"
 }
 
-show_known_game_notes() {
-    # Usage: show_known_game_notes <id> <steam|gog> [skip_availability]
+show_profile_notes() {
+    # Usage: show_profile_notes <id> <steam|gog> [skip_availability]
     # Best-effort, install-only heads-up for well-known EAX titles, sourced
-    # from the game-level `notes` field of known-eax-games.json. Notes are
+    # from the game-level `notes` field of game-database.json. Notes are
     # stored as a single unwrapped line for easy editing, then word-wrapped to
     # the script's usual prose width at display time. stores.<store>.delisted
     # is shown as an Availability line here too, EXCEPT when the caller
-    # already surfaced it in a KNOWN GAMES DATABASE block (show_game_details_block
+    # already surfaced it in a GAME PROFILE block (show_game_details_block
     # passes skip_availability=1 to avoid printing it twice) — call sites that
-    # don't go through a KNOWN GAMES DATABASE block (e.g. an unmatched manual entry)
+    # don't go through a GAME PROFILE block (e.g. an unmatched manual entry)
     # still need this fallback.
     [ "$SCRIPT_ACTION" == "i" ] || return
     [ -z "$1" ] && return
-    ensure_known_games_json || return
+    ensure_game_database || return
 
     local store="steam" store_label="Steam"
     if [ "$2" == "gog" ]; then
@@ -662,10 +664,10 @@ show_known_game_notes() {
     fi
 
     local notes listing
-    notes=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .notes // empty' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+    notes=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .notes // empty' "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
 
     if [ -z "$3" ]; then
-        listing=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | (if .stores[$store].delisted then "delisted" else empty end)' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+        listing=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | (if .stores[$store].delisted then "delisted" else empty end)' "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
         if [ "$listing" == "delisted" ]; then
             echo -e "\n${NOTE}  Note: this game is currently delisted from ${store_label}'s storefront —"
             echo -e "  existing owners keep access, but it can't be newly purchased there anymore.${NC}"
@@ -679,18 +681,18 @@ show_known_game_notes() {
 
 show_game_details_block() {
     # Usage: show_game_details_block <id> <steam|gog> <location>
-    # The richer "--- KNOWN GAMES DATABASE ---" banner scan_game_libraries shows when
+    # The richer "--- GAME PROFILE ---" banner scan_game_libraries shows when
     # a game is picked from a library scan, factored out so the manual/GUI
     # path can show the same thing once detect_game_environment has confirmed
     # a prefix and therefore knows the id to look this up by. Only prints
-    # when known-eax-games.json actually has a matching entry — an unmatched
+    # when game-database.json actually has a matching entry — an unmatched
     # manual pick has nothing to show, same as before this existed.
     local id="$1" store="$2" location="$3"
-    KNOWN_GAME_API=""
-    KNOWN_GAME_PATCHES=""
+    PROFILE_API=""
+    PROFILE_PATCHES=""
     [ "$SCRIPT_ACTION" == "i" ] || return
     [ -z "$id" ] && return
-    ensure_known_games_json || return
+    ensure_game_database || return
 
     local store_label="Steam"
     [ "$store" == "gog" ] && store_label="GOG"
@@ -698,51 +700,51 @@ show_game_details_block() {
     local match_count
     match_count=$(jq -r --arg id "$id" --arg store "$store" \
         '[.games[] | select((.stores[$store].id // "") | tostring == $id)] | length' \
-        "$KNOWN_GAMES_FILE" 2>/dev/null)
+        "$GAME_DATABASE_FILE" 2>/dev/null)
     [ "${match_count:-0}" -gt 0 ] || return
 
     local name eax_versions api listing eax_status eax_status_details restore_details
     local store_details patches id_confidence
     name=$(jq -r --arg id "$id" --arg store "$store" \
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | .name' \
-        "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
     eax_versions=$(jq -r --arg id "$id" --arg store "$store" \
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.versions // [] | join(", ")' \
-        "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
     api=$(jq -r --arg id "$id" --arg store "$store" \
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | (.stores[$store].api // .eax.api // "directsound3d")' \
-        "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
-    KNOWN_GAME_API="$api"
+        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
+    PROFILE_API="$api"
     listing=$(jq -r --arg id "$id" --arg store "$store" \
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | (if .stores[$store].delisted then "delisted" else empty end)' \
-        "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
     eax_status=$(jq -r --arg id "$id" --arg store "$store" \
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.status // "supported"' \
-        "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
     [ -z "$eax_status" ] && eax_status="supported"
     eax_status_details=$(jq -r --arg id "$id" --arg store "$store" \
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.problem // empty' \
-        "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
     restore_details=$(jq -r --arg id "$id" --arg store "$store" \
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.fix // empty' \
-        "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
     store_details=$(jq -r --arg id "$id" --arg store "$store" \
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | .stores[$store].store_details // empty' \
-        "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
     # The first match's whole text, not its first line: patches can hold a
     # line break between suggestions.
     patches=$(jq -r --arg id "$id" --arg store "$store" \
         '[.games[] | select((.stores[$store].id // "") | tostring == $id)][0].stores[$store].patches // empty' \
-        "$KNOWN_GAMES_FILE" 2>/dev/null)
-    KNOWN_GAME_PATCHES="$patches"
+        "$GAME_DATABASE_FILE" 2>/dev/null)
+    PROFILE_PATCHES="$patches"
     id_confidence=$(jq -r --arg id "$id" --arg store "$store" \
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | .stores[$store].id_source // empty' \
-        "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
 
     resolve_recommended_tweaks "$id" "$store"
 
     # --- Field lines: what the database has on file, then what was found here ---
-    # Everything under "Game details" comes from known-eax-games.json, not
+    # Everything under "Game details" comes from game-database.json, not
     # from the install, so it's kept apart from the two facts the library
     # scan found on this system. The lines are collected first and printed
     # together, so every value lines up after the longest label shown.
@@ -763,7 +765,7 @@ show_game_details_block() {
             fi
         done
     }
-    print_banner "KNOWN GAMES DATABASE"
+    print_banner "GAME PROFILE"
     _detail_heading "Game details"
     _detail "Name" "${BOLD}${name}${NC}"
     if [ "$listing" == "delisted" ]; then
@@ -840,7 +842,7 @@ show_game_details_block() {
         print_subheading "Additional steps"
         print_wrapped "$restore_details"
     fi
-    show_known_game_notes "$id" "$store" 1
+    show_profile_notes "$id" "$store" 1
     SCANNED_NOTES_SHOWN=1
     if [ -n "$patches" ]; then
         print_subheading "Suggested community patches"
@@ -857,18 +859,18 @@ show_game_details_block() {
     done < <(jq -r --arg id "$id" --arg store "$store" '
         [.games[] | select((.stores[$store].id // "") | tostring == $id)][0].sources // [] | .[]
         | if type == "string" then [(capture("^https?://(www\\.)?(?<h>[^/]+)").h), .] else [.title, .url] end
-        | join("\t")' "$KNOWN_GAMES_FILE" 2>/dev/null)
+        | join("\t")' "$GAME_DATABASE_FILE" 2>/dev/null)
     echo ""
 }
 
 # Usage: print_community_patches_summary
 # INSTALLATION COMPLETE's "Suggested community patches" section: the same text
-# the KNOWN GAMES DATABASE block showed, repeated where the player will still
+# the GAME PROFILE block showed, repeated where the player will still
 # see it when they go to play.
 print_community_patches_summary() {
-    [ -n "$KNOWN_GAME_PATCHES" ] || return 0
+    [ -n "$PROFILE_PATCHES" ] || return 0
     echo -e "\n${YELLOW}${BOLD}Suggested community patches:${NC}"
-    print_wrapped "$KNOWN_GAME_PATCHES"
+    print_wrapped "$PROFILE_PATCHES"
 }
 
 confirm_continue_if_eax_impossible() {
@@ -897,10 +899,10 @@ confirm_continue_if_eax_impossible() {
     local acf_file="$3"
 
     local status="" workaround="false" beta_branch=""
-    if ensure_known_games_json; then
-        status=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.status // "supported"' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
-        workaround=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.fix_in_place // false' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
-        beta_branch=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .stores[$store].beta_branch // empty' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+    if ensure_game_database; then
+        status=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.status // "supported"' "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
+        workaround=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.fix_in_place // false' "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
+        beta_branch=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .stores[$store].beta_branch // empty' "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
     elif [ "$store" != "gog" ] && [ -n "${EAX_IMPOSSIBLE_FALLBACK_STEAM[$1]:-}" ]; then
         # Only ever seeds Half-Life (AppID 70), which has no in-place
         # workaround — workaround stays "false".
@@ -916,7 +918,7 @@ confirm_continue_if_eax_impossible() {
     if [ "$status" == "built_in" ]; then
         [ -n "$BUILT_IN_CONFIRMED" ] && return
         local name
-        name=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .name' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+        name=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .name' "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
         confirm_built_in_install "$name" || prompt_restart_or_quit 0
         return
     fi
