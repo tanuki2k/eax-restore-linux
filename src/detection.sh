@@ -660,13 +660,6 @@ identify_game_dir() {
     return 1
 }
 
-# Usage: game_name_for_dir <dir>
-# The name of the game installed in <dir> (see identify_game_dir), for lists
-# that only have a path. Prints nothing when it can't tell.
-game_name_for_dir() {
-    identify_game_dir "$1" && printf '%s' "$GAME_ID_NAME"
-}
-
 normalize_game_name() {
     # Usage: normalize_game_name <string>
     # Lowercases, converts standalone (word-bounded) roman numerals II-IX to

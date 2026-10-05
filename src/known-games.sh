@@ -120,14 +120,19 @@ prompt_recent_game() {
     else
         echo -e "${WHITE}Previously used game folders:${NC}"
     fi
-    # The game's name, with its folder dimmed underneath; just the folder
+    # The game's name, with its folder dimmed underneath for uninstall, or
+    # its storefront like the library scan's list for Tools; just the folder
     # when the install doesn't say what it is.
-    local i name
+    local i store
     for i in "${!paths[@]}"; do
-        name="$(game_name_for_dir "${paths[$i]}")"
-        if [ -n "$name" ]; then
-            print_option "$((i + 1))" "$name"
-            echo -e "    ${DIM}$(tilde_path "${paths[$i]}")${NC}"
+        if identify_game_dir "${paths[$i]}" && [ -n "$GAME_ID_NAME" ]; then
+            if [ -n "$SETTINGS_TOOL_MODE" ]; then
+                store="Steam"; [ "$GAME_ID_STORE" == "gog" ] && store="GOG"
+                print_option "$((i + 1))" "$GAME_ID_NAME" "($store)"
+            else
+                print_option "$((i + 1))" "$GAME_ID_NAME"
+                echo -e "    ${DIM}$(tilde_path "${paths[$i]}")${NC}"
+            fi
         else
             print_option "$((i + 1))" "${paths[$i]}"
         fi
