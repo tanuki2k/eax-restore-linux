@@ -211,7 +211,7 @@
     },
     "config_file_name": {
       "type": "string",
-      "pattern": "^[A-Za-z0-9._ -]+\\.([iI][nN][iI]|[cC][fF][gG])$"
+      "pattern": "^[A-Za-z0-9._ -]+\\.([iI][nN][iI]|[cC][fF][gG]|[gG][dD][bB])$"
     },
     "config_file": {
       "type": "object",
@@ -219,8 +219,8 @@
       "additionalProperties": false,
       "properties": {
         "format": {
-          "description": "ini: [Section] key=value. flat_ini: key=value lines with no [sections]. idtech_cfg: seta key \"value\". dark_cfg: NewDark key value, bare flags, ;flag = off.",
-          "enum": ["ini", "flat_ini", "idtech_cfg", "dark_cfg"]
+          "description": "ini: [Section] key=value. flat_ini: key=value lines with no [sections]. idtech_cfg: seta key \"value\". dark_cfg: NewDark key value, bare flags, ;flag = off. gadb: Monolith's binary game database (F.E.A.R.'s Profile000.gdb); only switches an existing on/off setting, values \"0\"/\"1\".",
+          "enum": ["ini", "flat_ini", "idtech_cfg", "dark_cfg", "gadb"]
         },
         "locations": {
           "description": "Where to look, in order, as \"base:path\". The first one that exists is used.",
@@ -228,7 +228,7 @@
           "minItems": 1,
           "items": {
             "type": "string",
-            "pattern": "^(game|install|prefix_documents|prefix_appdata|prefix_localappdata):(?!/)(?!.*\\.\\.)[^\\\\]+\\.([iI][nN][iI]|[cC][fF][gG])$"
+            "pattern": "^(game|install|prefix_documents|prefix_appdata|prefix_localappdata|prefix_public_documents):(?!/)(?!.*\\.\\.)[^\\\\]+\\.([iI][nN][iI]|[cC][fF][gG]|[gG][dD][bB])$"
           }
         },
         "if_missing": {

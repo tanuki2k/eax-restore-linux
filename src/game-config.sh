@@ -3,7 +3,7 @@
 # ==============================================================================
 # Everything the script changes in a game's own config files comes from that
 # game's known-games entry (game_config.audio_settings / optional_settings) — the script
-# itself only knows how to read and edit the four config formats, never which
+# itself only knows how to read and edit the five config formats, never which
 # game needs what. Decided in Phase 1 (Speaker Configuration offers the
 # alsoft.ini values, step 11 offers the game's own settings), applied in
 # Phase 2, recorded in the manifest as CONFIG: lines, reverted on uninstall.
@@ -13,14 +13,50 @@
 #   __DELETE__            remove the key (null in JSON)
 #   __ABSENT__            (read side only) the key isn't in the file
 
-# Usage: config_get_key <file> <ini|flat_ini|idtech_cfg|dark_cfg> <section> <key>
+# Usage: _gadb_find <file> <key>
+# gadb is Monolith's binary game database, which F.E.A.R. keeps its player
+# profile in (Profile000.gdb): a "GADB" header with the string table's size
+# at byte 8, the string table from byte 28 (NUL-separated names), then
+# 4-byte-aligned little-endian records of [name's offset in the string
+# table, type, 0, count, value...]. Prints "<byte position of the value>
+# <value>" for the key's one on/off record (type 1, count 1), and nothing
+# when there's none, more than one, or the file isn't a GADB file. Read a
+# byte at a time through od, so it's endian-safe and needs nothing extra.
+_gadb_find() {
+    od -An -v -tu1 -w1 "$1" 2>/dev/null | LC_ALL=C awk -v key="$2" '
+        { b[n++] = $1 + 0 }
+        function u32(i) { return b[i] + b[i+1] * 256 + b[i+2] * 65536 + b[i+3] * 16777216 }
+        END {
+            if (n < 28 || b[0] != 71 || b[1] != 65 || b[2] != 68 || b[3] != 66) exit
+            sl = u32(8); end = 28 + sl; if (end > n) exit
+            lkey = tolower(key); ko = -1; s = ""; start = 28
+            for (i = 28; i < end; i++) {
+                if (b[i] == 0) {
+                    if (ko < 0 && tolower(s) == lkey) ko = start - 28
+                    s = ""; start = i + 1
+                } else s = s sprintf("%c", b[i])
+            }
+            if (ko < 0) exit
+            hits = 0
+            for (i = end + (4 - end % 4) % 4; i + 20 <= n; i += 4)
+                if (u32(i) == ko && u32(i+4) == 1 && u32(i+8) == 0 && u32(i+12) == 1) { hits++; pos = i + 16 }
+            if (hits == 1) print pos, u32(pos)
+        }'
+}
+
+# Usage: config_get_key <file> <ini|flat_ini|idtech_cfg|dark_cfg|gadb> <section> <key>
 # Prints the key's current value, __ABSENT__ if it isn't set, or (dark_cfg
 # only) __TRUE__ for an active bare flag and __FALSE__ for a flag that's only
 # present commented out. Section and key names match case-insensitively, like
-# the games themselves read them.
+# the games themselves read them. A gadb key is one on/off setting, 0 or 1.
 config_get_key() {
-    local file="$1" fmt="$2" sec="$3" key="$4"
+    local file="$1" fmt="$2" sec="$3" key="$4" found
     [ -f "$file" ] || { echo "__ABSENT__"; return; }
+    if [ "$fmt" == "gadb" ]; then
+        found="$(_gadb_find "$file" "$key")"
+        if [ -n "$found" ]; then echo "${found#* }"; else echo "__ABSENT__"; fi
+        return
+    fi
     LC_ALL=C awk -v fmt="$fmt" -v sec="$sec" -v key="$key" '
         BEGIN { lsec = tolower(sec); lkey = tolower(key); insec = (fmt != "ini"); found = 0; commented = 0 }
         { sub(/\r$/, "") }
@@ -54,19 +90,43 @@ config_get_key() {
     ' "$file"
 }
 
-# Usage: config_set_key <file> <ini|flat_ini|idtech_cfg|dark_cfg> <section> <key> <value>
+# Usage: _gadb_set <file> <key> <0|1>
+# config_set_key for gadb: overwrites the value of the key's existing on/off
+# record in place. Never adds or removes a record, since the file's offsets
+# would all move, so an absent key or any value but 0/1 returns 1. Writes a
+# copy in the same folder, checks the new value reads back, then swaps it in.
+_gadb_set() {
+    local file="$1" key="$2" value="$3" found tmp
+    [[ "$value" =~ ^[01]$ ]] || return 1
+    found="$(_gadb_find "$file" "$key")"
+    [ -n "$found" ] || return 1
+    tmp="$(mktemp "$(dirname "$file")/.eax-restore-cfg.XXXXXX" 2>/dev/null)" || return 1
+    if cp -f "$file" "$tmp" 2>/dev/null \
+        && { if [ "$value" == "1" ]; then printf '\x01\x00\x00\x00'; else printf '\x00\x00\x00\x00'; fi; } \
+            | dd of="$tmp" bs=1 seek="${found%% *}" conv=notrunc status=none 2>/dev/null \
+        && [ "$(_gadb_find "$tmp" "$key")" == "${found%% *} $value" ]; then
+        chmod --reference="$file" "$tmp" 2>/dev/null
+        mv -f "$tmp" "$file" 2>/dev/null && return 0
+    fi
+    rm -f "$tmp"
+    return 1
+}
+
+# Usage: config_set_key <file> <ini|flat_ini|idtech_cfg|dark_cfg|gadb> <section> <key> <value>
 # Sets (or with __DELETE__ removes) one key, keeping everything else in the
 # file as it was — including CRLF line endings, the original spelling of an
 # existing key, and "key = value" spacing. A missing ini key goes at the end
 # of its section (or a new section at the end of the file); a missing flat_ini
 # or cfg key is appended. flat_ini is ini without [sections] — the whole file
 # is one section, so its rows carry no section name. For dark_cfg, a commented-out example line is left in place and
-# the active line is added right after it. Writes through a temp file in the
+# the active line is added right after it. gadb only switches an existing
+# on/off setting (see _gadb_set). Writes through a temp file in the
 # same folder and swaps it in, so a failure never leaves a half-written file.
 # Returns 1 if the file couldn't be written.
 config_set_key() {
     local file="$1" fmt="$2" sec="$3" key="$4" value="$5"
     local crlf=0 current tmp
+    [ "$fmt" == "gadb" ] && { _gadb_set "$file" "$key" "$value"; return; }
     [ -f "$file" ] && LC_ALL=C grep -q $'\r' "$file" 2>/dev/null && crlf=1
     current="$(config_get_key "$file" "$fmt" "$sec" "$key")"
     tmp="$(mktemp "$(dirname "$file")/.eax-restore-cfg.XXXXXX" 2>/dev/null)" || return 1
@@ -212,6 +272,11 @@ resolve_config_file() {
                         prefix_localappdata) dirs+=("$PREFIX_PATH/drive_c/users/$u/AppData/Local") ;;
                     esac
                 done ;;
+            # Shared by every user, so one folder (F.E.A.R. keeps its
+            # profiles here).
+            prefix_public_documents)
+                [ -n "${PREFIX_PATH:-}" ] || continue
+                dirs=("$PREFIX_PATH/drive_c/users/Public/Documents") ;;
             *) continue ;;
         esac
         for dir in "${dirs[@]}"; do
@@ -307,15 +372,17 @@ load_game_config_rows() {
 config_row_is_safe() {
     local fmt="$1" locations="$2" sec="$3" key="$4" value="$5" loc
     local name_re='^[A-Za-z0-9._ -]+$' value_re='^[A-Za-z0-9._ ()-]*$'
-    [[ "$fmt" =~ ^(ini|flat_ini|idtech_cfg|dark_cfg)$ ]] || return 1
+    [[ "$fmt" =~ ^(ini|flat_ini|idtech_cfg|dark_cfg|gadb)$ ]] || return 1
     [ -n "$locations" ] || return 1
     IFS='|' read -ra locs <<< "$locations"
     for loc in "${locs[@]}"; do
-        [[ "$loc" =~ ^(game|install|prefix_documents|prefix_appdata|prefix_localappdata):[^/\\] ]] || return 1
+        [[ "$loc" =~ ^(game|install|prefix_documents|prefix_appdata|prefix_localappdata|prefix_public_documents):[^/\\] ]] || return 1
         [[ "$loc" == *..* || "$loc" == *\\* ]] && return 1
     done
     [[ "$key" =~ $name_re ]] || return 1
     if [ "$fmt" == "ini" ]; then [[ "$sec" =~ $name_re ]] || return 1; fi
+    # A gadb setting can only be switched on or off in place.
+    if [ "$fmt" == "gadb" ]; then [[ "$value" =~ ^[01]$ ]] || return 1; fi
     case "$value" in
         __TRUE__|__FALSE__) [ "$fmt" == "dark_cfg" ] || return 1 ;;
         __DELETE__) ;;

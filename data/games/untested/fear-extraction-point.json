@@ -12,6 +12,21 @@
   "install": {
     "tweaks": ["eax_unified", "expand_audio_limits"]
   },
+  "game_config": {
+    "files": {
+      "Profile000.gdb": {
+        "format": "gadb",
+        "locations": ["prefix_public_documents:TimeGate Studios/FEARXP/Profiles/Profile000.gdb"]
+      }
+    },
+    "audio_settings": [
+      {
+        "title": "Enable EAX effects",
+        "reason": "F.E.A.R. Extraction Point ships with its hardware sound and EAX options off, so it plays with no EAX reverb.",
+        "changes": { "Profile000.gdb": { "UseHWSound": "1", "UseEAX": "1", "UseEAX4": "1" } }
+      }
+    ]
+  },
   "sources": [
     { "title": "PCGamingWiki: F.E.A.R.", "url": "https://www.pcgamingwiki.com/wiki/F.E.A.R." },
     {
