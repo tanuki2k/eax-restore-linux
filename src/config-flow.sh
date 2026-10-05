@@ -343,7 +343,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
 
         while true; do
             prompt "Selection [1-4]: "
-            read_answer SURROUND_CHOICE
+            read_answer SURROUND_CHOICE || exit 0
             case "$SURROUND_CHOICE" in
                 1) SURROUND_CHANNELS="quad"; break ;;
                 2) SURROUND_CHANNELS="surround51"; break ;;

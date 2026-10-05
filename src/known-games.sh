@@ -362,7 +362,7 @@ scan_game_libraries() {
     local choice
     while true; do
         prompt "Selection [0-${#names[@]}]: "
-        read_answer choice
+        read_answer choice || exit 0
         if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 0 ] && [ "$choice" -le ${#names[@]} ]; then
             break
         fi

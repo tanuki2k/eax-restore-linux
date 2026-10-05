@@ -1576,9 +1576,9 @@ select_architecture() {
     if [ "$ARCH" == "MANUAL" ]; then
         while true; do
             prompt "Architecture (32/64): "
-            read_answer ARCH
+            read_answer ARCH || exit 0
             if [[ "$ARCH" == "32" || "$ARCH" == "64" ]]; then break
-            else print_result "Invalid selection. Please type 32 or 64." "$YELLOW"; fi
+            else print_result "That's not a valid option — please type 32 or 64." "$YELLOW"; fi
         done
     fi
     ARCH_FOLDER=$([ "$ARCH" == "64" ] && echo "Win64" || echo "Win32")
