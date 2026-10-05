@@ -201,6 +201,10 @@ MAIN_MENU_SHOWN=""
 # main-menu loop opens the Tools menu instead of the main menu.
 OPEN_TOOLS_MENU=""
 
+# Set by scan_game_libraries when the player picks the list's [M]anually
+# ("manual") or [R]eturn ("return") instead of a game.
+SCAN_NEXT=""
+
 # Which Tools → Game settings item is running: "optional" (Optional settings)
 # or "speakers" (Speaker configuration), empty otherwise. See settings-flow.sh.
 SETTINGS_TOOL_MODE=""

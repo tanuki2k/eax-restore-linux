@@ -168,7 +168,7 @@ prompt_recent_game() {
             return 0
         fi
         [[ " ${keys[*]} " == *" $choice "* ]] && break
-        print_result "That's not a valid option — please type $( [ ${#paths[@]} -eq 1 ] && echo "1" || echo "a number from 1-${#paths[@]}"), or $(join_choices "${keys[@]}")." "$YELLOW"
+        print_result "That's not a valid option — please type $( [ ${#paths[@]} -eq 1 ] && echo "1" || echo "a number from 1-${#paths[@]}"), $(join_choices "${keys[@]}")." "$YELLOW"
     done
     case "$choice" in
         b) LOCATE_METHOD="gui" ;;
@@ -269,6 +269,7 @@ scan_game_libraries() {
     # AppID search/confirmation. Returns 1 (GAME_DIR left empty) if nothing
     # was found or picked, so get_game_directory falls through to its
     # normal manual/GUI-picker flow.
+    SCAN_NEXT=""
     GAME_DIR=""
     GAME_NAME=""
     GAME_INSTALL_ROOT=""
@@ -400,22 +401,31 @@ scan_game_libraries() {
         [ "${stores[$i]}" == "gog" ] && store_label="GOG"
         print_option "$((i + 1))" "${names[$i]}" "(${store_label})"
     done
-    print_option 0 "None of these / enter a path manually"
+    # Not in the list: type the path instead, or go back (SCAN_NEXT tells
+    # get_game_directory which).
+    local -a keys=(m)
+    echo ""
+    print_key_option "[M]anually type the game path"
+    if [ -n "$MAIN_MENU_SHOWN" ]; then
+        echo ""
+        print_key_option "[R]eturn to the $(return_menu_label)"; keys+=(r)
+    fi
 
     local choice
     while true; do
-        prompt "Selection [0-${#names[@]}]: "
+        prompt "Selection [1-${#names[@]}/$(IFS=/; echo "${keys[*]}")]: "
         read_answer choice || exit 0
-        if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 0 ] && [ "$choice" -le ${#names[@]} ]; then
+        choice="${choice,,}"
+        if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#names[@]} ]; then
             break
         fi
-        print_result "That's not a valid option — please enter a number from 0-${#names[@]}." "$YELLOW"
-        echo ""
+        case " ${keys[*]} " in
+            *" $choice "*)
+                [ "$choice" == "m" ] && SCAN_NEXT="manual" || SCAN_NEXT="return"
+                return 1 ;;
+        esac
+        print_result "That's not a valid option — please type a number from 1-${#names[@]}, $(join_choices "${keys[@]}")." "$YELLOW"
     done
-    if [ "$choice" -eq 0 ]; then
-        print_result "No game selected." "$YELLOW"
-        return 1
-    fi
 
     local idx=$((choice - 1))
 

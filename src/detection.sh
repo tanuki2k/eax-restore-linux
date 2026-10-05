@@ -14,17 +14,42 @@ find_local_wine() {
     echo "$found_wine"
 }
 
+# Usage: clean_typed_path <text>
+# A typed or pasted path as the folder it names: surrounding spaces trimmed,
+# quotes around the whole entry removed ('…', "…", including a terminal's
+# '…'\''…' for an apostrophe inside), backslash escapes from a dragged-in
+# path undone (Baldur\'s\ Gate), one trailing slash dropped and a leading ~
+# expanded. Quotes and apostrophes inside a name are kept.
+clean_typed_path() {
+    local p="$1"
+    p="${p#"${p%%[![:space:]]*}"}"; p="${p%"${p##*[![:space:]]}"}"
+    if [ ${#p} -ge 2 ] && [[ "$p" == \'*\' ]]; then
+        p="${p:1:${#p}-2}"; p="${p//\'\\\'\'/\'}"
+    elif [ ${#p} -ge 2 ] && [[ "$p" == \"*\" ]]; then
+        p="${p:1:${#p}-2}"
+    elif [[ "$p" == *\\* ]]; then
+        p="$(printf '%s' "$p" | sed 's/\\\(.\)/\1/g')"
+    fi
+    [ "$p" != "/" ] && p="${p%/}"
+    p="${p/#\~/$HOME}"
+    printf '%s' "$p"
+}
+
 prompt_manual_game_dir() {
-    # Usage: prompt_manual_game_dir
-    # Prompts for a game .exe folder and cleans the entry in place — strips
-    # surrounding quotes and a trailing slash, expands a leading ~. Result
-    # in GAME_DIR (emptied on EOF or a blank line). Returns 1 on EOF/blank
-    # so a caller looping on the read can't spin on closed stdin; callers do
-    # their own directory-exists / .exe-count validation afterwards.
-    prompt "Enter the full path to the game's .exe folder:"
+    # Usage: prompt_manual_game_dir [back]
+    # Prompts for a game .exe folder and cleans the entry (clean_typed_path).
+    # Result in GAME_DIR (emptied on EOF or a blank line). Returns 1 on
+    # EOF/blank so a caller looping on the read can't spin on closed stdin;
+    # callers do their own directory-exists / .exe-count validation
+    # afterwards. "back" adds "(or press Enter to go back)" to the question,
+    # for a caller that treats a blank line that way.
+    if [ "${1:-}" == "back" ]; then
+        prompt "Enter the full path to the game's .exe folder (or press Enter to go back):"
+    else
+        prompt "Enter the full path to the game's .exe folder:"
+    fi
     if ! read_answer GAME_DIR; then GAME_DIR=""; return 1; fi
-    GAME_DIR="${GAME_DIR//\'/}"; GAME_DIR="${GAME_DIR//\"/}"; GAME_DIR="${GAME_DIR%/}"
-    GAME_DIR="${GAME_DIR/#\~/$HOME}"
+    GAME_DIR="$(clean_typed_path "$GAME_DIR")"
     [ -z "$GAME_DIR" ] && return 1
     return 0
 }
@@ -34,11 +59,17 @@ pick_directory_gui() {
     # Opens a native folder-picker dialog via zenity (GNOME/GTK desktops) or
     # kdialog (KDE Plasma), whichever is available — covers the popular
     # desktop environments without pulling in a new dependency by default.
-    # Prints the chosen path (empty if cancelled/unavailable/failed).
+    # Prints the chosen path (empty if cancelled/unavailable/failed). Opens
+    # in the Steam library if there is one, else Heroic's games folder, else
+    # home, so most players start right among their games.
+    local start="$HOME" root
+    root="$(steam_roots | head -n 1 | cut -f2)"
+    if [ -n "$root" ] && [ -d "$root/steamapps/common" ]; then start="$root/steamapps/common"
+    elif [ -d "$HOME/Games/Heroic" ]; then start="$HOME/Games/Heroic"; fi
     if command -v zenity &>/dev/null; then
-        zenity --file-selection --directory --title="Select the game's .exe folder" 2>/dev/null
+        zenity --file-selection --directory --filename="$start/" --title="Select the game's .exe folder" 2>/dev/null
     elif command -v kdialog &>/dev/null; then
-        kdialog --getexistingdirectory "$HOME" --title "Select the game's .exe folder" 2>/dev/null
+        kdialog --getexistingdirectory "$start" --title "Select the game's .exe folder" 2>/dev/null
     fi
 }
 
@@ -50,11 +81,11 @@ show_hidden_folder_tip_popup() {
     # also serves as the "ready to open the picker" acknowledgement a
     # terminal prompt would otherwise need. Only called when have_gui_picker
     # is set, so zenity or kdialog is already known to be present.
-    local msg="Steam's default install path (~/.local/share/Steam/...) is inside a hidden folder.\n\nPress Ctrl+H in the file picker if you don't see it."
+    local msg="Pick the folder with the game's .exe.\nSteam games are in a hidden folder: press Ctrl+H to show it."
     if command -v zenity &>/dev/null; then
-        zenity --info --title="Tip" --text="$msg" --width=350 2>/dev/null
+        zenity --info --title="Choose the game folder" --text="$msg" --ok-label="Open" --width=350 2>/dev/null
     elif command -v kdialog &>/dev/null; then
-        kdialog --msgbox "$msg" --title "Tip" 2>/dev/null
+        kdialog --msgbox "$msg" --title "Choose the game folder" 2>/dev/null
     fi
 }
 
@@ -112,8 +143,10 @@ get_game_directory() {
         locations_shown=1
     }
 
+    local retype
     while [ -z "$GAME_DIR" ]; do
         local action=""
+        retype=0
         if [ -n "$preset" ]; then
             action="$preset"; preset=""
         elif [ "$back_to_main_menu" -eq 1 ]; then
@@ -181,6 +214,15 @@ get_game_directory() {
                     record_recent_game "$GAME_DIR"
                     return
                 fi
+                # The list's [M]anually / [R]eturn (see SCAN_NEXT).
+                case "$SCAN_NEXT" in
+                    manual) RESTART_REQUESTED=""; preset="manual"; continue ;;
+                    return)
+                        RESTART_REQUESTED=1
+                        unset -f _show_common_locations
+                        return
+                        ;;
+                esac
                 # A scan that bailed (nothing picked, or an EAX-impossible
                 # pick where the user chose "different game") drops back to
                 # this menu on its own — clear the restart flag so it can't
@@ -191,6 +233,7 @@ get_game_directory() {
                 continue
                 ;;
             gui)
+                _show_common_locations
                 show_hidden_folder_tip_popup
                 GAME_DIR=$(pick_directory_gui)
                 GAME_DIR="${GAME_DIR%/}"
@@ -202,12 +245,15 @@ get_game_directory() {
                 print_status "Selected: $GAME_DIR" "$DIM"
                 ;;
             manual)
-                # Only here, where the player has to type a path: the menu,
-                # a scan and the folder picker don't need it.
+                # Before typing or browsing for a path (not before the menu or
+                # a scan). A typed path that doesn't work is asked for again;
+                # a blank answer goes back.
                 _show_common_locations
-                prompt_manual_game_dir || true
+                prompt_manual_game_dir back && retype=1
                 ;;
         esac
+        # A blank answer: back, without an error.
+        [ -n "$GAME_DIR" ] || continue
 
         if [ -d "$GAME_DIR" ]; then
             if [ "$SCRIPT_ACTION" == "i" ]; then
@@ -217,6 +263,7 @@ get_game_directory() {
                     if confirm "Are you absolutely sure this is the correct game folder?" N; then break; fi
                     echo ""
                     GAME_DIR=""
+                    [ "$retype" -eq 1 ] && preset="manual"
                 else
                     break
                 fi
@@ -225,8 +272,8 @@ get_game_directory() {
             fi
         else
             print_error "Directory not found. Please check the path and try again."
-            echo ""
             GAME_DIR=""
+            [ "$retype" -eq 1 ] && preset="manual"
         fi
     done
 
@@ -1427,8 +1474,7 @@ detect_game_environment() {
                 # the DLL override, the system32/syswow64 copy and the VC++
                 # check all happen.
                 [ -z "$PREFIX_PATH" ] && continue
-                PREFIX_PATH="${PREFIX_PATH//\'/}"; PREFIX_PATH="${PREFIX_PATH//\"/}"; PREFIX_PATH="${PREFIX_PATH%/}"
-                PREFIX_PATH="${PREFIX_PATH/#\~/$HOME}"
+                PREFIX_PATH="$(clean_typed_path "$PREFIX_PATH")"
             fi
 
             if [ -d "$PREFIX_PATH/drive_c" ]; then
