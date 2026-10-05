@@ -134,6 +134,10 @@ if [ -n "$SETTINGS_TOOL_MODE" ]; then
             continue
         fi
         GAME_SETTINGS_EDIT_OPTIONAL=1 game_settings_step 2
+        if [ -n "$GAME_SETTINGS_CANCELLED" ]; then
+            print_result "Nothing was changed." "$YELLOW"
+            continue
+        fi
     fi
 
     if [ "$settings_speakers_changed" -eq 0 ] && [ ${#GAME_SETTINGS_PLAN[@]} -eq 0 ] \

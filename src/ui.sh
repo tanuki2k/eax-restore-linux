@@ -397,29 +397,44 @@ join_choices() {
 }
 
 # Usage: checklist_select "<fallback prompt>" <title> [<title> ...]
-# A tick list for choosing any of several items, every one ticked to start:
-# ↑/↓ (or k/j) move, Space ticks or unticks, a ticks all, n unticks all,
-# Enter confirms. Fills SELECTED[1..N] (1 = ticked), like parse_selection.
+# A tick list for choosing any of several items: ↑/↓ (or k/j) move, Space
+# ticks or unticks, a ticks all, n unticks all, Enter confirms, Esc (or q)
+# cancels. Fills SELECTED[1..N] (1 = ticked), like parse_selection, and
+# returns 1 on cancel with SELECTED back at the starting ticks.
+# Optional, set by the caller just before and cleared after each use:
+# CHECKLIST_INITIAL=(1 0 …) starts some items unticked (everything starts
+# ticked otherwise; Enter keeps whatever it starts as), and
+# CHECKLIST_DETAILS=("<printed block>" …) gives each item a body (its reason
+# and rows), drawn under its own title so the box sits on the title itself.
 # The list is drawn straight to /dev/tty, since stdout runs through the run
 # log's tee and a redraw per keypress would fill the log; once confirmed it's
-# erased and the final list is printed once through stdout instead. Without a
-# terminal to drive it (piped answers), it numbers the titles and asks the
-# fallback prompt, read like a typed selection: Enter for all, numbers for
-# some (see parse_selection), n for none.
-# A caller can set CHECKLIST_INITIAL=(1 0 …) first to start some items
-# unticked (Tools → Optional settings starts from what's on now); Enter then
-# keeps that state, in the fallback too. It's cleared after each use.
+# erased and the final list is printed once through stdout instead. A list
+# taller or wider than the terminal can't be redrawn in place, so its bodies
+# are printed first and the tick list under them has just the titles.
+# Without a terminal to drive it (piped answers), it numbers the titles and
+# asks the fallback prompt, read like a typed selection: Enter for the
+# starting state, numbers for some (see parse_selection), n for none.
 checklist_select() {
     local fallback="$1"; shift
-    local -a items=("$@") initial=("${CHECKLIST_INITIAL[@]}")
+    local -a items=("$@") initial=("${CHECKLIST_INITIAL[@]}") bodies=()
     local n=${#items[@]} i
-    CHECKLIST_INITIAL=()
+    for ((i = 0; i < n; i++)); do bodies[i]="${CHECKLIST_DETAILS[$i]:-}"; done
+    CHECKLIST_INITIAL=(); CHECKLIST_DETAILS=()
     SELECTED=()
     for ((i = 1; i <= n; i++)); do SELECTED[i]="${initial[$((i - 1))]:-1}"; done
+    local start="${SELECTED[*]}"
+    local has_bodies=0
+    for ((i = 0; i < n; i++)); do [ -n "${bodies[i]}" ] && has_bodies=1; done
+
+    # Each body indented under its title, which sits after " > [x] ".
+    _checklist_body() { printf '%s\n' "${bodies[$1]}" | sed 's/^./  &/'; }
 
     if [ ! -t 0 ] || [ "${TERM:-dumb}" == "dumb" ] || ! { : > /dev/tty; } 2>/dev/null; then
         echo ""
-        for i in "${!items[@]}"; do print_option "$((i + 1))" "${items[$i]}"; done
+        for ((i = 0; i < n; i++)); do
+            print_option "$((i + 1))" "${items[i]}"
+            [ -n "${bodies[i]}" ] && { _checklist_body "$i"; echo ""; }
+        done
         prompt "$fallback"
         local answer
         read_answer answer || answer="n"
@@ -428,31 +443,50 @@ checklist_select() {
         elif [ -n "$answer" ] || [ ${#initial[@]} -eq 0 ]; then
             parse_selection "$n" "$answer"
         fi
+        unset -f _checklist_body
         return 0
     fi
 
-    local cur=1 key rest tty_fd drawn=0
+    local cur=1 key rest tty_fd frame lines=0 inline="$has_bodies" rows cols widest box
     exec {tty_fd}>/dev/tty
+    # The boxes go on the titles only if the whole list fits the terminal:
+    # a redraw can't reach lines that have scrolled off the top or wrapped.
+    if [ "$inline" -eq 1 ]; then
+        read -r rows cols < <(stty size < /dev/tty 2>/dev/null)
+        frame="$(for ((i = 0; i < n; i++)); do printf '\n        %s\n' "${items[i]}"; _checklist_body "$i"; done)"
+        lines=$(( $(printf '%s\n' "$frame" | wc -l) + 2 ))
+        widest=$(printf '%s\n' "$frame" | sed 's/\x1b\[[0-9;]*m//g' | awk '{ if (length > w) w = length } END { print w + 0 }')
+        if [ -z "$rows" ] || [ "$lines" -gt $(( rows - 2 )) ] || [ "$widest" -ge "${cols:-80}" ]; then
+            inline=0
+            for ((i = 0; i < n; i++)); do
+                echo -e "\n  ${BOLD}${items[i]}${NC}"
+                _checklist_body "$i"
+            done
+        fi
+    fi
     # Let tee finish putting the rows above on screen before drawing under them.
     sleep 0.1
-    _checklist_draw() {
-        local j box
-        # Back over the question and the list, then down again from there.
-        [ "$drawn" -eq 1 ] && printf '\e[%dA\r\e[J' "$((n + 1))" >&"$tty_fd"
-        printf '%b\n' "${YELLOW}Choose with ↑/↓, Space to tick or untick, Enter to confirm:${NC}" >&"$tty_fd"
+    _checklist_frame() {
+        local j box title
+        local hint="Choose with ↑/↓, Space to tick or untick, Enter to confirm, Esc to cancel"
+        [ "$inline" -eq 1 ] || printf '\n%b\n' "${YELLOW}${hint}:${NC}"
         for ((j = 1; j <= n; j++)); do
-            box="[ ]"; [ "${SELECTED[$j]}" == "1" ] && box="[${GREEN}x${NC}]"
-            if [ "$j" -eq "$cur" ]; then
-                printf '%b\n' " > ${box} ${BOLD}${items[$((j - 1))]}${NC}" >&"$tty_fd"
-            else
-                printf '%b\n' "   ${box} ${items[$((j - 1))]}" >&"$tty_fd"
-            fi
+            box="[ ]"; [ "${SELECTED[j]}" == "1" ] && box="[${GREEN}x${NC}]"
+            title="${items[$((j - 1))]}"
+            [ "$inline" -eq 1 ] && printf '\n'
+            if [ "$j" -eq "$cur" ]; then printf '%b\n' " > ${box} ${BOLD}${title}${NC}"
+            else printf '%b\n' "   ${box} ${title}"; fi
+            [ "$inline" -eq 1 ] && [ -n "${bodies[$((j - 1))]}" ] && _checklist_body "$((j - 1))"
         done
-        drawn=1
+        [ "$inline" -eq 1 ] && printf '\n%b\n' "${YELLOW}${hint}${NC}"
     }
-    printf '\n' >&"$tty_fd"
+    local cancelled=0 drawn=0
     while true; do
-        _checklist_draw
+        frame="$(_checklist_frame)"
+        # Back over the last frame, then down again from there.
+        [ "$drawn" -eq 1 ] && printf '\e[%dA\r\e[J' "$lines" >&"$tty_fd"
+        printf '%s\n' "$frame" >&"$tty_fd"
+        lines=$(printf '%s\n' "$frame" | wc -l); drawn=1
         IFS= read -rsn1 key || exit 0
         case "$key" in
             "") break ;;
@@ -461,27 +495,39 @@ checklist_select() {
             j|J) [ "$cur" -lt "$n" ] && cur=$((cur + 1)) ;;
             a|A) for ((i = 1; i <= n; i++)); do SELECTED[i]=1; done ;;
             n|N) for ((i = 1; i <= n; i++)); do SELECTED[i]=0; done ;;
+            q|Q) cancelled=1; break ;;
             $'\e')
                 rest=""; IFS= read -rsn2 -t 0.05 rest
                 case "$rest" in
+                    "") cancelled=1; break ;;
                     "[A"|"OA") [ "$cur" -gt 1 ] && cur=$((cur - 1)) ;;
                     "[B"|"OB") [ "$cur" -lt "$n" ] && cur=$((cur + 1)) ;;
                 esac
                 ;;
         esac
     done
-    # Erase the blank line, the question and the list; the record goes to stdout.
-    printf '\e[%dA\r\e[J' "$((n + 2))" >&"$tty_fd"
+    # Erase the list; the record goes to stdout.
+    printf '\e[%dA\r\e[J' "$lines" >&"$tty_fd"
     exec {tty_fd}>&-
-    unset -f _checklist_draw
-    echo ""
+    unset -f _checklist_frame
+    if [ "$cancelled" -eq 1 ]; then
+        read -ra SELECTED <<< "0 $start"; unset 'SELECTED[0]'
+        unset -f _checklist_body
+        print_result "Cancelled." "$YELLOW"
+        return 1
+    fi
     for ((i = 1; i <= n; i++)); do
-        if [ "${SELECTED[$i]}" == "1" ]; then
-            echo -e " [${GREEN}x${NC}] ${items[$((i - 1))]}"
+        box="[ ]"; [ "${SELECTED[i]}" == "1" ] && box="[${GREEN}x${NC}]"
+        if [ "$inline" -eq 1 ]; then
+            echo -e "\n ${box} ${BOLD}${items[$((i - 1))]}${NC}"
+            [ -n "${bodies[$((i - 1))]}" ] && _checklist_body "$((i - 1))"
         else
-            echo -e " [ ] ${items[$((i - 1))]}"
+            [ "$i" -eq 1 ] && echo ""
+            echo -e " ${box} ${items[$((i - 1))]}"
         fi
     done
+    unset -f _checklist_body
+    return 0
 }
 
 # ==============================================================================

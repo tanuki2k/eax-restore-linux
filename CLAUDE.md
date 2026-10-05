@@ -127,11 +127,13 @@ their execution order in the assembled script):
    variants, `print_wrapped`, `confirm`, `read_answer`, plus `print_divider`/`print_line`). Sourced
    right after `globals.sh` since every helper depends on the colour vars defined
    there. See "Text/output style conventions" below. Also `checklist_select`, the
-   tick list (↑/↓, Space, Enter; all ticked to start) for picking any of several
-   items: the optional game settings and uninstall's settings to put back. Use it
-   for any new multi-pick. It draws to `/dev/tty` so the run log only gets the
-   final list, and falls back to a numbered "type the numbers" prompt when stdin
-   isn't a terminal.
+   tick list (↑/↓, Space, Enter; Esc cancels and returns 1) for picking any of
+   several items: the optional game settings and uninstall's settings to put
+   back. Use it for any new multi-pick. `CHECKLIST_INITIAL` sets the starting
+   ticks and `CHECKLIST_DETAILS` gives each item a body drawn under its box. It
+   draws to `/dev/tty` so the run log only gets the final list, falls back to
+   titles-only boxes when the list doesn't fit the terminal, and to a numbered
+   "type the numbers" prompt when stdin isn't a terminal.
 5. **`common.sh`** — small helpers used throughout every other file: `is_truthy`,
    `is_genuine_dll`, `parse_selection`.
 6. **`guards.sh`** — refuses root / Steam Gaming Mode, runs before any real work

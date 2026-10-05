@@ -156,6 +156,8 @@ GAME_SETTINGS_REVERT_GROUPS=()
 declare -A GAME_SETTINGS_RECORDED=()
 # Set by game_settings_step once it has printed its step heading.
 GAME_SETTINGS_STEP_SHOWN=""
+# Set by game_settings_step when Esc cancels Tools → Optional settings' tick list.
+GAME_SETTINGS_CANCELLED=""
 UNINSTALL_VCRUN="n"
 
 # DLL override (src/launcher-config.sh). OVERRIDE_METHOD is step 10's choice:
@@ -202,6 +204,8 @@ SETTINGS_TOOL_MODE=""
 # checklist_select's starting ticks, set by a caller just before it (1/0 per
 # item); empty means everything starts ticked.
 CHECKLIST_INITIAL=()
+# checklist_select's per-item bodies (reason and rows), set the same way.
+CHECKLIST_DETAILS=()
 
 # Minimal hardcoded safety net for confirm_continue_if_eax_impossible, used
 # only if ensure_known_games_json can't produce a file at all (e.g. first

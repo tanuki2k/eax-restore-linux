@@ -688,6 +688,7 @@ game_settings_step() {
     GAME_SETTINGS_PLAN=(); GAME_SETTINGS_MISSING=(); GAME_SETTINGS_FOLLOW_UPS=()
     GAME_SETTINGS_DECLINED=(); GAME_SETTINGS_ABSENT=()
     GAME_AUDIO_FIX_TITLES=(); GAME_AUDIO_FIX_ALREADY=()
+    GAME_SETTINGS_CANCELLED=""
     current_known_game || return
 
     local -a rows=()
@@ -806,19 +807,22 @@ game_settings_step() {
 
     # Prints one fix: title, reason, and each row's current → new value.
     _print_fix() {
+        echo -e "\n  ${BOLD}${fix_title[$1]}${NC}"
+        _fix_body "$1"
+    }
+    # A fix's reason and rows, under its title (or its box in a tick list).
+    _fix_body() {
         local id="$1"
-        echo -e "\n  ${BOLD}${fix_title[$id]}${NC}"
         echo -e "${WHITE}$(printf '%s' "${fix_reason[$id]}" | fold -s -w 74 | sed 's/^/    /')${NC}"
         echo ""
         print_config_rows "$(fix_rows_for_display "${fix_rows[$id]}")"
         _print_absent_note "$id"
     }
-    # Tools → Optional settings: one this script applied, with each key's
-    # original value (from the manifest) → the value it has now.
-    _print_applied_fix() {
+    # Tools → Optional settings: the body of one this script applied, with
+    # each key's original value (from the manifest) → the value it has now.
+    _applied_fix_body() {
         local id="$1" line display_rows=""
         local -a c
-        echo -e "\n  ${BOLD}${fix_title[$id]}${NC} ${DIM}— on now${NC}"
         echo -e "${WHITE}$(printf '%s' "${fix_reason[$id]}" | fold -s -w 74 | sed 's/^/    /')${NC}"
         echo ""
         while IFS= read -r line; do
@@ -892,14 +896,16 @@ game_settings_step() {
     done
     if [ ${#optional[@]} -gt 0 ]; then
         echo -e "\n${WHITE}Optional settings for ${GAME_NAME} — not needed for EAX:${NC}"
-        local -a offered=() offered_titles=() initial=()
+        # The ones to choose from go in the tick list, each with its reason
+        # and rows under its box; the rest get their status line first.
+        local -a offered=() offered_titles=() initial=() bodies=()
         for id in "${optional[@]}"; do
             if [ "${fix_status[$id]}" == "offer" ]; then
                 offered+=("$id"); offered_titles+=("${fix_title[$id]}"); initial+=(0)
-                _print_fix "$id"
+                bodies+=("$(_fix_body "$id")")
             elif [ "${fix_status[$id]}" == "applied" ]; then
-                offered+=("$id"); offered_titles+=("${fix_title[$id]}"); initial+=(1)
-                _print_applied_fix "$id"
+                offered+=("$id"); offered_titles+=("${fix_title[$id]} — on now"); initial+=(1)
+                bodies+=("$(_applied_fix_body "$id")")
             else
                 _print_status_line "$id"
             fi
@@ -909,9 +915,13 @@ game_settings_step() {
             [ ${#offered[@]} -gt 1 ] && example="1 2"
             if [ -n "${GAME_SETTINGS_EDIT_OPTIONAL:-}" ]; then
                 # Starts from what's on now; nothing is declined, only changed.
-                CHECKLIST_INITIAL=("${initial[@]}")
-                checklist_select "Press Enter to keep these as they are, type the numbers you want on (e.g. \"$example\"), or 'n' for none:" \
-                    "${offered_titles[@]}"
+                CHECKLIST_INITIAL=("${initial[@]}"); CHECKLIST_DETAILS=("${bodies[@]}")
+                if ! checklist_select "Press Enter to keep these as they are, type the numbers you want on (e.g. \"$example\"), or 'n' for none:" \
+                    "${offered_titles[@]}"; then
+                    GAME_SETTINGS_CANCELLED=1
+                    unset -f _print_fix _fix_body _applied_fix_body _print_absent_note _decline_fix _plan_fix _print_status_line
+                    return
+                fi
                 for i in "${!offered[@]}"; do
                     id="${offered[$i]}"
                     if [ "${fix_status[$id]}" == "offer" ] && [ "${SELECTED[$((i + 1))]}" == "1" ]; then
@@ -921,15 +931,19 @@ game_settings_step() {
                     fi
                 done
             else
-                checklist_select "Press Enter to apply all, type the numbers you want (e.g. \"$example\"), or 'n' to skip:" \
-                    "${offered_titles[@]}"
+                # Esc applies none of them, like 'n'.
+                CHECKLIST_DETAILS=("${bodies[@]}")
+                if ! checklist_select "Press Enter to apply all, type the numbers you want (e.g. \"$example\"), or 'n' to skip:" \
+                    "${offered_titles[@]}"; then
+                    for ((i = 1; i <= ${#offered[@]}; i++)); do SELECTED[i]=0; done
+                fi
                 for i in "${!offered[@]}"; do
                     if [ "${SELECTED[$((i + 1))]}" == "1" ]; then _plan_fix "${offered[$i]}"; else _decline_fix "${offered[$i]}"; fi
                 done
             fi
         fi
     fi
-    unset -f _print_fix _print_applied_fix _print_absent_note _decline_fix _plan_fix _print_status_line
+    unset -f _print_fix _fix_body _applied_fix_body _print_absent_note _decline_fix _plan_fix _print_status_line
 }
 
 # Usage: known_game_field <jq path, e.g. .exe>
@@ -1197,34 +1211,30 @@ choose_game_settings_to_revert() {
     [ ${#groups[@]} -eq 1 ] && noun="setting"
     print_status "${#groups[@]} ${noun} changed: ${titles}" ""
 
-    local -a order=()
-    local cat label
+    # Audio settings first, then optional ones, each with its rows (what it
+    # changed → the original it goes back to) under its box in the tick list.
+    local -a order=() pick_titles=() bodies=()
+    local cat display_rows i
     for cat in audio optional; do
-        local header_shown=0
         for g in "${groups[@]}"; do
             [[ "$g" == "$cat"$'\x1f'* ]] || continue
-            if [ "$header_shown" -eq 0 ]; then
-                [ "$cat" == "audio" ] && label="Audio settings" || label="Optional settings"
-                echo -e "\n${WHITE}${label}:${NC}"
-                header_shown=1
-            fi
-            order+=("$g")
-            echo -e "\n  ${BOLD}${g#*$'\x1f'}${NC}"
-            local display_rows=""
+            order+=("$g"); pick_titles+=("${g#*$'\x1f'}")
+            display_rows=""
             while IFS= read -r line; do
                 [ -n "$line" ] || continue
                 mapfile -t -d $'\t' f < <(printf '%s' "${line#CONFIG:}")
                 display_rows+="$(basename "${f[2]}")"$'\x1f'"${f[4]}"$'\x1f'"${f[5]}"$'\x1f'"${f[7]}"$'\x1f'"${f[6]}"$'\n'
             done <<< "${group_lines[$g]}"
-            print_config_rows "$display_rows"
+            bodies+=("$(print_config_rows "$display_rows")")
         done
     done
 
-    local -a pick_titles=()
-    local i
-    for g in "${order[@]}"; do pick_titles+=("${g#*$'\x1f'}"); done
-    checklist_select "Press Enter to put all of these back, type the numbers you want (e.g. \"1\"), or 'n' to keep them:" \
-        "${pick_titles[@]}"
+    # Esc puts none of them back, like 'n'.
+    CHECKLIST_DETAILS=("${bodies[@]}")
+    if ! checklist_select "Press Enter to put all of these back, type the numbers you want (e.g. \"1\"), or 'n' to keep them:" \
+        "${pick_titles[@]}"; then
+        for ((i = 1; i <= ${#order[@]}; i++)); do SELECTED[i]=0; done
+    fi
     for i in "${!order[@]}"; do
         g="${order[$i]}"
         if [ "${SELECTED[$((i + 1))]}" == "1" ]; then
