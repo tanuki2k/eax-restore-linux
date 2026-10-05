@@ -43,8 +43,8 @@
           "default": []
         },
         "status": {
-          "description": "supported; removed_by_patch (an update stripped EAX from the current build); not_implemented (a remaster/rewrite that never had EAX).",
-          "enum": ["supported", "removed_by_patch", "not_implemented"],
+          "description": "supported; removed_by_patch (an update stripped EAX from the current build); not_implemented (a remaster/rewrite that never had EAX); built_in (EAX already works in this build without the script, e.g. it ships its own OpenAL32.dll with EAX).",
+          "enum": ["supported", "removed_by_patch", "not_implemented", "built_in"],
           "default": "supported"
         },
         "problem": {

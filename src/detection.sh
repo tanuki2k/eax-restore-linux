@@ -65,6 +65,7 @@ get_game_directory() {
     EXTRA_GAME_DIRS=()
     SCANNED_APPID=""
     SCANNED_NOTES_SHOWN=""
+    BUILT_IN_CONFIRMED=""
     OPENAL_NATIVE_MODE=""
 
     if [ "$SCRIPT_ACTION" == "u" ] && prompt_recent_game; then

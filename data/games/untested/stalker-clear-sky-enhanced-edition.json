@@ -1,0 +1,15 @@
+{
+  "$schema": "../../schema.json",
+  "name": "S.T.A.L.K.E.R.: Clear Sky - Enhanced Edition",
+  "exe": "xrEngine.exe",
+  "stores": {
+    "steam": { "id": 2427420 },
+    "gog": { "id": 1709591792 }
+  },
+  "eax": {
+    "api": "openal",
+    "versions": ["2.0"],
+    "status": "built_in",
+    "problem": "Unlike the original Clear Sky, it comes with OpenAL Soft, which has EAX built in, so its reverb doesn't depend on a Creative sound card."
+  }
+}

@@ -135,6 +135,31 @@ prompt_recent_game() {
     return 1
 }
 
+game_eax_status() {
+    # Usage: game_eax_status <id> <steam|gog>
+    # The entry's eax.status ("supported" when it has none), or nothing when
+    # the game isn't in the database.
+    jq -r --arg id "$1" --arg store "$2" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.status // "supported"' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1
+}
+
+confirm_built_in_install() {
+    # Usage: confirm_built_in_install <game_name>
+    # For an eax.status "built_in" game (EAX already works without this
+    # script, e.g. an edition that ships its own OpenAL32.dll with EAX).
+    # Installing still swaps in a newer OpenAL32.dll and adds alsoft.ini, so
+    # it's offered, but defaults to No. Asked once per game: a Yes sets
+    # BUILT_IN_CONFIRMED so confirm_continue_if_eax_impossible doesn't ask
+    # again after the prefix step. Right after show_game_details_block, its
+    # Status block has already said all this, so only the question is asked.
+    if [ -z "$SCANNED_NOTES_SHOWN" ]; then
+        print_note "${1:-This game} already has working EAX reverb" \
+            "through its own OpenAL Soft. Installing is optional: it swaps in a newer" \
+            "OpenAL Soft and adds speaker and headphone settings."
+    fi
+    confirm "Install anyway?" N || return 1
+    BUILT_IN_CONFIRMED=1
+}
+
 block_if_eax_not_implemented() {
     # Usage: block_if_eax_not_implemented <id> <steam|gog> <game_name>
     # Early twin of confirm_continue_if_eax_impossible's hard-block branches
@@ -206,6 +231,7 @@ scan_game_libraries() {
     GAME_INSTALL_ROOT=""
     SCANNED_APPID=""
     SCANNED_NOTES_SHOWN=""
+    BUILT_IN_CONFIRMED=""
     OPENAL_NATIVE_MODE=""
     EAX_UNIFIED=""
     RECOMMENDED_AUDIO_LIMITS=""
@@ -356,7 +382,11 @@ scan_game_libraries() {
     # back to get_game_directory's menu instead of asking to continue with it.
     [ -n "$RESTART_REQUESTED" ] && return 1
 
-    confirm "Continue with this game?" || return 1
+    if [ "$(game_eax_status "${ids[$idx]}" "${stores[$idx]}")" == "built_in" ]; then
+        confirm_built_in_install "${meta_names[$idx]}" || return 1
+    else
+        confirm "Continue with this game?" || return 1
+    fi
 
     GAME_NAME="${meta_names[$idx]}"
 
@@ -583,6 +613,8 @@ show_game_details_block() {
         _detail "EAX Support" "${GREEN}${BOLD}${ver_display}${NC}"
     elif [ "$eax_status" == "removed_by_patch" ]; then
         _detail "EAX Support" "${YELLOW}${BOLD}${ver_display}${NC} ${DIM}(originally supported)${NC}"
+    elif [ "$eax_status" == "built_in" ]; then
+        _detail "EAX Support" "${GREEN}${BOLD}${ver_display}${NC} ${DIM}(already built in)${NC}"
     else
         _detail "EAX Support" "${YELLOW}${BOLD}None${NC}"
     fi
@@ -604,15 +636,16 @@ show_game_details_block() {
     _print_details
 
     # --- Blocks: status -> problem -> solution ---
-    if [ "$eax_status" == "removed_by_patch" ] || [ "$eax_status" == "not_implemented" ]; then
-        local state_line="Never implemented in this edition."
+    if [ "$eax_status" != "supported" ]; then
+        local state_line="Never implemented in this edition." after_line=""
         [ "$eax_status" == "removed_by_patch" ] && state_line="Removed by a later patch."
-        print_subheading "Status"
-        if [ -n "$eax_status_details" ]; then
-            print_wrapped "$state_line $eax_status_details"
-        else
-            print_wrapped "$state_line"
+        if [ "$eax_status" == "built_in" ]; then
+            state_line=""
+            after_line=" Installing is optional: it swaps in a newer OpenAL Soft and adds speaker and headphone settings."
         fi
+        print_subheading "Status"
+        local status_text="${state_line}${eax_status_details:+ $eax_status_details}${after_line}"
+        print_wrapped "${status_text# }"
     fi
     if [ -n "$store_details" ]; then
         print_subheading "$store_label details"
@@ -664,8 +697,9 @@ show_game_details_block() {
 
 confirm_continue_if_eax_impossible() {
     # Usage: confirm_continue_if_eax_impossible <id> <steam|gog> [acf_file]
-    # eax.status distinguishes two reasons this script has nothing to restore
-    # on a build: "removed_by_patch" (a software update stripped EAX/A3D
+    # "built_in" (EAX already works without this script) only asks whether
+    # to install anyway. Otherwise eax.status distinguishes two reasons this
+    # script has nothing to restore on a build: "removed_by_patch" (a software update stripped EAX/A3D
     # calls from an otherwise-DirectSound3D game) vs. "not_implemented" (a
     # remaster/rewrite that never had EAX in the first place — no
     # build-level fix exists). "not_implemented" is an unconditional no-op,
@@ -697,6 +731,17 @@ confirm_continue_if_eax_impossible() {
         status="removed_by_patch"
     fi
     if [ -z "$status" ] || [ "$status" == "supported" ]; then
+        return
+    fi
+
+    # EAX already works without anything installed. Already asked when the
+    # game was picked from the library scan; asked here for a game found
+    # any other way.
+    if [ "$status" == "built_in" ]; then
+        [ -n "$BUILT_IN_CONFIRMED" ] && return
+        local name
+        name=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .name' "$KNOWN_GAMES_FILE" 2>/dev/null | head -n 1)
+        confirm_built_in_install "$name" || prompt_restart_or_quit 0
         return
     fi
 

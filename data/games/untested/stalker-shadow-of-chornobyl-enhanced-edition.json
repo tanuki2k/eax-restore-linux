@@ -1,0 +1,15 @@
+{
+  "$schema": "../../schema.json",
+  "name": "S.T.A.L.K.E.R.: Shadow of Chornobyl - Enhanced Edition",
+  "exe": "xrEngine.exe",
+  "stores": {
+    "steam": { "id": 2427410 },
+    "gog": { "id": 1542429427 }
+  },
+  "eax": {
+    "api": "openal",
+    "versions": ["2.0"],
+    "status": "built_in",
+    "problem": "Unlike the original Shadow of Chernobyl, it comes with OpenAL Soft, which has EAX built in, so its reverb doesn't depend on a Creative sound card."
+  }
+}
