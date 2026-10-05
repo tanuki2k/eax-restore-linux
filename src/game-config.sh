@@ -895,7 +895,7 @@ game_settings_step() {
         [[ "$id" == optional:* ]] && [[ "${fix_status[$id]}" =~ ^(offer|applied|already|missing|absent)$ ]] && optional+=("$id")
     done
     if [ ${#optional[@]} -gt 0 ]; then
-        echo -e "\n${WHITE}Optional settings for ${GAME_NAME} — not needed for EAX:${NC}"
+        echo -e "\n${WHITE}Optional settings for ${GAME_NAME}:${NC}"
         # The ones to choose from go in the tick list, each with its reason
         # and rows under its box; the rest get their status line first.
         local -a offered=() offered_titles=() initial=() bodies=()
@@ -904,7 +904,7 @@ game_settings_step() {
                 offered+=("$id"); offered_titles+=("${fix_title[$id]}"); initial+=(0)
                 bodies+=("$(_fix_body "$id")")
             elif [ "${fix_status[$id]}" == "applied" ]; then
-                offered+=("$id"); offered_titles+=("${fix_title[$id]} — on now"); initial+=(1)
+                offered+=("$id"); offered_titles+=("${fix_title[$id]} (Active)"); initial+=(1)
                 bodies+=("$(_applied_fix_body "$id")")
             else
                 _print_status_line "$id"
