@@ -240,6 +240,17 @@ an install predating this mechanism), uninstall falls back to a best-effort scan
 known filenames (`dsound.dll`, `dsoal-aldrv.dll`, `OpenAL32.dll`, etc.) — a last resort
 that's less precise than the manifest path, so avoid removing/renaming the manifest
 mechanism itself.
+The manifest (`.eax-restore-manifest.txt` in the game's exe folder) is plain
+text, one line per change: a deployed file's path, `VCRUN`, `REGISTRY:…`,
+`LAUNCHER:…` or `CONFIG:…` (tab-separated). New manifests start with
+`MANIFEST_HEADER` ("# EAX Restore manifest, format 1", written by
+`start_manifest`); older ones have no header and the same lines, and every
+reader skips `#` lines. After an uninstall the whole file is the "# EAX
+Restore: uninstalled …" marker. Uninstall's and Tools' game list is built from
+the live manifests on disk (`find_installed_game_dirs`: Steam libraries and
+Heroic's game folders) — `$XDG_STATE_HOME/eax-restore-linux/installed-games.txt`
+only stores its most-recently-used order (`note_game_used`,
+`installed_game_dirs`).
 
 ## Text/output style conventions
 

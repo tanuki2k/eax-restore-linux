@@ -162,10 +162,11 @@ if [ -n "$VCRUN_ONLY_MODE" ]; then
 
     if install_vcrun_dependencies; then
         GAME_MANIFEST="$GAME_DIR/.eax-restore-manifest.txt"
-        if [ -f "$GAME_MANIFEST" ] && head -n 1 "$GAME_MANIFEST" | grep -q "^# EAX Restore: uninstalled"; then
-            # A stale "already uninstalled" sentinel would otherwise make a
-            # future uninstall run stop before ever reading this marker.
-            : > "$GAME_MANIFEST"
+        if [ ! -s "$GAME_MANIFEST" ] || head -n 1 "$GAME_MANIFEST" | grep -q "^# EAX Restore: uninstalled"; then
+            # A new manifest, or a stale "already uninstalled" sentinel, which
+            # would otherwise make a future uninstall run stop before ever
+            # reading this marker.
+            start_manifest "$GAME_MANIFEST"
         fi
         echo "VCRUN" >> "$GAME_MANIFEST"
     else

@@ -466,6 +466,13 @@ check_target_writable() {
     exit 1
 }
 
+# Usage: start_manifest <manifest file>
+# Starts a manifest afresh: empties it and writes MANIFEST_HEADER as its
+# first line.
+start_manifest() {
+    printf '%s\n' "$MANIFEST_HEADER" > "$1"
+}
+
 deploy_copy() {
     # Usage: deploy_copy <src> <dest> <verb>
     # Copies one file and only records it in the manifest (and reports it)

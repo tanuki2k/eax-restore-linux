@@ -36,6 +36,11 @@ BASE_SHARE="$HOME/.local/share/eax-restore-linux"
 # which games are on it comes from their install manifests. See
 # installed_game_dirs. State, so under $XDG_STATE_HOME like the run logs.
 INSTALLED_GAMES_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/eax-restore-linux/installed-games.txt"
+
+# First line of every install manifest this version starts, so a later format
+# change can be told apart. Older manifests have no header and the same lines;
+# readers skip "#" lines (the "uninstalled" marker is the other one).
+MANIFEST_HEADER="# EAX Restore manifest, format 1"
 DSOAL_SHARE="$BASE_SHARE/dsoal"
 DSOAL_OFFICIAL="$DSOAL_SHARE/official"
 DSOAL_PINNED="$DSOAL_SHARE/pinned"

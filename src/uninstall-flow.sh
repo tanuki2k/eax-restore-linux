@@ -58,6 +58,8 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         while IFS= read -r manifest_entry; do
             [ -z "$manifest_entry" ] && continue
             case "$manifest_entry" in
+                # The format header (MANIFEST_HEADER) and any other comment.
+                \#*) continue ;;
                 "REGISTRY:COM") REG_HAS_COM="y"; continue ;;
                 # Bare "REGISTRY:OVERRIDE" (no DLL suffix) is only ever read,
                 # never written, by this version of the script — it's kept
@@ -416,7 +418,10 @@ EOF
     kept_lines=("${GAME_SETTINGS_KEPT[@]}" "${LAUNCHER_LINES_KEPT[@]}")
     if { [ ${#CONFIG_LINES[@]} -gt 0 ] || [ ${#LAUNCHER_LINES[@]} -gt 0 ]; } && [ -f "$INSTALL_MANIFEST" ]; then
         if head -n 1 "$INSTALL_MANIFEST" | grep -q "^# EAX Restore: uninstalled"; then
-            [ ${#kept_lines[@]} -gt 0 ] && printf '%s\n' "${kept_lines[@]}" > "$INSTALL_MANIFEST"
+            if [ ${#kept_lines[@]} -gt 0 ]; then
+                start_manifest "$INSTALL_MANIFEST"
+                printf '%s\n' "${kept_lines[@]}" >> "$INSTALL_MANIFEST"
+            fi
         else
             { grep -v '^CONFIG:\|^LAUNCHER:' "$INSTALL_MANIFEST"
               [ ${#kept_lines[@]} -gt 0 ] && printf '%s\n' "${kept_lines[@]}"

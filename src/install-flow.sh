@@ -131,7 +131,7 @@
 
     DEPLOY_FAILURES=0
 
-    : > "$INSTALL_MANIFEST"
+    start_manifest "$INSTALL_MANIFEST"
     [ "$VCRUN_INSTALLED_THIS_RUN" == "1" ] && echo "VCRUN" >> "$INSTALL_MANIFEST"
 
     print_phase_task "Deploying files to local game folder"
