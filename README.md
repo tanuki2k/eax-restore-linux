@@ -25,6 +25,7 @@ Because modern operating systems and Proton/Wine don't natively support this old
 * **Advanced Engine Tweaks:** Optional EAX Unified dummy files (`eax.dll`/`eaxunified.dll`) and expanded audio limits to fix stuttering in chaotic, high-channel games like *F.E.A.R.*
 * **Automatic DLL Overrides:** Sets the `dsound`/`openal32` override for you — in the game's Steam launch options or Heroic environment variables (the default, so it's visible and easy to undo there), or in the Wine prefix registry — or leaves it to you, with instructions. Existing launch options are kept, and uninstall puts them back.
 * **Change an Installed Game:** Tools → **[O]ptional settings** turns a game's optional settings on or off after the install, and **[S]peaker configuration** switches its speaker setup (stereo, headphones/HRTF, surround, matrix) along with any of the game's own settings that go with it, like BioShock's speaker mode. Both only touch games this script installed to, and uninstall still puts back every original value.
+* **Browse Game Profiles:** Tools → **[B]rowse game profiles** lists every game in the database with a fuzzy search — **Ctrl-S** and **Ctrl-A** narrow it to Steam or GOG, and to DirectSound3D or OpenAL games — and shows the selected game's profile beside the list, one for each store it's on — the same screen the install shows when you pick it. **Tab** switches to the game's settings in full: why each one is offered, the file and where it lives, and the exact values it sets. **Shift-↑/↓** and **PgUp/PgDn** scroll the profile, and **Ctrl-F** opens it full screen (q comes back).
 * **DSOAL Logging:** Tools → **[D]SOAL logging** turns DSOAL's own log on or off for one game, without editing launch options by hand. Useful for checking which EAX version a game really uses, or for a bug report.
 * **VC++ Runtime Handling:** Detects and installs the Microsoft VC++ 2022 Redistributable that older Proton/Wine builds need to load kcat's DSOAL / OpenAL Soft, falling back to a direct Microsoft download if winetricks/protontricks fails, and verifying the actual DLLs on disk rather than trusting exit codes.
 * **Safety Guards:** Refuses to run as root or from Steam's Gaming Mode, and won't auto-modify SteamOS's immutable filesystem.
@@ -39,6 +40,8 @@ The script checks for these dependencies and offers to install them if they are 
 * **Heroic/GOG Games:** Requires `winetricks`.
 
 `jq` powers checksum verification for kcat's official builds, as well as the game database used for install-time notes and library scanning (see below).
+
+**Optional:** `fzf` 0.35 or newer for Tools → **[B]rowse game profiles** (0.58 or newer draws each part in its own box). The script offers to install it the first time you open the browser.
 
 ## Usage
 
@@ -168,6 +171,8 @@ tools/build-game-database.sh       # regenerates game-database.json
 CI checks every file against the schema, that it's formatted, and that `game-database.json` is up to date. Please only add a store `id` you've independently verified against the storefront's own page or API — a wrong ID would point the script at someone else's prefix. **Leave a field out when it's empty or at its default** — there are no `null`s in these files.
 
 To find what a game setting should change, `tools/probe-game.sh` helps: `scan <game dir> [prefix]` lists the game's config files and the setting names in its exes, and `snap`/`diff` show exactly which lines change when you switch an option in-game (snap, run the game and change it, snap again, diff).
+
+`tools/browse-game-database.sh [database.json]` browses the built `game-database.json` with the same browser as Tools → **[B]rowse game profiles** (it needs `fzf`): rebuild, then check how your entry's profile reads to players.
 
 A game file looks like this (see `data/games/tested/` for more):
 

@@ -680,42 +680,6 @@ extra_exe_folders_list() {
     echo "$out"
 }
 
-show_profile_notes() {
-    # Usage: show_profile_notes <id> <steam|gog> [skip_availability]
-    # Best-effort, install-only heads-up for well-known EAX titles, sourced
-    # from the game-level `notes` field of game-database.json. Notes are
-    # stored as a single unwrapped line for easy editing, then word-wrapped to
-    # the script's usual prose width at display time. stores.<store>.delisted
-    # is shown as an Availability line here too, EXCEPT when the caller
-    # already surfaced it in a GAME PROFILE block (show_game_details_block
-    # passes skip_availability=1 to avoid printing it twice) — call sites that
-    # don't go through a GAME PROFILE block (e.g. an unmatched manual entry)
-    # still need this fallback.
-    [ "$SCRIPT_ACTION" == "i" ] || return
-    [ -z "$1" ] && return
-    ensure_game_database || return
-
-    local store="steam" store_label="Steam"
-    if [ "$2" == "gog" ]; then
-        store="gog"; store_label="GOG"
-    fi
-
-    local notes listing
-    notes=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .notes // empty' "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
-
-    if [ -z "$3" ]; then
-        listing=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | (if .stores[$store].delisted then "delisted" else empty end)' "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
-        if [ "$listing" == "delisted" ]; then
-            echo -e "\n${NOTE}  Note: this game is currently delisted from ${store_label}'s storefront —"
-            echo -e "  existing owners keep access, but it can't be newly purchased there anymore.${NC}"
-        fi
-    fi
-
-    [ -z "$notes" ] && return
-    print_subheading "Notes"
-    print_wrapped "$notes"
-}
-
 show_game_details_block() {
     # Usage: show_game_details_block <id> <steam|gog> <location>
     # The richer "--- GAME PROFILE ---" banner scan_game_libraries shows when
@@ -724,7 +688,9 @@ show_game_details_block() {
     # a prefix and therefore knows the id to look this up by (see
     # show_profile_if_unseen, ahead of the EAX status check). Only prints
     # when game-database.json actually has a matching entry — an unmatched
-    # manual pick has nothing to show, same as before this existed.
+    # manual pick has nothing to show, same as before this existed. The
+    # screen itself is print_game_profile; this adds what the install reads
+    # back from it (PROFILE_API, PROFILE_PATCHES, the recommended tweaks).
     local id="$1" store="$2" location="$3"
     PROFILE_API=""
     PROFILE_PATCHES=""
@@ -732,17 +698,40 @@ show_game_details_block() {
     [ -z "$id" ] && return
     ensure_game_database || return
 
-    local store_label="Steam"
-    [ "$store" == "gog" ] && store_label="GOG"
-
     local match_count
     match_count=$(jq -r --arg id "$id" --arg store "$store" \
         '[.games[] | select((.stores[$store].id // "") | tostring == $id)] | length' \
         "$GAME_DATABASE_FILE" 2>/dev/null)
     [ "${match_count:-0}" -gt 0 ] || return
 
+    PROFILE_API=$(jq -r --arg id "$id" --arg store "$store" \
+        '.games[] | select((.stores[$store].id // "") | tostring == $id) | (.stores[$store].api // .eax.api // "directsound3d")' \
+        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
+    # The first match's whole text, not its first line: patches can hold a
+    # line break between suggestions.
+    PROFILE_PATCHES=$(jq -r --arg id "$id" --arg store "$store" \
+        '[.games[] | select((.stores[$store].id // "") | tostring == $id)][0].stores[$store].patches // empty' \
+        "$GAME_DATABASE_FILE" 2>/dev/null)
+    resolve_recommended_tweaks "$id" "$store"
+
+    print_game_profile "$id" "$store" "$location"
+    SCANNED_NOTES_SHOWN=1
+}
+
+print_game_profile() {
+    # Usage: print_game_profile <id> <steam|gog> [location]
+    # The "--- GAME PROFILE ---" screen for one store's entry, read straight
+    # from GAME_DATABASE_FILE. Output only — it sets nothing — so the
+    # database browser's preview can draw it outside an install. With a
+    # location it ends its fields with "System details" (where this install
+    # was found); without one, a Platform row under "Game details" says
+    # which store's profile it is.
+    local id="$1" store="$2" location="$3"
+    local store_label="Steam"
+    [ "$store" == "gog" ] && store_label="GOG"
+
     local name eax_versions api listing eax_status eax_status_details restore_details
-    local store_details patches id_confidence
+    local store_details patches id_confidence eax_unified notes
     name=$(jq -r --arg id "$id" --arg store "$store" \
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | .name' \
         "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
@@ -752,7 +741,6 @@ show_game_details_block() {
     api=$(jq -r --arg id "$id" --arg store "$store" \
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | (.stores[$store].api // .eax.api // "directsound3d")' \
         "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
-    PROFILE_API="$api"
     listing=$(jq -r --arg id "$id" --arg store "$store" \
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | (if .stores[$store].delisted then "delisted" else empty end)' \
         "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
@@ -774,12 +762,17 @@ show_game_details_block() {
     patches=$(jq -r --arg id "$id" --arg store "$store" \
         '[.games[] | select((.stores[$store].id // "") | tostring == $id)][0].stores[$store].patches // empty' \
         "$GAME_DATABASE_FILE" 2>/dev/null)
-    PROFILE_PATCHES="$patches"
     id_confidence=$(jq -r --arg id "$id" --arg store "$store" \
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | .stores[$store].id_source // empty' \
         "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
-
-    resolve_recommended_tweaks "$id" "$store"
+    # Read here rather than through resolve_recommended_tweaks, which sets
+    # the install's tweak globals.
+    eax_unified=$(jq -r --arg id "$id" --arg store "$store" \
+        '[.games[] | select((.stores[$store].id // "") | tostring == $id)][0] | .install.tweaks // [] | index("eax_unified") != null' \
+        "$GAME_DATABASE_FILE" 2>/dev/null)
+    notes=$(jq -r --arg id "$id" --arg store "$store" \
+        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .notes // empty' \
+        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
 
     # --- Field lines: what the database has on file, then what was found here ---
     # Everything under "Game details" comes from game-database.json, not
@@ -829,16 +822,20 @@ show_game_details_block() {
     else
         _detail "Audio API" "${WHITE}DirectSound3D${NC}"
     fi
-    [ -n "$EAX_UNIFIED" ] && _detail "EAX Unified" "${WHITE}Yes${NC}"
+    [ "$eax_unified" == "true" ] && _detail "EAX Unified" "${WHITE}Yes${NC}"
     local setting_counts audio_settings optional_settings
     setting_counts="$(count_game_settings "$id" "$store")"
     read -r audio_settings optional_settings <<< "${setting_counts:-0 0}"
     [ "${audio_settings:-0}" -gt 0 ] && _detail "Audio settings" "${WHITE}${audio_settings}${NC}"
     [ "${optional_settings:-0}" -gt 0 ] && _detail "Optional settings" "${WHITE}${optional_settings}${NC}"
 
-    _detail_heading "System details"
-    _detail "Platform" "${GREEN}$store_label${NC}"
-    _detail "Location" "${DIM}$(tilde_path "$location")${NC}"
+    if [ -n "$location" ]; then
+        _detail_heading "System details"
+        _detail "Platform" "${GREEN}$store_label${NC}"
+        _detail "Location" "${DIM}$(tilde_path "$location")${NC}"
+    else
+        _detail "Platform" "${GREEN}$store_label${NC} ${DIM}(ID $id)${NC}"
+    fi
     _print_details
 
     # --- Blocks: status -> problem -> solution ---
@@ -883,8 +880,10 @@ show_game_details_block() {
         print_subheading "Additional steps"
         print_wrapped "$restore_details"
     fi
-    show_profile_notes "$id" "$store" 1
-    SCANNED_NOTES_SHOWN=1
+    if [ -n "$notes" ]; then
+        print_subheading "Notes"
+        print_wrapped "$notes"
+    fi
     if [ -n "$patches" ]; then
         print_subheading "Suggested community patches"
         print_wrapped "$patches"
@@ -902,6 +901,171 @@ show_game_details_block() {
         | if type == "string" then [(capture("^https?://(www\\.)?(?<h>[^/]+)").h), .] else [.title, .url] end
         | join("\t")' "$GAME_DATABASE_FILE" 2>/dev/null)
     echo ""
+}
+
+# Usage: fzf_at_least <version>
+# True when the installed fzf is at least that version.
+fzf_at_least() {
+    printf '%s\n%s\n' "$1" "$(fzf --version 2>/dev/null | awk '{ print $1 }')" | sort -V -C
+}
+
+# Usage: browse_game_database
+# Every game in GAME_DATABASE_FILE in two panes: one row per game on the
+# left, fuzzy-searched by fzf, and on the right the selected game's GAME
+# PROFILE for each of its stores, Steam's first, or with Tab its game
+# settings in full. Ctrl-S and Ctrl-A narrow the list, and the profiles
+# shown, by store and by audio API (see browse_game_stores); Ctrl-F opens
+# the right pane full screen (browse_zoom). View only. fzf draws on /dev/tty, so
+# none of it reaches the run log. Needs fzf 0.35; the boxed sections need
+# 0.58, so an older fzf gets the same browser without them.
+browse_game_database() {
+    local dir defs state
+    # A run killed while browsing (its terminal closed) leaves its folder
+    # behind, so each start clears out any a day old.
+    find "${TMPDIR:-/tmp}" -maxdepth 1 -type d -name 'eax-restore-browse.*' -user "$(id -u)" -mmin +1440 \
+        -exec rm -rf {} + 2>/dev/null
+    dir="$(mktemp -d -t eax-restore-browse.XXXXXX)" || return 1
+    defs="$dir/defs.sh" state="$dir/state"
+    # fzf runs the preview and the keys' commands in a new shell, which has
+    # none of this script's functions or colours. Every function goes in,
+    # not a list of the ones print_game_profile calls, so a helper it picks
+    # up later can't be missing there.
+    { declare -p GREEN YELLOW CYAN WHITE BOLD DIM NOTE NC GAME_DATABASE_FILE; declare -f; } > "$defs"
+    echo "all all profile" > "$state"
+    # The right pane is just wide enough for the profile's 58-column
+    # dividers, so the list gets the rest. A terminal too narrow for both
+    # side by side puts it under the list instead.
+    local cols boxed=0 side="right,64" border="border-left"
+    read -r _ cols < <({ stty size < /dev/tty; } 2>/dev/null)
+    [ "${cols:-0}" -lt 100 ] && side="down,55%" border="border-top"
+    fzf_at_least 0.58 && boxed=1 && border="border-rounded"
+    local -a fzf_opts=()
+    if [ "$boxed" -eq 1 ]; then
+        fzf_opts=(--input-border rounded --input-label " Search " --prompt "> " --info inline-right
+            --header-border rounded --header-label " Filters "
+            --list-border rounded --list-label " Games "
+            --preview-label " Game profile ")
+    else
+        fzf_opts=(--prompt "Search: " --info inline)
+    fi
+    local load="source ${defs@Q}"
+    # Ctrl-F (browse_zoom) needs less; without it the key is left out.
+    local -a zoom=()
+    command -v less &> /dev/null && zoom=(--bind "ctrl-f:execute($load; browse_zoom ${state@Q} {1})")
+    # The key legend, centred on the bottom line: keys in bold cyan. Cut
+    # down to fit below 120 columns, since fzf cuts off a label too long
+    # for the line.
+    local legend="" key sep=""
+    local -a keys=("Ctrl-S" "store" "Ctrl-A" "audio API" "Tab" "game settings"
+        "Shift-↑/↓" "scroll" "Ctrl-F" "full screen" "Esc" "back")
+    [ "${cols:-0}" -ge 120 ] || keys=("Ctrl-S" "store" "Ctrl-A" "API" "Tab" "settings"
+        "Shift-↑/↓" "scroll" "Ctrl-F" "zoom" "Esc" "back")
+    [ ${#zoom[@]} -gt 0 ] || keys=("${keys[@]:0:8}" "${keys[@]:10}")
+    for ((key = 0; key < ${#keys[@]}; key += 2)); do
+        legend+="${sep}${CYAN}${BOLD}${keys[key]}${NC} ${keys[key + 1]}"
+        sep=" ${DIM}·${NC} "
+    done
+    local label_cmd="$load; browse_view_label ${state@Q}"
+    [ "$boxed" -eq 1 ] && label_cmd="+transform-preview-label($label_cmd)" || label_cmd=""
+    browse_game_rows "$state" \
+        | SHELL="$BASH" fzf --ansi --delimiter $'\t' --with-nth 2 --header-lines 1 \
+            --layout reverse "${fzf_opts[@]}" \
+            --border bottom --border-label-pos 0:bottom --border-label " $(printf '%b' "$legend") " \
+            --preview "$load; WRAP_COLUMNS=\$((FZF_PREVIEW_COLUMNS < 80 ? FZF_PREVIEW_COLUMNS - 4 : 76)) browse_game_preview ${state@Q} {1}" \
+            --preview-window "$side,$border" \
+            --bind "shift-up:preview-up,shift-down:preview-down,page-up:preview-page-up,page-down:preview-page-down" \
+            "${zoom[@]}" \
+            --bind "tab:execute-silent($load; browse_state_next ${state@Q} view)+refresh-preview$label_cmd" \
+            --bind "ctrl-s:reload($load; browse_state_next ${state@Q} store; browse_game_rows ${state@Q})" \
+            --bind "ctrl-a:reload($load; browse_state_next ${state@Q} api; browse_game_rows ${state@Q})" \
+            > /dev/null || true
+    rm -rf "$dir"
+    return 0
+}
+
+# Usage: browse_game_stores <state file> [game id]
+# One "<game id>\t<name>\t<store>\t<store id>" line per store entry that
+# passes the browser's filters, games sorted by name and Steam before GOG.
+# The state file holds "<store> <api> <view>": the two filters, each "all"
+# or a value, and which view the right pane shows (profile or settings).
+# The API is the store's own, else the game's. With a game id, just that
+# game's.
+browse_game_stores() {
+    local store api
+    read -r store api _ < "$1"
+    jq -r --arg store "$store" --arg api "$api" --arg game "${2:-}" '
+        .games | sort_by(.name | ascii_downcase) | .[]
+        | select($game == "" or .id == $game) | . as $g
+        | ("steam", "gog") as $key | .stores[$key] // empty
+        | select(($store == "all" or $key == $store)
+            and ($api == "all" or (.api // $g.eax.api // "directsound3d") == $api))
+        | "\($g.id)\t\($g.name)\t\($key)\t\(.id)"' "$GAME_DATABASE_FILE" 2>/dev/null
+}
+
+# Usage: browse_game_rows <state file>
+# browse_game_database's list: a line naming the filters (fzf keeps it above
+# the list), then one "<game id>\t<name>" row per game with a store entry
+# that passes them.
+browse_game_rows() {
+    local store api
+    read -r store api _ < "$1"
+    local -A label=([all]="All" [steam]="Steam" [gog]="GOG" [directsound3d]="DirectSound3D" [openal]="OpenAL")
+    printf '\t%b\n' "Store: ${GREEN}${label[$store]}${NC} · Audio API: ${GREEN}${label[$api]}${NC}"
+    browse_game_stores "$1" | awk -F '\t' '!seen[$1]++ { print $1 "\t" $2 }'
+}
+
+# Usage: browse_game_preview <state file> <game id>
+# The browser's right pane: the game's GAME PROFILE for each of its store
+# entries that passes the filters, one under the other, or in the settings
+# view its game settings.
+browse_game_preview() {
+    local -a entries
+    local entry store_key store_id view
+    read -r _ _ view < "$1"
+    if [ "$view" == "settings" ]; then
+        print_game_settings_details "$2"
+        return
+    fi
+    mapfile -t entries < <(browse_game_stores "$1" "$2")
+    for entry in "${entries[@]}"; do
+        IFS=$'\t' read -r _ _ store_key store_id <<< "$entry"
+        print_game_profile "$store_id" "$store_key"
+    done
+}
+
+# Usage: browse_state_next <state file> <store|api|view>
+# The browser's keys: Ctrl-S / Ctrl-A move that filter on to its next value
+# (All → one → the other → All), Tab switches the right pane between the
+# profile and the settings.
+browse_state_next() {
+    local store api view
+    read -r store api view < "$1"
+    case "$2" in
+        store) case "$store" in all) store=steam ;; steam) store=gog ;; *) store=all ;; esac ;;
+        api) case "$api" in all) api=directsound3d ;; directsound3d) api=openal ;; *) api=all ;; esac ;;
+        view) [ "$view" == "settings" ] && view=profile || view=settings ;;
+    esac
+    echo "$store $api $view" > "$1"
+}
+
+# Usage: browse_zoom <state file> <game id>
+# Ctrl-F in the browser: the right pane's text in less, across the whole
+# terminal (fzf can't give the pane all of it), wrapped as on the install's
+# screens. less -R keeps the colours; the Sources links' escape codes are
+# dropped, since an older less shows them as junk. q goes back.
+browse_zoom() {
+    local cols
+    read -r _ cols < <({ stty size < /dev/tty; } 2>/dev/null)
+    WRAP_COLUMNS=$(( ${cols:-80} < 80 ? ${cols:-80} - 4 : 76 )) browse_game_preview "$1" "$2" \
+        | sed $'s/\e]8;;[^\e]*\e\\\\//g' | less -R
+}
+
+# Usage: browse_view_label <state file>
+# The right pane's label for the view it shows.
+browse_view_label() {
+    local view
+    read -r _ _ view < "$1"
+    [ "$view" == "settings" ] && echo " Game settings " || echo " Game profile "
 }
 
 # Usage: print_community_patches_summary

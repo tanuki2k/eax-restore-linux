@@ -229,9 +229,10 @@ print_error_arrow() {
 # Word-wraps free-form prose (e.g. JSON-sourced notes/hints, not already
 # hand-wrapped script text) at 76 columns and indents it two spaces, in
 # WHITE. Distinct from print_note/print_warning/print_error, whose multi-line
-# arguments are assumed already wrapped by the caller.
+# arguments are assumed already wrapped by the caller. WRAP_COLUMNS narrows
+# it for a space smaller than the terminal (the database browser's preview).
 print_wrapped() {
-    echo -e "${WHITE}$(tilde_path "$1" | fold -s -w 76 | sed 's/^/  /')${NC}"
+    echo -e "${WHITE}$(tilde_path "$1" | fold -s -w "${WRAP_COLUMNS:-76}" | sed 's/^/  /')${NC}"
 }
 
 # Usage: read_answer VAR

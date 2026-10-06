@@ -413,7 +413,9 @@ config_row_is_safe() {
 # under it (ini only), then one "key  old → new" line per change, with the
 # keys lined up. A file or section line is only printed when it differs from
 # the row above. <rows> is newline-separated \x1f rows of
-# file, section, key, old, new.
+# file, section, key, old, new. An old value of __ANY__ prints just
+# "key  → new", for the database browser, which has no install to read the
+# current value from.
 print_config_rows() {
     local r prev_file="" prev_sec="" file sec key old new indent
     local -a g
@@ -437,9 +439,95 @@ print_config_rows() {
         else
             indent="      "
         fi
-        printf "%s${WHITE}%-${key_len}s${NC}  %s → ${GREEN}%s${NC}\n" "$indent" "$key" "$(config_display_value "$old")" "$(config_display_value "$new")"
+        if [ "$old" == "__ANY__" ]; then
+            printf "%s${WHITE}%-${key_len}s${NC}  → ${GREEN}%s${NC}\n" "$indent" "$key" "$(config_display_value "$new")"
+        else
+            printf "%s${WHITE}%-${key_len}s${NC}  %s → ${GREEN}%s${NC}\n" "$indent" "$key" "$(config_display_value "$old")" "$(config_display_value "$new")"
+        fi
         prev_file="$file"; prev_sec="$sec"
     done <<< "$1"
+}
+
+# Usage: print_game_settings_details <game id>
+# The database browser's Game settings view: every audio and optional
+# setting in the game's entry, each with its reason, the file (and where it
+# lives), the keys and the values it sets, and when it applies. Laid out
+# like the install's Game Settings step, minus the current values, which
+# only an install has. Settings belong to the game, not a store, so this is
+# one view for both; a store-only one says so.
+print_game_settings_details() {
+    local name store_key store_id
+    IFS=$'\t' read -r name store_key store_id < <(jq -r --arg game "$1" '
+        .games[] | select(.id == $game) | [.name, (.stores | to_entries[0] | .key, (.value.id | tostring))] | join("\t")' \
+        "$GAME_DATABASE_FILE" 2>/dev/null)
+    print_banner "GAME SETTINGS"
+    local -a rows f
+    local row
+    while IFS= read -r row; do [ -n "$row" ] && rows+=("$row"); done \
+        < <([ -n "$store_id" ] && load_game_config_rows "$store_id" "$store_key")
+    if [ ${#rows[@]} -eq 0 ]; then
+        echo ""
+        print_wrapped "${name:-This game} has no game settings in the database."
+        return
+    fi
+
+    local -A location_label=([game]="game folder" [install]="install folder" [prefix_documents]="Documents"
+        [prefix_appdata]="AppData" [prefix_public_documents]="Public Documents")
+    local -A speaker_name=([stereo]="Stereo" [headphones]="Headphones" [matrix]="Matrix encoding"
+        [surround]="Surround (any layout)" [quad]="Quad (4.0)" [surround51]="Surround 5.1"
+        [surround61]="Surround 6.1" [surround71]="Surround 7.1")
+    local width=$(( ${WRAP_COLUMNS:-76} - 2 ))
+    local id prev_id="" prev_cat="" display_rows="" stores speakers follow file_label loc s
+    local -a locs labels
+    # One setting's rows are printed together, after its last row is read.
+    _flush_setting() {
+        [ -n "$prev_id" ] || return 0
+        print_config_rows "$display_rows"
+        if [ -n "$stores" ]; then
+            labels=()
+            for s in ${stores//,/ }; do [ "$s" == "gog" ] && labels+=("GOG") || labels+=("Steam"); done
+            echo -e "    ${DIM}Only on ${labels[*]}${NC}"
+        fi
+        if [ -n "$speakers" ]; then
+            labels=()
+            for s in ${speakers//,/ }; do labels+=("${speaker_name[$s]:-$s}"); done
+            echo -e "    ${DIM}Only with $(IFS='|'; s="${labels[*]}"; echo "${s//|/ or }")${NC}"
+        fi
+        if [ -n "$follow" ]; then
+            echo -e "    ${DIM}Afterwards:${NC}"
+            echo -e "${WHITE}$(printf '%s' "$follow" | fold -s -w "$width" | sed 's/^/    /')${NC}"
+        fi
+    }
+    for row in "${rows[@]}"; do
+        mapfile -t -d $'\x1f' f < <(printf '%s' "$row")
+        id="${f[0]}:${f[1]}"
+        if [ "$id" != "$prev_id" ]; then
+            _flush_setting
+            if [ "${f[0]}" != "$prev_cat" ]; then
+                [ "${f[0]}" == "audio" ] && echo -e "\n${WHITE}Audio settings for ${name}:${NC}" \
+                    || echo -e "\n${WHITE}Optional settings for ${name}:${NC}"
+                prev_cat="${f[0]}"
+            fi
+            echo -e "\n  ${BOLD}${f[2]}${NC}"
+            echo -e "${WHITE}$(printf '%s' "${f[3]}" | fold -s -w "$width" | sed 's/^/    /')${NC}"
+            echo ""
+            display_rows="" stores="${f[4]}" speakers="${f[5]}" follow="${f[6]}"
+            prev_id="$id"
+        fi
+        # The file as the rows group it, then where the game keeps it.
+        IFS='|' read -ra locs <<< "${f[10]}"
+        labels=()
+        for loc in "${locs[@]}"; do
+            s="${location_label[${loc%%:*}]:-${loc%%:*}}"
+            [ "${loc#*:}" == "${f[7]}" ] || s+=": ${loc#*:}"
+            labels+=("$s")
+        done
+        file_label="${f[7]}  ($(IFS='|'; s="${labels[*]}"; echo "${s//|/ or }"))"
+        display_rows+="${file_label}"$'\x1f'"${f[11]}"$'\x1f'"${f[12]}"$'\x1f'"__ANY__"$'\x1f'"${f[13]}"$'\n'
+    done
+    _flush_setting
+    unset -f _flush_setting
+    echo ""
 }
 
 # Usage: fix_rows_for_display <plan rows>

@@ -69,21 +69,14 @@ else
 
     if [ ${#MISSING_BASE_PKGS[@]} -gt 0 ]; then
         print_error "this script needs a few tools that aren't installed yet: ${MISSING_BASE_PKGS[*]}"
-        if grep -q "ID=steamos" /etc/os-release 2>/dev/null; then
+        if is_steamos; then
             print_warning "SteamOS detected. To protect your immutable filesystem, please install missing" \
                 "tools via the Discover software centre."
             print_error "Cannot proceed without base dependencies. Exiting."; exit 1
         else
             if confirm "Auto-install these dependencies now? (Requires sudo)"; then
-                print_task "Installing missing packages"
-                source /etc/os-release
-                OS_FLAVOR="${ID_LIKE:-$ID}"
-                case "$OS_FLAVOR" in
-                    *debian*|*ubuntu*) sudo apt-get update && sudo apt-get install -y "${MISSING_BASE_PKGS[@]}" ;;
-                    *arch*) sudo pacman -Sy --noconfirm "${MISSING_BASE_PKGS[@]}" ;;
-                    *fedora*) sudo dnf install -y "${MISSING_BASE_PKGS[@]}" ;;
-                    *) print_error "please install these manually: ${MISSING_BASE_PKGS[*]}"; exit 1 ;;
-                esac
+                install_packages "${MISSING_BASE_PKGS[@]}" \
+                    || { print_error "Cannot proceed without base dependencies. Exiting."; exit 1; }
                 print_status "Dependencies installed successfully." "$GREEN"
             else print_error "Cannot proceed without base dependencies. Exiting."; exit 1; fi
         fi

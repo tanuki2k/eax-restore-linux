@@ -23,11 +23,14 @@ EAX_RESTORE_DSOAL_PIN="${EAX_RESTORE_DSOAL_PIN:-}"
 # tool is left without finishing (OPEN_TOOLS_MENU: back to the Tools menu).
 
 # Usage: tools_menu
-# The Tools submenu: changing an installed game's settings, then the runtime
-# helpers, each group under its own heading. Sets the chosen tool's mode, or
-# shows the SELECT OPERATION banner again for [R]eturn to the main menu.
+# The Tools submenu: changing an installed game's settings, browsing the
+# game database, then the runtime helpers, each group under its own heading.
+# Sets the chosen tool's mode, or shows the SELECT OPERATION banner again for
+# [R]eturn to the main menu.
 # [O]ptional settings is left out when the game database is missing, since
-# the settings come from the game's profile in it.
+# the settings come from the game's profile in it, and so is [B]rowse, which
+# also needs a terminal for fzf. [B]rowse runs right here and comes back to
+# this menu, since it doesn't pick a game.
 tools_menu() {
     local -a tool_keys
     print_banner "TOOLS"
@@ -37,13 +40,17 @@ tools_menu() {
         if [ -n "$GAME_DATABASE_FILE" ]; then
             print_key_option "[O]ptional settings"; tool_keys+=(o)
         fi
-        print_key_option "[S]peaker configuration"
+        print_key_option "[S]peaker configuration"; tool_keys+=(s)
+        if [ -n "$GAME_DATABASE_FILE" ] && interactive_tty; then
+            echo -e "\n${WHITE}Game database:${NC}"
+            print_key_option "[B]rowse game profiles"; tool_keys+=(b)
+        fi
         echo -e "\n${WHITE}Runtime:${NC}"
         print_key_option "[V]C++ install"
         print_key_option "[D]SOAL logging"
         echo ""
         print_key_option "[R]eturn to the main menu"
-        tool_keys+=(s v d r)
+        tool_keys+=(v d r)
         prompt "Selection [$(IFS=/; echo "${tool_keys[*]}")]: "
         read_answer menu_choice || exit 0
         menu_choice="${menu_choice,,}"
@@ -51,12 +58,35 @@ tools_menu() {
         case "$menu_choice" in
             o) SETTINGS_TOOL_MODE="optional"; return ;;
             s) SETTINGS_TOOL_MODE="speakers"; return ;;
+            b) browse_game_database_tool ;;
             v) VCRUN_ONLY_MODE="menu"; return ;;
             d) DSOAL_LOG_MODE=1; return ;;
             r|"") print_banner "SELECT OPERATION"; return ;;
             *) print_result "That's not a valid option — please type $(join_choices "${tool_keys[@]}")." "$YELLOW" ;;
         esac
     done
+}
+
+# Usage: browse_game_database_tool
+# Tools → [B]rowse game profiles. fzf isn't one of the script's own
+# requirements, so it's offered here, the one place that needs it.
+browse_game_database_tool() {
+    if ! command -v fzf &> /dev/null; then
+        print_note "Browsing the game profiles needs fzf, which isn't installed."
+        if is_steamos; then
+            print_paragraph "SteamOS's system files are read-only, so this script can't install it."
+            return
+        fi
+        confirm "Install fzf now? (Requires sudo)" || return
+        install_packages fzf || return
+        command -v fzf &> /dev/null || return
+    fi
+    if ! fzf_at_least 0.35; then
+        print_note "Browsing the game profiles needs fzf 0.35 or newer, and this system has" \
+            "$(fzf --version | awk '{ print $1 }'). Your package manager's updates may have a newer one."
+        return
+    fi
+    browse_game_database
 }
 
 while true; do

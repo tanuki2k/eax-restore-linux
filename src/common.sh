@@ -97,3 +97,23 @@ parse_selection() {
         for ((i = start; i <= end && i <= total; i++)); do SELECTED[$i]=0; done
     done
 }
+
+# Usage: is_steamos
+# SteamOS's system is read-only, so the package managers can't install there.
+is_steamos() { grep -q "ID=steamos" /etc/os-release 2>/dev/null; }
+
+# Usage: install_packages <package>...
+# Installs the packages with the distro's own package manager (apt, pacman
+# or dnf) through sudo. Returns 1 when the install fails, or when the distro
+# isn't one of those, after asking for them to be installed by hand.
+install_packages() {
+    local flavour
+    flavour="$(. /etc/os-release 2>/dev/null; echo "${ID_LIKE:-$ID}")"
+    print_task "Installing missing packages"
+    case "$flavour" in
+        *debian*|*ubuntu*) sudo apt-get update && sudo apt-get install -y "$@" ;;
+        *arch*) sudo pacman -Sy --noconfirm "$@" ;;
+        *fedora*) sudo dnf install -y "$@" ;;
+        *) print_error "please install these manually: $*"; return 1 ;;
+    esac
+}

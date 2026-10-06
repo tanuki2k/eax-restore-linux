@@ -90,7 +90,9 @@ launcher hardcodes `releases/latest`).
   numbered snapshots under `~/.cache/eax-probe/<name>/`, and `diff <name>` shows
   what changed between the last two. Snap before the first launch, after
   quitting at the main menu (defaults), and after switching the option in-game.
-  `tools/migrate-v2-to-v3.sh` is the one-off that split the old single-file (schema 2)
+  `tools/browse-game-database.sh [file]` (needs fzf) browses the built
+  database with the Tools menu's browser — a quick look at how an entry's
+  profile reads. `tools/migrate-v2-to-v3.sh` is the one-off that split the old single-file (schema 2)
   database; kept for reference only.
 - **Run the script:** `./dist/eax-restore-linux.sh` (interactive; requires `curl`, `unzip`,
   `file`, `jq`, plus `protontricks` for Steam games or `winetricks` for Heroic/GOG
@@ -135,18 +137,31 @@ their execution order in the assembled script):
    titles-only boxes when the list doesn't fit the terminal, and to a numbered
    "type the numbers" prompt when stdin isn't a terminal.
 5. **`common.sh`** — small helpers used throughout every other file: `is_truthy`,
-   `is_genuine_dll`, `parse_selection`.
+   `is_genuine_dll`, `parse_selection`, `is_steamos`, `install_packages` (apt /
+   pacman / dnf via sudo; pre-flight and the fzf offer).
 6. **`guards.sh`** — refuses root / Steam Gaming Mode, runs before any real work
    starts.
 7. **`detection.sh`** — Steam AppID / Heroic prefix / architecture detection,
    `get_game_directory`, `detect_game_environment`, `select_architecture`, etc.
 8. **`game-database.sh`** — the `game-database.json` helpers:
-   `ensure_game_database`, `scan_game_libraries`, `show_profile_notes`,
+   `ensure_game_database`, `scan_game_libraries`, `show_game_details_block`
+   (the install's GAME PROFILE: sets `PROFILE_API`/`PROFILE_PATCHES` and the
+   recommended tweaks, then draws it with `print_game_profile`, which only
+   prints), `browse_game_database` (Tools → [B]rowse game profiles and
+   `tools/browse-game-database.sh`: one fzf row per game from
+   `browse_game_rows`; the preview, `browse_game_preview`, stacks a
+   `print_game_profile` per store entry, run in a new shell from a
+   `declare -f` dump, or with Tab `print_game_settings_details`; both read
+   `browse_game_stores`, which applies the Ctrl-S / Ctrl-A store and audio
+   API filters. The keys' state (filters, view) is one temp file that
+   `browse_state_next` updates; Ctrl-F is `browse_zoom` (the pane in
+   `less -R`). Needs fzf 0.35 (`fzf_at_least`); 0.58+ gets the boxed
+   sections, older fzf the same browser without them),
    `confirm_continue_if_eax_impossible`, etc.
 9. **`game-config.sh`** — the Game Settings feature: `config_get_key` /
    `config_set_key` (awk readers/writers for the five text config formats, keeping CRLF,
    key spelling and spacing, plus `_gadb_find`/`_gadb_set`, which switch an on/off
-   setting in place in Monolith's binary `gadb` profile), `resolve_config_file`, `offer_alsoft_settings` (step 8),
+   setting in place in Monolith's binary `gadb` profile), `resolve_config_file`, `print_game_settings_details` (the database browser's Tab view: every setting's reason, file, keys and values, via `load_game_config_rows` and `print_config_rows` with `__ANY__` for the unknown current value), `offer_alsoft_settings` (step 8),
    `game_settings_step` (step 11), `apply_game_settings` (Phase 2, writes `CONFIG:`
    manifest lines), `print_game_settings_summary`, `revert_game_settings`
    (uninstall step 7). All of it driven by the entry's `game_config` /
@@ -321,7 +336,8 @@ for a new call site.
   raw `echo -e`/`printf` that prints a path needs to call it itself
   (`"$(tilde_path "$GAME_DIR")"`). Display only — keep the real path in variables.
 - `print_wrapped "free text"` — wraps data-sourced prose (e.g. the `notes` field in
-  `game-database.json`, not already hand-wrapped script text) at 76 columns and
+  `game-database.json`, not already hand-wrapped script text) at 76 columns
+  (`WRAP_COLUMNS` overrides it, for the browser's narrower preview) and
   indents it, in WHITE. Don't hardcode line breaks into stored data; wrap at render
   time instead.
 
