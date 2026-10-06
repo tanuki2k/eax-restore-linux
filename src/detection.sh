@@ -1017,6 +1017,19 @@ confirm_game_dir_has_exe() {
     fi
 }
 
+show_profile_if_unseen() {
+    # Usage: show_profile_if_unseen <id> <steam|gog>
+    # On the browse/manual path, the GAME PROFILE as soon as the prefix step
+    # knows the game's ID: ahead of the EAX status check, so a game that's
+    # blocked there still shows why, and whatever the answer to step 4's
+    # audio API question. Then checks the folder holds the profile's .exe.
+    # Nothing to do after a library scan, which showed it at the pick.
+    [ -z "$SCANNED_NOTES_SHOWN" ] || return 0
+    show_game_details_block "$1" "$2" "$GAME_DIR"
+    [ -n "$SCANNED_NOTES_SHOWN" ] && confirm_game_dir_has_exe "$1" "$2" "${GAME_NAME:-the game}"
+    return 0
+}
+
 detect_api_from_binary() {
     # Usage: detect_api_from_binary <game_dir>
     # Fallback heuristic for games with no game-database.json entry: greps
@@ -1190,6 +1203,8 @@ confirm_continue_if_openal_native() {
                 db_api_raw=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | (.stores[$store].api // .eax.api // "")' "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
                 api="${db_api_raw:-directsound3d}"
                 matched=1
+                # Normally done in the prefix step with the profile
+                # (show_profile_if_unseen); a fallback for a match it missed.
                 confirm_game_dir_has_exe "$1" "$store" "$game_name"
             else
                 print_note "$game_name has no profile in the game database."
@@ -1208,6 +1223,7 @@ confirm_continue_if_openal_native() {
         local api_display="DirectSound3D"
         [ "$api" == "openal" ] && api_display="OpenAL"
         print_status "Detected: ${BOLD}$api_display${NC}" ""
+        # Same fallback: the profile is normally shown in the prefix step.
         [ "$matched" -eq 1 ] && [ -z "$SCANNED_NOTES_SHOWN" ] && show_game_details_block "$1" "$2" "$GAME_DIR"
 
         if [ "$api" == "openal" ]; then
@@ -1378,16 +1394,17 @@ detect_game_environment() {
                 if confirm "Use this detected prefix?"; then
                     PREFIX_PATH="$DETECTED_STEAM_PREFIX"
                     ACF_FILE="${GAME_DIR%/common/*}/appmanifest_${APPID}.acf"
-                    confirm_continue_if_eax_impossible "$APPID" "steam" "$ACF_FILE"
-                    # User chose to go back and pick a different game — unwind
-                    # to the config flow's Step 1-2 loop.
-                    [ -n "$RESTART_REQUESTED" ] && return
                     if [ -z "$GAME_NAME" ]; then
                         # Same source appid/gog_id already come from, not the
                         # curated JSON — the appmanifest's own "name" key.
                         [ -f "$ACF_FILE" ] && GAME_NAME=$(sed -n 's/^[[:space:]]*"name"[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$ACF_FILE" 2>/dev/null | head -n 1)
                         [ -z "$GAME_NAME" ] && GAME_NAME="AppID $APPID"
                     fi
+                    show_profile_if_unseen "$APPID" "steam"
+                    confirm_continue_if_eax_impossible "$APPID" "steam" "$ACF_FILE"
+                    # User chose to go back and pick a different game — unwind
+                    # to the config flow's Step 1-2 loop.
+                    [ -n "$RESTART_REQUESTED" ] && return
                     break
                 fi
                 APPID=""
@@ -1447,13 +1464,16 @@ detect_game_environment() {
                 <<< "$(detect_heroic_prefix_verbose "$GAME_DIR" 2>/dev/null)"
         fi
         HEROIC_EXPECTED_PREFIX="$DETECTED_PREFIX"
+        # Found from the game folder, not the prefix, so it's kept whichever
+        # prefix is used: a typed one still gets the game's profile, its EAX
+        # check and its settings.
+        HEROIC_APP_NAME="$DETECTED_APP_NAME"
         if [ "$attempt_auto_detect" -eq 1 ]; then
             if [ -n "$DETECTED_PREFIX" ]; then
                 print_detected "Detected Prefix" "$DETECTED_PREFIX"
                 [ "$HEROIC_PREFIX_SOURCE" == "shared" ] && print_status "This is Heroic's shared prefix, because ${HEROIC_GAME_TITLE:-this game} has no prefix of its own." "$DIM"
                 if confirm "Use this detected prefix?"; then
                     PREFIX_PATH="$DETECTED_PREFIX"
-                    HEROIC_APP_NAME="$DETECTED_APP_NAME"
                 fi
             fi
         fi
@@ -1481,10 +1501,6 @@ detect_game_environment() {
                 echo ""
                 print_status "Prefix verified!" "$GREEN"
                 if ! check_heroic_prefix_match; then PREFIX_PATH=""; continue; fi
-                confirm_continue_if_eax_impossible "$HEROIC_APP_NAME" "gog"
-                # User chose to go back and pick a different game — unwind to
-                # the config flow's Step 1-2 loop.
-                [ -n "$RESTART_REQUESTED" ] && return
                 if [ -z "$GAME_NAME" ] && [ -n "$HEROIC_APP_NAME" ]; then
                     # Same source the GOG ID already comes from, not the
                     # curated JSON — Heroic's own install folder name.
@@ -1492,6 +1508,11 @@ detect_game_environment() {
                     [ -n "$HEROIC_INSTALL_PATH" ] && GAME_NAME="$(basename "$HEROIC_INSTALL_PATH")"
                     [ -z "$GAME_NAME" ] && GAME_NAME="GOG ID $HEROIC_APP_NAME"
                 fi
+                show_profile_if_unseen "$HEROIC_APP_NAME" "gog"
+                confirm_continue_if_eax_impossible "$HEROIC_APP_NAME" "gog"
+                # User chose to go back and pick a different game — unwind to
+                # the config flow's Step 1-2 loop.
+                [ -n "$RESTART_REQUESTED" ] && return
                 break
             else
                 print_error "Initialised Wine prefix not found at that location."

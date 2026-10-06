@@ -341,19 +341,37 @@ block_if_eax_not_implemented() {
     workaround=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.fix_in_place // false' "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
 
     if [ "$status" == "not_implemented" ]; then
-        print_error "$3 never implemented EAX/environmental audio in the first place, so" \
-            "there would be nothing here for this script to restore."
+        if [ -n "$SCANNED_NOTES_SHOWN" ]; then
+            print_eax_block_error "$1" "$store"
+        else
+            print_error "$3 never implemented EAX/environmental audio in the first place, so" \
+                "there would be nothing here for this script to restore."
+        fi
         prompt_restart_or_quit 1
         return
     fi
 
     if [ "$status" == "removed_by_patch" ] && [ "$workaround" != "true" ]; then
-        print_error "EAX/A3D support was removed from $3's current build by a software update," \
-            "and there's no known in-place fix — restoring it would need a separate install this" \
-            "script isn't pointed at."
+        if [ -n "$SCANNED_NOTES_SHOWN" ]; then
+            print_eax_block_error "$1" "$store"
+        else
+            print_error "EAX/A3D support was removed from $3's current build by a software update," \
+                "and there's no known in-place fix — restoring it would need a separate install this" \
+                "script isn't pointed at."
+        fi
         prompt_restart_or_quit 1
         return
     fi
+}
+
+# Usage: print_eax_block_error <id> <steam|gog>
+# The hard block's error when the GAME PROFILE was just shown: its Status
+# already says why, so this only names the game (as the profile does) and
+# the outcome.
+print_eax_block_error() {
+    local name
+    name=$(jq -r --arg id "$1" --arg store "$2" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .name' "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
+    print_error "There's nothing for this script to restore in ${name:-this game}."
 }
 
 detect_steam_beta_branch() {
@@ -703,7 +721,8 @@ show_game_details_block() {
     # The richer "--- GAME PROFILE ---" banner scan_game_libraries shows when
     # a game is picked from a library scan, factored out so the manual/GUI
     # path can show the same thing once detect_game_environment has confirmed
-    # a prefix and therefore knows the id to look this up by. Only prints
+    # a prefix and therefore knows the id to look this up by (see
+    # show_profile_if_unseen, ahead of the EAX status check). Only prints
     # when game-database.json actually has a matching entry — an unmatched
     # manual pick has nothing to show, same as before this existed.
     local id="$1" store="$2" location="$3"
@@ -824,7 +843,10 @@ show_game_details_block() {
 
     # --- Blocks: status -> problem -> solution ---
     if [ "$eax_status" != "supported" ]; then
-        local state_line="Never implemented in this edition." after_line=""
+        # The entry's own problem text says why; the generic lead-in is only
+        # for an entry without one.
+        local state_line="" after_line=""
+        [ -z "$eax_status_details" ] && state_line="Never implemented in this edition."
         [ "$eax_status" == "removed_by_patch" ] && state_line="Removed by a later patch."
         if [ "$eax_status" == "built_in" ]; then
             state_line=""
@@ -942,17 +964,27 @@ confirm_continue_if_eax_impossible() {
         return
     fi
 
+    # Right after the GAME PROFILE (always the case unless the database is
+    # missing and the hardcoded fallback matched), its Status has said why.
     if [ "$status" == "not_implemented" ]; then
-        print_error "This edition never implemented EAX/environmental audio in the first place, so" \
-            "there would be nothing here for this script to restore."
+        if [ -n "$SCANNED_NOTES_SHOWN" ]; then
+            print_eax_block_error "$1" "$store"
+        else
+            print_error "This edition never implemented EAX/environmental audio in the first place, so" \
+                "there would be nothing here for this script to restore."
+        fi
         prompt_restart_or_quit 1
         return
     fi
 
     if [ "$workaround" != "true" ]; then
-        print_error "EAX/A3D support was removed from this build by a software update, and there's" \
-            "no known in-place fix — restoring it would need a separate install this script" \
-            "isn't pointed at."
+        if [ -n "$SCANNED_NOTES_SHOWN" ]; then
+            print_eax_block_error "$1" "$store"
+        else
+            print_error "EAX/A3D support was removed from this build by a software update, and there's" \
+                "no known in-place fix — restoring it would need a separate install this script" \
+                "isn't pointed at."
+        fi
         prompt_restart_or_quit 1
         return
     fi
