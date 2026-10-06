@@ -223,6 +223,14 @@ CHECKLIST_INITIAL=()
 # checklist_select's per-item bodies (reason and rows), set the same way.
 CHECKLIST_DETAILS=()
 
+# The database browser's right pane when it's beside the game list: this
+# share of the width, so a bigger window gives the profile more room, but
+# never fewer columns than BROWSE_SIDE_WIDTH. fzf adds its border and
+# padding around that, which leaves just enough for the profile's
+# 58-column dividers.
+BROWSE_SIDE_PERCENT=55
+BROWSE_SIDE_WIDTH=58
+
 # Minimal hardcoded safety net for confirm_continue_if_eax_impossible, used
 # only if ensure_game_database can't produce a file at all (e.g. first
 # run, offline, no cache yet). Keeps the "this install is a functional

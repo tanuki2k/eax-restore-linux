@@ -150,13 +150,23 @@ their execution order in the assembled script):
    prints), `browse_game_database` (Tools → [B]rowse game profiles and
    `tools/browse-game-database.sh`: one fzf row per game from
    `browse_game_rows`; the preview, `browse_game_preview`, stacks a
-   `print_game_profile` per store entry, run in a new shell from a
-   `declare -f` dump, or with Tab `print_game_settings_details`; both read
-   `browse_game_stores`, which applies the Ctrl-S / Ctrl-A store and audio
-   API filters. The keys' state (filters, view) is one temp file that
-   `browse_state_next` updates; Ctrl-F is `browse_zoom` (the pane in
-   `less -R`). Needs fzf 0.35 (`fzf_at_least`); 0.58+ gets the boxed
-   sections, older fzf the same browser without them),
+   `print_game_profile` per store entry (no banner: the pane's label names
+   it), run in a new shell from a `declare -f` dump, or with Tab
+   `print_game_settings_details`, or with F1 `browse_help`; both read
+   `browse_game_stores`, which applies the Ctrl-S / Ctrl-A / Ctrl-O store,
+   audio (API or EAX version) and availability (listed / delisted) filters. The keys' state
+   (filters, view, help, order, layout) is one temp file that
+   `browse_state_next` updates; Ctrl-R is fzf's `toggle-sort` (`--tiebreak
+   index` otherwise); Ctrl-L swaps the right pane between beside the list
+   (`BROWSE_SIDE_WIDTH`) and under it, and `browse_filter_header` refits the
+   Filters box (two filters a line when the list is wide enough) through
+   `transform-header` after every key and resize; Enter and double-click are
+   ignored, so only Esc and fzf's abort keys close it;
+   Ctrl-F is `browse_zoom` (the pane in `less -R`). Needs fzf 0.35
+   (`fzf_at_least`). 0.58+ gets the boxed sections and runs with
+   `--height=-1` on the alternate screen, so `browse_key_bar` can draw the
+   key bar and version on the last row; older fzf puts the bar on a border
+   line and the filters in four `--header-lines` (`BROWSE_HEADER_LINES`)),
    `confirm_continue_if_eax_impossible`, etc.
 9. **`game-config.sh`** — the Game Settings feature: `config_get_key` /
    `config_set_key` (awk readers/writers for the five text config formats, keeping CRLF,

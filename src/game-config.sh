@@ -460,7 +460,6 @@ print_game_settings_details() {
     IFS=$'\t' read -r name store_key store_id < <(jq -r --arg game "$1" '
         .games[] | select(.id == $game) | [.name, (.stores | to_entries[0] | .key, (.value.id | tostring))] | join("\t")' \
         "$GAME_DATABASE_FILE" 2>/dev/null)
-    print_banner "GAME SETTINGS"
     local -a rows f
     local row
     while IFS= read -r row; do [ -n "$row" ] && rows+=("$row"); done \
