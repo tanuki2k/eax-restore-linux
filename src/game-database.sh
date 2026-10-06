@@ -71,14 +71,11 @@ ensure_game_database() {
                 GAME_DATABASE_FILE="$GAME_DATABASE_CACHE"
                 print_status "Couldn't reach GitHub, so the copy from $(date -r "$GAME_DATABASE_CACHE" +%F) is used." "$YELLOW" >&2
             else
-                # No message here — every caller that has something
-                # meaningful to say about a missing database says it
-                # itself, in its own context (scan_game_libraries has its
-                # own explicit notice; confirm_continue_if_openal_native
-                # explains it right under the Audio API Detection header).
-                # A generic message from here would surface wherever this
-                # function happens to be called first, disconnected from
-                # whichever step the user is actually looking at.
+                # The first call is the pre-flight check's, so this shows
+                # under its STATUS header before the main menu, which then
+                # leaves out what needs the database. Later callers still
+                # say what's missing in their own step.
+                print_status "Couldn't reach GitHub and there's no saved copy, so scanning and optional settings are hidden." "$YELLOW" >&2
                 return 1
             fi
         fi

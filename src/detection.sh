@@ -1166,8 +1166,8 @@ confirm_continue_if_openal_native() {
     elif [ "$attempt_auto_detect" -eq 0 ]; then
         declined=1
     else
-        # Availability is already known by this point (the REPOSITORY CACHE
-        # CHECK step fetches/memoizes it before Phase 1 even starts), so
+        # Availability is already known by this point (the pre-flight
+        # check fetches/memoizes it before the main menu), so
         # there's nothing further to ask permission for here — the gate
         # above already covers it.
         ensure_game_database && json_available=1

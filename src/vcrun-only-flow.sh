@@ -26,27 +26,35 @@ EAX_RESTORE_DSOAL_PIN="${EAX_RESTORE_DSOAL_PIN:-}"
 # The Tools submenu: changing an installed game's settings, then the runtime
 # helpers, each group under its own heading. Sets the chosen tool's mode, or
 # shows the SELECT OPERATION banner again for [R]eturn to the main menu.
+# [O]ptional settings is left out when the game database is missing, since
+# the settings come from the game's profile in it.
 tools_menu() {
+    local -a tool_keys
     print_banner "TOOLS"
     while true; do
+        tool_keys=()
         echo -e "\n${WHITE}Game settings:${NC}"
-        print_key_option "[O]ptional settings"
+        if [ -n "$GAME_DATABASE_FILE" ]; then
+            print_key_option "[O]ptional settings"; tool_keys+=(o)
+        fi
         print_key_option "[S]peaker configuration"
         echo -e "\n${WHITE}Runtime:${NC}"
         print_key_option "[V]C++ install"
         print_key_option "[D]SOAL logging"
         echo ""
         print_key_option "[R]eturn to the main menu"
-        prompt "Selection [o/s/v/d/r]: "
+        tool_keys+=(s v d r)
+        prompt "Selection [$(IFS=/; echo "${tool_keys[*]}")]: "
         read_answer menu_choice || exit 0
         menu_choice="${menu_choice,,}"
+        [ -z "$menu_choice" ] || [[ " ${tool_keys[*]} " == *" $menu_choice "* ]] || menu_choice="?"
         case "$menu_choice" in
             o) SETTINGS_TOOL_MODE="optional"; return ;;
             s) SETTINGS_TOOL_MODE="speakers"; return ;;
             v) VCRUN_ONLY_MODE="menu"; return ;;
             d) DSOAL_LOG_MODE=1; return ;;
             r|"") print_banner "SELECT OPERATION"; return ;;
-            *) print_result "That's not a valid option — please type o, s, v, d or r." "$YELLOW" ;;
+            *) print_result "That's not a valid option — please type $(join_choices "${tool_keys[@]}")." "$YELLOW" ;;
         esac
     done
 }
@@ -75,9 +83,13 @@ else
                 tools_menu
                 continue
             fi
-            menu_keys=(s)
+            # [S]can is left out when the game database is missing, since
+            # it matches the libraries against it.
+            menu_keys=()
             echo -e "\n${WHITE}What would you like to do?${NC}\n"
-            print_key_option "[S]can your Steam/Heroic library"
+            if [ -n "$GAME_DATABASE_FILE" ]; then
+                print_key_option "[S]can your Steam/Heroic library"; menu_keys+=(s)
+            fi
             if gui_picker_available; then
                 print_key_option "[B]rowse for the game folder"; menu_keys+=(b)
             fi

@@ -89,3 +89,9 @@ else
         fi
     else print_status "All base requirements met." "$GREEN"; fi
 fi
+
+# Fetched once here, before the main menu, so its status line doesn't show
+# up partway through a step, and the menus can leave out what needs it when
+# it's missing (GAME_DATABASE_FILE stays empty). Every later call reuses this
+# result.
+ensure_game_database
