@@ -6,12 +6,12 @@
     "steam": {
       "id": 13200,
       "delisted": true,
-      "store_details": "Delisted from Steam in December 2022, when Epic pulled the entire classic Unreal series from sale."
+      "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale."
     },
     "gog": {
       "id": 1207658677,
       "delisted": true,
-      "store_details": "Delisted from GOG in December 2022, when Epic pulled the entire classic Unreal series from sale."
+      "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale."
     }
   },
   "eax": { "api": "openal", "versions": ["1.0", "2.0", "3.0"] },

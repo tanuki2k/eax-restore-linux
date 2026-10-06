@@ -147,10 +147,12 @@ their execution order in the assembled script):
    `ensure_game_database`, `scan_game_libraries`, `show_game_details_block`
    (the install's GAME PROFILE: sets `PROFILE_API`/`PROFILE_PATCHES` and the
    recommended tweaks, then draws it with `print_game_profile`, which only
-   prints), `browse_game_database` (Tools → [B]rowse game profiles and
+   prints: a one-store wrapper around `print_game_profile_stores`, which
+   takes one or more `<store>:<id>` entries of a game), `browse_game_database` (Tools → [B]rowse game profiles and
    `tools/browse-game-database.sh`: one fzf row per game from
-   `browse_game_rows`; the preview, `browse_game_preview`, stacks a
-   `print_game_profile` per store entry (no banner: the pane's label names
+   `browse_game_rows`; the preview, `browse_game_preview`, draws one
+   `print_game_profile_stores` covering every store entry that passes the
+   filters (what they share once, what differs per store; no banner: the pane's label names
    it), run in a new shell from a `declare -f` dump, or with Tab
    `print_game_settings_details`, or with F1 `browse_help`; both read
    `browse_game_stores`, which applies the Ctrl-S / Ctrl-A store (Steam,

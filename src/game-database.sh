@@ -721,30 +721,41 @@ show_game_details_block() {
 
 print_game_profile() {
     # Usage: print_game_profile <id> <steam|gog> [location]
-    # The GAME PROFILE screen's body for one store's entry, read straight
-    # from GAME_DATABASE_FILE; the caller prints the banner above it (the
-    # database browser's pane has its own label instead). Output only — it
-    # sets nothing — so the browser can draw it outside an install. With a
-    # location it ends its fields with "System details" (where this install
-    # was found); without one, a Platform row under the name says which
-    # store's profile it is.
-    local id="$1" store="$2" location="$3"
-    local store_label="Steam"
-    [ "$store" == "gog" ] && store_label="GOG"
+    # The GAME PROFILE screen's body for one store's entry; see
+    # print_game_profile_stores.
+    print_game_profile_stores "${3:-}" "$2:$1"
+}
 
-    local name eax_versions api listing eax_status eax_status_details restore_details
-    local store_details patches id_confidence eax_unified notes
+print_game_profile_stores() {
+    # Usage: print_game_profile_stores <location> <store>:<id> [<store>:<id> ...]
+    # The GAME PROFILE screen's body, read straight from GAME_DATABASE_FILE;
+    # the caller prints the banner above it (the database browser's pane has
+    # its own label instead). Output only — it sets nothing — so the browser
+    # can draw it outside an install. Each <store>:<id> is one of the game's
+    # store entries: the install passes the one it found, the browser every
+    # one that passes its filters. With more than one, what the stores share
+    # (most of it, since it's stored once per game) is shown once, and only
+    # what differs (the audio API, store details, patches, delisted) per
+    # store. With a location (the install) the fields end with "System
+    # details" (where this install was found); without one, a Platform row
+    # under the name says which store's profile it is.
+    local location="$1"; shift
+    local -a stores=() ids=() labels=() apis=() listings=() id_sources=() details=() patches=() counts=()
+    local entry
+    for entry in "$@"; do
+        stores+=("${entry%%:*}"); ids+=("${entry#*:}")
+        [ "${entry%%:*}" == "gog" ] && labels+=("GOG") || labels+=("Steam")
+    done
+    local n=${#stores[@]} i id="${ids[0]}" store="${stores[0]}"
+
+    # Game-level fields: the same for every store entry, so read from the
+    # first.
+    local name eax_versions eax_status eax_status_details restore_details eax_unified notes
     name=$(jq -r --arg id "$id" --arg store "$store" \
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | .name' \
         "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
     eax_versions=$(jq -r --arg id "$id" --arg store "$store" \
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.versions // [] | join(", ")' \
-        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
-    api=$(jq -r --arg id "$id" --arg store "$store" \
-        '.games[] | select((.stores[$store].id // "") | tostring == $id) | (.stores[$store].api // .eax.api // "directsound3d")' \
-        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
-    listing=$(jq -r --arg id "$id" --arg store "$store" \
-        '.games[] | select((.stores[$store].id // "") | tostring == $id) | (if .stores[$store].delisted then "delisted" else empty end)' \
         "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
     eax_status=$(jq -r --arg id "$id" --arg store "$store" \
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.status // "supported"' \
@@ -756,17 +767,6 @@ print_game_profile() {
     restore_details=$(jq -r --arg id "$id" --arg store "$store" \
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.fix // empty' \
         "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
-    store_details=$(jq -r --arg id "$id" --arg store "$store" \
-        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .stores[$store].store_details // empty' \
-        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
-    # The first match's whole text, not its first line: patches can hold a
-    # line break between suggestions.
-    patches=$(jq -r --arg id "$id" --arg store "$store" \
-        '[.games[] | select((.stores[$store].id // "") | tostring == $id)][0].stores[$store].patches // empty' \
-        "$GAME_DATABASE_FILE" 2>/dev/null)
-    id_confidence=$(jq -r --arg id "$id" --arg store "$store" \
-        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .stores[$store].id_source // empty' \
-        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
     # Read here rather than through resolve_recommended_tweaks, which sets
     # the install's tweak globals.
     eax_unified=$(jq -r --arg id "$id" --arg store "$store" \
@@ -776,37 +776,81 @@ print_game_profile() {
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | .notes // empty' \
         "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
 
+    # Store-level fields, one per entry.
+    for i in "${!stores[@]}"; do
+        apis[i]=$(jq -r --arg id "${ids[i]}" --arg store "${stores[i]}" \
+            '.games[] | select((.stores[$store].id // "") | tostring == $id) | (.stores[$store].api // .eax.api // "directsound3d")' \
+            "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
+        listings[i]=$(jq -r --arg id "${ids[i]}" --arg store "${stores[i]}" \
+            '.games[] | select((.stores[$store].id // "") | tostring == $id) | (if .stores[$store].delisted then "delisted" else empty end)' \
+            "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
+        id_sources[i]=$(jq -r --arg id "${ids[i]}" --arg store "${stores[i]}" \
+            '.games[] | select((.stores[$store].id // "") | tostring == $id) | .stores[$store].id_source // empty' \
+            "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
+        details[i]=$(jq -r --arg id "${ids[i]}" --arg store "${stores[i]}" \
+            '.games[] | select((.stores[$store].id // "") | tostring == $id) | .stores[$store].store_details // empty' \
+            "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
+        # The first match's whole text, not its first line: patches can hold
+        # a line break between suggestions.
+        patches[i]=$(jq -r --arg id "${ids[i]}" --arg store "${stores[i]}" \
+            '[.games[] | select((.stores[$store].id // "") | tostring == $id)][0].stores[$store].patches // empty' \
+            "$GAME_DATABASE_FILE" 2>/dev/null)
+        counts[i]="$(count_game_settings "${ids[i]}" "${stores[i]}")"
+    done
+
+    # Usage: _same_for_all <array name>
+    # True when every store's value in the array is the same.
+    _same_for_all() {
+        local -n _vals="$1"
+        local v
+        for v in "${_vals[@]}"; do [ "$v" == "${_vals[0]}" ] || return 1; done
+    }
+
     # --- Field lines: what the database has on file, then what was found here ---
     # Everything under "Game details" comes from game-database.json, not
     # from the install, so it's kept apart from the two facts the library
     # scan found on this system. The lines are collected first and printed
-    # together, so every value lines up after the longest label shown.
+    # together, so every value lines up after the longest label shown. A
+    # value with one line per store continues under the first.
     local -a detail_labels=() detail_values=()
     _detail() { detail_labels+=("$1"); detail_values+=("$2"); }
     _detail_heading() { detail_labels+=(""); detail_values+=("$1"); }
     _print_details() {
-        local i width=0
+        local i width=0 pad
         for i in "${!detail_labels[@]}"; do
             [ ${#detail_labels[$i]} -gt "$width" ] && width=${#detail_labels[$i]}
         done
+        printf -v pad '%*s' $(( width + 6 )) ""
         for i in "${!detail_labels[@]}"; do
             if [ -z "${detail_labels[$i]}" ]; then
                 echo -e "\n${WHITE}${detail_values[$i]}:${NC}"
             else
                 printf ' -> %b%s%b:%*s %b\n' "$YELLOW" "${detail_labels[$i]}" "$NC" \
-                    $(( width - ${#detail_labels[$i]} )) "" "${detail_values[$i]}"
+                    $(( width - ${#detail_labels[$i]} )) "" "${detail_values[$i]//$'\n'/$'\n'$pad}"
             fi
         done
     }
+    local value sep
     _detail_heading "Game details"
     _detail "Name" "${BOLD}${name}${NC}"
-    [ -n "$location" ] || _detail "Platform" "${GREEN}$store_label${NC} ${DIM}(ID $id)${NC}"
-    if [ "$listing" == "delisted" ]; then
-        _detail "Availability" "${WHITE}Delisted from $store_label ${DIM}(existing owners keep access)${NC}"
+    if [ -z "$location" ]; then
+        value="" sep=""
+        for i in "${!stores[@]}"; do
+            value+="${sep}${GREEN}${labels[i]}${NC} ${DIM}(ID ${ids[i]})${NC}"; sep=$'\n'
+        done
+        [ "$n" -gt 1 ] && _detail "Platforms" "$value" || _detail "Platform" "$value"
     fi
-    if [ "$id_confidence" == "steamdb_historical" ]; then
-        _detail "ID source" "${WHITE}SteamDB records ${DIM}(not verified against a local install)${NC}"
-    fi
+    # One row naming every store it's delisted from.
+    value=""
+    for i in "${!stores[@]}"; do
+        [ "${listings[i]}" == "delisted" ] && value+="${value:+ and }${labels[i]}"
+    done
+    [ -n "$value" ] && _detail "Availability" "${WHITE}Delisted from $value ${DIM}(existing owners keep access)${NC}"
+    for i in "${!stores[@]}"; do
+        if [ "${id_sources[i]}" == "steamdb_historical" ]; then
+            _detail "ID source" "${WHITE}SteamDB records ${DIM}(not verified against a local install)${NC}"
+        fi
+    done
     # eax_versions sits in the same slot for every game — the qualifier for a
     # patch-removed build comes after the list, not in place of it.
     local ver_display="${eax_versions:-Unknown}"
@@ -819,21 +863,40 @@ print_game_profile() {
     else
         _detail "EAX Support" "${YELLOW}${BOLD}None${NC}"
     fi
-    if [ "$api" == "openal" ]; then
-        _detail "Audio API" "${WHITE}OpenAL${NC}"
+    _api_name() { [ "$1" == "openal" ] && echo "OpenAL" || echo "DirectSound3D"; }
+    if _same_for_all apis; then
+        _detail "Audio API" "${WHITE}$(_api_name "${apis[0]}")${NC}"
     else
-        _detail "Audio API" "${WHITE}DirectSound3D${NC}"
+        value="" sep=""
+        for i in "${!stores[@]}"; do
+            value+="${sep}${WHITE}$(_api_name "${apis[i]}")${NC} on ${labels[i]}"; sep=$'\n'
+        done
+        _detail "Audio API" "$value"
     fi
     [ "$eax_unified" == "true" ] && _detail "EAX Unified" "${WHITE}Yes${NC}"
-    local setting_counts audio_settings optional_settings
-    setting_counts="$(count_game_settings "$id" "$store")"
-    read -r audio_settings optional_settings <<< "${setting_counts:-0 0}"
-    [ "${audio_settings:-0}" -gt 0 ] && _detail "Audio settings" "${WHITE}${audio_settings}${NC}"
-    [ "${optional_settings:-0}" -gt 0 ] && _detail "Optional settings" "${WHITE}${optional_settings}${NC}"
+    # Settings limited to one store (only_if.stores) can make the counts
+    # differ; each count is then shown with its store.
+    local col label_text
+    local -a nums fields
+    for col in 0 1; do
+        [ "$col" -eq 0 ] && label_text="Audio settings" || label_text="Optional settings"
+        nums=()
+        for i in "${!stores[@]}"; do
+            read -ra fields <<< "${counts[i]:-0 0}"
+            nums[i]="${fields[col]:-0}"
+        done
+        if _same_for_all nums; then
+            [ "${nums[0]}" -gt 0 ] && _detail "$label_text" "${WHITE}${nums[0]}${NC}"
+        else
+            value="" sep=""
+            for i in "${!stores[@]}"; do value+="${sep}${WHITE}${nums[i]}${NC} on ${labels[i]}"; sep=$'\n'; done
+            _detail "$label_text" "$value"
+        fi
+    done
 
     if [ -n "$location" ]; then
         _detail_heading "System details"
-        _detail "Platform" "${GREEN}$store_label${NC}"
+        _detail "Platform" "${GREEN}${labels[0]}${NC}"
         _detail "Location" "${DIM}$(tilde_path "$location")${NC}"
     fi
     _print_details
@@ -853,29 +916,59 @@ print_game_profile() {
         local status_text="${state_line}${eax_status_details:+ $eax_status_details}${after_line}"
         print_wrapped "${status_text# }"
     fi
-    if [ -n "$store_details" ]; then
-        print_subheading "$store_label details"
-        print_wrapped "$store_details"
+    # Store texts the stores share are shown once, under both their names.
+    if [ "$n" -gt 1 ] && [ -n "${details[0]}" ] && _same_for_all details; then
+        print_subheading "$(printf '%s and ' "${labels[@]:0:n-1}")${labels[n-1]} details"
+        print_wrapped "${details[0]}"
+    else
+        for i in "${!stores[@]}"; do
+            [ -n "${details[i]}" ] || continue
+            print_subheading "${labels[i]} details"
+            print_wrapped "${details[i]}"
+        done
     fi
     if [ "$eax_status" == "supported" ]; then
-        local solution="DSOAL + OpenAL Soft"
-        [ "$api" == "openal" ] && solution="OpenAL Soft"
+        _solution() { [ "$1" == "openal" ] && echo "OpenAL Soft" || echo "DSOAL + OpenAL Soft"; }
         print_subheading "Restoring EAX with"
-        print_wrapped "$solution"
+        if _same_for_all apis; then
+            print_wrapped "$(_solution "${apis[0]}")"
+        else
+            for i in "${!stores[@]}"; do print_wrapped "${labels[i]}: $(_solution "${apis[i]}")"; done
+        fi
+        unset -f _solution
     fi
+    # Every store's titles, in database order; one only some stores offer
+    # says which.
     local cat title
     local -a eax_titles=() extra_titles=()
-    while IFS=$'\t' read -r cat title; do
-        [ "$cat" == "audio" ] && eax_titles+=("$title") || extra_titles+=("$title")
-    done < <(game_setting_titles "$id" "$store")
+    local -A title_stores=()
+    for i in "${!stores[@]}"; do
+        while IFS=$'\t' read -r cat title; do
+            if [ -z "${title_stores[$cat$'\t'$title]+x}" ]; then
+                [ "$cat" == "audio" ] && eax_titles+=("$title") || extra_titles+=("$title")
+                title_stores[$cat$'\t'$title]="${labels[i]}"
+            else
+                title_stores[$cat$'\t'$title]+=" and ${labels[i]}"
+            fi
+        done < <(game_setting_titles "${ids[i]}" "${stores[i]}")
+    done
+    _setting_title() {
+        local only="${title_stores[$1$'\t'$2]}"
+        if [ "$n" -gt 1 ] && [ "$(grep -o ' and ' <<< "$only" | wc -l)" -lt $(( n - 1 )) ]; then
+            echo "$2 ($only only)"
+        else
+            echo "$2"
+        fi
+    }
     if [ ${#eax_titles[@]} -gt 0 ]; then
         print_subheading "Audio settings"
-        for title in "${eax_titles[@]}"; do print_wrapped "$title"; done
+        for title in "${eax_titles[@]}"; do print_wrapped "$(_setting_title audio "$title")"; done
     fi
     if [ ${#extra_titles[@]} -gt 0 ]; then
         print_subheading "Optional settings"
-        for title in "${extra_titles[@]}"; do print_wrapped "$title"; done
+        for title in "${extra_titles[@]}"; do print_wrapped "$(_setting_title optional "$title")"; done
     fi
+    unset -f _setting_title
     if [ -n "$restore_details" ]; then
         print_subheading "Additional steps"
         print_wrapped "$restore_details"
@@ -884,10 +977,19 @@ print_game_profile() {
         print_subheading "Notes"
         print_wrapped "$notes"
     fi
-    if [ -n "$patches" ]; then
-        print_subheading "Suggested community patches"
-        print_wrapped "$patches"
+    if [ "$n" -eq 1 ] || { [ -n "${patches[0]}" ] && _same_for_all patches; }; then
+        if [ -n "${patches[0]}" ]; then
+            print_subheading "Suggested community patches"
+            print_wrapped "${patches[0]}"
+        fi
+    else
+        for i in "${!stores[@]}"; do
+            [ -n "${patches[i]}" ] || continue
+            print_subheading "Suggested community patches for ${labels[i]}"
+            print_wrapped "${patches[i]}"
+        done
     fi
+    unset -f _same_for_all _api_name
     # Always the last section: the pages behind the entry's claims, as
     # clickable names. A bare URL is shown by its site's address.
     local src_title src_url shown_sources=0
@@ -1126,13 +1228,13 @@ browse_filter_header() {
 }
 
 # Usage: browse_game_preview <state file> <game id>
-# The browser's right pane: the F1 help when it's on; else the game's
-# profile for each of its store entries that passes the filters, a divider
-# between them, or in the settings view its game settings. No banner: the
-# pane's label names it.
+# The browser's right pane: the F1 help when it's on; else one profile for
+# the game, covering each of its store entries that passes the filters
+# (print_game_profile_stores shows what they share once), or in the
+# settings view its game settings. No banner: the pane's label names it.
 browse_game_preview() {
-    local -a entries
-    local entry store_key store_id view help first=1
+    local -a entries=()
+    local row store_key store_id view help
     read -r _ _ view help _ < "$1"
     if [ "$help" == "1" ]; then
         browse_help
@@ -1142,18 +1244,10 @@ browse_game_preview() {
         print_game_settings_details "$2"
         return
     fi
-    mapfile -t entries < <(browse_game_stores "$1" "$2")
-    for entry in "${entries[@]}"; do
-        IFS=$'\t' read -r _ _ store_key store_id <<< "$entry"
-        # print_divider's 58 columns, or the pane's width if that's less.
-        if [ "$first" -eq 0 ]; then
-            local rule="----------------------------------------------------------"
-            echo ""
-            echo -e "${CYAN}${rule:0:$(( ${WRAP_COLUMNS:-76} < 58 ? ${WRAP_COLUMNS:-76} : 58 ))}${NC}"
-        fi
-        print_game_profile "$store_id" "$store_key"
-        first=0
-    done
+    while IFS=$'\t' read -r _ _ store_key store_id; do
+        entries+=("$store_key:$store_id")
+    done < <(browse_game_stores "$1" "$2")
+    [ ${#entries[@]} -gt 0 ] && print_game_profile_stores "" "${entries[@]}"
 }
 
 # Usage: browse_help

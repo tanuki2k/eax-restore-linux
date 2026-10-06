@@ -29,11 +29,11 @@
       "stores": {
         "steam": {
           "id": 2204130,
-          "store_details": "Steam sells this as the 'Planetary Pack', bundling the Alien Crossfire expansion."
+          "store_details": "Sold as the 'Planetary Pack', bundling the Alien Crossfire expansion."
         },
         "gog": {
           "id": 1207658936,
-          "store_details": "GOG sells this as the 'Planetary Pack', bundling the Alien Crossfire expansion."
+          "store_details": "Sold as the 'Planetary Pack', bundling the Alien Crossfire expansion."
         }
       },
       "eax": {
@@ -2582,13 +2582,13 @@
         "steam": {
           "id": 238210,
           "delisted": true,
-          "store_details": "The classic 1999 build was delisted from Steam in October 2025; Steam now sells only the 25th Anniversary Remaster.",
+          "store_details": "The classic 1999 build was delisted in October 2025, and only the 25th Anniversary Remaster is sold now.",
           "patches": "The System Shock 2 Community Patch (SCP) fixes bugs and polishes the game, and is worth installing alongside EAX."
         },
         "gog": {
           "id": 1207659172,
           "delisted": true,
-          "store_details": "The original 1999 build's own GOG listing was delisted in October 2025 — GOG now sells only the 25th Anniversary Remaster — but existing owners of the classic build keep access.",
+          "store_details": "The classic 1999 build was delisted in October 2025, and only the 25th Anniversary Remaster is sold now.",
           "patches": "The System Shock 2 Community Patch (SCP) fixes bugs and polishes the game, and is worth installing alongside EAX."
         }
       },
@@ -3201,13 +3201,13 @@
         "steam": {
           "id": 13250,
           "delisted": true,
-          "store_details": "Delisted from Steam in December 2022, when Epic pulled the entire classic Unreal series from sale. OldUnreal (oldunreal.com) distributes a free, Epic-authorized copy of the full game.",
+          "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale. OldUnreal (oldunreal.com) distributes a free, Epic-authorised copy of the full game.",
           "patches": "OldUnreal's v227 patch adds a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
         },
         "gog": {
           "id": 1207658679,
           "delisted": true,
-          "store_details": "Delisted from GOG in December 2022, when Epic pulled the entire classic Unreal series from sale. OldUnreal (oldunreal.com) distributes a free, Epic-authorized copy of the full game.",
+          "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale. OldUnreal (oldunreal.com) distributes a free, Epic-authorised copy of the full game.",
           "patches": "OldUnreal's v227 patch adds a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
         }
       },
@@ -3313,12 +3313,12 @@
         "steam": {
           "id": 13200,
           "delisted": true,
-          "store_details": "Delisted from Steam in December 2022, when Epic pulled the entire classic Unreal series from sale."
+          "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale."
         },
         "gog": {
           "id": 1207658677,
           "delisted": true,
-          "store_details": "Delisted from GOG in December 2022, when Epic pulled the entire classic Unreal series from sale."
+          "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale."
         }
       },
       "eax": {
