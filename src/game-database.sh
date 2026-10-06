@@ -913,9 +913,9 @@ fzf_at_least() {
 # Every game in GAME_DATABASE_FILE in two panes: one row per game on the
 # left, fuzzy-searched by fzf, and on the right the selected game's profile
 # for each of its stores, Steam's first, or with Tab its game settings in
-# full. Ctrl-A, Ctrl-S and Ctrl-O narrow the list, and the profiles shown,
-# by audio, store and listing (see browse_game_stores); Ctrl-R swaps the
-# order between best match and A–Z; Ctrl-L puts the right pane beside or
+# full. Ctrl-A and Ctrl-S narrow the list, and the profiles shown, by
+# audio and by store, delisted ones included (see browse_game_stores);
+# Ctrl-R swaps the order between best match and A–Z; Ctrl-L puts the right pane beside or
 # under the list; F1 shows every key (browse_help); Ctrl-F opens the right
 # pane full screen (browse_zoom). View only: Enter and double-click do
 # nothing, so only Esc and fzf's other abort keys close it. fzf draws on
@@ -932,9 +932,9 @@ browse_game_database() {
         -exec rm -rf {} + 2>/dev/null
     dir="$(mktemp -d -t eax-restore-browse.XXXXXX)" || return 1
     defs="$dir/defs.sh" state="$dir/state"
-    # The right pane sits beside the list (BROWSE_SIDE_PERCENT of the width,
-    # at least BROWSE_SIDE_WIDTH). Below 104 columns that leaves the list too
-    # narrow for its filters, so it starts under the list instead.
+    # The right pane sits beside the list (BROWSE_SIDE_PERCENT of the
+    # width). Below 104 columns that leaves both too narrow, so it starts
+    # under the list instead.
     local cols boxed=0 layout=side
     read -r _ cols < <({ stty size < /dev/tty; } 2>/dev/null)
     [ "${cols:-0}" -lt 104 ] && layout=stack
@@ -943,7 +943,7 @@ browse_game_database() {
     # rather than being cut off.
     local border="border-left" stack="down,55%,wrap,border-top"
     [ "$boxed" -eq 1 ] && border="border-rounded" stack="down,55%,wrap,border-rounded"
-    local side="right,$BROWSE_SIDE_PERCENT%,wrap,$border,<$BROWSE_SIDE_WIDTH(right,$BROWSE_SIDE_WIDTH,wrap,$border)"
+    local side="right,$BROWSE_SIDE_PERCENT%,wrap,$border"
     local now="$side" other="$stack"
     [ "$layout" == "stack" ] && now="$stack" other="$side"
     # fzf runs the preview and the keys' commands in a new shell, which has
@@ -953,8 +953,8 @@ browse_game_database() {
     # in the list's first lines (older fzf) rather than fzf's header.
     local BROWSE_HEADER_LINES=$(( 1 - boxed ))
     { declare -p GREEN YELLOW CYAN WHITE BOLD DIM NOTE NC GAME_DATABASE_FILE SCRIPT_VERSION \
-        BROWSE_SIDE_PERCENT BROWSE_SIDE_WIDTH BROWSE_HEADER_LINES; declare -f; } > "$defs"
-    echo "all all all profile 0 match $layout" > "$state"
+        BROWSE_SIDE_PERCENT BROWSE_HEADER_LINES; declare -f; } > "$defs"
+    echo "all all profile 0 match $layout" > "$state"
     # The key bar's own small script: it's redrawn on every move through
     # the list, too often to load all of the above each time.
     local bar="$dir/bar.sh"
@@ -991,6 +991,8 @@ browse_game_database() {
         browse_key_bar
         printf '\e[H' > /dev/tty
     fi
+    # Ctrl-L's change-preview-window takes its argument in [...]: fzf ends
+    # a (...) one at the first ")", and a layout can hold parentheses.
     browse_game_rows "$state" \
         | SHELL="$BASH" fzf --ansi --delimiter $'\t' --with-nth 2 \
             --layout reverse --tiebreak index "${fzf_opts[@]}" \
@@ -1002,9 +1004,8 @@ browse_game_database() {
             --bind "tab:execute-silent($next view)+refresh-preview$label" \
             --bind "ctrl-s:execute-silent($next store)+reload($rows)$header" \
             --bind "ctrl-a:execute-silent($next audio)+reload($rows)$header" \
-            --bind "ctrl-o:execute-silent($next listing)+reload($rows)$header" \
             --bind "ctrl-r:execute-silent($next order)+toggle-sort+reload($rows)$header" \
-            --bind "ctrl-l:execute-silent($next layout)+change-preview-window($other|$now)$header" \
+            --bind "ctrl-l:execute-silent($next layout)+change-preview-window[$other|$now]$header" \
             > /dev/null || true
     [ "$boxed" -eq 1 ] && printf '\e[?1049l' > /dev/tty
     rm -rf "$dir"
@@ -1045,24 +1046,27 @@ browse_key_bar() {
 # Usage: browse_game_stores <state file> [game id]
 # One "<game id>\t<name>\t<store>\t<store id>" line per store entry that
 # passes the browser's filters, games sorted by name and Steam before GOG.
-# The state file holds "<store> <audio> <listing> <view> <help> <order>
-# <layout>": store all/steam/gog; audio all, directsound3d, openal or eax1.0
-# to eax5.0 (games whose eax.versions lists it); listing all, listed or
-# delisted (the store's own delisted flag); then what the right pane shows,
-# the list's order and where the right pane is. The API is the store's
-# own, else the game's. With a game id, just that game's.
+# The state file holds "<store> <audio> <view> <help> <order> <layout>":
+# store all, steam, gog, or delisted / steam-delisted / gog-delisted (the
+# entries with the store's own delisted flag, from any store or that one);
+# audio all, directsound3d, openal or eax1.0 to eax5.0 (games whose
+# eax.versions lists it); then what the right pane shows, the list's order
+# and where the right pane is. The API is the store's own, else the
+# game's. With a game id, just that game's.
 browse_game_stores() {
-    local store audio listing
-    read -r store audio listing _ < "$1"
-    jq -r --arg store "$store" --arg audio "$audio" --arg listing "$listing" --arg game "${2:-}" '
-        .games | sort_by(.name | ascii_downcase) | .[]
+    local store audio
+    read -r store audio _ < "$1"
+    jq -r --arg store "$store" --arg audio "$audio" --arg game "${2:-}" '
+        ($store | sub("-?delisted$"; "")) as $only
+        | ($store | endswith("delisted")) as $delisted
+        | .games | sort_by(.name | ascii_downcase) | .[]
         | select($game == "" or .id == $game) | . as $g
         | ("steam", "gog") as $key | .stores[$key] // empty
-        | select(($store == "all" or $key == $store)
+        | select(($only == "all" or $only == "" or $key == $only)
+            and (($delisted | not) or (.delisted // false))
             and ($audio == "all"
                 or (.api // $g.eax.api // "directsound3d") == $audio
-                or (($audio | startswith("eax")) and (($g.eax.versions // []) | index($audio[3:])) != null))
-            and ($listing == "all" or ($listing == "delisted") == (.delisted // false)))
+                or (($audio | startswith("eax")) and (($g.eax.versions // []) | index($audio[3:])) != null)))
         | "\($g.id)\t\($g.name)\t\($key)\t\(.id)"' "$GAME_DATABASE_FILE" 2>/dev/null
 }
 
@@ -1079,45 +1083,44 @@ browse_game_rows() {
 
 # Usage: browse_filter_header <state file> [list]
 # The Filters box: each filter's key (bold cyan), then the filter and its
-# value (green).
-# Two filters a line when the game list is wide enough, else (or with
-# "list") one a line. The list is as wide as the terminal when the right
-# pane is under it, and narrower by that pane (BROWSE_SIDE_PERCENT of the
-# width, at least BROWSE_SIDE_WIDTH) when it's beside it.
-# Padded by character count: printf pads bytes, and "A–Z" has a multi-byte
-# dash.
+# value (green). All four on one line when the game list is wide enough,
+# else two a line, else (or with "list") one a line. The list is as wide as
+# the terminal when the right pane is under it, and BROWSE_SIDE_PERCENT
+# narrower when it's beside it. Values are padded to the longest each can
+# be, so nothing moves as a filter cycles; by character count, since
+# printf pads bytes and "A–Z" has a multi-byte dash.
 browse_filter_header() {
-    local store audio listing order layout cols width
-    read -r store audio listing _ _ order layout < "$1"
-    local -A label=([all]="All" [steam]="Steam" [gog]="GOG" [directsound3d]="DirectSound3D" [openal]="OpenAL"
-        [listed]="Listed" [delisted]="Delisted" [match]="Best match" [az]="A–Z")
-    local -a names=("Store" "Audio" "Availability" "Order") keys=("Ctrl-S" "Ctrl-A" "Ctrl-O" "Ctrl-R") values=()
+    local store audio order layout cols width
+    read -r store audio _ _ order layout < "$1"
+    local -A label=([all]="All" [steam]="Steam" [gog]="GOG" [delisted]="Delisted"
+        [steam-delisted]="Steam delisted" [gog-delisted]="GOG delisted"
+        [directsound3d]="DirectSound3D" [openal]="OpenAL" [match]="Best match" [az]="A–Z")
+    local -a names=("Store" "Audio" "Order") keys=("Ctrl-S" "Ctrl-A" "Ctrl-R") values=()
     local v
-    for v in "$store" "$audio" "$listing" "$order"; do values+=("${label[$v]:-EAX ${v#eax}}"); done
-    # Usage: _browse_cell <filter> <label width> [value width]
-    # "Ctrl-S Store  All": the key, then its filter and value; the value is
+    for v in "$store" "$audio" "$order"; do values+=("${label[$v]:-EAX ${v#eax}}"); done
+    # Usage: _browse_cell <filter> [value width]
+    # "Ctrl-S Store All": the key, then its filter and value; the value is
     # padded only when another cell follows it on the line.
     _browse_cell() {
-        printf '%b%s%b %-*s%b%s%b%*s' "${CYAN}${BOLD}" "${keys[$1]}" "$NC" "$2" "${names[$1]}" \
-            "$GREEN" "${values[$1]}" "$NC" $(( ${3:-0} > ${#values[$1]} ? ${3:-0} - ${#values[$1]} : 0 )) ""
+        printf '%b%s%b %-6s%b%s%b%*s' "${CYAN}${BOLD}" "${keys[$1]}" "$NC" "${names[$1]}" \
+            "$GREEN" "${values[$1]}" "$NC" $(( ${2:-0} > ${#values[$1]} ? ${2:-0} - ${#values[$1]} : 0 )) ""
     }
     cols="${FZF_COLUMNS:-}"
     [ -n "$cols" ] || read -r _ cols < <({ stty size < /dev/tty; } 2>/dev/null)
     # Less the list's border and the gutter fzf indents its lines by, and
-    # beside the right pane, that pane with its border and padding.
+    # beside the right pane, that pane.
     width=$(( ${cols:-0} - 5 ))
-    if [ "$layout" == "side" ]; then
-        local pane=$(( ${cols:-0} * BROWSE_SIDE_PERCENT / 100 ))
-        [ "$pane" -lt $(( BROWSE_SIDE_WIDTH + 4 )) ] && pane=$(( BROWSE_SIDE_WIDTH + 4 ))
-        width=$(( width - pane ))
-    fi
-    # Store and Availability in the left column, Audio and Order (the long
-    # values) in the right: 7 + 13 + 8, two spaces, 7 + 6 + 13.
-    if [ "${2:-}" != "list" ] && [ "$width" -ge 56 ]; then
-        printf '%s  %s\n' "$(_browse_cell 0 13 8)" "$(_browse_cell 1 6)"
-        printf '%s  %s\n' "$(_browse_cell 2 13 8)" "$(_browse_cell 3 6)"
+    [ "$layout" == "side" ] && width=$(( width - ${cols:-0} * BROWSE_SIDE_PERCENT / 100 ))
+    [ "${2:-}" == "list" ] && width=0
+    if [ "$width" -ge 80 ]; then
+        # 7 + 6 + 14, 7 + 6 + 13, 7 + 6 + 10, two spaces between.
+        printf '%s  %s  %s\n' "$(_browse_cell 0 14)" "$(_browse_cell 1 13)" "$(_browse_cell 2)"
+    elif [ "$width" -ge 55 ]; then
+        # Store and Order in the left column, Audio on the right.
+        printf '%s  %s\n' "$(_browse_cell 0 14)" "$(_browse_cell 1)"
+        printf '%s\n' "$(_browse_cell 2)"
     else
-        for v in 0 1 2 3; do printf '%s\n' "$(_browse_cell "$v" 13)"; done
+        for v in 0 1 2; do printf '%s\n' "$(_browse_cell "$v")"; done
     fi
     unset -f _browse_cell
 }
@@ -1130,7 +1133,7 @@ browse_filter_header() {
 browse_game_preview() {
     local -a entries
     local entry store_key store_id view help first=1
-    read -r _ _ _ view help _ < "$1"
+    read -r _ _ view help _ < "$1"
     if [ "$help" == "1" ]; then
         browse_help
         return
@@ -1142,7 +1145,12 @@ browse_game_preview() {
     mapfile -t entries < <(browse_game_stores "$1" "$2")
     for entry in "${entries[@]}"; do
         IFS=$'\t' read -r _ _ store_key store_id <<< "$entry"
-        [ "$first" -eq 1 ] || { echo ""; print_divider; }
+        # print_divider's 58 columns, or the pane's width if that's less.
+        if [ "$first" -eq 0 ]; then
+            local rule="----------------------------------------------------------"
+            echo ""
+            echo -e "${CYAN}${rule:0:$(( ${WRAP_COLUMNS:-76} < 58 ? ${WRAP_COLUMNS:-76} : 58 ))}${NC}"
+        fi
         print_game_profile "$store_id" "$store_key"
         first=0
     done
@@ -1162,8 +1170,7 @@ browse_help() {
         "F1" "Show or hide this help."
         "" "Filters"
         "Ctrl-A" "Audio: All → DirectSound3D → OpenAL → EAX 1.0 … 5.0."
-        "Ctrl-S" "Store: All → Steam → GOG."
-        "Ctrl-O" "Availability: All → Listed → Delisted."
+        "Ctrl-S" "Store: All → Steam → GOG → Delisted → Steam delisted → GOG delisted. Delisted games are no longer sold on that store."
         "Ctrl-R" "Order: best match first, or A–Z."
         "" "View"
         "Ctrl-F" "Open the right pane full screen; q comes back."
@@ -1197,36 +1204,39 @@ browse_help() {
     done
 }
 
-# Usage: browse_state_next <state file> <store|audio|listing|view|help|order|layout>
-# The browser's keys: Ctrl-S / Ctrl-A / Ctrl-O move that filter on to its
+# Usage: browse_state_next <state file> <store|audio|view|help|order|layout>
+# The browser's keys: Ctrl-S / Ctrl-A move that filter on to its
 # next value (back to All after the last), Tab switches the right pane
 # between the profile and the settings (and closes the help), F1 shows or
 # hides the help, Ctrl-R swaps the order, Ctrl-L the layout.
 browse_state_next() {
-    local store audio listing view help order layout
-    read -r store audio listing view help order layout < "$1"
+    local store audio view help order layout
+    read -r store audio view help order layout < "$1"
     case "$2" in
-        store) case "$store" in all) store=steam ;; steam) store=gog ;; *) store=all ;; esac ;;
+        store)
+            case "$store" in
+                all) store=steam ;; steam) store=gog ;; gog) store=delisted ;;
+                delisted) store="steam-delisted" ;; steam-delisted) store="gog-delisted" ;; *) store=all ;;
+            esac ;;
         audio)
             case "$audio" in
                 all) audio=directsound3d ;; directsound3d) audio=openal ;; openal) audio=eax1.0 ;;
                 eax1.0) audio=eax2.0 ;; eax2.0) audio=eax3.0 ;; eax3.0) audio=eax4.0 ;; eax4.0) audio=eax5.0 ;;
                 *) audio=all ;;
             esac ;;
-        listing) case "$listing" in all) listing=listed ;; listed) listing=delisted ;; *) listing=all ;; esac ;;
         view) [ "$view" == "settings" ] && view=profile || view=settings; help=0 ;;
         help) [ "$help" == "1" ] && help=0 || help=1 ;;
         order) [ "$order" == "az" ] && order=match || order=az ;;
         layout) [ "$layout" == "stack" ] && layout=side || layout=stack ;;
     esac
-    echo "$store $audio $listing $view $help $order $layout" > "$1"
+    echo "$store $audio $view $help $order $layout" > "$1"
 }
 
 # Usage: browse_pane_label <state file>
 # The right pane's label for what it shows.
 browse_pane_label() {
     local view help
-    read -r _ _ _ view help _ < "$1"
+    read -r _ _ view help _ < "$1"
     if [ "$help" == "1" ]; then echo " Help "
     elif [ "$view" == "settings" ]; then echo " Game settings "
     else echo " Game profile "; fi

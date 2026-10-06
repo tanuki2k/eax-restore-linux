@@ -153,13 +153,15 @@ their execution order in the assembled script):
    `print_game_profile` per store entry (no banner: the pane's label names
    it), run in a new shell from a `declare -f` dump, or with Tab
    `print_game_settings_details`, or with F1 `browse_help`; both read
-   `browse_game_stores`, which applies the Ctrl-S / Ctrl-A / Ctrl-O store,
-   audio (API or EAX version) and availability (listed / delisted) filters. The keys' state
+   `browse_game_stores`, which applies the Ctrl-S / Ctrl-A store (Steam,
+   GOG, or delisted from either or one) and audio (API or EAX version)
+   filters. The keys' state
    (filters, view, help, order, layout) is one temp file that
    `browse_state_next` updates; Ctrl-R is fzf's `toggle-sort` (`--tiebreak
    index` otherwise); Ctrl-L swaps the right pane between beside the list
-   (`BROWSE_SIDE_WIDTH`) and under it, and `browse_filter_header` refits the
-   Filters box (two filters a line when the list is wide enough) through
+   (`BROWSE_SIDE_PERCENT` of the width) and under it, and
+   `browse_filter_header` refits the Filters box (three filters on one, two
+   or three lines, by the list's width) through
    `transform-header` after every key and resize; Enter and double-click are
    ignored, so only Esc and fzf's abort keys close it;
    Ctrl-F is `browse_zoom` (the pane in `less -R`). Needs fzf 0.35
