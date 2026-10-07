@@ -1,7 +1,7 @@
 {
   "$schema": "../schema.json",
   "name": "Race Driver: GRID",
-  "description": "Race Driver: GRID is a singleplayer and multiplayer racing game in the Grid series.",
+  "description": "Race Driver: GRID is a singleplayer and multiplayer racing game and the first in the Grid series.",
   "released": "2008-05-30",
   "stores": {
     "gog": {

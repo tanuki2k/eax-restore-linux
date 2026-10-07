@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Tom Clancy's Splinter Cell",
-  "description": "Tom Clancy's Splinter Cell is a singleplayer third-person stealth action game in the Tom Clancy's Splinter Cell series.",
+  "description": "Tom Clancy's Splinter Cell is a singleplayer third-person stealth action game and the first in the Tom Clancy's Splinter Cell series.",
   "released": "2003-02-18",
   "exe": "splintercell.exe",
   "stores": {

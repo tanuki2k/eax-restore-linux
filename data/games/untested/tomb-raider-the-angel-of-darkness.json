@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Tomb Raider: The Angel of Darkness",
-  "description": "Tomb Raider: The Angel of Darkness is a singleplayer third-person action-adventure game in the Tomb Raider series.",
+  "description": "Tomb Raider: The Angel of Darkness is a singleplayer third-person action-adventure game and the sixth in the Tomb Raider series.",
   "released": "2003-07-01",
   "stores": {
     "steam": { "id": 225020 },

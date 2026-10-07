@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "F.E.A.R.",
-  "description": "F.E.A.R. is a singleplayer and multiplayer first-person shooter and horror game in the F.E.A.R. series.",
+  "description": "F.E.A.R. is a singleplayer and multiplayer first-person shooter and horror game and the first in the F.E.A.R. series.",
   "released": "2005-10-18",
   "exe": "FEAR.exe",
   "stores": {

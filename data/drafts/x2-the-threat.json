@@ -1,7 +1,7 @@
 {
   "$schema": "../schema.json",
   "name": "X2: The Threat",
-  "description": "X2: The Threat is a singleplayer space trading and combat simulation game in the X series.",
+  "description": "X2: The Threat is a singleplayer space trading and combat simulation game and the second in the X series.",
   "released": "2003-12-01",
   "stores": {
     "steam": { "id": 2800 },

@@ -1,7 +1,7 @@
 {
   "$schema": "../schema.json",
   "name": "Vampire: The Masquerade - Redemption",
-  "description": "Vampire: The Masquerade - Redemption is a singleplayer and multiplayer third-person role-playing game in the Vampire: The Masquerade series.",
+  "description": "Vampire: The Masquerade - Redemption is a singleplayer and multiplayer third-person role-playing game and the first in the Vampire: The Masquerade series.",
   "released": "2000-06-07",
   "stores": {
     "gog": { "id": 1207658831 }

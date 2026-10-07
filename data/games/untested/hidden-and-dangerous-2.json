@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Hidden & Dangerous 2",
-  "description": "Hidden & Dangerous 2 is a singleplayer and multiplayer first- and third-person tactical shooter game in the Hidden & Dangerous series.",
+  "description": "Hidden & Dangerous 2 is a singleplayer and multiplayer first- and third-person tactical shooter game and the second in the Hidden & Dangerous series.",
   "released": "2003-10-23",
   "stores": {
     "steam": { "id": 703320 },

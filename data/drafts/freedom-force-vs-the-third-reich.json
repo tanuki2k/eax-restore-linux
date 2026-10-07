@@ -1,7 +1,7 @@
 {
   "$schema": "../schema.json",
   "name": "Freedom Force vs. the Third Reich",
-  "description": "Freedom Force vs. the Third Reich is a singleplayer and multiplayer real-time tactics role-playing game in the Freedom Force series.",
+  "description": "Freedom Force vs. the Third Reich is a singleplayer and multiplayer real-time tactics role-playing game and the second in the Freedom Force series.",
   "released": "2005-03-08",
   "stores": {
     "steam": { "id": 8890 }

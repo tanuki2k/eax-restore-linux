@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Thief II: The Metal Age",
-  "description": "Thief II: The Metal Age is a singleplayer first-person stealth and immersive sim game in the Thief series.",
+  "description": "Thief II: The Metal Age is a singleplayer first-person stealth and immersive sim game and the second in the Thief series.",
   "released": "2000-03-23",
   "exe": "Thief2.exe",
   "stores": {

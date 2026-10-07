@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Deus Ex",
-  "description": "Deus Ex is a singleplayer and multiplayer first-person action role-playing and immersive sim game in the Deus Ex series.",
+  "description": "Deus Ex is a singleplayer and multiplayer first-person action role-playing and immersive sim game and the first in the Deus Ex series.",
   "released": "2000-06-23",
   "exe": "DeusEx.exe",
   "stores": {

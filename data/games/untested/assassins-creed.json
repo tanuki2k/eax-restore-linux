@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Assassin's Creed",
-  "description": "Assassin's Creed is a singleplayer third-person action-adventure and stealth game in the Assassin's Creed series.",
+  "description": "Assassin's Creed is a singleplayer third-person action-adventure and stealth game and the first in the Assassin's Creed series.",
   "released": "2008-04-08",
   "exe": "AssassinsCreed_Dx9.exe",
   "stores": {

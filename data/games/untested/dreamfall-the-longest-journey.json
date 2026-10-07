@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Dreamfall: The Longest Journey",
-  "description": "Dreamfall: The Longest Journey is a singleplayer third-person adventure game in The Longest Journey series.",
+  "description": "Dreamfall: The Longest Journey is a singleplayer third-person adventure game and the second in The Longest Journey series.",
   "released": "2006-04-17",
   "stores": {
     "steam": { "id": 6300 }

@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Star Wars Jedi Knight: Jedi Academy",
-  "description": "Star Wars Jedi Knight: Jedi Academy is a singleplayer and multiplayer first- and third-person shooter and action game in the Star Wars: Jedi Knight series.",
+  "description": "Star Wars Jedi Knight: Jedi Academy is a singleplayer and multiplayer first- and third-person shooter and action game and the fourth in the Star Wars: Jedi Knight series.",
   "released": "2003-09-16",
   "exe": "jasp.exe",
   "stores": {

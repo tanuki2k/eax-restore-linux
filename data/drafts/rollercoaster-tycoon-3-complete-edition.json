@@ -1,7 +1,7 @@
 {
   "$schema": "../schema.json",
   "name": "RollerCoaster Tycoon 3: Complete Edition",
-  "description": "RollerCoaster Tycoon 3: Complete Edition is a singleplayer construction and management simulation game in the RollerCoaster Tycoon series.",
+  "description": "RollerCoaster Tycoon 3: Complete Edition is a singleplayer construction and management simulation game, an updated edition of the third in the RollerCoaster Tycoon series that includes its Soaked! and Wild! expansions.",
   "released": "2020-09-24",
   "stores": {
     "gog": { "id": 1207659032 }

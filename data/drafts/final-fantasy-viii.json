@@ -1,7 +1,7 @@
 {
   "$schema": "../schema.json",
   "name": "Final Fantasy VIII",
-  "description": "Final Fantasy VIII is a singleplayer third-person role-playing game in the Final Fantasy series.",
+  "description": "Final Fantasy VIII is a singleplayer third-person role-playing game and the eighth main game in the Final Fantasy series.",
   "released": "2000-01-26",
   "stores": {
     "steam": {

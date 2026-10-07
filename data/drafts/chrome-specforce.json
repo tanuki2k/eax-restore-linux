@@ -1,7 +1,7 @@
 {
   "$schema": "../schema.json",
   "name": "Chrome: SpecForce",
-  "description": "Chrome: SpecForce is a singleplayer and multiplayer first-person shooter game in the Chrome series.",
+  "description": "Chrome: SpecForce is a singleplayer and multiplayer first-person shooter game and the second in the Chrome series.",
   "released": "2005-06-02",
   "stores": {
     "steam": { "id": 46430, "delisted": true, "id_source": "steamdb_historical" }

@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Dungeon Keeper II",
-  "description": "Dungeon Keeper II is a singleplayer and multiplayer real-time strategy and dungeon management game in the Dungeon Keeper series.",
+  "description": "Dungeon Keeper II is a singleplayer and multiplayer real-time strategy and dungeon management game and the second in the Dungeon Keeper series.",
   "released": "1999-06-25",
   "stores": {
     "steam": { "id": 2616460 },

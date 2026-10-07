@@ -1,7 +1,7 @@
 {
   "$schema": "../schema.json",
   "name": "Stronghold",
-  "description": "Stronghold is a singleplayer and multiplayer real-time strategy and castle-building game in the Stronghold series.",
+  "description": "Stronghold is a singleplayer and multiplayer real-time strategy and castle-building game and the first in the Stronghold series.",
   "released": "2001-10-19",
   "stores": {
     "gog": {

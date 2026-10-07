@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Brothers in Arms: Earned in Blood",
-  "description": "Brothers in Arms: Earned in Blood is a singleplayer and multiplayer first-person tactical shooter game in the Brothers in Arms series.",
+  "description": "Brothers in Arms: Earned in Blood is a singleplayer and multiplayer first-person tactical shooter game and the second in the Brothers in Arms series.",
   "released": "2005-10-06",
   "exe": "EiB.exe",
   "stores": {

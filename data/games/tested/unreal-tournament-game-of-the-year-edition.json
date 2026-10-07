@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Unreal Tournament: Game of the Year Edition",
-  "description": "Unreal Tournament: Game of the Year Edition is a singleplayer and multiplayer first-person arena shooter game in the Unreal series.",
+  "description": "Unreal Tournament: Game of the Year Edition is a singleplayer and multiplayer first-person arena shooter game and the first in the Unreal Tournament series.",
   "released": "1999-11-22",
   "exe": "UnrealTournament.exe",
   "stores": {

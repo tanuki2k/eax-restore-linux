@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Tom Clancy's Rainbow Six: Vegas",
-  "description": "Tom Clancy's Rainbow Six: Vegas is a singleplayer and multiplayer first-person tactical shooter game in the Tom Clancy's Rainbow Six series.",
+  "description": "Tom Clancy's Rainbow Six: Vegas is a singleplayer and multiplayer first-person tactical shooter game and the first in the Tom Clancy's Rainbow Six: Vegas series.",
   "released": "2006-12-12",
   "stores": {
     "steam": { "id": 13540 }

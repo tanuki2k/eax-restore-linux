@@ -89,7 +89,7 @@
     {
       "id": "aquanox",
       "name": "AquaNox",
-      "description": "AquaNox is a singleplayer and multiplayer first-person shooter and submarine simulation game in the AquaNox series.",
+      "description": "AquaNox is a singleplayer and multiplayer first-person shooter and submarine simulation game and the first in the AquaNox series.",
       "released": "2001-10-12",
       "stores": {
         "steam": {
@@ -158,7 +158,7 @@
     {
       "id": "assassins-creed",
       "name": "Assassin's Creed",
-      "description": "Assassin's Creed is a singleplayer third-person action-adventure and stealth game in the Assassin's Creed series.",
+      "description": "Assassin's Creed is a singleplayer third-person action-adventure and stealth game and the first in the Assassin's Creed series.",
       "released": "2008-04-08",
       "exe": "AssassinsCreed_Dx9.exe",
       "stores": {
@@ -208,7 +208,7 @@
     {
       "id": "baldurs-gate-2-complete",
       "name": "Baldur's Gate 2 Complete",
-      "description": "Baldur's Gate 2 Complete is a singleplayer and multiplayer isometric role-playing game in the Baldur's Gate series, bundling Shadows of Amn with its Throne of Bhaal expansion.",
+      "description": "Baldur's Gate 2 Complete is a singleplayer and multiplayer isometric role-playing game, bundling Shadows of Amn, the second game in the Baldur's Gate series, with its Throne of Bhaal expansion.",
       "released": "2000-09-21",
       "exe": "BGMain.exe",
       "stores": {
@@ -258,7 +258,7 @@
     {
       "id": "baldurs-gate-ii-enhanced-edition",
       "name": "Baldur's Gate II: Enhanced Edition",
-      "description": "Baldur's Gate II: Enhanced Edition is a singleplayer and multiplayer isometric role-playing game in the Baldur's Gate series.",
+      "description": "Baldur's Gate II: Enhanced Edition is a singleplayer and multiplayer isometric role-playing game, an enhanced edition of the second in the Baldur's Gate series.",
       "released": "2013-11-15",
       "exe": "BaldurII.exe",
       "stores": {
@@ -279,7 +279,7 @@
     {
       "id": "baldurs-gate-enhanced-edition",
       "name": "Baldur's Gate: Enhanced Edition",
-      "description": "Baldur's Gate: Enhanced Edition is a singleplayer and multiplayer isometric role-playing game in the Baldur's Gate series.",
+      "description": "Baldur's Gate: Enhanced Edition is a singleplayer and multiplayer isometric role-playing game, an enhanced edition of the first in the Baldur's Gate series.",
       "released": "2012-11-28",
       "exe": "Baldur.exe",
       "stores": {
@@ -300,7 +300,7 @@
     {
       "id": "baldurs-gate-the-original-saga",
       "name": "Baldur's Gate: The Original Saga",
-      "description": "Baldur's Gate: The Original Saga is a singleplayer and multiplayer isometric role-playing game in the Baldur's Gate series, bundling Baldur's Gate with its Tales of the Sword Coast expansion.",
+      "description": "Baldur's Gate: The Original Saga is a singleplayer and multiplayer isometric role-playing game, bundling Baldur's Gate, the first game in the Baldur's Gate series, with its Tales of the Sword Coast expansion.",
       "released": "1998-12-21",
       "exe": "BGMain.exe",
       "stores": {
@@ -349,7 +349,7 @@
     {
       "id": "battlestations-midway",
       "name": "Battlestations: Midway",
-      "description": "Battlestations: Midway is a singleplayer and multiplayer naval action and real-time tactics game in the Battlestations series.",
+      "description": "Battlestations: Midway is a singleplayer and multiplayer naval action and real-time tactics game and the first in the Battlestations series.",
       "released": "2007-01-30",
       "stores": {
         "steam": {
@@ -367,7 +367,7 @@
     {
       "id": "bioshock",
       "name": "BioShock",
-      "description": "BioShock is a singleplayer first-person shooter and immersive sim game in the BioShock series.",
+      "description": "BioShock is a singleplayer first-person shooter and immersive sim game and the first in the BioShock series.",
       "released": "2007-08-21",
       "exe": "Bioshock.exe",
       "stores": {
@@ -501,7 +501,7 @@
     {
       "id": "brothers-in-arms-earned-in-blood",
       "name": "Brothers in Arms: Earned in Blood",
-      "description": "Brothers in Arms: Earned in Blood is a singleplayer and multiplayer first-person tactical shooter game in the Brothers in Arms series.",
+      "description": "Brothers in Arms: Earned in Blood is a singleplayer and multiplayer first-person tactical shooter game and the second in the Brothers in Arms series.",
       "released": "2005-10-06",
       "exe": "EiB.exe",
       "stores": {
@@ -549,7 +549,7 @@
     {
       "id": "brothers-in-arms-hells-highway",
       "name": "Brothers in Arms: Hell's Highway",
-      "description": "Brothers in Arms: Hell's Highway is a singleplayer and multiplayer first-person tactical shooter game in the Brothers in Arms series.",
+      "description": "Brothers in Arms: Hell's Highway is a singleplayer and multiplayer first-person tactical shooter game and the third in the Brothers in Arms series.",
       "released": "2008-10-07",
       "exe": "biahh.exe",
       "stores": {
@@ -571,7 +571,7 @@
     {
       "id": "brothers-in-arms-road-to-hill-30",
       "name": "Brothers in Arms: Road to Hill 30",
-      "description": "Brothers in Arms: Road to Hill 30 is a singleplayer and multiplayer first-person tactical shooter game in the Brothers in Arms series.",
+      "description": "Brothers in Arms: Road to Hill 30 is a singleplayer and multiplayer first-person tactical shooter game and the first in the Brothers in Arms series.",
       "released": "2005-03-08",
       "exe": "bia.exe",
       "stores": {
@@ -697,7 +697,7 @@
     {
       "id": "condemned-criminal-origins",
       "name": "Condemned: Criminal Origins",
-      "description": "Condemned: Criminal Origins is a singleplayer first-person survival horror and action game in the Condemned series.",
+      "description": "Condemned: Criminal Origins is a singleplayer first-person survival horror and action game and the first in the Condemned series.",
       "released": "2006-04-11",
       "stores": {
         "steam": {
@@ -723,7 +723,7 @@
     {
       "id": "descent-3",
       "name": "Descent 3",
-      "description": "Descent 3 is a singleplayer and multiplayer first-person shooter game in the Descent series.",
+      "description": "Descent 3 is a singleplayer and multiplayer first-person shooter game and the third in the Descent series.",
       "released": "1999-06-17",
       "exe": "MAIN.EXE",
       "stores": {
@@ -744,7 +744,7 @@
     {
       "id": "deus-ex",
       "name": "Deus Ex",
-      "description": "Deus Ex is a singleplayer and multiplayer first-person action role-playing and immersive sim game in the Deus Ex series.",
+      "description": "Deus Ex is a singleplayer and multiplayer first-person action role-playing and immersive sim game and the first in the Deus Ex series.",
       "released": "2000-06-23",
       "exe": "DeusEx.exe",
       "stores": {
@@ -841,7 +841,7 @@
     {
       "id": "doom-3",
       "name": "DOOM 3",
-      "description": "DOOM 3 is a singleplayer and multiplayer first-person shooter and survival horror game in the Doom series.",
+      "description": "DOOM 3 is a singleplayer and multiplayer first-person shooter and survival horror game and the third main game in the Doom series.",
       "released": "2004-08-03",
       "exe": "Doom3.exe",
       "stores": {
@@ -886,7 +886,7 @@
     {
       "id": "dreamfall-the-longest-journey",
       "name": "Dreamfall: The Longest Journey",
-      "description": "Dreamfall: The Longest Journey is a singleplayer third-person adventure game in The Longest Journey series.",
+      "description": "Dreamfall: The Longest Journey is a singleplayer third-person adventure game and the second in The Longest Journey series.",
       "released": "2006-04-17",
       "stores": {
         "steam": {
@@ -904,7 +904,7 @@
     {
       "id": "dungeon-keeper-ii",
       "name": "Dungeon Keeper II",
-      "description": "Dungeon Keeper II is a singleplayer and multiplayer real-time strategy and dungeon management game in the Dungeon Keeper series.",
+      "description": "Dungeon Keeper II is a singleplayer and multiplayer real-time strategy and dungeon management game and the second in the Dungeon Keeper series.",
       "released": "1999-06-25",
       "stores": {
         "steam": {
@@ -924,7 +924,7 @@
     {
       "id": "dungeon-siege",
       "name": "Dungeon Siege",
-      "description": "Dungeon Siege is a singleplayer and multiplayer third-person action role-playing game in the Dungeon Siege series.",
+      "description": "Dungeon Siege is a singleplayer and multiplayer third-person action role-playing game and the first in the Dungeon Siege series.",
       "released": "2002-04-05",
       "stores": {
         "steam": {
@@ -945,7 +945,7 @@
     {
       "id": "dungeon-siege-ii",
       "name": "Dungeon Siege II",
-      "description": "Dungeon Siege II is a singleplayer and multiplayer third-person action role-playing game in the Dungeon Siege series.",
+      "description": "Dungeon Siege II is a singleplayer and multiplayer third-person action role-playing game and the second in the Dungeon Siege series.",
       "released": "2005-08-16",
       "stores": {
         "steam": {
@@ -985,7 +985,7 @@
     {
       "id": "fear",
       "name": "F.E.A.R.",
-      "description": "F.E.A.R. is a singleplayer and multiplayer first-person shooter and horror game in the F.E.A.R. series.",
+      "description": "F.E.A.R. is a singleplayer and multiplayer first-person shooter and horror game and the first in the F.E.A.R. series.",
       "released": "2005-10-18",
       "exe": "FEAR.exe",
       "stores": {
@@ -1154,7 +1154,7 @@
     {
       "id": "fear-platinum",
       "name": "F.E.A.R. Platinum",
-      "description": "F.E.A.R. Platinum is a singleplayer and multiplayer first-person shooter and horror game in the F.E.A.R. series, bundling F.E.A.R. with its Extraction Point and Perseus Mandate expansions.",
+      "description": "F.E.A.R. Platinum is a singleplayer and multiplayer first-person shooter and horror game, bundling F.E.A.R., the first game in the F.E.A.R. series, with its Extraction Point and Perseus Mandate expansions.",
       "released": "2005-10-18",
       "exe": "FEAR.exe",
       "stores": {
@@ -1253,7 +1253,7 @@
     {
       "id": "fallout-tactics-classic",
       "name": "Fallout Tactics Classic",
-      "description": "Fallout Tactics Classic is a singleplayer and multiplayer isometric tactical role-playing game in the Fallout series.",
+      "description": "Fallout Tactics Classic is a singleplayer and multiplayer isometric tactical role-playing game and a spin-off in the Fallout series.",
       "released": "2001-03-15",
       "exe": "BOS.exe",
       "stores": {
@@ -1294,7 +1294,7 @@
     {
       "id": "fallout-tactics-brotherhood-of-steel",
       "name": "Fallout Tactics: Brotherhood of Steel",
-      "description": "Fallout Tactics: Brotherhood of Steel is a singleplayer and multiplayer isometric tactical role-playing game in the Fallout series.",
+      "description": "Fallout Tactics: Brotherhood of Steel is a singleplayer and multiplayer isometric tactical role-playing game and a spin-off in the Fallout series.",
       "released": "2001-03-15",
       "stores": {
         "steam": {
@@ -1336,7 +1336,7 @@
     {
       "id": "far-cry-2",
       "name": "Far Cry 2",
-      "description": "Far Cry 2 is a singleplayer and multiplayer open-world first-person shooter game in the Far Cry series.",
+      "description": "Far Cry 2 is a singleplayer and multiplayer open-world first-person shooter game and the second in the Far Cry series.",
       "released": "2008-10-21",
       "stores": {
         "steam": {
@@ -1391,7 +1391,7 @@
     {
       "id": "half-life",
       "name": "Half-Life",
-      "description": "Half-Life is a singleplayer and multiplayer first-person shooter game in the Half-Life series.",
+      "description": "Half-Life is a singleplayer and multiplayer first-person shooter game and the first in the Half-Life series.",
       "released": "1998-11-19",
       "exe": "hl.exe",
       "stores": {
@@ -1453,7 +1453,7 @@
     {
       "id": "hidden-and-dangerous-2",
       "name": "Hidden & Dangerous 2",
-      "description": "Hidden & Dangerous 2 is a singleplayer and multiplayer first- and third-person tactical shooter game in the Hidden & Dangerous series.",
+      "description": "Hidden & Dangerous 2 is a singleplayer and multiplayer first- and third-person tactical shooter game and the second in the Hidden & Dangerous series.",
       "released": "2003-10-23",
       "stores": {
         "steam": {
@@ -1473,7 +1473,7 @@
     {
       "id": "icewind-dale-complete",
       "name": "Icewind Dale Complete",
-      "description": "Icewind Dale Complete is a singleplayer and multiplayer isometric role-playing game in the Icewind Dale series, bundling Icewind Dale with its Heart of Winter expansion.",
+      "description": "Icewind Dale Complete is a singleplayer and multiplayer isometric role-playing game, bundling Icewind Dale, the first game in the Icewind Dale series, with its Heart of Winter expansion.",
       "released": "2000-06-29",
       "exe": "IDMain.exe",
       "stores": {
@@ -1522,7 +1522,7 @@
     {
       "id": "icewind-dale-ii",
       "name": "Icewind Dale II",
-      "description": "Icewind Dale II is a singleplayer and multiplayer isometric role-playing game in the Icewind Dale series.",
+      "description": "Icewind Dale II is a singleplayer and multiplayer isometric role-playing game and the second in the Icewind Dale series.",
       "released": "2002-08-27",
       "exe": "IWD2.exe",
       "stores": {
@@ -1564,7 +1564,7 @@
     {
       "id": "icewind-dale-enhanced-edition",
       "name": "Icewind Dale: Enhanced Edition",
-      "description": "Icewind Dale: Enhanced Edition is a singleplayer and multiplayer isometric role-playing game in the Icewind Dale series.",
+      "description": "Icewind Dale: Enhanced Edition is a singleplayer and multiplayer isometric role-playing game, an enhanced edition of the first in the Icewind Dale series.",
       "released": "2014-10-30",
       "stores": {
         "steam": {
@@ -1584,7 +1584,7 @@
     {
       "id": "mafia",
       "name": "Mafia",
-      "description": "Mafia is a singleplayer third-person action-adventure game in the Mafia series.",
+      "description": "Mafia is a singleplayer third-person action-adventure game and the first in the Mafia series.",
       "released": "2002-08-29",
       "stores": {
         "gog": {
@@ -1609,7 +1609,7 @@
     {
       "id": "max-payne-2-the-fall-of-max-payne",
       "name": "Max Payne 2: The Fall of Max Payne",
-      "description": "Max Payne 2: The Fall of Max Payne is a singleplayer third-person shooter game in the Max Payne series.",
+      "description": "Max Payne 2: The Fall of Max Payne is a singleplayer third-person shooter game and the second in the Max Payne series.",
       "released": "2003-10-15",
       "exe": "maxpayne2.exe",
       "stores": {
@@ -1634,7 +1634,7 @@
     {
       "id": "medal-of-honor-allied-assault",
       "name": "Medal of Honor: Allied Assault",
-      "description": "Medal of Honor: Allied Assault is a singleplayer and multiplayer first-person shooter game in the Medal of Honor series.",
+      "description": "Medal of Honor: Allied Assault is a singleplayer and multiplayer first-person shooter game and the third in the Medal of Honor series.",
       "released": "2002-01-22",
       "stores": {
         "gog": {
@@ -1670,7 +1670,7 @@
     {
       "id": "neverwinter-nights-2",
       "name": "Neverwinter Nights 2",
-      "description": "Neverwinter Nights 2 is a singleplayer and multiplayer third-person role-playing game in the Neverwinter Nights series.",
+      "description": "Neverwinter Nights 2 is a singleplayer and multiplayer third-person role-playing game and the second in the Neverwinter Nights series.",
       "released": "2006-10-31",
       "exe": "nwn2main.exe",
       "stores": {
@@ -1788,7 +1788,7 @@
     {
       "id": "neverwinter-nights-2-enhanced-edition",
       "name": "Neverwinter Nights 2: Enhanced Edition",
-      "description": "Neverwinter Nights 2: Enhanced Edition is a singleplayer and multiplayer third-person role-playing game in the Neverwinter Nights series.",
+      "description": "Neverwinter Nights 2: Enhanced Edition is a singleplayer and multiplayer third-person role-playing game, an enhanced edition of the second in the Neverwinter Nights series.",
       "released": "2025-07-15",
       "stores": {
         "steam": {
@@ -1808,7 +1808,7 @@
     {
       "id": "neverwinter-nights-diamond",
       "name": "Neverwinter Nights Diamond",
-      "description": "Neverwinter Nights Diamond is a singleplayer and multiplayer third-person role-playing game in the Neverwinter Nights series, bundling Neverwinter Nights with its Shadows of Undrentide and Hordes of the Underdark expansions.",
+      "description": "Neverwinter Nights Diamond is a singleplayer and multiplayer third-person role-playing game, bundling Neverwinter Nights, the first game in the Neverwinter Nights series, with its Shadows of Undrentide and Hordes of the Underdark expansions.",
       "released": "2002-06-18",
       "exe": "nwmain.exe",
       "stores": {
@@ -1933,7 +1933,7 @@
     {
       "id": "neverwinter-nights-enhanced-edition",
       "name": "Neverwinter Nights: Enhanced Edition",
-      "description": "Neverwinter Nights: Enhanced Edition is a singleplayer and multiplayer third-person role-playing game in the Neverwinter Nights series.",
+      "description": "Neverwinter Nights: Enhanced Edition is a singleplayer and multiplayer third-person role-playing game, an enhanced edition of the first in the Neverwinter Nights series.",
       "released": "2018-03-27",
       "stores": {
         "steam": {
@@ -1953,7 +1953,7 @@
     {
       "id": "outcast",
       "name": "Outcast",
-      "description": "Outcast is a singleplayer third-person action-adventure game in the Outcast series.",
+      "description": "Outcast is a singleplayer third-person action-adventure game and the first in the Outcast series.",
       "released": "1999-06-25",
       "stores": {
         "steam": {
@@ -2016,7 +2016,7 @@
     {
       "id": "psychonauts",
       "name": "Psychonauts",
-      "description": "Psychonauts is a singleplayer third-person platform and action-adventure game in the Psychonauts series.",
+      "description": "Psychonauts is a singleplayer third-person platform and action-adventure game and the first in the Psychonauts series.",
       "released": "2005-04-19",
       "stores": {
         "steam": {
@@ -2068,7 +2068,7 @@
     {
       "id": "quake-4",
       "name": "Quake 4",
-      "description": "Quake 4 is a singleplayer and multiplayer first-person shooter game in the Quake series.",
+      "description": "Quake 4 is a singleplayer and multiplayer first-person shooter game and the fourth in the Quake series.",
       "released": "2005-10-18",
       "exe": "Quake4.exe",
       "stores": {
@@ -2150,7 +2150,7 @@
     {
       "id": "red-faction",
       "name": "Red Faction",
-      "description": "Red Faction is a singleplayer and multiplayer first-person shooter game in the Red Faction series.",
+      "description": "Red Faction is a singleplayer and multiplayer first-person shooter game and the first in the Red Faction series.",
       "released": "2001-09-18",
       "stores": {
         "steam": {
@@ -2214,7 +2214,7 @@
     {
       "id": "stalker-call-of-pripyat",
       "name": "S.T.A.L.K.E.R.: Call of Pripyat",
-      "description": "S.T.A.L.K.E.R.: Call of Pripyat is a singleplayer and multiplayer open-world first-person shooter and survival horror game in the S.T.A.L.K.E.R. series.",
+      "description": "S.T.A.L.K.E.R.: Call of Pripyat is a singleplayer and multiplayer open-world first-person shooter and survival horror game and the third in the S.T.A.L.K.E.R. series.",
       "released": "2009-10-02",
       "exe": "xrEngine.exe",
       "stores": {
@@ -2242,7 +2242,7 @@
     {
       "id": "stalker-call-of-prypiat-enhanced-edition",
       "name": "S.T.A.L.K.E.R.: Call of Prypiat - Enhanced Edition",
-      "description": "S.T.A.L.K.E.R.: Call of Prypiat - Enhanced Edition is an open-world first-person shooter and survival horror game in the S.T.A.L.K.E.R. series.",
+      "description": "S.T.A.L.K.E.R.: Call of Prypiat - Enhanced Edition is an open-world first-person shooter and survival horror game, an enhanced edition of the third in the S.T.A.L.K.E.R. series.",
       "released": "2025-05-20",
       "exe": "xrEngine.exe",
       "stores": {
@@ -2265,7 +2265,7 @@
     {
       "id": "stalker-clear-sky",
       "name": "S.T.A.L.K.E.R.: Clear Sky",
-      "description": "S.T.A.L.K.E.R.: Clear Sky is a singleplayer and multiplayer open-world first-person shooter and survival horror game in the S.T.A.L.K.E.R. series.",
+      "description": "S.T.A.L.K.E.R.: Clear Sky is a singleplayer and multiplayer open-world first-person shooter and survival horror game and the second in the S.T.A.L.K.E.R. series.",
       "released": "2008-08-22",
       "exe": "xrEngine.exe",
       "stores": {
@@ -2294,7 +2294,7 @@
     {
       "id": "stalker-clear-sky-enhanced-edition",
       "name": "S.T.A.L.K.E.R.: Clear Sky - Enhanced Edition",
-      "description": "S.T.A.L.K.E.R.: Clear Sky - Enhanced Edition is an open-world first-person shooter and survival horror game in the S.T.A.L.K.E.R. series.",
+      "description": "S.T.A.L.K.E.R.: Clear Sky - Enhanced Edition is an open-world first-person shooter and survival horror game, an enhanced edition of the second in the S.T.A.L.K.E.R. series.",
       "released": "2025-05-20",
       "exe": "xrEngine.exe",
       "stores": {
@@ -2317,7 +2317,7 @@
     {
       "id": "stalker-shadow-of-chernobyl",
       "name": "S.T.A.L.K.E.R.: Shadow of Chernobyl",
-      "description": "S.T.A.L.K.E.R.: Shadow of Chernobyl is a singleplayer and multiplayer open-world first-person shooter and survival horror game in the S.T.A.L.K.E.R. series.",
+      "description": "S.T.A.L.K.E.R.: Shadow of Chernobyl is a singleplayer and multiplayer open-world first-person shooter and survival horror game and the first in the S.T.A.L.K.E.R. series.",
       "released": "2007-03-20",
       "exe": "XR_3DA.exe",
       "stores": {
@@ -2345,7 +2345,7 @@
     {
       "id": "stalker-shadow-of-chornobyl-enhanced-edition",
       "name": "S.T.A.L.K.E.R.: Shadow of Chornobyl - Enhanced Edition",
-      "description": "S.T.A.L.K.E.R.: Shadow of Chornobyl - Enhanced Edition is an open-world first-person shooter and survival horror game in the S.T.A.L.K.E.R. series.",
+      "description": "S.T.A.L.K.E.R.: Shadow of Chornobyl - Enhanced Edition is an open-world first-person shooter and survival horror game, an enhanced edition of the first in the S.T.A.L.K.E.R. series.",
       "released": "2025-05-20",
       "exe": "xrEngine.exe",
       "stores": {
@@ -2385,7 +2385,7 @@
     {
       "id": "soldier-of-fortune-ii-double-helix",
       "name": "Soldier of Fortune II: Double Helix",
-      "description": "Soldier of Fortune II: Double Helix is a singleplayer and multiplayer first-person shooter game in the Soldier of Fortune series.",
+      "description": "Soldier of Fortune II: Double Helix is a singleplayer and multiplayer first-person shooter game and the second in the Soldier of Fortune series.",
       "released": "2002-05-21",
       "exe": "SoF2.exe",
       "stores": {
@@ -2426,7 +2426,7 @@
     {
       "id": "star-trek-elite-force-ii",
       "name": "Star Trek: Elite Force II",
-      "description": "Star Trek: Elite Force II is a singleplayer and multiplayer first-person shooter game in the Star Trek series.",
+      "description": "Star Trek: Elite Force II is a singleplayer and multiplayer first-person shooter game and the second in the Star Trek: Elite Force series.",
       "released": "2003-06-20",
       "stores": {
         "gog": {
@@ -2446,7 +2446,7 @@
     {
       "id": "star-wars-jedi-knight-ii-jedi-outcast",
       "name": "Star Wars Jedi Knight II: Jedi Outcast",
-      "description": "Star Wars Jedi Knight II: Jedi Outcast is a singleplayer and multiplayer first- and third-person shooter and action game in the Star Wars: Jedi Knight series.",
+      "description": "Star Wars Jedi Knight II: Jedi Outcast is a singleplayer and multiplayer first- and third-person shooter and action game and the third in the Star Wars: Jedi Knight series.",
       "released": "2002-03-28",
       "exe": "jk2sp.exe",
       "stores": {
@@ -2500,7 +2500,7 @@
     {
       "id": "star-wars-jedi-knight-jedi-academy",
       "name": "Star Wars Jedi Knight: Jedi Academy",
-      "description": "Star Wars Jedi Knight: Jedi Academy is a singleplayer and multiplayer first- and third-person shooter and action game in the Star Wars: Jedi Knight series.",
+      "description": "Star Wars Jedi Knight: Jedi Academy is a singleplayer and multiplayer first- and third-person shooter and action game and the fourth in the Star Wars: Jedi Knight series.",
       "released": "2003-09-16",
       "exe": "jasp.exe",
       "stores": {
@@ -2555,7 +2555,7 @@
     {
       "id": "star-wars-knights-of-the-old-republic",
       "name": "Star Wars: Knights of the Old Republic",
-      "description": "Star Wars: Knights of the Old Republic is a singleplayer third-person role-playing game in the Star Wars: Knights of the Old Republic series.",
+      "description": "Star Wars: Knights of the Old Republic is a singleplayer third-person role-playing game and the first in the Star Wars: Knights of the Old Republic series.",
       "released": "2003-11-19",
       "exe": "swkotor.exe",
       "stores": {
@@ -2601,7 +2601,7 @@
     {
       "id": "star-wars-knights-of-the-old-republic-ii-the-sith-lords",
       "name": "Star Wars: Knights of the Old Republic II - The Sith Lords",
-      "description": "Star Wars: Knights of the Old Republic II - The Sith Lords is a singleplayer third-person role-playing game in the Star Wars: Knights of the Old Republic series.",
+      "description": "Star Wars: Knights of the Old Republic II - The Sith Lords is a singleplayer third-person role-playing game and the second in the Star Wars: Knights of the Old Republic series.",
       "released": "2005-02-08",
       "exe": "swkotor2.exe",
       "stores": {
@@ -2677,7 +2677,7 @@
     {
       "id": "swat-4",
       "name": "SWAT 4",
-      "description": "SWAT 4 is a singleplayer and multiplayer first-person tactical shooter game in the SWAT series.",
+      "description": "SWAT 4 is a singleplayer and multiplayer first-person tactical shooter game and the fourth in the SWAT series.",
       "released": "2005-04-05",
       "exe": "Swat4.exe",
       "stores": {
@@ -2723,7 +2723,7 @@
     {
       "id": "system-shock-2",
       "name": "System Shock 2",
-      "description": "System Shock 2 is a singleplayer and multiplayer first-person action role-playing, survival horror and immersive sim game in the System Shock series.",
+      "description": "System Shock 2 is a singleplayer and multiplayer first-person action role-playing, survival horror and immersive sim game and the second in the System Shock series.",
       "released": "1999-08-11",
       "exe": "SS2.exe",
       "stores": {
@@ -2790,7 +2790,7 @@
     {
       "id": "system-shock-2-25th-anniversary-remaster",
       "name": "System Shock 2: 25th Anniversary Remaster",
-      "description": "System Shock 2: 25th Anniversary Remaster is a singleplayer and multiplayer first-person action role-playing, survival horror and immersive sim game in the System Shock series.",
+      "description": "System Shock 2: 25th Anniversary Remaster is a singleplayer and multiplayer first-person action role-playing, survival horror and immersive sim game, a remaster of the second in the System Shock series.",
       "released": "2025-06-26",
       "exe": "SystemShock2Remastered.exe",
       "stores": {
@@ -2905,7 +2905,7 @@
     {
       "id": "the-witcher",
       "name": "The Witcher",
-      "description": "The Witcher is a singleplayer third-person action role-playing game in The Witcher series.",
+      "description": "The Witcher is a singleplayer third-person action role-playing game and the first in The Witcher series.",
       "released": "2007-10-26",
       "stores": {
         "steam": {
@@ -2926,7 +2926,7 @@
     {
       "id": "thief-gold",
       "name": "Thief Gold",
-      "description": "Thief Gold is a singleplayer first-person stealth and immersive sim game in the Thief series.",
+      "description": "Thief Gold is a singleplayer first-person stealth and immersive sim game, an expanded edition of the first in the Thief series.",
       "released": "1998-12-01",
       "exe": "THIEF.EXE",
       "stores": {
@@ -2990,7 +2990,7 @@
     {
       "id": "thief-ii-the-metal-age",
       "name": "Thief II: The Metal Age",
-      "description": "Thief II: The Metal Age is a singleplayer first-person stealth and immersive sim game in the Thief series.",
+      "description": "Thief II: The Metal Age is a singleplayer first-person stealth and immersive sim game and the second in the Thief series.",
       "released": "2000-03-23",
       "exe": "Thief2.exe",
       "stores": {
@@ -3055,7 +3055,7 @@
     {
       "id": "thief-deadly-shadows",
       "name": "Thief: Deadly Shadows",
-      "description": "Thief: Deadly Shadows is a singleplayer first- and third-person stealth and immersive sim game in the Thief series.",
+      "description": "Thief: Deadly Shadows is a singleplayer first- and third-person stealth and immersive sim game and the third in the Thief series.",
       "released": "2004-05-25",
       "exe": "T3Main.exe",
       "stores": {
@@ -3154,7 +3154,7 @@
     {
       "id": "tom-clancys-ghost-recon-advanced-warfighter-2",
       "name": "Tom Clancy's Ghost Recon: Advanced Warfighter 2",
-      "description": "Tom Clancy's Ghost Recon: Advanced Warfighter 2 is a singleplayer and multiplayer first-person tactical shooter game in the Tom Clancy's Ghost Recon series.",
+      "description": "Tom Clancy's Ghost Recon: Advanced Warfighter 2 is a singleplayer and multiplayer first-person tactical shooter game and the second in the Tom Clancy's Ghost Recon Advanced Warfighter series.",
       "released": "2007-06-29",
       "stores": {
         "steam": {
@@ -3176,7 +3176,7 @@
     {
       "id": "tom-clancys-rainbow-six-vegas",
       "name": "Tom Clancy's Rainbow Six: Vegas",
-      "description": "Tom Clancy's Rainbow Six: Vegas is a singleplayer and multiplayer first-person tactical shooter game in the Tom Clancy's Rainbow Six series.",
+      "description": "Tom Clancy's Rainbow Six: Vegas is a singleplayer and multiplayer first-person tactical shooter game and the first in the Tom Clancy's Rainbow Six: Vegas series.",
       "released": "2006-12-12",
       "stores": {
         "steam": {
@@ -3200,7 +3200,7 @@
     {
       "id": "tom-clancys-rainbow-six-vegas-2",
       "name": "Tom Clancy's Rainbow Six: Vegas 2",
-      "description": "Tom Clancy's Rainbow Six: Vegas 2 is a singleplayer and multiplayer first-person tactical shooter game in the Tom Clancy's Rainbow Six series.",
+      "description": "Tom Clancy's Rainbow Six: Vegas 2 is a singleplayer and multiplayer first-person tactical shooter game and the second in the Tom Clancy's Rainbow Six: Vegas series.",
       "released": "2008-04-15",
       "stores": {
         "steam": {
@@ -3225,7 +3225,7 @@
     {
       "id": "tom-clancys-splinter-cell",
       "name": "Tom Clancy's Splinter Cell",
-      "description": "Tom Clancy's Splinter Cell is a singleplayer third-person stealth action game in the Tom Clancy's Splinter Cell series.",
+      "description": "Tom Clancy's Splinter Cell is a singleplayer third-person stealth action game and the first in the Tom Clancy's Splinter Cell series.",
       "released": "2003-02-18",
       "exe": "splintercell.exe",
       "stores": {
@@ -3277,7 +3277,7 @@
     {
       "id": "tom-clancys-splinter-cell-chaos-theory",
       "name": "Tom Clancy's Splinter Cell: Chaos Theory",
-      "description": "Tom Clancy's Splinter Cell: Chaos Theory is a singleplayer and multiplayer third-person stealth action game in the Tom Clancy's Splinter Cell series.",
+      "description": "Tom Clancy's Splinter Cell: Chaos Theory is a singleplayer and multiplayer third-person stealth action game and the third in the Tom Clancy's Splinter Cell series.",
       "released": "2005-03-29",
       "exe": "splintercell3.exe",
       "stores": {
@@ -3303,7 +3303,7 @@
     {
       "id": "tom-clancys-splinter-cell-double-agent",
       "name": "Tom Clancy's Splinter Cell: Double Agent",
-      "description": "Tom Clancy's Splinter Cell: Double Agent is a singleplayer and multiplayer third-person stealth action game in the Tom Clancy's Splinter Cell series.",
+      "description": "Tom Clancy's Splinter Cell: Double Agent is a singleplayer and multiplayer third-person stealth action game and the fourth in the Tom Clancy's Splinter Cell series.",
       "released": "2006-11-07",
       "exe": "SplinterCell4.exe",
       "stores": {
@@ -3330,7 +3330,7 @@
     {
       "id": "tomb-raider-the-angel-of-darkness",
       "name": "Tomb Raider: The Angel of Darkness",
-      "description": "Tomb Raider: The Angel of Darkness is a singleplayer third-person action-adventure game in the Tomb Raider series.",
+      "description": "Tomb Raider: The Angel of Darkness is a singleplayer third-person action-adventure game and the sixth in the Tomb Raider series.",
       "released": "2003-07-01",
       "stores": {
         "steam": {
@@ -3376,7 +3376,7 @@
     {
       "id": "unreal-gold",
       "name": "Unreal Gold",
-      "description": "Unreal Gold is a singleplayer and multiplayer first-person shooter game in the Unreal series, bundling Unreal with its Return to Na Pali expansion.",
+      "description": "Unreal Gold is a singleplayer and multiplayer first-person shooter game, bundling Unreal, the first game in the Unreal series, with its Return to Na Pali expansion.",
       "released": "1998-05-22",
       "exe": "Unreal.exe",
       "stores": {
@@ -3490,7 +3490,7 @@
     {
       "id": "unreal-ii-the-awakening",
       "name": "Unreal II: The Awakening",
-      "description": "Unreal II: The Awakening is a singleplayer first-person shooter game in the Unreal series.",
+      "description": "Unreal II: The Awakening is a singleplayer first-person shooter game and the second in the Unreal series.",
       "released": "2003-02-04",
       "exe": "Unreal2.exe",
       "stores": {
@@ -3542,7 +3542,7 @@
     {
       "id": "unreal-tournament-2004",
       "name": "Unreal Tournament 2004",
-      "description": "Unreal Tournament 2004 is a singleplayer and multiplayer first-person arena shooter game in the Unreal series.",
+      "description": "Unreal Tournament 2004 is a singleplayer and multiplayer first-person arena shooter game and the third in the Unreal Tournament series.",
       "released": "2004-03-16",
       "exe": "UT2004.exe",
       "stores": {
@@ -3589,7 +3589,7 @@
     {
       "id": "unreal-tournament-3",
       "name": "Unreal Tournament 3",
-      "description": "Unreal Tournament 3 is a singleplayer and multiplayer first-person arena shooter game in the Unreal series.",
+      "description": "Unreal Tournament 3 is a singleplayer and multiplayer first-person arena shooter game and the fourth in the Unreal Tournament series.",
       "released": "2007-11-19",
       "exe": "UT3.exe",
       "stores": {
@@ -3634,7 +3634,7 @@
     {
       "id": "unreal-tournament-game-of-the-year-edition",
       "name": "Unreal Tournament: Game of the Year Edition",
-      "description": "Unreal Tournament: Game of the Year Edition is a singleplayer and multiplayer first-person arena shooter game in the Unreal series.",
+      "description": "Unreal Tournament: Game of the Year Edition is a singleplayer and multiplayer first-person arena shooter game and the first in the Unreal Tournament series.",
       "released": "1999-11-22",
       "exe": "UnrealTournament.exe",
       "stores": {
@@ -3751,7 +3751,7 @@
     {
       "id": "x-com-enforcer",
       "name": "X-COM: Enforcer",
-      "description": "X-COM: Enforcer is a singleplayer and multiplayer third-person shooter game in the X-COM series.",
+      "description": "X-COM: Enforcer is a singleplayer and multiplayer third-person shooter game and a spin-off in the X-COM series.",
       "released": "2001-04-17",
       "exe": "XCom.exe",
       "stores": {

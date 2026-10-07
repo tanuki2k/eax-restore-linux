@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Tom Clancy's Splinter Cell: Chaos Theory",
-  "description": "Tom Clancy's Splinter Cell: Chaos Theory is a singleplayer and multiplayer third-person stealth action game in the Tom Clancy's Splinter Cell series.",
+  "description": "Tom Clancy's Splinter Cell: Chaos Theory is a singleplayer and multiplayer third-person stealth action game and the third in the Tom Clancy's Splinter Cell series.",
   "released": "2005-03-29",
   "exe": "splintercell3.exe",
   "stores": {

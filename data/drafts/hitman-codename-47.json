@@ -1,7 +1,7 @@
 {
   "$schema": "../schema.json",
   "name": "Hitman: Codename 47",
-  "description": "Hitman: Codename 47 is a singleplayer third-person stealth game in the Hitman series.",
+  "description": "Hitman: Codename 47 is a singleplayer third-person stealth game and the first in the Hitman series.",
   "released": "2000-11-19",
   "exe": "Hitman.Exe",
   "stores": {

@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "System Shock 2",
-  "description": "System Shock 2 is a singleplayer and multiplayer first-person action role-playing, survival horror and immersive sim game in the System Shock series.",
+  "description": "System Shock 2 is a singleplayer and multiplayer first-person action role-playing, survival horror and immersive sim game and the second in the System Shock series.",
   "released": "1999-08-11",
   "exe": "SS2.exe",
   "stores": {

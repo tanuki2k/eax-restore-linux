@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "SWAT 4",
-  "description": "SWAT 4 is a singleplayer and multiplayer first-person tactical shooter game in the SWAT series.",
+  "description": "SWAT 4 is a singleplayer and multiplayer first-person tactical shooter game and the fourth in the SWAT series.",
   "released": "2005-04-05",
   "exe": "Swat4.exe",
   "stores": {

@@ -1,7 +1,7 @@
 {
   "$schema": "../schema.json",
   "name": "Full Spectrum Warrior: Ten Hammers",
-  "description": "Full Spectrum Warrior: Ten Hammers is a singleplayer and multiplayer third-person real-time tactics game in the Full Spectrum Warrior series.",
+  "description": "Full Spectrum Warrior: Ten Hammers is a singleplayer and multiplayer third-person real-time tactics game and the second in the Full Spectrum Warrior series.",
   "released": "2006-03-27",
   "stores": {
     "steam": { "id": 4530 }

@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Neverwinter Nights 2",
-  "description": "Neverwinter Nights 2 is a singleplayer and multiplayer third-person role-playing game in the Neverwinter Nights series.",
+  "description": "Neverwinter Nights 2 is a singleplayer and multiplayer third-person role-playing game and the second in the Neverwinter Nights series.",
   "released": "2006-10-31",
   "exe": "nwn2main.exe",
   "stores": {

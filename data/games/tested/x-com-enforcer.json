@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "X-COM: Enforcer",
-  "description": "X-COM: Enforcer is a singleplayer and multiplayer third-person shooter game in the X-COM series.",
+  "description": "X-COM: Enforcer is a singleplayer and multiplayer third-person shooter game and a spin-off in the X-COM series.",
   "released": "2001-04-17",
   "exe": "XCom.exe",
   "stores": {

@@ -1,7 +1,7 @@
 {
   "$schema": "../schema.json",
   "name": "Killing Floor",
-  "description": "Killing Floor is a singleplayer and multiplayer first-person co-op survival shooter game in the Killing Floor series.",
+  "description": "Killing Floor is a singleplayer and multiplayer first-person co-op survival shooter game and the first in the Killing Floor series.",
   "released": "2009-05-14",
   "stores": {
     "steam": { "id": 1250 }

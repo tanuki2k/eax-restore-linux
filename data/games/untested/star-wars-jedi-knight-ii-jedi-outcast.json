@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Star Wars Jedi Knight II: Jedi Outcast",
-  "description": "Star Wars Jedi Knight II: Jedi Outcast is a singleplayer and multiplayer first- and third-person shooter and action game in the Star Wars: Jedi Knight series.",
+  "description": "Star Wars Jedi Knight II: Jedi Outcast is a singleplayer and multiplayer first- and third-person shooter and action game and the third in the Star Wars: Jedi Knight series.",
   "released": "2002-03-28",
   "exe": "jk2sp.exe",
   "stores": {

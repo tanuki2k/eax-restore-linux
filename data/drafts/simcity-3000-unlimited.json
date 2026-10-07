@@ -1,7 +1,7 @@
 {
   "$schema": "../schema.json",
   "name": "SimCity 3000: Unlimited",
-  "description": "SimCity 3000: Unlimited is a singleplayer city-building game in the SimCity series.",
+  "description": "SimCity 3000: Unlimited is a singleplayer city-building game, an expanded edition of the third in the SimCity series.",
   "released": "1999-02-01",
   "stores": {
     "gog": { "id": 2086050016 }

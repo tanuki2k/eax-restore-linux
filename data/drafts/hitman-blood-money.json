@@ -1,7 +1,7 @@
 {
   "$schema": "../schema.json",
   "name": "Hitman: Blood Money",
-  "description": "Hitman: Blood Money is a singleplayer third-person stealth game in the Hitman series.",
+  "description": "Hitman: Blood Money is a singleplayer third-person stealth game and the fourth in the Hitman series.",
   "released": "2006-05-26",
   "exe": "HitmanBloodMoney.exe",
   "stores": {

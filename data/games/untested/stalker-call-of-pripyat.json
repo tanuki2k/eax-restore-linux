@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "S.T.A.L.K.E.R.: Call of Pripyat",
-  "description": "S.T.A.L.K.E.R.: Call of Pripyat is a singleplayer and multiplayer open-world first-person shooter and survival horror game in the S.T.A.L.K.E.R. series.",
+  "description": "S.T.A.L.K.E.R.: Call of Pripyat is a singleplayer and multiplayer open-world first-person shooter and survival horror game and the third in the S.T.A.L.K.E.R. series.",
   "released": "2009-10-02",
   "exe": "xrEngine.exe",
   "stores": {

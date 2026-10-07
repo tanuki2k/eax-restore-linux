@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Brothers in Arms: Hell's Highway",
-  "description": "Brothers in Arms: Hell's Highway is a singleplayer and multiplayer first-person tactical shooter game in the Brothers in Arms series.",
+  "description": "Brothers in Arms: Hell's Highway is a singleplayer and multiplayer first-person tactical shooter game and the third in the Brothers in Arms series.",
   "released": "2008-10-07",
   "exe": "biahh.exe",
   "stores": {

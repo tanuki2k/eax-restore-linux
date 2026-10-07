@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Far Cry 2",
-  "description": "Far Cry 2 is a singleplayer and multiplayer open-world first-person shooter game in the Far Cry series.",
+  "description": "Far Cry 2 is a singleplayer and multiplayer open-world first-person shooter game and the second in the Far Cry series.",
   "released": "2008-10-21",
   "stores": {
     "steam": { "id": 19900 },

@@ -1,7 +1,7 @@
 {
   "$schema": "../schema.json",
   "name": "Hitman: Contracts",
-  "description": "Hitman: Contracts is a singleplayer third-person stealth game in the Hitman series.",
+  "description": "Hitman: Contracts is a singleplayer third-person stealth game and the third in the Hitman series.",
   "released": "2004-04-20",
   "exe": "HitmanContracts.exe",
   "stores": {

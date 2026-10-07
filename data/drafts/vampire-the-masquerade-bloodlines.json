@@ -1,7 +1,7 @@
 {
   "$schema": "../schema.json",
   "name": "Vampire: The Masquerade - Bloodlines",
-  "description": "Vampire: The Masquerade - Bloodlines is a singleplayer first- and third-person action role-playing game in the Vampire: The Masquerade series.",
+  "description": "Vampire: The Masquerade - Bloodlines is a singleplayer first- and third-person action role-playing game and the second in the Vampire: The Masquerade series.",
   "released": "2004-11-16",
   "stores": {
     "steam": { "id": 2600 },

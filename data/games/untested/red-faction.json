@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Red Faction",
-  "description": "Red Faction is a singleplayer and multiplayer first-person shooter game in the Red Faction series.",
+  "description": "Red Faction is a singleplayer and multiplayer first-person shooter game and the first in the Red Faction series.",
   "released": "2001-09-18",
   "stores": {
     "steam": { "id": 20530 },

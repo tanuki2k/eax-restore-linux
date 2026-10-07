@@ -1,7 +1,7 @@
 {
   "$schema": "../schema.json",
   "name": "Call of Juarez",
-  "description": "Call of Juarez is a singleplayer and multiplayer first-person shooter game in the Call of Juarez series.",
+  "description": "Call of Juarez is a singleplayer and multiplayer first-person shooter game and the first in the Call of Juarez series.",
   "released": "2006-09-15",
   "stores": {
     "steam": { "id": 3020 }

@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Neverwinter Nights: Enhanced Edition",
-  "description": "Neverwinter Nights: Enhanced Edition is a singleplayer and multiplayer third-person role-playing game in the Neverwinter Nights series.",
+  "description": "Neverwinter Nights: Enhanced Edition is a singleplayer and multiplayer third-person role-playing game, an enhanced edition of the first in the Neverwinter Nights series.",
   "released": "2018-03-27",
   "stores": {
     "steam": { "id": 704450 },

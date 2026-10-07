@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "AquaNox",
-  "description": "AquaNox is a singleplayer and multiplayer first-person shooter and submarine simulation game in the AquaNox series.",
+  "description": "AquaNox is a singleplayer and multiplayer first-person shooter and submarine simulation game and the first in the AquaNox series.",
   "released": "2001-10-12",
   "stores": {
     "steam": { "id": 39630 }

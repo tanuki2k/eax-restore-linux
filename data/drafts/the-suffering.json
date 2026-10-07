@@ -1,7 +1,7 @@
 {
   "$schema": "../schema.json",
   "name": "The Suffering",
-  "description": "The Suffering is a singleplayer first- and third-person shooter and survival horror game in The Suffering series.",
+  "description": "The Suffering is a singleplayer first- and third-person shooter and survival horror game and the first in The Suffering series.",
   "released": "2004-06-07",
   "exe": "SUFFERING.EXE",
   "stores": {

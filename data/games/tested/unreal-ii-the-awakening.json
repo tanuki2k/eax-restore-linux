@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Unreal II: The Awakening",
-  "description": "Unreal II: The Awakening is a singleplayer first-person shooter game in the Unreal series.",
+  "description": "Unreal II: The Awakening is a singleplayer first-person shooter game and the second in the Unreal series.",
   "released": "2003-02-04",
   "exe": "Unreal2.exe",
   "stores": {

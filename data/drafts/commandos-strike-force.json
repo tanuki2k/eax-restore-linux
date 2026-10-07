@@ -1,7 +1,7 @@
 {
   "$schema": "../schema.json",
   "name": "Commandos: Strike Force",
-  "description": "Commandos: Strike Force is a singleplayer and multiplayer first-person tactical shooter game in the Commandos series.",
+  "description": "Commandos: Strike Force is a singleplayer and multiplayer first-person tactical shooter game and the fourth in the Commandos series.",
   "released": "2006-03-17",
   "stores": {
     "steam": { "id": 6820, "delisted": true, "id_source": "steamdb_historical" }

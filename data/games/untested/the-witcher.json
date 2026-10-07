@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "The Witcher",
-  "description": "The Witcher is a singleplayer third-person action role-playing game in The Witcher series.",
+  "description": "The Witcher is a singleplayer third-person action role-playing game and the first in The Witcher series.",
   "released": "2007-10-26",
   "stores": {
     "steam": { "id": 20900 },

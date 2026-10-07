@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Outcast",
-  "description": "Outcast is a singleplayer third-person action-adventure game in the Outcast series.",
+  "description": "Outcast is a singleplayer third-person action-adventure game and the first in the Outcast series.",
   "released": "1999-06-25",
   "stores": {
     "steam": { "id": 336610 },

@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Dungeon Siege",
-  "description": "Dungeon Siege is a singleplayer and multiplayer third-person action role-playing game in the Dungeon Siege series.",
+  "description": "Dungeon Siege is a singleplayer and multiplayer third-person action role-playing game and the first in the Dungeon Siege series.",
   "released": "2002-04-05",
   "stores": {
     "steam": { "id": 39190 },

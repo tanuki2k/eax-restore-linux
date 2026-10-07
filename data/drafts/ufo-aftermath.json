@@ -1,7 +1,7 @@
 {
   "$schema": "../schema.json",
   "name": "UFO: Aftermath",
-  "description": "UFO: Aftermath is a singleplayer real-time tactics and strategy game in the UFO series.",
+  "description": "UFO: Aftermath is a singleplayer real-time tactics and strategy game and the first in the UFO series.",
   "released": "2003-10-03",
   "stores": {
     "gog": { "id": 1207658815 }

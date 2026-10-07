@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Max Payne 2: The Fall of Max Payne",
-  "description": "Max Payne 2: The Fall of Max Payne is a singleplayer third-person shooter game in the Max Payne series.",
+  "description": "Max Payne 2: The Fall of Max Payne is a singleplayer third-person shooter game and the second in the Max Payne series.",
   "released": "2003-10-15",
   "exe": "maxpayne2.exe",
   "stores": {

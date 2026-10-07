@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Star Wars: Knights of the Old Republic II - The Sith Lords",
-  "description": "Star Wars: Knights of the Old Republic II - The Sith Lords is a singleplayer third-person role-playing game in the Star Wars: Knights of the Old Republic series.",
+  "description": "Star Wars: Knights of the Old Republic II - The Sith Lords is a singleplayer third-person role-playing game and the second in the Star Wars: Knights of the Old Republic series.",
   "released": "2005-02-08",
   "exe": "swkotor2.exe",
   "stores": {

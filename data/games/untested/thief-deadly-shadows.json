@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Thief: Deadly Shadows",
-  "description": "Thief: Deadly Shadows is a singleplayer first- and third-person stealth and immersive sim game in the Thief series.",
+  "description": "Thief: Deadly Shadows is a singleplayer first- and third-person stealth and immersive sim game and the third in the Thief series.",
   "released": "2004-05-25",
   "exe": "T3Main.exe",
   "stores": {

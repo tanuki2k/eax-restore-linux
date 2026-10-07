@@ -1,7 +1,7 @@
 {
   "$schema": "../schema.json",
   "name": "Company of Heroes",
-  "description": "Company of Heroes is a singleplayer and multiplayer real-time strategy game in the Company of Heroes series.",
+  "description": "Company of Heroes is a singleplayer and multiplayer real-time strategy game and the first in the Company of Heroes series.",
   "released": "2006-09-11",
   "stores": {
     "steam": { "id": 228200 }

@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Neverwinter Nights Diamond",
-  "description": "Neverwinter Nights Diamond is a singleplayer and multiplayer third-person role-playing game in the Neverwinter Nights series, bundling Neverwinter Nights with its Shadows of Undrentide and Hordes of the Underdark expansions.",
+  "description": "Neverwinter Nights Diamond is a singleplayer and multiplayer third-person role-playing game, bundling Neverwinter Nights, the first game in the Neverwinter Nights series, with its Shadows of Undrentide and Hordes of the Underdark expansions.",
   "released": "2002-06-18",
   "exe": "nwmain.exe",
   "stores": {

@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "F.E.A.R. Platinum",
-  "description": "F.E.A.R. Platinum is a singleplayer and multiplayer first-person shooter and horror game in the F.E.A.R. series, bundling F.E.A.R. with its Extraction Point and Perseus Mandate expansions.",
+  "description": "F.E.A.R. Platinum is a singleplayer and multiplayer first-person shooter and horror game, bundling F.E.A.R., the first game in the F.E.A.R. series, with its Extraction Point and Perseus Mandate expansions.",
   "released": "2005-10-18",
   "exe": "FEAR.exe",
   "stores": {

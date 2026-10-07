@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Baldur's Gate 2 Complete",
-  "description": "Baldur's Gate 2 Complete is a singleplayer and multiplayer isometric role-playing game in the Baldur's Gate series, bundling Shadows of Amn with its Throne of Bhaal expansion.",
+  "description": "Baldur's Gate 2 Complete is a singleplayer and multiplayer isometric role-playing game, bundling Shadows of Amn, the second game in the Baldur's Gate series, with its Throne of Bhaal expansion.",
   "released": "2000-09-21",
   "exe": "BGMain.exe",
   "stores": {
