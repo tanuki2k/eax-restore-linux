@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "TimeShift",
+  "description": "TimeShift is a singleplayer and multiplayer first-person shooter game.",
+  "released": "2007-10-30",
   "stores": {
     "steam": { "id": 10130 }
   },

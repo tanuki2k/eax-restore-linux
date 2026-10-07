@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Fallout Tactics: Brotherhood of Steel",
+  "description": "Fallout Tactics: Brotherhood of Steel is a singleplayer and multiplayer isometric tactical role-playing game in the Fallout series.",
+  "released": "2001-03-15",
   "stores": {
     "steam": { "id": 38420 },
     "gog": { "id": 1440152063 }

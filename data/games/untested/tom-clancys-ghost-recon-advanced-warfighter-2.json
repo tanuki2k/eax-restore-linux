@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Tom Clancy's Ghost Recon: Advanced Warfighter 2",
+  "description": "Tom Clancy's Ghost Recon: Advanced Warfighter 2 is a singleplayer and multiplayer first-person tactical shooter game in the Tom Clancy's Ghost Recon series.",
+  "released": "2007-06-29",
   "stores": {
     "steam": { "id": 13510, "delisted": true, "store_details": "Delisted from Steam around 2015." }
   },

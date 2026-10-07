@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Neverwinter Nights 2: Enhanced Edition",
+  "description": "Neverwinter Nights 2: Enhanced Edition is a singleplayer and multiplayer third-person role-playing game in the Neverwinter Nights series.",
+  "released": "2025-07-15",
   "stores": {
     "steam": { "id": 2738630 },
     "gog": { "id": 1993442013 }

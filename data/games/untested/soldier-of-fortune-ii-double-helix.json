@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Soldier of Fortune II: Double Helix",
+  "description": "Soldier of Fortune II: Double Helix is a singleplayer and multiplayer first-person shooter game in the Soldier of Fortune series.",
+  "released": "2002-05-21",
   "exe": "SoF2.exe",
   "stores": {
     "gog": { "id": 1228964594, "store_details": "Sold as the 'Gold Edition'." }

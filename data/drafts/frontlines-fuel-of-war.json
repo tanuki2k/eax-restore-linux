@@ -1,6 +1,8 @@
 {
   "$schema": "../schema.json",
   "name": "Frontlines: Fuel of War",
+  "description": "Frontlines: Fuel of War is a singleplayer and multiplayer first-person shooter game.",
+  "released": "2008-02-25",
   "stores": {
     "steam": { "id": 9460 }
   },

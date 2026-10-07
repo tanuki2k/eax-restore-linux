@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Baldur's Gate: Enhanced Edition",
+  "description": "Baldur's Gate: Enhanced Edition is a singleplayer and multiplayer isometric role-playing game in the Baldur's Gate series.",
+  "released": "2012-11-28",
   "exe": "Baldur.exe",
   "stores": {
     "steam": { "id": 228280 },

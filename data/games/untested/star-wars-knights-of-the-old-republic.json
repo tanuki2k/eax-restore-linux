@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Star Wars: Knights of the Old Republic",
+  "description": "Star Wars: Knights of the Old Republic is a singleplayer third-person role-playing game in the Star Wars: Knights of the Old Republic series.",
+  "released": "2003-11-19",
   "exe": "swkotor.exe",
   "stores": {
     "steam": { "id": 32370 },

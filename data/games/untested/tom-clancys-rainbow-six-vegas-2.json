@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Tom Clancy's Rainbow Six: Vegas 2",
+  "description": "Tom Clancy's Rainbow Six: Vegas 2 is a singleplayer and multiplayer first-person tactical shooter game in the Tom Clancy's Rainbow Six series.",
+  "released": "2008-04-15",
   "stores": {
     "steam": { "id": 15120 }
   },

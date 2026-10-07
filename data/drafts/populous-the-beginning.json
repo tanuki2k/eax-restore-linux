@@ -1,6 +1,8 @@
 {
   "$schema": "../schema.json",
   "name": "Populous: The Beginning",
+  "description": "Populous: The Beginning is a singleplayer and multiplayer real-time strategy and god game in the Populous series.",
+  "released": "1998-11-17",
   "stores": {
     "gog": { "id": 1207659027 }
   },

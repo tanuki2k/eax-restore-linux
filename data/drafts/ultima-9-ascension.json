@@ -1,6 +1,8 @@
 {
   "$schema": "../schema.json",
   "name": "Ultima 9: Ascension",
+  "description": "Ultima 9: Ascension is a singleplayer third-person role-playing game in the Ultima series.",
+  "released": "1999-11-23",
   "stores": {
     "gog": { "id": 1207659093 }
   },

@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Brothers in Arms: Road to Hill 30",
+  "description": "Brothers in Arms: Road to Hill 30 is a singleplayer and multiplayer first-person tactical shooter game in the Brothers in Arms series.",
+  "released": "2005-03-08",
   "exe": "bia.exe",
   "stores": {
     "steam": { "id": 15190 },

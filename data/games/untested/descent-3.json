@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Descent 3",
+  "description": "Descent 3 is a singleplayer and multiplayer first-person shooter game in the Descent series.",
+  "released": "1999-06-17",
   "exe": "MAIN.EXE",
   "stores": {
     "steam": { "id": 273590 },

@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "DOOM 3",
+  "description": "DOOM 3 is a singleplayer and multiplayer first-person shooter and survival horror game in the Doom series.",
+  "released": "2004-08-03",
   "exe": "Doom3.exe",
   "stores": {
     "steam": { "id": 9050 },

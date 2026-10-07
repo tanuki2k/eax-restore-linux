@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Icewind Dale II",
+  "description": "Icewind Dale II is a singleplayer and multiplayer isometric role-playing game in the Icewind Dale series.",
+  "released": "2002-08-27",
   "exe": "IWD2.exe",
   "stores": {
     "gog": {

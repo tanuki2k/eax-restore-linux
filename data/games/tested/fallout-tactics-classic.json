@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Fallout Tactics Classic",
+  "description": "Fallout Tactics Classic is a singleplayer and multiplayer isometric tactical role-playing game in the Fallout series.",
+  "released": "2001-03-15",
   "exe": "BOS.exe",
   "stores": {
     "gog": {

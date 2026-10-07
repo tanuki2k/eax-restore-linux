@@ -13,6 +13,16 @@
       "type": "string",
       "minLength": 1
     },
+    "description": {
+      "description": "One sentence on what the game is, shown only in the database browser: modes, perspective, genres and series in PCGamingWiki's pattern (\"X is a singleplayer first-person shooter game in the Y series.\"), in our own words. Starts with the game's name.",
+      "type": "string",
+      "minLength": 1
+    },
+    "released": {
+      "description": "The game's first Windows release, earliest region: YYYY-MM-DD, or YYYY-MM / YYYY when only that much is verified. A bundle, Gold, Complete, GOTY or Classic edition takes its base game's date; an Enhanced Edition, Remaster or Anniversary Edition its own.",
+      "type": "string",
+      "pattern": "^\\d{4}(-(0[1-9]|1[0-2])(-(0[1-9]|[12]\\d|3[01]))?)?$"
+    },
     "exe": {
       "description": "The main game executable's file name only (no folders), with its exact case, e.g. \"DeusEx.exe\". Used to pick the right folder when scanning an install.",
       "type": "string",

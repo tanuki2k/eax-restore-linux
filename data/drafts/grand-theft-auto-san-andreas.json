@@ -1,6 +1,8 @@
 {
   "$schema": "../schema.json",
   "name": "Grand Theft Auto: San Andreas",
+  "description": "Grand Theft Auto: San Andreas is a singleplayer open-world third-person action-adventure game in the Grand Theft Auto series.",
+  "released": "2005-06-07",
   "exe": "gta-sa.exe",
   "stores": {
     "steam": {

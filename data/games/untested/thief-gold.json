@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Thief Gold",
+  "description": "Thief Gold is a singleplayer first-person stealth and immersive sim game in the Thief series.",
+  "released": "1998-12-01",
   "exe": "THIEF.EXE",
   "stores": {
     "steam": {

@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "BioShock",
+  "description": "BioShock is a singleplayer first-person shooter and immersive sim game in the BioShock series.",
+  "released": "2007-08-21",
   "exe": "Bioshock.exe",
   "stores": {
     "steam": {

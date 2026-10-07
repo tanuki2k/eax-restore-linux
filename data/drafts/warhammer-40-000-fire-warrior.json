@@ -1,6 +1,8 @@
 {
   "$schema": "../schema.json",
   "name": "Warhammer 40,000: Fire Warrior",
+  "description": "Warhammer 40,000: Fire Warrior is a singleplayer and multiplayer first-person shooter game in the Warhammer 40,000 series.",
+  "released": "2003-09-24",
   "stores": {
     "gog": { "id": 1394528466 }
   },

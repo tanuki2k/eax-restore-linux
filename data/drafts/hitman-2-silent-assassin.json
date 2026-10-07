@@ -1,6 +1,8 @@
 {
   "$schema": "../schema.json",
   "name": "Hitman 2: Silent Assassin",
+  "description": "Hitman 2: Silent Assassin is a singleplayer third-person stealth game in the Hitman series.",
+  "released": "2002-10-01",
   "exe": "hitman2.exe",
   "stores": {
     "steam": { "id": 6850 },

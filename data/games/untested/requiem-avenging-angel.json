@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Requiem: Avenging Angel",
+  "description": "Requiem: Avenging Angel is a singleplayer and multiplayer first-person shooter game.",
+  "released": "1999-03-31",
   "stores": {
     "gog": { "id": 1449581489 }
   },

@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Half-Life",
+  "description": "Half-Life is a singleplayer and multiplayer first-person shooter game in the Half-Life series.",
+  "released": "1998-11-19",
   "exe": "hl.exe",
   "stores": {
     "steam": {

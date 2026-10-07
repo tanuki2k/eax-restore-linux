@@ -1,6 +1,8 @@
 {
   "$schema": "../schema.json",
   "name": "Full Spectrum Warrior",
+  "description": "Full Spectrum Warrior is a singleplayer and multiplayer third-person real-time tactics game in the Full Spectrum Warrior series.",
+  "released": "2004-09-21",
   "stores": {
     "steam": { "id": 4520 }
   },

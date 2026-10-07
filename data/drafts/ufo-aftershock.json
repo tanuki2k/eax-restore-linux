@@ -1,6 +1,8 @@
 {
   "$schema": "../schema.json",
   "name": "UFO: Aftershock",
+  "description": "UFO: Aftershock is a singleplayer real-time tactics and strategy game in the UFO series.",
+  "released": "2005-10-21",
   "stores": {
     "gog": { "id": 1207658816 }
   },

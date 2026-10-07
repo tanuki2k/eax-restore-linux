@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Baldur's Gate II: Enhanced Edition",
+  "description": "Baldur's Gate II: Enhanced Edition is a singleplayer and multiplayer isometric role-playing game in the Baldur's Gate series.",
+  "released": "2013-11-15",
   "exe": "BaldurII.exe",
   "stores": {
     "steam": { "id": 257350 },

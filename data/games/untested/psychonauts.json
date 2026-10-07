@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Psychonauts",
+  "description": "Psychonauts is a singleplayer third-person platform and action-adventure game in the Psychonauts series.",
+  "released": "2005-04-19",
   "stores": {
     "steam": { "id": 3830 },
     "gog": { "id": 1207658807 }

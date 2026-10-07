@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Aliens versus Predator Classic 2000",
+  "description": "Aliens versus Predator Classic 2000 is a singleplayer and multiplayer first-person shooter and survival horror game in the Alien vs. Predator series.",
+  "released": "1999-05-13",
   "exe": "AvP_Classic.exe",
   "stores": {
     "steam": { "id": 3730 },

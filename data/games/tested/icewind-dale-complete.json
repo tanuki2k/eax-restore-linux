@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Icewind Dale Complete",
+  "description": "Icewind Dale Complete is a singleplayer and multiplayer isometric role-playing game in the Icewind Dale series, bundling Icewind Dale with its Heart of Winter expansion.",
+  "released": "2000-06-29",
   "exe": "IDMain.exe",
   "stores": {
     "gog": {

@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Anachronox",
+  "description": "Anachronox is a singleplayer third-person role-playing game.",
+  "released": "2001-06-27",
   "exe": "anox.exe",
   "stores": {
     "steam": { "id": 242940 },

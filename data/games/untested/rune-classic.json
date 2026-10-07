@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Rune Classic",
+  "description": "Rune Classic is a singleplayer and multiplayer third-person action-adventure game.",
+  "released": "2000-10-27",
   "exe": "Rune.exe",
   "stores": {
     "steam": { "id": 210950 },

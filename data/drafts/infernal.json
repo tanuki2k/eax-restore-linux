@@ -1,6 +1,8 @@
 {
   "$schema": "../schema.json",
   "name": "Infernal",
+  "description": "Infernal is a singleplayer third-person shooter and action-adventure game.",
+  "released": "2007-02-23",
   "stores": {
     "steam": { "id": 7060, "delisted": true, "id_source": "steamdb_historical" }
   },

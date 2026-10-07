@@ -1,6 +1,8 @@
 {
   "$schema": "../schema.json",
   "name": "RollerCoaster Tycoon 3: Complete Edition",
+  "description": "RollerCoaster Tycoon 3: Complete Edition is a singleplayer construction and management simulation game in the RollerCoaster Tycoon series.",
+  "released": "2020-09-24",
   "stores": {
     "gog": { "id": 1207659032 }
   },

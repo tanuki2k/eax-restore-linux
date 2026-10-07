@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Arx Fatalis",
+  "description": "Arx Fatalis is a singleplayer first-person action role-playing game.",
+  "released": "2002-06-28",
   "exe": "arx.exe",
   "stores": {
     "steam": { "id": 1700 },

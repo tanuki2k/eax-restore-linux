@@ -1,6 +1,8 @@
 {
   "$schema": "../schema.json",
   "name": "Project I.G.I.-2: Covert Strike",
+  "description": "Project I.G.I.-2: Covert Strike is a singleplayer and multiplayer first-person tactical shooter game in the I.G.I. series.",
+  "released": "2003-02-21",
   "stores": {
     "gog": { "id": 1207658666 }
   },

@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Shogo: Mobile Armor Division",
+  "description": "Shogo: Mobile Armor Division is a singleplayer and multiplayer first-person shooter game.",
+  "released": "1998-10-15",
   "stores": {
     "gog": { "id": 1207658659 }
   },

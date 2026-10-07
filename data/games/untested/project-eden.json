@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Project Eden",
+  "description": "Project Eden is a singleplayer and multiplayer third-person squad action-adventure game.",
+  "released": "2001-10-12",
   "stores": {
     "gog": { "id": 1207659235 }
   },

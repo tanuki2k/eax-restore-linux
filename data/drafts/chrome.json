@@ -1,6 +1,8 @@
 {
   "$schema": "../schema.json",
   "name": "Chrome",
+  "description": "Chrome is a singleplayer and multiplayer first-person shooter game in the Chrome series.",
+  "released": "2003-06-13",
   "stores": {
     "steam": { "id": 46420, "delisted": true, "id_source": "steamdb_historical" }
   },

@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Unreal Gold",
+  "description": "Unreal Gold is a singleplayer and multiplayer first-person shooter game in the Unreal series, bundling Unreal with its Return to Na Pali expansion.",
+  "released": "1998-05-22",
   "exe": "Unreal.exe",
   "stores": {
     "steam": {

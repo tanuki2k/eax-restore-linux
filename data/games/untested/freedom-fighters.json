@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Freedom Fighters",
+  "description": "Freedom Fighters is a singleplayer and multiplayer third-person squad shooter game.",
+  "released": "2003-09-25",
   "stores": {
     "steam": { "id": 1347780 },
     "gog": { "id": 1756362098 }

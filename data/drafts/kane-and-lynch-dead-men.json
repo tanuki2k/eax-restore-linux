@@ -1,6 +1,8 @@
 {
   "$schema": "../schema.json",
   "name": "Kane & Lynch: Dead Men",
+  "description": "Kane & Lynch: Dead Men is a singleplayer and multiplayer third-person shooter game in the Kane & Lynch series.",
+  "released": "2007-11-13",
   "exe": "kaneandlynch.exe",
   "stores": {
     "steam": {

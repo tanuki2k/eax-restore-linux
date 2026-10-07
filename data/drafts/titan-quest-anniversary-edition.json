@@ -1,6 +1,8 @@
 {
   "$schema": "../schema.json",
   "name": "Titan Quest Anniversary Edition",
+  "description": "Titan Quest Anniversary Edition is a singleplayer and multiplayer isometric action role-playing game in the Titan Quest series.",
+  "released": "2016-08-31",
   "stores": {
     "steam": { "id": 475150 },
     "gog": { "id": 1196955511 }

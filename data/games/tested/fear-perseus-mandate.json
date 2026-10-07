@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "F.E.A.R. Perseus Mandate",
+  "description": "F.E.A.R. Perseus Mandate is a singleplayer and multiplayer first-person shooter and horror expansion in the F.E.A.R. series.",
+  "released": "2007-11-06",
   "exe": "FEARXP2.exe",
   "stores": {
     "steam": { "id": 21120 }

@@ -51,7 +51,7 @@ def normalize_game:
     | (if .install then .install |= normalize_install else . end)
     | (if .game_config then .game_config |= normalize_game_config else . end)
     | drop_empty
-    | order_keys(["$schema", "name", "exe", "stores", "eax", "install", "game_config", "sources", "notes"]);
+    | order_keys(["$schema", "name", "description", "released", "exe", "stores", "eax", "install", "game_config", "sources", "notes"]);
 
 # One-line rendering with spaces inside braces: { "id": 6910 }, ["1.0", "2.0"].
 def compact:

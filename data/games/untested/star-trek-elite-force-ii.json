@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Star Trek: Elite Force II",
+  "description": "Star Trek: Elite Force II is a singleplayer and multiplayer first-person shooter game in the Star Trek series.",
+  "released": "2003-06-20",
   "stores": {
     "gog": { "id": 2125201406 }
   },

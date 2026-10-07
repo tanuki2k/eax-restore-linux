@@ -719,6 +719,18 @@ show_game_details_block() {
     SCANNED_NOTES_SHOWN=1
 }
 
+# Usage: format_release_date <YYYY-MM-DD | YYYY-MM | YYYY>
+# A game's release date as the profile shows it: "23 June 2000",
+# "June 2000" or "2000", depending on how much of it is known.
+format_release_date() {
+    local -a months=(January February March April May June July August September October November December)
+    local y m d
+    IFS=- read -r y m d <<< "$1"
+    if [ -n "$d" ]; then printf '%d %s %s' "$((10#$d))" "${months[$((10#$m - 1))]}" "$y"
+    elif [ -n "$m" ]; then printf '%s %s' "${months[$((10#$m - 1))]}" "$y"
+    else printf '%s' "$y"; fi
+}
+
 print_game_profile() {
     # Usage: print_game_profile <id> <steam|gog> [location]
     # The GAME PROFILE screen's body for one store's entry; see
@@ -737,8 +749,9 @@ print_game_profile_stores() {
     # (most of it, since it's stored once per game) is shown once, and only
     # what differs (the audio API, store details, patches, delisted) per
     # store. With a location (the install) the fields end with "System
-    # details" (where this install was found); without one, a Platform row
-    # under the name says which store's profile it is.
+    # details" (where this install was found); without one (the browser),
+    # each store's ID gets a row under the name, and the game's description
+    # opens the profile.
     local location="$1"; shift
     local -a stores=() ids=() labels=() apis=() listings=() id_sources=() details=() patches=() counts=()
     local entry
@@ -751,8 +764,15 @@ print_game_profile_stores() {
     # Game-level fields: the same for every store entry, so read from the
     # first.
     local name eax_versions eax_status eax_status_details restore_details eax_unified notes
+    local released description
     name=$(jq -r --arg id "$id" --arg store "$store" \
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | .name' \
+        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
+    released=$(jq -r --arg id "$id" --arg store "$store" \
+        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .released // empty' \
+        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
+    description=$(jq -r --arg id "$id" --arg store "$store" \
+        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .description // empty' \
         "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
     eax_versions=$(jq -r --arg id "$id" --arg store "$store" \
         '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.versions // [] | join(", ")' \
@@ -833,12 +853,13 @@ print_game_profile_stores() {
     local value sep
     _detail_heading "Game details"
     _detail "Name" "${BOLD}${name}${NC}"
+    [ -n "$released" ] && _detail "Released" "${WHITE}$(format_release_date "$released")${NC}"
+    # The browser names each store's ID; the install shows its one store
+    # under System details instead.
     if [ -z "$location" ]; then
-        value="" sep=""
         for i in "${!stores[@]}"; do
-            value+="${sep}${GREEN}${labels[i]}${NC} ${DIM}(ID ${ids[i]})${NC}"; sep=$'\n'
+            _detail "${labels[i]} ID" "${WHITE}${ids[i]}${NC}"
         done
-        [ "$n" -gt 1 ] && _detail "Platforms" "$value" || _detail "Platform" "$value"
     fi
     # One row naming every store it's delisted from.
     value=""
@@ -898,6 +919,11 @@ print_game_profile_stores() {
         _detail_heading "System details"
         _detail "Platform" "${GREEN}${labels[0]}${NC}"
         _detail "Location" "${DIM}$(tilde_path "$location")${NC}"
+    fi
+    # The browser opens with what the game is; the install already knows.
+    if [ -z "$location" ] && [ -n "$description" ]; then
+        echo ""
+        print_wrapped "$description"
     fi
     _print_details
 

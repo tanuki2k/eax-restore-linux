@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Dungeons & Dragons: Dragonshard",
+  "description": "Dungeons & Dragons: Dragonshard is a singleplayer and multiplayer real-time strategy and role-playing game.",
+  "released": "2005-09-27",
   "exe": "Dragonshard.exe",
   "stores": {
     "gog": { "id": 1207658928 }

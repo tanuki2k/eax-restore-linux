@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Unreal Tournament 3",
+  "description": "Unreal Tournament 3 is a singleplayer and multiplayer first-person arena shooter game in the Unreal series.",
+  "released": "2007-11-19",
   "exe": "UT3.exe",
   "stores": {
     "steam": {

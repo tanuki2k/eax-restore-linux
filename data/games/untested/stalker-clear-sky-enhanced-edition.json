@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "S.T.A.L.K.E.R.: Clear Sky - Enhanced Edition",
+  "description": "S.T.A.L.K.E.R.: Clear Sky - Enhanced Edition is an open-world first-person shooter and survival horror game in the S.T.A.L.K.E.R. series.",
+  "released": "2025-05-20",
   "exe": "xrEngine.exe",
   "stores": {
     "steam": { "id": 2427420 },

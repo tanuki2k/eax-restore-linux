@@ -1,6 +1,8 @@
 {
   "$schema": "../schema.json",
   "name": "The Suffering: Ties That Bind",
+  "description": "The Suffering: Ties That Bind is a singleplayer first- and third-person shooter and survival horror game in The Suffering series.",
+  "released": "2005-09-26",
   "exe": "SufferingTTB.exe",
   "stores": {
     "gog": {

@@ -1,6 +1,8 @@
 {
   "$schema": "../schema.json",
   "name": "Gothic II: Gold Edition",
+  "description": "Gothic II: Gold Edition is a singleplayer third-person action role-playing game in the Gothic series, bundling Gothic II with its Night of the Raven expansion.",
+  "released": "2002-11-29",
   "exe": "Gothic2.exe",
   "stores": {
     "steam": { "id": 39510 },

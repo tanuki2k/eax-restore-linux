@@ -1,6 +1,8 @@
 {
   "$schema": "../schema.json",
   "name": "Painkiller: Gold Edition",
+  "description": "Painkiller: Gold Edition is a singleplayer and multiplayer first-person shooter game in the Painkiller series, bundling Painkiller with its Battle out of Hell expansion.",
+  "released": "2004-04-12",
   "stores": {
     "steam": { "id": 3200, "delisted": true, "id_source": "local_install_verified" }
   },

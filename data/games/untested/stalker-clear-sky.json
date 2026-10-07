@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "S.T.A.L.K.E.R.: Clear Sky",
+  "description": "S.T.A.L.K.E.R.: Clear Sky is a singleplayer and multiplayer open-world first-person shooter and survival horror game in the S.T.A.L.K.E.R. series.",
+  "released": "2008-08-22",
   "exe": "xrEngine.exe",
   "stores": {
     "steam": { "id": 20510 },

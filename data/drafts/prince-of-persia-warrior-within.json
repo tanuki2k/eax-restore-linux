@@ -1,6 +1,8 @@
 {
   "$schema": "../schema.json",
   "name": "Prince of Persia: Warrior Within",
+  "description": "Prince of Persia: Warrior Within is a singleplayer third-person action-adventure and platform game in the Prince of Persia series.",
+  "released": "2004-12-02",
   "stores": {
     "steam": { "id": 13500 }
   },

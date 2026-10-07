@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "S.T.A.L.K.E.R.: Shadow of Chernobyl",
+  "description": "S.T.A.L.K.E.R.: Shadow of Chernobyl is a singleplayer and multiplayer open-world first-person shooter and survival horror game in the S.T.A.L.K.E.R. series.",
+  "released": "2007-03-20",
   "exe": "XR_3DA.exe",
   "stores": {
     "steam": { "id": 4500 },

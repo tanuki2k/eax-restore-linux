@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Tom Clancy's Splinter Cell: Double Agent",
+  "description": "Tom Clancy's Splinter Cell: Double Agent is a singleplayer and multiplayer third-person stealth action game in the Tom Clancy's Splinter Cell series.",
+  "released": "2006-11-07",
   "exe": "SplinterCell4.exe",
   "stores": {
     "steam": { "id": 13580 }

@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Clive Barker's Undying",
+  "description": "Clive Barker's Undying is a singleplayer first-person shooter and survival horror game.",
+  "released": "2001-02-22",
   "exe": "Undying.exe",
   "stores": {
     "gog": { "id": 1207659191 }

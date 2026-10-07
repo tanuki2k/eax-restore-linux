@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Medal of Honor: Allied Assault",
+  "description": "Medal of Honor: Allied Assault is a singleplayer and multiplayer first-person shooter game in the Medal of Honor series.",
+  "released": "2002-01-22",
   "stores": {
     "gog": {
       "id": 1207659126,

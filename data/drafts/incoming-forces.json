@@ -1,6 +1,8 @@
 {
   "$schema": "../schema.json",
   "name": "Incoming Forces",
+  "description": "Incoming Forces is a singleplayer and multiplayer vehicle combat shooter game in the Incoming series.",
+  "released": "2002-03-08",
   "stores": {
     "gog": { "id": 1207663873 }
   },

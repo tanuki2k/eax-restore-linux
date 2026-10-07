@@ -1,6 +1,8 @@
 {
   "$schema": "../schema.json",
   "name": "Serious Sam Classic: The First Encounter",
+  "description": "Serious Sam Classic: The First Encounter is a singleplayer and multiplayer first-person shooter game in the Serious Sam series.",
+  "released": "2001-03-21",
   "stores": {
     "steam": { "id": 41050 },
     "gog": { "id": 1207658876 }

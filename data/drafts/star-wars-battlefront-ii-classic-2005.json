@@ -1,6 +1,8 @@
 {
   "$schema": "../schema.json",
   "name": "Star Wars: Battlefront II (Classic, 2005)",
+  "description": "Star Wars: Battlefront II (Classic, 2005) is a singleplayer and multiplayer first- and third-person shooter game in the Star Wars: Battlefront series.",
+  "released": "2005-10-31",
   "stores": {
     "steam": { "id": 6060 },
     "gog": { "id": 1421404701 }

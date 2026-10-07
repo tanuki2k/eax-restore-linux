@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Alpha Prime",
+  "description": "Alpha Prime is a singleplayer first-person shooter game.",
+  "released": "2006-12-21",
   "exe": "AlphaPrime.exe",
   "stores": {
     "steam": { "id": 2590 }

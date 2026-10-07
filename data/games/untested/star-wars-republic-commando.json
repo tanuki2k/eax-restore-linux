@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Star Wars: Republic Commando",
+  "description": "Star Wars: Republic Commando is a singleplayer and multiplayer first-person tactical shooter game in the Star Wars series.",
+  "released": "2005-03-01",
   "exe": "SWRepublicCommando.exe",
   "stores": {
     "steam": { "id": 6000 },

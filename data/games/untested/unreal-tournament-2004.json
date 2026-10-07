@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Unreal Tournament 2004",
+  "description": "Unreal Tournament 2004 is a singleplayer and multiplayer first-person arena shooter game in the Unreal series.",
+  "released": "2004-03-16",
   "exe": "UT2004.exe",
   "stores": {
     "steam": {

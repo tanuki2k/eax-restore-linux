@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Condemned: Criminal Origins",
+  "description": "Condemned: Criminal Origins is a singleplayer first-person survival horror and action game in the Condemned series.",
+  "released": "2006-04-11",
   "stores": {
     "steam": {
       "id": 4720,

@@ -1,6 +1,8 @@
 {
   "$schema": "../schema.json",
   "name": "Sid Meier's Pirates!",
+  "description": "Sid Meier's Pirates! is a singleplayer action-adventure and strategy game in the Pirates! series.",
+  "released": "2004-11-22",
   "stores": {
     "steam": { "id": 3920 }
   },

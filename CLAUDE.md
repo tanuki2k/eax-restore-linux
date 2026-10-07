@@ -148,7 +148,10 @@ their execution order in the assembled script):
    (the install's GAME PROFILE: sets `PROFILE_API`/`PROFILE_PATCHES` and the
    recommended tweaks, then draws it with `print_game_profile`, which only
    prints: a one-store wrapper around `print_game_profile_stores`, which
-   takes one or more `<store>:<id>` entries of a game), `browse_game_database` (Tools → [B]rowse game profiles and
+   takes one or more `<store>:<id>` entries of a game; both screens show
+   `released` via `format_release_date`, and without a location (the
+   browser) it adds a `<Store> ID` row per store and opens with the game's
+   `description`), `browse_game_database` (Tools → [B]rowse game profiles and
    `tools/browse-game-database.sh`: one fzf row per game from
    `browse_game_rows`; the preview, `browse_game_preview`, draws one
    `print_game_profile_stores` covering every store entry that passes the
@@ -399,7 +402,7 @@ own user-facing strings. Neither is enforceable by a linter, so match the exampl
 below when writing or editing either.
 
 **Database prose fields** (`notes`, `store_details`, `patches`, `eax.problem`,
-`eax.fix`, and a game setting's `title`, `reason` and `follow_up` — see README's "Contributing
+`eax.fix`, `description`, and a game setting's `title`, `reason` and `follow_up` — see README's "Contributing
 to the game database" for what belongs in which field):
 
 - Keep each field to its one job; don't restate content that belongs in a sibling
@@ -422,6 +425,15 @@ to the game database" for what belongs in which field):
 - Be concrete and current rather than generic — name the actual tweak label,
   mission, mod, or date — but keep each note to 1-3 sentences confined to its
   field's job; don't pad it with everything known about the title.
+- `description` (browser only) is one sentence in PCGamingWiki's pattern, own
+  words, starting with the entry's exact `name`: modes, perspective, genres, "in
+  the <series> series" — e.g. "Thief Gold is a singleplayer first-person stealth
+  and immersive sim game in the Thief series." No opinions, no EAX talk (the
+  profile covers that); a bundle names its expansions; leave out a mode or
+  perspective you can't confirm. `released` is the first Windows release,
+  earliest region, checked against two sources; bundles/Gold/Complete/GOTY/Classic
+  take the base game's date, Enhanced Editions/Remasters/Anniversary editions
+  their own; never a store's listing date.
 - A `notes` entry in practice: short, plain prose (no markdown), em-dashes for
   parenthetical asides, occasionally addressing the user directly in a conditional
   ("If you also own the classic build..."), one caveat or fact per note. E.g.

@@ -1,6 +1,8 @@
 {
   "$schema": "../../schema.json",
   "name": "Baldur's Gate: The Original Saga",
+  "description": "Baldur's Gate: The Original Saga is a singleplayer and multiplayer isometric role-playing game in the Baldur's Gate series, bundling Baldur's Gate with its Tales of the Sword Coast expansion.",
+  "released": "1998-12-21",
   "exe": "BGMain.exe",
   "stores": {
     "gog": {
