@@ -1041,7 +1041,7 @@
     {
       "id": "fear-extraction-point",
       "name": "F.E.A.R. Extraction Point",
-      "description": "F.E.A.R. Extraction Point is a singleplayer first-person shooter and horror expansion in the F.E.A.R. series.",
+      "description": "F.E.A.R. Extraction Point is a singleplayer first-person shooter and horror expansion for F.E.A.R.",
       "released": "2006-10-24",
       "exe": "FEARXP.exe",
       "stores": {
@@ -1100,7 +1100,7 @@
     {
       "id": "fear-perseus-mandate",
       "name": "F.E.A.R. Perseus Mandate",
-      "description": "F.E.A.R. Perseus Mandate is a singleplayer and multiplayer first-person shooter and horror expansion in the F.E.A.R. series.",
+      "description": "F.E.A.R. Perseus Mandate is a singleplayer and multiplayer first-person shooter and horror expansion for F.E.A.R.",
       "released": "2007-11-06",
       "exe": "FEARXP2.exe",
       "stores": {
@@ -1413,7 +1413,7 @@
     {
       "id": "half-life-blue-shift",
       "name": "Half-Life: Blue Shift",
-      "description": "Half-Life: Blue Shift is a singleplayer first-person shooter expansion in the Half-Life series.",
+      "description": "Half-Life: Blue Shift is a singleplayer first-person shooter expansion for Half-Life.",
       "released": "2001-06-12",
       "stores": {
         "steam": {
@@ -1433,7 +1433,7 @@
     {
       "id": "half-life-opposing-force",
       "name": "Half-Life: Opposing Force",
-      "description": "Half-Life: Opposing Force is a singleplayer and multiplayer first-person shooter expansion in the Half-Life series.",
+      "description": "Half-Life: Opposing Force is a singleplayer and multiplayer first-person shooter expansion for Half-Life.",
       "released": "1999-11-19",
       "stores": {
         "steam": {
@@ -3131,7 +3131,7 @@
     {
       "id": "titan-quest-immortal-throne",
       "name": "Titan Quest: Immortal Throne",
-      "description": "Titan Quest: Immortal Throne is a singleplayer and multiplayer isometric action role-playing expansion in the Titan Quest series.",
+      "description": "Titan Quest: Immortal Throne is a singleplayer and multiplayer isometric action role-playing expansion for Titan Quest.",
       "released": "2007-03-02",
       "stores": {
         "steam": {

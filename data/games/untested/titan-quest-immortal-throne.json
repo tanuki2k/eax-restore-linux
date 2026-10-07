@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Titan Quest: Immortal Throne",
-  "description": "Titan Quest: Immortal Throne is a singleplayer and multiplayer isometric action role-playing expansion in the Titan Quest series.",
+  "description": "Titan Quest: Immortal Throne is a singleplayer and multiplayer isometric action role-playing expansion for Titan Quest.",
   "released": "2007-03-02",
   "stores": {
     "steam": { "id": 4550, "delisted": true, "id_source": "steamdb_historical" }

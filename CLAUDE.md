@@ -150,8 +150,8 @@ their execution order in the assembled script):
    prints: a one-store wrapper around `print_game_profile_stores`, which
    takes one or more `<store>:<id>` entries of a game; both screens show
    `released` via `format_release_date`, and without a location (the
-   browser) it adds a `<Store> ID` row per store and opens with the game's
-   `description`), `browse_game_database` (Tools → [B]rowse game profiles and
+   browser) it adds a `<Store> ID` row per store and a Description section
+   under the fields), `browse_game_database` (Tools → [B]rowse game profiles and
    `tools/browse-game-database.sh`: one fzf row per game from
    `browse_game_rows`; the preview, `browse_game_preview`, draws one
    `print_game_profile_stores` covering every store entry that passes the
@@ -429,8 +429,9 @@ to the game database" for what belongs in which field):
   words, starting with the entry's exact `name`: modes, perspective, genres, "in
   the <series> series" — e.g. "Thief Gold is a singleplayer first-person stealth
   and immersive sim game in the Thief series." No opinions, no EAX talk (the
-  profile covers that); a bundle names its expansions; leave out a mode or
-  perspective you can't confirm. `released` is the first Windows release,
+  profile covers that); a bundle names its expansions, and an expansion names
+  the game it's for ("…horror expansion for F.E.A.R.") rather than its series;
+  leave out a mode or perspective you can't confirm. `released` is the first Windows release,
   earliest region, checked against two sources; bundles/Gold/Complete/GOTY/Classic
   take the base game's date, Enhanced Editions/Remasters/Anniversary editions
   their own; never a store's listing date.

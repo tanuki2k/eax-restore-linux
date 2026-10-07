@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Half-Life: Opposing Force",
-  "description": "Half-Life: Opposing Force is a singleplayer and multiplayer first-person shooter expansion in the Half-Life series.",
+  "description": "Half-Life: Opposing Force is a singleplayer and multiplayer first-person shooter expansion for Half-Life.",
   "released": "1999-11-19",
   "stores": {
     "steam": { "id": 50 }

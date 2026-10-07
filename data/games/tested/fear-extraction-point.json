@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "F.E.A.R. Extraction Point",
-  "description": "F.E.A.R. Extraction Point is a singleplayer first-person shooter and horror expansion in the F.E.A.R. series.",
+  "description": "F.E.A.R. Extraction Point is a singleplayer first-person shooter and horror expansion for F.E.A.R.",
   "released": "2006-10-24",
   "exe": "FEARXP.exe",
   "stores": {

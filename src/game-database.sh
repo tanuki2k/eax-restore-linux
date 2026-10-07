@@ -750,8 +750,8 @@ print_game_profile_stores() {
     # what differs (the audio API, store details, patches, delisted) per
     # store. With a location (the install) the fields end with "System
     # details" (where this install was found); without one (the browser),
-    # each store's ID gets a row under the name, and the game's description
-    # opens the profile.
+    # each store's ID gets a row under the name, and a Description section
+    # follows the fields.
     local location="$1"; shift
     local -a stores=() ids=() labels=() apis=() listings=() id_sources=() details=() patches=() counts=()
     local entry
@@ -920,12 +920,12 @@ print_game_profile_stores() {
         _detail "Platform" "${GREEN}${labels[0]}${NC}"
         _detail "Location" "${DIM}$(tilde_path "$location")${NC}"
     fi
-    # The browser opens with what the game is; the install already knows.
+    _print_details
+    # What the game is, for the browser; the install already knows.
     if [ -z "$location" ] && [ -n "$description" ]; then
-        echo ""
+        print_subheading "Description"
         print_wrapped "$description"
     fi
-    _print_details
 
     # --- Blocks: status -> problem -> solution ---
     if [ "$eax_status" != "supported" ]; then
