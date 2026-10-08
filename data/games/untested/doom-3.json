@@ -5,23 +5,36 @@
   "released": "2004-08-03",
   "exe": "Doom3.exe",
   "stores": {
-    "steam": { "id": 9050 },
+    "steam": {
+      "id": 9050,
+      "store_details": "Comes only with the 'DOOM 3' purchase, together with Resurrection of Evil, which Steam lists as a separate game but installs into this folder and runs from the same exe — give it the same launch options as DOOM 3."
+    },
     "gog": {
       "id": 1492054092,
       "id_source": "local_install_verified",
-      "store_details": "GOG sells this bundled with the 2012 BFG Edition, and Heroic installs the two as separate library entries — this one is the classic game (its folder ends '.../DOOM 3'). The BFG Edition is a different game with no EAX."
+      "store_details": "Comes with the 'DOOM 3' purchase, together with Resurrection of Evil, and Heroic installs that purchase as two library entries — this one is the classic game (its folder ends '.../DOOM 3')."
     }
   },
   "eax": { "api": "openal", "versions": ["4.0"] },
   "game_config": {
     "files": {
-      "DoomConfig.cfg": { "format": "idtech_cfg", "locations": ["game:base/DoomConfig.cfg"] }
+      "DoomConfig.cfg": { "format": "idtech_cfg", "locations": ["game:base/DoomConfig.cfg"] },
+      "d3xp DoomConfig.cfg": {
+        "format": "idtech_cfg",
+        "locations": ["game:d3xp/DoomConfig.cfg"],
+        "if_missing": "skip"
+      }
     },
     "audio_settings": [
       {
         "title": "Enable EAX reverb",
         "reason": "DOOM 3 ships with its EAX sound options off, so there's no reverb.",
         "changes": { "DoomConfig.cfg": { "s_useOpenAL": "1", "s_useEAXReverb": "1" } }
+      },
+      {
+        "title": "Enable EAX reverb in Resurrection of Evil",
+        "reason": "Resurrection of Evil ships with its EAX sound options off, so there's no reverb.",
+        "changes": { "d3xp DoomConfig.cfg": { "s_useOpenAL": "1", "s_useEAXReverb": "1" } }
       }
     ]
   }
