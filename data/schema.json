@@ -205,7 +205,7 @@
           "items": { "type": "integer" },
           "default": []
         },
-        "store_details": { "type": "string", "description": "What's specific to this store's listing. A game that isn't an Enhanced Edition, remaster or remake doesn't mention one." },
+        "store_details": { "type": "string", "description": "What's specific to this store's listing. A game that isn't an Enhanced Edition, remaster or remake doesn't mention one, unless the store sells them as one bundle (then name every game in it)." },
         "patches": { "type": "string" }
       }
     },

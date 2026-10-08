@@ -8,12 +8,12 @@
     "steam": {
       "id": 9050,
       "companion_apps": [9070],
-      "store_details": "Comes only with the 'DOOM 3' purchase, together with Resurrection of Evil, which Steam lists as a separate game but installs into this folder and runs from the same exe."
+      "store_details": "DOOM 3 is sold as a bundle with Resurrection of Evil and DOOM 3: BFG Edition. Steam lists Resurrection of Evil as its own game."
     },
     "gog": {
       "id": 1492054092,
       "id_source": "local_install_verified",
-      "store_details": "Comes with the 'DOOM 3' purchase, together with Resurrection of Evil, and Heroic installs that purchase as two library entries — this one is the classic game (its folder ends '.../DOOM 3')."
+      "store_details": "DOOM 3 is sold as a bundle with Resurrection of Evil and DOOM 3: BFG Edition. Heroic shows the bundle as two library entries."
     }
   },
   "eax": { "api": "openal", "versions": ["4.0"] },
@@ -38,5 +38,9 @@
         "changes": { "d3xp DoomConfig.cfg": { "s_useOpenAL": "1", "s_useEAXReverb": "1" } }
       }
     ]
-  }
+  },
+  "sources": [
+    { "title": "Steam: DOOM 3", "url": "https://store.steampowered.com/app/208200/" },
+    { "title": "GOG: DOOM 3", "url": "https://www.gog.com/en/game/doom_3" }
+  ]
 }

@@ -439,7 +439,10 @@ to the game database" for what belongs in which field):
 - A game that isn't itself an Enhanced Edition, remaster or remake never
   mentions one (or a same-named remake on another store) in any field, not even
   "not the Enhanced Edition" — the player is looking at the classic. Only an
-  EE/remaster entry's `notes` may point back to the classic build.
+  EE/remaster entry's `notes` may point back to the classic build. The
+  exception is a store that sells them as one bundle: its `store_details` may
+  name every game in it, the EE/remaster included ("DOOM 3 is sold as a
+  bundle with Resurrection of Evil and DOOM 3: BFG Edition.").
 - Be concrete and current rather than generic — name the actual tweak label,
   mission, mod, or date — but keep each note to 1-3 sentences confined to its
   field's job; don't pad it with everything known about the title.
