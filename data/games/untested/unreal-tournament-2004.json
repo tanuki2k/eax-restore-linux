@@ -8,13 +8,13 @@
     "steam": {
       "id": 13230,
       "delisted": true,
-      "store_details": "Delisted from Steam in December 2022, when Epic pulled the entire classic Unreal series from sale. OldUnreal (oldunreal.com) distributes a free, Epic-authorized copy of the full game.",
+      "store_details": "Delisted from Steam in December 2022, when Epic pulled the entire classic Unreal series from sale.",
       "patches": "OldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
     },
     "gog": {
       "id": 1207658691,
       "delisted": true,
-      "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale. OldUnreal (oldunreal.com) distributes a free, Epic-authorized copy of the full game.",
+      "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.",
       "patches": "OldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
     }
   },
