@@ -515,65 +515,20 @@ scan_game_libraries() {
     names=("${s_names[@]}"); meta_names=("${s_meta[@]}"); paths=("${s_paths[@]}")
     stores=("${s_stores[@]}"); ids=("${s_ids[@]}")
 
-    # Pages as tall as the terminal allows (at least 10 games), so the top of
-    # a long list doesn't scroll away; numbers run on across pages and any of
-    # them works from any page. No terminal (piped answers): one page.
-    local total=${#names[@]}
-    local per_page=$total rows page=0 pages first last
-    rows="$(stty size < /dev/tty 2>/dev/null | cut -d' ' -f1)"
-    if [ -t 0 ] && [[ "$rows" =~ ^[0-9]+$ ]]; then
-        per_page=$(( rows - 12 ))
-        [ "$per_page" -lt 10 ] && per_page=10
-    fi
-    pages=$(( (total + per_page - 1) / per_page ))
-
-    local choice store_label
-    local -a keys
-    while true; do
-        first=$(( page * per_page )); last=$(( first + per_page - 1 ))
-        [ "$last" -ge "$total" ] && last=$(( total - 1 ))
-        if [ "$pages" -gt 1 ]; then
-            print_result "Games with a profile in your libraries (page $((page + 1)) of ${pages}):"
-        else
-            print_result "Games with a profile in your libraries:"
-        fi
-        for ((i = first; i <= last; i++)); do
-            store_label="Steam"
-            [ "${stores[$i]}" == "gog" ] && store_label="GOG"
-            print_option "$((i + 1))" "${names[$i]}" "(${store_label})"
-        done
-        # Not in the list: type the path instead, or go back (SCAN_NEXT
-        # tells get_game_directory which).
-        keys=()
-        echo ""
-        [ "$page" -lt $(( pages - 1 )) ] && { print_key_option "[N]ext page"; keys+=(n); }
-        [ "$page" -gt 0 ] && { print_key_option "[P]revious page"; keys+=(p); }
-        print_key_option "[M]anually type the game path"; keys+=(m)
-        if [ -n "$MAIN_MENU_SHOWN" ]; then
-            echo ""
-            print_key_option "[R]eturn to the $(return_menu_label)"; keys+=(r)
-        fi
-
-        while true; do
-            prompt "Selection [1-${total}/$(IFS=/; echo "${keys[*]}")]: "
-            read_answer choice || exit 0
-            choice="${choice,,}"
-            if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "$total" ]; then
-                break 2
-            fi
-            case " ${keys[*]} " in
-                *" $choice "*)
-                    case "$choice" in
-                        n) page=$(( page + 1 )); continue 2 ;;
-                        p) page=$(( page - 1 )); continue 2 ;;
-                        m) SCAN_NEXT="manual"; return 1 ;;
-                        r) SCAN_NEXT="return"; return 1 ;;
-                    esac
-                    ;;
-            esac
-            print_result "That's not a valid option — please type a number from 1-${total}, $(join_choices "${keys[@]}")." "$YELLOW"
-        done
+    # A long list goes in pages (paged_select). Not in the list: type the
+    # path instead, or go back (SCAN_NEXT tells get_game_directory which).
+    PAGED_LABELS=("${names[@]}"); PAGED_DETAILS=()
+    for i in "${!stores[@]}"; do
+        if [ "${stores[$i]}" == "gog" ]; then PAGED_DETAILS+=("(GOG)"); else PAGED_DETAILS+=("(Steam)"); fi
     done
+    local -a extra=("m|[M]anually type the game path")
+    [ -n "$MAIN_MENU_SHOWN" ] && extra+=("|" "r|[R]eturn to the $(return_menu_label)")
+    paged_select "Games with a profile in your libraries" "${extra[@]}" || exit 0
+    case "$PAGED_CHOICE" in
+        m) SCAN_NEXT="manual"; return 1 ;;
+        r) SCAN_NEXT="return"; return 1 ;;
+    esac
+    local choice="$PAGED_CHOICE"
 
     local idx=$((choice - 1))
 

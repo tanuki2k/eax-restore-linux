@@ -451,6 +451,10 @@ EOF
     print_community_patches_summary
 fi
 
+# An install Tools → Probe game settings handed off to: back to its second
+# run (probe_after_install exits when it's done).
+[ -n "$PROBE_PENDING" ] && probe_after_install
+
 # Closes the main-menu loop opened above the main menu in vcrun-only-flow.sh.
 break
 done

@@ -3,7 +3,7 @@
 # ==============================================================================
 # Everything the script changes in a game's own config files comes from that
 # game's profile (game_config.audio_settings / optional_settings) — the script
-# itself only knows how to read and edit the six config formats, never which
+# itself only knows how to read and edit the seven config formats, never which
 # game needs what. Decided in Phase 1 (Speaker Configuration offers the
 # alsoft.ini values, step 11 offers the game's own settings), applied in
 # Phase 2, recorded in the manifest as CONFIG: lines, reverted on uninstall.
@@ -44,7 +44,116 @@ _gadb_find() {
         }'
 }
 
-# Usage: config_get_key <file> <ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gadb> <section> <key>
+# wine_reg is one of Wine's registry files, system.reg (HKLM) or user.reg
+# (HKCU), which Wine keeps as text in the prefix: "[Key\\Path] <time>"
+# headers with doubled backslashes, then "Name"=dword:0000000a or
+# "Name"="text" lines. The section is the key's path with single
+# backslashes, the key a value name, both matched case-insensitively like
+# Windows. A dword reads and is written as a decimal number. Any other type
+# (hex:, str(2):, ...) reads as __RAW__ and is never changed.
+
+# Usage: _wine_reg_section <file> <key path>
+# The key path to use: the given one, or when the file doesn't have it, the
+# same key in the other registry view (with or without Wow6432Node\, so an
+# entry written for a 64-bit prefix also finds a 32-bit prefix's key).
+# Prints the given path when neither exists.
+_wine_reg_section() {
+    local alt
+    if [[ "${2,,}" == software\\wow6432node\\* ]]; then alt="Software\\${2:21}"
+    elif [[ "${2,,}" == software\\* ]]; then alt="Software\\Wow6432Node\\${2:9}"; fi
+    if [ -n "$alt" ] && ! _wine_reg_has_key "$1" "$2" && _wine_reg_has_key "$1" "$alt"; then
+        echo "$alt"
+    else
+        echo "$2"
+    fi
+}
+
+# Usage: _wine_reg_has_key <file> <key path>
+# Names reach awk through ENVIRON, since -v would collapse the backslashes.
+_wine_reg_has_key() {
+    SEC="${2//\\/\\\\}" LC_ALL=C awk 'BEGIN { want = "[" tolower(ENVIRON["SEC"]) "]" }
+        /^\[/ { h = $0; sub(/\][^]]*$/, "]", h); if (tolower(h) == want) { found = 1; exit } }
+        END { exit !found }' "$1"
+}
+
+# Usage: _wine_reg_read <file> <key path> <value name>
+# Prints "<type><TAB><value>": dword (as a decimal number), string,
+# raw (any other type; value __RAW__) or absent (value __ABSENT__).
+_wine_reg_read() {
+    local sec
+    sec="$(_wine_reg_section "$1" "$2")"
+    SEC="${sec//\\/\\\\}" NAME="$3" LC_ALL=C awk '
+        BEGIN { want = "[" tolower(ENVIRON["SEC"]) "]"; pre = tolower("\"" ENVIRON["NAME"] "\"=") }
+        function hex2dec(h,   i, d) { d = 0; h = tolower(h)
+            for (i = 1; i <= length(h); i++) d = d * 16 + index("0123456789abcdef", substr(h, i, 1)) - 1
+            return d }
+        /^\[/ { h = $0; sub(/\][^]]*$/, "]", h); insec = (tolower(h) == want); next }
+        insec && tolower(substr($0, 1, length(pre))) == pre {
+            v = substr($0, length(pre) + 1)
+            if (v ~ /^dword:[0-9a-fA-F]+$/) printf "dword\t%d\n", hex2dec(substr(v, 7))
+            else if (v ~ /^".*"$/) {
+                v = substr(v, 2, length(v) - 2); gsub(/\\"/, "\"", v); gsub(/\\\\/, "\\", v)
+                printf "string\t%s\n", v
+            } else print "raw\t__RAW__"
+            found = 1; exit
+        }
+        END { if (!found) print "absent\t__ABSENT__" }' "$1"
+}
+
+# Usage: _wine_reg_set <file> <key path> <value name> <value>
+# config_set_key for wine_reg. A value keeps its type: a dword stays a dword
+# (so the new value must be a number), a string stays a string. A new value
+# is a dword when it's a number, else a string; a new key goes at the end of
+# the file with Wine's own header lines. Never touches a raw value. Only
+# safe while Wine isn't running in the prefix (wine_registry_quiet), since
+# wineserver writes the file back from memory when it exits.
+_wine_reg_set() {
+    local file="$1" sec key="$3" value="$4" type now tmp
+    [ -f "$file" ] || return 1
+    sec="$(_wine_reg_section "$file" "$2")"
+    type="$(_wine_reg_read "$file" "$sec" "$key")"; type="${type%%$'\t'*}"
+    [ "$type" == "raw" ] && return 1
+    if [ "$value" != "__DELETE__" ]; then
+        if [ "$type" == "dword" ] || { [ "$type" == "absent" ] && [[ "$value" =~ ^[0-9]+$ ]]; }; then
+            [[ "$value" =~ ^[0-9]{1,10}$ ]] && [ "$((10#$value))" -le 4294967295 ] || return 1
+            value="dword:$(printf '%08x' "$((10#$value))")"
+        else
+            value="\"$value\""
+        fi
+    fi
+    now="$(date +%s)"
+    tmp="$(mktemp "$(dirname "$file")/.eax-restore-cfg.XXXXXX" 2>/dev/null)" || return 1
+    # #time= is the key's FILETIME (100 ns steps since 1601), as Wine writes it.
+    SEC="${sec//\\/\\\\}" NAME="$key" VAL="$value" NOW="$now" \
+        FT="$(printf '%x' $(( (now + 11644473600) * 10000000 )))" LC_ALL=C awk '
+        BEGIN { sec = ENVIRON["SEC"]; want = "[" tolower(sec) "]"; name = ENVIRON["NAME"]
+            pre = tolower("\"" name "\"="); val = ENVIRON["VAL"]; del = (val == "__DELETE__") }
+        function line() { return "\"" name "\"=" val }
+        function flush_blanks() { while (nb > 0) { print ""; nb-- } }
+        /^\[/ {
+            if (insec && !done && !del) { print line(); done = 1 }
+            flush_blanks()
+            h = $0; sub(/\][^]]*$/, "]", h); insec = (tolower(h) == want); if (insec) seen = 1
+            print; next
+        }
+        /^$/ { nb++; next }
+        { flush_blanks() }
+        insec && !done && tolower(substr($0, 1, length(pre))) == pre {
+            done = 1
+            if (!del) print substr($0, 1, length(pre)) val
+            next
+        }
+        { print }
+        END {
+            if (insec && !done && !del) { print line(); done = 1 }
+            flush_blanks()
+            if (!seen && !del) { print ""; print "[" sec "] " ENVIRON["NOW"]; print "#time=" ENVIRON["FT"]; print line() }
+        }' "$file" > "$tmp" || { rm -f "$tmp"; return 1; }
+    chmod --reference="$file" "$tmp" 2>/dev/null
+    mv -f "$tmp" "$file" 2>/dev/null || { rm -f "$tmp"; return 1; }
+}
+
+# Usage: config_get_key <file> <ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gadb|wine_reg> <section> <key>
 # Prints the key's current value, __ABSENT__ if it isn't set, or (dark_cfg
 # only) __TRUE__ for an active bare flag and __FALSE__ for a flag that's only
 # present commented out. Section and key names match case-insensitively, like
@@ -53,6 +162,10 @@ _gadb_find() {
 config_get_key() {
     local file="$1" fmt="$2" sec="$3" key="$4" found
     [ -f "$file" ] || { echo "__ABSENT__"; return; }
+    if [ "$fmt" == "wine_reg" ]; then
+        found="$(_wine_reg_read "$file" "$sec" "$key")"; echo "${found#*$'\t'}"
+        return
+    fi
     if [ "$fmt" == "gadb" ]; then
         found="$(_gadb_find "$file" "$key")"
         if [ -n "$found" ]; then echo "${found#* }"; else echo "__ABSENT__"; fi
@@ -120,7 +233,7 @@ _gadb_set() {
     return 1
 }
 
-# Usage: config_set_key <file> <ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gadb> <section> <key> <value>
+# Usage: config_set_key <file> <ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gadb|wine_reg> <section> <key> <value>
 # Sets (or with __DELETE__ removes) one key, keeping everything else in the
 # file as it was — including CRLF line endings, the original spelling of an
 # existing key, and "key = value" spacing. A missing ini key goes at the end
@@ -136,6 +249,7 @@ config_set_key() {
     local file="$1" fmt="$2" sec="$3" key="$4" value="$5"
     local crlf=0 current tmp
     [ "$fmt" == "gadb" ] && { _gadb_set "$file" "$key" "$value"; return; }
+    [ "$fmt" == "wine_reg" ] && { _wine_reg_set "$file" "$sec" "$key" "$value"; return; }
     [ -f "$file" ] && LC_ALL=C grep -q $'\r' "$file" 2>/dev/null && crlf=1
     current="$(config_get_key "$file" "$fmt" "$sec" "$key")"
     tmp="$(mktemp "$(dirname "$file")/.eax-restore-cfg.XXXXXX" 2>/dev/null)" || return 1
@@ -228,9 +342,13 @@ config_set_key() {
 
 # Usage: config_values_equal <format> <a> <b>
 # ini values compare case-insensitively (Unreal reads "True" and "true" the
-# same); everything else must match exactly.
+# same), and so do wine_reg strings, while its dwords compare as numbers
+# ("03" is 3); everything else must match exactly.
 config_values_equal() {
-    if [ "$1" == "ini" ]; then [ "${2,,}" == "${3,,}" ]; else [ "$2" == "$3" ]; fi
+    if [ "$1" == "wine_reg" ] && [[ "$2" =~ ^[0-9]{1,10}$ && "$3" =~ ^[0-9]{1,10}$ ]]; then
+        [ "$((10#$2))" -eq "$((10#$3))" ]
+    elif [ "$1" == "ini" ] || [ "$1" == "wine_reg" ]; then [ "${2,,}" == "${3,,}" ]
+    else [ "$2" == "$3" ]; fi
 }
 
 # Usage: config_display_value <value>
@@ -241,6 +359,7 @@ config_display_value() {
         __TRUE__) echo "on" ;;
         __FALSE__) echo "off" ;;
         __DELETE__) echo "(removed)" ;;
+        __RAW__) echo "(binary)" ;;
         *) echo "$1" ;;
     esac
 }
@@ -295,6 +414,10 @@ resolve_config_file() {
             prefix_public_documents)
                 [ -n "${PREFIX_PATH:-}" ] || continue
                 dirs=("$PREFIX_PATH/drive_c/users/Public/Documents") ;;
+            # The prefix's own registry files (wine_reg), nothing else.
+            prefix)
+                [ -n "${PREFIX_PATH:-}" ] && [[ "$rel" =~ ^(system|user)\.reg$ ]] || continue
+                dirs=("$PREFIX_PATH") ;;
             *) continue ;;
         esac
         for dir in "${dirs[@]}"; do
@@ -375,7 +498,7 @@ load_game_config_rows() {
           ((.optional_settings // []) | to_entries[] | {cat: "optional", i: .key, f: .value})
         | .cat as $cat | .i as $i | .f as $f
         | $f.changes | to_entries[] | .key as $file | ($files[$file] // {}) as $def
-        | (if $def.format == "ini"
+        | (if $def.format == "ini" or $def.format == "wine_reg"
              then (.value | to_entries[] | .key as $sec | .value | to_entries[] | [$sec, .key, .value])
              else (.value | to_entries[] | ["", .key, .value]) end) as $kv
         | [$cat, ($i | tostring), $f.title, $f.reason, (($f.only_if.stores // []) | join(",")),
@@ -387,18 +510,26 @@ load_game_config_rows() {
 # Usage: config_row_is_safe <format> <locations> <section> <key> <value>
 # The schema already enforces all this in CI; this re-checks only what could
 # touch the wrong file or corrupt one, in case a bad entry slips through.
+# wine_reg is the only format for the prefix's registry files, and only
+# them; its section is a registry key path, backslash-separated.
 config_row_is_safe() {
     local fmt="$1" locations="$2" sec="$3" key="$4" value="$5" loc
     local name_re='^[A-Za-z0-9._ -]+$' value_re='^[A-Za-z0-9._ ()-]*$'
-    [[ "$fmt" =~ ^(ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gadb)$ ]] || return 1
+    local reg_key_re='^[A-Za-z0-9._ ()-]+(\\[A-Za-z0-9._ ()-]+)*$'
+    [[ "$fmt" =~ ^(ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gadb|wine_reg)$ ]] || return 1
     [ -n "$locations" ] || return 1
     IFS='|' read -ra locs <<< "$locations"
     for loc in "${locs[@]}"; do
+        if [ "$fmt" == "wine_reg" ]; then
+            [[ "$loc" =~ ^prefix:(system|user)\.reg$ ]] || return 1
+            continue
+        fi
         [[ "$loc" =~ ^(game|install|prefix_documents|prefix_appdata|prefix_localappdata|prefix_public_documents):[^/\\] ]] || return 1
         [[ "$loc" == *..* || "$loc" == *\\* ]] && return 1
     done
     [[ "$key" =~ $name_re ]] || return 1
     if [ "$fmt" == "ini" ]; then [[ "$sec" =~ $name_re ]] || return 1; fi
+    if [ "$fmt" == "wine_reg" ]; then [[ "$sec" =~ $reg_key_re ]] && [[ "$sec" != *..* ]] || return 1; fi
     # A gadb setting can only be switched on or off in place.
     if [ "$fmt" == "gadb" ]; then [[ "$value" =~ ^[01]$ ]] || return 1; fi
     case "$value" in
@@ -1088,6 +1219,21 @@ clear_crash_marker() {
     fi
 }
 
+# Usage: wine_registry_quiet
+# Before the first wine_reg change of a run: Wine keeps the registry in
+# wineserver's memory and writes system.reg / user.reg back when it exits,
+# which would undo an edit made while it runs. So this waits for it to save
+# and exit (e.g. after the install's own registry import). Returns 1 while
+# the game is running, since then wineserver won't exit.
+wine_registry_quiet() {
+    if game_exe_running; then
+        print_warning_arrow "$GAME_NAME is running, so its registry settings can't be changed until it's closed."
+        return 1
+    fi
+    flush_wine_registry "Waiting for Wine to save the registry..."
+    return 0
+}
+
 # Usage: apply_game_settings
 # Phase 2: writes GAME_SETTINGS_PLAN into the game's config files and records
 # each change in the manifest as
@@ -1099,7 +1245,7 @@ clear_crash_marker() {
 # effect are carried over so uninstall can still revert them.
 apply_game_settings() {
     local -A recorded=() prev_old=()
-    local line cat title path fmt sec key new file old state
+    local line cat title path fmt sec key new file old state reg_state=""
     local -a f
 
     # Last install's original values, by path/section/key.
@@ -1115,6 +1261,12 @@ apply_game_settings() {
             mapfile -t -d $'\x1f' f < <(printf '%s' "$line")
             cat="${f[0]}"; title="${f[1]}"; path="${f[2]}"; fmt="${f[3]}"; sec="${f[4]}"; key="${f[5]}"
             new="${f[6]}"; file="${f[7]}"; state="${f[9]}"
+
+            # Once, before the registry file is backed up or read.
+            if [ "$fmt" == "wine_reg" ]; then
+                [ -n "$reg_state" ] || { wine_registry_quiet && reg_state="ok" || reg_state="busy"; }
+                [ "$reg_state" == "ok" ] || { record_deploy_failure "$path"; continue; }
+            fi
 
             if [ ! -f "$path" ]; then
                 if [ "$state" != "create" ]; then
@@ -1339,7 +1491,7 @@ choose_game_settings_to_revert() {
 # A setting that can't be written stays in GAME_SETTINGS_KEPT, so the manifest
 # keeps it.
 revert_game_settings() {
-    local entry g lines line current restored target
+    local entry g lines line current restored target reg_state=""
     local -a f
     for entry in "${GAME_SETTINGS_REVERT_GROUPS[@]}"; do
         g="${entry%%$'\x1f'*}"$'\x1f'; lines="${entry#*$'\x1f'}"; g+="${lines%%$'\x1f'*}"
@@ -1349,6 +1501,10 @@ revert_game_settings() {
             [ -n "$line" ] || continue
             mapfile -t -d $'\t' f < <(printf '%s' "${line#CONFIG:}")
             [ -f "${f[2]}" ] || continue
+            if [ "${f[3]}" == "wine_reg" ]; then
+                [ -n "$reg_state" ] || { wine_registry_quiet && reg_state="ok" || reg_state="busy"; }
+                if [ "$reg_state" != "ok" ]; then GAME_SETTINGS_KEPT+=("$line"); continue; fi
+            fi
             current="$(config_get_key "${f[2]}" "${f[3]}" "${f[4]}" "${f[5]}")"
             if ! config_values_equal "${f[3]}" "$current" "${f[7]}"; then
                 print_status "Kept ${f[5]} in $(basename "${f[2]}") — it's been changed since install." "$DIM"

@@ -24,8 +24,8 @@ the fields.
 **Design rule: anything specific to a game or engine lives in the database, never as a
 special case in the script's code** — config edits, the audio API (and so the engine),
 alsoft.ini values, recommended tweaks. The script only knows how to read and edit the
-six config formats (`ini`, `flat_ini`, `idtech_cfg`, `dark_cfg`, `brace_cfg`, and the binary `gadb`),
-not which game needs what.
+seven config formats (`ini`, `flat_ini`, `idtech_cfg`, `dark_cfg`, `brace_cfg`, the binary `gadb`,
+and `wine_reg`, the prefix's registry files), not which game needs what.
 
 `eax-restore-linux.sh` is **not committed to the repo** — it's a generated build
 artifact. Its source lives split across `src/*.sh` (one file per functional group);
@@ -83,13 +83,18 @@ launcher hardcodes `releases/latest`).
   CI (`.github/workflows/game-database.yml`) runs `check-jsonschema --schemafile
   data/schema.json` over all three folders plus both scripts' `--check` modes; the build
   also fails if a game's file name is in more than one folder.
-  `tools/probe-game.sh` (dev-only, read-only towards the game) finds what a new
-  game setting should change: `scan <game dir> [prefix]` lists config files with
-  line endings, setting names in the exes, the bundled OpenAL and Miles 3D
-  providers; `snap <name> [<game dir> [prefix]]` copies the config files into
-  numbered snapshots under `~/.cache/eax-probe/<name>/`, and `diff <name>` shows
-  what changed between the last two. Snap before the first launch, after
-  quitting at the main menu (defaults), and after switching the option in-game.
+  To find what a new game setting should change, run
+  `EAX_RESTORE_DEV=1 ./dist/eax-restore-linux.sh` → Tools → [P]robe game
+  settings (`src/probe-flow.sh`): it lists the installed games that have a file
+  in `data/` (a new game needs a `data/drafts/` file first), shows a read-only
+  scan of the game's folder (config files with line endings, setting names in
+  the exes and DLLs, the bundled OpenAL and Miles 3D providers; kept as
+  `scan.txt` in the session folder), snapshots the config files and registry,
+  runs the game (defaults), installs the fix, runs it again (sound options
+  switched on) and merges the changed keys into the game's file as an audio
+  setting titled "Enable EAX reverb" with a TODO reason, then optionally runs
+  it a third time (other options changed) for a TODO-titled optional setting,
+  formatting and rebuilding after each.
   `tools/browse-game-database.sh [file]` (needs fzf) browses the built
   database with the Tools menu's browser — a quick look at how an entry's
   profile reads. `tools/migrate-v2-to-v3.sh` is the one-off that split the old single-file (schema 2)
@@ -135,7 +140,11 @@ their execution order in the assembled script):
    ticks and `CHECKLIST_DETAILS` gives each item a body drawn under its box. It
    draws to `/dev/tty` so the run log only gets the final list, falls back to
    titles-only boxes when the list doesn't fit the terminal, and to a numbered
-   "type the numbers" prompt when stdin isn't a terminal.
+   "type the numbers" prompt when stdin isn't a terminal. `paged_select` is the
+   numbered pick list for a long list (the library scan, the probe's installed
+   games): pages fit the terminal, [N]ext/[P]revious, the caller's letter keys
+   after them, rows from `PAGED_LABELS`/`PAGED_DETAILS`, answer in
+   `PAGED_CHOICE`. Use it for any new list that can run long.
 5. **`common.sh`** — small helpers used throughout every other file: `is_truthy`,
    `is_genuine_dll`, `parse_selection`, `is_steamos`, `install_packages` (apt /
    pacman / dnf via sudo; pre-flight and the fzf offer).
@@ -178,7 +187,11 @@ their execution order in the assembled script):
 9. **`game-config.sh`** — the Game Settings feature: `config_get_key` /
    `config_set_key` (awk readers/writers for the five text config formats, keeping CRLF,
    key spelling and spacing, plus `_gadb_find`/`_gadb_set`, which switch an on/off
-   setting in place in Monolith's binary `gadb` profile), `resolve_config_file`, `print_game_settings_details` (the database browser's Tab view: every setting's reason, file, keys and values, via `load_game_config_rows` and `print_config_rows` with `__ANY__` for the unknown current value), `offer_alsoft_settings` (step 8),
+   setting in place in Monolith's binary `gadb` profile, and `_wine_reg_read`/
+   `_wine_reg_set`, which edit a dword or string value in the prefix's
+   `system.reg`/`user.reg` text, a key as the section; `wine_registry_quiet` waits
+   for wineserver to save and exit before the first one is written, since it
+   writes those files back from memory), `resolve_config_file`, `print_game_settings_details` (the database browser's Tab view: every setting's reason, file, keys and values, via `load_game_config_rows` and `print_config_rows` with `__ANY__` for the unknown current value), `offer_alsoft_settings` (step 8),
    `game_settings_step` (step 11), `apply_game_settings` (Phase 2, writes `CONFIG:`
    manifest lines), `print_game_settings_summary`, `revert_game_settings`
    (uninstall step 7). All of it driven by the entry's `game_config` /
@@ -231,7 +244,13 @@ their execution order in the assembled script):
     (`dsoal-log-flow.sh`, another early exit), Tools → Optional settings /
     Speaker configuration (`settings-flow.sh`, which identifies the game from
     its own folder with `identify_game_dir` and the prefix from the manifest,
-    so it has no launcher step), `ACTION: UNINSTALL`, `ACTION: INSTALL`. The `ACTION: INSTALL` block itself
+    so it has no launcher step), Tools → Probe game settings (`probe-flow.sh`,
+    only with `EAX_RESTORE_DEV=1`: runs the game before and after an install,
+    finding it by its prefix in `/proc/*/environ`, and proposes the
+    `game_config` from the config-file snapshots; the install in between is the
+    normal one, entered with `PRESET_GAME_DIR` so step 1 doesn't ask, and
+    `install-flow.sh` hands back to `probe_after_install` when `PROBE_PENDING`
+    is set), `ACTION: UNINSTALL`, `ACTION: INSTALL`. The `ACTION: INSTALL` block itself
     spans two files sharing one `if [ "$SCRIPT_ACTION" == "i" ]` — opened in
     `config-flow.sh` (Phase 1: Configuration, all the interactive prompts)
     and closed in `install-flow.sh` (Phase 2: Execution, actually deploying
@@ -249,7 +268,8 @@ their execution order in the assembled script):
     "Configuration finished!" before the "Proceed?" — a new Phase 1 question
     should add its answer there. `uninstall-flow.sh` follows the
     same split in one file: Phase 1 (steps 1-7) only asks and records answers
-    (e.g. `choose_game_settings_to_revert`, `ask_close_launcher_early`), then
+    (e.g. `choose_game_settings_to_revert`, whether to remove each launcher
+    override — Phase 2 then closes and reopens that launcher without asking), then
     one "Proceed?" and Phase 2 makes every change under the phase progress bar.
     Keep new uninstall questions in Phase 1.
 
@@ -344,7 +364,7 @@ for a new call site.
   counts down on the `"> "` line (`(Yes in 25s)`) and takes the default when
   nothing is typed, setting `CONFIRM_TIMED_OUT=1` so the caller can say so. Only
   for a default that's safe to act on unattended (closing a launcher with no
-  game running, in `offer_close_launcher` / `ask_close_launcher_early`).
+  game running, in `offer_close_launcher`).
   Non-tty input falls back to plain `confirm`.
 - `prompt "question text: "` — the non-yes/no counterpart of `confirm`: a leading
   blank line, the `${YELLOW}` question line, then the separate `"> "` read line — but

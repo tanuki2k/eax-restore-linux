@@ -99,6 +99,16 @@ get_game_directory() {
     BUILT_IN_CONFIRMED=""
     OPENAL_NATIVE_MODE=""
 
+    # The game Tools → Probe game settings already picked and ran (see
+    # probe-flow.sh): used once, like LOCATE_METHOD.
+    if [ -n "$PRESET_GAME_DIR" ]; then
+        GAME_DIR="$PRESET_GAME_DIR"; GAME_NAME="$PRESET_GAME_NAME"
+        GAME_INSTALL_ROOT="$PRESET_GAME_ROOT"; SCANNED_APPID="$PRESET_APPID"
+        PRESET_GAME_DIR=""; PRESET_GAME_NAME=""; PRESET_GAME_ROOT=""; PRESET_APPID=""
+        echo -e "\n${GREEN}Using: $(tilde_path "$GAME_DIR")${NC}"
+        return
+    fi
+
     if wants_installed_list && prompt_installed_game; then
         echo -e "\n${GREEN}Using: $(tilde_path "$GAME_DIR")${NC}"
         note_game_used "$GAME_DIR"
@@ -1602,20 +1612,22 @@ resolve_heroic_runner() {
 }
 
 flush_wine_registry() {
+    # Usage: flush_wine_registry [spinner label]
     # Wine keeps the registry in wineserver's memory and only writes
     # user.reg once the server shuts down, so wait for that before reading
     # the file back. Best-effort: a timeout just means the check below may
     # not see the change yet.
+    local label="${1:-Checking the DLL override...}"
     if [ "$LAUNCHER_TYPE" == "1" ] && [ -n "$APPID" ]; then
         log_cmd "protontricks wineserver -w (AppID $APPID)"
         # timeout goes inside -c: the Flatpak protontricks is a shell
         # function, which timeout can't run.
-        run_with_spinner "Checking the DLL override..." "$EAX_LOG_FILE" protontricks -c "timeout 60 wineserver -w" "$APPID"
+        run_with_spinner "$label" "$EAX_LOG_FILE" protontricks -c "timeout 60 wineserver -w" "$APPID"
     elif [ -n "$WINE_CMD" ]; then
         local server="${WINESERVER_CMD:-$(dirname "$WINE_CMD")/wineserver}"
         [ -x "$server" ] || server="wineserver"
         log_cmd "$server -w (prefix $PREFIX_PATH)"
-        run_with_spinner "Checking the DLL override..." "$EAX_LOG_FILE" env WINEPREFIX="$PREFIX_PATH" timeout 60 "$server" -w
+        run_with_spinner "$label" "$EAX_LOG_FILE" env WINEPREFIX="$PREFIX_PATH" timeout 60 "$server" -w
     fi
 }
 

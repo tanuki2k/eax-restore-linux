@@ -377,6 +377,64 @@ print_option() {
     fi
 }
 
+# Usage: PAGED_LABELS=(…) PAGED_DETAILS=(…); paged_select "Heading" ["x|[X]label" | "|" ...]
+# A numbered pick list split into pages as tall as the terminal allows (at
+# least 10 rows), so the top of a long list doesn't scroll away. Numbers run
+# on across pages and any of them works from any page; [N]ext / [P]revious
+# show only when there's a page that way. Each extra "x|[X]label" is a letter
+# option after them ("|" alone is a blank line). With no terminal (piped
+# answers) it's one page. Sets PAGED_CHOICE to the number or letter typed;
+# returns 1 when input ends.
+paged_select() {
+    local heading="$1"; shift
+    local total=${#PAGED_LABELS[@]} per_page rows page=0 pages first last i opt choice
+    local -a keys
+    per_page=$total
+    rows="$(stty size < /dev/tty 2>/dev/null | cut -d' ' -f1)"
+    if [ -t 0 ] && [[ "$rows" =~ ^[0-9]+$ ]]; then
+        per_page=$(( rows - 12 ))
+        [ "$per_page" -lt 10 ] && per_page=10
+    fi
+    pages=$(( (total + per_page - 1) / per_page ))
+    PAGED_CHOICE=""
+    while true; do
+        first=$(( page * per_page )); last=$(( first + per_page - 1 ))
+        [ "$last" -ge "$total" ] && last=$(( total - 1 ))
+        if [ "$pages" -gt 1 ]; then print_result "$heading (page $((page + 1)) of ${pages}):"
+        else print_result "$heading:"; fi
+        for ((i = first; i <= last; i++)); do
+            print_option "$((i + 1))" "${PAGED_LABELS[$i]}" "${PAGED_DETAILS[$i]:-}"
+        done
+        keys=()
+        echo ""
+        [ "$page" -lt $(( pages - 1 )) ] && { print_key_option "[N]ext page"; keys+=(n); }
+        [ "$page" -gt 0 ] && { print_key_option "[P]revious page"; keys+=(p); }
+        for opt in "$@"; do
+            if [ "$opt" == "|" ]; then echo ""; continue; fi
+            print_key_option "${opt#*|}"; keys+=("${opt%%|*}")
+        done
+
+        while true; do
+            prompt "Selection [1-${total}${keys[*]:+/}$(IFS=/; echo "${keys[*]}")]: "
+            read_answer choice || return 1
+            choice="${choice,,}"
+            if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "$total" ]; then
+                PAGED_CHOICE="$choice"; return 0
+            fi
+            case " ${keys[*]} " in
+                *" $choice "*)
+                    case "$choice" in
+                        n) page=$(( page + 1 )); continue 2 ;;
+                        p) page=$(( page - 1 )); continue 2 ;;
+                        *) PAGED_CHOICE="$choice"; return 0 ;;
+                    esac
+                    ;;
+            esac
+            print_result "That's not a valid option — please type a number from 1-${total}${keys[*]:+, }$(join_choices "${keys[@]}")." "$YELLOW"
+        done
+    done
+}
+
 # Usage: print_key_option "[S]can your Steam/Heroic library"
 # One row of a letter menu, where the bracketed letter is what to type. Same
 # indent as print_option; the caller owns the header, blank lines and prompt.
@@ -389,7 +447,8 @@ print_key_option() {
 # settings, Speaker configuration, VC++ install, DSOAL logging), "main menu"
 # otherwise.
 return_menu_label() {
-    if [ -n "${SETTINGS_TOOL_MODE:-}" ] || [ -n "${DSOAL_LOG_MODE:-}" ] || [ "${VCRUN_ONLY_MODE:-}" == "menu" ]; then
+    if [ -n "${SETTINGS_TOOL_MODE:-}" ] || [ -n "${DSOAL_LOG_MODE:-}" ] || [ "${VCRUN_ONLY_MODE:-}" == "menu" ] \
+        || [ -n "${PROBE_TOOL_MODE:-}" ]; then
         printf 'Tools menu'
     else
         printf 'main menu'

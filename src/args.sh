@@ -32,6 +32,8 @@ prompts is done via environment variables:
   EAX_RESTORE_GAME_DATABASE_FILE=PATH   Use a local game database file
   EAX_RESTORE_NO_LOG=1                Don't write a run log (normally saved to
                                       ~/.local/state/eax-restore-linux/logs/)
+  EAX_RESTORE_DEV=1                   Add Tools → Probe game settings
+  EAX_RESTORE_REPO=PATH               Repo checkout the probe merges into
 
 Full feature list, environment variable details, and README:
 https://github.com/tanuki2k/eax-restore-linux

@@ -41,9 +41,15 @@ tools_menu() {
             print_key_option "[O]ptional settings"; tool_keys+=(o)
         fi
         print_key_option "[S]peaker configuration"; tool_keys+=(s)
-        if [ -n "$GAME_DATABASE_FILE" ] && interactive_tty; then
+        if { [ -n "$GAME_DATABASE_FILE" ] && interactive_tty; } || is_truthy "${EAX_RESTORE_DEV:-}"; then
             echo -e "\n${WHITE}Game database:${NC}"
+        fi
+        if [ -n "$GAME_DATABASE_FILE" ] && interactive_tty; then
             print_key_option "[B]rowse game profiles"; tool_keys+=(b)
+        fi
+        # A contributor's tool, so only with EAX_RESTORE_DEV set.
+        if is_truthy "${EAX_RESTORE_DEV:-}"; then
+            print_key_option "[P]robe game settings"; tool_keys+=(p)
         fi
         echo -e "\n${WHITE}Runtime:${NC}"
         print_key_option "[V]C++ install"
@@ -59,6 +65,7 @@ tools_menu() {
             o) SETTINGS_TOOL_MODE="optional"; return ;;
             s) SETTINGS_TOOL_MODE="speakers"; return ;;
             b) browse_game_database_tool ;;
+            p) PROBE_TOOL_MODE=1; return ;;
             v) VCRUN_ONLY_MODE="menu"; return ;;
             d) DSOAL_LOG_MODE=1; return ;;
             r|"") print_banner "SELECT OPERATION"; return ;;
@@ -93,6 +100,11 @@ while true; do
 VCRUN_ONLY_MODE=""
 DSOAL_LOG_MODE=""
 SETTINGS_TOOL_MODE=""
+PROBE_TOOL_MODE=""
+# An install the probe handed off to that went back to the menu instead of
+# finishing: the probe's session is saved, so it carries on from the Tools
+# item later.
+PROBE_PENDING=""
 LOCATE_METHOD=""
 RESTART_REQUESTED=""
 if is_truthy "$EAX_RESTORE_VCRUN_ONLY"; then
@@ -106,7 +118,7 @@ else
         SCRIPT_ACTION=""
         MAIN_MENU_SHOWN=1
         while [ -z "$SCRIPT_ACTION" ] && [ -z "$VCRUN_ONLY_MODE" ] && [ -z "$DSOAL_LOG_MODE" ] \
-            && [ -z "$SETTINGS_TOOL_MODE" ]; do
+            && [ -z "$SETTINGS_TOOL_MODE" ] && [ -z "$PROBE_TOOL_MODE" ]; do
             # A tool left without finishing comes back to the Tools menu.
             if [ -n "$OPEN_TOOLS_MENU" ]; then
                 OPEN_TOOLS_MENU=""

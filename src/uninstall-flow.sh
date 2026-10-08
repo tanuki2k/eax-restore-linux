@@ -251,8 +251,9 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
 
     print_step 5 "Registry and Launcher Cleanup"
 
-    # Launcher overrides: say which will be removed, and if their launcher is
-    # running now, ask here whether to close it, so Phase 2 doesn't stop to ask.
+    # Launcher overrides: ask whether to remove each one. Yes also lets
+    # Phase 2 close the launcher (if it's running then) and reopen it,
+    # without stopping to ask.
     LAUNCHER_WORK=0
     print_task "Checking launcher and registry changes"
     if [ ${#LAUNCHER_LINES[@]} -gt 0 ]; then
@@ -261,11 +262,14 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
             OVERRIDE_LAUNCHER="${f_fields[0]}"; OVERRIDE_FILE="${f_fields[1]}"; OVERRIDE_ID="${f_fields[2]}"
             [ -f "$OVERRIDE_FILE" ] || continue
             where="$(launcher_override_where)"
-            print_status "${where^}: the DLL override will be removed" ""
-            ask_close_launcher_early "$OVERRIDE_LAUNCHER" remove
-            [ "${LAUNCHER_CLOSE_ANSWER[$OVERRIDE_LAUNCHER]:-}" == "n" ] \
-                && print_status "The DLL override will stay in $(launcher_override_where)." "$YELLOW" \
-                || LAUNCHER_WORK=1
+            print_status "Launcher: the install added a DLL override to ${where}" ""
+            if confirm "Remove the DLL override from ${where}?" Y; then
+                LAUNCHER_CLOSE_ANSWER[$OVERRIDE_LAUNCHER]="y"
+                LAUNCHER_WORK=1
+            else
+                LAUNCHER_REMOVE_DECLINED["$line"]=1
+                print_status "The DLL override will stay in ${where}." "$YELLOW"
+            fi
         done
     fi
 

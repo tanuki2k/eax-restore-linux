@@ -168,8 +168,8 @@ print_launcher_open() {
 # player has to close it themselves. Sets LAUNCHER_CLOSE_ASKED to 1 when it
 # showed the "is open" message and asked, and LAUNCHER_CLOSE_DECLINED to 1
 # when the player said No, which means skip the override rather than close it
-# themselves. When uninstall already asked in Phase 1 (LAUNCHER_CLOSE_ANSWER),
-# that answer is used instead of asking again.
+# themselves. When uninstall's Phase 1 already had the player choose to
+# remove the override (LAUNCHER_CLOSE_ANSWER y), it closes without asking.
 offer_close_launcher() {
     local label cmd
     LAUNCHER_CLOSE_ASKED=0; LAUNCHER_CLOSE_DECLINED=0
@@ -181,7 +181,6 @@ offer_close_launcher() {
     cmd="$(launcher_launch_cmd "$1")"
     [ -n "$cmd" ] || return 1
     case "${LAUNCHER_CLOSE_ANSWER[$1]:-}" in
-        n) LAUNCHER_CLOSE_DECLINED=1; return 1 ;;
         y) ;;
         *)
             print_launcher_open "$1" "$2"
@@ -197,27 +196,6 @@ offer_close_launcher() {
     fi
     print_warning_arrow "${label} didn't close in time."
     return 1
-}
-
-# Usage: ask_close_launcher_early <steam|heroic> <add|remove>
-# Uninstall Phase 1: when the launcher is running now and the script could
-# close it, asks the same question offer_close_launcher would, and keeps the
-# answer in LAUNCHER_CLOSE_ANSWER so Phase 2 acts on it without asking. Closes
-# nothing. Asks once per launcher.
-ask_close_launcher_early() {
-    local label
-    [ -z "${LAUNCHER_CLOSE_ANSWER[$1]:-}" ] || return 0
-    launcher_running "$1" || return 0
-    launcher_game_running "$1" && return 0
-    [ -n "$(launcher_launch_cmd "$1")" ] || return 0
-    label="$(launcher_label "$1")"
-    print_launcher_open "$1" "$2"
-    if confirm_countdown "Close ${label}, $(launcher_change_text "$2" short), then reopen ${label}?" Y 25; then
-        LAUNCHER_CLOSE_ANSWER[$1]="y"
-        [ "$CONFIRM_TIMED_OUT" -eq 1 ] && print_status "No answer after 25 seconds, so ${label} will be closed and reopened."
-    else
-        LAUNCHER_CLOSE_ANSWER[$1]="n"
-    fi
 }
 
 # Usage: reopen_launchers
@@ -637,10 +615,11 @@ revert_launcher_overrides() {
         mapfile -t -d $'\t' f < <(printf '%s' "${line#LAUNCHER:}")
         OVERRIDE_LAUNCHER="${f[0]}"; OVERRIDE_FILE="${f[1]}"; OVERRIDE_ID="${f[2]}"
         if [ ! -f "$OVERRIDE_FILE" ]; then continue; fi
-        # Phase 1's "No" to closing the launcher means leave the override,
-        # even if the launcher has been closed since.
-        if [ "${LAUNCHER_CLOSE_ANSWER[$OVERRIDE_LAUNCHER]:-}" == "n" ] \
-            || ! wait_for_launcher_closed "$OVERRIDE_LAUNCHER" remove "type 's' to leave it as it is"; then
+        # Phase 1's "No" to removing it means leave it.
+        if [ -n "${LAUNCHER_REMOVE_DECLINED[$line]:-}" ]; then
+            LAUNCHER_LINES_KEPT+=("$line"); continue
+        fi
+        if ! wait_for_launcher_closed "$OVERRIDE_LAUNCHER" remove "type 's' to leave it as it is"; then
             print_status "Left the DLL override in $(launcher_override_where)." "$YELLOW"
             LAUNCHER_LINES_KEPT+=("$line"); continue
         fi

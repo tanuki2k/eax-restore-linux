@@ -214,12 +214,18 @@
       "type": "string",
       "pattern": "^[A-Za-z0-9._ -]+$"
     },
+    "registry_key": {
+      "description": "A wine_reg file's section: a registry key path below its hive, backslash-separated, as it appears in the prefix's .reg file, e.g. Software\\Wow6432Node\\Outrage\\Descent3.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._ ()-]+(\\\\[A-Za-z0-9._ ()-]+)+$",
+      "not": { "pattern": "\\.\\." }
+    },
     "value_string": {
       "type": "string",
       "pattern": "^[A-Za-z0-9._ ()-]*$"
     },
     "value": {
-      "description": "A string sets the value; true/false turns a dark_cfg flag on or off; null deletes the key.",
+      "description": "A string sets the value (for a wine_reg dword, a decimal number); true/false turns a dark_cfg flag on or off; null deletes the key.",
       "anyOf": [
         { "$ref": "#/$defs/value_string" },
         { "type": "boolean" },
@@ -228,7 +234,7 @@
     },
     "config_file_name": {
       "type": "string",
-      "pattern": "^[A-Za-z0-9._ -]+\\.([iI][nN][iI]|[cC][fF][gG]|[gG][dD][bB])$"
+      "pattern": "^[A-Za-z0-9._ -]+\\.([iI][nN][iI]|[cC][fF][gG]|[gG][dD][bB]|[rR][eE][gG])$"
     },
     "config_file": {
       "type": "object",
@@ -236,16 +242,19 @@
       "additionalProperties": false,
       "properties": {
         "format": {
-          "description": "ini: [Section] key=value. flat_ini: key=value lines with no [sections]. idtech_cfg: seta key \"value\". dark_cfg: NewDark key value, bare flags, ;flag = off. brace_cfg: {key} = {value} lines (Fallout Tactics' bos.cfg). gadb: Monolith's binary game database (F.E.A.R.'s Profile000.gdb); only switches an existing on/off setting, values \"0\"/\"1\".",
-          "enum": ["ini", "flat_ini", "idtech_cfg", "dark_cfg", "brace_cfg", "gadb"]
+          "description": "ini: [Section] key=value. flat_ini: key=value lines with no [sections]. idtech_cfg: seta key \"value\". dark_cfg: NewDark key value, bare flags, ;flag = off. brace_cfg: {key} = {value} lines (Fallout Tactics' bos.cfg). gadb: Monolith's binary game database (F.E.A.R.'s Profile000.gdb); only switches an existing on/off setting, values \"0\"/\"1\". wine_reg: the prefix's system.reg (HKLM) or user.reg (HKCU), for a game that keeps its options in the registry; changes go key path -> value name -> value, a dword as a decimal number, and only dword and string values are changed.",
+          "enum": ["ini", "flat_ini", "idtech_cfg", "dark_cfg", "brace_cfg", "gadb", "wine_reg"]
         },
         "locations": {
-          "description": "Where to look, in order, as \"base:path\". The first one that exists is used.",
+          "description": "Where to look, in order, as \"base:path\". The first one that exists is used. A wine_reg file's only locations are prefix:system.reg and prefix:user.reg.",
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "string",
-            "pattern": "^(game|install|prefix_documents|prefix_appdata|prefix_localappdata|prefix_public_documents):(?!/)(?!.*\\.\\.)[^\\\\]+\\.([iI][nN][iI]|[cC][fF][gG]|[gG][dD][bB])$"
+            "anyOf": [
+              { "pattern": "^(game|install|prefix_documents|prefix_appdata|prefix_localappdata|prefix_public_documents):(?!/)(?!.*\\.\\.)[^\\\\]+\\.([iI][nN][iI]|[cC][fF][gG]|[gG][dD][bB])$" },
+              { "pattern": "^prefix:(system|user)\\.reg$" }
+            ]
           }
         },
         "if_missing": {
@@ -258,7 +267,10 @@
           "pattern": "^[A-Za-z0-9._ -]+$",
           "not": { "enum": [".", ".."] }
         }
-      }
+      },
+      "if": { "properties": { "format": { "const": "wine_reg" } } },
+      "then": { "properties": { "locations": { "items": { "pattern": "^prefix:" } } } },
+      "else": { "properties": { "locations": { "items": { "not": { "pattern": "^prefix:" } } } } }
     },
     "setting": {
       "type": "object",
@@ -298,14 +310,14 @@
           }
         },
         "changes": {
-          "description": "file -> section -> key -> value for ini files; file -> key -> value for cfg files. Files must be defined in game_config.files.",
+          "description": "file -> section -> key -> value for ini files; file -> key -> value for cfg files; file -> registry key path -> value name -> value for wine_reg. Files must be defined in game_config.files.",
           "type": "object",
           "minProperties": 1,
           "propertyNames": { "$ref": "#/$defs/config_file_name" },
           "additionalProperties": {
             "type": "object",
             "minProperties": 1,
-            "propertyNames": { "$ref": "#/$defs/name_part" },
+            "propertyNames": { "anyOf": [{ "$ref": "#/$defs/name_part" }, { "$ref": "#/$defs/registry_key" }] },
             "additionalProperties": {
               "anyOf": [
                 { "$ref": "#/$defs/value" },

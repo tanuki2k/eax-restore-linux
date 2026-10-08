@@ -33,6 +33,7 @@ COMPONENTS=(
     vcrun-only-flow.sh
     dsoal-log-flow.sh
     settings-flow.sh
+    probe-flow.sh
     uninstall-flow.sh
     config-flow.sh
     install-flow.sh

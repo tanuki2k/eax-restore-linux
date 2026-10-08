@@ -181,10 +181,13 @@ OVERRIDE_FILE=""
 OVERRIDE_ID=""
 LAUNCHER_LINES=()
 LAUNCHER_LINES_KEPT=()
-# Uninstall: the answer to "Close <launcher>, …?" given in Phase 1 for a
-# launcher that was running then (y or n), keyed steam/heroic, so Phase 2
-# doesn't ask again. Empty during install, which asks when it gets there.
+# Uninstall: "y" for a launcher (steam/heroic) whose DLL override the player
+# chose to remove in Phase 1, so Phase 2 closes and reopens it, if it's
+# running, without asking. Empty during install, which asks when it gets there.
 declare -A LAUNCHER_CLOSE_ANSWER=()
+# Uninstall: the LAUNCHER: manifest lines whose override the player chose
+# to keep in Phase 1.
+declare -A LAUNCHER_REMOVE_DECLINED=()
 
 # Set by prompt_restart_or_quit when the user, at an EAX-impossible dead end,
 # chooses to go back and pick a different game rather than quit. The config
@@ -216,6 +219,26 @@ SCAN_NEXT=""
 # Which Tools → Game settings item is running: "optional" (Optional settings)
 # or "speakers" (Speaker configuration), empty otherwise. See settings-flow.sh.
 SETTINGS_TOOL_MODE=""
+
+# Tools → Probe game settings (EAX_RESTORE_DEV=1 only), see probe-flow.sh.
+# PROBE_TOOL_MODE is set while it runs. PROBE_PENDING marks an install it
+# handed off to, which install-flow.sh hands back from; PRESET_GAME_DIR (with
+# its name, install folder and Steam AppID) is the game install step 1 then
+# uses without asking. Sessions live under PROBE_DIR.
+PROBE_TOOL_MODE=""
+PROBE_PENDING=""
+PRESET_GAME_DIR=""
+PRESET_GAME_NAME=""
+PRESET_GAME_ROOT=""
+PRESET_APPID=""
+PROBE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/eax-restore-linux/probe"
+PROBE_SEEN_EXES=()
+
+# paged_select's rows (label, and an optional dim detail per row), set by
+# the caller just before it, and the number or letter it was answered with.
+PAGED_LABELS=()
+PAGED_DETAILS=()
+PAGED_CHOICE=""
 
 # checklist_select's starting ticks, set by a caller just before it (1/0 per
 # item); empty means everything starts ticked.
