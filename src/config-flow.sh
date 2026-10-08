@@ -17,6 +17,11 @@ print_choices_summary() {
     elif [ -n "${HEROIC_APP_NAME:-}" ]; then _choice "Launcher" "Heroic"
     else _choice "Launcher" "Wine prefix"; fi
     [ -n "$PREFIX_PATH" ] && _choice "Prefix" "$(tilde_path "$PREFIX_PATH")"
+    local i list=""
+    for i in "${!COMPANION_IDS[@]}"; do
+        list+="${list:+$'\n'}${COMPANION_NAMES[$i]} ${DIM}($(tilde_path "${COMPANION_PREFIXES[$i]}"))${NC}"
+    done
+    [ -n "$list" ] && _choice "Also sets up" "$list"
     _choice "Architecture" "${ARCH}-bit"
 
     if [ "$ENGINE_CHOICE" == "2" ]; then
@@ -30,10 +35,20 @@ print_choices_summary() {
     if [ "$INSTALL_VCRUN" == "y" ]; then _choice "VC++ runtimes" "Install"
     elif [ "${APPLY_VCRUN_OVERRIDES_NEEDED:-0}" == "1" ]; then _choice "VC++ runtimes" "Already in the prefix"
     else _choice "VC++ runtimes" "Skip"; fi
+    list=""
+    for i in "${!COMPANION_IDS[@]}"; do
+        case "${COMPANION_VCRUN[$i]:-}" in
+            install) list+="${list:+$'\n'}Install in ${COMPANION_NAMES[$i]}'s prefix" ;;
+            overrides) list+="${list:+$'\n'}Already in ${COMPANION_NAMES[$i]}'s prefix" ;;
+        esac
+    done
+    # Continues the row above it.
+    [ -n "$list" ] && values[${#values[@]}-1]+=$'\n'"$list"
 
     _choice "Speakers" "$(speaker_label)"
 
-    local entry sec key value line list=""
+    local entry sec key value line
+    list=""
     for entry in "${ALSOFT_OVERRIDES[@]}"; do
         IFS=$'\x1f' read -r sec key value <<< "$entry"
         if [ "$sec/$key" == "reverb/boost" ]; then list+="${list:+$'\n'}Reverb boost +${value} dB"
@@ -52,6 +67,16 @@ print_choices_summary() {
         registry) _choice "DLL override" "$(runner_label) prefix registry" ;;
         *) _choice "DLL override" "You'll set it yourself (instructions at the end)" ;;
     esac
+    list=""
+    for i in "${!COMPANION_IDS[@]}"; do
+        case "${COMPANION_OVERRIDE[$i]:-}" in
+            launcher) list+="${list:+$'\n'}Steam's launch options for ${COMPANION_NAMES[$i]}" ;;
+            registry) list+="${list:+$'\n'}${COMPANION_NAMES[$i]}'s Proton prefix registry" ;;
+            *) list+="${list:+$'\n'}${COMPANION_NAMES[$i]}: you'll set it yourself" ;;
+        esac
+    done
+    # Continues the row above it.
+    [ -n "$list" ] && values[${#values[@]}-1]+=$'\n'"$list"
 
     # Only for a game that offered settings: the ones chosen, in order.
     if [ ${#GAME_SETTINGS_PLAN[@]} -gt 0 ] || [ ${#GAME_SETTINGS_DECLINED[@]} -gt 0 ]; then
@@ -148,6 +173,11 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         print_status "$GAME_NAME also starts games from $(extra_exe_folders_list), so they get the same files."
     fi
 
+    # Steam apps that run this game's exe from its folder with their own
+    # prefix and launch options (DOOM 3's Resurrection of Evil) — each gets
+    # the same prefix steps and override as the game itself.
+    resolve_companion_apps "$APPID"
+
     # 4. Audio API Detection
     print_step 4 "Audio API Detection"
     print_paragraph "This step works out whether the game plays its 3D sound through DirectSound3D or" \
@@ -229,11 +259,13 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     # MS runtime on older Proton/Wine, so this step always runs now rather
     # than being gated on the engine choice.
     INSTALL_VCRUN="n"
+    VCRUN_CHECKED="n"
     print_step 7 "VC++ Runtime Dependencies"
     print_paragraph "Genuine Microsoft C++ runtime libraries are needed for older Proton/Wine" \
         "builds (9 and below) to load kcat's DSOAL / OpenAL Soft."
 
     if confirm "Check $GAME_NAME's prefix for existing VC++ runtime files?"; then
+        VCRUN_CHECKED="y"
         print_task "Checking prefix for existing VC++ runtime files"
 
         if [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows" ]; then
@@ -257,6 +289,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         echo -e "\n${WHITE}Skipping. You can revisit this later with EAX_RESTORE_VCRUN_ONLY=1 without redoing"
         echo -e "the rest of the install.${NC}"
     fi
+    choose_companion_vcrun "$VCRUN_CHECKED"
 
     # 8. Audio Configuration
     print_step 8 "Speaker Configuration"
@@ -432,6 +465,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     # Heroic's environment variables for this game — so it's visible there and
     # easy to undo.
     choose_override_method
+    choose_companion_overrides
 
     # 11. Game Settings — changes to the game's own config files, from its
     # game profile. Last, since it's about the game rather than the

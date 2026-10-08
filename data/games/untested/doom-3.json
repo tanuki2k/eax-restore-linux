@@ -7,7 +7,8 @@
   "stores": {
     "steam": {
       "id": 9050,
-      "store_details": "Comes only with the 'DOOM 3' purchase, together with Resurrection of Evil, which Steam lists as a separate game but installs into this folder and runs from the same exe — give it the same launch options as DOOM 3."
+      "companion_apps": [9070],
+      "store_details": "Comes only with the 'DOOM 3' purchase, together with Resurrection of Evil, which Steam lists as a separate game but installs into this folder and runs from the same exe."
     },
     "gog": {
       "id": 1492054092,

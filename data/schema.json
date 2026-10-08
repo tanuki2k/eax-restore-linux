@@ -198,6 +198,13 @@
           "items": { "type": "string", "pattern": "^(?!/)(?!.*\\.\\.)[^\\\\]+$" },
           "default": []
         },
+        "companion_apps": {
+          "description": "Steam only: AppIDs of other Steam apps that run this game's exe from its own folder (e.g. DOOM 3's Resurrection of Evil, 9070, which starts Doom3.exe with its own arguments). Each has its own Proton prefix and launch options, so an install sets those up the same way as the game's own.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "integer" },
+          "default": []
+        },
         "store_details": { "type": "string", "description": "What's specific to this store's listing. A game that isn't an Enhanced Edition, remaster or remake doesn't mention one." },
         "patches": { "type": "string" }
       }

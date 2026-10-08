@@ -213,7 +213,19 @@ their execution order in the assembled script):
     `get_asset_digest`, `confirm_unverified_download`.
 13. **`cache.sh`** — `update_local_cache` (the repository-cache step), plus
     `handle_conflict` and `auto_backup_and_overwrite`.
-14. **`preflight.sh`** through **`install-flow.sh`** — top-level script flow:
+14. **`prefix-steps.sh`** — the install's per-prefix steps as functions
+    (`install_openal_runtime`, `deploy_prefix_dlls`, `apply_prefix_registry`,
+    and uninstall's `remove_prefix_registry`), so a game's own prefix and its
+    Steam companion apps' run the same code. A companion app
+    (`stores.steam.companion_apps`, e.g. DOOM 3's Resurrection of Evil) runs
+    the game's exe from its folder but has its own Proton prefix and launch
+    options: `resolve_companion_apps` (install Phase 1, VC++-only) finds the
+    installed ones and their prefixes into `COMPANION_IDS` / `_NAMES` /
+    `_PREFIXES`, and `with_companion` points `APPID` / `PREFIX_PATH` /
+    `GAME_NAME` at one for a call. Their launch options are written inside
+    `apply_launcher_override` (`apply_companion_launcher_overrides`), so the
+    launcher is closed once.
+15. **`preflight.sh`** through **`install-flow.sh`** — top-level script flow:
     pre-flight dependency check, the main menu and the `EAX_RESTORE_VCRUN_ONLY`
     early-exit path (`vcrun-only-flow.sh`), Tools → DSOAL logging
     (`dsoal-log-flow.sh`, another early exit), Tools → Optional settings /
@@ -274,10 +286,12 @@ that's less precise than the manifest path, so avoid removing/renaming the manif
 mechanism itself.
 The manifest (`.eax-restore-manifest.txt` in the game's exe folder) is plain
 text, one line per change: a deployed file's path, `VCRUN`, `REGISTRY:…`,
-`LAUNCHER:…` or `CONFIG:…` (tab-separated). New manifests start with
-`MANIFEST_HEADER` ("# EAX Restore manifest, format 1", written by
-`start_manifest`); older ones have no header and the same lines, and every
-reader skips `#` lines. After an uninstall the whole file is the "# EAX
+`LAUNCHER:…` or `CONFIG:…` (tab-separated). A companion app's `VCRUN` /
+`REGISTRY:…` lines end in a tab and its AppID (`VCRUN\t9070`); its prefix
+DLLs are absolute paths and its `LAUNCHER:` line names its AppID anyway. New
+manifests start with `MANIFEST_HEADER` ("# EAX Restore manifest, format 2",
+written by `start_manifest`; format 1 had no companion lines); older ones
+have no header and the same lines, and every reader skips `#` lines. After an uninstall the whole file is the "# EAX
 Restore: uninstalled …" marker. Uninstall's and Tools' game list is built from
 the live manifests on disk (`find_installed_game_dirs`: Steam libraries and
 Heroic's game folders) — `$XDG_STATE_HOME/eax-restore-linux/installed-games.txt`

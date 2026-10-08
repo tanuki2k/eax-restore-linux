@@ -40,7 +40,7 @@ INSTALLED_GAMES_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/eax-restore-linux/in
 # First line of every install manifest this version starts, so a later format
 # change can be told apart. Older manifests have no header and the same lines;
 # readers skip "#" lines (the "uninstalled" marker is the other one).
-MANIFEST_HEADER="# EAX Restore manifest, format 1"
+MANIFEST_HEADER="# EAX Restore manifest, format 2"
 DSOAL_SHARE="$BASE_SHARE/dsoal"
 DSOAL_OFFICIAL="$DSOAL_SHARE/official"
 DSOAL_PINNED="$DSOAL_SHARE/pinned"

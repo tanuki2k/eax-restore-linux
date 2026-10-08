@@ -501,7 +501,10 @@ runner_label() {
 # Usage: launcher_override_where
 # Where the override goes, for prompts and the summary.
 launcher_override_where() {
-    if [ "$OVERRIDE_LAUNCHER" == "steam" ]; then echo "Steam's launch options for $GAME_NAME"
+    # A companion app's line (another AppID than the game's) names the companion.
+    if [ "$OVERRIDE_LAUNCHER" == "steam" ] && [ -n "${OVERRIDE_ID:-}" ] && [ "$OVERRIDE_ID" != "${APPID:-}" ]; then
+        echo "Steam's launch options for $(companion_name_for_id "$OVERRIDE_ID")"
+    elif [ "$OVERRIDE_LAUNCHER" == "steam" ]; then echo "Steam's launch options for $GAME_NAME"
     else echo "Heroic's environment variables for $GAME_NAME"; fi
 }
 
@@ -565,14 +568,27 @@ _apply_launcher_override() {
     print_phase_task "Setting the DLL override in $(launcher_label "$OVERRIDE_LAUNCHER")"
     if ! wait_for_launcher_closed "$OVERRIDE_LAUNCHER" add "type 's' to set it yourself instead"; then
         print_status "Skipped — the instructions to set it yourself are below." "$YELLOW"
-        OVERRIDE_METHOD="manual"; return 0
+        OVERRIDE_METHOD="manual"
+        local i
+        for i in "${!COMPANION_IDS[@]}"; do
+            [ "${COMPANION_OVERRIDE[$i]:-}" == "launcher" ] && COMPANION_OVERRIDE[i]="manual"
+        done
+        return 0
     fi
+    _write_launcher_override || OVERRIDE_METHOD="manual"
+    apply_companion_launcher_overrides
+}
 
-    local old new current
+# Usage: _write_launcher_override
+# Writes the override into the current target (OVERRIDE_LAUNCHER / _FILE /
+# _ID), reads it back and records it in the manifest. Returns 1 when it
+# couldn't be set (the caller drops that app to manual instructions).
+_write_launcher_override() {
+    local old new
     old="$(launcher_override_get)"
     if [ "$old" == "__NOAPP__" ]; then
-        print_warning_arrow "$(launcher_label "$OVERRIDE_LAUNCHER") no longer has settings for $GAME_NAME, so the override wasn't added there."
-        OVERRIDE_METHOD="manual"; return 0
+        print_warning_arrow "$(launcher_label "$OVERRIDE_LAUNCHER") no longer has settings for this game, so the override wasn't added to $(launcher_override_where)."
+        return 1
     fi
     if [ "$OVERRIDE_LAUNCHER" == "steam" ]; then
         new="$(launch_options_with_override "$( [ "$old" == "__ABSENT__" ] || echo "$old")" "$PRIMARY_DLL_NAME")"
@@ -582,6 +598,18 @@ _apply_launcher_override() {
     fi
 
     if [ "$old" == "$new" ]; then
+        # Set by an earlier install: keep its manifest line (with the value
+        # from before that install), or uninstall would never put it back.
+        local line
+        local -a f
+        for line in "${PREV_LAUNCHER_LINES[@]}"; do
+            mapfile -t -d $'\t' f < <(printf '%s' "${line#LAUNCHER:}")
+            if [ "${f[0]}" == "$OVERRIDE_LAUNCHER" ] && [ "${f[1]}" == "$OVERRIDE_FILE" ] \
+                && [ "${f[2]}" == "$OVERRIDE_ID" ] && [ "${f[4]}" == "$new" ]; then
+                printf '%s\n' "$line" >> "$INSTALL_MANIFEST"
+                break
+            fi
+        done
         print_status "Already set: $(launcher_override_where)"
         return 0
     fi
@@ -589,7 +617,7 @@ _apply_launcher_override() {
         print_error_arrow "Couldn't save the override to $(launcher_override_where), so it isn't set." \
             "The run log has the details."
         DEPLOY_FAILURES=$(( ${DEPLOY_FAILURES:-0} + 1 ))
-        OVERRIDE_METHOD="manual"; return 0
+        return 1
     fi
     printf 'LAUNCHER:%s\t%s\t%s\t%s\t%s\n' "$OVERRIDE_LAUNCHER" "$OVERRIDE_FILE" "$OVERRIDE_ID" "$old" "$new" >> "$INSTALL_MANIFEST"
     log_cmd "launcher override: $OVERRIDE_FILE [$OVERRIDE_ID] '$old' -> '$new'"

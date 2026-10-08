@@ -50,6 +50,9 @@
     if [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows/system32" ]; then
         check_target_writable "$PREFIX_PATH/drive_c/windows/system32" "Wine/Proton prefix"
     fi
+    for i in "${!COMPANION_IDS[@]}"; do
+        check_target_writable "${COMPANION_PREFIXES[$i]}/drive_c/windows/system32" "${COMPANION_NAMES[$i]}'s Proton prefix"
+    done
 
     # One bar step per STATUS: header below: OpenAL runtime, game folder,
     # configurations, plus VC++ (installing it, or setting up one that's
@@ -59,37 +62,15 @@
     [ ${#GAME_SETTINGS_PLAN[@]} -gt 0 ] && phase_total=$(( phase_total + 1 ))
     { [[ "$INSTALL_VCRUN" =~ $YES_RE ]] || [ -n "${APPLY_VCRUN_OVERRIDES_NEEDED:-}" ]; } && phase_total=$(( phase_total + 1 ))
     [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows" ] && phase_total=$(( phase_total + 1 ))
+    # Each companion app's prefix setup, plus its VC++ install when it gets one.
+    for i in "${!COMPANION_IDS[@]}"; do
+        phase_total=$(( phase_total + 1 ))
+        [ "${COMPANION_VCRUN[$i]:-}" == "install" ] && phase_total=$(( phase_total + 1 ))
+    done
     start_phase_progress "$phase_total"
 
-    OPENAL_TOOL=$( [ "$LAUNCHER_TYPE" == "1" ] && echo "protontricks" || echo "winetricks" )
     print_phase_task "Installing Creative's OpenAL runtime into the prefix"
-
-    # A failure here is a warning, not a deploy failure: the engine's own
-    # DLLs are copied in directly below and don't depend on this package —
-    # but it must never be reported as installed when the tool failed.
-    OPENAL_RC=""
-    if [ "$LAUNCHER_TYPE" == "1" ]; then
-        log_cmd "protontricks $APPID -q openal"
-        run_with_spinner "Installing via $OPENAL_TOOL..." "$EAX_LOG_FILE" \
-            protontricks "$APPID" -q openal
-        OPENAL_RC=$?; echo "[exit $OPENAL_RC]" >> "$EAX_LOG_FILE"
-    else
-        if [ -n "$WINE_CMD" ] && [ -n "$PREFIX_PATH" ]; then
-            # Using --force to bypass winetricks safety blocks in Heroic
-            log_cmd "winetricks --force -q openal (WINE=$WINE_CMD, prefix $PREFIX_PATH)"
-            run_with_spinner "Installing via $OPENAL_TOOL..." "$EAX_LOG_FILE" \
-                env WINEPREFIX="$PREFIX_PATH" WINE="$WINE_CMD" WINESERVER="${WINESERVER_CMD:-}" winetricks --force -q openal
-            OPENAL_RC=$?; echo "[exit $OPENAL_RC]" >> "$EAX_LOG_FILE"
-        else
-            print_warning_arrow "No local Wine binary or resolved prefix was found, so this step is being skipped."
-        fi
-    fi
-    if [ "$OPENAL_RC" == "0" ]; then
-        print_status "OpenAL was installed successfully." "$GREEN"
-    elif [ -n "$OPENAL_RC" ]; then
-        print_warning_arrow "Creative's OpenAL runtime didn't install (exit code $OPENAL_RC), so the prefix may be missing it." \
-            "The run log has the full output."
-    fi
+    install_openal_runtime
 
    VCRUN_INSTALLED_THIS_RUN="0"
    if [[ "$INSTALL_VCRUN" =~ $YES_RE ]]; then
@@ -122,10 +103,15 @@
     # over the ones still in effect.
     declare -A PREV_MANIFEST_FILES
     PREV_CONFIG_LINES=()
+    # And its LAUNCHER: lines, for an override that's still in place: the
+    # launcher step finds it "already set" and keeps the line, so uninstall
+    # can still put back what was there before the first install.
+    PREV_LAUNCHER_LINES=()
     if [ -s "$INSTALL_MANIFEST" ]; then
         while IFS= read -r line; do
             [[ "$line" == /* ]] && PREV_MANIFEST_FILES["$line"]=1
             [[ "$line" == CONFIG:* ]] && PREV_CONFIG_LINES+=("$line")
+            [[ "$line" == LAUNCHER:* ]] && PREV_LAUNCHER_LINES+=("$line")
         done < "$INSTALL_MANIFEST"
     fi
 
@@ -167,25 +153,7 @@
 
     if [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows" ]; then
         print_phase_task "Duplicating files to Wine/Proton system prefix"
-        if [ "$ARCH" == "32" ] && [ -d "$PREFIX_PATH/drive_c/windows/syswow64" ]; then
-            PREFIX_TARGET_DIR="$PREFIX_PATH/drive_c/windows/syswow64"
-        else
-            PREFIX_TARGET_DIR="$PREFIX_PATH/drive_c/windows/system32"
-        fi
-
-        # Index 0 (the primary override DLL) is unconditionally backed up
-        # and overwritten — it's the one file Wine is being told to
-        # override anyway. Any secondary files (dsoal-aldrv.dll) go through
-        # the interactive conflict prompt instead, same as the game-dir copy
-        # above, since a pre-existing file of that exact name is unusual.
-        for i in "${!DEPLOY_SRC[@]}"; do
-            DEPLOY_DEST="$PREFIX_TARGET_DIR/${DEPLOY_DEST_NAME[$i]}"
-            if [ "$i" -eq 0 ]; then
-                auto_backup_and_overwrite "$DEPLOY_DEST" && deploy_copy "${DEPLOY_SRC[$i]}" "$DEPLOY_DEST" "Duplicated"
-            elif handle_conflict "$DEPLOY_DEST"; then
-                deploy_copy "${DEPLOY_SRC[$i]}" "$DEPLOY_DEST" "Duplicated"
-            fi
-        done
+        deploy_prefix_dlls
     fi
 
     print_phase_task "Applying configurations and tweaks"
@@ -401,77 +369,26 @@ EOF
     fi
 
     if [[ "$ADVANCED_COM" =~ $YES_RE ]] || [ "$OVERRIDE_METHOD" == "registry" ]; then
-        # Written into GAME_DIR rather than a temp dir: apply_registry_patch
-        # (detection.sh) runs `protontricks -c` for Steam games, which
-        # executes inside a Steam Runtime container that may not have /tmp
-        # bind-mounted — the game's own library folder is guaranteed to be
-        # visible instead.
-        REG_FILE="$GAME_DIR/dsoal_master_patch_$$.reg"
-        echo "Windows Registry Editor Version 5.00" > "$REG_FILE"
-        echo "" >> "$REG_FILE"
-
-        if [[ "$ADVANCED_COM" =~ $YES_RE ]]; then
-            cat <<EOF >> "$REG_FILE"
-[HKEY_CURRENT_USER\Software\Classes\CLSID\{3901CC3F-84B5-4FA4-BA35-AA8172B8A09B}\InprocServer32]
-@="dsound.dll"
-
-[HKEY_CURRENT_USER\Software\Classes\CLSID\{47D4D946-62E8-11CF-93BC-444553540000}\InprocServer32]
-@="dsound.dll"
-
-[HKEY_CURRENT_USER\Software\Classes\WOW6432Node\CLSID\{3901CC3F-84B5-4FA4-BA35-AA8172B8A09B}\InprocServer32]
-@="dsound.dll"
-
-[HKEY_CURRENT_USER\Software\Classes\WOW6432Node\CLSID\{47D4D946-62E8-11CF-93BC-444553540000}\InprocServer32]
-@="dsound.dll"
-
-EOF
+        reg_com="n"; reg_override="n"
+        [[ "$ADVANCED_COM" =~ $YES_RE ]] && reg_com="y"
+        [ "$OVERRIDE_METHOD" == "registry" ] && reg_override="y"
+        apply_prefix_registry "$reg_com" "$reg_override"
+        # Show the manual WINEDLLOVERRIDES instructions below instead of
+        # claiming the override was handled automatically.
+        if [ "$REG_STATUS" != "ok" ] && [ "$reg_override" == "y" ]; then
+            OVERRIDE_PATCH_FAILED="1"
+            OVERRIDE_METHOD="manual"
         fi
-
-        if [ "$OVERRIDE_METHOD" == "registry" ]; then
-            cat <<EOF >> "$REG_FILE"
-[HKEY_CURRENT_USER\Software\Wine\DllOverrides]
-"${PRIMARY_DLL_NAME}"="native,builtin"
-
-EOF
-        fi
-
-        # The manifest lines are written whether or not regedit succeeded: a
-        # partial import can still leave keys behind, and uninstall deleting
-        # a key that was never set is harmless.
-        [[ "$ADVANCED_COM" =~ $YES_RE ]] && echo "REGISTRY:COM" >> "$INSTALL_MANIFEST"
-        [ "$OVERRIDE_METHOD" == "registry" ] && echo "REGISTRY:OVERRIDE:${PRIMARY_DLL_NAME}" >> "$INSTALL_MANIFEST"
-        # REG_STATUS: ok, failed (regedit itself), or missing (regedit
-        # reported success but the override isn't in the prefix). The
-        # override is the one registry change EAX can't work without, so
-        # it's read back rather than trusting regedit's exit code alone; a
-        # prefix with no user.reg to read (return 2) is left as ok.
-        REG_STATUS="ok"
-        if ! apply_registry_patch "$REG_FILE"; then
-            REG_STATUS="failed"
-        elif [ "$OVERRIDE_METHOD" == "registry" ]; then
-            verify_dll_override "$PRIMARY_DLL_NAME"
-            [ $? -eq 1 ] && REG_STATUS="missing"
-        fi
-
-        if [ "$REG_STATUS" == "ok" ]; then
-            [[ "$ADVANCED_COM" =~ $YES_RE ]] && print_status "Injected: COM Registry Routing"
-            [ "$OVERRIDE_METHOD" == "registry" ] && print_status "Injected: WINEDLLOVERRIDES (native,builtin) into registry"
-        else
-            if [ "$REG_STATUS" == "failed" ]; then
-                print_error_arrow "Couldn't write the registry changes to the Wine prefix, so they aren't applied." \
-                    "The run log has the full output."
-            else
-                print_error_arrow "The registry import reported success, but the ${PRIMARY_DLL_NAME}.dll override isn't in" \
-                    "the prefix's registry, so Wine won't load the new DLL. The run log has the details."
-            fi
-            DEPLOY_FAILURES=$(( ${DEPLOY_FAILURES:-0} + 1 ))
-            # Show the manual WINEDLLOVERRIDES instructions below instead
-            # of claiming the override was handled automatically.
-            [ "$OVERRIDE_METHOD" == "registry" ] && OVERRIDE_PATCH_FAILED="1"
-            [ "$OVERRIDE_METHOD" == "registry" ] && OVERRIDE_METHOD="manual"
-        fi
-        rm -f "$REG_FILE"
     fi
+
+    # Companion apps (DOOM 3's Resurrection of Evil): the same prefix steps in
+    # each one's own prefix. Their launch options are set with the game's
+    # below, so the launcher is only closed once.
+    for i in "${!COMPANION_IDS[@]}"; do
+        [ "${COMPANION_VCRUN[$i]:-}" == "install" ] && with_companion "$i" install_companion_vcrun "$i"
+        print_phase_task "Setting up ${COMPANION_NAMES[$i]}'s Proton prefix"
+        with_companion "$i" install_companion_prefix "$i"
+    done
 
     # Step 10's launcher choice: Steam launch options / Heroic environment
     # variables. Drops back to manual instructions if it can't be written.
@@ -504,6 +421,7 @@ EOF
         [ "$OVERRIDE_METHOD" == "launcher" ] && override_where="$(launcher_override_where)"
         echo -e "\n${YELLOW}${BOLD}Final Steps to activate EAX:${NC}"
         echo -e " 1. ${YELLOW}${BOLD}Launch the game:${NC} ${WHITE}The DLL Override is set in $(tilde_path "$override_where"), so just hit Play.${NC}"
+        print_companion_final_steps
         # The game profile's audio settings already switched EAX on in the
         # game's own settings, so there's nothing left to do in its menus.
         game_audio_settings_done \
@@ -511,6 +429,7 @@ EOF
     else
         echo -e "\n${YELLOW}${BOLD}Final Steps to activate EAX:${NC}"
         echo -e " 1. ${YELLOW}${BOLD}Set the Override:${NC} ${WHITE}Apply the WINEDLLOVERRIDES rule (see below).${NC}"
+        print_companion_final_steps
         echo -e " 2. ${YELLOW}${BOLD}Launch the game:${NC} ${WHITE}Start the game as you normally would.${NC}"
         game_audio_settings_done \
             || echo -e " 3. ${YELLOW}${BOLD}In-Game Settings:${NC} ${WHITE}Go to Audio settings and enable 'EAX', '3D Sound', or 'Hardware Acceleration'.${NC}"

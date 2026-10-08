@@ -28,6 +28,7 @@ COMPONENTS=(
     vcrun.sh
     verify.sh
     cache.sh
+    prefix-steps.sh
     preflight.sh
     vcrun-only-flow.sh
     dsoal-log-flow.sh

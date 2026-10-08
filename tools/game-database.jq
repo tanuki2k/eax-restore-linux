@@ -20,7 +20,7 @@ def normalize_store:
     drop_empty
     | if .delisted == false then del(.delisted) else . end
     | if .id_source == "storefront_verified" then del(.id_source) else . end
-    | order_keys(["id", "delisted", "id_source", "api", "beta_branch", "extra_exe_folders", "store_details", "patches"]);
+    | order_keys(["id", "delisted", "id_source", "api", "beta_branch", "extra_exe_folders", "companion_apps", "store_details", "patches"]);
 
 def normalize_eax:
     drop_empty

@@ -43,6 +43,12 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     VCRUN_INSTALLED="n"
     CONFIG_LINES=()
     LAUNCHER_LINES=()
+    # Companion apps' prefix changes (lines tagged with their AppID, see
+    # prefix-steps.sh), keyed by AppID; COMPANION_* is filled from them below.
+    UNINSTALL_COMPANION_IDS=()
+    declare -A UNINSTALL_COMPANION_VCRUN=() UNINSTALL_COMPANION_COM=() UNINSTALL_COMPANION_OVERRIDE=()
+    UNINSTALL_COMPANION_VCRUN_REMOVE=()
+    COMPANION_IDS=(); COMPANION_NAMES=(); COMPANION_PREFIXES=()
 
     if [ -s "$INSTALL_MANIFEST" ] && head -n 1 "$INSTALL_MANIFEST" | grep -q "^# EAX Restore: uninstalled"; then
         print_task "Reading the install manifest"
@@ -60,6 +66,8 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
             case "$manifest_entry" in
                 # The format header (MANIFEST_HEADER) and any other comment.
                 \#*) continue ;;
+                # A companion app's (its AppID after a tab).
+                VCRUN$'\t'*|REGISTRY:*$'\t'*) note_companion_manifest_line "$manifest_entry"; continue ;;
                 "REGISTRY:COM") REG_HAS_COM="y"; continue ;;
                 # Bare "REGISTRY:OVERRIDE" (no DLL suffix) is only ever read,
                 # never written, by this version of the script — it's kept
@@ -148,12 +156,14 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     elif [ "$VCRUN_PRESENT" == "y" ]; then
         print_status "VC++ runtime: found in the prefix" ""
     fi
+    [ ${#UNINSTALL_COMPANION_IDS[@]} -gt 0 ] && resolve_uninstall_companions
     if [ ${#CONFIG_LINES[@]} -gt 0 ]; then
         settings_count="$(for line in "${CONFIG_LINES[@]}"; do cut -f1,2 <<< "${line#CONFIG:}"; done | sort -u | wc -l)"
         print_status "Game settings: ${settings_count} changed during install" ""
     fi
 
-    if [ ${#FILES_TO_REMOVE[@]} -eq 0 ] && [ "$REG_HAS_COM" == "n" ] && [ "$REG_HAS_OVERRIDE" == "n" ] && [ "$VCRUN_PRESENT" == "n" ] && [ ${#CONFIG_LINES[@]} -eq 0 ] && [ ${#LAUNCHER_LINES[@]} -eq 0 ]; then
+    if [ ${#FILES_TO_REMOVE[@]} -eq 0 ] && [ "$REG_HAS_COM" == "n" ] && [ "$REG_HAS_OVERRIDE" == "n" ] && [ "$VCRUN_PRESENT" == "n" ] && [ ${#CONFIG_LINES[@]} -eq 0 ] && [ ${#LAUNCHER_LINES[@]} -eq 0 ] \
+        && [ ${#COMPANION_IDS[@]} -eq 0 ]; then
         print_status "Nothing from this script was found in the game folder or prefix, so there's nothing to remove." ""
         exit 0
     fi
@@ -279,6 +289,10 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         print_note_arrow "No prefix or AppID was found for this game, so there's nothing to clean up in the registry."
         REMOVE_REG="n"
     fi
+    for id in "${COMPANION_IDS[@]}"; do
+        { [ -n "${UNINSTALL_COMPANION_COM[$id]:-}" ] || [ -n "${UNINSTALL_COMPANION_OVERRIDE[$id]:-}" ]; } \
+            && print_status "Registry: will be cleaned up in $(companion_name_for_id "$id")'s prefix too" ""
+    done
 
     print_step 6 "VC++ Runtime"
 
@@ -291,11 +305,24 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     else
         print_status "Not installed in this prefix, so nothing to do." ""
     fi
+    COMPANION_WORK=0
+    for i in "${!COMPANION_IDS[@]}"; do
+        id="${COMPANION_IDS[$i]}"
+        UNINSTALL_COMPANION_VCRUN_REMOVE[i]="n"
+        if [ -n "${UNINSTALL_COMPANION_VCRUN[$id]:-}" ]; then
+            confirm "Also remove the VC++ 2022 Redistributable from ${COMPANION_NAMES[$i]}'s prefix?" N \
+                && UNINSTALL_COMPANION_VCRUN_REMOVE[i]="y"
+        fi
+        if [ "${UNINSTALL_COMPANION_VCRUN_REMOVE[$i]}" == "y" ] || [ -n "${UNINSTALL_COMPANION_COM[$id]:-}" ] \
+            || [ -n "${UNINSTALL_COMPANION_OVERRIDE[$id]:-}" ]; then
+            COMPANION_WORK=$(( COMPANION_WORK + 1 ))
+        fi
+    done
 
     choose_game_settings_to_revert 7
 
     if [ ${#FINAL_REMOVE[@]} -eq 0 ] && [ "$LAUNCHER_WORK" -eq 0 ] && [[ ! "$REMOVE_REG" =~ $YES_RE ]] \
-        && [ "$UNINSTALL_VCRUN" == "n" ] && [ ${#GAME_SETTINGS_REVERT_GROUPS[@]} -eq 0 ]; then
+        && [ "$UNINSTALL_VCRUN" == "n" ] && [ ${#GAME_SETTINGS_REVERT_GROUPS[@]} -eq 0 ] && [ "$COMPANION_WORK" -eq 0 ]; then
         echo -e "\n${WHITE}Nothing to change, so the uninstall is finished.${NC}"
         exit 0
     fi
@@ -316,6 +343,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     [[ "$REMOVE_REG" =~ $YES_RE ]] && phase_total=$(( phase_total + 1 ))
     [ "$UNINSTALL_VCRUN" == "y" ] && phase_total=$(( phase_total + 1 ))
     [ ${#GAME_SETTINGS_REVERT_GROUPS[@]} -gt 0 ] && phase_total=$(( phase_total + 1 ))
+    phase_total=$(( phase_total + COMPANION_WORK ))
     start_phase_progress "$phase_total"
 
     if [ ${#FINAL_REMOVE[@]} -gt 0 ]; then
@@ -354,56 +382,32 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
 
     if [[ "$REMOVE_REG" =~ $YES_RE ]]; then
         print_phase_task "Cleaning registry"
-        # Written into GAME_DIR rather than a temp dir: apply_registry_patch
-        # (detection.sh) runs `protontricks -c` for Steam games, which
-        # executes inside a Steam Runtime container that may not have
-        # /tmp bind-mounted — the game's own library folder is
-        # guaranteed to be visible instead.
-        REG_FILE="$GAME_DIR/dsoal_registry_clean_$$.reg"
-        echo "Windows Registry Editor Version 5.00" > "$REG_FILE"
-        echo "" >> "$REG_FILE"
-
-        if [[ "$REG_HAS_OVERRIDE" == "y" ]]; then
-            if [ -z "$REG_OVERRIDE_DLL" ]; then
-                # No manifest to say which DLL was overridden (dsound or
-                # openal32) — clear both defensively; deleting a key that
-                # was never set is a harmless no-op.
-                cat <<EOF >> "$REG_FILE"
-[HKEY_CURRENT_USER\Software\Wine\DllOverrides]
-"dsound"=-
-"openal32"=-
-
-EOF
-            else
-                cat <<EOF >> "$REG_FILE"
-[HKEY_CURRENT_USER\Software\Wine\DllOverrides]
-"$REG_OVERRIDE_DLL"=-
-
-EOF
-            fi
+        reg_dll=""
+        if [ "$REG_HAS_OVERRIDE" == "y" ]; then
+            # No manifest to say which DLL was overridden (dsound or
+            # openal32): clear both.
+            reg_dll="${REG_OVERRIDE_DLL:-both}"
         fi
-
-        if [[ "$REG_HAS_COM" == "y" ]]; then
-            cat <<EOF >> "$REG_FILE"
-[-HKEY_CURRENT_USER\Software\Classes\CLSID\{3901CC3F-84B5-4FA4-BA35-AA8172B8A09B}]
-[-HKEY_CURRENT_USER\Software\Classes\CLSID\{47D4D946-62E8-11CF-93BC-444553540000}]
-[-HKEY_CURRENT_USER\Software\Classes\WOW6432Node\CLSID\{3901CC3F-84B5-4FA4-BA35-AA8172B8A09B}]
-[-HKEY_CURRENT_USER\Software\Classes\WOW6432Node\CLSID\{47D4D946-62E8-11CF-93BC-444553540000}]
-EOF
-        fi
-
-        if apply_registry_patch "$REG_FILE"; then
+        if remove_prefix_registry "$REG_HAS_COM" "$reg_dll"; then
             print_status "Registry keys safely removed." "$GREEN"
         else
             print_warning_arrow "The registry keys couldn't be removed from the Wine prefix. The run log has the full output."
         fi
-        rm -f "$REG_FILE"
     fi
 
     if [ "$UNINSTALL_VCRUN" == "y" ]; then
         print_phase_task "Removing the MS VC++ 2022 Redistributable"
         uninstall_vcrun_dependencies
     fi
+
+    # Companion apps' own prefixes (DOOM 3's Resurrection of Evil).
+    for i in "${!COMPANION_IDS[@]}"; do
+        id="${COMPANION_IDS[$i]}"
+        [ "${UNINSTALL_COMPANION_VCRUN_REMOVE[$i]}" == "y" ] || [ -n "${UNINSTALL_COMPANION_COM[$id]:-}" ] \
+            || [ -n "${UNINSTALL_COMPANION_OVERRIDE[$id]:-}" ] || continue
+        print_phase_task "Cleaning up ${COMPANION_NAMES[$i]}'s Proton prefix"
+        with_companion "$i" uninstall_companion_prefix "$i"
+    done
 
     if [ ${#GAME_SETTINGS_REVERT_GROUPS[@]} -gt 0 ]; then
         print_phase_task "Putting back game settings"

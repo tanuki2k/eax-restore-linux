@@ -189,11 +189,17 @@ if [ -n "$VCRUN_ONLY_MODE" ]; then
     done
 
     select_architecture
+    # Steam apps that run this game from its folder with their own prefix
+    # (DOOM 3's Resurrection of Evil) get the runtime too.
+    resolve_companion_apps "$APPID"
 
     print_banner "READY"
     echo -e "\n${WHITE}This will attempt to install the MS VC++ 2022 Redistributable into:${NC}"
     [ "$LAUNCHER_TYPE" == "1" ] && echo -e "${WHITE} -> Steam AppID: ${BOLD}$APPID${NC}"
     [ -n "$PREFIX_PATH" ] && echo -e "${WHITE} -> Prefix: ${BOLD}$(tilde_path "$PREFIX_PATH")${NC}"
+    for i in "${!COMPANION_IDS[@]}"; do
+        echo -e "${WHITE} -> ${COMPANION_NAMES[$i]}'s prefix: ${BOLD}$(tilde_path "${COMPANION_PREFIXES[$i]}")${NC}"
+    done
     echo -e "\n${YELLOW}Proceed? (Y/n): ${NC}"
     echo -e -n "> "
     read_answer CONFIRM_VCRUN_ONLY
@@ -211,6 +217,25 @@ if [ -n "$VCRUN_ONLY_MODE" ]; then
             start_manifest "$GAME_MANIFEST"
         fi
         echo "VCRUN" >> "$GAME_MANIFEST"
+        # Each companion's own prefix, recorded with its AppID like an
+        # install's (see prefix-steps.sh).
+        COMPANION_VCRUN_FAILED=""
+        for i in "${!COMPANION_IDS[@]}"; do
+            VCRUN_TASK_FOR="${COMPANION_NAMES[$i]}"
+            if with_companion "$i" install_vcrun_dependencies; then
+                printf 'VCRUN\t%s\n' "${COMPANION_IDS[$i]}" >> "$GAME_MANIFEST"
+            else
+                COMPANION_VCRUN_FAILED+="${COMPANION_VCRUN_FAILED:+, }${COMPANION_NAMES[$i]}"
+            fi
+            VCRUN_TASK_FOR=""
+        done
+        if [ -n "$COMPANION_VCRUN_FAILED" ]; then
+            print_run_summary
+            print_banner "VC++ RUNTIME INSTALL INCOMPLETE" "$YELLOW"
+            print_error "The core VC++ runtime files couldn't be verified in ${COMPANION_VCRUN_FAILED}'s prefix," \
+                "so the runtime isn't installed there. The installer output is saved in $VCRUN_LOG."
+            exit 1
+        fi
     else
         print_run_summary
         print_banner "VC++ RUNTIME INSTALL INCOMPLETE" "$YELLOW"

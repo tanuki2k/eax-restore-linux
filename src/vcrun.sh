@@ -123,7 +123,11 @@ install_vcrun_dependencies() {
     # failure (either path can silently "succeed" without leaving files
     # behind, e.g. if Wine's MSI engine chokes on it) is actually debuggable
     # instead of a dead end with no information.
-    print_phase_task "Installing MS VC++ 2022 Redistributable"
+    # A companion app's install (VCRUN_TASK_FOR, see install_companion_prefix)
+    # names whose prefix it's going into.
+    local vcrun_task="Installing MS VC++ 2022 Redistributable"
+    [ -n "${VCRUN_TASK_FOR:-}" ] && vcrun_task+=" into ${VCRUN_TASK_FOR}'s prefix"
+    print_phase_task "$vcrun_task"
 
     VCRUN_SHARE="$BASE_SHARE/vcrun2022"
     mkdir -p "$VCRUN_SHARE"
