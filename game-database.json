@@ -3377,13 +3377,13 @@
         "steam": {
           "id": 13250,
           "delisted": true,
-          "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale. OldUnreal (oldunreal.com) distributes a free, Epic-authorised copy of the full game.",
+          "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.",
           "patches": "OldUnreal's v227 patch adds a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
         },
         "gog": {
           "id": 1207658679,
           "delisted": true,
-          "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale. OldUnreal (oldunreal.com) distributes a free, Epic-authorised copy of the full game.",
+          "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.",
           "patches": "OldUnreal's v227 patch adds a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
         }
       },
@@ -3543,7 +3543,7 @@
         "steam": {
           "id": 13230,
           "delisted": true,
-          "store_details": "Delisted from Steam in December 2022, when Epic pulled the entire classic Unreal series from sale.",
+          "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.",
           "patches": "OldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
         },
         "gog": {
@@ -3596,7 +3596,7 @@
         "steam": {
           "id": 13210,
           "delisted": true,
-          "store_details": "Delisted from Steam in December 2022, along with the rest of the Unreal series."
+          "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale."
         }
       },
       "eax": {
@@ -3641,13 +3641,13 @@
         "steam": {
           "id": 13240,
           "delisted": true,
-          "store_details": "Delisted from Steam in December 2022, when Epic pulled the entire classic Unreal series from sale. OldUnreal (oldunreal.com) distributes a free, Epic-authorized copy of the full game.",
+          "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.",
           "patches": "Creative's official 'EAX Library Patch' (uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip) adds full EAX 2.0 reverb and muffling of sounds through walls to the original Deathmatch and Capture the Flag maps — historically mirrored at patches-scrolls.com.\nOldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
         },
         "gog": {
           "id": 1207658692,
           "delisted": true,
-          "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale. OldUnreal (oldunreal.com) distributes a free, Epic-authorized copy of the full game.",
+          "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.",
           "patches": "Creative's official 'EAX Library Patch' (uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip) adds full EAX 2.0 reverb and muffling of sounds through walls to the original Deathmatch and Capture the Flag maps — historically mirrored at patches-scrolls.com.\nOldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
         }
       },
