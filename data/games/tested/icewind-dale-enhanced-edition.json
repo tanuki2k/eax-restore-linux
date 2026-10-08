@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Icewind Dale: Enhanced Edition",
-  "description": "Icewind Dale: Enhanced Edition is a singleplayer and multiplayer isometric role-playing game, an enhanced edition of the first in the Icewind Dale series.",
+  "description": "Icewind Dale: Enhanced Edition is a singleplayer and multiplayer isometric role-playing game, an enhanced edition of 2000's Icewind Dale.",
   "released": "2014-10-30",
   "stores": {
     "steam": { "id": 321800 },

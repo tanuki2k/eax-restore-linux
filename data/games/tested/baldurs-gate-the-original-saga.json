@@ -1,14 +1,14 @@
 {
   "$schema": "../../schema.json",
   "name": "Baldur's Gate: The Original Saga",
-  "description": "Baldur's Gate: The Original Saga is a singleplayer and multiplayer isometric role-playing game, bundling Baldur's Gate, the first game in the Baldur's Gate series, with its Tales of the Sword Coast expansion.",
+  "description": "Baldur's Gate: The Original Saga is a singleplayer and multiplayer isometric role-playing game.",
   "released": "1998-12-21",
   "exe": "BGMain.exe",
   "stores": {
     "gog": {
       "id": 1207658886,
       "delisted": true,
-      "store_details": "This is the original 1998 Baldur's Gate with its Tales of the Sword Coast expansion, not 2012's 'Enhanced Edition'. GOG stopped selling it by November 2016 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
+      "store_details": "This is the original 1998 Baldur's Gate with its Tales of the Sword Coast expansion. GOG stopped selling it by November 2016 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
     }
   },
   "eax": { "api": "directsound3d", "versions": ["1.0"] },

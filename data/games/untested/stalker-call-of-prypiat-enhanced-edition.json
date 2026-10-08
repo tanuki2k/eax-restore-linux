@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "S.T.A.L.K.E.R.: Call of Prypiat - Enhanced Edition",
-  "description": "S.T.A.L.K.E.R.: Call of Prypiat - Enhanced Edition is an open-world first-person shooter and survival horror game, an enhanced edition of the third in the S.T.A.L.K.E.R. series.",
+  "description": "S.T.A.L.K.E.R.: Call of Prypiat - Enhanced Edition is an open-world first-person shooter and survival horror game, an enhanced edition of 2009's S.T.A.L.K.E.R.: Call of Pripyat.",
   "released": "2025-05-20",
   "exe": "xrEngine.exe",
   "stores": {

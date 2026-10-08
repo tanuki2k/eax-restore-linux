@@ -6,7 +6,7 @@
   "stores": {
     "gog": {
       "id": 1207658712,
-      "store_details": "Sold only on GOG, as 'Stronghold HD' — the original 2001 Firefly Studios build. Steam delisted it in favour of the 2023 'Definitive Edition' remaster, which uses a different engine without DirectSound3D EAX."
+      "store_details": "Sold only on GOG, as 'Stronghold HD' — the original 2001 Firefly Studios build."
     }
   },
   "eax": { "api": "directsound3d", "versions": ["1.0"] }

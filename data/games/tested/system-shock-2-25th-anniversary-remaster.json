@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "System Shock 2: 25th Anniversary Remaster",
-  "description": "System Shock 2: 25th Anniversary Remaster is a singleplayer and multiplayer first-person action role-playing, survival horror and immersive sim game, a remaster of the second in the System Shock series.",
+  "description": "System Shock 2: 25th Anniversary Remaster is a singleplayer and multiplayer first-person action role-playing, survival horror and immersive sim game, a remaster of 1999's System Shock 2.",
   "released": "2025-06-26",
   "exe": "SystemShock2Remastered.exe",
   "stores": {

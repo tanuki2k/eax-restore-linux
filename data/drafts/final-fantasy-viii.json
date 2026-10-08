@@ -4,10 +4,7 @@
   "description": "Final Fantasy VIII is a singleplayer third-person role-playing game and the eighth main game in the Final Fantasy series.",
   "released": "2000-01-26",
   "stores": {
-    "steam": {
-      "id": 39150,
-      "store_details": "The original 2013 PC port, not 2019's 'FINAL FANTASY VIII - REMASTERED'."
-    }
+    "steam": { "id": 39150, "store_details": "The original 2013 PC port." }
   },
   "eax": { "api": "directsound3d", "versions": ["1.0", "2.0"] },
   "install": {

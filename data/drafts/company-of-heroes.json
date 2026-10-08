@@ -6,6 +6,5 @@
   "stores": {
     "steam": { "id": 228200 }
   },
-  "eax": { "api": "directsound3d", "versions": ["2.0", "3.0", "4.0"] },
-  "notes": "Not on GOG. A 'Definitive Edition' remaster is announced but unreleased — this classic 2006 build is still the only Steam listing; worth rechecking this entry once that ships."
+  "eax": { "api": "directsound3d", "versions": ["2.0", "3.0", "4.0"] }
 }

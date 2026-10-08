@@ -1,14 +1,14 @@
 {
   "$schema": "../../schema.json",
   "name": "Neverwinter Nights Diamond",
-  "description": "Neverwinter Nights Diamond is a singleplayer and multiplayer third-person role-playing game, bundling Neverwinter Nights, the first game in the Neverwinter Nights series, with its Shadows of Undrentide and Hordes of the Underdark expansions.",
+  "description": "Neverwinter Nights Diamond is a singleplayer and multiplayer third-person role-playing game.",
   "released": "2002-06-18",
   "exe": "nwmain.exe",
   "stores": {
     "gog": {
       "id": 1207658890,
       "delisted": true,
-      "store_details": "This is the original 2002 Neverwinter Nights with both expansions and the premium modules, not 2018's 'Enhanced Edition'. Since October 2018, GOG only includes it as a bonus with the Enhanced Edition (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
+      "store_details": "This is the original 2002 Neverwinter Nights with both expansions and the premium modules. GOG stopped selling it on its own in October 2018 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
     }
   },
   "eax": { "api": "directsound3d", "versions": ["1.0", "2.0", "3.0"] },

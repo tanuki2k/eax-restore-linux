@@ -422,6 +422,10 @@ to the game database" for what belongs in which field):
   above its Sources section — cite a source in parentheses when the claim is
   non-obvious, e.g. "(per PCGamingWiki)", and put its page in `sources`. Never in a
   game setting's `title`, `reason` or `follow_up` (see below).
+- A game that isn't itself an Enhanced Edition, remaster or remake never
+  mentions one (or a same-named remake on another store) in any field, not even
+  "not the Enhanced Edition" — the player is looking at the classic. Only an
+  EE/remaster entry's `notes` may point back to the classic build.
 - Be concrete and current rather than generic — name the actual tweak label,
   mission, mod, or date — but keep each note to 1-3 sentences confined to its
   field's job; don't pad it with everything known about the title.
@@ -429,8 +433,13 @@ to the game database" for what belongs in which field):
   words, starting with the entry's exact `name`: modes, perspective, genres, "in
   the <series> series" — e.g. "Thief Gold is a singleplayer first-person stealth
   and immersive sim game in the Thief series." No opinions, no EAX talk (the
-  profile covers that); a bundle names its expansions, and an expansion names
-  the game it's for ("…horror expansion for F.E.A.R.") rather than its series;
+  profile covers that), and nothing another field already says — what a bundle
+  includes, which build it is, a delisting all belong in `store_details`/`notes`,
+  an EE/remaster names the original and its year ("an enhanced edition of
+  2000's Baldur's Gate II: Shadows of Amn"), a bundle its base game only when
+  no other field does ("an expanded edition of Thief: The Dark Project"); an
+  expansion names the game it's for ("…horror expansion for F.E.A.R.") rather
+  than its series;
   leave out a mode or perspective you can't confirm. `released` is the first Windows release,
   earliest region, checked against two sources; bundles/Gold/Complete/GOTY/Classic
   take the base game's date, Enhanced Editions/Remasters/Anniversary editions

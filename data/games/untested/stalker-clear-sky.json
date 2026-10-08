@@ -11,6 +11,5 @@
   "eax": { "api": "directsound3d", "versions": ["1.0", "2.0", "3.0"] },
   "install": {
     "tweaks": ["eax_unified"]
-  },
-  "notes": "This is the original Clear Sky, not the separate 'S.T.A.L.K.E.R.: Clear Sky - Enhanced Edition' listing."
+  }
 }

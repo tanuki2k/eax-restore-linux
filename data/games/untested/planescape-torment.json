@@ -7,7 +7,7 @@
     "gog": {
       "id": 1207658887,
       "delisted": true,
-      "store_details": "This is the original 1999 Planescape: Torment, not 2017's 'Enhanced Edition'. GOG stopped selling it on its own when the Enhanced Edition came out in April 2017 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
+      "store_details": "This is the original 1999 Planescape: Torment. GOG stopped selling it on its own in April 2017 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
     }
   },
   "eax": { "api": "directsound3d", "versions": ["1.0"] },

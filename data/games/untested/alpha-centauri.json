@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Alpha Centauri",
-  "description": "Alpha Centauri is a singleplayer and multiplayer turn-based 4X strategy game, bundling Sid Meier's Alpha Centauri with its Alien Crossfire expansion.",
+  "description": "Alpha Centauri is a singleplayer and multiplayer turn-based 4X strategy game.",
   "released": "1999-02-09",
   "exe": "terran.exe",
   "stores": {

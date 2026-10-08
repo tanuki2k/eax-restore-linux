@@ -27,7 +27,7 @@
     {
       "id": "alpha-centauri",
       "name": "Alpha Centauri",
-      "description": "Alpha Centauri is a singleplayer and multiplayer turn-based 4X strategy game, bundling Sid Meier's Alpha Centauri with its Alien Crossfire expansion.",
+      "description": "Alpha Centauri is a singleplayer and multiplayer turn-based 4X strategy game.",
       "released": "1999-02-09",
       "exe": "terran.exe",
       "stores": {
@@ -183,7 +183,7 @@
           "eax_unified"
         ]
       },
-      "notes": "The PC 'Director's Cut Edition' sold on both stores isn't a remaster — it's the original 2008 PC port of the 2007 console game, with four PC-exclusive bonus missions and DirectX 10 support added on top."
+      "notes": "The PC 'Director's Cut Edition' sold on both stores is the original 2008 PC port of the 2007 console game, with four PC-exclusive bonus missions and DirectX 10 support added on top."
     },
     {
       "id": "avencast-rise-of-the-mage",
@@ -208,14 +208,14 @@
     {
       "id": "baldurs-gate-2-complete",
       "name": "Baldur's Gate 2 Complete",
-      "description": "Baldur's Gate 2 Complete is a singleplayer and multiplayer isometric role-playing game, bundling Shadows of Amn, the second game in the Baldur's Gate series, with its Throne of Bhaal expansion.",
+      "description": "Baldur's Gate 2 Complete is a singleplayer and multiplayer isometric role-playing game.",
       "released": "2000-09-21",
       "exe": "BGMain.exe",
       "stores": {
         "gog": {
           "id": 1207658893,
           "delisted": true,
-          "store_details": "This is the original 2000 Baldur's Gate II: Shadows of Amn with its Throne of Bhaal expansion, not 2013's 'Enhanced Edition'. GOG stopped selling it by November 2016 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
+          "store_details": "This is the original 2000 Baldur's Gate II: Shadows of Amn with its Throne of Bhaal expansion. GOG stopped selling it by November 2016 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
         }
       },
       "eax": {
@@ -258,7 +258,7 @@
     {
       "id": "baldurs-gate-ii-enhanced-edition",
       "name": "Baldur's Gate II: Enhanced Edition",
-      "description": "Baldur's Gate II: Enhanced Edition is a singleplayer and multiplayer isometric role-playing game, an enhanced edition of the second in the Baldur's Gate series.",
+      "description": "Baldur's Gate II: Enhanced Edition is a singleplayer and multiplayer isometric role-playing game, an enhanced edition of 2000's Baldur's Gate II: Shadows of Amn.",
       "released": "2013-11-15",
       "exe": "BaldurII.exe",
       "stores": {
@@ -279,7 +279,7 @@
     {
       "id": "baldurs-gate-enhanced-edition",
       "name": "Baldur's Gate: Enhanced Edition",
-      "description": "Baldur's Gate: Enhanced Edition is a singleplayer and multiplayer isometric role-playing game, an enhanced edition of the first in the Baldur's Gate series.",
+      "description": "Baldur's Gate: Enhanced Edition is a singleplayer and multiplayer isometric role-playing game, an enhanced edition of 1998's Baldur's Gate.",
       "released": "2012-11-28",
       "exe": "Baldur.exe",
       "stores": {
@@ -300,14 +300,14 @@
     {
       "id": "baldurs-gate-the-original-saga",
       "name": "Baldur's Gate: The Original Saga",
-      "description": "Baldur's Gate: The Original Saga is a singleplayer and multiplayer isometric role-playing game, bundling Baldur's Gate, the first game in the Baldur's Gate series, with its Tales of the Sword Coast expansion.",
+      "description": "Baldur's Gate: The Original Saga is a singleplayer and multiplayer isometric role-playing game.",
       "released": "1998-12-21",
       "exe": "BGMain.exe",
       "stores": {
         "gog": {
           "id": 1207658886,
           "delisted": true,
-          "store_details": "This is the original 1998 Baldur's Gate with its Tales of the Sword Coast expansion, not 2012's 'Enhanced Edition'. GOG stopped selling it by November 2016 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
+          "store_details": "This is the original 1998 Baldur's Gate with its Tales of the Sword Coast expansion. GOG stopped selling it by November 2016 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
         }
       },
       "eax": {
@@ -373,7 +373,7 @@
       "stores": {
         "steam": {
           "id": 7670,
-          "store_details": "This is the original 2007 BioShock. Unlike 2016's 'BioShock Remastered', which dropped EAX and its reverb (per PCGamingWiki), it's an ideal candidate for restoring EAX sound."
+          "store_details": "This is the original 2007 BioShock, an ideal candidate for restoring EAX sound."
         }
       },
       "eax": {
@@ -487,10 +487,6 @@
         {
           "title": "Creative's BioShock audio guide (archived)",
           "url": "https://web.archive.org/web/20080514015042/http://www.soundblaster.com/products/gaming/article.asp?articleID=71545&categoryID=13"
-        },
-        {
-          "title": "PCGamingWiki: BioShock Remastered",
-          "url": "https://www.pcgamingwiki.com/wiki/BioShock_Remastered"
         },
         {
           "title": "PCGamingWiki: BioShock",
@@ -1154,7 +1150,7 @@
     {
       "id": "fear-platinum",
       "name": "F.E.A.R. Platinum",
-      "description": "F.E.A.R. Platinum is a singleplayer and multiplayer first-person shooter and horror game, bundling F.E.A.R., the first game in the F.E.A.R. series, with its Extraction Point and Perseus Mandate expansions.",
+      "description": "F.E.A.R. Platinum is a singleplayer and multiplayer first-person shooter and horror game.",
       "released": "2005-10-18",
       "exe": "FEAR.exe",
       "stores": {
@@ -1473,14 +1469,14 @@
     {
       "id": "icewind-dale-complete",
       "name": "Icewind Dale Complete",
-      "description": "Icewind Dale Complete is a singleplayer and multiplayer isometric role-playing game, bundling Icewind Dale, the first game in the Icewind Dale series, with its Heart of Winter expansion.",
+      "description": "Icewind Dale Complete is a singleplayer and multiplayer isometric role-playing game.",
       "released": "2000-06-29",
       "exe": "IDMain.exe",
       "stores": {
         "gog": {
           "id": 1207658888,
           "delisted": true,
-          "store_details": "This is the original 2000 Icewind Dale with its Heart of Winter and Trials of the Luremaster expansions, not 2014's 'Enhanced Edition'. GOG had stopped selling it by November 2016 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
+          "store_details": "This is the original 2000 Icewind Dale with its Heart of Winter and Trials of the Luremaster expansions. GOG had stopped selling it by November 2016 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
         }
       },
       "eax": {
@@ -1528,7 +1524,7 @@
       "stores": {
         "gog": {
           "id": 1207658891,
-          "store_details": "Sold as 'Icewind Dale 2 Complete'. There's no Enhanced Edition of Icewind Dale II, so this is the classic game."
+          "store_details": "Sold as 'Icewind Dale 2 Complete'."
         }
       },
       "eax": {
@@ -1564,7 +1560,7 @@
     {
       "id": "icewind-dale-enhanced-edition",
       "name": "Icewind Dale: Enhanced Edition",
-      "description": "Icewind Dale: Enhanced Edition is a singleplayer and multiplayer isometric role-playing game, an enhanced edition of the first in the Icewind Dale series.",
+      "description": "Icewind Dale: Enhanced Edition is a singleplayer and multiplayer isometric role-playing game, an enhanced edition of 2000's Icewind Dale.",
       "released": "2014-10-30",
       "stores": {
         "steam": {
@@ -1603,8 +1599,7 @@
         "tweaks": [
           "eax_unified"
         ]
-      },
-      "notes": "This is the classic 2002 game, not the 2020 remake 'Mafia: Definitive Edition'."
+      }
     },
     {
       "id": "max-payne-2-the-fall-of-max-payne",
@@ -1676,7 +1671,7 @@
       "stores": {
         "gog": {
           "id": 1207659162,
-          "store_details": "This is the original 2006 Neverwinter Nights 2 with its Mask of the Betrayer and Storm of Zehir expansions and the Mysteries of Westgate adventure pack, not 2025's 'Enhanced Edition'. GOG still sells it alongside the Enhanced Edition, and it's an ideal candidate for restoring EAX sound."
+          "store_details": "This is the original 2006 Neverwinter Nights 2 with its Mask of the Betrayer and Storm of Zehir expansions and the Mysteries of Westgate adventure pack. It's an ideal candidate for restoring EAX sound."
         }
       },
       "eax": {
@@ -1788,7 +1783,7 @@
     {
       "id": "neverwinter-nights-2-enhanced-edition",
       "name": "Neverwinter Nights 2: Enhanced Edition",
-      "description": "Neverwinter Nights 2: Enhanced Edition is a singleplayer and multiplayer third-person role-playing game, an enhanced edition of the second in the Neverwinter Nights series.",
+      "description": "Neverwinter Nights 2: Enhanced Edition is a singleplayer and multiplayer third-person role-playing game, an enhanced edition of 2006's Neverwinter Nights 2.",
       "released": "2025-07-15",
       "stores": {
         "steam": {
@@ -1808,14 +1803,14 @@
     {
       "id": "neverwinter-nights-diamond",
       "name": "Neverwinter Nights Diamond",
-      "description": "Neverwinter Nights Diamond is a singleplayer and multiplayer third-person role-playing game, bundling Neverwinter Nights, the first game in the Neverwinter Nights series, with its Shadows of Undrentide and Hordes of the Underdark expansions.",
+      "description": "Neverwinter Nights Diamond is a singleplayer and multiplayer third-person role-playing game.",
       "released": "2002-06-18",
       "exe": "nwmain.exe",
       "stores": {
         "gog": {
           "id": 1207658890,
           "delisted": true,
-          "store_details": "This is the original 2002 Neverwinter Nights with both expansions and the premium modules, not 2018's 'Enhanced Edition'. Since October 2018, GOG only includes it as a bonus with the Enhanced Edition (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
+          "store_details": "This is the original 2002 Neverwinter Nights with both expansions and the premium modules. GOG stopped selling it on its own in October 2018 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
         }
       },
       "eax": {
@@ -1933,7 +1928,7 @@
     {
       "id": "neverwinter-nights-enhanced-edition",
       "name": "Neverwinter Nights: Enhanced Edition",
-      "description": "Neverwinter Nights: Enhanced Edition is a singleplayer and multiplayer third-person role-playing game, an enhanced edition of the first in the Neverwinter Nights series.",
+      "description": "Neverwinter Nights: Enhanced Edition is a singleplayer and multiplayer third-person role-playing game, an enhanced edition of 2002's Neverwinter Nights.",
       "released": "2018-03-27",
       "stores": {
         "steam": {
@@ -1980,7 +1975,7 @@
         "gog": {
           "id": 1207658887,
           "delisted": true,
-          "store_details": "This is the original 1999 Planescape: Torment, not 2017's 'Enhanced Edition'. GOG stopped selling it on its own when the Enhanced Edition came out in April 2017 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
+          "store_details": "This is the original 1999 Planescape: Torment. GOG stopped selling it on its own in April 2017 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
         }
       },
       "eax": {
@@ -2242,7 +2237,7 @@
     {
       "id": "stalker-call-of-prypiat-enhanced-edition",
       "name": "S.T.A.L.K.E.R.: Call of Prypiat - Enhanced Edition",
-      "description": "S.T.A.L.K.E.R.: Call of Prypiat - Enhanced Edition is an open-world first-person shooter and survival horror game, an enhanced edition of the third in the S.T.A.L.K.E.R. series.",
+      "description": "S.T.A.L.K.E.R.: Call of Prypiat - Enhanced Edition is an open-world first-person shooter and survival horror game, an enhanced edition of 2009's S.T.A.L.K.E.R.: Call of Pripyat.",
       "released": "2025-05-20",
       "exe": "xrEngine.exe",
       "stores": {
@@ -2288,13 +2283,12 @@
         "tweaks": [
           "eax_unified"
         ]
-      },
-      "notes": "This is the original Clear Sky, not the separate 'S.T.A.L.K.E.R.: Clear Sky - Enhanced Edition' listing."
+      }
     },
     {
       "id": "stalker-clear-sky-enhanced-edition",
       "name": "S.T.A.L.K.E.R.: Clear Sky - Enhanced Edition",
-      "description": "S.T.A.L.K.E.R.: Clear Sky - Enhanced Edition is an open-world first-person shooter and survival horror game, an enhanced edition of the second in the S.T.A.L.K.E.R. series.",
+      "description": "S.T.A.L.K.E.R.: Clear Sky - Enhanced Edition is an open-world first-person shooter and survival horror game, an enhanced edition of 2008's S.T.A.L.K.E.R.: Clear Sky.",
       "released": "2025-05-20",
       "exe": "xrEngine.exe",
       "stores": {
@@ -2345,7 +2339,7 @@
     {
       "id": "stalker-shadow-of-chornobyl-enhanced-edition",
       "name": "S.T.A.L.K.E.R.: Shadow of Chornobyl - Enhanced Edition",
-      "description": "S.T.A.L.K.E.R.: Shadow of Chornobyl - Enhanced Edition is an open-world first-person shooter and survival horror game, an enhanced edition of the first in the S.T.A.L.K.E.R. series.",
+      "description": "S.T.A.L.K.E.R.: Shadow of Chornobyl - Enhanced Edition is an open-world first-person shooter and survival horror game, an enhanced edition of 2007's S.T.A.L.K.E.R.: Shadow of Chernobyl.",
       "released": "2025-05-20",
       "exe": "xrEngine.exe",
       "stores": {
@@ -2730,13 +2724,13 @@
         "steam": {
           "id": 238210,
           "delisted": true,
-          "store_details": "The classic 1999 build was delisted in October 2025, and only the 25th Anniversary Remaster is sold now.",
+          "store_details": "The classic 1999 build was delisted in October 2025.",
           "patches": "The System Shock 2 Community Patch (SCP) fixes bugs and polishes the game, and is worth installing alongside EAX."
         },
         "gog": {
           "id": 1207659172,
           "delisted": true,
-          "store_details": "The classic 1999 build was delisted in October 2025, and only the 25th Anniversary Remaster is sold now.",
+          "store_details": "The classic 1999 build was delisted in October 2025.",
           "patches": "The System Shock 2 Community Patch (SCP) fixes bugs and polishes the game, and is worth installing alongside EAX."
         }
       },
@@ -2790,7 +2784,7 @@
     {
       "id": "system-shock-2-25th-anniversary-remaster",
       "name": "System Shock 2: 25th Anniversary Remaster",
-      "description": "System Shock 2: 25th Anniversary Remaster is a singleplayer and multiplayer first-person action role-playing, survival horror and immersive sim game, a remaster of the second in the System Shock series.",
+      "description": "System Shock 2: 25th Anniversary Remaster is a singleplayer and multiplayer first-person action role-playing, survival horror and immersive sim game, a remaster of 1999's System Shock 2.",
       "released": "2025-06-26",
       "exe": "SystemShock2Remastered.exe",
       "stores": {
@@ -2926,7 +2920,7 @@
     {
       "id": "thief-gold",
       "name": "Thief Gold",
-      "description": "Thief Gold is a singleplayer first-person stealth and immersive sim game, an expanded edition of the first in the Thief series.",
+      "description": "Thief Gold is a singleplayer first-person stealth and immersive sim game, an expanded edition of Thief: The Dark Project.",
       "released": "1998-12-01",
       "exe": "THIEF.EXE",
       "stores": {

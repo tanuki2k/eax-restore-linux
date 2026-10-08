@@ -7,7 +7,7 @@
   "stores": {
     "gog": {
       "id": 1207659162,
-      "store_details": "This is the original 2006 Neverwinter Nights 2 with its Mask of the Betrayer and Storm of Zehir expansions and the Mysteries of Westgate adventure pack, not 2025's 'Enhanced Edition'. GOG still sells it alongside the Enhanced Edition, and it's an ideal candidate for restoring EAX sound."
+      "store_details": "This is the original 2006 Neverwinter Nights 2 with its Mask of the Betrayer and Storm of Zehir expansions and the Mysteries of Westgate adventure pack. It's an ideal candidate for restoring EAX sound."
     }
   },
   "eax": { "api": "directsound3d", "versions": ["1.0", "2.0", "3.0"] },

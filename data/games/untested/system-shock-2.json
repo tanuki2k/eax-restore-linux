@@ -8,13 +8,13 @@
     "steam": {
       "id": 238210,
       "delisted": true,
-      "store_details": "The classic 1999 build was delisted in October 2025, and only the 25th Anniversary Remaster is sold now.",
+      "store_details": "The classic 1999 build was delisted in October 2025.",
       "patches": "The System Shock 2 Community Patch (SCP) fixes bugs and polishes the game, and is worth installing alongside EAX."
     },
     "gog": {
       "id": 1207659172,
       "delisted": true,
-      "store_details": "The classic 1999 build was delisted in October 2025, and only the 25th Anniversary Remaster is sold now.",
+      "store_details": "The classic 1999 build was delisted in October 2025.",
       "patches": "The System Shock 2 Community Patch (SCP) fixes bugs and polishes the game, and is worth installing alongside EAX."
     }
   },

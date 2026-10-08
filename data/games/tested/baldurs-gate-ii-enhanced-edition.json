@@ -1,7 +1,7 @@
 {
   "$schema": "../../schema.json",
   "name": "Baldur's Gate II: Enhanced Edition",
-  "description": "Baldur's Gate II: Enhanced Edition is a singleplayer and multiplayer isometric role-playing game, an enhanced edition of the second in the Baldur's Gate series.",
+  "description": "Baldur's Gate II: Enhanced Edition is a singleplayer and multiplayer isometric role-playing game, an enhanced edition of 2000's Baldur's Gate II: Shadows of Amn.",
   "released": "2013-11-15",
   "exe": "BaldurII.exe",
   "stores": {

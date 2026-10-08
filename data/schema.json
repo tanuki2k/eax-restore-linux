@@ -14,7 +14,7 @@
       "minLength": 1
     },
     "description": {
-      "description": "One sentence on what the game is, shown only in the database browser: modes, perspective, genres and series in PCGamingWiki's pattern (\"X is a singleplayer first-person shooter game in the Y series.\"), in our own words. Starts with the game's name.",
+      "description": "One sentence on what the game is, shown only in the database browser: modes, perspective, genres and series in PCGamingWiki's pattern (\"X is a singleplayer first-person shooter game in the Y series.\"), in our own words. Starts with the game's name. Doesn't repeat what other fields (e.g. store_details) say, such as what a bundle includes.",
       "type": "string",
       "minLength": 1
     },
@@ -198,7 +198,7 @@
           "items": { "type": "string", "pattern": "^(?!/)(?!.*\\.\\.)[^\\\\]+$" },
           "default": []
         },
-        "store_details": { "type": "string" },
+        "store_details": { "type": "string", "description": "What's specific to this store's listing. A game that isn't an Enhanced Edition, remaster or remake doesn't mention one." },
         "patches": { "type": "string" }
       }
     },
