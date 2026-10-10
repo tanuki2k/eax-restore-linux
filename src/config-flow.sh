@@ -2,6 +2,29 @@
 # ACTION: INSTALL (PHASE 1: CONFIGURATION)
 # ==============================================================================
 
+# Usage: show_tweak_blurb <limits|com|dummy>
+# The heading and two-line description shown above an advanced tweak's
+# question, the same wherever that tweak is offered.
+show_tweak_blurb() {
+    case "$1" in
+        dummy)
+            print_result "${BOLD}EAX Unified Dummy Files" "$CYAN"
+            echo -e "${WHITE}Tricks certain games (like KOTOR, Max Payne, and early Unreal Engine titles)"
+            echo -e "into unlocking the EAX menu option by creating harmless, empty eax.dll and eaxunified.dll files.${NC}"
+            ;;
+        limits)
+            print_result "${BOLD}Expand Audio Limits" "$CYAN"
+            echo -e "${WHITE}Forces the engine to handle 256 simultaneous sounds and locks the sample rate to 48kHz."
+            echo -e "Fixes audio dropping out in chaotic games (like F.E.A.R. or Thief), but uses more CPU.${NC}"
+            ;;
+        com)
+            print_result "${BOLD}COM Registry Routing" "$CYAN"
+            echo -e "${WHITE}Explicitly forces the Windows registry to point directly to our custom dsound.dll."
+            echo -e "Beneficial for stubborn late-90s and early-2000s games that actively ignore local DLL files.${NC}"
+            ;;
+    esac
+}
+
 # Usage: print_choices_summary
 # Phase 2's "Configuration finished!" recap of every Phase 1 answer, shown
 # before the player confirms the deploy so they can check it all in one place.
@@ -289,13 +312,13 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
                 "prefers by default even when Microsoft's files are there."
             APPLY_VCRUN_OVERRIDES_NEEDED=1
         else
-            echo -e "\n${WHITE}These files are missing or incomplete here. Without them, the game may crash"
-            echo -e "silently on startup when it tries to load the audio engine.${NC}"
+            print_paragraph "These files are missing or incomplete here. Without them, the game may crash" \
+                "silently on startup when it tries to load the audio engine."
             if confirm "Install genuine MS VC++ runtimes?"; then INSTALL_VCRUN="y"; else INSTALL_VCRUN="n"; fi
         fi
     else
-        echo -e "\n${WHITE}Skipping. You can revisit this later with EAX_RESTORE_VCRUN_ONLY=1 without redoing"
-        echo -e "the rest of the install.${NC}"
+        print_paragraph "Skipping. You can revisit this later with EAX_RESTORE_VCRUN_ONLY=1 without redoing" \
+            "the rest of the install."
     fi
     choose_companion_vcrun "$VCRUN_CHECKED"
 
@@ -352,7 +375,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     # get it shadowed and can fail to boot. So for a flagged game, decide it
     # here with a guarded check instead of the generic prompt.
     if [ -n "$EAX_UNIFIED" ] && [ "$EAX_UNIFIED_DUMMY_APPLICABLE" -eq 1 ]; then
-        echo -e "\n${WHITE}$GAME_NAME is one of those exceptions — it reaches EAX through an eax.dll shim (EAX Unified),${NC}"
+        print_result "$GAME_NAME is one of those exceptions — it reaches EAX through an eax.dll shim (EAX Unified),"
         echo -e "${WHITE}so it's worth checking whether it already ships its own eax.dll before deciding${NC}"
         echo -e "${WHITE}whether to create dummy eax.dll files to unlock the game's EAX menu.${NC}"
         if confirm "Check whether it ships its own eax.dll?" Y; then
@@ -374,9 +397,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     # firefights). Applies to both engines, so — unlike the other two — it has
     # no applicability gate.
     if [ -n "$RECOMMENDED_AUDIO_LIMITS" ]; then
-        echo -e "\n${CYAN}${BOLD}Expand Audio Limits${NC}"
-        echo -e "${WHITE}Forces the engine to handle 256 simultaneous sounds and locks the sample rate to 48kHz."
-        echo -e "Fixes audio dropping out in chaotic games (like F.E.A.R. or Thief), but uses more CPU.${NC}"
+        show_tweak_blurb limits
         if confirm "Expand OpenAL audio limits? $GAME_NAME is flagged in its profile as benefiting from this." Y; then
             ADVANCED_LIMITS="y"
         else
@@ -389,9 +410,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     # it in addition to EAX Unified Dummy Files for EAX to work under
     # Wine/Proton).
     if [ -n "$RECOMMENDED_COM_ROUTING" ] && [ "$COM_ROUTING_APPLICABLE" -eq 1 ]; then
-        echo -e "\n${CYAN}${BOLD}COM Registry Routing${NC}"
-        echo -e "${WHITE}Explicitly forces the Windows registry to point directly to our custom dsound.dll."
-        echo -e "Beneficial for stubborn late-90s and early-2000s games that actively ignore local DLL files.${NC}"
+        show_tweak_blurb com
         if confirm "Inject COM registry routing? $GAME_NAME is flagged in its profile as needing this." Y; then
             ADVANCED_COM="y"
         else
@@ -404,13 +423,11 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         # Engine 2: only Expand Audio Limits could possibly apply, and it's
         # already been decided above if the database recommended it.
         if [ "$AUDIO_LIMITS_HANDLED" -eq 0 ]; then
-            echo -e "\n${WHITE}EAX Unified Dummy Files and COM Registry Routing both target DirectSound3D"
-            echo -e "specifically, which doesn't apply to a direct OpenAL32.dll swap — only Expand Audio Limits applies here.${NC}"
+            print_paragraph "EAX Unified Dummy Files and COM Registry Routing both target DirectSound3D" \
+                "specifically, which doesn't apply to a direct OpenAL32.dll swap — only Expand Audio Limits applies here."
 
             if confirm "Would you like to view and opt-in to this advanced tweak?" N; then
-                echo -e "\n${CYAN}${BOLD}Expand Audio Limits${NC}"
-                echo -e "${WHITE}Forces the engine to handle 256 simultaneous sounds and locks the sample rate to 48kHz."
-                echo -e "Fixes audio dropping out in chaotic games (like F.E.A.R. or Thief), but uses more CPU.${NC}"
+                show_tweak_blurb limits
                 if confirm "Expand OpenAL audio limits?" N; then
                     ADVANCED_LIMITS="y"
                 fi
@@ -436,27 +453,21 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
 
             if confirm "$GATE_PROMPT" N; then
                 if [ "$EAX_UNIFIED_DUMMY_APPLICABLE" -eq 1 ] && [ "$EAX_UNIFIED_DUMMY_HANDLED" -eq 0 ]; then
-                    echo -e "\n${CYAN}${BOLD}EAX Unified Dummy Files${NC}"
-                    echo -e "${WHITE}Tricks certain games (like KOTOR, Max Payne, and early Unreal Engine titles)"
-                    echo -e "into unlocking the EAX menu option by creating harmless, empty eax.dll and eaxunified.dll files.${NC}"
+                    show_tweak_blurb dummy
                     if confirm "Inject EAX Unified dummy files?" N; then
                         ADVANCED_DUMMY="y"
                     fi
                 fi
 
                 if [ "$AUDIO_LIMITS_HANDLED" -eq 0 ]; then
-                    echo -e "\n${CYAN}${BOLD}Expand Audio Limits${NC}"
-                    echo -e "${WHITE}Forces the engine to handle 256 simultaneous sounds and locks the sample rate to 48kHz."
-                    echo -e "Fixes audio dropping out in chaotic games (like F.E.A.R. or Thief), but uses more CPU.${NC}"
+                    show_tweak_blurb limits
                     if confirm "Expand OpenAL audio limits?" N; then
                         ADVANCED_LIMITS="y"
                     fi
                 fi
 
                 if [ "$COM_ROUTING_APPLICABLE" -eq 1 ] && [ "$COM_ROUTING_HANDLED" -eq 0 ]; then
-                    echo -e "\n${CYAN}${BOLD}COM Registry Routing${NC}"
-                    echo -e "${WHITE}Explicitly forces the Windows registry to point directly to our custom dsound.dll."
-                    echo -e "Beneficial for stubborn late-90s and early-2000s games that actively ignore local DLL files.${NC}"
+                    show_tweak_blurb com
                     if confirm "Inject COM registry routing?" N; then
                         ADVANCED_COM="y"
                     fi

@@ -262,7 +262,7 @@ print_subheading() {
 # load-bearing for unrelated content further down should keep its manual
 # echo -e instead).
 print_paragraph() {
-    local body="\n${WHITE}$1"
+    local line body="\n${WHITE}$1"
     shift
     for line in "$@"; do body+="\n${line}"; done
     echo -e "$(tilde_path "$body")${NC}"

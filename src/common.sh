@@ -17,7 +17,7 @@ prompt_restart_or_quit() {
     if confirm "Would you like to go back and choose a different game?" Y; then
         RESTART_REQUESTED=1
     else
-        echo -e "\n${WHITE}Exiting.${NC}"
+        print_result "Exiting."
         exit "${1:-0}"
     fi
 }

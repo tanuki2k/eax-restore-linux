@@ -237,7 +237,7 @@ prompt_installed_game() {
     while IFS= read -r p; do [ -n "$p" ] && paths+=("$p"); done < <(installed_game_dirs)
     [ ${#paths[@]} -eq 0 ] && return 1
 
-    echo -e "\n${WHITE}Games with something installed via this script:${NC}"
+    print_result "Games with something installed via this script:"
     # One line per game, its name and storefront like the library scan's
     # list; a folder is added only under entries that would otherwise read
     # the same, and shown on its own for a folder that can't be placed.
@@ -1269,7 +1269,7 @@ browse_help() {
     local width=$(( ${WRAP_COLUMNS:-76} - 15 )) i line first
     for ((i = 0; i < ${#help[@]}; i += 2)); do
         if [ -z "${help[i]}" ]; then
-            echo -e "\n${WHITE}${help[i + 1]}:${NC}"
+            print_result "${help[i + 1]}:"
             continue
         fi
         first=1
@@ -1363,7 +1363,7 @@ browse_zoom() {
 # see it when they go to play.
 print_community_patches_summary() {
     [ -n "$PROFILE_PATCHES" ] || return 0
-    echo -e "\n${YELLOW}${BOLD}Suggested community patches:${NC}"
+    print_result "${BOLD}Suggested community patches:" "$YELLOW"
     print_wrapped "$PROFILE_PATCHES"
 }
 

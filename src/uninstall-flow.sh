@@ -201,7 +201,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         declare -A HAS_BACKUP
         for t in "${RESTORE_TARGETS[@]}"; do HAS_BACKUP["$t"]=1; done
 
-        echo -e "\n${YELLOW}${BOLD}The following files will be removed:${NC}"
+        print_result "${BOLD}The following files will be removed:" "$YELLOW"
         idx=1
         for f in "${FILES_TO_REMOVE[@]}"; do
             if [ "${HAS_BACKUP[$f]:-0}" == "1" ]; then
@@ -215,13 +215,13 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         # One row per kind of answer (parse_selection's syntax); the number
         # rows only make sense with more than one file.
         if [ ${#FILES_TO_REMOVE[@]} -gt 1 ]; then
-            echo -e "\n${YELLOW}Which files should be removed?${NC}"
+            print_result "Which files should be removed?" "$YELLOW"
             printf "  %-9s  %s\n" "Enter" "remove all of them"
             printf "  %-9s  %s\n" "1 2 3" "remove only these (or a range: 1-3)"
             printf "  %-9s  %s\n" "^2" "remove all except 2"
             printf "  %-9s  %s\n" "n" "keep them all"
         else
-            echo -e "\n${YELLOW}Should this file be removed?${NC}"
+            print_result "Should this file be removed?" "$YELLOW"
             printf "  %-9s  %s\n" "Enter" "remove it"
             printf "  %-9s  %s\n" "n" "keep it"
         fi
@@ -345,7 +345,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
 
     if [ ${#FINAL_REMOVE[@]} -eq 0 ] && [ "$LAUNCHER_WORK" -eq 0 ] && [[ ! "$REMOVE_REG" =~ $YES_RE ]] \
         && [ "$UNINSTALL_VCRUN" == "n" ] && [ ${#GAME_SETTINGS_REVERT_GROUPS[@]} -eq 0 ] && [ "$COMPANION_WORK" -eq 0 ]; then
-        echo -e "\n${WHITE}Nothing to change, so the uninstall is finished.${NC}"
+        print_result "Nothing to change, so the uninstall is finished."
         exit 0
     fi
 
@@ -354,7 +354,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     # ==============================================================================
     print_banner "UNINSTALL — PHASE 2: EXECUTION"
     if ! confirm "Ready to remove the EAX fix from ${GAME_NAME:-this game}. Proceed?"; then
-        echo -e "\n${YELLOW}Uninstall cancelled. Nothing was changed.${NC}"
+        print_result "Uninstall cancelled. Nothing was changed." "$YELLOW"
         exit 0
     fi
 

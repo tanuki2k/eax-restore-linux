@@ -680,7 +680,7 @@ ask_speaker_configuration() {
     local prev_mode="${OUTPUT_MODE:-}" prev_stereo="${STEREO_MODE:-}"
     local prev_hrtf="${ENABLE_HRTF:-}" prev_channels="${SURROUND_CHANNELS:-}"
 
-    echo -e "\n${WHITE}What kind of audio output are you using?${NC}"
+    print_result "What kind of audio output are you using?"
     case "$prev_mode" in surround) RADIO_INITIAL=2 ;; matrix) RADIO_INITIAL=3 ;; *) RADIO_INITIAL=1 ;; esac
     RADIO_DETAILS=("Headphones, or two speakers."
         "Four to eight speakers, such as 5.1 or 7.1."
@@ -694,7 +694,7 @@ ask_speaker_configuration() {
     if [ "$OUTPUT_MODE_CHOICE" == "1" ]; then
         OUTPUT_MODE="stereo"
 
-        echo -e "\n${WHITE}What are you listening on?${NC}"
+        print_result "What are you listening on?"
         RADIO_INITIAL=1
         if [ "$prev_mode" == "stereo" ]; then
             case "$prev_stereo" in speakers) RADIO_INITIAL=2 ;; headphones) RADIO_INITIAL=3 ;; esac
@@ -734,7 +734,7 @@ ask_speaker_configuration() {
     elif [ "$OUTPUT_MODE_CHOICE" == "2" ]; then
         OUTPUT_MODE="surround"
 
-        echo -e "\n${WHITE}Which speaker layout do you have?${NC}"
+        print_result "Which speaker layout do you have?"
         case "$prev_channels" in
             quad) RADIO_INITIAL=1 ;; surround61) RADIO_INITIAL=3 ;; surround71) RADIO_INITIAL=4 ;;
             *) RADIO_INITIAL=2 ;;
@@ -1128,7 +1128,7 @@ game_settings_step() {
         done
     fi
     if [ "$any_audio" -eq 1 ] && [ "$wanted" -eq 1 ]; then
-        echo -e "\n${WHITE}Audio settings for ${GAME_NAME}:${NC}"
+        print_result "Audio settings for ${GAME_NAME}:"
         for id in "${fix_order[@]}"; do
             [[ "$id" == audio:* ]] || continue
             case "${fix_status[$id]}" in
@@ -1178,7 +1178,7 @@ game_settings_step() {
             for id in "${offered[@]}"; do _decline_fix "$id"; done
             offered=()
         else
-            echo -e "\n${WHITE}Optional settings for ${GAME_NAME}:${NC}"
+            print_result "Optional settings for ${GAME_NAME}:"
         fi
         for id in "${unoffered[@]}"; do _print_status_line "$id"; done
         if [ ${#offered[@]} -gt 0 ]; then
@@ -1461,7 +1461,7 @@ print_game_settings_summary() {
     _summary_skipped() {
         echo -e " ${YELLOW}✗${NC} ${WHITE}${1}${NC}${2:+${DIM} (${2})${NC}}"
     }
-    echo -e "\n${YELLOW}${BOLD}Game settings:${NC}"
+    print_result "${BOLD}Game settings:" "$YELLOW"
     for title in "${GAME_SETTINGS_APPLIED[@]}"; do
         fu=""
         for entry in "${GAME_SETTINGS_FOLLOW_UPS[@]}"; do

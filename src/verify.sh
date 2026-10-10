@@ -1,6 +1,6 @@
 print_offline_instructions() {
     print_banner "OFFLINE MODE INSTRUCTIONS" "$YELLOW"
-    echo -e "\n${WHITE}GitHub is unreachable and no local cache was found.${NC}"
+    print_result "GitHub is unreachable and no local cache was found."
     echo -e "${WHITE}Manually extract release .zips into these folders (one DSOAL and one OpenAL Soft is enough):${NC}\n"
     echo -e "${CYAN}1. kcat DSOAL stable (archive/DSOAL_${DSOAL_PINNED_REV}.zip):${NC} ${GREEN}$(tilde_path "$DSOAL_PINNED")${NC}"
     echo -e "${CYAN}2. kcat DSOAL latest:${NC}                    ${GREEN}$(tilde_path "$DSOAL_OFFICIAL")${NC}"

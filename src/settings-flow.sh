@@ -121,7 +121,7 @@ if [ -n "$SETTINGS_TOOL_MODE" ]; then
         GAME_SETTINGS_SPEAKERS_ONLY=1 game_settings_step 3
         if [ ${#GAME_SETTINGS_REVERT_GROUPS[@]} -gt 0 ]; then
             [ -n "$GAME_SETTINGS_STEP_SHOWN" ] || print_step 3 "Game Audio Settings"
-            echo -e "\n${WHITE}These were set for your old speakers, so they'll be put back:${NC}"
+            print_result "These were set for your old speakers, so they'll be put back:"
             for entry in "${GAME_SETTINGS_REVERT_GROUPS[@]}"; do
                 settings_title="${entry#*$'\x1f'}"; settings_title="${settings_title%%$'\x1f'*}"
                 echo -e "  ${YELLOW}-${NC} ${WHITE}${settings_title}${NC}"
@@ -157,7 +157,7 @@ if [ -n "$SETTINGS_TOOL_MODE" ]; then
     fi
 
     # The recap, then one "Proceed?" before anything is written.
-    echo -e "\n${WHITE}Your changes:${NC}"
+    print_result "Your changes:"
     [ "$settings_speakers_changed" -eq 1 ] \
         && echo -e " -> ${YELLOW}Speakers${NC}: ${WHITE}${settings_old_label:-unknown} → ${settings_new_label}${NC}"
     settings_on=""

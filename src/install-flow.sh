@@ -4,10 +4,10 @@
     # PHASE 2: EXECUTION
     # ==============================================================================
     print_banner "PHASE 2: EXECUTION"
-    echo -e "\n${CYAN}${BOLD}Configuration finished!${NC}"
+    print_result "${BOLD}Configuration finished!" "$CYAN"
     print_choices_summary
     if ! confirm "Ready to deploy the audio files to your game and system prefix. Proceed?"; then
-        echo -e "\n${YELLOW}Installation aborted.${NC}"
+        print_result "Installation aborted." "$YELLOW"
         exit 0
     fi
 
@@ -32,16 +32,16 @@
     if [ "$ENGINE_CHOICE" == "2" ]; then
         if [ ! -f "$OPENAL_SRC" ]; then
             print_error "Required OpenAL Soft source file was not found in the cache."
-            echo -e "\n${WHITE}This usually means the download failed or was incomplete earlier in this run"
-            echo -e "(check the Audio Engine Selection step's download output above), or the ${ARCH_FOLDER} build isn't present in it."
-            echo -e "Re-run the script to retry the download.${NC}"
+            print_paragraph "This usually means the download failed or was incomplete earlier in this run" \
+                "(check the Audio Engine Selection step's download output above), or the ${ARCH_FOLDER} build isn't present in it." \
+                "Re-run the script to retry the download."
             exit 1
         fi
     elif [ ! -f "$DSOUND_SRC" ] || [ ! -f "$DSOAL_SRC" ]; then
         print_error "Required source files for the selected engine were not found in the cache."
-        echo -e "\n${WHITE}This usually means the download for this engine failed or was incomplete earlier in this run"
-        echo -e "(check the Audio Engine Selection step's download output above), or the ${ARCH_FOLDER} build isn't present in it."
-        echo -e "Re-run the script to retry the download, or choose a different engine.${NC}"
+        print_paragraph "This usually means the download for this engine failed or was incomplete earlier in this run" \
+            "(check the Audio Engine Selection step's download output above), or the ${ARCH_FOLDER} build isn't present in it." \
+            "Re-run the script to retry the download, or choose a different engine."
         exit 1
     fi
 
@@ -419,7 +419,7 @@ EOF
     if [ "$OVERRIDE_METHOD" == "registry" ] || [ "$OVERRIDE_METHOD" == "launcher" ]; then
         override_where="the $(runner_label) prefix registry"
         [ "$OVERRIDE_METHOD" == "launcher" ] && override_where="$(launcher_override_where)"
-        echo -e "\n${YELLOW}${BOLD}Final Steps to activate EAX:${NC}"
+        print_result "${BOLD}Final Steps to activate EAX:" "$YELLOW"
         echo -e " 1. ${YELLOW}${BOLD}Launch the game:${NC} ${WHITE}The DLL Override is set in $(tilde_path "$override_where"), so just hit Play.${NC}"
         print_companion_final_steps
         # The game profile's audio settings already switched EAX on in the
@@ -427,7 +427,7 @@ EOF
         game_audio_settings_done \
             || echo -e " 2. ${YELLOW}${BOLD}In-Game Settings:${NC} ${WHITE}Go to Audio settings and enable 'EAX', '3D Sound', or 'Hardware Acceleration'.${NC}"
     else
-        echo -e "\n${YELLOW}${BOLD}Final Steps to activate EAX:${NC}"
+        print_result "${BOLD}Final Steps to activate EAX:" "$YELLOW"
         echo -e " 1. ${YELLOW}${BOLD}Set the Override:${NC} ${WHITE}Apply the WINEDLLOVERRIDES rule (see below).${NC}"
         print_companion_final_steps
         echo -e " 2. ${YELLOW}${BOLD}Launch the game:${NC} ${WHITE}Start the game as you normally would.${NC}"

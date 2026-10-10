@@ -1364,9 +1364,9 @@ confirm_continue_if_openal_native() {
     fi
 
     if [ "$overriding" -eq 0 ]; then
-        echo -e "\n${WHITE}Almost every classic EAX title uses DirectSound3D; only a handful route"
-        echo -e "EAX through OpenAL natively. Choose DirectSound3D unless you know this"
-        echo -e "game is one of the exceptions.${NC}"
+        print_paragraph "Almost every classic EAX title uses DirectSound3D; only a handful route" \
+            "EAX through OpenAL natively. Choose DirectSound3D unless you know this" \
+            "game is one of the exceptions."
     fi
     echo ""
     print_option 1 "DirectSound3D / DSOAL   [default]"
@@ -1389,7 +1389,7 @@ confirm_continue_if_openal_native() {
     done
 
     if [ "$api_choice" == "3" ]; then
-        echo -e "\n${WHITE}Install cancelled.${NC}"
+        print_result "Install cancelled."
         exit 0
     fi
 
@@ -1456,7 +1456,7 @@ detect_game_environment() {
         print_task "Verifying Wine Prefix"
         while true; do
             if [ -z "$APPID" ]; then
-                echo -e "\n${YELLOW}Enter the Steam AppID manually: ${NC}"
+                print_result "Enter the Steam AppID manually: " "$YELLOW"
                 echo -e "${WHITE} Tip: Found on the game's Steam Store URL, or in Steam by right-clicking the game -> Properties -> Updates.${NC}"
                 echo -e -n "> "
                 if ! read_answer APPID; then
@@ -1518,8 +1518,8 @@ detect_game_environment() {
                 if ! confirm "Check this AppID again?"; then APPID=""; fi
             else
                 print_error "Proton prefix not found for AppID ${APPID}."
-                echo -e "\n${WHITE}If you just installed this game, Proton has not generated the prefix yet."
-                echo -e "Please launch the game at least once, close it, and try again.${NC}"
+                print_paragraph "If you just installed this game, Proton has not generated the prefix yet." \
+                    "Please launch the game at least once, close it, and try again."
                 if ensure_game_database; then
                     local beta_branch
                     beta_branch=$(gdb_field "$APPID" steam '.stores.steam.beta_branch // empty')
@@ -1567,7 +1567,7 @@ detect_game_environment() {
 
         while true; do
             if [ -z "$PREFIX_PATH" ]; then
-                echo -e "\n${YELLOW}Enter the Wine prefix path: ${NC}"
+                print_result "Enter the Wine prefix path: " "$YELLOW"
                 echo -e "${WHITE} Example Heroic: ~/Games/Heroic/Prefixes/[Game-Name]${NC}"
                 echo -e -n "> "
                 if ! read_answer PREFIX_PATH; then
@@ -1603,8 +1603,8 @@ detect_game_environment() {
                 break
             else
                 print_error "Initialised Wine prefix not found at that location."
-                echo -e "\n${WHITE}If you just installed this game, the launcher has not generated the prefix yet."
-                echo -e "Please run the game at least once, close it, and try again.${NC}"
+                print_paragraph "If you just installed this game, the launcher has not generated the prefix yet." \
+                    "Please run the game at least once, close it, and try again."
 
                 # "No" clears the path and drops back to the manual prompt for a
                 # corrected value; an empty entry there triggers restart/quit.

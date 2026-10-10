@@ -36,16 +36,16 @@ tools_menu() {
     print_banner "TOOLS"
     while true; do
         tool_keys=()
-        echo -e "\n${WHITE}Game settings:${NC}"
+        print_result "Game settings:"
         if [ -n "$GAME_DATABASE_FILE" ]; then
             print_key_option "[O]ptional settings"; tool_keys+=(o)
         fi
         print_key_option "[S]peaker configuration"; tool_keys+=(s)
         if [ -n "$GAME_DATABASE_FILE" ] && interactive_tty; then
-            echo -e "\n${WHITE}Game database:${NC}"
+            print_result "Game database:"
             print_key_option "[B]rowse game profiles"; tool_keys+=(b)
         fi
-        echo -e "\n${WHITE}Runtime:${NC}"
+        print_result "Runtime:"
         print_key_option "[V]C++ install"
         print_key_option "[D]SOAL logging"
         echo ""
@@ -154,10 +154,10 @@ fi
 if [ -n "$VCRUN_ONLY_MODE" ]; then
     print_banner "VC++ RUNTIME ONLY MODE"
     if [ "$VCRUN_ONLY_MODE" == "env" ]; then
-        echo -e "\n${WHITE}EAX_RESTORE_VCRUN_ONLY is set, so this run will only install the MS VC++ 2022"
-        echo -e "Redistributable into a game's prefix — nothing else the script normally does (DSOAL,"
-        echo -e "OpenAL Soft, alsoft.ini, registry overrides) will be touched.${NC}"
-        echo -e "\n${WHITE}Unset EAX_RESTORE_VCRUN_ONLY to return to the normal install/uninstall flow.${NC}"
+        print_paragraph "EAX_RESTORE_VCRUN_ONLY is set, so this run will only install the MS VC++ 2022" \
+            "Redistributable into a game's prefix — nothing else the script normally does (DSOAL," \
+            "OpenAL Soft, alsoft.ini, registry overrides) will be touched."
+        print_result "Unset EAX_RESTORE_VCRUN_ONLY to return to the normal install/uninstall flow."
     else
         tool_gate "This installs the MS VC++ 2022 Redistributable into a game's prefix —" \
             "DSOAL, OpenAL Soft, alsoft.ini and registry overrides aren't touched." \
@@ -195,16 +195,13 @@ if [ -n "$VCRUN_ONLY_MODE" ]; then
     resolve_companion_apps "$APPID"
 
     print_banner "READY"
-    echo -e "\n${WHITE}This will attempt to install the MS VC++ 2022 Redistributable into:${NC}"
+    print_result "This will attempt to install the MS VC++ 2022 Redistributable into:"
     [ "$LAUNCHER_TYPE" == "1" ] && echo -e "${WHITE} -> Steam AppID: ${BOLD}$APPID${NC}"
     [ -n "$PREFIX_PATH" ] && echo -e "${WHITE} -> Prefix: ${BOLD}$(tilde_path "$PREFIX_PATH")${NC}"
     for i in "${!COMPANION_IDS[@]}"; do
         echo -e "${WHITE} -> ${COMPANION_NAMES[$i]}'s prefix: ${BOLD}$(tilde_path "${COMPANION_PREFIXES[$i]}")${NC}"
     done
-    echo -e "\n${YELLOW}Proceed? (Y/n): ${NC}"
-    echo -e -n "> "
-    read_answer CONFIRM_VCRUN_ONLY
-    if [[ "$CONFIRM_VCRUN_ONLY" =~ $NO_RE ]]; then
+    if ! confirm "Proceed?"; then
         print_result "Cancelled — no changes were made." "$YELLOW"
         exit 0
     fi

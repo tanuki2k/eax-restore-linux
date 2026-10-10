@@ -52,11 +52,11 @@ if [ -n "$DSOAL_LOG_MODE" ]; then
         launcher_override_target
     done
     if [ -z "$OVERRIDE_FILE" ]; then
-        echo -e "\n${WHITE}To turn on DSOAL logging yourself, set these environment variables for ${GAME_NAME}${NC}"
+        print_result "To turn on DSOAL logging yourself, set these environment variables for ${GAME_NAME}"
         echo -e "${WHITE}(in Steam, put them in front of %command% in its launch options):${NC}"
         echo -e "  ${CYAN}DSOAL_LOGLEVEL=4${NC}"
         echo -e "  ${CYAN}DSOAL_LOGFILE=\"${dsoal_log_wine}\"${NC}"
-        echo -e "\n${WHITE}Use 3 instead of 4 for a smaller log without every EAX call.${NC}"
+        print_result "Use 3 instead of 4 for a smaller log without every EAX call."
         exit 0
     fi
 
