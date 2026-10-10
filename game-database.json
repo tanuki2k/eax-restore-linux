@@ -756,6 +756,35 @@
                 }
               }
             }
+          },
+          {
+            "title": "Enable EAX reverb",
+            "reason": "TODO",
+            "changes": {
+              "system.reg": {
+                "Software\\Wow6432Node\\Outrage\\Descent3": {
+                  "LauncherSoundEnabled": "1",
+                  "SoundcardName": "Primary Sound Driver",
+                  "SoundMixer": "6"
+                }
+              }
+            }
+          }
+        ],
+        "optional_settings": [
+          {
+            "title": "TODO",
+            "reason": "TODO",
+            "changes": {
+              "system.reg": {
+                "Software\\Wow6432Node\\Outrage\\Descent3": {
+                  "ConnectionSpeed": "Fast",
+                  "DetailLevelConfigured": "1",
+                  "NetworkConnection": "LAN",
+                  "PredefDetailSetting": "3"
+                }
+              }
+            }
           }
         ]
       }
@@ -2236,17 +2265,6 @@
                 "gui_mediumFontLimit": "0"
               }
             }
-          },
-          {
-            "title": "Fix stutter at 60 Hz",
-            "reason": "Quake 4 runs its game logic at 62.5 frames a second, so it stutters slightly on a 60 Hz display.",
-            "changes": {
-              "autoexec.cfg": {
-                "com_fixedTic": "1",
-                "r_swapInterval": "0"
-              }
-            },
-            "follow_up": "Quake 4's own V-Sync is now off, so turn on V-Sync and a 60 FPS cap outside the game, or the picture will tear."
           }
         ]
       },

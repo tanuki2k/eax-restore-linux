@@ -18,6 +18,35 @@
         "changes": {
           "system.reg": { "Software\\Wow6432Node\\Outrage\\Descent3": { "SoundMixer": "6" } }
         }
+      },
+      {
+        "title": "Enable EAX reverb",
+        "reason": "TODO",
+        "changes": {
+          "system.reg": {
+            "Software\\Wow6432Node\\Outrage\\Descent3": {
+              "LauncherSoundEnabled": "1",
+              "SoundcardName": "Primary Sound Driver",
+              "SoundMixer": "6"
+            }
+          }
+        }
+      }
+    ],
+    "optional_settings": [
+      {
+        "title": "TODO",
+        "reason": "TODO",
+        "changes": {
+          "system.reg": {
+            "Software\\Wow6432Node\\Outrage\\Descent3": {
+              "ConnectionSpeed": "Fast",
+              "DetailLevelConfigured": "1",
+              "NetworkConnection": "LAN",
+              "PredefDetailSetting": "3"
+            }
+          }
+        }
       }
     ]
   }
