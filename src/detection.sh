@@ -99,16 +99,6 @@ get_game_directory() {
     BUILT_IN_CONFIRMED=""
     OPENAL_NATIVE_MODE=""
 
-    # The game Tools → Probe game settings already picked and ran (see
-    # probe-flow.sh): used once, like LOCATE_METHOD.
-    if [ -n "$PRESET_GAME_DIR" ]; then
-        GAME_DIR="$PRESET_GAME_DIR"; GAME_NAME="$PRESET_GAME_NAME"
-        GAME_INSTALL_ROOT="$PRESET_GAME_ROOT"; SCANNED_APPID="$PRESET_APPID"
-        PRESET_GAME_DIR=""; PRESET_GAME_NAME=""; PRESET_GAME_ROOT=""; PRESET_APPID=""
-        echo -e "\n${GREEN}Using: $(tilde_path "$GAME_DIR")${NC}"
-        return
-    fi
-
     if wants_installed_list && prompt_installed_game; then
         echo -e "\n${GREEN}Using: $(tilde_path "$GAME_DIR")${NC}"
         note_game_used "$GAME_DIR"

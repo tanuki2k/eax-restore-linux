@@ -83,18 +83,9 @@ launcher hardcodes `releases/latest`).
   CI (`.github/workflows/game-database.yml`) runs `check-jsonschema --schemafile
   data/schema.json` over all three folders plus both scripts' `--check` modes; the build
   also fails if a game's file name is in more than one folder.
-  To find what a new game setting should change, run
-  `EAX_RESTORE_DEV=1 ./dist/eax-restore-linux.sh` → Tools → [P]robe game
-  settings (`src/probe-flow.sh`): it lists the installed games that have a file
-  in `data/` (a new game needs a `data/drafts/` file first), shows a read-only
-  scan of the game's folder (config files with line endings, setting names in
-  the exes and DLLs, the bundled OpenAL and Miles 3D providers; kept as
-  `scan.txt` in the session folder), snapshots the config files and registry,
-  runs the game (defaults), installs the fix, runs it again (sound options
-  switched on) and merges the changed keys into the game's file as an audio
-  setting titled "Enable EAX reverb" with a TODO reason, then optionally runs
-  it a third time (other options changed) for a TODO-titled optional setting,
-  formatting and rebuilding after each.
+  To find what a new game setting should change, compare the game's config files
+  (and the prefix's registry files) before and after switching its sound options
+  on. (A probe tool that automated this was removed; it's to be reimplemented.)
   `tools/browse-game-database.sh [file]` (needs fzf) browses the built
   database with the Tools menu's browser — a quick look at how an entry's
   profile reads. `tools/migrate-v2-to-v3.sh` is the one-off that split the old single-file (schema 2)
@@ -161,8 +152,7 @@ their execution order in the assembled script):
    for the highlighted item, answer in `RADIO_CHOICE`; it leaves one
    ` -> Label: choice` line and falls back to the numbered menu when stdin isn't
    a terminal. Use it for any new short single-pick menu. `paged_select` is the
-   numbered pick list for a long list (the library scan, the probe's installed
-   games): pages fit the terminal, [N]ext/[P]revious, the caller's letter keys
+   numbered pick list for a long list (the library scan): pages fit the terminal, [N]ext/[P]revious, the caller's letter keys
    after them, rows from `PAGED_LABELS`/`PAGED_DETAILS`, answer in
    `PAGED_CHOICE`. Use it for any new list that can run long.
 5. **`common.sh`** — small helpers used throughout every other file: `is_truthy`,
@@ -266,13 +256,7 @@ their execution order in the assembled script):
     (`dsoal-log-flow.sh`, another early exit), Tools → Optional settings /
     Speaker configuration (`settings-flow.sh`, which identifies the game from
     its own folder with `identify_game_dir` and the prefix from the manifest,
-    so it has no launcher step), Tools → Probe game settings (`probe-flow.sh`,
-    only with `EAX_RESTORE_DEV=1`: runs the game before and after an install,
-    finding it by its prefix in `/proc/*/environ`, and proposes the
-    `game_config` from the config-file snapshots; the install in between is the
-    normal one, entered with `PRESET_GAME_DIR` so step 1 doesn't ask, and
-    `install-flow.sh` hands back to `probe_after_install` when `PROBE_PENDING`
-    is set), `ACTION: UNINSTALL`, `ACTION: INSTALL`. The `ACTION: INSTALL` block itself
+    so it has no launcher step), `ACTION: UNINSTALL`, `ACTION: INSTALL`. The `ACTION: INSTALL` block itself
     spans two files sharing one `if [ "$SCRIPT_ACTION" == "i" ]` — opened in
     `config-flow.sh` (Phase 1: Configuration, all the interactive prompts)
     and closed in `install-flow.sh` (Phase 2: Execution, actually deploying

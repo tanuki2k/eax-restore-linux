@@ -112,17 +112,6 @@
 #   edits to the database before they've been pushed to the branch it's
 #   normally fetched from.
 #
-# * EAX_RESTORE_DEV=1  Adds Tools → [P]robe game settings, for contributors
-#   adding a game's settings to the database: it launches the game, notices
-#   when it quits, installs the fix, launches it again while you switch its
-#   sound options on, then proposes the game_config those changes need (and
-#   optionally a third time, for optional settings). Run from a repo
-#   checkout (dist/eax-restore-linux.sh), it merges the proposal into the
-#   game's data file; elsewhere it saves it.
-#
-# * EAX_RESTORE_REPO=/path/to/checkout  The repo checkout Probe game settings
-#   merges into, when the script isn't run from that checkout's dist/.
-#
 # --- License ---
 # MIT License
 # Copyright (c) 2026 Tanuki2k

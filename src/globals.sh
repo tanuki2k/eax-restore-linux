@@ -220,20 +220,6 @@ SCAN_NEXT=""
 # or "speakers" (Speaker configuration), empty otherwise. See settings-flow.sh.
 SETTINGS_TOOL_MODE=""
 
-# Tools → Probe game settings (EAX_RESTORE_DEV=1 only), see probe-flow.sh.
-# PROBE_TOOL_MODE is set while it runs. PROBE_PENDING marks an install it
-# handed off to, which install-flow.sh hands back from; PRESET_GAME_DIR (with
-# its name, install folder and Steam AppID) is the game install step 1 then
-# uses without asking. Sessions live under PROBE_DIR.
-PROBE_TOOL_MODE=""
-PROBE_PENDING=""
-PRESET_GAME_DIR=""
-PRESET_GAME_NAME=""
-PRESET_GAME_ROOT=""
-PRESET_APPID=""
-PROBE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/eax-restore-linux/probe"
-PROBE_SEEN_EXES=()
-
 # paged_select's rows (label, and an optional dim detail per row), set by
 # the caller just before it, and the number or letter it was answered with.
 PAGED_LABELS=()

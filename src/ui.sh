@@ -569,8 +569,7 @@ print_key_option() {
 # settings, Speaker configuration, VC++ install, DSOAL logging), "main menu"
 # otherwise.
 return_menu_label() {
-    if [ -n "${SETTINGS_TOOL_MODE:-}" ] || [ -n "${DSOAL_LOG_MODE:-}" ] || [ "${VCRUN_ONLY_MODE:-}" == "menu" ] \
-        || [ -n "${PROBE_TOOL_MODE:-}" ]; then
+    if [ -n "${SETTINGS_TOOL_MODE:-}" ] || [ -n "${DSOAL_LOG_MODE:-}" ] || [ "${VCRUN_ONLY_MODE:-}" == "menu" ]; then
         printf 'Tools menu'
     else
         printf 'main menu'

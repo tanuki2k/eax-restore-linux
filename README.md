@@ -170,7 +170,7 @@ tools/build-game-database.sh       # regenerates game-database.json
 
 CI checks every file against the schema, that it's formatted, and that `game-database.json` is up to date. Please only add a store `id` you've independently verified against the storefront's own page or API — a wrong ID would point the script at someone else's prefix. **Leave a field out when it's empty or at its default** — there are no `null`s in these files.
 
-To find what a game setting should change, run the script from a checkout with `EAX_RESTORE_DEV=1 ./dist/eax-restore-linux.sh` and pick Tools → **Probe game settings**. It snapshots the game's config files, launches the game (quit from the main menu without changing anything), installs the fix, launches it again (switch the sound options on, then quit), and proposes the keys that changed (in its config files or its registry) as a new audio setting in the game's file, titled "Enable EAX reverb" with a TODO reason for you to write. It can then launch the game a third time (change the other options worth offering, then quit) and propose those as an optional setting with a TODO title and reason. Only games that already have a file are listed — for a new one, add a `data/drafts/` file with its name and store ID first. Before the first launch it also lists the game's config files, the setting names in its exes and DLLs, and its bundled OpenAL and Miles 3D providers.
+To find what a game setting should change, compare the game's config files (and, for registry settings, the prefix's `user.reg`/`system.reg`) before and after switching its sound options on, then write the keys that changed into the game's file as an audio setting.
 
 `tools/browse-game-database.sh [database.json]` browses the built `game-database.json` with the same browser as Tools → **[B]rowse game profiles** (it needs `fzf`): rebuild, then check how your entry's profile reads to players.
 
@@ -257,8 +257,6 @@ For repeat runs or scripting, these can be set to skip prompts:
 | `EAX_RESTORE_SKIP_CACHE_CHECK=1` | Doesn't contact GitHub for DSOAL or OpenAL Soft: the build choice only offers what's already in the local cache. |
 | `EAX_RESTORE_GAME_DATABASE_FILE=/path/to/game-database.json` | Uses a local file (e.g. one you built with `tools/build-game-database.sh`) instead of fetching `game-database.json` — mainly for testing edits to the database itself before they're pushed. |
 | `EAX_RESTORE_NO_LOG=1` | Turns off the per-run log file (see [Logs & Bug Reports](#logs--bug-reports)). |
-| `EAX_RESTORE_DEV=1` | Adds Tools → **Probe game settings**, for adding a game's settings to the database. It lists the installed games that already have an entry, launches the one you pick, notices when it quits, installs the fix, launches it again while you switch its sound options on, then proposes the `game_config` for those changes (and, if you like, launches it a third time for optional settings). Run from a repo checkout's `dist/`, it merges the proposal into the game's file; elsewhere it saves it under `~/.cache/eax-restore-linux/probe/`. |
-| `EAX_RESTORE_REPO=/path/to/checkout` | The repo checkout Probe game settings merges into, when the script isn't run from that checkout's `dist/`. |
 
 ### Logs & Bug Reports
 
