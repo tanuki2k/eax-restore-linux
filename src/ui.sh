@@ -94,6 +94,7 @@ print_start_header() {
     local -a fit=()
     local art
     for n in 1 2 3 4; do
+        # shellcheck disable=SC1087 # indirect expansion of the array named in art
         art="d$n[@]"; widest=0
         for line in "${!art}"; do
             line="$(printf '%b' "$line" | sed 's/\x1b\[[0-9;]*m//g')"
@@ -103,6 +104,7 @@ print_start_header() {
     done
     [ ${#fit[@]} -gt 0 ] || fit=(4)
     n="${1:-${fit[RANDOM % ${#fit[@]}]}}"
+    # shellcheck disable=SC1087 # indirect expansion of the array named in art
     art="d$n[@]"
     echo ""
     for line in "${!art}"; do echo -e "$line"; done

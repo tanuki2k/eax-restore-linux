@@ -847,6 +847,7 @@ speaker_config_from_alsoft() {
             fi
             ;;
     esac
+    return 0
 }
 
 # Usage: offer_alsoft_settings

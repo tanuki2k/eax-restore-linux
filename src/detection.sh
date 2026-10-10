@@ -1780,7 +1780,9 @@ select_architecture() {
         if confirm "Attempt to auto-detect 32/64-bit architecture?"; then
             A32=0; A64=0
             while IFS= read -r -d '' exe; do
-                [[ $(file "$exe") == *"PE32+"* ]] && ((A64++)) || ((A32++))
+                # if/else, not "a && ((A64++)) || ((A32++))": ((A64++)) from 0 is
+                # status 1, so that would count a first 64-bit exe as 32-bit too.
+                if [[ $(file "$exe") == *"PE32+"* ]]; then A64=$((A64 + 1)); else A32=$((A32 + 1)); fi
             done < <(find "$GAME_DIR" -maxdepth 2 -type f -iname "*.exe" -print0)
             if [ "$A64" -gt 0 ] && [ "$A32" -eq 0 ]; then
                 DETECTED="64"

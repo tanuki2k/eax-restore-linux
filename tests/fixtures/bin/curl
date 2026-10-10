@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Test stub: the network is off, so every request fails the way an offline one does.
+echo "curl $*" >> "${STUB_LOG:-/dev/null}"
+exit 6

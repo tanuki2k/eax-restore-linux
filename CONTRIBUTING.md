@@ -19,7 +19,7 @@ Open an issue describing the use case. If it's specific to a particular game or 
 1. Fork the repo and create a branch from `main`.
 2. Keep changes focused — one fix or feature per PR is easier to review than a bundle of unrelated changes.
 3. Test your change against a real game install where possible; this script has a lot of environment-dependent branches (Steam vs. Heroic, 32-bit vs. 64-bit, Proton vs. native Wine) that are hard to catch with a syntax check alone.
-4. Run `bash -n eax-restore-linux.sh` at minimum to confirm the script still parses.
+4. Run `./build.sh && bats -r tests` (install `bats` first); it also covers `bash -n` via CI. Add a test with a bug fix.
 5. Describe what you tested in the PR description.
 
 ## Style

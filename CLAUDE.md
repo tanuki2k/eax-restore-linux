@@ -106,9 +106,18 @@ launcher hardcodes `releases/latest`).
   `EAX_RESTORE_GAME_DATABASE_FILE=/path/to/file.json` (point at a local JSON edit before
   it's pushed) are useful when iterating — see the script's own
   `--- Environment Variables ---` header comment for the full list.
-- There is no test suite or CI test job; verification is manual (`bash -n`, running the
-  install/uninstall flow against a real game prefix, checking `README.md` and the
-  script's own header/inline docs stay in sync with behavior changes).
+- **Tests:** `./build.sh && bats -r tests` (needs `bats`; `.github/workflows/test.yml`
+  runs it plus `bash -n` and `shellcheck --severity=error`). `tests/unit/` sources
+  `src/*.sh` directly and covers the config editors (every format, gadb, wine_reg),
+  launch-option/VDF/Heroic editing, `parse_selection` and the speaker round trip.
+  `tests/integration/` runs the built script against a fake Steam world in a temp
+  `$HOME` (`env.bash`: fake library, prefix, caches, PE stubs; `tests/fixtures/bin`
+  stubs `protontricks` (its `regedit` import is applied to `user.reg` by
+  `regedit-apply.py`), `winetricks`, `curl`, `pgrep`) with answers piped on stdin
+  (one line per prompt; a new Phase 1 question needs a line in `install_answers`), and
+  checks that uninstall restores the tree byte for byte. Add a test with each bug fix.
+  Real Proton/launchers, fzf and the tick-list UI are still manual, as is checking
+  `README.md` and the script's own header/inline docs stay in sync with behavior changes.
 
 ## Architecture
 

@@ -1,0 +1,32 @@
+{
+  "schema_version": 3,
+  "games": [
+    {
+      "id": "test-game",
+      "name": "Test Game",
+      "released": "2001-01-01",
+      "exe": "game.exe",
+      "stores": { "steam": { "id": 424242 } },
+      "eax": { "api": "directsound3d", "versions": ["2.0"] },
+      "game_config": {
+        "files": {
+          "settings.ini": { "format": "ini", "locations": ["game:settings.ini"] }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX effects",
+            "reason": "Test Game ships with EAX off.",
+            "changes": { "settings.ini": { "Audio": { "UseEAX": "1", "Provider": "DSOUND" } } }
+          }
+        ],
+        "optional_settings": [
+          {
+            "title": "Skip intro movies",
+            "reason": "Test Game plays its intro movies on every start.",
+            "changes": { "settings.ini": { "Video": { "SkipIntro": "1" } } }
+          }
+        ]
+      }
+    }
+  ]
+}

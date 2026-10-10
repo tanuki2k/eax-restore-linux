@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Test stub: records the call; answers the prefix query with $STUB_PREFIX and
+# applies regedit imports to the prefix's user.reg.
+echo "protontricks $*" >> "${STUB_LOG:-/dev/null}"
+case "$1" in
+    -V|--version) echo "protontricks (stub) 1.12.0" ;;
+    -c) case "$2" in
+            *WINEPREFIX*) echo "$STUB_PREFIX" ;;
+            regedit*)
+                reg="${2#regedit \"}"; reg="${reg%\"}"
+                python3 -I "$(dirname "${BASH_SOURCE[0]}")/regedit-apply.py" "$reg" ;;
+        esac ;;
+esac
+exit 0
