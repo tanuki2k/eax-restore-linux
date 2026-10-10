@@ -448,21 +448,21 @@ current_profile() {
 # Prints "<audio> <optional>": settings this store's build can be offered (only_if
 # stores match). Used by the GAME PROFILE block's fix counts before the game folder is known.
 count_game_settings() {
-    jq -r --arg id "$1" --arg store "$2" '
-        [.games[] | select((.stores[$store].id // "") | tostring == $id)][0].game_config // {}
+    gdb_jq "$1" "$2" '
+        entry0 | .game_config // {}
         | def offered: [.[]? | select((.only_if.stores // [$store]) | index($store))] | length;
-          "\(.audio_settings | offered) \(.optional_settings | offered)"' "$GAME_DATABASE_FILE" 2>/dev/null
+          "\(.audio_settings | offered) \(.optional_settings | offered)"'
 }
 
 # Usage: game_setting_titles <id> <steam|gog>
 # One "audio|optional<TAB>title" line per setting count_game_settings counts,
 # audio settings first, for the game profile screen.
 game_setting_titles() {
-    jq -r --arg id "$1" --arg store "$2" '
-        [.games[] | select((.stores[$store].id // "") | tostring == $id)][0].game_config // {}
+    gdb_jq "$1" "$2" '
+        entry0 | .game_config // {}
         | def offered: [.[]? | select((.only_if.stores // [$store]) | index($store))];
           (.audio_settings | offered | .[] | "audio\t\(.title)"),
-          (.optional_settings | offered | .[] | "optional\t\(.title)")' "$GAME_DATABASE_FILE" 2>/dev/null
+          (.optional_settings | offered | .[] | "optional\t\(.title)")'
 }
 
 # Usage: speakers_match <comma list>
@@ -489,10 +489,10 @@ speakers_match() {
 # (|-joined), section ("" for cfg formats), key, value (with the markers
 # above). \x1f rather than tabs so empty fields survive `read`.
 load_game_config_rows() {
-    jq -r --arg id "$1" --arg store "$2" '
+    gdb_jq "$1" "$2" '
         def enc: if type == "boolean" then (if . then "__TRUE__" else "__FALSE__" end)
                  elif . == null then "__DELETE__" else tostring end;
-        [.games[] | select((.stores[$store].id // "") | tostring == $id)][0].game_config // empty
+        entry0 | .game_config // empty
         | (.files // {}) as $files
         | ((.audio_settings // []) | to_entries[] | {cat: "audio", i: .key, f: .value}),
           ((.optional_settings // []) | to_entries[] | {cat: "optional", i: .key, f: .value})
@@ -504,7 +504,7 @@ load_game_config_rows() {
         | [$cat, ($i | tostring), $f.title, $f.reason, (($f.only_if.stores // []) | join(",")),
            ([$f.only_if.speakers // empty] | flatten | join(",")), ($f.follow_up // ""), $file, ($def.format // ""),
            ($def.if_missing // ""), (($def.locations // []) | join("|")), $kv[0], $kv[1], ($kv[2] | enc)]
-        | join("\u001f")' "$GAME_DATABASE_FILE" 2>/dev/null
+        | join("\u001f")'
 }
 
 # Usage: config_row_is_safe <format> <locations> <section> <key> <value>
@@ -870,10 +870,9 @@ offer_alsoft_settings() {
             confirm "Set ${key} to ${value} in alsoft.ini for ${GAME_NAME}?" Y || continue
         fi
         ALSOFT_OVERRIDES+=("$sec"$'\x1f'"$key"$'\x1f'"$value")
-    done < <(jq -r --arg id "$KG_ID" --arg store "$KG_STORE" '
-        [.games[] | select((.stores[$store].id // "") | tostring == $id)][0].install.alsoft_ini // {}
-        | to_entries[] | .key as $sec | .value | to_entries[] | [$sec, .key, (.value | tostring)] | join("\u001f")' \
-        "$GAME_DATABASE_FILE" 2>/dev/null)
+    done < <(gdb_jq "$KG_ID" "$KG_STORE" '
+        entry0 | .install.alsoft_ini // {}
+        | to_entries[] | .key as $sec | .value | to_entries[] | [$sec, .key, (.value | tostring)] | join("\u001f")')
 }
 
 # Usage: apply_alsoft_overrides
@@ -1249,9 +1248,7 @@ game_settings_step() {
 # One field of the current game's profile (KG_ID / KG_STORE), or
 # nothing.
 profile_field() {
-    jq -r --arg id "$KG_ID" --arg store "$KG_STORE" \
-        "[.games[] | select((.stores[\$store].id // \"\") | tostring == \$id)][0] | $1 // empty" \
-        "$GAME_DATABASE_FILE" 2>/dev/null
+    gdb_jq "$KG_ID" "$KG_STORE" "entry0 | $1 // empty"
 }
 
 # Usage: game_exe_running

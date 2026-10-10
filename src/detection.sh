@@ -1004,9 +1004,7 @@ confirm_game_dir_has_exe() {
     # real .exe. Keeps the current folder if the user declines or the new
     # path isn't usable.
     local exe_name
-    exe_name=$(jq -r --arg id "$1" --arg store "$2" \
-        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .exe // empty' \
-        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
+    exe_name=$(gdb_field "$1" "$2" '.exe // empty')
     [ -n "$exe_name" ] && [ -n "$GAME_DIR" ] || return 0
     find "$GAME_DIR" -maxdepth 1 -type f -iname "$exe_name" -print -quit 2>/dev/null | grep -q . && return 0
 
@@ -1219,9 +1217,7 @@ confirm_continue_if_openal_native() {
         elif [ -n "$GAME_DIR" ] && [ -d "$GAME_DIR" ]; then
             print_task "Checking $game_name's files against its profile"
             local main_exe scan_result scan_ds_file scan_openal_file
-            main_exe=$(jq -r --arg id "$1" --arg store "$store" \
-                '.games[] | select((.stores[$store].id // "") | tostring == $id) | .exe // empty' \
-                "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
+            main_exe=$(gdb_field "$1" "$store" '.exe // empty')
             IFS=$'\x1f' read -r scan_result scan_ds_file scan_openal_file \
                 < <(detect_api_from_binary "$GAME_DIR" "$main_exe")
             print_api_row "Profile" "$api_display"
@@ -1268,10 +1264,10 @@ confirm_continue_if_openal_native() {
             echo ""
             print_status "Checking the game database for $game_name's audio API..."
 
-            match_count=$(jq -r --arg id "$1" --arg store "$store" '[.games[] | select((.stores[$store].id // "") | tostring == $id)] | length' "$GAME_DATABASE_FILE" 2>/dev/null)
+            match_count=$(gdb_jq "$1" "$store" 'matches | length')
 
             if [ "${match_count:-0}" -gt 0 ]; then
-                db_api_raw=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | (.stores[$store].api // .eax.api // "")' "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
+                db_api_raw=$(gdb_field "$1" "$store" '(.stores[$store].api // .eax.api // "")')
                 api="${db_api_raw:-directsound3d}"
                 matched=1
                 # Normally done in the prefix step with the profile
@@ -1509,9 +1505,7 @@ detect_game_environment() {
                 echo -e "Please launch the game at least once, close it, and try again.${NC}"
                 if ensure_game_database; then
                     local beta_branch
-                    beta_branch=$(jq -r --arg id "$APPID" \
-                        '.games[] | select((.stores.steam.id // "") | tostring == $id) | .stores.steam.beta_branch // empty' \
-                        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
+                    beta_branch=$(gdb_field "$APPID" steam '.stores.steam.beta_branch // empty')
                     if [ -n "$beta_branch" ]; then
                         print_note "no prefix at all can also mean Steam installed a native Linux build" \
                             "instead of Windows — no Proton is used for that. Opting into the" \

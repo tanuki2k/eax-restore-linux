@@ -48,9 +48,7 @@ resolve_companion_apps() {
     local -a ids
     # Read first: the confirm below must read the player's answer, not jq's
     # output, which a "while read ... < <(jq)" loop would hand it.
-    mapfile -t ids < <(jq -r --arg id "$1" \
-        '[.games[] | select((.stores.steam.id // "") | tostring == $id)][0] | .stores.steam.companion_apps // [] | .[]' \
-        "$GAME_DATABASE_FILE" 2>/dev/null)
+    mapfile -t ids < <(gdb_jq "$1" steam 'entry0 | .stores.steam.companion_apps // [] | .[]')
     for id in "${ids[@]}"; do
         [[ "$id" =~ ^[0-9]+$ ]] && [ "$id" != "$1" ] || continue
         acf="$lib/appmanifest_${id}.acf"

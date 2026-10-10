@@ -297,11 +297,43 @@ prompt_installed_game() {
     return 1
 }
 
+# --- Looking up one game's entry ---------------------------------------------
+# A game is found by one store ID. gdb_jq prepends these jq definitions to
+# every lookup, so no call site repeats the selector: entry is the first
+# match (and nothing when there is none), entry0 the first match or null,
+# matches all of them. $id and $store are the --arg values. The definitions
+# live inside the function, not in a variable: the browser's preview runs in
+# a new shell that gets every function but only a short list of variables.
+
+# Usage: gdb_jq <id> <steam|gog> <jq filter using entry / entry0 / matches>
+# Raw jq output for the filter, with errors silenced.
+gdb_jq() {
+    local defs='def matches: [.games[] | select((.stores[$store].id // "") | tostring == $id)];
+        def entry: first(matches[]);
+        def entry0: matches[0];'
+    jq -r --arg id "$1" --arg store "$2" "$defs $3" "$GAME_DATABASE_FILE" 2>/dev/null
+}
+
+# Usage: gdb_field <id> <steam|gog> <jq path on the entry, e.g. .eax.status>
+# The first line of one field of the game's entry, or nothing.
+gdb_field() { gdb_jq "$1" "$2" "entry | $3" | head -n 1; }
+
+# Usage: gdb_fields <id> <steam|gog> <jq expression>...
+# Several fields in one jq run, as one line with the values separated by
+# \x1f (read them with IFS=$'\x1f' read -r). Each expression must give
+# exactly one value (end it in // ""); line breaks inside a value are cut to
+# its first line.
+gdb_fields() {
+    local id="$1" store="$2" list="" e; shift 2
+    for e in "$@"; do list+="${list:+, }($e)"; done
+    gdb_jq "$id" "$store" "entry | [$list] | map(tostring | (split(\"\\n\")[0] // \"\")) | join(\"\\u001f\")"
+}
+
 game_eax_status() {
     # Usage: game_eax_status <id> <steam|gog>
     # The entry's eax.status ("supported" when it has none), or nothing when
     # the game isn't in the database.
-    jq -r --arg id "$1" --arg store "$2" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.status // "supported"' "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1
+    gdb_field "$1" "$2" '.eax.status // "supported"'
 }
 
 confirm_built_in_install() {
@@ -337,8 +369,8 @@ block_if_eax_not_implemented() {
     local store="steam"
     [ "$2" == "gog" ] && store="gog"
     local status workaround
-    status=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.status // "supported"' "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
-    workaround=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.fix_in_place // false' "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
+    IFS=$'\x1f' read -r status workaround < <(gdb_fields "$1" "$store" '.eax.status // ""' '.eax.fix_in_place // false')
+    [ -n "$status" ] || return
 
     if [ "$status" == "not_implemented" ]; then
         if [ -n "$SCANNED_NOTES_SHOWN" ]; then
@@ -370,7 +402,7 @@ block_if_eax_not_implemented() {
 # the outcome.
 print_eax_block_error() {
     local name
-    name=$(jq -r --arg id "$1" --arg store "$2" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .name' "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
+    name=$(gdb_field "$1" "$2" .name)
     print_error "There's nothing for this script to restore in ${name:-this game}."
 }
 
@@ -547,13 +579,9 @@ scan_game_libraries() {
 
     local beta_branch="" exe_name
     if [ "${stores[$idx]}" == "steam" ]; then
-        beta_branch=$(jq -r --arg id "${ids[$idx]}" \
-            '.games[] | select((.stores.steam.id // "") | tostring == $id) | .stores.steam.beta_branch // empty' \
-            "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
+        beta_branch=$(gdb_field "${ids[$idx]}" steam '.stores.steam.beta_branch // empty')
     fi
-    exe_name=$(jq -r --arg id "${ids[$idx]}" --arg store "${stores[$idx]}" \
-        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .exe // empty' \
-        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
+    exe_name=$(gdb_field "${ids[$idx]}" "${stores[$idx]}" '.exe // empty')
     resolve_exe_folder "${paths[$idx]}" "$beta_branch" "$exe_name" || return 1
     GAME_INSTALL_ROOT="${paths[$idx]}"
 
@@ -590,9 +618,7 @@ resolve_recommended_tweaks() {
     local store="steam"
     [ "$2" == "gog" ] && store="gog"
     local tweaks
-    tweaks=$(jq -r --arg id "$1" --arg store "$store" \
-        '[.games[] | select((.stores[$store].id // "") | tostring == $id)][0] | .install.tweaks // [] | .[]' \
-        "$GAME_DATABASE_FILE" 2>/dev/null)
+    tweaks=$(gdb_jq "$1" "$store" 'entry0 | .install.tweaks // [] | .[]')
     [ -z "$tweaks" ] && return
     grep -qx "eax_unified" <<< "$tweaks" && EAX_UNIFIED=1
     grep -qx "expand_audio_limits" <<< "$tweaks" && RECOMMENDED_AUDIO_LIMITS=1
@@ -617,9 +643,7 @@ resolve_extra_exe_folders() {
         [[ "$rel" == /* || "$rel" == *..* || "$rel" == *\\* ]] && continue
         dir="$(find_existing_variant "$GAME_DIR/$rel")"
         [ -n "$dir" ] && [ -d "$dir" ] && EXTRA_GAME_DIRS+=("$dir")
-    done < <(jq -r --arg id "$1" --arg store "$2" \
-        '[.games[] | select((.stores[$store].id // "") | tostring == $id)][0] | .stores[$store].extra_exe_folders // [] | .[]' \
-        "$GAME_DATABASE_FILE" 2>/dev/null)
+    done < <(gdb_jq "$1" "$2" 'entry0 | .stores[$store].extra_exe_folders // [] | .[]')
 }
 
 # Usage: extra_exe_folders_list
@@ -653,19 +677,13 @@ show_game_details_block() {
     ensure_game_database || return
 
     local match_count
-    match_count=$(jq -r --arg id "$id" --arg store "$store" \
-        '[.games[] | select((.stores[$store].id // "") | tostring == $id)] | length' \
-        "$GAME_DATABASE_FILE" 2>/dev/null)
+    match_count=$(gdb_jq "$id" "$store" 'matches | length')
     [ "${match_count:-0}" -gt 0 ] || return
 
-    PROFILE_API=$(jq -r --arg id "$id" --arg store "$store" \
-        '.games[] | select((.stores[$store].id // "") | tostring == $id) | (.stores[$store].api // .eax.api // "directsound3d")' \
-        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
+    PROFILE_API=$(gdb_field "$id" "$store" '(.stores[$store].api // .eax.api // "directsound3d")')
     # The first match's whole text, not its first line: patches can hold a
     # line break between suggestions.
-    PROFILE_PATCHES=$(jq -r --arg id "$id" --arg store "$store" \
-        '[.games[] | select((.stores[$store].id // "") | tostring == $id)][0].stores[$store].patches // empty' \
-        "$GAME_DATABASE_FILE" 2>/dev/null)
+    PROFILE_PATCHES=$(gdb_jq "$id" "$store" 'entry0 | .stores[$store].patches // empty')
     resolve_recommended_tweaks "$id" "$store"
 
     print_banner "GAME PROFILE"
@@ -719,56 +737,21 @@ print_game_profile_stores() {
     # first.
     local name eax_versions eax_status eax_status_details restore_details eax_unified notes
     local released description
-    name=$(jq -r --arg id "$id" --arg store "$store" \
-        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .name' \
-        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
-    released=$(jq -r --arg id "$id" --arg store "$store" \
-        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .released // empty' \
-        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
-    description=$(jq -r --arg id "$id" --arg store "$store" \
-        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .description // empty' \
-        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
-    eax_versions=$(jq -r --arg id "$id" --arg store "$store" \
-        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.versions // [] | join(", ")' \
-        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
-    eax_status=$(jq -r --arg id "$id" --arg store "$store" \
-        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.status // "supported"' \
-        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
+    IFS=$'\x1f' read -r name released description eax_versions eax_status eax_status_details \
+        restore_details eax_unified notes < <(gdb_fields "$id" "$store" \
+        '.name // ""' '.released // ""' '.description // ""' '.eax.versions // [] | join(", ")' \
+        '.eax.status // "supported"' '.eax.problem // ""' '.eax.fix // ""' \
+        '.install.tweaks // [] | index("eax_unified") != null' '.notes // ""')
     [ -z "$eax_status" ] && eax_status="supported"
-    eax_status_details=$(jq -r --arg id "$id" --arg store "$store" \
-        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.problem // empty' \
-        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
-    restore_details=$(jq -r --arg id "$id" --arg store "$store" \
-        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.fix // empty' \
-        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
-    # Read here rather than through resolve_recommended_tweaks, which sets
-    # the install's tweak globals.
-    eax_unified=$(jq -r --arg id "$id" --arg store "$store" \
-        '[.games[] | select((.stores[$store].id // "") | tostring == $id)][0] | .install.tweaks // [] | index("eax_unified") != null' \
-        "$GAME_DATABASE_FILE" 2>/dev/null)
-    notes=$(jq -r --arg id "$id" --arg store "$store" \
-        '.games[] | select((.stores[$store].id // "") | tostring == $id) | .notes // empty' \
-        "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
 
     # Store-level fields, one per entry.
     for i in "${!stores[@]}"; do
-        apis[i]=$(jq -r --arg id "${ids[i]}" --arg store "${stores[i]}" \
-            '.games[] | select((.stores[$store].id // "") | tostring == $id) | (.stores[$store].api // .eax.api // "directsound3d")' \
-            "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
-        listings[i]=$(jq -r --arg id "${ids[i]}" --arg store "${stores[i]}" \
-            '.games[] | select((.stores[$store].id // "") | tostring == $id) | (if .stores[$store].delisted then "delisted" else empty end)' \
-            "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
-        id_sources[i]=$(jq -r --arg id "${ids[i]}" --arg store "${stores[i]}" \
-            '.games[] | select((.stores[$store].id // "") | tostring == $id) | .stores[$store].id_source // empty' \
-            "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
-        details[i]=$(jq -r --arg id "${ids[i]}" --arg store "${stores[i]}" \
-            '.games[] | select((.stores[$store].id // "") | tostring == $id) | .stores[$store].store_details // empty' \
-            "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
+        IFS=$'\x1f' read -r apis[i] listings[i] id_sources[i] details[i] < <(gdb_fields "${ids[i]}" "${stores[i]}" \
+            '.stores[$store].api // .eax.api // "directsound3d"' '(if .stores[$store].delisted then "delisted" else "" end)' \
+            '.stores[$store].id_source // ""' '.stores[$store].store_details // ""')
         # The first match's whole text, not its first line: patches can hold
         # a line break between suggestions.
-        patches[i]=$(jq -r --arg id "${ids[i]}" --arg store "${stores[i]}" \
-            '[.games[] | select((.stores[$store].id // "") | tostring == $id)][0].stores[$store].patches // empty' \
-            "$GAME_DATABASE_FILE" 2>/dev/null)
+        patches[i]=$(gdb_jq "${ids[i]}" "${stores[i]}" 'entry0 | .stores[$store].patches // empty')
         counts[i]="$(count_game_settings "${ids[i]}" "${stores[i]}")"
     done
 
@@ -960,10 +943,10 @@ print_game_profile_stores() {
         [ "$shown_sources" -eq 0 ] && print_subheading "Sources"
         print_link "$src_title" "$src_url"
         shown_sources=1
-    done < <(jq -r --arg id "$id" --arg store "$store" '
-        [.games[] | select((.stores[$store].id // "") | tostring == $id)][0].sources // [] | .[]
+    done < <(gdb_jq "$id" "$store" '
+        entry0 | .sources // [] | .[]
         | if type == "string" then ["", .] else [.title, .url] end
-        | join("\u001f")' "$GAME_DATABASE_FILE" 2>/dev/null)
+        | join("\u001f")')
     echo ""
 }
 
@@ -1406,9 +1389,9 @@ confirm_continue_if_eax_impossible() {
 
     local status="" workaround="false" beta_branch=""
     if ensure_game_database; then
-        status=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.status // "supported"' "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
-        workaround=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .eax.fix_in_place // false' "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
-        beta_branch=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .stores[$store].beta_branch // empty' "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
+        IFS=$'\x1f' read -r status workaround beta_branch < <(gdb_fields "$1" "$store" \
+            '.eax.status // ""' '.eax.fix_in_place // false' '.stores[$store].beta_branch // ""')
+        [ -n "$workaround" ] || workaround="false"
     elif [ "$store" != "gog" ] && [ -n "${EAX_IMPOSSIBLE_FALLBACK_STEAM[$1]:-}" ]; then
         # Only ever seeds Half-Life (AppID 70), which has no in-place
         # workaround — workaround stays "false".
@@ -1424,7 +1407,7 @@ confirm_continue_if_eax_impossible() {
     if [ "$status" == "built_in" ]; then
         [ -n "$BUILT_IN_CONFIRMED" ] && return
         local name
-        name=$(jq -r --arg id "$1" --arg store "$store" '.games[] | select((.stores[$store].id // "") | tostring == $id) | .name' "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
+        name=$(gdb_field "$1" "$store" .name)
         confirm_built_in_install "$name" || prompt_restart_or_quit 0
         return
     fi
