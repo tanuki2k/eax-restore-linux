@@ -32,6 +32,7 @@ if [ -n "$SETTINGS_TOOL_MODE" ]; then
         RESTART_REQUESTED=""
 
         print_step 1 "Game Location"
+        print_paragraph "This step finds the folder the game is installed in."
         get_game_directory ""
         # Step 1's [R]eturn, or a retry handed back: back to the Tools menu,
         # as every way out of these tools short of finishing is.

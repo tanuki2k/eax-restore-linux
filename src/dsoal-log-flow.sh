@@ -23,6 +23,7 @@ if [ -n "$DSOAL_LOG_MODE" ]; then
         RESTART_REQUESTED=""
 
         print_step 1 "Game Location"
+        print_paragraph "This step finds the folder the game is installed in."
         get_game_directory ""
         # Only step 1's [R]eturn sets it here: back to the Tools menu.
         [ -n "$RESTART_REQUESTED" ] && { OPEN_TOOLS_MENU=1; continue 2; }

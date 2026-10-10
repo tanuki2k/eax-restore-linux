@@ -213,20 +213,13 @@ get_game_directory() {
                 return
                 ;;
             scan)
-                print_note "the scan only finds games in the game database, which is still growing." \
-                    "If your game isn't listed, it may still have EAX — choose [M] under the list" \
-                    "to type its path yourself."
-                # Enter scans, B goes back to the locate menu.
-                local go=""
-                while :; do
-                    prompt "Press Enter to scan your libraries, or type B to go back:"
-                    read_answer go || exit 0
-                    case "${go,,}" in
-                        "") break ;;
-                        b) continue 2 ;;
-                    esac
-                    print_result "That's not a valid option — please press Enter or type B." "$YELLOW"
-                done
+                print_note "the game database is a work in progress, so the scan only finds the games" \
+                    "added so far. If your game isn't listed, it may still have EAX — choose [M] under" \
+                    "the list to type its path yourself."
+                # No goes back to the locate menu.
+                if ! confirm "Scan your libraries, knowing the game database is a work in progress?"; then
+                    continue
+                fi
                 if scan_game_libraries; then
                     echo -e "\n${GREEN}Using: $(tilde_path "$GAME_DIR")${NC}"
                     note_game_used "$GAME_DIR"

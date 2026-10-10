@@ -20,6 +20,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         RESTART_REQUESTED=""
 
         print_step 1 "Game Location"
+        print_paragraph "This step finds the folder the game is installed in."
         get_game_directory ""
         # Only step 1's [R]eturn to the main menu sets it here.
         [ -n "$RESTART_REQUESTED" ] && continue 2
@@ -211,8 +212,19 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
             idx=$((idx + 1))
         done
 
-        echo -e "\n${YELLOW}Press Enter to remove all of these, or type the numbers of just the ones you"
-        echo -e "want (e.g. \"1 2 3\", \"1-3\", or \"^4\" to remove everything except 4), or 'n' to keep them: ${NC}"
+        # One row per kind of answer (parse_selection's syntax); the number
+        # rows only make sense with more than one file.
+        if [ ${#FILES_TO_REMOVE[@]} -gt 1 ]; then
+            echo -e "\n${YELLOW}Which files should be removed?${NC}"
+            printf "  %-9s  %s\n" "Enter" "remove all of them"
+            printf "  %-9s  %s\n" "1 2 3" "remove only these (or a range: 1-3)"
+            printf "  %-9s  %s\n" "^2" "remove all except 2"
+            printf "  %-9s  %s\n" "n" "keep them all"
+        else
+            echo -e "\n${YELLOW}Should this file be removed?${NC}"
+            printf "  %-9s  %s\n" "Enter" "remove it"
+            printf "  %-9s  %s\n" "n" "keep it"
+        fi
         echo -e -n "> "
         read_answer CONFIRM_UNINSTALL
 
