@@ -145,7 +145,9 @@ their execution order in the assembled script):
    ticks and `CHECKLIST_DETAILS` gives each item a body drawn under its box. It
    draws to `/dev/tty` so the run log only gets the final list, falls back to
    titles-only boxes when the list doesn't fit the terminal, and to a numbered
-   "type the numbers" prompt when stdin isn't a terminal. `radio_select` is its
+   "type the numbers" prompt when stdin isn't a terminal (`CHECKLIST_TYPED=1`
+   then, so a caller that asks a follow-up "Apply …?" after Enter can skip it
+   for a typed answer). `radio_select` is its
    single-pick counterpart (↑/↓, Enter; no cancel) for a short menu where each
    item needs a sentence: the speaker step's three questions. `RADIO_INITIAL`
    sets the starting item, `RADIO_DETAILS` the description shown under the list

@@ -1169,13 +1169,14 @@ game_settings_step() {
             fi
         done
         _game_settings_heading optional
-        # Not needed for EAX, so No is the default, and anything but Yes
-        # applies none of them. Tools → Optional settings is the player
+        # Not needed for EAX, so each one starts unticked and only the ones
+        # the player ticks are applied; looking at them costs nothing, so
+        # Yes is the default here. Tools → Optional settings is the player
         # choosing to edit them, so it goes straight to the list.
         local review="Review them?" count="${#offered[@]} optional settings"
         [ ${#offered[@]} -eq 1 ] && { review="Review it?"; count="1 optional setting"; }
         if [ ${#offered[@]} -gt 0 ] && [ -z "${GAME_SETTINGS_EDIT_OPTIONAL:-}" ] \
-            && ! confirm "${GAME_NAME} has ${count}. ${review}" N; then
+            && ! confirm "${GAME_NAME} has ${count}. ${review}" Y; then
             print_note "${GAME_NAME}'s optional settings will stay as they are — you can review them later from Tools → Optional settings in this script's main menu."
             for id in "${offered[@]}"; do _decline_fix "$id"; done
             offered=()
@@ -1184,17 +1185,28 @@ game_settings_step() {
         fi
         for id in "${unoffered[@]}"; do _print_status_line "$id"; done
         if [ ${#offered[@]} -gt 0 ]; then
-            local example="1" i
+            local example="1" i ticked picks
             [ ${#offered[@]} -gt 1 ] && example="1 2"
+            # The tick list's Enter isn't the last word: a player who presses
+            # it by mistake (or without seeing that Space ticks) gets a
+            # question naming what it would do, and No goes back to the list
+            # with the ticks kept. A typed answer (no terminal) is already
+            # deliberate, and asking again there could loop on empty input.
+            picks=("${initial[@]}")
             if [ -n "${GAME_SETTINGS_EDIT_OPTIONAL:-}" ]; then
                 # Starts from what's on now; nothing is declined, only changed.
-                CHECKLIST_INITIAL=("${initial[@]}"); CHECKLIST_DETAILS=("${bodies[@]}")
-                if ! checklist_select "Press Enter to keep these as they are, type the numbers you want on (e.g. \"$example\"), or 'n' for none:" \
-                    "${offered_titles[@]}"; then
-                    GAME_SETTINGS_CANCELLED=1
-                    unset -f _print_fix _fix_body _applied_fix_body _print_absent_note _decline_fix _plan_fix _print_status_line
-                    return
-                fi
+                while true; do
+                    CHECKLIST_INITIAL=("${picks[@]}"); CHECKLIST_DETAILS=("${bodies[@]}")
+                    if ! checklist_select "Press Enter to keep these as they are, type the numbers you want on (e.g. \"$example\"), or 'n' for none:" \
+                        "${offered_titles[@]}"; then
+                        GAME_SETTINGS_CANCELLED=1
+                        unset -f _print_fix _fix_body _applied_fix_body _print_absent_note _decline_fix _plan_fix _print_status_line
+                        return
+                    fi
+                    picks=("${SELECTED[@]}")
+                    if [ "${picks[*]}" == "${initial[*]}" ] || [ "$CHECKLIST_TYPED" -eq 1 ]; then break; fi
+                    confirm "Apply these changes?" Y && break
+                done
                 for i in "${!offered[@]}"; do
                     id="${offered[$i]}"
                     if [ "${fix_status[$id]}" == "offer" ] && [ "${SELECTED[$((i + 1))]}" == "1" ]; then
@@ -1204,12 +1216,26 @@ game_settings_step() {
                     fi
                 done
             else
-                # Esc applies none of them, like 'n'.
-                CHECKLIST_DETAILS=("${bodies[@]}")
-                if ! checklist_select "Press Enter to apply all, type the numbers you want (e.g. \"$example\"), or 'n' to skip:" \
-                    "${offered_titles[@]}"; then
-                    for ((i = 1; i <= ${#offered[@]}; i++)); do SELECTED[i]=0; done
-                fi
+                # Esc applies none of them, like 'n', without asking.
+                while true; do
+                    CHECKLIST_INITIAL=("${picks[@]}"); CHECKLIST_DETAILS=("${bodies[@]}")
+                    if ! checklist_select "Type the numbers you want (e.g. \"$example\"), or press Enter for none:" \
+                        "${offered_titles[@]}"; then
+                        for ((i = 1; i <= ${#offered[@]}; i++)); do SELECTED[i]=0; done
+                        break
+                    fi
+                    [ "$CHECKLIST_TYPED" -eq 1 ] && break
+                    picks=("${SELECTED[@]}")
+                    ticked=0
+                    for i in "${picks[@]}"; do [ "$i" == "1" ] && ticked=$((ticked + 1)); done
+                    if [ "$ticked" -eq 0 ]; then
+                        confirm "Skip ${GAME_NAME}'s optional settings?" N && break
+                    elif [ "$ticked" -eq 1 ]; then
+                        confirm "Apply 1 optional setting?" Y && break
+                    else
+                        confirm "Apply ${ticked} optional settings?" Y && break
+                    fi
+                done
                 for i in "${!offered[@]}"; do
                     if [ "${SELECTED[$((i + 1))]}" == "1" ]; then _plan_fix "${offered[$i]}"; else _decline_fix "${offered[$i]}"; fi
                 done

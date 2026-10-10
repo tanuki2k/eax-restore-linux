@@ -625,6 +625,7 @@ join_choices() {
 # Without a terminal to drive it (piped answers), it numbers the titles and
 # asks the fallback prompt, read like a typed selection: Enter for the
 # starting state, numbers for some (see parse_selection), n for none.
+# CHECKLIST_TYPED says which of the two it was (1 = typed).
 checklist_select() {
     local fallback="$1"; shift
     local -a items=("$@") initial=("${CHECKLIST_INITIAL[@]}") bodies=()
@@ -640,7 +641,9 @@ checklist_select() {
     # Each body indented under its title, which sits after " > [x] ".
     _checklist_body() { printf '%s\n' "${bodies[$1]}" | sed 's/^./  &/'; }
 
+    CHECKLIST_TYPED=0
     if [ ! -t 0 ] || [ "${TERM:-dumb}" == "dumb" ] || ! { : > /dev/tty; } 2>/dev/null; then
+        CHECKLIST_TYPED=1
         echo ""
         for ((i = 0; i < n; i++)); do
             print_option "$((i + 1))" "${items[i]}"
