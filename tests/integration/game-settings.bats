@@ -43,8 +43,8 @@ config_get_ini() {
 
 @test "install leaves the optional setting alone when none is picked" {
     profile_install_answers "$BATS_TEST_TMPDIR/in"
-    # the "pick" answer becomes Enter (none)
-    sed -i 's/^1$//' "$BATS_TEST_TMPDIR/in"
+    # the "pick" answer becomes n (none), which means none in every version
+    sed -i 's/^1$/n/' "$BATS_TEST_TMPDIR/in"
     run_script "$BATS_TEST_TMPDIR/in"
     [ "$(config_get_ini Audio UseEAX)" == "1" ]
     [ -z "$(config_get_ini Video SkipIntro)" ]

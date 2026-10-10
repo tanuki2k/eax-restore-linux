@@ -136,7 +136,8 @@ uninstall_answers() {
 
 # The same install for a game that has a profile in the fixture database:
 # adds the API confirmation, Game Audio Settings (apply) and Optional Game
-# Settings (pick #1, "Skip intro movies").
+# Settings (review: y, pick #1 "Skip intro movies"). The last Enter is spare: a typed pick
+# is followed by an "Apply?" question in some versions of the script, not others.
 profile_install_answers() {
     answers "$1" m "$GAME" \
         "" "" "" \
@@ -148,8 +149,8 @@ profile_install_answers() {
         "" \
         "" \
         "" "" \
-        "" 1 \
-        "" ""
+        y 1 \
+        "" "" ""
 }
 
 # Usage: make_profile_world
