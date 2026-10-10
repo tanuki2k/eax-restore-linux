@@ -179,7 +179,9 @@ their execution order in the assembled script):
    (filters, view, help, order, layout) is one temp file that
    `browse_state_next` updates; Ctrl-R is fzf's `toggle-sort` (`--tiebreak
    index` otherwise); Ctrl-L swaps the right pane between beside the list
-   (`BROWSE_SIDE_PERCENT` of the width) and under it, and
+   (`BROWSE_SIDE_PERCENT` of the width) and under it, which it also does by
+   itself (fzf 0.58+) when a resize crosses `BROWSE_STACK_COLUMNS`, both
+   through `browse_layout`, and
    `browse_filter_header` refits the Filters box (three filters on one, two
    or three lines, by the list's width) through
    `transform-header` after every key and resize; Enter and double-click are

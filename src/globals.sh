@@ -254,6 +254,8 @@ RADIO_CHOICE=""
 # The database browser's right pane when it's beside the game list: this
 # share of the width, so the list and the profile grow together.
 BROWSE_SIDE_PERCENT=50
+# Narrower than this many columns, the pane goes under the list instead.
+BROWSE_STACK_COLUMNS=104
 
 # Minimal hardcoded safety net for confirm_continue_if_eax_impossible, used
 # only if ensure_game_database can't produce a file at all (e.g. first

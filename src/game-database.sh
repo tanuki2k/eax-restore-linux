@@ -1015,11 +1015,12 @@ browse_game_database() {
     dir="$(mktemp -d -t eax-restore-browse.XXXXXX)" || return 1
     defs="$dir/defs.sh" state="$dir/state"
     # The right pane sits beside the list (BROWSE_SIDE_PERCENT of the
-    # width). Below 104 columns that leaves both too narrow, so it starts
-    # under the list instead.
+    # width). Below BROWSE_STACK_COLUMNS that leaves both too narrow, so it
+    # starts under the list instead, and (fzf 0.58+) moves there or back
+    # when a resize crosses that width (browse_layout).
     local cols boxed=0 layout=side
     read -r _ cols < <({ stty size < /dev/tty; } 2>/dev/null)
-    [ "${cols:-0}" -lt 104 ] && layout=stack
+    [ "${cols:-0}" -lt "$BROWSE_STACK_COLUMNS" ] && layout=stack
     fzf_at_least 0.58 && boxed=1
     # wrap: a profile row longer than the pane goes on to the next line
     # rather than being cut off.
@@ -1035,8 +1036,8 @@ browse_game_database() {
     # in the list's first lines (older fzf) rather than fzf's header.
     local BROWSE_HEADER_LINES=$(( 1 - boxed ))
     { declare -p GREEN YELLOW CYAN WHITE BOLD DIM NOTE NC GAME_DATABASE_FILE SCRIPT_VERSION \
-        BROWSE_SIDE_PERCENT BROWSE_HEADER_LINES; declare -f; } > "$defs"
-    echo "all all profile 0 match $layout" > "$state"
+        BROWSE_SIDE_PERCENT BROWSE_STACK_COLUMNS BROWSE_HEADER_LINES; declare -f; } > "$defs"
+    echo "all all profile 0 match $layout $layout" > "$state"
     # The key bar's own small script: it's redrawn on every move through
     # the list, too often to load all of the above each time.
     local bar="$dir/bar.sh"
@@ -1044,7 +1045,7 @@ browse_game_database() {
         echo browse_key_bar; } > "$bar"
     local load="source ${defs@Q}"
     local next="$load; browse_state_next ${state@Q}" rows="$load; browse_game_rows ${state@Q}"
-    local header="" label=""
+    local header="" label="" swap
     local -a fzf_opts=()
     if [ "$boxed" -eq 1 ]; then
         header="+transform-header($load; browse_filter_header ${state@Q})"
@@ -1055,14 +1056,18 @@ browse_game_database() {
         # clears below itself as it starts, at a moment none of its events
         # reliably follow, so the bar is drawn again whenever the selection
         # moves as well as on every resize, which also refits the filters.
+        # Ctrl-L goes through browse_layout too, so it and a resize agree
+        # on where the pane is; fzf's own [a|b] cycle would lose track.
+        swap="transform($load; browse_layout ${state@Q} toggle ${side@Q} ${stack@Q})"
         fzf_opts=(--height=-1 --input-border rounded --input-label " Search " --prompt "> " --info inline-right
             --header "$(browse_filter_header "$state")"
             --header-border rounded --header-label " Filters "
             --list-border rounded --list-label " Games "
             --preview-label " Game profile "
             --bind "start,load,focus:execute-silent(bash ${bar@Q})"
-            --bind "resize:execute-silent(bash ${bar@Q})$header")
+            --bind "resize:execute-silent(bash ${bar@Q})+transform($load; browse_layout ${state@Q} resize ${side@Q} ${stack@Q})$header")
     else
+        swap="execute-silent($next layout)+change-preview-window[$other|$now]"
         fzf_opts=(--header-lines 4 --prompt "Search: " --info inline
             --border bottom --border-label-pos 0:bottom --border-label " $(browse_key_legend) ")
     fi
@@ -1087,22 +1092,35 @@ browse_game_database() {
             --bind "ctrl-s:execute-silent($next store)+reload($rows)$header" \
             --bind "ctrl-a:execute-silent($next audio)+reload($rows)$header" \
             --bind "ctrl-r:execute-silent($next order)+toggle-sort+reload($rows)$header" \
-            --bind "ctrl-l:execute-silent($next layout)+change-preview-window[$other|$now]$header" \
+            --bind "ctrl-l:$swap$header" \
             > /dev/null || true
     [ "$boxed" -eq 1 ] && printf '\e[?1049l' > /dev/tty
     rm -rf "$dir"
     return 0
 }
 
-# Usage: browse_key_legend
+# Usage: browse_key_legend [max width]
 # The browser's key legend, keys in bold cyan. The filter keys are in the
-# Filters box beside their filters, and the rest in the F1 help.
+# Filters box beside their filters, and the rest in the F1 help. With a
+# width, the middle keys go (scroll, then layout, then game settings) until
+# it fits; F1 and Esc always stay, since F1 lists every key. It can still be
+# wider than that, so the caller checks.
 browse_key_legend() {
     local -a keys=("F1" "help" "Tab" "game settings" "Ctrl-L" "layout" "Shift-↑/↓" "scroll" "Esc" "back")
-    local i out="" sep=""
-    for ((i = 0; i < ${#keys[@]}; i += 2)); do
-        out+="${sep}${CYAN}${BOLD}${keys[i]}${NC} ${keys[i + 1]}"
-        sep=" ${DIM}·${NC} "
+    local max="${1:-}" i out plain sep
+    local -a drop=(6 4 2)
+    while :; do
+        out="" sep=""
+        for ((i = 0; i < ${#keys[@]}; i += 2)); do
+            [ -n "${keys[i]}" ] || continue
+            out+="${sep}${CYAN}${BOLD}${keys[i]}${NC} ${keys[i + 1]}"
+            sep=" ${DIM}·${NC} "
+        done
+        [ -n "$max" ] && [ "${#drop[@]}" -gt 0 ] || break
+        plain="$(printf '%b' "$out" | sed 's/\x1b\[[0-9;]*m//g')"
+        [ "${#plain}" -le "$max" ] && break
+        keys[drop[0]]=""
+        drop=("${drop[@]:1}")
     done
     printf '%b' "$out"
 }
@@ -1110,31 +1128,42 @@ browse_key_legend() {
 # Usage: browse_key_bar
 # Draws the key legend centred on the terminal's last row, with the script
 # version at the far right, straight to /dev/tty; the cursor is put back
-# where fzf left it. Also run on every resize.
+# where fzf left it. Also run on every resize. On a narrow terminal the
+# legend loses keys to fit, then the version goes; nothing is written in
+# the last column, since a line running past it there would scroll the
+# whole screen up under fzf.
 browse_key_bar() {
     local rows cols legend plain version="v${SCRIPT_VERSION}" col
     read -r rows cols < <({ stty size < /dev/tty; } 2>/dev/null)
     [ -n "$rows" ] || return 0
-    legend="$(browse_key_legend)"
+    legend="$(browse_key_legend $(( cols - ${#version} - 2 )))"
     plain="$(printf '%s' "$legend" | sed 's/\x1b\[[0-9;]*m//g')"
+    if [ "${#plain}" -gt $(( cols - ${#version} - 2 )) ]; then
+        version=""
+        [ "${#plain}" -gt $(( cols - 1 )) ] && legend="" plain=""
+    fi
+    local room=$(( cols - 1 - ${#version} - (${#version} > 0 ? 1 : 0) ))
     col=$(( (cols - ${#plain}) / 2 + 1 ))
     # Clear of the version on a narrow terminal.
-    [ $(( col + ${#plain} )) -gt $(( cols - ${#version} - 1 )) ] && col=$(( cols - ${#version} - ${#plain} - 1 ))
+    [ $(( col + ${#plain} - 1 )) -gt "$room" ] && col=$(( room - ${#plain} + 1 ))
     [ "$col" -lt 1 ] && col=1
-    printf '\e7\e[%d;1H\e[2K\e[%d;%dH%s\e[%d;%dH%b%s%b\e8' "$rows" "$rows" "$col" "$legend" \
-        "$rows" $(( cols - ${#version} + 1 )) "$DIM" "$version" "$NC" > /dev/tty 2>/dev/null
+    printf '\e7\e[%d;1H\e[2K\e[%d;%dH%s' "$rows" "$rows" "$col" "$legend" > /dev/tty 2>/dev/null
+    # The version ends one column short of the edge.
+    [ -n "$version" ] && printf '\e[%d;%dH%b%s%b' "$rows" $(( cols - ${#version} )) "$DIM" "$version" "$NC" > /dev/tty 2>/dev/null
+    printf '\e8' > /dev/tty 2>/dev/null
 }
 
 # Usage: browse_game_stores <state file> [game id]
 # One "<game id>\t<name>\t<store>\t<store id>" line per store entry that
 # passes the browser's filters, games sorted by name and Steam before GOG.
-# The state file holds "<store> <audio> <view> <help> <order> <layout>":
+# The state file holds "<store> <audio> <view> <help> <order> <layout> <fit>":
 # store all, steam, gog, or delisted / steam-delisted / gog-delisted (the
 # entries with the store's own delisted flag, from any store or that one);
 # audio all, directsound3d, openal or eax1.0 to eax5.0 (games whose
-# eax.versions lists it); then what the right pane shows, the list's order
-# and where the right pane is. The API is the store's own, else the
-# game's. With a game id, just that game's.
+# eax.versions lists it); then what the right pane shows, the list's order,
+# where the right pane is and where the terminal's width last put it.
+# The API is the store's own, else the game's. With a game id, just that
+# game's.
 browse_game_stores() {
     local store audio
     read -r store audio _ < "$1"
@@ -1173,7 +1202,7 @@ browse_game_rows() {
 # printf pads bytes and "A–Z" has a multi-byte dash.
 browse_filter_header() {
     local store audio order layout cols width
-    read -r store audio _ _ order layout < "$1"
+    read -r store audio _ _ order layout _ < "$1"
     local -A label=([all]="All" [steam]="Steam" [gog]="GOG" [delisted]="Delisted"
         [steam-delisted]="Steam delisted" [gog-delisted]="GOG delisted"
         [directsound3d]="DirectSound3D" [openal]="OpenAL" [match]="Best match" [az]="A–Z")
@@ -1234,21 +1263,25 @@ browse_game_preview() {
 # F1 in the browser: every key that does something, fzf's own included,
 # most needed first, wrapped to the pane. A "" key starts a heading.
 browse_help() {
+    # Older fzf has no resize event, so only 0.58+ (no BROWSE_HEADER_LINES)
+    # switches the layout by itself.
+    local auto=" It switches by itself when the window gets narrow or wide."
+    [ "${BROWSE_HEADER_LINES:-0}" == "1" ] && auto=""
     local -a help=(
         "" "The basics"
+        "F1" "Show or hide this help."
         "Type" "Search the game names: any part of a name, words in any order."
         "↑/↓" "Move through the list. A mouse click shows a game too."
         "Tab" "Switch the right pane between the game's profile and its settings."
         "Shift-↑/↓" "Scroll the right pane; PgUp/PgDn a page at a time, or the mouse wheel over it."
         "Esc" "Close the browser (Ctrl-C, Ctrl-G and Ctrl-Q too, and Ctrl-D when the search is empty)."
-        "F1" "Show or hide this help."
         "" "Filters"
         "Ctrl-A" "Audio: All → DirectSound3D → OpenAL → EAX 1.0 … 5.0."
         "Ctrl-S" "Store: All → Steam → GOG → Delisted → Steam delisted → GOG delisted. Delisted games are no longer sold on that store."
         "Ctrl-R" "Order: best match first, or A–Z."
         "" "View"
         "Ctrl-F" "Open the right pane full screen; q comes back."
-        "Ctrl-L" "Layout: side by side, or top and bottom."
+        "Ctrl-L" "Layout: side by side, or top and bottom.$auto"
         "Ctrl-/" "Wrap long game names onto a second line."
         "" "Editing the search"
         "Ctrl-U" "Clear the search."
@@ -1284,8 +1317,8 @@ browse_help() {
 # between the profile and the settings (and closes the help), F1 shows or
 # hides the help, Ctrl-R swaps the order, Ctrl-L the layout.
 browse_state_next() {
-    local store audio view help order layout
-    read -r store audio view help order layout < "$1"
+    local store audio view help order layout fit
+    read -r store audio view help order layout fit < "$1"
     case "$2" in
         store)
             case "$store" in
@@ -1303,7 +1336,31 @@ browse_state_next() {
         order) [ "$order" == "az" ] && order=match || order=az ;;
         layout) [ "$layout" == "stack" ] && layout=side || layout=stack ;;
     esac
-    echo "$store $audio $view $help $order $layout" > "$1"
+    echo "$store $audio $view $help $order $layout $fit" > "$1"
+}
+
+# Usage: browse_layout <state file> <toggle|resize> <side window> <stack window>
+# Prints the fzf action that puts the right pane where the state says, for
+# fzf's transform. toggle is Ctrl-L. resize switches to the layout that fits
+# the terminal (under the list below BROWSE_STACK_COLUMNS) only when the
+# width crosses that line, so a Ctrl-L choice stays until the window
+# gets wider or narrower past it.
+browse_layout() {
+    local store audio view help order layout fit cols now
+    read -r store audio view help order layout fit < "$1"
+    case "$2" in
+        toggle) [ "$layout" == "stack" ] && layout=side || layout=stack ;;
+        resize)
+            # fzf passes its width (the terminal's, at --height=-1).
+            cols="${FZF_COLUMNS:-}"
+            [ -n "$cols" ] || read -r _ cols < <({ stty size < /dev/tty; } 2>/dev/null)
+            now=side
+            [ "${cols:-0}" -lt "$BROWSE_STACK_COLUMNS" ] && now=stack
+            [ "$now" == "$fit" ] && return 0
+            fit="$now" layout="$now" ;;
+    esac
+    echo "$store $audio $view $help $order $layout $fit" > "$1"
+    if [ "$layout" == "stack" ]; then echo "change-preview-window[$4]"; else echo "change-preview-window[$3]"; fi
 }
 
 # Usage: browse_pane_label <state file>
