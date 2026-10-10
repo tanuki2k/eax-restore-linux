@@ -5,36 +5,38 @@
 # Usage: print_choices_summary
 # Phase 2's "Configuration finished!" recap of every Phase 1 answer, shown
 # before the player confirms the deploy so they can check it all in one place.
-# Labels line up like the GAME PROFILE details; a value with more than
-# one line (the game settings list) continues under the first.
+# Laid out like the GAME PROFILE: Game details, Sound and Setup headings over
+# one aligned list of rows (print_detail_rows), then the chosen game settings
+# as a subheading list. A value with more than one line continues under the
+# first. Values are plain text (WHITE renders bold).
 print_choices_summary() {
-    local -a labels=() values=()
-    _choice() { labels+=("$1"); values+=("$2"); }
+    local -a groups=() labels=() values=()
+    _choice() { groups+=("$1"); labels+=("$2"); values+=("$3"); }
 
-    _choice "Game" "${BOLD}${GAME_NAME}${NC}"
-    _choice "Location" "$(tilde_path "$GAME_DIR")"
-    if [ "$LAUNCHER_TYPE" == "1" ]; then _choice "Launcher" "Steam"
-    elif [ -n "${HEROIC_APP_NAME:-}" ]; then _choice "Launcher" "Heroic"
-    else _choice "Launcher" "Wine prefix"; fi
-    [ -n "$PREFIX_PATH" ] && _choice "Prefix" "$(tilde_path "$PREFIX_PATH")"
+    _choice game "Game" "${GAME_NAME}"
+    _choice game "Location" "$(tilde_path "$GAME_DIR")"
+    if [ "$LAUNCHER_TYPE" == "1" ]; then _choice game "Launcher" "Steam"
+    elif [ -n "${HEROIC_APP_NAME:-}" ]; then _choice game "Launcher" "Heroic"
+    else _choice game "Launcher" "Wine prefix"; fi
+    [ -n "$PREFIX_PATH" ] && _choice game "Prefix" "$(tilde_path "$PREFIX_PATH")"
     local i list=""
     for i in "${!COMPANION_IDS[@]}"; do
         list+="${list:+$'\n'}${COMPANION_NAMES[$i]} ${DIM}($(tilde_path "${COMPANION_PREFIXES[$i]}"))${NC}"
     done
-    [ -n "$list" ] && _choice "Also sets up" "$list"
-    _choice "Architecture" "${ARCH}-bit"
+    [ -n "$list" ] && _choice game "Also sets up" "$list"
+    _choice game "Architecture" "${ARCH}-bit"
 
     if [ "$ENGINE_CHOICE" == "2" ]; then
-        _choice "Audio engine" "OpenAL Soft as OpenAL32.dll"
-        _choice "Builds" "OpenAL Soft ${OAL_BUILD^} ${DIM}(${OAL_SELECTED_LABEL:-unknown})${NC}"
+        _choice sound "Audio engine" "OpenAL Soft as OpenAL32.dll"
+        _choice sound "Builds" "OpenAL Soft ${OAL_BUILD^} ${DIM}(${OAL_SELECTED_LABEL:-unknown})${NC}"
     else
-        _choice "Audio engine" "DSOAL + OpenAL Soft"
-        _choice "Builds" "DSOAL ${DSOAL_BUILD^} ${DIM}(${DSOAL_SELECTED_LABEL:-unknown})${NC}"$'\n'"OpenAL Soft ${OAL_BUILD^} ${DIM}(${OAL_SELECTED_LABEL:-unknown})${NC}"
+        _choice sound "Audio engine" "DSOAL + OpenAL Soft"
+        _choice sound "Builds" "DSOAL ${DSOAL_BUILD^} ${DIM}(${DSOAL_SELECTED_LABEL:-unknown})${NC}"$'\n'"OpenAL Soft ${OAL_BUILD^} ${DIM}(${OAL_SELECTED_LABEL:-unknown})${NC}"
     fi
 
-    if [ "$INSTALL_VCRUN" == "y" ]; then _choice "VC++ runtimes" "Install"
-    elif [ "${APPLY_VCRUN_OVERRIDES_NEEDED:-0}" == "1" ]; then _choice "VC++ runtimes" "Already in the prefix"
-    else _choice "VC++ runtimes" "Skip"; fi
+    if [ "$INSTALL_VCRUN" == "y" ]; then _choice setup "VC++ runtimes" "Install"
+    elif [ "${APPLY_VCRUN_OVERRIDES_NEEDED:-0}" == "1" ]; then _choice setup "VC++ runtimes" "Already in the prefix"
+    else _choice setup "VC++ runtimes" "Skip"; fi
     list=""
     for i in "${!COMPANION_IDS[@]}"; do
         case "${COMPANION_VCRUN[$i]:-}" in
@@ -45,7 +47,7 @@ print_choices_summary() {
     # Continues the row above it.
     [ -n "$list" ] && values[${#values[@]}-1]+=$'\n'"$list"
 
-    _choice "Speakers" "$(speaker_label)"
+    _choice sound "Speakers" "$(speaker_label)"
 
     local entry sec key value line
     list=""
@@ -54,18 +56,18 @@ print_choices_summary() {
         if [ "$sec/$key" == "reverb/boost" ]; then list+="${list:+$'\n'}Reverb boost +${value} dB"
         else list+="${list:+$'\n'}${key} = ${value}"; fi
     done
-    [ -n "$list" ] && _choice "alsoft.ini" "$list"
+    [ -n "$list" ] && _choice sound "alsoft.ini" "$list"
 
     list=""
     [ "$ADVANCED_DUMMY" == "y" ] && list+="${list:+$'\n'}EAX Unified dummy files"
     [ "$ADVANCED_LIMITS" == "y" ] && list+="${list:+$'\n'}Expand audio limits"
     [ "$ADVANCED_COM" == "y" ] && list+="${list:+$'\n'}COM registry routing"
-    _choice "Advanced tweaks" "${list:-None}"
+    _choice sound "Advanced tweaks" "${list:-None}"
 
     case "$OVERRIDE_METHOD" in
-        launcher) _choice "DLL override" "$(launcher_override_where)" ;;
-        registry) _choice "DLL override" "$(runner_label) prefix registry" ;;
-        *) _choice "DLL override" "You'll set it yourself (instructions at the end)" ;;
+        launcher) _choice setup "DLL override" "$(launcher_override_where)" ;;
+        registry) _choice setup "DLL override" "$(runner_label) prefix registry" ;;
+        *) _choice setup "DLL override" "You'll set it yourself (instructions at the end)" ;;
     esac
     list=""
     for i in "${!COMPANION_IDS[@]}"; do
@@ -79,34 +81,38 @@ print_choices_summary() {
     [ -n "$list" ] && values[${#values[@]}-1]+=$'\n'"$list"
 
     # Only for a game that offered settings: the ones chosen, in order.
+    local settings="" has_settings=0
     if [ ${#GAME_SETTINGS_PLAN[@]} -gt 0 ] || [ ${#GAME_SETTINGS_DECLINED[@]} -gt 0 ]; then
         local title
         local -a f
-        list=""
+        has_settings=1
         for line in "${GAME_SETTINGS_PLAN[@]}"; do
             mapfile -t -d $'\x1f' f < <(printf '%s' "$line")
             title="${f[1]}"
-            [[ $'\n'"$list"$'\n' == *$'\n'"$title"$'\n'* ]] || list+="${list:+$'\n'}${title}"
+            [[ $'\n'"$settings"$'\n' == *$'\n'"$title"$'\n'* ]] || settings+="${settings:+$'\n'}${title}"
         done
-        _choice "Game settings" "${list:-None}"
     fi
 
-    local i width=0 first rest pad
-    for i in "${!labels[@]}"; do
-        [ ${#labels[$i]} -gt "$width" ] && width=${#labels[$i]}
+    # Rows were collected as the answers come up; printed group by group,
+    # through the GAME PROFILE's own row printer, so the two screens match.
+    local g
+    for g in game sound setup; do
+        case "$g" in
+            game) detail_heading "Game details" ;;
+            sound) detail_heading "Sound" ;;
+            setup) detail_heading "Setup" ;;
+        esac
+        for i in "${!labels[@]}"; do
+            [ "${groups[$i]}" == "$g" ] && detail_row "${labels[$i]}" "${values[$i]}"
+        done
     done
-    echo -e "\n${WHITE}Your choices:${NC}"
-    for i in "${!labels[@]}"; do
-        first="${values[$i]%%$'\n'*}"
-        printf ' -> %b%s%b:%*s %b%b%b\n' "$YELLOW" "${labels[$i]}" "$NC" \
-            $(( width - ${#labels[$i]} )) "" "$WHITE" "$first" "$NC"
-        [ "$first" == "${values[$i]}" ] && continue
-        printf -v pad '%*s' $(( width + 6 )) ""
-        rest="${values[$i]#*$'\n'}"
+    print_detail_rows
+    if [ "$has_settings" -eq 1 ]; then
+        print_subheading "Game settings"
         while IFS= read -r line; do
-            echo -e "${pad}${WHITE}${line}${NC}"
-        done <<< "$rest"
-    done
+            echo -e "  ${line}"
+        done <<< "${settings:-None}"
+    fi
     unset -f _choice
 }
 

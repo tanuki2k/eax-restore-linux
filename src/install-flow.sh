@@ -446,7 +446,7 @@ EOF
         fi
     fi
     # Each block below brings its own leading blank line (the game settings
-    # summary, then the run log's "Log saved to:"), so none is added here.
+    # summary, then the run log's box), so none is added here.
     print_game_settings_summary
     print_community_patches_summary
 fi

@@ -784,35 +784,17 @@ print_game_profile_stores() {
     # Everything under "Game details" comes from game-database.json, not
     # from the install, so it's kept apart from the two facts the library
     # scan found on this system. The lines are collected first and printed
-    # together, so every value lines up after the longest label shown. A
-    # value with one line per store continues under the first.
-    local -a detail_labels=() detail_values=()
-    _detail() { detail_labels+=("$1"); detail_values+=("$2"); }
-    _detail_heading() { detail_labels+=(""); detail_values+=("$1"); }
-    _print_details() {
-        local i width=0 pad
-        for i in "${!detail_labels[@]}"; do
-            [ ${#detail_labels[$i]} -gt "$width" ] && width=${#detail_labels[$i]}
-        done
-        printf -v pad '%*s' $(( width + 6 )) ""
-        for i in "${!detail_labels[@]}"; do
-            if [ -z "${detail_labels[$i]}" ]; then
-                echo -e "\n${WHITE}${detail_values[$i]}:${NC}"
-            else
-                printf ' -> %b%s%b:%*s %b\n' "$YELLOW" "${detail_labels[$i]}" "$NC" \
-                    $(( width - ${#detail_labels[$i]} )) "" "${detail_values[$i]//$'\n'/$'\n'$pad}"
-            fi
-        done
-    }
+    # together (print_detail_rows), so every value lines up after the longest
+    # label shown. A value with one line per store continues under the first.
     local value sep
-    _detail_heading "Game details"
-    _detail "Name" "${BOLD}${name}${NC}"
-    [ -n "$released" ] && _detail "Released" "${WHITE}$(format_release_date "$released")${NC}"
+    detail_heading "Game details"
+    detail_row "Name" "${BOLD}${name}${NC}"
+    [ -n "$released" ] && detail_row "Released" "${WHITE}$(format_release_date "$released")${NC}"
     # The browser names each store's ID; the install shows its one store
     # under System details instead.
     if [ -z "$location" ]; then
         for i in "${!stores[@]}"; do
-            _detail "${labels[i]} ID" "${WHITE}${ids[i]}${NC}"
+            detail_row "${labels[i]} ID" "${WHITE}${ids[i]}${NC}"
         done
     fi
     # One row naming every store it's delisted from.
@@ -820,35 +802,35 @@ print_game_profile_stores() {
     for i in "${!stores[@]}"; do
         [ "${listings[i]}" == "delisted" ] && value+="${value:+ and }${labels[i]}"
     done
-    [ -n "$value" ] && _detail "Availability" "${WHITE}Delisted from $value ${DIM}(existing owners keep access)${NC}"
+    [ -n "$value" ] && detail_row "Availability" "${WHITE}Delisted from $value ${DIM}(existing owners keep access)${NC}"
     for i in "${!stores[@]}"; do
         if [ "${id_sources[i]}" == "steamdb_historical" ]; then
-            _detail "ID source" "${WHITE}SteamDB records ${DIM}(not verified against a local install)${NC}"
+            detail_row "ID source" "${WHITE}SteamDB records ${DIM}(not verified against a local install)${NC}"
         fi
     done
     # eax_versions sits in the same slot for every game — the qualifier for a
     # patch-removed build comes after the list, not in place of it.
     local ver_display="${eax_versions:-Unknown}"
     if [ "$eax_status" == "supported" ]; then
-        _detail "EAX Support" "${GREEN}${BOLD}${ver_display}${NC}"
+        detail_row "EAX Support" "${GREEN}${BOLD}${ver_display}${NC}"
     elif [ "$eax_status" == "removed_by_patch" ]; then
-        _detail "EAX Support" "${YELLOW}${BOLD}${ver_display}${NC} ${DIM}(originally supported)${NC}"
+        detail_row "EAX Support" "${YELLOW}${BOLD}${ver_display}${NC} ${DIM}(originally supported)${NC}"
     elif [ "$eax_status" == "built_in" ]; then
-        _detail "EAX Support" "${GREEN}${BOLD}${ver_display}${NC} ${DIM}(already built in)${NC}"
+        detail_row "EAX Support" "${GREEN}${BOLD}${ver_display}${NC} ${DIM}(already built in)${NC}"
     else
-        _detail "EAX Support" "${YELLOW}${BOLD}None${NC}"
+        detail_row "EAX Support" "${YELLOW}${BOLD}None${NC}"
     fi
     _api_name() { [ "$1" == "openal" ] && echo "OpenAL" || echo "DirectSound3D"; }
     if _same_for_all apis; then
-        _detail "Audio API" "${WHITE}$(_api_name "${apis[0]}")${NC}"
+        detail_row "Audio API" "${WHITE}$(_api_name "${apis[0]}")${NC}"
     else
         value="" sep=""
         for i in "${!stores[@]}"; do
             value+="${sep}${WHITE}$(_api_name "${apis[i]}")${NC} on ${labels[i]}"; sep=$'\n'
         done
-        _detail "Audio API" "$value"
+        detail_row "Audio API" "$value"
     fi
-    [ "$eax_unified" == "true" ] && _detail "EAX Unified" "${WHITE}Yes${NC}"
+    [ "$eax_unified" == "true" ] && detail_row "EAX Unified" "${WHITE}Yes${NC}"
     # Settings limited to one store (only_if.stores) can make the counts
     # differ; each count is then shown with its store.
     local col label_text
@@ -861,20 +843,20 @@ print_game_profile_stores() {
             nums[i]="${fields[col]:-0}"
         done
         if _same_for_all nums; then
-            [ "${nums[0]}" -gt 0 ] && _detail "$label_text" "${WHITE}${nums[0]}${NC}"
+            [ "${nums[0]}" -gt 0 ] && detail_row "$label_text" "${WHITE}${nums[0]}${NC}"
         else
             value="" sep=""
             for i in "${!stores[@]}"; do value+="${sep}${WHITE}${nums[i]}${NC} on ${labels[i]}"; sep=$'\n'; done
-            _detail "$label_text" "$value"
+            detail_row "$label_text" "$value"
         fi
     done
 
     if [ -n "$location" ]; then
-        _detail_heading "System details"
-        _detail "Platform" "${GREEN}${labels[0]}${NC}"
-        _detail "Location" "${DIM}$(tilde_path "$location")${NC}"
+        detail_heading "System details"
+        detail_row "Platform" "${GREEN}${labels[0]}${NC}"
+        detail_row "Location" "${DIM}$(tilde_path "$location")${NC}"
     fi
-    _print_details
+    print_detail_rows
     # What the game is, for the browser; the install already knows.
     if [ -z "$location" ] && [ -n "$description" ]; then
         print_subheading "Description"
@@ -970,18 +952,18 @@ print_game_profile_stores() {
         done
     fi
     unset -f _same_for_all _api_name
-    # Always the last section: the pages behind the entry's claims, as
-    # clickable names. A bare URL is shown by its site's address.
+    # Always the last section: the pages behind the entry's claims, each name
+    # a link with its address under it. A bare URL has no name, just the address.
     local src_title src_url shown_sources=0
-    while IFS=$'\t' read -r src_title src_url; do
+    while IFS=$'\x1f' read -r src_title src_url; do
         [ -n "$src_url" ] || continue
         [ "$shown_sources" -eq 0 ] && print_subheading "Sources"
         print_link "$src_title" "$src_url"
         shown_sources=1
     done < <(jq -r --arg id "$id" --arg store "$store" '
         [.games[] | select((.stores[$store].id // "") | tostring == $id)][0].sources // [] | .[]
-        | if type == "string" then [(capture("^https?://(www\\.)?(?<h>[^/]+)").h), .] else [.title, .url] end
-        | join("\t")' "$GAME_DATABASE_FILE" 2>/dev/null)
+        | if type == "string" then ["", .] else [.title, .url] end
+        | join("\u001f")' "$GAME_DATABASE_FILE" 2>/dev/null)
     echo ""
 }
 
@@ -999,8 +981,10 @@ fzf_at_least() {
 # audio and by store, delisted ones included (see browse_game_stores);
 # Ctrl-R swaps the order between best match and A–Z; Ctrl-L puts the right pane beside or
 # under the list; F1 shows every key (browse_help); Ctrl-F opens the right
-# pane full screen (browse_zoom). View only: Enter and double-click do
-# nothing, so only Esc and fzf's other abort keys close it. fzf draws on
+# pane full screen (browse_zoom). View only: Enter does nothing, so only
+# Esc and fzf's other abort keys close it. The mouse is left to the
+# terminal (--no-mouse): with fzf holding it, kitty and Ghostty only opened
+# a link with Shift held, and text couldn't be selected to copy. fzf draws on
 # /dev/tty, so none of it reaches the run log. Needs fzf 0.35; 0.58 or
 # newer draws each part in its own box, with the filters laid out to fit
 # the list (browse_filter_header) and the key bar on the last row
@@ -1085,7 +1069,7 @@ browse_game_database() {
             --layout reverse --tiebreak index "${fzf_opts[@]}" \
             --preview "$load; WRAP_COLUMNS=\$((FZF_PREVIEW_COLUMNS < 100 ? FZF_PREVIEW_COLUMNS - 4 : 96)) browse_game_preview ${state@Q} {1}" \
             --preview-window "$now" \
-            --bind "enter:ignore,double-click:ignore" \
+            --no-mouse --bind "enter:ignore" \
             --bind "shift-up:preview-up,shift-down:preview-down,page-up:preview-page-up,page-down:preview-page-down" \
             --bind "f1:execute-silent($next help)+refresh-preview$label" \
             --bind "tab:execute-silent($next view)+refresh-preview$label" \
@@ -1271,9 +1255,10 @@ browse_help() {
         "" "The basics"
         "F1" "Show or hide this help."
         "Type" "Search the game names: any part of a name, words in any order."
-        "↑/↓" "Move through the list. A mouse click shows a game too."
+        "↑/↓" "Move through the list."
         "Tab" "Switch the right pane between the game's profile and its settings."
-        "Shift-↑/↓" "Scroll the right pane; PgUp/PgDn a page at a time, or the mouse wheel over it."
+        "Shift-↑/↓" "Scroll the right pane; PgUp/PgDn a page at a time."
+        "Mouse" "Select text to copy it, and Ctrl+click a link to open it. Your terminal's block selection (often Ctrl+Alt+drag) picks text from one pane only."
         "Esc" "Close the browser (Ctrl-C, Ctrl-G and Ctrl-Q too, and Ctrl-D when the search is empty)."
         "" "Filters"
         "Ctrl-A" "Audio: All → DirectSound3D → OpenAL → EAX 1.0 … 5.0."
@@ -1381,7 +1366,7 @@ browse_zoom() {
     local cols
     read -r _ cols < <({ stty size < /dev/tty; } 2>/dev/null)
     WRAP_COLUMNS=$(( ${cols:-80} < 100 ? ${cols:-80} - 4 : 96 )) browse_game_preview "$1" "$2" \
-        | sed $'s/\e]8;;[^\e]*\e\\\\//g' | less -R
+        | sed $'s/\e]8;;[^\a]*\a//g' | less -R
 }
 
 # Usage: print_community_patches_summary

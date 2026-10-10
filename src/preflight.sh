@@ -2,10 +2,7 @@
 # SCRIPT START
 # ==============================================================================
 clear
-echo -e "${CYAN}${BOLD}==========================================================${NC}"
-echo -e "${CYAN}${BOLD}   DSOAL & OpenAL Soft Universal Installer                ${NC}"
-echo -e "${CYAN}${BOLD}   v${SCRIPT_VERSION}  (${SCRIPT_DATE})${NC}"
-echo -e "${CYAN}${BOLD}==========================================================${NC}"
+print_start_header
 
 print_banner "PRE-FLIGHT SYSTEM CHECK"
 
@@ -67,6 +64,15 @@ else
         MISSING_BASE_PKGS+=("jq")
     fi
 
+    # Optional for now: only Tools → Browse game profiles uses it, and that
+    # offers to install it too. Installed along with any required tool that's
+    # missing, on its own so a failure can't stop the script, but never asked
+    # about by itself here, which would mean a question on every run.
+    FZF_MISSING=0
+    echo -n -e " -> Checking for ${YELLOW}fzf${NC}... "
+    if command -v fzf &> /dev/null; then echo -e "${GREEN}FOUND${NC}"
+    else echo -e "${DIM}MISSING (optional, for browsing game profiles)${NC}"; FZF_MISSING=1; fi
+
     if [ ${#MISSING_BASE_PKGS[@]} -gt 0 ]; then
         print_error "this script needs a few tools that aren't installed yet: ${MISSING_BASE_PKGS[*]}"
         if is_steamos; then
@@ -74,10 +80,16 @@ else
                 "tools via the Discover software centre."
             print_error "Cannot proceed without base dependencies. Exiting."; exit 1
         else
-            if confirm "Auto-install these dependencies now? (Requires sudo)"; then
+            install_question="Auto-install these dependencies now? (Requires sudo)"
+            [ "$FZF_MISSING" -eq 1 ] && install_question="Auto-install these dependencies, plus fzf for browsing game profiles? (Requires sudo)"
+            if confirm "$install_question"; then
                 install_packages "${MISSING_BASE_PKGS[@]}" \
                     || { print_error "Cannot proceed without base dependencies. Exiting."; exit 1; }
                 print_status "Dependencies installed successfully." "$GREEN"
+                if [ "$FZF_MISSING" -eq 1 ]; then
+                    install_packages fzf && FZF_MISSING=0 \
+                        || print_note_arrow "fzf didn't install, so browsing game profiles will offer it again."
+                fi
             else print_error "Cannot proceed without base dependencies. Exiting."; exit 1; fi
         fi
     else print_status "All base requirements met." "$GREEN"; fi

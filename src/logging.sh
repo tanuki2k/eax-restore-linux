@@ -16,6 +16,9 @@ LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/eax-restore-linux/logs"
 [[ "$SCRIPT_VERSION" == *-dev* ]] && LOG_DIR="$LOG_DIR/dev"
 EAX_LOG_FILE="/dev/null"
 BUG_REPORT_URL="https://github.com/tanuki2k/eax-restore-linux/issues/new?template=bug_report.md"
+# Short enough to print in the end-of-run box; "New issue" there offers the
+# bug report template.
+BUG_REPORT_PAGE="https://github.com/tanuki2k/eax-restore-linux/issues"
 
 write_log_header() {
     local distro heroic_kind steam_kind
@@ -76,6 +79,7 @@ write_log_summary() {
         echo ""
         echo "=== Run summary ==="
         echo "Exit code:       $rc"
+        echo "Bug report:      $BUG_REPORT_URL"
         echo "Finished:        $(date '+%Y-%m-%d %H:%M:%S %z')"
         echo "Last step:       ${last_section:-none}"
         [ -n "$GAME_NAME" ] && echo "Game name:       $GAME_NAME"
@@ -128,13 +132,25 @@ finish_run_log() {
     # Release a pinned PHASE 2 progress bar first, or an exit mid-deploy
     # leaves the terminal scrolling inside its region.
     end_phase_progress
-    # Own line, with $HOME shown as ~, so the path fits the 76-column layout.
-    echo -e "\n${WHITE}Log saved to:${NC}"
-    echo -e "  ${GREEN}$(tilde_path "$EAX_LOG_FILE")${NC}"
-    if [ "$rc" -ne 0 ]; then
-        echo -e "\n${YELLOW}If something went wrong, please attach this log to a bug report:${NC}"
-        echo -e "  ${WHITE}$BUG_REPORT_URL${NC}"
+    # The log's folder and file name on lines of their own, with $HOME shown
+    # as ~, so the path fits the box. The "Meditation #" is the timestamp in
+    # the file name, so it names this run's log.
+    local name="${EAX_LOG_FILE##*/}"
+    local -a box=("${BOLD}Run finished — log saved${NC}")
+    if [[ "$name" =~ ^eax-restore-([0-9]{8})-([0-9]{6})\.log$ ]]; then
+        box+=("${BOLD}Meditation #${BASH_REMATCH[1]}.${BASH_REMATCH[2]}${NC}")
     fi
+    box+=("" "$(tilde_path "${EAX_LOG_FILE%/*}")/" "$(term_link "file://${EAX_LOG_FILE// /%20}" "$name")")
+    if [ "$rc" -ne 0 ]; then
+        # A terminal link; the run log writes it out as "title (url)".
+        # Printed in full: a terminal without link support (Konsole, by
+        # default) can still open a plain address. Where links work, it goes
+        # straight to the bug report template.
+        box+=("" "${BOLD}Something wrong? Attach this log to a bug report:${NC}"
+            "$(term_link "$BUG_REPORT_URL" "$BUG_REPORT_PAGE")")
+    fi
+    echo ""
+    print_centred_box "$NOTE" "${box[@]}"
     # Hand the terminal back and let tee drain before appending the summary,
     # so the summary really is the last thing in the file.
     exec 1>&3 2>&4 3>&- 4>&-
@@ -160,7 +176,7 @@ if ! is_truthy "${EAX_RESTORE_NO_LOG:-}" && mkdir -p "$LOG_DIR" 2>/dev/null; the
     # written; the writer's PID is recorded so finish_run_log can wait for
     # it to drain.
     exec 3>&1 4>&2
-    exec > >(exec setsid bash -c 'exec tee >(echo "$BASHPID" > "$1.pid"; exec sed -u -e "s/\x1b\]8;;\([^\x1b]*\)\x1b\\\\\([^\x1b]*\)\x1b\]8;;\x1b\\\\/\2 (\1)/g" -e "s/\x1b\]7137;\([^\x07]*\)\x07/\1/g" -e "s/\x1b\[[0-9;]*[A-Za-z]//g" -e "s/.*\r//" >> "$1")' _ "$EAX_LOG_FILE") 2>&1
+    exec > >(exec setsid bash -c 'exec tee >(echo "$BASHPID" > "$1.pid"; exec sed -u -e "s/\x1b\]8;;[^\x07]*\x07\([^\x1b]*\)\x1b\]8;;\x07/\1/g" -e "s/\x1b\]7137;\([^\x07]*\)\x07/\1/g" -e "s/\x1b\[[0-9;]*[A-Za-z]//g" -e "s/.*\r//" >> "$1")' _ "$EAX_LOG_FILE") 2>&1
     trap finish_run_log EXIT
     # Turn Ctrl-C / kill into a normal exit with the conventional status, so
     # the EXIT trap above records the real exit code (not the last command's).

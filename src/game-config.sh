@@ -571,9 +571,9 @@ print_config_rows() {
             indent="      "
         fi
         if [ "$old" == "__ANY__" ]; then
-            printf "%s${WHITE}%-${key_len}s${NC}  → ${GREEN}%s${NC}\n" "$indent" "$key" "$(config_display_value "$new")"
+            printf "%s%-${key_len}s  → ${GREEN}%s${NC}\n" "$indent" "$key" "$(config_display_value "$new")"
         else
-            printf "%s${WHITE}%-${key_len}s${NC}  %s → ${GREEN}%s${NC}\n" "$indent" "$key" "$(config_display_value "$old")" "$(config_display_value "$new")"
+            printf "%s%-${key_len}s  %s → ${GREEN}%s${NC}\n" "$indent" "$key" "$(config_display_value "$old")" "$(config_display_value "$new")"
         fi
         prev_file="$file"; prev_sec="$sec"
     done <<< "$1"
@@ -625,7 +625,7 @@ print_game_settings_details() {
         fi
         if [ -n "$follow" ]; then
             echo -e "    ${DIM}Afterwards:${NC}"
-            echo -e "${WHITE}$(printf '%s' "$follow" | fold -s -w "$width" | sed 's/^/    /')${NC}"
+            printf '%s\n' "$follow" | fold -s -w "$width" | sed 's/^/    /'
         fi
     }
     for row in "${rows[@]}"; do
@@ -639,7 +639,7 @@ print_game_settings_details() {
                 prev_cat="${f[0]}"
             fi
             echo -e "\n  ${BOLD}${f[2]}${NC}"
-            echo -e "${WHITE}$(printf '%s' "${f[3]}" | fold -s -w "$width" | sed 's/^/    /')${NC}"
+            printf '%s\n' "${f[3]}" | fold -s -w "$width" | sed 's/^/    /'
             echo ""
             display_rows="" stores="${f[4]}" speakers="${f[5]}" follow="${f[6]}"
             prev_id="$id"
@@ -1037,7 +1037,7 @@ game_settings_step() {
     # A fix's reason and rows, under its title (or its box in a tick list).
     _fix_body() {
         local id="$1"
-        echo -e "${WHITE}$(printf '%s' "${fix_reason[$id]}" | fold -s -w 74 | sed 's/^/    /')${NC}"
+        printf '%s\n' "${fix_reason[$id]}" | fold -s -w 74 | sed 's/^/    /'
         echo ""
         print_config_rows "$(fix_rows_for_display "${fix_rows[$id]}")"
         _print_absent_note "$id"
@@ -1047,7 +1047,7 @@ game_settings_step() {
     _applied_fix_body() {
         local id="$1" line display_rows=""
         local -a c
-        echo -e "${WHITE}$(printf '%s' "${fix_reason[$id]}" | fold -s -w 74 | sed 's/^/    /')${NC}"
+        printf '%s\n' "${fix_reason[$id]}" | fold -s -w 74 | sed 's/^/    /'
         echo ""
         while IFS= read -r line; do
             [ -n "$line" ] || continue
@@ -1386,15 +1386,10 @@ print_game_settings_summary() {
     [ ${#GAME_SETTINGS_APPLIED[@]} -gt 0 ] || [ ${#GAME_SETTINGS_MISSING[@]} -gt 0 ] \
         || [ ${#GAME_SETTINGS_DECLINED[@]} -gt 0 ] || [ ${#GAME_SETTINGS_ABSENT[@]} -gt 0 ] || return
     local title entry fu t files
-    # One " - " line, wrapped with its continuation lines under the text.
+    # One line per setting: a tick if it's in place, a cross if not, with a
+    # short reason only when the player didn't choose to skip it.
     _summary_skipped() {
-        local text first rest
-        text="$(printf '%s' "$1" | fold -s -w 74 | sed 's/ *$//')"
-        first="${text%%$'\n'*}"; rest=""
-        [ "$first" != "$text" ] && rest="$(printf '%s' "${text#*$'\n'}" | sed 's/^/   /')"
-        echo -e " ${YELLOW}-${NC} ${WHITE}${first}${NC}"
-        [ -n "$rest" ] && echo -e "${WHITE}${rest}${NC}"
-        return 0
+        echo -e " ${YELLOW}✗${NC} ${WHITE}${1}${NC}${2:+${DIM} (${2})${NC}}"
     }
     echo -e "\n${YELLOW}${BOLD}Game settings:${NC}"
     for title in "${GAME_SETTINGS_APPLIED[@]}"; do
@@ -1411,15 +1406,15 @@ print_game_settings_summary() {
     done
     for entry in "${GAME_SETTINGS_DECLINED[@]}"; do
         IFS=$'\x1f' read -r title files <<< "$entry"
-        _summary_skipped "${title} wasn't applied, so you'll have to turn it on manually in ${GAME_NAME}'s in-game settings or by editing ${files}."
+        _summary_skipped "$title"
     done
     for entry in "${GAME_SETTINGS_MISSING[@]}"; do
         IFS=$'\x1f' read -r title files <<< "$entry"
-        _summary_skipped "${GAME_NAME} hasn't created ${files} yet, so ${title} wasn't applied. You'll have to turn it on manually in the game's in-game settings or by editing ${files}."
+        _summary_skipped "$title" "${GAME_NAME} hasn't created ${files} yet"
     done
     for entry in "${GAME_SETTINGS_ABSENT[@]}"; do
         IFS=$'\x1f' read -r title files <<< "$entry"
-        _summary_skipped "${title} — left out: ${GAME_NAME} has no ${files}."
+        _summary_skipped "$title" "${GAME_NAME} has no ${files}"
     done
     unset -f _summary_skipped
 }

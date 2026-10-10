@@ -51,6 +51,95 @@ print_banner() {
     print_line
 }
 
+# Usage: print_start_header [design]
+# The logo at the top of every run: one of four designs, picked at random
+# from those no wider than the terminal (80 columns when there's none to
+# measure). The version and date come from SCRIPT_VERSION / SCRIPT_DATE; a
+# dev build's date runs long ("2026-10-10 build g77a706f-dirty"), so each
+# design gives it room. [design] (1-4) forces one, for checking them.
+print_start_header() {
+    local ver="v${SCRIPT_VERSION}" day="${SCRIPT_DATE%% *}" extra
+    extra="${SCRIPT_DATE#"$day"}"; extra="${extra# }"
+    local rule="══════════════════════════════════════════════════════════"
+    local -a d1 d2 d3 d4
+    d1=("  ${CYAN}┏━╸ ┏━┓ ╻ ╻    ┏━┓ ┏━╸ ┏━┓ ╺┳╸ ┏━┓ ┏━┓ ┏━╸${NC}   ${DIM}│${NC} ${DIM}restore hardware EAX${NC}"
+        "  ${CYAN}┣╸  ┣━┫ ┏╋┛    ┣┳┛ ┣╸  ┗━┓  ┃  ┃ ┃ ┣┳┛ ┣╸ ${NC}   ${DIM}│${NC} ${ver} · ${day}"
+        "  ${CYAN}┗━╸ ╹ ╹ ╹ ╹    ╹┗╸ ┗━╸ ┗━┛  ╹  ┗━┛ ╹┗╸ ┗━╸${NC}   ${DIM}│${NC} ${DIM}${extra:-DSOAL · OpenAL Soft}${NC}")
+    local caption="· ${ver} · ${SCRIPT_DATE} ·" pad
+    pad=$(( (58 - ${#caption}) / 2 )); [ "$pad" -lt 0 ] && pad=0
+    d2=("${CYAN}${rule}${NC}"
+        "        ${CYAN}╔══ ╔═╗ ╗ ╔    ╔═╗ ╔══ ╔══ ═╦═ ╔═╗ ╔═╗ ╔══${NC}"
+        "        ${CYAN}╠═  ╠═╣  ╬     ╠╦╝ ╠═  ╚═╗  ║  ║ ║ ╠╦╝ ╠═${NC}"
+        "        ${CYAN}╚══ ╩ ╩ ╝ ╚    ╩╚═ ╚══ ══╝  ╩  ╚═╝ ╩╚═ ╚══${NC}"
+        "${CYAN}${rule}${NC}"
+        "$(printf '%*s' "$pad" "")${DIM}${caption}${NC}")
+    d3=("          ${CYAN}______   ___    _  __${NC}"
+        "         ${CYAN}/ ____/  /   |  | |/ /${NC}"
+        "        ${CYAN}/ __/    / /| |  |   /${NC}"
+        "       ${CYAN}/ /___   / ___ | /   |${NC}"
+        "      ${CYAN}/_____/  /_/  |_|/_/|_|${NC}"
+        "                        ${DIM}r e s t o r e  /  l i n u x${NC}"
+        "                        ${ver} · ${SCRIPT_DATE}")
+    d4=("  ${CYAN}███████╗ █████╗ ██╗  ██╗${NC}  eax-restore-linux"
+        "  ${CYAN}██╔════╝██╔══██╗╚██╗██╔╝${NC}  ${DIM}─────────────────${NC}"
+        "  ${CYAN}█████╗  ███████║ ╚███╔╝ ${NC}  ${DIM}version${NC}  ${SCRIPT_VERSION}"
+        "  ${CYAN}██╔══╝  ██╔══██║ ██╔██╗ ${NC}  ${DIM}date${NC}     ${SCRIPT_DATE}"
+        "  ${CYAN}███████╗██║  ██║██╔╝ ██╗${NC}  ${DIM}engines${NC}  DSOAL · OpenAL Soft"
+        "  ${CYAN}╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝${NC}")
+
+    local cols rows n line widest
+    read -r rows cols < <({ stty size < /dev/tty; } 2>/dev/null)
+    [[ "$cols" =~ ^[0-9]+$ ]] || cols=80
+    # The designs that fit, by their widest line with the colours left out.
+    local -a fit=()
+    local art
+    for n in 1 2 3 4; do
+        art="d$n[@]"; widest=0
+        for line in "${!art}"; do
+            line="$(printf '%b' "$line" | sed 's/\x1b\[[0-9;]*m//g')"
+            [ ${#line} -gt "$widest" ] && widest=${#line}
+        done
+        [ "$widest" -le "$cols" ] && fit+=("$n")
+    done
+    [ ${#fit[@]} -gt 0 ] || fit=(4)
+    n="${1:-${fit[RANDOM % ${#fit[@]}]}}"
+    art="d$n[@]"
+    echo ""
+    for line in "${!art}"; do echo -e "$line"; done
+}
+
+# Usage: term_link <url> <text>
+# <text> as a terminal hyperlink (OSC 8) to <url>, for echo -e / printf %b:
+# the low-level piece for a link inside another line (the end-of-run box).
+# Ended with BEL rather than ESC \, which more terminals accept. Konsole
+# ignores these links unless its profile allows them, so anything the player
+# must be able to open also needs its plain address printed; print_link does
+# both, so prefer it. The run log keeps just <text>.
+term_link() {
+    printf '%s' "\e]8;;$1\a$2\e]8;;\a"
+}
+
+# Usage: print_centred_box <colour> "line" ["line" ...]
+# A thin rounded-corner frame as wide as the dividers, every line centred in
+# it, frame and text in <colour> (the end-of-run log box, after the Amiga's
+# Guru Meditation). An empty argument is a blank row. Lines are measured
+# without their colour codes or terminal links, so either can be used in
+# one; a line too wide for the frame is printed under it as it is.
+print_centred_box() {
+    local colour="$1"; shift
+    local inner=56 line plain left right
+    local -a wide=()
+    echo -e "${colour}┌$(printf '─%.0s' $(seq "$inner"))┐${NC}"
+    for line in "$@"; do
+        plain="$(printf '%b' "$line" | sed -e 's/\x1b\]8;;[^\x07]*\x07//g' -e 's/\x1b\[[0-9;]*m//g')"
+        if [ ${#plain} -gt "$inner" ]; then wide+=("$line"); continue; fi
+        left=$(( (inner - ${#plain}) / 2 )); right=$(( inner - ${#plain} - left ))
+        echo -e "${colour}│$(printf '%*s' "$left" "")${line}${colour}$(printf '%*s' "$right" "")│${NC}"
+    done
+    echo -e "${colour}└$(printf '─%.0s' $(seq "$inner"))┘${NC}"
+    for line in "${wide[@]}"; do echo -e "${colour}${line}${NC}"; done
+}
+
 # Usage: print_step N "Label"
 # Emits the numbered step header ("2. Launcher Identification") used to
 # separate the sub-stages of PHASE 1: CONFIGURATION. Same blank/divider/
@@ -72,13 +161,42 @@ print_step() {
     print_line
 }
 
+# Usage: detail_row "Label" "value"; detail_heading "Heading"; print_detail_rows
+# The GAME PROFILE's field list, shared with Phase 2's choices recap: rows
+# are collected first (into DETAIL_LABELS / DETAIL_VALUES), then printed
+# together, so every value lines up after the longest label in the whole
+# list. A heading is a flush-left "Heading:" line with a blank line above
+# it; a row is " -> Label: value", the label in YELLOW. A value with more
+# than one line continues under the first. print_detail_rows empties the
+# list once it's printed.
+detail_row() { DETAIL_LABELS+=("$1"); DETAIL_VALUES+=("$2"); }
+detail_heading() { DETAIL_LABELS+=(""); DETAIL_VALUES+=("$1"); }
+print_detail_rows() {
+    local i width=0 pad
+    for i in "${!DETAIL_LABELS[@]}"; do
+        [ ${#DETAIL_LABELS[$i]} -gt "$width" ] && width=${#DETAIL_LABELS[$i]}
+    done
+    printf -v pad '%*s' $(( width + 6 )) ""
+    for i in "${!DETAIL_LABELS[@]}"; do
+        if [ -z "${DETAIL_LABELS[$i]}" ]; then
+            echo -e "\n${WHITE}${DETAIL_VALUES[$i]}:${NC}"
+        else
+            printf ' -> %b%s%b:%*s %b\n' "$YELLOW" "${DETAIL_LABELS[$i]}" "$NC" \
+                $(( width - ${#DETAIL_LABELS[$i]} )) "" "${DETAIL_VALUES[$i]//$'\n'/$'\n'$pad}"
+        fi
+    done
+    DETAIL_LABELS=(); DETAIL_VALUES=()
+}
+
 # Usage: print_link "title" "url"
-# One line of a print_subheading section, indented like print_wrapped, whose
-# title is a clickable terminal hyperlink (OSC 8) to the url. A terminal
-# without hyperlink support shows just the title; the run log rewrites it as
-# "title (url)" so the address survives there.
+# The way to print a URL: the title as a terminal link (term_link), indented
+# like print_wrapped, with the plain address dimmed under it, since a
+# terminal without link support (Konsole, by default) can only open an
+# address it can see. An empty title prints just the address. The address
+# isn't wrapped or shortened; terminals still match one that wraps.
 print_link() {
-    printf '  %b\e]8;;%s\e\\%s\e]8;;\e\\%b\n' "$WHITE" "$2" "$1" "$NC"
+    [ -n "$1" ] && printf '  %b%b%b\n' "$WHITE" "$(term_link "$2" "$1")" "$NC"
+    printf '  %b%s%b\n' "$DIM${1:+  }" "$2" "$NC"
 }
 
 # Usage: print_detected "Label" "value"
@@ -542,7 +660,7 @@ checklist_select() {
     # The boxes go on the titles only if the whole list fits the terminal:
     # a redraw can't reach lines that have scrolled off the top or wrapped.
     if [ "$inline" -eq 1 ]; then
-        read -r rows cols < <(stty size < /dev/tty 2>/dev/null)
+        read -r rows cols < <({ stty size < /dev/tty; } 2>/dev/null)
         frame="$(for ((i = 0; i < n; i++)); do printf '\n        %s\n' "${items[i]}"; _checklist_body "$i"; done)"
         lines=$(( $(printf '%s\n' "$frame" | wc -l) + 2 ))
         widest=$(printf '%s\n' "$frame" | sed 's/\x1b\[[0-9;]*m//g' | awk '{ if (length > w) w = length } END { print w + 0 }')

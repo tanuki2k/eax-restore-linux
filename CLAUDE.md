@@ -133,7 +133,12 @@ their execution order in the assembled script):
    `print_status`, `print_note`/`print_warning`/`print_error` and their `_arrow`
    variants, `print_wrapped`, `confirm`, `read_answer`, plus `print_divider`/`print_line`). Sourced
    right after `globals.sh` since every helper depends on the colour vars defined
-   there. See "Text/output style conventions" below. Also `checklist_select`, the
+   there. See "Text/output style conventions" below. `print_start_header` is the
+   logo at the top of every run: one of four designs at random, from those that
+   fit the terminal's width (`print_start_header N` forces one). `detail_row` /
+   `detail_heading` / `print_detail_rows` are the GAME PROFILE's field list
+   (flush-left "Heading:" lines over ` -> Label: value` rows, one width for the
+   whole list), shared with Phase 2's choices recap. Also `checklist_select`, the
    tick list (↑/↓, Space, Enter; Esc cancels and returns 1) for picking any of
    several items: the optional game settings and uninstall's settings to put
    back. Use it for any new multi-pick. `CHECKLIST_INITIAL` sets the starting
@@ -184,7 +189,7 @@ their execution order in the assembled script):
    through `browse_layout`, and
    `browse_filter_header` refits the Filters box (three filters on one, two
    or three lines, by the list's width) through
-   `transform-header` after every key and resize; Enter and double-click are
+   `transform-header` after every key and resize; fzf runs with `--no-mouse`, so the terminal keeps the mouse for selecting text and Ctrl+clicking links; Enter is
    ignored, so only Esc and fzf's abort keys close it;
    Ctrl-F is `browse_zoom` (the pane in `less -R`). Needs fzf 0.35
    (`fzf_at_least`). 0.58+ gets the boxed sections and runs with
@@ -390,6 +395,14 @@ for a new call site.
   de-emphasized ` detail` in `DIM` (e.g. `in /path/to/dir`, `(Steam)`). The caller
   still owns the menu's `${WHITE}` header line, its leading/trailing blank lines, and
   the `${YELLOW}` `Selection [...]:` prompt + `read_answer` loop.
+- `print_link "title" "url"` — the way to print a URL: the title as a clickable
+  terminal link (OSC 8), with the plain address dimmed under it (an empty title
+  prints just the address). Konsole ignores OSC 8 links unless its profile allows
+  them, but every terminal opens a plain address it can see, so a URL the player
+  needs is always printed in full. `term_link url text` is the low-level link for
+  inside another line (the end-of-run box); a caller using it prints the plain
+  address itself. Never hand-write an OSC 8 sequence. The run log keeps just the
+  link text.
 - `tilde_path "text"` — shortens every `$HOME/...` path in the text to `~/...` for
   display. Every helper above and below already runs its text through it, so only a
   raw `echo -e`/`printf` that prints a path needs to call it itself

@@ -36,7 +36,7 @@ verify_vcrun_files() {
         if is_genuine_dll "$target_dir/$f"; then
             echo -e "      ${GREEN}[OK]${NC}      $f"
         elif [ -s "$target_dir/$f" ]; then
-            echo -e "      ${YELLOW}[WINE]${NC}    $f ${WHITE}(Wine's built-in version, not Microsoft's)${NC}"
+            echo -e "      ${YELLOW}[WINE]${NC}    $f"
             core_ok=0
         else
             echo -e "      ${YELLOW}[MISSING]${NC} $f"
@@ -47,9 +47,9 @@ verify_vcrun_files() {
         if is_genuine_dll "$target_dir/$f"; then
             echo -e "      ${GREEN}[OK]${NC}      $f"
         elif [ -s "$target_dir/$f" ]; then
-            echo -e "      ${YELLOW}[WINE]${NC}    $f ${WHITE}(optional, Wine's built-in version)${NC}"
+            echo -e "      ${YELLOW}[WINE]${NC}    $f ${DIM}(optional)${NC}"
         else
-            echo -e "      ${YELLOW}[MISSING]${NC} $f ${WHITE}(optional, not always required)${NC}"
+            echo -e "      ${YELLOW}[MISSING]${NC} $f ${DIM}(optional)${NC}"
         fi
     done
 

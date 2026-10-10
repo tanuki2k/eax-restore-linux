@@ -245,6 +245,9 @@ PAGED_CHOICE=""
 CHECKLIST_INITIAL=()
 # checklist_select's per-item bodies (reason and rows), set the same way.
 CHECKLIST_DETAILS=()
+# The rows detail_row / detail_heading collect for print_detail_rows.
+DETAIL_LABELS=()
+DETAIL_VALUES=()
 # radio_select's starting item (1-based; empty means the first) and per-item
 # descriptions, set by a caller just before it; RADIO_CHOICE is its answer.
 RADIO_INITIAL=""
