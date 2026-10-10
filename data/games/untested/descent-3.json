@@ -8,5 +8,17 @@
     "steam": { "id": 273590 },
     "gog": { "id": 1207658657 }
   },
-  "eax": { "api": "directsound3d", "versions": ["2.0"] }
+  "eax": { "api": "directsound3d", "versions": ["2.0"] },
+  "game_config": {
+    "files": { "system.reg": { "format": "wine_reg", "locations": ["prefix:system.reg"] } },
+    "audio_settings": [
+      {
+        "title": "Enable EAX reverb",
+        "reason": "Descent 3's launcher sets the sound mixer to DirectSound instead of 'Creative EAX', so the game plays without reverb.",
+        "changes": {
+          "system.reg": { "Software\\Wow6432Node\\Outrage\\Descent3": { "SoundMixer": "6" } }
+        }
+      }
+    ]
+  }
 }

@@ -735,6 +735,29 @@
         "versions": [
           "2.0"
         ]
+      },
+      "game_config": {
+        "files": {
+          "system.reg": {
+            "format": "wine_reg",
+            "locations": [
+              "prefix:system.reg"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX reverb",
+            "reason": "Descent 3's launcher sets the sound mixer to DirectSound instead of 'Creative EAX', so the game plays without reverb.",
+            "changes": {
+              "system.reg": {
+                "Software\\Wow6432Node\\Outrage\\Descent3": {
+                  "SoundMixer": "6"
+                }
+              }
+            }
+          }
+        ]
       }
     },
     {
@@ -2176,14 +2199,54 @@
         ],
         "optional_settings": [
           {
-            "title": "Fix low-res textures",
-            "reason": "Quake 4 can't detect how much memory modern graphics cards have, so it loads its lowest-resolution textures.",
+            "title": "Fix low image quality",
+            "reason": "Quake 4 can't detect how much memory modern graphics cards have, so it picks low-quality settings and loads its lowest-resolution textures.",
             "changes": {
               "autoexec.cfg": {
-                "sys_videoRam": "512"
+                "com_videoRam": "1024",
+                "r_renderer": "best",
+                "com_machineSpec": "3",
+                "r_shadows": "1",
+                "r_skipSky": "0",
+                "r_skipBump": "0",
+                "r_skipSpecular": "0",
+                "r_skipNewAmbient": "1",
+                "r_forceAmbient": "0",
+                "r_multiSamples": "4",
+                "image_anisotropy": "8",
+                "image_ignoreHighQuality": "0",
+                "image_downSize": "0",
+                "image_downSizeBump": "0",
+                "image_downSizeSpecular": "0",
+                "image_useCache": "0",
+                "image_useCompression": "0",
+                "image_useNormalCompression": "0",
+                "image_usePrecompressedTextures": "0",
+                "image_lodbias": "-2",
+                "image_filter": "GL_LINEAR_MIPMAP_LINEAR"
+              }
+            }
+          },
+          {
+            "title": "Fix blurry text",
+            "reason": "Quake 4 limits how sharply it draws its smaller text, so menu and HUD text looks blurry at high resolutions. A few multiplayer menus can cut off text with this on.",
+            "changes": {
+              "autoexec.cfg": {
+                "gui_smallFontLimit": "0",
+                "gui_mediumFontLimit": "0"
+              }
+            }
+          },
+          {
+            "title": "Fix stutter at 60 Hz",
+            "reason": "Quake 4 runs its game logic at 62.5 frames a second, so it stutters slightly on a 60 Hz display.",
+            "changes": {
+              "autoexec.cfg": {
+                "com_fixedTic": "1",
+                "r_swapInterval": "0"
               }
             },
-            "follow_up": "Open Options -> Video and click Autodetect."
+            "follow_up": "Quake 4's own V-Sync is now off, so turn on V-Sync and a 60 FPS cap outside the game, or the picture will tear."
           }
         ]
       },
