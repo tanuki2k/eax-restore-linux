@@ -51,7 +51,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     UNINSTALL_COMPANION_VCRUN_REMOVE=()
     COMPANION_IDS=(); COMPANION_NAMES=(); COMPANION_PREFIXES=()
 
-    if [ -s "$INSTALL_MANIFEST" ] && head -n 1 "$INSTALL_MANIFEST" | grep -q "^# EAX Restore: uninstalled"; then
+    if [ -s "$INSTALL_MANIFEST" ] && manifest_is_uninstalled "$INSTALL_MANIFEST"; then
         print_task "Reading the install manifest"
         print_status "This game was already uninstalled in a previous run, so there's nothing left to remove." "$GREEN"
         print_status "If you've copied DSOAL/OpenAL files in by hand since, remove those yourself — there's no install record for them." ""
@@ -443,7 +443,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     # step 7. The same goes for launcher overrides left in place.
     kept_lines=("${GAME_SETTINGS_KEPT[@]}" "${LAUNCHER_LINES_KEPT[@]}")
     if { [ ${#CONFIG_LINES[@]} -gt 0 ] || [ ${#LAUNCHER_LINES[@]} -gt 0 ]; } && [ -f "$INSTALL_MANIFEST" ]; then
-        if head -n 1 "$INSTALL_MANIFEST" | grep -q "^# EAX Restore: uninstalled"; then
+        if manifest_is_uninstalled "$INSTALL_MANIFEST"; then
             if [ ${#kept_lines[@]} -gt 0 ]; then
                 start_manifest "$INSTALL_MANIFEST"
                 printf '%s\n' "${kept_lines[@]}" >> "$INSTALL_MANIFEST"

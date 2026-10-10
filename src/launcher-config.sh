@@ -402,8 +402,7 @@ vdf_set_launch_options() {
             print raw
         }
     ' "$file" > "$tmp" || { rm -f "$tmp"; return 1; }
-    chmod --reference="$file" "$tmp" 2>/dev/null
-    mv -f "$tmp" "$file" 2>/dev/null || { rm -f "$tmp"; return 1; }
+    swap_in "$tmp" "$file"
 }
 
 # Usage: heroic_get_env <GamesConfig file> <appName> <variable>
@@ -430,8 +429,7 @@ heroic_set_env() {
               else . + [{ key: $k, value: $v }] end)' "$file" 2>/dev/null)" \
         || { rm -f "$tmp"; return 1; }
     printf '%s' "$out" > "$tmp" || { rm -f "$tmp"; return 1; }
-    chmod --reference="$file" "$tmp" 2>/dev/null
-    mv -f "$tmp" "$file" 2>/dev/null || { rm -f "$tmp"; return 1; }
+    swap_in "$tmp" "$file"
 }
 
 # Usage: heroic_get_override <GamesConfig file> <appName>

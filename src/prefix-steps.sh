@@ -19,7 +19,7 @@
 # Usage: steam_acf_name <appmanifest_<id>.acf>
 # The app's name as Steam shows it, from its appmanifest.
 steam_acf_name() {
-    sed -n 's/^[[:space:]]*"name"[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$1" 2>/dev/null | head -n 1
+    acf_value "$1" name
 }
 
 # Usage: steam_prefix_for_appid <appid>

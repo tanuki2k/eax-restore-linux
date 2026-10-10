@@ -149,8 +149,7 @@ _wine_reg_set() {
             flush_blanks()
             if (!seen && !del) { print ""; print "[" sec "] " ENVIRON["NOW"]; print "#time=" ENVIRON["FT"]; print line() }
         }' "$file" > "$tmp" || { rm -f "$tmp"; return 1; }
-    chmod --reference="$file" "$tmp" 2>/dev/null
-    mv -f "$tmp" "$file" 2>/dev/null || { rm -f "$tmp"; return 1; }
+    swap_in "$tmp" "$file"
 }
 
 # Usage: config_get_key <file> <ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gadb|wine_reg> <section> <key>
@@ -336,8 +335,7 @@ config_set_key() {
             }
         }
     ' > "$tmp" || { rm -f "$tmp"; return 1; }
-    [ -f "$file" ] && chmod --reference="$file" "$tmp" 2>/dev/null
-    mv -f "$tmp" "$file" 2>/dev/null || { rm -f "$tmp"; return 1; }
+    swap_in "$tmp" "$file"
 }
 
 # Usage: config_values_equal <format> <a> <b>
@@ -381,7 +379,7 @@ game_install_root() {
         while IFS= read -r path; do
             [ -n "$path" ] && [[ "$GAME_DIR" == "$path"* ]] && [ ${#path} -gt ${#best} ] && best="$path"
         done < <(jq -r '.. | objects | (.install_path // .installPath // empty)' "$json" 2>/dev/null)
-    done < <(find "$HOME/.config/heroic" "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic" -type f -name "installed.json" 2>/dev/null)
+    done < <(heroic_installed_jsons)
     echo "${best:-$GAME_DIR}"
 }
 

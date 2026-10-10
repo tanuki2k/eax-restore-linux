@@ -38,6 +38,31 @@ is_genuine_dll() {
     grep -qa "Wine builtin DLL\|Wine placeholder DLL" "$file" 2>/dev/null && return 1
     return 0
 }
+# Usage: swap_in <temp file> <target>
+# Replaces the target with the temp file written next to it, keeping the
+# target's permissions. A failed move removes the temp file and returns 1, so
+# a half-written file is never left behind.
+swap_in() {
+    [ -f "$2" ] && chmod --reference="$2" "$1" 2>/dev/null
+    mv -f "$1" "$2" 2>/dev/null || { rm -f "$1"; return 1; }
+}
+
+# Usage: acf_value <appmanifest_<id>.acf> <key>
+# One top-level string value from a Steam appmanifest ("name", "installdir"),
+# or nothing.
+acf_value() {
+    sed -n "s/^[[:space:]]*\"$2\"[[:space:]]*\"\(.*\)\"[[:space:]]*\$/\1/p" "$1" 2>/dev/null | head -n 1
+}
+
+# Usage: manifest_is_uninstalled <manifest>
+# True when the manifest is the "uninstalled" marker an uninstall leaves
+# behind, not a record of what an install changed.
+manifest_is_uninstalled() {
+    local first
+    IFS= read -r first < "$1" 2>/dev/null
+    [[ "$first" == "# EAX Restore: uninstalled"* ]]
+}
+
 parse_selection() {
     # Usage: parse_selection <total_count> <input_string>
     # Parses pacman-style selection syntax into the global SELECTED[1..N]

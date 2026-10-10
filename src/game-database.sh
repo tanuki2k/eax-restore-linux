@@ -103,7 +103,7 @@ ensure_game_database() {
 # isn't the "uninstalled" marker.
 manifest_is_live() {
     local m="$1/.eax-restore-manifest.txt"
-    [ -s "$m" ] && ! head -n 1 "$m" | grep -q "^# EAX Restore: uninstalled"
+    [ -s "$m" ] && ! manifest_is_uninstalled "$m"
 }
 
 # Usage: steam_library_dirs
@@ -112,7 +112,7 @@ manifest_is_live() {
 steam_library_dirs() {
     local root vdf extra
     local -A seen=()
-    for root in "$HOME/.local/share/Steam" "$HOME/.var/app/com.valvesoftware.Steam/.local/share/Steam"; do
+    while IFS=$'\t' read -r _ root; do
         if [ -d "$root/steamapps" ] && [ -z "${seen["$root/steamapps"]:-}" ]; then
             printf '%s\n' "$root/steamapps"; seen["$root/steamapps"]=1
         fi
@@ -124,7 +124,7 @@ steam_library_dirs() {
                 printf '%s\n' "$extra/steamapps"; seen["$extra/steamapps"]=1
             fi
         done < <(sed -n 's/^[[:space:]]*"path"[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$vdf" 2>/dev/null)
-    done
+    done < <(steam_roots)
 }
 
 # Usage: find_installed_game_dirs
@@ -138,8 +138,7 @@ find_installed_game_dirs() {
         while IFS= read -r lib; do
             find "$lib/common" -mindepth 2 -maxdepth 5 -name .eax-restore-manifest.txt 2>/dev/null
         done < <(steam_library_dirs)
-        for conf in "$HOME/.config/heroic" "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic"; do
-            [ -d "$conf" ] || continue
+        while IFS=$'\t' read -r _ conf; do
             {
                 jq -r '.defaultSettings.defaultInstallPath // empty' "$conf/config.json" 2>/dev/null
                 jq -r '.installed[]?.install_path // empty' "$conf/gog_store/installed.json" 2>/dev/null
@@ -148,7 +147,7 @@ find_installed_game_dirs() {
             } | sort -u | while IFS= read -r lib; do
                 [ -d "$lib" ] && find "$lib" -maxdepth 5 -name .eax-restore-manifest.txt 2>/dev/null
             done
-        done
+        done < <(heroic_roots)
     } | while IFS= read -r m; do
         m="$(dirname "$m")"
         manifest_is_live "$m" && printf '%s\n' "$m"
@@ -482,11 +481,11 @@ scan_game_libraries() {
                 appid=$(basename "$acf" | tr -dc '0-9')
                 [ -z "$appid" ] && continue
                 echo "$steam_ids" | grep -qx "$appid" || continue
-                installdir=$(sed -n 's/^[[:space:]]*"installdir"[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$acf" 2>/dev/null | head -n 1)
+                installdir=$(acf_value "$acf" installdir)
                 [ -n "$installdir" ] && [ -d "$lib/common/$installdir" ] || continue
                 name=$(jq -r --arg id "$appid" '.games[] | select((.stores.steam.id | tostring) == $id) | .name' "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
                 [ -z "$name" ] && name="AppID $appid"
-                meta_name=$(sed -n 's/^[[:space:]]*"name"[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$acf" 2>/dev/null | head -n 1)
+                meta_name=$(acf_value "$acf" name)
                 [ -z "$meta_name" ] && meta_name="AppID $appid"
                 names+=("$name")
                 meta_names+=("$meta_name")
@@ -502,7 +501,7 @@ scan_game_libraries() {
     gog_ids=$(jq -r '.games[] | select(.stores.gog.id != null) | .stores.gog.id' "$GAME_DATABASE_FILE" 2>/dev/null)
     if [ -n "$gog_ids" ]; then
         local installed_jsons
-        installed_jsons=$(find "$HOME/.config/heroic" "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic" -type f -name "installed.json" 2>/dev/null)
+        installed_jsons=$(heroic_installed_jsons)
         print_status "Checking Heroic installed.json files..." ""
         local json_file install_path app_name name meta_name
         while IFS= read -r json_file; do
@@ -520,7 +519,7 @@ scan_game_libraries() {
                 paths+=("$install_path")
                 stores+=("gog")
                 ids+=("$app_name")
-            done < <(awk 'BEGIN { RS="}"; FS="," } { ip=""; an=""; for (i=1; i<=NF; i++) { if ($i ~ /"(install_path|installPath)"/) { line=$i; sub(/^.*"(install_path|installPath)"[ \t]*:[ \t]*"/, "", line); sub(/".*$/, "", line); ip=line } if ($i ~ /"(app_name|appName)"/) { line=$i; sub(/^.*"(app_name|appName)"[ \t]*:[ \t]*"/, "", line); sub(/".*$/, "", line); an=line } } if (ip != "") print ip "\t" an }' "$json_file")
+            done < <(heroic_installed_records "$json_file")
         done <<< "$installed_jsons"
     fi
 

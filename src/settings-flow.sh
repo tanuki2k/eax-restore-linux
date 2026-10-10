@@ -42,12 +42,12 @@ if [ -n "$SETTINGS_TOOL_MODE" ]; then
         # there's nothing to change, so it's back to the main menu.
         INSTALL_MANIFEST="$GAME_DIR/.eax-restore-manifest.txt"
         settings_alsoft_files=()
-        if [ -s "$INSTALL_MANIFEST" ] && ! head -n 1 "$INSTALL_MANIFEST" | grep -q "^# EAX Restore: uninstalled"; then
+        if [ -s "$INSTALL_MANIFEST" ] && ! manifest_is_uninstalled "$INSTALL_MANIFEST"; then
             while IFS= read -r line; do
                 [[ "$line" == /*/alsoft.ini ]] && [ -f "$line" ] && settings_alsoft_files+=("$line")
             done < "$INSTALL_MANIFEST"
         fi
-        if [ ! -s "$INSTALL_MANIFEST" ] || head -n 1 "$INSTALL_MANIFEST" | grep -q "^# EAX Restore: uninstalled" \
+        if [ ! -s "$INSTALL_MANIFEST" ] || manifest_is_uninstalled "$INSTALL_MANIFEST" \
             || { [ "$SETTINGS_TOOL_MODE" == "speakers" ] && [ ${#settings_alsoft_files[@]} -eq 0 ]; }; then
             print_note "The EAX fix isn't installed in $(tilde_path "$GAME_DIR")."
             print_paragraph "Install it first (Scan, Browse or Manually on the main menu), then come back here."

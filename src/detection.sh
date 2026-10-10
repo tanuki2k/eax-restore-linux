@@ -3,14 +3,14 @@
 # ==============================================================================
 
 find_local_wine() {
-    local search_paths=("$HOME/.config/heroic/tools" "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic/tools")
-    local found_wine=""
-    for path in "${search_paths[@]}"; do
+    local found_wine="" root path
+    while IFS=$'\t' read -r _ root; do
+        path="$root/tools"
         if [ -d "$path" ]; then
             found_wine=$(find "$path" -type f -path "*/bin/wine" -executable 2>/dev/null | head -n 1)
             [ -n "$found_wine" ] && break
         fi
-    done
+    done < <(heroic_roots)
     echo "$found_wine"
 }
 
@@ -355,6 +355,25 @@ heroic_roots() {
     return 0
 }
 
+heroic_installed_jsons() {
+    # Usage: heroic_installed_jsons
+    # Every installed.json under a Heroic config folder (native and Flatpak,
+    # all stores), one path per line.
+    local root
+    while IFS=$'\t' read -r _ root; do
+        find "$root" -type f -name "installed.json" 2>/dev/null
+    done < <(heroic_roots)
+}
+
+heroic_installed_records() {
+    # Usage: heroic_installed_records <installed.json>
+    # One "install_path<TAB>app_name" line per installed game. Read with awk
+    # rather than jq: GOG's, Epic's and older Heroic files spell the keys
+    # differently (install_path/installPath, app_name/appName) and nest them
+    # at different depths.
+    awk 'BEGIN { RS="}"; FS="," } { ip=""; an=""; for (i=1; i<=NF; i++) { if ($i ~ /"(install_path|installPath)"/) { line=$i; sub(/^.*"(install_path|installPath)"[ \t]*:[ \t]*"/, "", line); sub(/".*$/, "", line); ip=line } if ($i ~ /"(app_name|appName)"/) { line=$i; sub(/^.*"(app_name|appName)"[ \t]*:[ \t]*"/, "", line); sub(/".*$/, "", line); an=line } } if (ip != "") print ip "\t" an }' "$1"
+}
+
 heroic_json_value() {
     # Usage: heroic_json_value <file> <key>
     # First "key": "value" string in a Heroic JSON file (empty if missing).
@@ -419,7 +438,7 @@ detect_heroic_prefix_verbose() {
                 if [ "$target_dir" == "$install_path" ] || [[ "$target_dir" == "$install_path"/* ]]; then
                     id="$record_app_name"; gog="$record_app_name"; title="$(basename "$install_path")"
                 fi
-            done < <(awk 'BEGIN { RS="}"; FS="," } { ip=""; an=""; for (i=1; i<=NF; i++) { if ($i ~ /"(install_path|installPath)"/) { line=$i; sub(/^.*"(install_path|installPath)"[ \t]*:[ \t]*"/, "", line); sub(/".*$/, "", line); ip=line } if ($i ~ /"(app_name|appName)"/) { line=$i; sub(/^.*"(app_name|appName)"[ \t]*:[ \t]*"/, "", line); sub(/".*$/, "", line); an=line } } if (ip != "") print ip "\t" an }' "$json_file")
+            done < <(heroic_installed_records "$json_file")
             if [ -n "$id" ]; then log_cmd "heroic: matched in $json_file (ID $id)"; break; fi
         done < <(find "$root" -type f -name "installed.json" 2>/dev/null)
 
@@ -652,9 +671,9 @@ find_heroic_install_path() {
     local want="$1"
     [ -z "$want" ] && return
     local json_file
-    find "$HOME/.config/heroic" "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic" -type f -name "installed.json" 2>/dev/null | while IFS= read -r json_file; do
+    heroic_installed_jsons | while IFS= read -r json_file; do
         [ -z "$json_file" ] && continue
-        awk -v want="$want" 'BEGIN { RS="}"; FS="," } { ip=""; an=""; for (i=1; i<=NF; i++) { if ($i ~ /"(install_path|installPath)"/) { line=$i; sub(/^.*"(install_path|installPath)"[ \t]*:[ \t]*"/, "", line); sub(/".*$/, "", line); ip=line } if ($i ~ /"(app_name|appName)"/) { line=$i; sub(/^.*"(app_name|appName)"[ \t]*:[ \t]*"/, "", line); sub(/".*$/, "", line); an=line } } if (an == want && ip != "") { print ip; exit } }' "$json_file"
+        heroic_installed_records "$json_file" | awk -F'\t' -v want="$want" '$2 == want { print $1; exit }'
     done | head -n 1
 }
 
@@ -672,11 +691,11 @@ identify_game_dir() {
         want="${dir#*/steamapps/common/}"; want="${want%%/*}"
         for acf in "${dir%%/common/*}"/appmanifest_*.acf; do
             [ -f "$acf" ] || continue
-            installdir=$(sed -n 's/^[[:space:]]*"installdir"[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$acf" 2>/dev/null | head -n 1)
+            installdir=$(acf_value "$acf" installdir)
             [ "$installdir" == "$want" ] || continue
             GAME_ID_STORE="steam"
             GAME_ID="$(basename "$acf" | tr -dc '0-9')"
-            GAME_ID_NAME=$(sed -n 's/^[[:space:]]*"name"[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$acf" 2>/dev/null | head -n 1)
+            GAME_ID_NAME=$(acf_value "$acf" name)
             GAME_ID_ROOT="${dir%%/common/*}/common/$want"
             return 0
         done
@@ -697,9 +716,8 @@ identify_game_dir() {
             # Heroic's own record of the install wins: its appName is the ID
             # the database uses, and a few info files carry another one
             # (Fallout Tactics' says 3).
-            id="$(find "$HOME/.config/heroic/gog_store" "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic/gog_store" \
-                -maxdepth 1 -name installed.json -exec jq -r --arg p "$dir" \
-                '.installed[]? | select((.install_path // "" | rtrimstr("/")) == $p) | .appName // empty' {} + 2>/dev/null | head -n 1)"
+            id="$(heroic_installed_jsons | xargs -r -d '\n' jq -r --arg p "$dir" \
+                '.installed[]? | select((.install_path // "" | rtrimstr("/")) == $p) | .appName // empty' 2>/dev/null | head -n 1)"
             [ -n "$id" ] && GAME_ID="$id"
             return 0
         fi
@@ -1469,7 +1487,7 @@ detect_game_environment() {
                     if [ -z "$GAME_NAME" ]; then
                         # Same source appid/gog_id already come from, not the
                         # curated JSON — the appmanifest's own "name" key.
-                        [ -f "$ACF_FILE" ] && GAME_NAME=$(sed -n 's/^[[:space:]]*"name"[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$ACF_FILE" 2>/dev/null | head -n 1)
+                        [ -f "$ACF_FILE" ] && GAME_NAME=$(acf_value "$ACF_FILE" name)
                         [ -z "$GAME_NAME" ] && GAME_NAME="AppID $APPID"
                     fi
                     show_profile_if_unseen "$APPID" "steam"
