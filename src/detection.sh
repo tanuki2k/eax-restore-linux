@@ -397,8 +397,7 @@ heroic_configs_for_prefix() {
     local p="${1%/}" root
     while IFS=$'\t' read -r _ root; do
         [ -z "$root" ] && continue
-        find "$root/GamesConfig" -maxdepth 1 -type f -name "*.json" \
-            \( -exec grep -Fq "\"winePrefix\": \"$p\"" {} \; -o -exec grep -Fq "\"winePrefix\": \"$p/\"" {} \; \) -print 2>/dev/null
+        grep -lF -e "\"winePrefix\": \"$p\"" -e "\"winePrefix\": \"$p/\"" "$root"/GamesConfig/*.json 2>/dev/null
     done < <(heroic_roots)
 }
 

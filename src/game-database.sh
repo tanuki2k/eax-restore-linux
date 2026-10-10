@@ -467,9 +467,18 @@ scan_game_libraries() {
     local names=() meta_names=() paths=() stores=() ids=()
 
     # --- Steam ---
-    local steam_ids
-    steam_ids=$(jq -r '.games[] | select(.stores.steam.id != null) | .stores.steam.id' "$GAME_DATABASE_FILE" 2>/dev/null)
-    if [ -n "$steam_ids" ]; then
+    # Both stores' id -> display name maps come from one jq run each, so the
+    # loops below test membership and fetch the name without a process per game.
+    local -A steam_names=() gog_names=()
+    local db_id db_name
+    while IFS=$'\x1f' read -r db_id db_name; do
+        [[ -v steam_names[$db_id] ]] || steam_names[$db_id]="$db_name"
+    done < <(jq -r '.games[] | select(.stores.steam.id != null) | [(.stores.steam.id | tostring), (.name // "" | split("\n")[0])] | join("\u001f")' "$GAME_DATABASE_FILE" 2>/dev/null)
+    while IFS=$'\x1f' read -r db_id db_name; do
+        [[ -v gog_names[$db_id] ]] || gog_names[$db_id]="$db_name"
+    done < <(jq -r '.games[] | select(.stores.gog.id != null) | [(.stores.gog.id | tostring), (.name // "" | split("\n")[0])] | join("\u001f")' "$GAME_DATABASE_FILE" 2>/dev/null)
+
+    if [ ${#steam_names[@]} -gt 0 ]; then
         local libs=() lib
         while IFS= read -r lib; do libs+=("$lib"); done < <(steam_library_dirs)
         print_status "Checking ${#libs[@]} Steam library folder(s)..." ""
@@ -478,12 +487,11 @@ scan_game_libraries() {
         for lib in "${libs[@]}"; do
             for acf in "$lib"/appmanifest_*.acf; do
                 [ -f "$acf" ] || continue
-                appid=$(basename "$acf" | tr -dc '0-9')
-                [ -z "$appid" ] && continue
-                echo "$steam_ids" | grep -qx "$appid" || continue
+                appid="${acf##*appmanifest_}"; appid="${appid%.acf}"
+                [[ -v steam_names[$appid] ]] || continue
                 installdir=$(acf_value "$acf" installdir)
                 [ -n "$installdir" ] && [ -d "$lib/common/$installdir" ] || continue
-                name=$(jq -r --arg id "$appid" '.games[] | select((.stores.steam.id | tostring) == $id) | .name' "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
+                name="${steam_names[$appid]}"
                 [ -z "$name" ] && name="AppID $appid"
                 meta_name=$(acf_value "$acf" name)
                 [ -z "$meta_name" ] && meta_name="AppID $appid"
@@ -497,9 +505,7 @@ scan_game_libraries() {
     fi
 
     # --- Heroic ---
-    local gog_ids
-    gog_ids=$(jq -r '.games[] | select(.stores.gog.id != null) | .stores.gog.id' "$GAME_DATABASE_FILE" 2>/dev/null)
-    if [ -n "$gog_ids" ]; then
+    if [ ${#gog_names[@]} -gt 0 ]; then
         local installed_jsons
         installed_jsons=$(heroic_installed_jsons)
         print_status "Checking Heroic installed.json files..." ""
@@ -508,9 +514,9 @@ scan_game_libraries() {
             [ -z "$json_file" ] && continue
             while IFS=$'\t' read -r install_path app_name; do
                 [ -z "$install_path" ] || [ -z "$app_name" ] && continue
-                echo "$gog_ids" | grep -qx "$app_name" || continue
+                [[ -v gog_names[$app_name] ]] || continue
                 [ -d "$install_path" ] || continue
-                name=$(jq -r --arg id "$app_name" '.games[] | select((.stores.gog.id | tostring) == $id) | .name' "$GAME_DATABASE_FILE" 2>/dev/null | head -n 1)
+                name="${gog_names[$app_name]}"
                 [ -z "$name" ] && name="GOG ID $app_name"
                 meta_name="$(basename "$install_path")"
                 [ -z "$meta_name" ] && meta_name="GOG ID $app_name"

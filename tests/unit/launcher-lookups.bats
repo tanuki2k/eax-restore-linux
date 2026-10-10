@@ -43,3 +43,14 @@ setup() {
     mkdir -p "$HOME/.steam/steam/steamapps" "$HOME/.var/app/com.valvesoftware.Steam/data/Steam/steamapps"
     [ "$(steam_library_dirs | wc -l)" -eq 2 ]
 }
+
+@test "heroic_configs_for_prefix: the GamesConfig files naming exactly that prefix, in either Heroic" {
+    local n="$HOME/.config/heroic/GamesConfig" f="$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic/GamesConfig"
+    mkdir -p "$n" "$f"
+    printf '{"1":{"winePrefix": "/p/one"}}' > "$n/1.json"
+    printf '{"2":{"winePrefix": "/p/one/"}}' > "$f/2.json"
+    printf '{"3":{"winePrefix": "/p/one-other"}}' > "$n/3.json"
+    printf '{"4":{"winePrefix": "/p/two"}}' > "$n/4.json"
+    run heroic_configs_for_prefix /p/one
+    [ "$(sort <<< "$output")" == "$(printf '%s\n%s' "$n/1.json" "$f/2.json")" ]
+}
