@@ -127,16 +127,18 @@ term_link() {
 # one; a line too wide for the frame is printed under it as it is.
 print_centred_box() {
     local colour="$1"; shift
-    local inner=56 line plain left right
+    local inner=56 line plain left right rule
     local -a wide=()
-    echo -e "${colour}┌$(printf '─%.0s' $(seq "$inner"))┐${NC}"
+    # No word splitting: the EXIT trap can draw this mid-"IFS= read".
+    printf -v rule '%*s' "$inner" ""; rule="${rule// /─}"
+    echo -e "${colour}┌${rule}┐${NC}"
     for line in "$@"; do
         plain="$(printf '%b' "$line" | sed -e 's/\x1b\]8;;[^\x07]*\x07//g' -e 's/\x1b\[[0-9;]*m//g')"
         if [ ${#plain} -gt "$inner" ]; then wide+=("$line"); continue; fi
         left=$(( (inner - ${#plain}) / 2 )); right=$(( inner - ${#plain} - left ))
         echo -e "${colour}│$(printf '%*s' "$left" "")${line}${colour}$(printf '%*s' "$right" "")│${NC}"
     done
-    echo -e "${colour}└$(printf '─%.0s' $(seq "$inner"))┘${NC}"
+    echo -e "${colour}└${rule}┘${NC}"
     for line in "${wide[@]}"; do echo -e "${colour}${line}${NC}"; done
 }
 

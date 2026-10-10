@@ -129,6 +129,9 @@ write_log_summary() {
 finish_run_log() {
     local rc=$?
     trap - EXIT
+    # A Ctrl-C at a tick list lands here from inside its "IFS= read", with
+    # that empty IFS still in effect; put the usual one back for the rest.
+    local IFS=$' \t\n'
     # Release a pinned PHASE 2 progress bar first, or an exit mid-deploy
     # leaves the terminal scrolling inside its region.
     end_phase_progress
