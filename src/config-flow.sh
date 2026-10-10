@@ -140,6 +140,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
 
         # 1. Game Location
         print_step 1 "Game Location"
+        print_paragraph "This step finds the folder the game is installed in."
         get_game_directory ""
         if [ -n "$RESTART_REQUESTED" ]; then
             [ -n "$MAIN_MENU_SHOWN" ] && continue 2
@@ -293,6 +294,8 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
 
     # 8. Audio Configuration
     print_step 8 "Speaker Configuration"
+    print_paragraph "This step sets up ${GAME_NAME:-the game}'s 3D sound for your speakers or headphones, so" \
+        "sounds come from the right direction."
     ask_speaker_configuration
 
     # The game profile's alsoft.ini values (e.g. a reverb boost) are
@@ -301,8 +304,8 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
 
     # 9. Advanced Compatibility Tweaks
     print_step 9 "Advanced Compatibility Tweaks"
-    echo -e "\n${WHITE}These optional workarounds are designed for extremely stubborn games"
-    echo -e "that refuse to load EAX normally. In 90% of cases, you do not need these.${NC}"
+    print_paragraph "This step offers workarounds for the few games that don't play EAX sound even with the" \
+        "fix in place."
 
     ADVANCED_DUMMY="n"
     ADVANCED_LIMITS="n"

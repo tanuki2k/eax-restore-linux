@@ -88,6 +88,8 @@ if [ -n "$SETTINGS_TOOL_MODE" ]; then
 
     if [ "$SETTINGS_TOOL_MODE" == "speakers" ]; then
         print_step 2 "Speaker Configuration"
+        print_paragraph "This step sets up ${GAME_NAME:-the game}'s 3D sound for your speakers or headphones, so" \
+            "sounds come from the right direction."
         settings_old_label=""
         if speaker_config_from_alsoft "${settings_alsoft_files[0]}"; then
             settings_old_label="$(speaker_label)"

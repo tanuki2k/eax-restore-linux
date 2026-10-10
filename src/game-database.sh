@@ -493,10 +493,9 @@ scan_game_libraries() {
     fi
 
     if [ ${#names[@]} -eq 0 ]; then
-        print_warning "No games with a profile were found in your Steam or Heroic libraries."
-        print_note "this only checks the community-maintained game database, which currently" \
-            "covers a small, hand-verified set of titles — it will grow over time. A game" \
-            "you own may still support EAX even if it's not listed yet."
+        print_warning "No games from the game database were found in your Steam or Heroic libraries."
+        print_note "your games may still have EAX even if the game database doesn't list them" \
+            "yet — choose [M] to type a game's path yourself."
         return 1
     fi
 

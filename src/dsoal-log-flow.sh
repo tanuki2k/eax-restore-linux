@@ -35,6 +35,8 @@ if [ -n "$DSOAL_LOG_MODE" ]; then
     done
 
     print_step 3 "DSOAL Logging"
+    print_paragraph "This step turns DSOAL's log file on or off, which shows whether" \
+        "${GAME_NAME:-the game} is loading the audio fix."
     LAUNCHER_CHANGE="dsoal_log"
     dsoal_log_wine="$(dsoal_log_path_for_wine "$GAME_DIR")"
 

@@ -922,6 +922,8 @@ game_settings_step() {
     _game_settings_heading() {
         [ "$heading_shown" -eq 1 ] && return
         print_step "$step" "Game Settings"
+        print_paragraph "This step offers changes to ${GAME_NAME:-the game}'s own settings, such as switching on" \
+            "its EAX options."
         heading_shown=1
         GAME_SETTINGS_STEP_SHOWN=1
     }
@@ -1430,6 +1432,8 @@ choose_game_settings_to_revert() {
     [ ${#CONFIG_LINES[@]} -gt 0 ] || return 0
 
     print_step "$step" "Game Settings"
+    print_paragraph "This step asks which of ${GAME_NAME:-the game}'s own settings to put back to what they" \
+        "were before the install."
     print_task "Reading the game settings this install changed"
 
     # Group lines by setting (category + title), keeping manifest order.

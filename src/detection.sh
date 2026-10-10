@@ -213,12 +213,20 @@ get_game_directory() {
                 return
                 ;;
             scan)
-                print_note "the game database is a small, hand-verified, work-in-progress" \
-                    "set — it doesn't cover every EAX game. A game you own may still support EAX" \
-                    "even if it's not (yet) listed."
-                if ! confirm "Understood — it's a work in progress?"; then
-                    continue
-                fi
+                print_note "the scan only finds games in the game database, which is still growing." \
+                    "If your game isn't listed, it may still have EAX — choose [M] under the list" \
+                    "to type its path yourself."
+                # Enter scans, B goes back to the locate menu.
+                local go=""
+                while :; do
+                    prompt "Press Enter to scan your libraries, or type B to go back:"
+                    read_answer go || exit 0
+                    case "${go,,}" in
+                        "") break ;;
+                        b) continue 2 ;;
+                    esac
+                    print_result "That's not a valid option — please press Enter or type B." "$YELLOW"
+                done
                 if scan_game_libraries; then
                     echo -e "\n${GREEN}Using: $(tilde_path "$GAME_DIR")${NC}"
                     note_game_used "$GAME_DIR"
@@ -792,6 +800,8 @@ resolve_exe_folder() {
     GAME_DIR=""
 
     print_step 2 "Locate Game Executable"
+    print_paragraph "This step finds the folder ${GAME_NAME:-the game}'s .exe runs from, since the game loads" \
+        "its audio DLLs from there."
 
     # Nested installs often bundle third-party installers/utilities
     # alongside the real game .exe (redistributables, anti-cheat setup,
@@ -802,12 +812,12 @@ resolve_exe_folder() {
     # it's nested.
     local junk_exe_re='^(unins(t(all)?)?[0-9]*|vc_?redist.*|(dx|directx)?setup|dxsetup|dxwebsetup|dx[0-9]+ger|dx[0-9]+ntger|dotnetfx.*|ndp[0-9].*|windowsdesktop-runtime.*|oalinst|physx.*|easyanticheat.*|eac_?setup.*|eaclauncher|be(service|daisy|launcher|_ex)[a-z0-9_]*|battleye.*|unitycrashhandler.*|crashreport(er|client)?|crash_?handler|crashpad_handler|bugsplat.*|epiconlineservices(installer)?|epicwebhelper.*|rockstar-games-launcher|social-club-setup|tagesclient.*|vulkanrt.*installer.*|gamingrepair(tool)?|registrationreminder|overlayinjector|cleanup|touchup|driverversionchecker|layerschecker|supporttool|dowser|iscopyfiles|detectionui.*|eax[0-9]*unified_redist.*|reg|.*updatelauncher|adb?e?rdr.*|ue3?redist.*|unrealfrontend|unrealconsole|uescriptprofiler|cookersync|testapp|.*oshelper)\.exe$'
 
-    # Up-front gate, same as the prefix stage's "attempt to automatically
-    # find your Proton prefix?" -- a detected folder is still a guess, and
+    # Up-front gate, same as the prefix stage's "Find <game>'s prefix
+    # automatically?" -- a detected folder is still a guess, and
     # some users would rather just type the path. confirm defaults to Yes and
     # returns 1 on EOF, so a closed stdin falls to manual entry, which itself
     # returns 1 on EOF -- a clean bail, no spin.
-    if ! confirm "Would you like the script to attempt to automatically find the game's executable folder?"; then
+    if ! confirm "Find ${GAME_NAME:-the game}'s .exe automatically?"; then
         resolve_exe_manual_entry "$root" && return 0
         return 1
     fi
@@ -1084,8 +1094,8 @@ confirm_continue_if_openal_native() {
     # implementation routes through OpenAL natively rather than DirectSound3D — the
     # dsound.dll/DSOAL swap has nothing to intercept here. Offers a distinct
     # remediation (direct OpenAL32.dll + alsoft.ini deployment) instead of a
-    # hard stop. Opens with a single upfront gate ("attempt to automatically
-    # detect $game_name's audio API?") governing everything below it -- when
+    # hard stop. Opens with a single upfront gate ("Detect $game_name's audio
+    # API automatically?") governing everything below it -- when
     # show_game_details_block already showed this game's documented API
     # (PROFILE_API set), accepting the gate cross-checks that value
     # against a live file scan instead of re-querying the database from
@@ -1132,7 +1142,7 @@ confirm_continue_if_openal_native() {
     local game_name="${3:-this game}"
 
     local attempt_auto_detect=1
-    confirm "Would you like the script to attempt to automatically detect $game_name's audio API?" || attempt_auto_detect=0
+    confirm "Detect $game_name's audio API automatically?" || attempt_auto_detect=0
 
     local json_available=0 match_count=0
     local api="" matched=0 scanned=0 json_checked=0 declined=0 overriding=0
@@ -1330,8 +1340,11 @@ detect_game_environment() {
     APPID=""
     PREFIX_PATH=""
 
+    print_paragraph "This step works out whether Steam or Heroic runs ${GAME_NAME:-the game}, and which" \
+        "Wine or Proton prefix it uses."
+
     local attempt_auto_detect=1
-    confirm "Would you like the script to attempt to automatically find the game's prefix?" || attempt_auto_detect=0
+    confirm "Find ${GAME_NAME:-the game}'s prefix automatically?" || attempt_auto_detect=0
 
     if [[ "$GAME_DIR" == *"/steamapps/common/"* ]]; then
         LAUNCHER_TYPE="1"

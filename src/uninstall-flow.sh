@@ -169,6 +169,8 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     fi
 
     print_step 4 "Game Files"
+    print_paragraph "This step asks whether to remove the files the install added to ${GAME_NAME:-the game}'s" \
+        "folder and put back any originals it replaced."
 
     # Phase 1 only works out what to do; nothing is removed until Phase 2.
     FILES_DECLINED="0"
@@ -250,6 +252,8 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     fi
 
     print_step 5 "Registry and Launcher Cleanup"
+    print_paragraph "This step asks whether to undo the DLL override and any Wine registry changes the install" \
+        "made."
 
     # Launcher overrides: ask whether to remove each one. Yes also lets
     # Phase 2 close the launcher (if it's running then) and reopen it,
@@ -299,6 +303,8 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     done
 
     print_step 6 "VC++ Runtime"
+    print_paragraph "This step checks whether the install added the VC++ 2022 Redistributable to" \
+        "${GAME_NAME:-the game}'s prefix."
 
     UNINSTALL_VCRUN="n"
     print_task "Checking for the VC++ runtime"

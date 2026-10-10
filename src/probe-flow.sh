@@ -926,6 +926,8 @@ probe_check_prefix() {
 probe_session() {
     STEP_TOTAL=6
     print_step 1 "Game"
+    print_paragraph "This step lists your installed Steam and GOG games that have a game database entry, so" \
+        "you can pick one to probe."
     probe_pick_game || return 1
     [ "$PROBE_STAGE" == "new" ] && [ ! -f "$PROBE_SESSION_DIR/scan.txt" ] && probe_show_scan
 
@@ -945,6 +947,8 @@ probe_session() {
 
     if [ "$PROBE_STAGE" == "defaults" ]; then
         print_step 3 "Install"
+        print_paragraph "This step installs the EAX fix into $PROBE_NAME, so the next run shows what its sound" \
+            "options change with the fix in place."
         local dir="${PROBE_EXE_DIR:-$PROBE_ROOT}"
         if manifest_is_live "$dir" && confirm "The EAX fix is already installed in $PROBE_NAME. Skip installing it again?" Y; then
             probe_snap 2
@@ -990,6 +994,8 @@ probe_after_install() {
 
     if [ "$PROBE_STAGE" == "changed" ]; then
         print_step 5 "Sound Settings"
+        print_paragraph "This step compares the snapshots from each run and proposes the audio settings for" \
+            "$PROBE_NAME's database entry."
         print_subheading "Files $PROBE_NAME created on its first run"
         local created
         created="$(cd "$PROBE_SESSION_DIR/1/files" 2>/dev/null && find . -type f | sort | while IFS= read -r f; do
