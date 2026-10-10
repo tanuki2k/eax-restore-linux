@@ -245,6 +245,11 @@ PAGED_CHOICE=""
 CHECKLIST_INITIAL=()
 # checklist_select's per-item bodies (reason and rows), set the same way.
 CHECKLIST_DETAILS=()
+# radio_select's starting item (1-based; empty means the first) and per-item
+# descriptions, set by a caller just before it; RADIO_CHOICE is its answer.
+RADIO_INITIAL=""
+RADIO_DETAILS=()
+RADIO_CHOICE=""
 
 # The database browser's right pane when it's beside the game list: this
 # share of the width, so the list and the profile grow together.

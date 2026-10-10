@@ -140,7 +140,13 @@ their execution order in the assembled script):
    ticks and `CHECKLIST_DETAILS` gives each item a body drawn under its box. It
    draws to `/dev/tty` so the run log only gets the final list, falls back to
    titles-only boxes when the list doesn't fit the terminal, and to a numbered
-   "type the numbers" prompt when stdin isn't a terminal. `paged_select` is the
+   "type the numbers" prompt when stdin isn't a terminal. `radio_select` is its
+   single-pick counterpart (↑/↓, Enter; no cancel) for a short menu where each
+   item needs a sentence: the speaker step's three questions. `RADIO_INITIAL`
+   sets the starting item, `RADIO_DETAILS` the description shown under the list
+   for the highlighted item, answer in `RADIO_CHOICE`; it leaves one
+   ` -> Label: choice` line and falls back to the numbered menu when stdin isn't
+   a terminal. Use it for any new short single-pick menu. `paged_select` is the
    numbered pick list for a long list (the library scan, the probe's installed
    games): pages fit the terminal, [N]ext/[P]revious, the caller's letter keys
    after them, rows from `PAGED_LABELS`/`PAGED_DETAILS`, answer in

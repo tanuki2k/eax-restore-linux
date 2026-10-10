@@ -620,6 +620,95 @@ checklist_select() {
     return 0
 }
 
+# Usage: RADIO_INITIAL=<n> RADIO_DETAILS=(…) radio_select "<record label>" <title> [<title> ...]
+# checklist_select's single-pick counterpart, for a short menu where each
+# item needs a sentence of explanation: ↑/↓ (or k/j) move the dot, Enter
+# picks it. The highlighted item's description is shown under the list and
+# changes as the dot moves, rather than one under every row, so the titles
+# stay a compact list. Sets RADIO_CHOICE (1-based). No cancel, matching the
+# numbered menus it replaced. RADIO_INITIAL / RADIO_DETAILS are cleared after
+# each use. Drawn to /dev/tty and erased the same way as checklist_select;
+# the record left behind is one " -> <record label>: <title>" line. Without a
+# terminal (piped answers) it's the numbered menu, descriptions dimmed after
+# the titles, read with the same default and validation as before.
+radio_select() {
+    local label="$1"; shift
+    local -a items=("$@") details=("${RADIO_DETAILS[@]}")
+    local n=${#items[@]} cur="${RADIO_INITIAL:-1}" i
+    RADIO_INITIAL=""; RADIO_DETAILS=()
+    [[ "$cur" =~ ^[0-9]+$ ]] && [ "$cur" -ge 1 ] && [ "$cur" -le "$n" ] || cur=1
+
+    if [ ! -t 0 ] || [ "${TERM:-dumb}" == "dumb" ] || ! { : > /dev/tty; } 2>/dev/null; then
+        echo ""
+        for ((i = 0; i < n; i++)); do print_option "$((i + 1))" "${items[i]}" "${details[i]:-}"; done
+        local answer
+        while true; do
+            prompt "Selection [1-$n, Default: $cur]: "
+            read_answer answer || exit 0
+            answer="${answer:-$cur}"
+            if [[ "$answer" =~ ^[0-9]+$ ]] && [ "$answer" -ge 1 ] && [ "$answer" -le "$n" ]; then break; fi
+            print_result "That's not a valid option — please type a number from 1 to $n." "$YELLOW"
+        done
+        RADIO_CHOICE="$answer"
+        print_status "$label: ${items[$((answer - 1))]}" ""
+        return 0
+    fi
+
+    # Every description is padded to the tallest one's line count, so each
+    # frame is the same height and the redraw never leaves stray lines.
+    local width=$(( ${WRAP_COLUMNS:-76} - 3 )) tallest=1 count
+    local -a wrapped=()
+    for ((i = 0; i < n; i++)); do
+        wrapped[i]="$(printf '%s\n' "${details[i]:-}" | fold -s -w "$width" | sed 's/ *$//; s/^/   /')"
+        count=$(printf '%s\n' "${wrapped[i]}" | wc -l)
+        [ "$count" -gt "$tallest" ] && tallest="$count"
+    done
+
+    local key rest tty_fd frame lines=0 drawn=0
+    exec {tty_fd}>/dev/tty
+    # Let tee finish putting the heading above on screen before drawing under it.
+    sleep 0.1
+    _radio_frame() {
+        local j pad
+        echo ""
+        for ((j = 1; j <= n; j++)); do
+            if [ "$j" -eq "$cur" ]; then printf '%b\n' " > (${GREEN}•${NC}) ${BOLD}${items[$((j - 1))]}${NC}"
+            else printf '%b\n' "   ( ) ${items[$((j - 1))]}"; fi
+        done
+        echo ""
+        printf '%b%s%b\n' "$DIM" "${wrapped[$((cur - 1))]}" "$NC"
+        pad=$(( tallest - $(printf '%s\n' "${wrapped[$((cur - 1))]}" | wc -l) ))
+        for ((j = 0; j < pad; j++)); do echo ""; done
+        printf '\n%b\n' "${YELLOW}Choose with ↑/↓ and press Enter${NC}"
+    }
+    while true; do
+        frame="$(_radio_frame)"
+        [ "$drawn" -eq 1 ] && printf '\e[%dA\r\e[J' "$lines" >&"$tty_fd"
+        printf '%s\n' "$frame" >&"$tty_fd"
+        lines=$(printf '%s\n' "$frame" | wc -l); drawn=1
+        IFS= read -rsn1 key || exit 0
+        case "$key" in
+            "") break ;;
+            k|K) [ "$cur" -gt 1 ] && cur=$((cur - 1)) ;;
+            j|J) [ "$cur" -lt "$n" ] && cur=$((cur + 1)) ;;
+            $'\e')
+                rest=""; IFS= read -rsn2 -t 0.05 rest
+                case "$rest" in
+                    "[A"|"OA") [ "$cur" -gt 1 ] && cur=$((cur - 1)) ;;
+                    "[B"|"OB") [ "$cur" -lt "$n" ] && cur=$((cur + 1)) ;;
+                esac
+                ;;
+        esac
+    done
+    # Erase the list; the record goes to stdout.
+    printf '\e[%dA\r\e[J' "$lines" >&"$tty_fd"
+    exec {tty_fd}>&-
+    unset -f _radio_frame
+    RADIO_CHOICE="$cur"
+    print_status "$label: ${items[$((cur - 1))]}" ""
+    return 0
+}
+
 # ==============================================================================
 # PROGRESS HELPERS
 # ==============================================================================

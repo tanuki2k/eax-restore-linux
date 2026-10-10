@@ -675,19 +675,20 @@ fix_rows_for_display() {
 # Usage: ask_speaker_configuration
 # Step 8's speaker questions, shared with Tools → Speaker configuration. Sets
 # OUTPUT_MODE (stereo / surround / matrix), STEREO_MODE (stereo only),
-# ENABLE_HRTF (the y/n answer) and SURROUND_CHANNELS (surround only).
+# ENABLE_HRTF (the y/n answer) and SURROUND_CHANNELS (surround only). When
+# Tools has already read the current setup into those (speaker_config_from_alsoft),
+# each question starts on it, so Enter all the way through changes nothing.
 ask_speaker_configuration() {
-    echo -e "\n${WHITE}What kind of audio output are you using?${NC}\n"
-    print_option 1 "Stereo (headphones or 2-speaker setup)"
-    print_option 2 "Surround Sound (4.0/5.1/6.1/7.1 speaker setup)"
-    print_option 3 "Matrix Encoding (stereo output decoded to surround by a receiver/soundbar)"
+    local prev_mode="${OUTPUT_MODE:-}" prev_stereo="${STEREO_MODE:-}"
+    local prev_hrtf="${ENABLE_HRTF:-}" prev_channels="${SURROUND_CHANNELS:-}"
 
-    while true; do
-        prompt "Selection [1-3, Default: 1]: "
-        read_answer OUTPUT_MODE_CHOICE
-        OUTPUT_MODE_CHOICE="${OUTPUT_MODE_CHOICE:-1}"
-        if [[ "$OUTPUT_MODE_CHOICE" =~ ^[123]$ ]]; then break; else print_result "That's not a valid option — please type 1, 2, or 3." "$YELLOW"; fi
-    done
+    echo -e "\n${WHITE}What kind of audio output are you using?${NC}"
+    case "$prev_mode" in surround) RADIO_INITIAL=2 ;; matrix) RADIO_INITIAL=3 ;; *) RADIO_INITIAL=1 ;; esac
+    RADIO_DETAILS=("Headphones, or two speakers."
+        "Four to eight speakers, such as 5.1 or 7.1."
+        "Stereo that a receiver or soundbar decodes into surround.")
+    radio_select "Audio output" "Stereo" "Surround sound" "Matrix encoding"
+    OUTPUT_MODE_CHOICE="$RADIO_CHOICE"
 
     ENABLE_HRTF=""
     SURROUND_CHANNELS=""
@@ -695,18 +696,16 @@ ask_speaker_configuration() {
     if [ "$OUTPUT_MODE_CHOICE" == "1" ]; then
         OUTPUT_MODE="stereo"
 
-        echo ""
-        echo -e "${WHITE}What are you listening on?${NC}\n"
-        print_option 1 "Auto (let OpenAL Soft decide)"
-        print_option 2 "Speakers"
-        print_option 3 "Headphones"
-
-        while true; do
-            prompt "Selection [1-3, Default: 1]: "
-            read_answer STEREO_MODE_CHOICE
-            STEREO_MODE_CHOICE="${STEREO_MODE_CHOICE:-1}"
-            if [[ "$STEREO_MODE_CHOICE" =~ ^[123]$ ]]; then break; else print_result "That's not a valid option — please type 1, 2, or 3." "$YELLOW"; fi
-        done
+        echo -e "\n${WHITE}What are you listening on?${NC}"
+        RADIO_INITIAL=1
+        if [ "$prev_mode" == "stereo" ]; then
+            case "$prev_stereo" in speakers) RADIO_INITIAL=2 ;; headphones) RADIO_INITIAL=3 ;; esac
+        fi
+        RADIO_DETAILS=("Leaves it to the sound engine to work out whether it's speakers or headphones."
+            "Two speakers in front of you."
+            "Headphones or earbuds.")
+        radio_select "Listening on" "Auto" "Speakers" "Headphones"
+        STEREO_MODE_CHOICE="$RADIO_CHOICE"
 
         case "$STEREO_MODE_CHOICE" in
             1) STEREO_MODE="auto" ;;
@@ -723,32 +722,37 @@ ask_speaker_configuration() {
             echo -e "${CYAN}Headphones Configuration (HRTF)${NC}\n"
             echo -e "${WHITE}Head-Related Transfer Function (HRTF) translates 3D positional audio into a binaural"
             echo -e "format specifically designed for standard stereo headphones. Turning this on will"
-            echo -e "allow you to hear exactly whether a sound is coming from above, below, or behind you.${NC}\n"
-            echo -e "${YELLOW}Do you want to enable HRTF for headphones? (y/N): ${NC}"
-            echo -e -n "> "
-            read_answer ENABLE_HRTF
+            echo -e "allow you to hear exactly whether a sound is coming from above, below, or behind you.${NC}"
+            # On by default; only a stereo setup that already has it off
+            # (Tools) keeps No as the default, so Enter doesn't switch it on.
+            local hrtf_default="Y"
+            [ "$prev_mode" == "stereo" ] && ! [[ "$prev_hrtf" =~ $YES_RE ]] && hrtf_default="N"
+            if confirm "Do you want to enable HRTF for headphones?" "$hrtf_default"; then
+                ENABLE_HRTF="y"
+            else
+                ENABLE_HRTF="n"
+            fi
         fi
     elif [ "$OUTPUT_MODE_CHOICE" == "2" ]; then
         OUTPUT_MODE="surround"
 
-        echo ""
-        echo -e "${WHITE}Select your speaker channel configuration:${NC}\n"
-        print_option 1 "Quad       (4.0)"
-        print_option 2 "Surround51 (5.1)"
-        print_option 3 "Surround61 (6.1)"
-        print_option 4 "Surround71 (7.1)"
-
-        while true; do
-            prompt "Selection [1-4]: "
-            read_answer SURROUND_CHOICE || exit 0
-            case "$SURROUND_CHOICE" in
-                1) SURROUND_CHANNELS="quad"; break ;;
-                2) SURROUND_CHANNELS="surround51"; break ;;
-                3) SURROUND_CHANNELS="surround61"; break ;;
-                4) SURROUND_CHANNELS="surround71"; break ;;
-                *) print_result "That's not a valid option — please type 1, 2, 3, or 4." "$YELLOW" ;;
-            esac
-        done
+        echo -e "\n${WHITE}Which speaker layout do you have?${NC}"
+        case "$prev_channels" in
+            quad) RADIO_INITIAL=1 ;; surround61) RADIO_INITIAL=3 ;; surround71) RADIO_INITIAL=4 ;;
+            *) RADIO_INITIAL=2 ;;
+        esac
+        RADIO_DETAILS=("Front left and right, rear left and right."
+            "Front left, centre and right, two surrounds and a subwoofer."
+            "5.1 plus a rear centre speaker."
+            "5.1 plus rear left and right speakers.")
+        # Same names as speaker_label, so the recap matches the pick.
+        radio_select "Speaker layout" "Quad (4.0)" "Surround 5.1" "Surround 6.1" "Surround 7.1"
+        case "$RADIO_CHOICE" in
+            1) SURROUND_CHANNELS="quad" ;;
+            2) SURROUND_CHANNELS="surround51" ;;
+            3) SURROUND_CHANNELS="surround61" ;;
+            4) SURROUND_CHANNELS="surround71" ;;
+        esac
     else
         OUTPUT_MODE="matrix"
     fi
