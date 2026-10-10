@@ -117,13 +117,14 @@ print_choices_summary() {
 }
 
 if [ "$SCRIPT_ACTION" == "i" ]; then
-    # Fixed step count for this flow (1-11, same regardless of launcher/engine
+    # Fixed step count for this flow (1-12, same regardless of launcher/engine
     # branch) — read by print_step via the STEP_TOTAL global so headers show
-    # "N/11. Label" instead of just "N. Label". Step 11 ("Game Settings") only
-    # appears for a game whose profile has config fixes to offer. Step 2 ("Locate Game
+    # "N/12. Label" instead of just "N. Label". Steps 11 ("Game Audio
+    # Settings") and 12 ("Optional Game Settings") only appear for a game whose
+    # profile has settings of that kind to offer. Step 2 ("Locate Game
     # Executable") only ever appears on the scan path — resolve_exe_folder
     # prints it itself — so browse/manual users jump straight from 1 to 3.
-    STEP_TOTAL=11
+    STEP_TOTAL=12
 
     # Nothing is downloaded yet: step 6 fetches only the builds that get
     # picked. This only checks GitHub can be reached, and stops now if it

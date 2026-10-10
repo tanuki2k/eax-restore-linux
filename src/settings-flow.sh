@@ -120,7 +120,7 @@ if [ -n "$SETTINGS_TOOL_MODE" ]; then
         # heading when it has any), then the ones going back.
         GAME_SETTINGS_SPEAKERS_ONLY=1 game_settings_step 3
         if [ ${#GAME_SETTINGS_REVERT_GROUPS[@]} -gt 0 ]; then
-            [ -n "$GAME_SETTINGS_STEP_SHOWN" ] || print_step 3 "Game Settings"
+            [ -n "$GAME_SETTINGS_STEP_SHOWN" ] || print_step 3 "Game Audio Settings"
             echo -e "\n${WHITE}These were set for your old speakers, so they'll be put back:${NC}"
             for entry in "${GAME_SETTINGS_REVERT_GROUPS[@]}"; do
                 settings_title="${entry#*$'\x1f'}"; settings_title="${settings_title%%$'\x1f'*}"

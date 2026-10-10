@@ -5,7 +5,7 @@
 # game's profile (game_config.audio_settings / optional_settings) — the script
 # itself only knows how to read and edit the seven config formats, never which
 # game needs what. Decided in Phase 1 (Speaker Configuration offers the
-# alsoft.ini values, step 11 offers the game's own settings), applied in
+# alsoft.ini values, steps 11-12 offer the game's own settings), applied in
 # Phase 2, recorded in the manifest as CONFIG: lines, reverted on uninstall.
 #
 # Values travel through here as plain strings plus three markers:
@@ -918,17 +918,31 @@ game_settings_step() {
     while IFS= read -r row; do [ -n "$row" ] && rows+=("$row"); done < <(load_game_config_rows "$KG_ID" "$KG_STORE")
     [ ${#rows[@]} -eq 0 ] && return
 
-    # The step's heading, printed the first time something needs it: the
-    # missing-file prompt below can come before the fix list, and a game with
-    # nothing to show gets no heading at all.
-    local heading_shown=0
+    # Two steps: the audio settings (step <step>) and the optional ones (the
+    # next step; in Tools → Optional settings, which shows only those, the
+    # caller's step). Each heading is printed the first time something needs
+    # it: the missing-file prompt below can come before the lists, and a part
+    # with nothing to show gets no heading at all.
+    local audio_heading_shown=0 optional_heading_shown=0 audio_seen=0
     GAME_SETTINGS_STEP_SHOWN=""
     _game_settings_heading() {
-        [ "$heading_shown" -eq 1 ] && return
-        print_step "$step" "Game Settings"
-        print_paragraph "This step offers changes to ${GAME_NAME:-the game}'s own settings, such as switching on" \
-            "its EAX options."
-        heading_shown=1
+        if [ "$1" == "audio" ]; then
+            [ "$audio_heading_shown" -eq 1 ] && return
+            print_step "$step" "Game Audio Settings"
+            if [ -n "${GAME_SETTINGS_SPEAKERS_ONLY:-}" ]; then
+                print_paragraph "This step changes ${GAME_NAME:-the game}'s own settings to match your speakers."
+            else
+                print_paragraph "This step turns on ${GAME_NAME:-the game}'s own EAX options."
+            fi
+            audio_heading_shown=1
+        else
+            [ "$optional_heading_shown" -eq 1 ] && return
+            local n="$step"
+            [ -z "${GAME_SETTINGS_EDIT_OPTIONAL:-}" ] && n=$((step + 1))
+            print_step "$n" "Optional Game Settings"
+            print_paragraph "This step offers changes to ${GAME_NAME:-the game} that aren't needed for EAX."
+            optional_heading_shown=1
+        fi
         GAME_SETTINGS_STEP_SHOWN=1
     }
 
@@ -957,6 +971,7 @@ game_settings_step() {
             [ -n "${GAME_SETTINGS_EDIT_OPTIONAL:-}" ] && [ "$cat" != "optional" ] && fix_status[$id]="skip"
         fi
         [[ "${fix_status[$id]}" =~ ^(skip|invalid)$ ]] && continue
+        [ "$cat" == "audio" ] && audio_seen=1
 
         if ! config_row_is_safe "$fmt" "$locs" "$sec" "$key" "$value"; then
             log_cmd "game settings: skipped \"$title\" — its entry for $file/$sec/$key failed the safety check"
@@ -976,7 +991,11 @@ game_settings_step() {
                 # "not found yet" check: explain, let the player launch the
                 # game, and look again; No carries on without this file's fixes.
                 while [ -z "$path" ]; do
-                    _game_settings_heading
+                    # Under the first step to show, so the steps stay in
+                    # order: the optional heading only comes after the
+                    # audio list.
+                    if [ "$audio_seen" -eq 1 ]; then _game_settings_heading audio
+                    else _game_settings_heading optional; fi
                     print_note "${GAME_NAME} hasn't created ${file} yet."
                     print_paragraph "If you just installed ${GAME_NAME}, it creates ${file} the first time it runs." \
                         "Please launch the game at least once, close it, and try again."
@@ -1026,8 +1045,6 @@ game_settings_step() {
         [[ "${fix_status[$id]}" =~ ^(offer|applied|already|missing|absent)$ ]] && shown=1
     done
     [ "$shown" -eq 0 ] && return
-
-    _game_settings_heading
 
     # Prints one fix: title, reason, and each row's current → new value.
     _print_fix() {
@@ -1095,7 +1112,24 @@ game_settings_step() {
             [ "${fix_status[$id]}" == "already" ] && GAME_AUDIO_FIX_ALREADY+=("${fix_title[$id]}")
         fi
     done
-    if [ "$any_audio" -eq 1 ]; then
+    # Asked before the list, so a player who'd rather set the game up by
+    # hand doesn't read through it; Tools → Speaker configuration already
+    # chose to change these. A No still shows why the rest aren't offered.
+    [ "$any_audio" -eq 1 ] && _game_settings_heading audio
+    local wanted=1
+    if [ "$audio_offer" -eq 1 ] && [ -z "${GAME_SETTINGS_SPEAKERS_ONLY:-}" ] \
+        && ! confirm "Change ${GAME_NAME}'s settings to turn on EAX?" Y; then
+        wanted=0
+        print_note "${GAME_NAME}'s EAX options will stay off, so you'll need to turn them on yourself in the game's own settings."
+        for id in "${fix_order[@]}"; do
+            [[ "$id" == audio:* ]] || continue
+            case "${fix_status[$id]}" in
+                offer) _decline_fix "$id" ;;
+                already|missing|absent) _print_status_line "$id" ;;
+            esac
+        done
+    fi
+    if [ "$any_audio" -eq 1 ] && [ "$wanted" -eq 1 ]; then
         echo -e "\n${WHITE}Audio settings for ${GAME_NAME}:${NC}"
         for id in "${fix_order[@]}"; do
             [[ "$id" == audio:* ]] || continue
@@ -1119,10 +1153,9 @@ game_settings_step() {
         [[ "$id" == optional:* ]] && [[ "${fix_status[$id]}" =~ ^(offer|applied|already|missing|absent)$ ]] && optional+=("$id")
     done
     if [ ${#optional[@]} -gt 0 ]; then
-        echo -e "\n${WHITE}Optional settings for ${GAME_NAME}:${NC}"
         # The ones to choose from go in the tick list, each with its reason
         # and rows under its box; the rest get their status line first.
-        local -a offered=() offered_titles=() initial=() bodies=()
+        local -a offered=() offered_titles=() initial=() bodies=() unoffered=()
         for id in "${optional[@]}"; do
             if [ "${fix_status[$id]}" == "offer" ]; then
                 offered+=("$id"); offered_titles+=("${fix_title[$id]}"); initial+=(0)
@@ -1131,9 +1164,24 @@ game_settings_step() {
                 offered+=("$id"); offered_titles+=("${fix_title[$id]} (Active)"); initial+=(1)
                 bodies+=("$(_applied_fix_body "$id")")
             else
-                _print_status_line "$id"
+                unoffered+=("$id")
             fi
         done
+        _game_settings_heading optional
+        # Not needed for EAX, so No is the default, and anything but Yes
+        # applies none of them. Tools → Optional settings is the player
+        # choosing to edit them, so it goes straight to the list.
+        local review="Review them?" count="${#offered[@]} optional settings"
+        [ ${#offered[@]} -eq 1 ] && { review="Review it?"; count="1 optional setting"; }
+        if [ ${#offered[@]} -gt 0 ] && [ -z "${GAME_SETTINGS_EDIT_OPTIONAL:-}" ] \
+            && ! confirm "${GAME_NAME} has ${count}. ${review}" N; then
+            print_note "${GAME_NAME}'s optional settings will stay as they are — you can review them later from Tools → Optional settings in this script's main menu."
+            for id in "${offered[@]}"; do _decline_fix "$id"; done
+            offered=()
+        else
+            echo -e "\n${WHITE}Optional settings for ${GAME_NAME}:${NC}"
+        fi
+        for id in "${unoffered[@]}"; do _print_status_line "$id"; done
         if [ ${#offered[@]} -gt 0 ]; then
             local example="1" i
             [ ${#offered[@]} -gt 1 ] && example="1 2"

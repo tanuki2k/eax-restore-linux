@@ -205,7 +205,7 @@ their execution order in the assembled script):
    `system.reg`/`user.reg` text, a key as the section; `wine_registry_quiet` waits
    for wineserver to save and exit before the first one is written, since it
    writes those files back from memory), `resolve_config_file`, `print_game_settings_details` (the database browser's Tab view: every setting's reason, file, keys and values, via `load_game_config_rows` and `print_config_rows` with `__ANY__` for the unknown current value), `offer_alsoft_settings` (step 8),
-   `game_settings_step` (step 11), `apply_game_settings` (Phase 2, writes `CONFIG:`
+   `game_settings_step` (steps 11-12: audio, then optional), `apply_game_settings` (Phase 2, writes `CONFIG:`
    manifest lines), `print_game_settings_summary`, `revert_game_settings`
    (uninstall step 7). All of it driven by the entry's `game_config` /
    `install.alsoft_ini`. The speaker step lives here too, shared by install
