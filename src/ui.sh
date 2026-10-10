@@ -11,10 +11,9 @@
 # ==============================================================================
 # VISUAL HELPERS
 # ==============================================================================
-# print_divider/print_line and the rest of the output-styling helpers live in
+# print_divider and the rest of the output-styling helpers live in
 # ui.sh, sourced right after globals.sh.
 print_divider() { echo -e "${CYAN}----------------------------------------------------------${NC}"; }
-print_line() { print_divider; }
 
 # Usage: tilde_path "text"
 # Prints text with every "$HOME/..." path shortened to "~/...". Every helper
@@ -48,7 +47,7 @@ print_banner() {
     echo ""
     print_divider
     echo -e "${color}${BOLD}--- ${label} ---${NC}"
-    print_line
+    print_divider
 }
 
 # Usage: print_start_header [design]
@@ -162,7 +161,7 @@ print_step() {
     echo ""
     print_divider
     echo -e "${CYAN}${n_display}. ${label}${NC}"
-    print_line
+    print_divider
 }
 
 # Usage: detail_row "Label" "value"; detail_heading "Heading"; print_detail_rows

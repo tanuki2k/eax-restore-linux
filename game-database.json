@@ -409,60 +409,60 @@
           {
             "title": "Enable 4.0 surround sound",
             "reason": "BioShock ships set to stereo, so the rear speakers of a 4.0 setup get no sound.",
+            "only_if": {
+              "speakers": "quad"
+            },
             "changes": {
               "Bioshock.ini": {
                 "ShockGame.ShockUserSettings": {
                   "SpeakerMode": "SM_Quad"
                 }
               }
-            },
-            "only_if": {
-              "speakers": "quad"
             }
           },
           {
             "title": "Enable 5.1 surround sound",
             "reason": "BioShock ships set to stereo, so the rest of a 5.1 speaker setup gets no sound.",
+            "only_if": {
+              "speakers": [
+                "surround51",
+                "surround61"
+              ]
+            },
             "changes": {
               "Bioshock.ini": {
                 "ShockGame.ShockUserSettings": {
                   "SpeakerMode": "SM_5_1"
                 }
               }
-            },
-            "only_if": {
-              "speakers": [
-                "surround51",
-                "surround61"
-              ]
             }
           },
           {
             "title": "Enable 7.1 surround sound",
             "reason": "BioShock ships set to stereo, so the rest of a 7.1 speaker setup gets no sound.",
+            "only_if": {
+              "speakers": "surround71"
+            },
             "changes": {
               "Bioshock.ini": {
                 "ShockGame.ShockUserSettings": {
                   "SpeakerMode": "SM_7_1"
                 }
               }
-            },
-            "only_if": {
-              "speakers": "surround71"
             }
           },
           {
             "title": "Enable Pro Logic surround",
             "reason": "BioShock ships set to plain stereo, so a Pro Logic receiver has no surround information to decode.",
+            "only_if": {
+              "speakers": "matrix"
+            },
             "changes": {
               "Bioshock.ini": {
                 "ShockGame.ShockUserSettings": {
                   "SpeakerMode": "SM_ProLogic"
                 }
               }
-            },
-            "only_if": {
-              "speakers": "matrix"
             }
           }
         ],
@@ -1811,74 +1811,74 @@
           {
             "title": "Enable 4.0 surround sound",
             "reason": "Neverwinter Nights 2 plays in stereo and has no in-game speaker option, so the rear speakers of a 4.0 setup get no sound.",
+            "only_if": {
+              "speakers": "quad"
+            },
             "changes": {
               "nwn2.ini": {
                 "Sound Options": {
                   "Speaker Type": "3"
                 }
               }
-            },
-            "only_if": {
-              "speakers": "quad"
             }
           },
           {
             "title": "Enable 5.1 surround sound",
             "reason": "Neverwinter Nights 2 plays in stereo and has no in-game speaker option, so the rest of a 5.1 speaker setup gets no sound.",
+            "only_if": {
+              "speakers": [
+                "surround51",
+                "surround61"
+              ]
+            },
             "changes": {
               "nwn2.ini": {
                 "Sound Options": {
                   "Speaker Type": "4"
                 }
               }
-            },
-            "only_if": {
-              "speakers": [
-                "surround51",
-                "surround61"
-              ]
             }
           },
           {
             "title": "Enable 7.1 surround sound",
             "reason": "Neverwinter Nights 2 plays in stereo and has no in-game speaker option, so the rest of a 7.1 speaker setup gets no sound.",
+            "only_if": {
+              "speakers": "surround71"
+            },
             "changes": {
               "nwn2.ini": {
                 "Sound Options": {
                   "Speaker Type": "5"
                 }
               }
-            },
-            "only_if": {
-              "speakers": "surround71"
             }
           },
           {
             "title": "Enable Pro Logic surround",
             "reason": "Neverwinter Nights 2 plays in stereo and has no in-game speaker option, so a Pro Logic receiver has no surround information to decode.",
+            "only_if": {
+              "speakers": "matrix"
+            },
             "changes": {
               "nwn2.ini": {
                 "Sound Options": {
                   "Speaker Type": "2"
                 }
               }
-            },
-            "only_if": {
-              "speakers": "matrix"
             }
           },
           {
             "title": "Enable headphone sound",
             "reason": "Neverwinter Nights 2 plays in stereo and has no in-game speaker option, so its sound isn't mixed for headphones.",
+            "only_if": {
+              "speakers": "headphones"
+            },
             "changes": {
               "nwn2.ini": {
                 "Sound Options": {
                   "Speaker Type": "1"
                 }
               }
-            },
-            "only_if": {
-              "speakers": "headphones"
             }
           }
         ]
@@ -1950,74 +1950,74 @@
           {
             "title": "Enable 4.0 surround sound",
             "reason": "Neverwinter Nights ships set to 2 speakers, so the rear speakers of a 4.0 setup get no sound.",
+            "only_if": {
+              "speakers": "quad"
+            },
             "changes": {
               "nwn.ini": {
                 "Sound Options": {
                   "Speaker Type": "3"
                 }
               }
-            },
-            "only_if": {
-              "speakers": "quad"
             }
           },
           {
             "title": "Enable 5.1 surround sound",
             "reason": "Neverwinter Nights ships set to 2 speakers, so the rest of a 5.1 speaker setup gets no sound.",
+            "only_if": {
+              "speakers": [
+                "surround51",
+                "surround61"
+              ]
+            },
             "changes": {
               "nwn.ini": {
                 "Sound Options": {
                   "Speaker Type": "4"
                 }
               }
-            },
-            "only_if": {
-              "speakers": [
-                "surround51",
-                "surround61"
-              ]
             }
           },
           {
             "title": "Enable 7.1 surround sound",
             "reason": "Neverwinter Nights ships set to 2 speakers, so the rest of a 7.1 speaker setup gets no sound.",
+            "only_if": {
+              "speakers": "surround71"
+            },
             "changes": {
               "nwn.ini": {
                 "Sound Options": {
                   "Speaker Type": "5"
                 }
               }
-            },
-            "only_if": {
-              "speakers": "surround71"
             }
           },
           {
             "title": "Enable Pro Logic surround",
             "reason": "Neverwinter Nights ships set to 2 speakers, so a Pro Logic receiver has no surround information to decode.",
+            "only_if": {
+              "speakers": "matrix"
+            },
             "changes": {
               "nwn.ini": {
                 "Sound Options": {
                   "Speaker Type": "2"
                 }
               }
-            },
-            "only_if": {
-              "speakers": "matrix"
             }
           },
           {
             "title": "Enable headphone sound",
             "reason": "Neverwinter Nights ships set to 2 speakers, so its sound isn't mixed for headphones.",
+            "only_if": {
+              "speakers": "headphones"
+            },
             "changes": {
               "nwn.ini": {
                 "Sound Options": {
                   "Speaker Type": "1"
                 }
               }
-            },
-            "only_if": {
-              "speakers": "headphones"
             }
           }
         ]

@@ -1,6 +1,5 @@
 # Shared jq helpers for the game database tooling (data/games/*.json).
-# Used by tools/format-game-database.sh, tools/build-game-database.sh and the
-# one-off tools/migrate-v2-to-v3.sh via `jq -L tools 'include "game-database"; ...'`.
+# Used by tools/format-game-database.sh and tools/build-game-database.sh.
 
 # Rebuilds an object with the listed keys first, in that order, followed by
 # any other keys in their existing order (the schema rejects unknown keys, so
@@ -41,9 +40,9 @@ def normalize_fix:
 def normalize_game_config:
     drop_empty
     | if .files then .files |= map_values(drop_empty | order_keys(["format", "locations", "if_missing"])) else . end
-    | if .audio_fixes then .audio_fixes |= map(normalize_fix) else . end
-    | if .extra_fixes then .extra_fixes |= map(normalize_fix) else . end
-    | order_keys(["files", "audio_fixes", "extra_fixes"]);
+    | if .audio_settings then .audio_settings |= map(normalize_fix) else . end
+    | if .optional_settings then .optional_settings |= map(normalize_fix) else . end
+    | order_keys(["files", "audio_settings", "optional_settings"]);
 
 def normalize_game:
     (if .stores then .stores |= (map_values(normalize_store) | order_keys(["steam", "gog"])) else . end)

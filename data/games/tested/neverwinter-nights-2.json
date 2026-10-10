@@ -34,32 +34,32 @@
       {
         "title": "Enable 4.0 surround sound",
         "reason": "Neverwinter Nights 2 plays in stereo and has no in-game speaker option, so the rear speakers of a 4.0 setup get no sound.",
-        "changes": { "nwn2.ini": { "Sound Options": { "Speaker Type": "3" } } },
-        "only_if": { "speakers": "quad" }
+        "only_if": { "speakers": "quad" },
+        "changes": { "nwn2.ini": { "Sound Options": { "Speaker Type": "3" } } }
       },
       {
         "title": "Enable 5.1 surround sound",
         "reason": "Neverwinter Nights 2 plays in stereo and has no in-game speaker option, so the rest of a 5.1 speaker setup gets no sound.",
-        "changes": { "nwn2.ini": { "Sound Options": { "Speaker Type": "4" } } },
-        "only_if": { "speakers": ["surround51", "surround61"] }
+        "only_if": { "speakers": ["surround51", "surround61"] },
+        "changes": { "nwn2.ini": { "Sound Options": { "Speaker Type": "4" } } }
       },
       {
         "title": "Enable 7.1 surround sound",
         "reason": "Neverwinter Nights 2 plays in stereo and has no in-game speaker option, so the rest of a 7.1 speaker setup gets no sound.",
-        "changes": { "nwn2.ini": { "Sound Options": { "Speaker Type": "5" } } },
-        "only_if": { "speakers": "surround71" }
+        "only_if": { "speakers": "surround71" },
+        "changes": { "nwn2.ini": { "Sound Options": { "Speaker Type": "5" } } }
       },
       {
         "title": "Enable Pro Logic surround",
         "reason": "Neverwinter Nights 2 plays in stereo and has no in-game speaker option, so a Pro Logic receiver has no surround information to decode.",
-        "changes": { "nwn2.ini": { "Sound Options": { "Speaker Type": "2" } } },
-        "only_if": { "speakers": "matrix" }
+        "only_if": { "speakers": "matrix" },
+        "changes": { "nwn2.ini": { "Sound Options": { "Speaker Type": "2" } } }
       },
       {
         "title": "Enable headphone sound",
         "reason": "Neverwinter Nights 2 plays in stereo and has no in-game speaker option, so its sound isn't mixed for headphones.",
-        "changes": { "nwn2.ini": { "Sound Options": { "Speaker Type": "1" } } },
-        "only_if": { "speakers": "headphones" }
+        "only_if": { "speakers": "headphones" },
+        "changes": { "nwn2.ini": { "Sound Options": { "Speaker Type": "1" } } }
       }
     ]
   }

@@ -88,8 +88,7 @@ launcher hardcodes `releases/latest`).
   on. (A probe tool that automated this was removed; it's to be reimplemented.)
   `tools/browse-game-database.sh [file]` (needs fzf) browses the built
   database with the Tools menu's browser — a quick look at how an entry's
-  profile reads. `tools/migrate-v2-to-v3.sh` is the one-off that split the old single-file (schema 2)
-  database; kept for reference only.
+  profile reads.
 - **Run the script:** `./dist/eax-restore-linux.sh` (interactive; requires `curl`, `unzip`,
   `file`, `jq`, plus `protontricks` for Steam games or `winetricks` for Heroic/GOG
   games — the script's own pre-flight check offers to install missing ones).
@@ -131,7 +130,7 @@ their execution order in the assembled script):
    in sync with each other.
 4. **`ui.sh`** — the text/output styling helpers (`print_banner`, `print_step`,
    `print_status`, `print_note`/`print_warning`/`print_error` and their `_arrow`
-   variants, `print_wrapped`, `confirm`, `read_answer`, plus `print_divider`/`print_line`). Sourced
+   variants, `print_wrapped`, `confirm`, `read_answer`, plus `print_divider`). Sourced
    right after `globals.sh` since every helper depends on the colour vars defined
    there. See "Text/output style conventions" below. `print_start_header` is the
    logo at the top of every run: one of four designs at random, from those that

@@ -29,34 +29,34 @@
       {
         "title": "Enable 4.0 surround sound",
         "reason": "BioShock ships set to stereo, so the rear speakers of a 4.0 setup get no sound.",
+        "only_if": { "speakers": "quad" },
         "changes": {
           "Bioshock.ini": { "ShockGame.ShockUserSettings": { "SpeakerMode": "SM_Quad" } }
-        },
-        "only_if": { "speakers": "quad" }
+        }
       },
       {
         "title": "Enable 5.1 surround sound",
         "reason": "BioShock ships set to stereo, so the rest of a 5.1 speaker setup gets no sound.",
+        "only_if": { "speakers": ["surround51", "surround61"] },
         "changes": {
           "Bioshock.ini": { "ShockGame.ShockUserSettings": { "SpeakerMode": "SM_5_1" } }
-        },
-        "only_if": { "speakers": ["surround51", "surround61"] }
+        }
       },
       {
         "title": "Enable 7.1 surround sound",
         "reason": "BioShock ships set to stereo, so the rest of a 7.1 speaker setup gets no sound.",
+        "only_if": { "speakers": "surround71" },
         "changes": {
           "Bioshock.ini": { "ShockGame.ShockUserSettings": { "SpeakerMode": "SM_7_1" } }
-        },
-        "only_if": { "speakers": "surround71" }
+        }
       },
       {
         "title": "Enable Pro Logic surround",
         "reason": "BioShock ships set to plain stereo, so a Pro Logic receiver has no surround information to decode.",
+        "only_if": { "speakers": "matrix" },
         "changes": {
           "Bioshock.ini": { "ShockGame.ShockUserSettings": { "SpeakerMode": "SM_ProLogic" } }
-        },
-        "only_if": { "speakers": "matrix" }
+        }
       }
     ],
     "optional_settings": [
