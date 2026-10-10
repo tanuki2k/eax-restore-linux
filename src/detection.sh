@@ -1045,40 +1045,85 @@ show_profile_if_unseen() {
 
 detect_api_from_binary() {
     # Usage: detect_api_from_binary <game_dir>
-    # Fallback heuristic for games with no game-database.json entry: greps
-    # the game's own .exe/.dll files for the literal ASCII import-table
-    # strings "OpenAL32.dll" / "dsound.dll" — the same signature-grepping
-    # trick is_genuine_dll() uses on PE binaries, and the same `file`-based
-    # PE inspection select_architecture uses to walk GAME_DIR. Prints
-    # "openal", "directsound3d", or "both" on stdout, or nothing if
-    # inconclusive. "both" means the imports reference both APIs — the caller
-    # treats that as a low-confidence DirectSound3D guess, not a confirmation.
-    # Not certain: a dynamically-LoadLibrary'd audio backend won't show up
-    # in the import table at all, and an engine that supports multiple
-    # backends may reference both. On a reinstall, this script's own
+    # Lower-confidence heuristic behind the game database: greps the game's
+    # own .exe/.dll files for signs of each audio API, case-insensitively
+    # (as Windows is: BioShock names "openal32.dll" in lowercase).
+    #   DirectSound3D: "dsound.dll" or "DirectSound". The DLL name alone
+    #     missed Unreal's Galaxy.dll, which creates DirectSound through COM
+    #     (ole32's CoCreateInstance) and never names dsound.dll.
+    #   OpenAL: "OpenAL32.dll" or "alcOpenDevice". UT3.exe reaches OpenAL
+    #     through Creative's router and wrap_oal.dll rather than by name.
+    # Prints one line, fields separated by \x1f (not a tab: read collapses
+    # a run of tabs, which would shift an empty field): the result
+    # ("openal", "directsound3d" or "both"), then the file that matched
+    # DirectSound, then the one that matched OpenAL (paths relative to
+    # <game_dir>), so the caller can show the player what the answer is
+    # based on. Prints nothing if neither matched. The file shown should be
+    # the game's own where possible, not a side library: in a first-pass test
+    # the plain alphabetical first hit was usually binkw32.dll (Bink video),
+    # SDL2.dll or testapp.exe. So .exe files are read before .dll files, the
+    # exe folder before its subfolders, and a file naming the DLL beats one
+    # that only mentions the API. "both" is common (an engine with more than
+    # one backend) and the caller treats it as a low-confidence DirectSound3D
+    # guess, not a confirmation. On a reinstall, this script's own
     # previously-deployed dsound.dll/dsoal-aldrv.dll/OpenAL32.dll would
     # otherwise sit right here and get read back as if they were evidence
     # about the game itself — excluded by name.
-    local dir="$1"
-    local has_openal=0 has_dsound=0
-    local f
-    while IFS= read -r -d '' f; do
-        case "$(basename "$f")" in
-            dsound.dll|dsoal-aldrv.dll|OpenAL32.dll) continue ;;
-        esac
-        # Case-insensitive, as Windows is: BioShock names "openal32.dll" in
-        # lowercase, which a case-sensitive match missed entirely.
-        grep -qai "OpenAL32\.dll" "$f" 2>/dev/null && has_openal=1
-        grep -qai "dsound\.dll" "$f" 2>/dev/null && has_dsound=1
-    done < <(find "$dir" -maxdepth 2 -type f \( -iname "*.exe" -o -iname "*.dll" \) -print0 2>/dev/null)
+    local dir="${1%/}"
+    local ds_named="" ds_mentioned="" openal_named="" openal_mentioned=""
+    local f rel depth ext
+    for depth in 1 2; do
+        for ext in exe dll; do
+            while IFS= read -r -d '' f; do
+                case "$(basename "$f")" in
+                    dsound.dll|dsoal-aldrv.dll|OpenAL32.dll) continue ;;
+                esac
+                rel="${f#"$dir"/}"
+                if [ -z "$openal_named" ]; then
+                    if grep -qai "OpenAL32\.dll" "$f" 2>/dev/null; then
+                        openal_named="$rel"
+                    elif [ -z "$openal_mentioned" ] && grep -qai "alcOpenDevice" "$f" 2>/dev/null; then
+                        openal_mentioned="$rel"
+                    fi
+                fi
+                if [ -z "$ds_named" ]; then
+                    if grep -qai "dsound\.dll" "$f" 2>/dev/null; then
+                        ds_named="$rel"
+                    elif [ -z "$ds_mentioned" ] && grep -qai "DirectSound" "$f" 2>/dev/null; then
+                        ds_mentioned="$rel"
+                    fi
+                fi
+            done < <(find "$dir" -mindepth "$depth" -maxdepth "$depth" -type f -iname "*.$ext" -print0 2>/dev/null | sort -z)
+        done
+    done
 
-    if [ "$has_openal" -eq 1 ] && [ "$has_dsound" -eq 1 ]; then
-        echo "both"
-    elif [ "$has_openal" -eq 1 ]; then
-        echo "openal"
-    elif [ "$has_dsound" -eq 1 ]; then
-        echo "directsound3d"
+    local ds_file="${ds_named:-$ds_mentioned}" openal_file="${openal_named:-$openal_mentioned}"
+    local api=""
+    if [ -n "$openal_file" ] && [ -n "$ds_file" ]; then
+        api="both"
+    elif [ -n "$openal_file" ]; then
+        api="openal"
+    elif [ -n "$ds_file" ]; then
+        api="directsound3d"
     fi
+    if [ -n "$api" ]; then printf '%s\x1f%s\x1f%s\n' "$api" "$ds_file" "$openal_file"; fi
+}
+
+scan_evidence() {
+    # Usage: scan_evidence <api> <ds_file> <openal_file>
+    # The files behind a detect_api_from_binary result, as a phrase for the
+    # player: "Galaxy.dll refers to DirectSound", or both APIs' files for
+    # "both". Only the files for <api> are named.
+    case "$1" in
+        both)
+            if [ "$2" == "$3" ]; then
+                echo "$2 refers to both OpenAL and DirectSound"
+            else
+                echo "$3 refers to OpenAL and $2 to DirectSound"
+            fi ;;
+        openal) echo "$3 refers to OpenAL" ;;
+        directsound3d) echo "$2 refers to DirectSound" ;;
+    esac
 }
 
 confirm_continue_if_openal_native() {
@@ -1100,7 +1145,7 @@ confirm_continue_if_openal_native() {
     # on — either the game isn't in game-database.json, OR the database
     # itself couldn't be loaded at all (offline, not yet merged to the
     # branch it's fetched from, etc.). When even that comes back empty (scan
-    # declined, or ran but matched neither import string), it spells out what
+    # declined, or ran but found neither API), it spells out what
     # couldn't be checked and prompts a DirectSound3D-vs-OpenAL choice rather
     # than assuming DirectSound3D — the "Audio Engine Selection" step only
     # lists the DSOAL builds, so this is the sole route into OpenAL-native
@@ -1139,6 +1184,8 @@ confirm_continue_if_openal_native() {
 
     local json_available=0 match_count=0
     local api="" matched=0 scanned=0 json_checked=0 declined=0 overriding=0
+    # The files a no-profile scan based its answer on, for the Detected line.
+    local found_evidence=""
     # The game profile's audio API for this store, exactly as stored —
     # the per-store override (stores.<store>.api) if present, else eax.api,
     # else "" when the entry omits both. Distinct from $api, which is
@@ -1165,21 +1212,21 @@ confirm_continue_if_openal_native() {
                 "$api_display API as-is."
         elif [ -n "$GAME_DIR" ] && [ -d "$GAME_DIR" ]; then
             print_task "Cross-checking $game_name's installed files against the documented $api_display API"
-            local scan_result
-            scan_result=$(detect_api_from_binary "$GAME_DIR")
+            print_status "Looking for OpenAL or DirectSound in the .exe and .dll files in $GAME_DIR..." ""
+            local scan_result scan_ds_file scan_openal_file
+            IFS=$'\x1f' read -r scan_result scan_ds_file scan_openal_file \
+                < <(detect_api_from_binary "$GAME_DIR")
             if [ -z "$scan_result" ]; then
                 # Nothing found isn't agreement: a launcher picked as the game
                 # folder (no exe in the entry) scans clean too, and reporting
                 # that as "consistent" once let a wrong API through unnoticed.
-                print_note_arrow "No .exe or .dll in $GAME_DIR references OpenAL or" \
-                    "DirectSound, so the documented $api_display API couldn't be confirmed."
+                print_note_arrow "None of the .exe or .dll files in $game_name's folder refer to OpenAL" \
+                    "or DirectSound, so its documented $api_display API couldn't be confirmed."
             elif [ "$scan_result" == "both" ] || [ "$scan_result" == "$api" ]; then
-                print_status "Consistent with its profile." "$GREEN"
+                print_status "$(scan_evidence "$scan_result" "$scan_ds_file" "$scan_openal_file"), which matches $game_name's profile." "$GREEN"
             else
-                local scan_display="DirectSound3D"
-                [ "$scan_result" == "openal" ] && scan_display="OpenAL"
-                print_warning "$game_name's installed files appear to reference $scan_display, which" \
-                    "conflicts with its profile's documented $api_display."
+                print_warning "$(scan_evidence "$scan_result" "$scan_ds_file" "$scan_openal_file"), which" \
+                    "conflicts with $game_name's documented $api_display API."
                 if ! confirm "Trust the profile ($api_display) over the file scan?"; then
                     api="$scan_result"
                     scanned=1
@@ -1227,8 +1274,11 @@ confirm_continue_if_openal_native() {
 
     if [ "$matched" -eq 0 ] && [ "$attempt_auto_detect" -eq 1 ] && [ -n "$GAME_DIR" ] && [ -d "$GAME_DIR" ]; then
         print_task "Searching for Audio APIs"
-        print_status "Scanning $game_name's .exe/.dll files for OpenAL32.dll/dsound.dll references..."  ""
-        api=$(detect_api_from_binary "$GAME_DIR")
+        print_status "Looking for OpenAL or DirectSound in the .exe and .dll files in $GAME_DIR..." ""
+        local found_ds_file found_openal_file
+        IFS=$'\x1f' read -r api found_ds_file found_openal_file \
+            < <(detect_api_from_binary "$GAME_DIR")
+        [ -n "$api" ] && found_evidence="$(scan_evidence "$api" "$found_ds_file" "$found_openal_file")"
         scanned=1
     fi
 
@@ -1236,6 +1286,7 @@ confirm_continue_if_openal_native() {
         local api_display="DirectSound3D"
         [ "$api" == "openal" ] && api_display="OpenAL"
         print_status "Detected: ${BOLD}$api_display${NC}" ""
+        [ -n "$found_evidence" ] && print_status "$found_evidence." "$DIM"
         # Same fallback: the profile is normally shown in the prefix step.
         [ "$matched" -eq 1 ] && [ -z "$SCANNED_NOTES_SHOWN" ] && show_game_details_block "$1" "$2" "$GAME_DIR"
 
@@ -1268,7 +1319,7 @@ confirm_continue_if_openal_native() {
 
     # Nothing authoritative to go on — no game profile (or the database
     # wasn't available), and the file scan was either declined or turned up
-    # neither import string. Rather than assume DirectSound3D outright, spell
+    # neither API. Rather than assume DirectSound3D outright, spell
     # out what couldn't be checked and let the user pick: the "Audio Engine
     # Selection" step only lists the DSOAL builds, so this prompt is also the
     # only way into OpenAL-native mode for a title the scan can't identify.
