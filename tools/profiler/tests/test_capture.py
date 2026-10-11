@@ -147,3 +147,19 @@ class KeyValueFormat(unittest.TestCase):
             diffs = capture.diff_snapshots(game, sd, "a", "b")
             gc, skipped = classify.draft_game_config(diffs, [])
         self.assertTrue(skipped and "no keys could be read" in skipped[0])
+
+
+class StepView(unittest.TestCase):
+    def test_a_step_shows_its_files_and_what_changed_with_the_reasons(self):
+        a = "Width 800\nLastPlayed 100\nEAX 0\n"
+        b = "Width 800\nLastPlayed 200\nEAX 1\n"
+        with tempfile.TemporaryDirectory() as t:
+            game, sd = world(t, {"g.cfg": a}, {"g.cfg": b})
+            v = classify.step_view(game, sd, "b", "a", baseline_noise={("g.cfg", "", "Width")})
+            first = classify.step_view(game, sd, "a", None)
+        self.assertEqual([f["location"] for f in v["files"]], ["game:g.cfg"])
+        rows = {c["key"]: c for f in v["diffs"] for c in f["changes"]}
+        self.assertEqual(set(rows), {"LastPlayed", "EAX"})
+        self.assertTrue(rows["LastPlayed"]["suspect_reason"])
+        self.assertIsNone(rows["EAX"]["suspect_reason"])
+        self.assertEqual((first["reference"], first["diffs"]), (None, []))

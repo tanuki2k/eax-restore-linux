@@ -195,6 +195,18 @@ def previous_label(steps, label):
     return max(before)[1] if before else None
 
 
+def step_view(sid, label):
+    game, s = find_game(sid), load_session(sid)
+    steps, d = s["steps"], sdir(sid)
+    if label not in steps:
+        raise ValueError("That step hasn't been captured yet.")
+    ref = "audio" if label.startswith("spk-") else previous_label(steps, label)
+    noise = set()
+    if "baseline" in steps and label != "baseline":
+        noise = classify.noise_keys(capture.diff_snapshots(game, d, "installed", "baseline"))
+    return classify.step_view(game, d, label, ref, noise)
+
+
 def draft(sid, use_ai):
     game, s = find_game(sid), load_session(sid)
     d, steps = sdir(sid), s["steps"]
@@ -252,6 +264,9 @@ class H(BaseHTTPRequestHandler):
                 return self.reply({"game": g, "errors": dbio.validate(g)})
             if m and method == "PUT":
                 return self.reply(dbio.save(*m.groups(), self.body()))
+            ms = re.match(r"^/api/session/([a-z]+-[A-Za-z0-9_]+)/step/([a-z0-9-]+)$", p)
+            if ms and method == "GET":
+                return self.reply(step_view(*ms.groups()))
             if p == "/api/cleanup" and method == "GET":
                 return self.reply({"entries": [cleanup.describe(e) for e in cleanup.find_entries()],
                                    "launchers": {"steam": cleanup.launcher_running("steam"), "heroic": cleanup.launcher_running("gog")}})
@@ -273,6 +288,10 @@ class H(BaseHTTPRequestHandler):
             m2 = re.match(r"^/api/preview/(tested|untested|drafts)/([a-z0-9-]+)$", p)
             if m2 and method == "POST":
                 return self.reply(dbio.preview(*m2.groups(), self.body()))
+            if method == "POST" and p == "/api/merge-config":
+                b = self.body()
+                merged, report = classify.merge_game_config(b.get("existing"), b.get("new") or {})
+                return self.reply({"game_config": merged, "report": report})
             if method == "POST" and p == "/api/validate":
                 return self.reply({"errors": dbio.validate(self.body())})
             if method == "POST" and p == "/api/new":

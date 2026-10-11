@@ -2,6 +2,9 @@
 bookkeeping, the `game_config` fragment, and the optional AI passes (titles and reasons,
 noise the heuristics missed, alsoft_ini / EAX suggestions). Pure functions over the diff
 structure `capture.diff_snapshots` returns, so each piece is testable without a game."""
+import copy
+import json
+import os
 import re
 
 import ai
@@ -127,6 +130,24 @@ def draft_speaker_settings(layout_diffs, gc):
     return skipped
 
 
+def step_view(game, session_dir, label, reference, baseline_noise=()):
+    """What one capture step saw: the files it watched, and what changed against the
+    snapshot before it (`reference`; None for the first). Every change is marked with why it
+    would be left out of the draft: `suspect_reason` for bookkeeping-looking keys,
+    `baseline` for keys the baseline run showed the game rewrites by itself."""
+    import capture
+    out = {"label": label, "reference": reference, "files": [], "diffs": []}
+    for p in capture.snapshot_paths(session_dir, label):
+        out["files"].append({"path": p, "location": ("prefix:" + os.path.basename(p)) if p.endswith(".reg") else capture.location_of(game, p)})
+    if reference:
+        out["diffs"] = capture.diff_snapshots(game, session_dir, reference, label)
+        for f in out["diffs"]:
+            for c in f["changes"]:
+                c["suspect_reason"] = noise_reason(c["key"], c["old"], c["new"])
+                c["baseline"] = (f["file"], c["section"], c["key"]) in baseline_noise
+    return out
+
+
 def flag_suspects(diffs):
     """Marks each change with `suspect_reason` (heuristics) and returns the ones still
     unflagged, as (file entry, change) pairs, for the AI to look at."""
@@ -174,3 +195,70 @@ def build(game_name, diffs, use_ai):
         except Exception as e:  # noqa: BLE001 - shown to the player; the heuristic draft stays usable
             out["ai"] = f"AI failed: {e}"
     return out
+
+
+# ---------------------------------------------------------------- merging into an entry
+KINDS = ("audio_settings", "optional_settings")
+
+
+def _flat(changes):
+    """file -> [section ->] key -> value, as {(file, section, key): value}."""
+    out = {}
+    for f, body in changes.items():
+        for a, v in body.items():
+            if isinstance(v, dict):
+                out.update({(f, a, k): x for k, x in v.items()})
+            else:
+                out[(f, "", a)] = v
+    return out
+
+
+def _nest(flat):
+    out = {}
+    for (f, sec, k), v in sorted(flat.items()):
+        (out.setdefault(f, {}).setdefault(sec, {}) if sec else out.setdefault(f, {}))[k] = v
+    return out
+
+
+def merge_game_config(existing, new):
+    """Puts a captured game_config into an entry's, leaving out what's already there.
+    A setting whose changes are all present (same keys and values, under the same only_if,
+    in either list) is skipped; one that partly overlaps keeps only the new keys; a key that
+    exists with a different value is kept and reported. Files already defined keep their
+    definition. Returns (merged game_config, report of what happened)."""
+    merged = copy.deepcopy(existing or {})
+    files = merged.setdefault("files", {})
+    report = {"added": [], "skipped": [], "trimmed": [], "conflicts": [], "files_added": [], "files_differ": []}
+    for name, spec in (new.get("files") or {}).items():
+        if name not in files:
+            files[name] = spec
+            report["files_added"].append(name)
+        elif files[name] != spec:
+            report["files_differ"].append(name)
+    gate = lambda st: json.dumps(st.get("only_if") or {}, sort_keys=True)
+    known = {}
+    for kind in KINDS:
+        for st in merged.get(kind, []):
+            known.setdefault(gate(st), {}).update(_flat(st.get("changes", {})))
+    for kind in KINDS:
+        for st in new.get(kind) or []:
+            have = known.setdefault(gate(st), {})
+            flat = _flat(st["changes"])
+            fresh = {k: v for k, v in flat.items() if k not in have or have[k] != v}
+            title = st.get("title") or "(untitled)"
+            if not fresh:
+                report["skipped"].append(title)
+                continue
+            if len(fresh) < len(flat):
+                report["trimmed"].append(f"{title}: {len(flat) - len(fresh)} of {len(flat)} changes were already in the entry")
+            for k in fresh:
+                if k in have:
+                    report["conflicts"].append(f"{k[2]} is {have[k]!r} in the entry, {fresh[k]!r} in the capture ({title})")
+            add = copy.deepcopy(st)
+            add["changes"] = _nest(fresh)
+            merged.setdefault(kind, []).append(add)
+            have.update(fresh)
+            report["added"].append(title)
+    if not merged["files"]:
+        del merged["files"]
+    return merged, report

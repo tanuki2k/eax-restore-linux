@@ -162,8 +162,8 @@ td .row{margin:0}
 .empty-art{font-size:44px}
 
 /* ---- tooltip */
-#tip{position:fixed;z-index:1000;display:none;max-width:min(400px,92vw);padding:10px 13px;border-radius:9px;background:var(--tip-bg);color:var(--tip-fg);font-size:13.5px;line-height:1.55;box-shadow:0 8px 28px rgba(0,0,0,.28);pointer-events:none;white-space:pre-line}
-#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--tip-bg);color:var(--tip-fg);padding:10px 18px;border-radius:9px;display:none;box-shadow:0 8px 28px rgba(0,0,0,.28);z-index:1100;max-width:92vw;font-size:13.5px}
+#tip{position:fixed;inset:auto;margin:0;border:0;overflow:visible;z-index:1000;max-width:min(400px,92vw);padding:10px 13px;border-radius:9px;background:var(--tip-bg);color:var(--tip-fg);font-size:13.5px;line-height:1.55;box-shadow:0 8px 28px rgba(0,0,0,.28);pointer-events:none;white-space:pre-line}
+#toast{position:fixed;inset:auto auto 20px 50%;margin:0;border:0;overflow:visible;transform:translateX(-50%);background:var(--tip-bg);color:var(--tip-fg);padding:10px 18px;border-radius:9px;box-shadow:0 8px 28px rgba(0,0,0,.28);z-index:1100;max-width:92vw;font-size:13.5px}
 
 /* ---- dialogs */
 dialog.dlg{width:min(720px,94vw);background:var(--surface);color:var(--fg);border:1px solid var(--line2);border-radius:12px;padding:20px 22px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
@@ -215,3 +215,11 @@ button.danger:hover:not(:disabled){background:var(--bad);filter:brightness(1.1)}
 .btn.warn:hover{background:var(--warn-weak);filter:brightness(1.1)}
 .badge.build-current{background:var(--ok-weak);color:var(--ok)}
 .badge.build-changed,.badge.build-new{background:var(--warn-weak);color:var(--warn)}
+
+/* ---- jump to a problem */
+@keyframes flash{0%,35%{box-shadow:0 0 0 3px var(--acc);background:var(--acc-weak)}100%{box-shadow:0 0 0 3px transparent;background:transparent}}
+.flash{animation:flash 2s ease-out;border-radius:8px}
+#errors li{transition:filter .1s}#errors li:hover{filter:brightness(1.15)}
+
+/* the tip and the toast are popovers, so they sit in the browser's top layer, above any open dialog */
+#tip:not(:popover-open),#toast:not(:popover-open){display:none}

@@ -46,7 +46,11 @@ async function api(path, method = "GET", body) {
   if (!r.ok) throw new Error(j.error || r.statusText);
   return j;
 }
-function toast(msg, ms = 3500) { const t = $("#toast"); t.textContent = msg; t.style.display = "block"; clearTimeout(t._t); t._t = setTimeout(() => (t.style.display = "none"), ms); }
+// A popover is drawn in the top layer, the same layer as an open dialog, so it can't end up behind one.
+// Hiding then showing again puts it above a dialog that was opened after it was last shown.
+function popUp(node) { if (node.matches(":popover-open")) node.hidePopover(); node.showPopover(); }
+function popDown(node) { if (node.matches(":popover-open")) node.hidePopover(); }
+function toast(msg, ms = 3500) { const t = $("#toast"); t.textContent = msg; popUp(t); clearTimeout(t._t); t._t = setTimeout(() => popDown(t), ms); }
 function resolve(s) { while (s && s.$ref) s = s.$ref.slice(2).split("/").reduce((o, k) => o[k], SCHEMA); return s; }
 const isEmpty = (v) => v === undefined || v === "" || (Array.isArray(v) && !v.length) || (v && typeof v === "object" && !Array.isArray(v) && !Object.keys(v).length);
 function prune(v) {
@@ -61,13 +65,13 @@ function prune(v) {
 const TIP = () => $("#tip");
 function showTip(target) {
   const t = TIP(), text = target.dataset.tip; if (!text) return;
-  t.textContent = text; t.style.display = "block";
+  t.textContent = text; popUp(t);
   const r = target.getBoundingClientRect(), w = t.offsetWidth, h = t.offsetHeight;
   let x = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), innerWidth - w - 8);
   let y = r.bottom + 8; if (y + h > innerHeight - 8) y = Math.max(8, r.top - h - 8);
   t.style.left = x + "px"; t.style.top = y + "px";
 }
-const hideTip = () => (TIP().style.display = "none");
+const hideTip = () => popDown(TIP());
 document.addEventListener("mouseover", (e) => { const n = e.target.closest("[data-tip]"); n ? showTip(n) : hideTip(); });
 document.addEventListener("focusin", (e) => { const n = e.target.closest("[data-tip]"); n && showTip(n); });
 document.addEventListener("focusout", hideTip);
@@ -81,6 +85,33 @@ function sectionOfPath(p) {
   const s = SECTIONS.find(([, , keys]) => keys.includes(top));
   return s ? s[0] : "overview";
 }
+// "game_config/audio_settings/5" + "'reason' is a required property" -> game_config.audio_settings[5].reason
+function problemPath(path, msg) {
+  let p = path.split("/").filter((s) => s !== "(root)").map((s) => (/^\d+$/.test(s) ? `[${s}]` : "." + s)).join("").replace(/^\./, "");
+  const m = msg.match(/^'(.+)' is a required property$/);
+  return m ? (p ? p + "." : "") + m[1] : p;
+}
+function findByPath(p) {
+  while (p) {
+    const hit = [...document.querySelectorAll("[data-path]")].find((n) => n.dataset.path === p);
+    if (hit) return hit;
+    const q = p.replace(/(\[\d+\]|\.[^.\[]+)$/, "");
+    if (q === p) break;
+    p = q;
+  }
+  return null;
+}
+// Switches to the right tab, opens every collapsed card around the field, scrolls to it and flashes it.
+function goToProblem(path, msg) {
+  setSection(sectionOfPath(path));
+  const target = findByPath(problemPath(path, msg));
+  if (!target) return;
+  for (let n = target; n; n = n.parentElement) if (n.tagName === "DETAILS") n.open = true;
+  target.scrollIntoView({ block: "center", behavior: "smooth" });
+  target.classList.remove("flash"); void target.offsetWidth; target.classList.add("flash");
+  const input = target.querySelector("input:not([type=checkbox]), textarea, select");
+  if (input && target.tagName !== "DETAILS") setTimeout(() => input.focus({ preventScroll: true }), 350);
+}
 function changed() {
   DIRTY = true; drawHeadStatus();
   const g = prune(GAME);
@@ -93,7 +124,7 @@ function showErrors(errs) {
   const ul = $("#errors");
   ul.replaceChildren(...(errs.length ? errs.map((e) => {
     const i = e.indexOf(": "), path = i > 0 ? e.slice(0, i) : "", msg = i > 0 ? e.slice(i + 2) : e;
-    return el("li", { onclick: () => path && setSection(sectionOfPath(path)) }, path ? el("code", {}, path) : null, msg);
+    return el("li", { title: "Go to this", onclick: () => path && goToProblem(path, msg) }, path ? el("code", {}, path) : null, msg);
   }) : [el("li", { class: "ok" }, "✓ No problems")]));
   drawNav();
 }
@@ -122,7 +153,14 @@ function chips(options, selected, onChange) {
 const fill = (node, ...kids) => node.replaceChildren(...kids.flat().filter((k) => k != null && k !== false));
 function grid(children) { return el("div", { class: "grid" }, children); }
 
+// Every field carries its place in the entry (data-path, e.g. game_config.audio_settings[2].reason) so a
+// problem in the list can be taken to it.
 function node(schema, parent, key, path, label) {
+  const e = fieldNode(schema, parent, key, path, label);
+  if (e && e.dataset && path) e.dataset.path = path;
+  return e;
+}
+function fieldNode(schema, parent, key, path, label) {
   const s = resolve(schema) || {};
   const lab = label ?? human(key), help = s.description;
   const set = (v) => { if (isEmpty(v)) delete parent[key]; else parent[key] = v; changed(); };
@@ -208,13 +246,18 @@ function cards(parent, key, itemSchema, path) {
         const c = o.only_if ? [].concat(o.only_if.stores || [], o.only_if.speakers || []).join(", ") : ""; cond.textContent = c ? "only if " + c : ""; cond.hidden = !c;
       };
       const fields = Object.entries(itemSchema.properties).map(([k, sub]) => {
-        const n = node(sub, o, k, path + "[]." + k);
+        const n = node(sub, o, k, `${path}[${i}].${k}`);
         if (k === "title") { n.classList.add("wide"); n.querySelector("input").addEventListener("input", refresh); n.querySelector(".grow").after(aiButton("setting", () => ({ game: GAME.name, changes: o.changes, kind: key }), (r) => { o.title = (r.title || "").slice(0, 60); o.reason = r.reason; draw(); })); }
         return n;
       });
       const d = el("details", { class: "setcard", open: list.length <= 2 || !o.title },
-        el("summary", {}, stitle, cond, badge, el("button", { type: "button", class: "icon", title: "Delete this setting", onclick: (e) => { e.preventDefault(); if (confirm(`Delete “${o.title || "this setting"}”?`)) { arr().splice(i, 1); changed(); draw(); } } }, "✕")),
+        el("summary", {}, stitle, cond, badge,
+          el("button", { type: "button", class: "icon", disabled: i === 0, title: "Move up", onclick: (e) => { e.preventDefault(); [list[i - 1], list[i]] = [list[i], list[i - 1]]; changed(); draw(); } }, "↑"),
+          el("button", { type: "button", class: "icon", disabled: i === list.length - 1, title: "Move down", onclick: (e) => { e.preventDefault(); [list[i + 1], list[i]] = [list[i], list[i + 1]]; changed(); draw(); } }, "↓"),
+          (key === "audio_settings" || key === "optional_settings") ? el("button", { type: "button", class: "btn sm", title: key === "audio_settings" ? "Move this setting to the optional settings" : "Move this setting to the audio settings", onclick: (e) => { e.preventDefault(); const to = key === "audio_settings" ? "optional_settings" : "audio_settings"; parent[to] = parent[to] || []; parent[to].push(list.splice(i, 1)[0]); changed(); renderPane(); } }, key === "audio_settings" ? "→ Optional" : "→ Audio") : null,
+          el("button", { type: "button", class: "icon", title: "Delete this setting", onclick: (e) => { e.preventDefault(); if (confirm(`Delete “${o.title || "this setting"}”?`)) { arr().splice(i, 1); changed(); draw(); } } }, "✕")),
         el("div", { class: "setbody" }, grid(fields)));
+      d.dataset.path = `${path}[${i}]`;
       d.addEventListener("input", refresh); d.addEventListener("change", refresh); refresh();
       return d;
     }) : [el("div", { class: "empty-note" }, "None yet. Capture the game to draft some, or add one by hand.")]),
@@ -229,9 +272,9 @@ function fileCards(parent, key, valueSchema, path) {
     const names = Object.keys(m());
     box.replaceChildren(names.length ? el("div", { class: "filegrid" }, names.map((name) => {
       const val = m()[name];
-      return el("div", { class: "filecard" },
+      return el("div", { class: "filecard", "data-path": `${path}.${name}` },
         el("header", {}, el("h4", {}, name), el("button", { type: "button", class: "icon", title: "Remove this file (settings that use it will need fixing)", onclick: () => { delete m()[name]; changed(); draw(); } }, "✕")),
-        grid(Object.entries(resolve(valueSchema).properties).map(([k, sub]) => node(sub, val, k, path + "." + k))));
+        grid(Object.entries(resolve(valueSchema).properties).map(([k, sub]) => node(sub, val, k, `${path}.${name}.${k}`))));
     })) : el("div", { class: "empty-note" }, "No config files yet."),
       el("div", { class: "addrow" }, el("button", { type: "button", class: "btn", onclick: () => {
         const n = prompt("Config file name, e.g. game.ini, Quake4Config.cfg, Profile000.gdb or system.reg:"); if (!n) return;
@@ -520,6 +563,29 @@ const STEPS = [
   ["audio", "Audio run: your turn", "The game starts. Switch ON the EAX / hardware 3D audio options, then quit the game."],
   ["optional", "Optional run (optional)", "Same again for quality-of-life options such as resolution or textures. These become optional settings."],
 ];
+const stepTitle = (label) => (label.startsWith("spk-") ? runName(label) : (STEPS.find(([k]) => k === label) || [0, label])[1]);
+const tilde = (p) => (p || "").replace(/^\/home\/[^/]+/, "~");
+async function viewStep(label) {
+  const v = await api(`/api/session/${SESS.sid}/step/${label}`);
+  const body = [];
+  body.push(el("p", { class: "muted", style: "margin:0 0 8px" }, v.reference ? `Compared with: ${stepTitle(v.reference)}. Only keys that changed are listed.` : "This is the first snapshot, so there's nothing to compare it with. It lists the files being watched."));
+  const drafted = label === "audio" || label === "optional" || label.startsWith("spk-");
+  const why = (c) => (c.baseline ? "ignored: the baseline run shows the game rewrites this itself" : c.suspect_reason ? "left out: " + c.suspect_reason : c.expressible ? "kept" : "not allowed by the schema");
+  if (v.reference) {
+    if (!v.diffs.length) body.push(el("div", { class: "empty-note" }, "Nothing changed in the files the tool watches."));
+    for (const f of v.diffs) {
+      if (f.unparsed) body.push(el("p", {}, el("b", {}, f.file), ` changed, but no keys could be read from it (guessed format: ${f.format}).`));
+      else if (f.binary_offsets) body.push(el("p", {}, el("b", {}, f.file), " changed, but it isn't a file the tool can read key by key."));
+      else body.push(el("details", { class: "cfile", open: true }, el("summary", {}, `${f.file}  →  ${f.location || "(outside the known folders)"}  [${f.format}]`),
+        el("div", { class: "tblwrap" }, el("table", {}, el("tr", {}, ["Section", "Key", "Was", "Now", drafted ? "In the draft" : null].filter(Boolean).map((h) => el("th", {}, h))),
+          ...f.changes.map((c) => el("tr", {}, el("td", {}, c.section), el("td", {}, c.key), el("td", { class: "muted" }, String(c.old)), el("td", {}, String(c.new)), drafted ? el("td", { class: (c.baseline || c.suspect_reason || !c.expressible) ? "muted" : "ok" }, why(c)) : null))))));
+    }
+    body.push(el("p", { class: "muted" }, (drafted ? "" : "This step isn't used for the draft; it shows what the install or the game does on its own. ") + "Some of Wine's own registry keys are hidden because they change on every run."));
+  }
+  body.push(el("details", {}, el("summary", {}, `Files watched (${v.files.length})`), el("ul", {}, v.files.map((f) => el("li", { style: "overflow-wrap:anywhere" }, tilde(f.path), f.location ? el("span", { class: "muted" }, `  (${f.location})`) : null)))));
+  const dlg = dialog(el("h3", {}, `${stepTitle(label)}: what it captured`), el("div", { style: "max-height:62vh;overflow:auto" }, body), el("div", { class: "btns" }, el("button", { type: "button", onclick: () => dlg.close() }, "Close")));
+  dlg.classList.add("wide");
+}
 const SPEAKERS = [
   ["headphones", "Headphones"], ["matrix", "Pro Logic (matrix)"], ["quad", "4.0 (quad)"],
   ["surround51", "5.1"], ["surround61", "6.1"], ["surround71", "7.1"], ["stereo", "Stereo"],
@@ -585,12 +651,14 @@ function drawSteps() {
     el("div", { class: "steps" }, ...STEPS.map(([k, t, d], i) => el("div", { class: "step" + (st[k] ? " done" : "") },
       el("div", { class: "num" }, st[k] ? "✓" : i + 1), el("div", { class: "body" }, el("b", {}, t), el("span", {}, d)),
       st[k] ? el("span", { class: "meta" }, `${st[k].files} files`) : null,
+      st[k] ? el("button", { type: "button", class: "btn sm", title: "See what this step captured", onclick: () => viewStep(k).catch((x) => toast(x.message, 8000)) }, "View") : null,
       el("button", { type: "button", class: st[k] ? "" : "primary", disabled: run, onclick: async () => { try { await api(`/api/session/${SESS.sid}/action`, "POST", { action: k }); await refreshSession(); drawSteps(); } catch (x) { toast(x.message, 8000); } } }, st[k] ? "Redo" : "Run")))),
     el("div", { class: "blockhead" }, el("h3", {}, "Speaker layouts (optional)"), helpIcon("Do this for each speaker setup the game's own audio options offer. Choose that layout in the game, quit, and the tool records what changed against the audio run. Skip any the game doesn't have. Layouts that change the same values are merged for you.")),
     el("div", { class: "steps" }, ...SPEAKERS.map(([k, name]) => { const key = "spk-" + k;
       return el("div", { class: "step" + (st[key] ? " done" : "") }, el("div", { class: "num" }, st[key] ? "✓" : "♪"),
         el("div", { class: "body" }, el("b", {}, name), el("span", {}, "Set this in the game's audio options, then quit.")),
         st[key] ? el("span", { class: "meta" }, `${st[key].files} files`) : null,
+        st[key] ? el("button", { type: "button", class: "btn sm", title: "See what this layout run captured", onclick: () => viewStep(key).catch((x) => toast(x.message, 8000)) }, "View") : null,
         el("button", { type: "button", disabled: run || !st.audio, title: st.audio ? "" : "Do the audio run first", onclick: async () => { try { await api(`/api/session/${SESS.sid}/action`, "POST", { action: key }); await refreshSession(); drawSteps(); } catch (x) { toast(x.message, 8000); } } }, st[key] ? "Redo" : "Run")); })),
     jobText ? el("div", { class: "status " + SESS.job.state }, jobText) : null,
     el("div", { class: "barrow" }, el("button", { type: "button", class: "primary", disabled: run || !st.audio, title: "Compare the snapshots and draft the game's settings. You can untick anything before merging.", onclick: makeDraft }, "Build settings from the captures"),
@@ -645,13 +713,18 @@ function applyDrops(gc) {
   for (const f of Object.keys(out.files)) if (!used.has(f)) delete out.files[f];
   return out;
 }
-function merge(gc0) {
+async function merge(gc0) {
   const gc = applyDrops(gc0);
   if (!GAME) return toast("Open or create the game's entry first");
-  GAME.game_config = GAME.game_config || { files: {} };
-  GAME.game_config.files = Object.assign(GAME.game_config.files || {}, gc.files);
-  for (const k of ["audio_settings", "optional_settings"]) if (gc[k]) GAME.game_config[k] = (GAME.game_config[k] || []).concat(gc[k]);
-  changed(); setSection("settings"); toast("Merged. Check each title and reason, then Save.", 6000);
+  const r = await api("/api/merge-config", "POST", { existing: prune(GAME).game_config || {}, new: gc });
+  GAME.game_config = r.game_config;
+  const p = r.report, bits = [`Merged ${p.added.length} setting${p.added.length === 1 ? "" : "s"}.`];
+  if (p.skipped.length) bits.push(`Left out ${p.skipped.length} already in the entry: ${p.skipped.join(", ")}.`);
+  if (p.trimmed.length) bits.push(`${p.trimmed.join("; ")}.`);
+  if (p.conflicts.length) bits.push(`Check: ${p.conflicts.join("; ")}.`);
+  if (p.files_differ.length) bits.push(`Kept the entry's own definition of ${p.files_differ.join(", ")}.`);
+  bits.push(p.added.length ? "Check each title and reason, then Save." : "Nothing new to add.");
+  changed(); setSection("settings"); toast(bits.join(" "), 14000);
 }
 
 window.addEventListener("error", (e) => toast("JS error: " + e.message, 20000));
@@ -663,8 +736,11 @@ window.addEventListener("unhandledrejection", (e) => toast("Error: " + (e.reason
   if (q.get("section")) setSection(q.get("section"));
   if (q.get("startcapture")) await captureCurrent();
   if (q.get("addsetting")) { GAME.game_config.audio_settings.push({ title: "", reason: "", changes: {} }); renderPane(); }
+  if (q.get("click")) $$(q.get("click"))[+(q.get("n") || 0)].click();
+  if (q.get("viewstep")) await viewStep(q.get("viewstep"));
   if (q.get("adddlg")) await addInstalled();
   if (q.get("cleanup")) await openCleanup(GAME);
+  if (q.get("tipsel")) showTip($$(q.get("tipsel"))[0]);
   if (q.get("tipdemo")) showTip($$(".qm")[+q.get("tipdemo") - 1]);
   if (q.get("rail") === "0") $("#layout").classList.add("norail");
 })();

@@ -180,6 +180,11 @@ def snapshot(game, session_dir, label):
     return len(index)
 
 
+def snapshot_paths(session_dir, label):
+    """The files a snapshot holds (absolute paths), without reading their contents."""
+    return sorted(json.loads(_rd(os.path.join(session_dir, label, "index.json")))["files"])
+
+
 def _load(session_dir, label):
     d = os.path.join(session_dir, label)
     idx = json.loads(_rd(os.path.join(d, "index.json")))["files"]
