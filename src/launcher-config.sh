@@ -198,6 +198,25 @@ offer_close_launcher() {
     return 1
 }
 
+# Usage: confirm_override_removal <where the override is, for the question>
+# Uninstall step 5's question for the launcher setting in OVERRIDE_LAUNCHER.
+# When the launcher is open and can be closed (no game running from it), Phase 2
+# will close it and open it again, so the question says that and counts down
+# the way the install's does, taking Yes if nobody answers. Otherwise it's the
+# plain question.
+confirm_override_removal() {
+    local label
+    label="$(launcher_label "$OVERRIDE_LAUNCHER")"
+    if launcher_running "$OVERRIDE_LAUNCHER" && ! launcher_game_running "$OVERRIDE_LAUNCHER" \
+        && [ -n "$(launcher_launch_cmd "$OVERRIDE_LAUNCHER")" ]; then
+        print_launcher_open "$OVERRIDE_LAUNCHER" remove
+        confirm_countdown "Close ${label}, $(launcher_change_text remove short), then reopen ${label}?" Y 25 || return 1
+        [ "$CONFIRM_TIMED_OUT" -eq 1 ] && print_status "No answer after 25 seconds, so that's a Yes: ${label} will be closed, the override removed and ${label} reopened once you confirm."
+        return 0
+    fi
+    confirm "Remove the DLL override from ${1}?" Y
+}
+
 # Usage: reopen_launchers
 # Starts every launcher offer_close_launcher closed, detached from this
 # terminal so it keeps running after the script ends.

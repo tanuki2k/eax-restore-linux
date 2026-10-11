@@ -279,7 +279,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
             [ -f "$OVERRIDE_FILE" ] || continue
             where="$(launcher_override_where)"
             print_status "Launcher: the install added a DLL override to ${where}" ""
-            if confirm "Remove the DLL override from ${where}?" Y; then
+            if confirm_override_removal "$where"; then
                 LAUNCHER_CLOSE_ANSWER[$OVERRIDE_LAUNCHER]="y"
                 LAUNCHER_WORK=1
             else
