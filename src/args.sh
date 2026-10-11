@@ -30,6 +30,7 @@ prompts is done via environment variables:
   EAX_RESTORE_VCRUN_ONLY=1            Only (re)install the VC++ runtime
   EAX_RESTORE_SKIP_CACHE_CHECK=1      Only use builds already downloaded
   EAX_RESTORE_GAME_DATABASE_FILE=PATH   Use a local game database file
+  EAX_RESTORE_ANSWERS_FILE=PATH       Read the answers to every prompt from a file
   EAX_RESTORE_NO_LOG=1                Don't write a run log (normally saved to
                                       ~/.local/state/eax-restore-linux/logs/)
 
@@ -47,3 +48,11 @@ EOF
         exit 0
         ;;
 esac
+
+# Unattended runs (the profiler tool): a file of answers, one line per prompt,
+# replaces the terminal. Everything already reads piped stdin, so no prompt
+# needs to know.
+if [ -n "${EAX_RESTORE_ANSWERS_FILE:-}" ]; then
+    [ -r "$EAX_RESTORE_ANSWERS_FILE" ] || { echo "Answers file not readable: $EAX_RESTORE_ANSWERS_FILE" >&2; exit 1; }
+    exec < <(grep -v '^[[:space:]]*#' "$EAX_RESTORE_ANSWERS_FILE")
+fi

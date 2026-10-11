@@ -256,6 +256,7 @@ For repeat runs or scripting, these can be set to skip prompts:
 | `EAX_RESTORE_VCRUN_ONLY=1` | Skips the full install/uninstall flow and just (re)installs the MS VC++ 2022 Redistributable into a game's prefix. The main menu offers the same under **Tools → [V]C++ install**. |
 | `EAX_RESTORE_SKIP_CACHE_CHECK=1` | Doesn't contact GitHub for DSOAL or OpenAL Soft: the build choice only offers what's already in the local cache. |
 | `EAX_RESTORE_GAME_DATABASE_FILE=/path/to/game-database.json` | Uses a local file (e.g. one you built with `tools/build-game-database.sh`) instead of fetching `game-database.json` — mainly for testing edits to the database itself before they're pushed. |
+| `EAX_RESTORE_ANSWERS_FILE=/path/to/answers.txt` | Answers every prompt from the file (one line per prompt; lines starting with `#` are ignored) instead of the terminal, for unattended runs such as `tools/profiler`. |
 | `EAX_RESTORE_NO_LOG=1` | Turns off the per-run log file (see [Logs & Bug Reports](#logs--bug-reports)). |
 
 ### Logs & Bug Reports

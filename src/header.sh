@@ -103,6 +103,10 @@
 #   cache. Speeds up repeat runs on a machine with a cache you know is
 #   current.
 #
+# * EAX_RESTORE_ANSWERS_FILE=/path/to/answers.txt  Answers every prompt from the
+#   file (one line per prompt, lines starting with # ignored) instead of the
+#   terminal, so a run can go unattended. Used by tools/profiler.
+#
 # * EAX_RESTORE_NO_LOG=1  Turns off the per-run log file. Normally every run
 #   is logged to ~/.local/state/eax-restore-linux/logs/ (newest 10 kept,
 #   latest.log points at the most recent) for attaching to bug reports.

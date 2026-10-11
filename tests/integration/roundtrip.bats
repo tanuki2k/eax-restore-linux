@@ -80,3 +80,14 @@ setup() {
     # user.reg keeps the emptied DllOverrides key, as regedit leaves it; the rest is identical
     diff <(grep -v 'pfx/user.reg' "$BATS_TEST_TMPDIR/before") <(grep -v 'pfx/user.reg' "$BATS_TEST_TMPDIR/after") || { tail -25 "$OUT"; false; }
 }
+
+@test "EAX_RESTORE_ANSWERS_FILE answers the prompts, # lines ignored" {
+    install_answers "$BATS_TEST_TMPDIR/in"
+    { echo "# unattended run"; cat "$BATS_TEST_TMPDIR/in"; } > "$BATS_TEST_TMPDIR/answers.txt"
+    DB_FILE=""; echo '{"schema_version":3,"games":[]}' > "$BATS_TEST_TMPDIR/db.json"; DB_FILE="$BATS_TEST_TMPDIR/db.json"
+    export EAX_RESTORE_GAME_DATABASE_FILE="$DB_FILE" EAX_RESTORE_ANSWERS_FILE="$BATS_TEST_TMPDIR/answers.txt"
+    OUT="$BATS_TEST_TMPDIR/out.txt"
+    ( cd "$BATS_TEST_TMPDIR" && timeout 120 "$REPO_ROOT/dist/eax-restore-linux.sh" < /dev/null > "$OUT" 2>&1 )
+    grep -q "INSTALLATION COMPLETE" "$OUT" || { tail -30 "$OUT"; false; }
+    [ -f "$GAME/.eax-restore-manifest.txt" ]
+}
