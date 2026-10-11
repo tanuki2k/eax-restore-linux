@@ -23,7 +23,9 @@ ensure_game_database() {
     if [ -n "${EAX_RESTORE_GAME_DATABASE_FILE:-}" ]; then
         if [ -s "$EAX_RESTORE_GAME_DATABASE_FILE" ] && jq empty "$EAX_RESTORE_GAME_DATABASE_FILE" 2>/dev/null; then
             GAME_DATABASE_FILE="$EAX_RESTORE_GAME_DATABASE_FILE"
-            print_note "Using a local game database file:" "$EAX_RESTORE_GAME_DATABASE_FILE" >&2
+            local n
+            n="$(jq '.games | length' "$GAME_DATABASE_FILE" 2>/dev/null)"
+            print_note "Using a local game database file with ${n:-0} game$([ "${n:-0}" == "1" ] || echo s):" "$EAX_RESTORE_GAME_DATABASE_FILE" >&2
         else
             print_error "EAX_RESTORE_GAME_DATABASE_FILE is set but the file is missing or not valid JSON." >&2
             return 1
