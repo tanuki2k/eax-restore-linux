@@ -12,7 +12,18 @@
     "files": { "settings.cfg": { "format": "dark_cfg", "locations": ["game:settings.cfg"] } },
     "audio_settings": [
       {
-        "title": "Set headphone output for Alpha Prime",
+        "title": "Enable EAX and sound occlusion",
+        "reason": "Out of the box, Alpha Prime has EAX and sound occlusion turned on.",
+        "changes": { "settings.cfg": { "EnableEAX": "1", "EnableSoundOcclusion": "1" } }
+      },
+      {
+        "title": "Enable Stereo output",
+        "reason": "The game has a Speakers setting in settings.cfg. This sets it to 2, which is stereo output.",
+        "only_if": { "speakers": "stereo" },
+        "changes": { "settings.cfg": { "Speakers": "2" } }
+      },
+      {
+        "title": "Enable headphone output",
         "reason": "Alpha Prime's sound output defaults to a speaker layout, so headphones get a mix made for speakers. Setting Speakers to 4 in settings.cfg switches it to the headphone output.",
         "only_if": { "speakers": "headphones" },
         "changes": { "settings.cfg": { "Speakers": "4" } }
@@ -40,17 +51,6 @@
         "reason": "The game's Speakers option defaults to a lower channel count. Setting it to 7 makes the game send 7.1 sound to OpenAL Soft.",
         "only_if": { "speakers": "surround71" },
         "changes": { "settings.cfg": { "Speakers": "7" } }
-      },
-      {
-        "title": "Set speakers to stereo output",
-        "reason": "The game has a Speakers setting in settings.cfg. This sets it to 2, which is stereo output.",
-        "only_if": { "speakers": "stereo" },
-        "changes": { "settings.cfg": { "Speakers": "2" } }
-      },
-      {
-        "title": "Enable EAX and sound occlusion",
-        "reason": "Out of the box, Alpha Prime has EAX and sound occlusion turned on.",
-        "changes": { "settings.cfg": { "EnableEAX": "1", "EnableSoundOcclusion": "1" } }
       }
     ]
   }
