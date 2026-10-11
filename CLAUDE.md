@@ -85,7 +85,8 @@ launcher hardcodes `releases/latest`).
   also fails if a game's file name is in more than one folder.
   To find what a new game setting should change, compare the game's config files
   (and the prefix's registry files) before and after switching its sound options
-  on. (A probe tool that automated this was removed; it's to be reimplemented.)
+  on. `tools/profiler/` (see its README) automates it: a local web editor plus capture
+  (snapshot, unattended install via `EAX_RESTORE_ANSWERS_FILE`, diff, AI-drafted settings).
   `tools/browse-game-database.sh [file]` (needs fzf) browses the built
   database with the Tools menu's browser — a quick look at how an entry's
   profile reads.

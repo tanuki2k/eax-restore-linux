@@ -22,6 +22,10 @@ Open an issue describing the use case. If it's specific to a particular game or 
 4. Run `./build.sh && bats -r tests` (install `bats` first); it also covers `bash -n` via CI. Add a test with a bug fix.
 5. Describe what you tested in the PR description.
 
+## Adding or fixing a game
+
+Game profiles are the JSON files under `data/games/` and `data/drafts/`. The README's "Contributing to the game database" section covers the fields, and `python3 tools/profiler/profiler.py` is a browser editor whose Capture tab finds the config keys for you (see `tools/profiler/README.md`). A new entry starts in `data/games/untested/`. Please check each store ID against the store's own page before you move an entry to `tested/`; the editor marks IDs it found on your install as `local_install_verified`, which only means they were seen locally.
+
 ## Style
 
 * Match the existing script's conventions: `UPPER_CASE` for variables that persist across functions, `snake_case` for function-local variables, and the existing color/echo helpers for output.
