@@ -64,6 +64,11 @@
           "4.0"
         ]
       },
+      "install": {
+        "tweaks": [
+          "com_registry_routing"
+        ]
+      },
       "game_config": {
         "files": {
           "settings.cfg": {
@@ -136,7 +141,10 @@
             "title": "Enable 5.1 surround output",
             "reason": "The game's Speakers setting is not set to 6 by default, so it does not use all six channels of a 5.1 setup. Setting it to 6 makes the game send surround sound to a 5.1 speaker system.",
             "only_if": {
-              "speakers": "surround51"
+              "speakers": [
+                "surround51",
+                "surround61"
+              ]
             },
             "changes": {
               "settings.cfg": {
@@ -157,7 +165,8 @@
             }
           }
         ]
-      }
+      },
+      "notes": "Alpha Prime sets its speaker option back to stereo every time it starts, so the speaker settings offered later don't last. That happened with Proton's default PipeWire audio driver, and with a 7.1 output on the PulseAudio driver."
     },
     {
       "id": "anachronox",
