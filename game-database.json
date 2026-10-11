@@ -949,6 +949,33 @@
               }
             }
           }
+        ],
+        "optional_settings": [
+          {
+            "title": "Fix low image quality",
+            "reason": "DOOM 3 can't detect how much memory modern graphics cards have, so it loads its lowest-resolution textures.",
+            "changes": {
+              "DoomConfig.cfg": {
+                "com_videoRam": "1024",
+                "image_downSize": "0",
+                "image_downSizeBump": "0",
+                "image_downSizeSpecular": "0",
+                "image_ignoreHighQuality": "0"
+              }
+            }
+          },
+          {
+            "title": "Fix low image quality in Resurrection of Evil",
+            "reason": "Resurrection of Evil can't detect how much memory modern graphics cards have, so it loads its lowest-resolution textures.",
+            "changes": {
+              "d3xp DoomConfig.cfg": {
+                "com_videoRam": "1024",
+                "image_downSize": "0",
+                "image_downSizeBump": "0",
+                "image_downSizeSpecular": "0"
+              }
+            }
+          }
         ]
       },
       "sources": [
