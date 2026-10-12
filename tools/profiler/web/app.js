@@ -202,6 +202,14 @@ function fieldNode(schema, parent, key, path, label) {
     const count = () => { if (counter) { const n = inp.value.length; counter.textContent = `${n}/${s.maxLength}`; counter.classList.toggle("over", n > s.maxLength - 5); } };
     count();
     const extra = [counter];
+    if (key === "exe") {
+      // The browser only reveals the picked file's name, which is all this field holds.
+      const pick = el("input", { type: "file", accept: ".exe", hidden: true, onchange: () => {
+        const f = pick.files[0]; if (!f) return;
+        inp.value = f.name; set(f.name); pick.value = "";
+      } });
+      extra.push(pick, el("button", { type: "button", class: "btn sm", title: "Pick the game's .exe to fill in its file name", onclick: () => pick.click() }, "Browse…"));
+    }
     if (key === "description") extra.push(aiButton("description", () => ({ name: GAME.name, released: GAME.released }), (r) => { set(r.description); inp.value = r.description || ""; }));
     if (key === "notes") extra.push(aiButton("notes", () => ({ game: prune(GAME) }), (r) => { set(r.notes); inp.value = r.notes || ""; }));
     const f = F(inp, { extra, wide: long, req: key === "name" });
