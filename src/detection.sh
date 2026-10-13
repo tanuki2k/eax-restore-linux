@@ -240,7 +240,9 @@ get_game_directory() {
                 GAME_DIR="${GAME_DIR%/}"
                 if [ -z "$GAME_DIR" ]; then
                     print_result "No folder selected." "$YELLOW"
-                    echo ""
+                    # No goes back to the locate menu (or the main menu it
+                    # came from, via back_to_main_menu).
+                    confirm "Browse for the game folder again?" && preset="gui"
                     continue
                 fi
                 print_status "Selected: $GAME_DIR" "$DIM"
