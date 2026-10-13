@@ -105,7 +105,7 @@ launcher hardcodes `releases/latest`).
   `$HOME` (`env.bash`: fake library, prefix, caches, PE stubs; `tests/fixtures/bin`
   stubs `protontricks` (its `regedit` import is applied to `user.reg` by
   `regedit-apply.py`), `winetricks`, `curl`, `pgrep`) with answers piped on stdin
-  (one line per prompt; a new Phase 1 question needs a line in `install_answers`), and
+  (one line per prompt; a new phase 1-3 question needs a line in `install_answers`), and
   checks that uninstall restores the tree byte for byte. Add a test with each bug fix.
   Real Proton/launchers, fzf and the tick-list UI are still manual, as is checking
   `README.md` and the script's own header/inline docs stay in sync with behavior changes.
@@ -205,8 +205,8 @@ their execution order in the assembled script):
    `_wine_reg_set`, which edit a dword or string value in the prefix's
    `system.reg`/`user.reg` text, a key as the section; `wine_registry_quiet` waits
    for wineserver to save and exit before the first one is written, since it
-   writes those files back from memory), `resolve_config_file`, `print_game_settings_details` (the database browser's Tab view: every setting's reason, file, keys and values, via `load_game_config_rows` and `print_config_rows` with `__ANY__` for the unknown current value), `offer_alsoft_settings` (step 8),
-   `game_settings_step` (steps 11-12: audio, then optional), `apply_game_settings` (Phase 2, writes `CONFIG:`
+   writes those files back from memory), `resolve_config_file`, `print_game_settings_details` (the database browser's Tab view: every setting's reason, file, keys and values, via `load_game_config_rows` and `print_config_rows` with `__ANY__` for the unknown current value), `offer_alsoft_settings` (phase 3's first question, run from `game_settings_step`),
+   `game_settings_step` (phase 3, steps 1-2: audio, then optional), `apply_game_settings` (Phase 4, writes `CONFIG:`
    manifest lines), `print_game_settings_summary`, `revert_game_settings`
    (uninstall step 7). All of it driven by the entry's `game_config` /
    `install.alsoft_ini`. The speaker step lives here too, shared by install
@@ -260,8 +260,10 @@ their execution order in the assembled script):
     its own folder with `identify_game_dir` and the prefix from the manifest,
     so it has no launcher step), `ACTION: UNINSTALL`, `ACTION: INSTALL`. The `ACTION: INSTALL` block itself
     spans two files sharing one `if [ "$SCRIPT_ACTION" == "i" ]` — opened in
-    `config-flow.sh` (Phase 1: Configuration, all the interactive prompts)
-    and closed in `install-flow.sh` (Phase 2: Execution, actually deploying
+    `config-flow.sh` (phases 1-3: Game, Sound fix, Game settings, all the interactive
+    prompts; `print_install_overview` introduces them and `print_install_phase`
+    draws each banner, with steps numbering from 1 in each)
+    and closed in `install-flow.sh` (phase 4: Install, actually deploying
     files/running protontricks/winetricks). Around all of that, a `while true`
     loop opened just above the main menu in `vcrun-only-flow.sh` and closed
     (`break; done`) at the bottom of `install-flow.sh` lets install step 1 go

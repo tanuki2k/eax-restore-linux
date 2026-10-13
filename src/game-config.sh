@@ -4,9 +4,9 @@
 # Everything the script changes in a game's own config files comes from that
 # game's profile (game_config.audio_settings / optional_settings) — the script
 # itself only knows how to read and edit the seven config formats, never which
-# game needs what. Decided in Phase 1 (Speaker Configuration offers the
-# alsoft.ini values, steps 11-12 offer the game's own settings), applied in
-# Phase 2, recorded in the manifest as CONFIG: lines, reverted on uninstall.
+# game needs what. Decided in phases 2-3 (Speaker Configuration, then phase 3's Game Audio
+# Settings offers the alsoft.ini values and the game's own settings), applied in
+# Phase 4, recorded in the manifest as CONFIG: lines, reverted on uninstall.
 #
 # Values travel through here as plain strings plus three markers:
 #   __TRUE__ / __FALSE__  a dark_cfg flag switched on / off (true/false in JSON)
@@ -848,18 +848,28 @@ speaker_config_from_alsoft() {
     return 0
 }
 
-# Usage: offer_alsoft_settings
-# Speaker Configuration's last question: the game profile's
+# Usage: offer_alsoft_settings [heading command...]
+# Game Audio Settings' first question: the game profile's
 # install.alsoft_ini values, each stated as a fact about the game plus a
-# default-yes offer. Accepted ones land in ALSOFT_OVERRIDES
-# ("section\x1fkey\x1fvalue") for Phase 2 to write into the generated
-# alsoft.ini.
+# default-yes offer. The heading command (the step's header) runs once,
+# right before the first question, so a game with none gets no header.
+# Accepted ones land in ALSOFT_OVERRIDES ("section\x1fkey\x1fvalue") for
+# Phase 4 to write into the generated alsoft.ini.
 offer_alsoft_settings() {
     ALSOFT_OVERRIDES=()
     current_profile || return
-    local sec key value
-    while IFS=$'\x1f' read -r sec key value; do
+    local sec key value asked="" entry
+    # Read first, then ask: a confirm inside a loop fed by the query would
+    # read its answer from the query's output, not from the player.
+    local -a entries=()
+    mapfile -t entries < <(gdb_jq "$KG_ID" "$KG_STORE" '
+        entry0 | .install.alsoft_ini // {}
+        | to_entries[] | .key as $sec | .value | to_entries[] | [$sec, .key, (.value | tostring)] | join("\u001f")')
+    for entry in "${entries[@]}"; do
+        IFS=$'\x1f' read -r sec key value <<< "$entry"
         [ -n "$key" ] || continue
+        if [ -z "$asked" ] && [ $# -gt 0 ]; then "$@"; fi
+        asked=1
         if [ "$sec/$key" == "reverb/boost" ]; then
             echo ""
             echo -e "${WHITE}${GAME_NAME}'s reverb is quiet at the default level.${NC}"
@@ -868,9 +878,7 @@ offer_alsoft_settings() {
             confirm "Set ${key} to ${value} in alsoft.ini for ${GAME_NAME}?" Y || continue
         fi
         ALSOFT_OVERRIDES+=("$sec"$'\x1f'"$key"$'\x1f'"$value")
-    done < <(gdb_jq "$KG_ID" "$KG_STORE" '
-        entry0 | .install.alsoft_ini // {}
-        | to_entries[] | .key as $sec | .value | to_entries[] | [$sec, .key, (.value | tostring)] | join("\u001f")')
+    done
 }
 
 # Usage: apply_alsoft_overrides
@@ -888,9 +896,9 @@ apply_alsoft_overrides() {
 }
 
 # Usage: game_settings_step <step_number>
-# Phase 1's Game Settings step. Reads each fix's config files as they are now,
+# Phase 3's Game Settings step. Reads each fix's config files as they are now,
 # so every row shows the real current → new value; nothing is written here.
-# Accepted rows go into GAME_SETTINGS_PLAN for Phase 2. For the final summary,
+# Accepted rows go into GAME_SETTINGS_PLAN for Phase 4. For the final summary,
 # settings whose file doesn't exist yet go into GAME_SETTINGS_MISSING, ones the
 # player turns down into GAME_SETTINGS_DECLINED, and ones left out because this
 # build has no such file (if_missing "skip") into GAME_SETTINGS_ABSENT. A
@@ -911,11 +919,6 @@ game_settings_step() {
     GAME_SETTINGS_CANCELLED=""
     current_profile || return
 
-    local -a rows=()
-    local row
-    while IFS= read -r row; do [ -n "$row" ] && rows+=("$row"); done < <(load_game_config_rows "$KG_ID" "$KG_STORE")
-    [ ${#rows[@]} -eq 0 ] && return
-
     # Two steps: the audio settings (step <step>) and the optional ones (the
     # next step; in Tools → Optional settings, which shows only those, the
     # caller's step). Each heading is printed the first time something needs
@@ -930,7 +933,7 @@ game_settings_step() {
             if [ -n "${GAME_SETTINGS_SPEAKERS_ONLY:-}" ]; then
                 print_paragraph "This step changes ${GAME_NAME:-the game}'s own settings to match your speakers."
             else
-                print_paragraph "This step turns on ${GAME_NAME:-the game}'s own EAX options."
+                print_paragraph "This step sets up ${GAME_NAME:-the game}'s own sound options for EAX."
             fi
             audio_heading_shown=1
         else
@@ -943,6 +946,20 @@ game_settings_step() {
         fi
         GAME_SETTINGS_STEP_SHOWN=1
     }
+
+    # The profile's alsoft.ini values (a reverb boost) are about the game,
+    # not the player's speakers, so they're offered here under the audio
+    # heading, not in Speaker Configuration. Only the install asks; both
+    # Tools modes leave them alone. Before the rows check below, since a game
+    # can have a boost and no config files to change.
+    if [ -z "${GAME_SETTINGS_SPEAKERS_ONLY:-}" ] && [ -z "${GAME_SETTINGS_EDIT_OPTIONAL:-}" ]; then
+        offer_alsoft_settings _game_settings_heading audio
+    fi
+
+    local -a rows=()
+    local row
+    while IFS= read -r row; do [ -n "$row" ] && rows+=("$row"); done < <(load_game_config_rows "$KG_ID" "$KG_STORE")
+    [ ${#rows[@]} -eq 0 ] && return
 
     # Per-fix state, keyed "category:number" in database order.
     local -a fix_order=()
@@ -1311,11 +1328,11 @@ wine_registry_quiet() {
 }
 
 # Usage: apply_game_settings
-# Phase 2: writes GAME_SETTINGS_PLAN into the game's config files and records
+# Phase 4: writes GAME_SETTINGS_PLAN into the game's config files and records
 # each change in the manifest as
 #   CONFIG:<audio|optional>\t<title>\t<path>\t<format>\t<section>\t<key>\t<old>\t<new>
 # Each file is backed up once as <file>.eax-restore.bak before its first edit
-# ever, and re-read first so a change made since Phase 1 isn't clobbered
+# ever, and re-read first so a change made since Phase 3 isn't clobbered
 # needlessly. On a reinstall, the old value recorded last time is kept (it's
 # the player's original), and last run's CONFIG lines for settings still in
 # effect are carried over so uninstall can still revert them.

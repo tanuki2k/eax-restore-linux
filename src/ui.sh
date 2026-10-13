@@ -50,6 +50,31 @@ print_banner() {
     print_divider
 }
 
+# Usage: print_install_phase N "LABEL"
+# The install's "--- PHASE N OF 4: LABEL ---" banner. Its steps number from 1
+# again in each phase (the caller sets STEP_TOTAL to that phase's count).
+# Not the PHASE_STEP/PHASE_TOTAL progress bar below, which is phase 4's.
+print_install_phase() {
+    print_banner "PHASE $1 OF 4: $2"
+}
+
+# Usage: print_install_overview
+# Shown once before the install's first phase: what the four phases are, and
+# that only the last one changes anything.
+print_install_overview() {
+    print_banner "HOW IT WORKS"
+    # Own rows, not print_paragraph: its WHITE renders bold, and a whole
+    # screen of that reads as shouting. Here only the phase names are bold;
+    # the numbers are GREEN like the phase banners, except the one phase
+    # that changes anything, in YELLOW.
+    echo -e "\nThe install has four phases:\n"
+    echo -e "  ${GREEN}1.${NC}  ${BOLD}Game${NC}           ${DIM}finds the game and works out how it plays sound${NC}"
+    echo -e "  ${GREEN}2.${NC}  ${BOLD}Sound fix${NC}      ${DIM}picks the audio files and sets up your speakers${NC}"
+    echo -e "  ${GREEN}3.${NC}  ${BOLD}Game settings${NC}  ${DIM}offers changes to the game's own audio and other settings${NC}"
+    echo -e "  ${YELLOW}4.${NC}  ${BOLD}Install${NC}        ${DIM}makes the changes, once you've confirmed${NC}"
+    echo -e "\nPhases ${GREEN}1${NC} to ${GREEN}3${NC} only ask questions. Nothing on your system changes until ${YELLOW}phase 4${NC}."
+}
+
 # Usage: print_start_header [design]
 # The logo at the top of every run: one of four designs, picked at random
 # from those no wider than the terminal (80 columns when there's none to
@@ -145,11 +170,11 @@ print_centred_box() {
 
 # Usage: print_step N "Label"
 # Emits the numbered step header ("2. Launcher Identification") used to
-# separate the sub-stages of PHASE 1: CONFIGURATION. Same blank/divider/
+# separate the sub-stages of an install phase. Same blank/divider/
 # label/divider wrapper as print_banner (no trailing blank either), but a
 # plain (non-bold) CYAN label with no surrounding dashes. When the calling
-# flow has set the STEP_TOTAL global (its fixed step count — install is 9,
-# uninstall is 6, VCRUN_ONLY is 2), renders "N/TOTAL. Label" instead of just
+# flow has set the STEP_TOTAL global (its fixed step count — each install
+# phase sets its own, uninstall is 7, VCRUN_ONLY is 2), renders "N/TOTAL. Label" instead of just
 # "N. Label" so the user can gauge how much of the flow is left; a caller
 # that never sets it (e.g. detection.sh's select_architecture, invoked from
 # more than one flow) keeps today's plain "N. Label" behavior.

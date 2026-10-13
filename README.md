@@ -87,11 +87,11 @@ unzip, file, protontricks, winetricks, wine, and jq are already available.[0m
 > m
 
 [0;36m----------------------------------------------------------[0m
-[0;32m[1m--- PHASE 1: CONFIGURATION ---[0m
+[0;32m[1m--- PHASE 1 OF 4: GAME ---[0m
 [0;36m----------------------------------------------------------[0m
 
 [0;36m----------------------------------------------------------[0m
-[0;36m1/11. Game Location[0m
+[0;36m1/5. Game Location[0m
 [0;36m----------------------------------------------------------[0m
 
 [1;37mCommon game locations:[0m
@@ -230,7 +230,7 @@ A game file looks like this (see `data/games/tested/` for more):
     - `"eax_unified"` — for titles that reach EAX through Creative's `eax.dll` "EAX Unified" shim rather than native DirectSound3D. Drives a guarded prompt for the EAX Unified Dummy Files tweak (it checks whether the game ships its own `eax.dll` first).
     - `"expand_audio_limits"` — for a title independently verified to need it, e.g. F.E.A.R.'s audio dropping out during large firefights.
     - `"com_registry_routing"` — for a title independently verified to need it, e.g. Grand Theft Auto: San Andreas.
-  - `alsoft_ini` — OpenAL Soft settings offered for this game in the Speaker Configuration step, as section → key → value strings. Only `reverb.boost` and `general.sources` / `frequency` / `default-reverb` / `resampler` are allowed. E.g. `{ "reverb": { "boost": "6" } }` for a game whose reverb is quiet — test that the value doesn't make the reverb pop.
+  - `alsoft_ini` — OpenAL Soft settings offered for this game in the Game Audio Settings step (phase 3), as section → key → value strings. Only `reverb.boost` and `general.sources` / `frequency` / `default-reverb` / `resampler` are allowed. E.g. `{ "reverb": { "boost": "6" } }` for a game whose reverb is quiet — test that the value doesn't make the reverb pop.
 - `game_config` — changes to the game's **own** config files (or its registry settings), offered in the Game Settings step. The player sees each file, setting and its current → new value, confirms, and uninstall puts the original values back (leaving anything the player has changed since alone).
   - `files` — each config file, keyed by its file name:
     - `format` — `"ini"` (`[Section]` + `key=value`), `"flat_ini"` (`key=value` lines with no `[Section]` headers, e.g. Thief: Deadly Shadows' `options.ini`), `"idtech_cfg"` (`seta key "value"`, id Tech games), `"dark_cfg"` (NewDark's `key value` lines, where a bare `key` turns a flag on and `;key` turns it off), `"brace_cfg"` (`{key} = {value}` lines, e.g. Fallout Tactics' `bos.cfg`), `"gadb"` (Monolith's binary game database, e.g. F.E.A.R.'s `Profile000.gdb`; it can only switch a setting the file already has on or off, so its values are `"0"` or `"1"`) or `"wine_reg"` (for a game that keeps its options in the registry, e.g. Descent 3: the prefix's `system.reg` for `HKEY_LOCAL_MACHINE` or `user.reg` for `HKEY_CURRENT_USER`, keyed `"system.reg"` / `"user.reg"`. Only number (dword) and text values can be changed, a number written in decimal; the script waits for Wine to save the registry and exit before changing it, and won't while the game is running).

@@ -1,9 +1,9 @@
     # Continues the "if [ "$SCRIPT_ACTION" == "i" ]" block opened at the top
     # of config-flow.sh.
     # ==============================================================================
-    # PHASE 2: EXECUTION
+    # PHASE 4: INSTALL
     # ==============================================================================
-    print_banner "PHASE 2: EXECUTION"
+    print_install_phase 4 "INSTALL"
     print_result "${BOLD}Configuration finished!" "$CYAN"
     print_choices_summary
     if ! confirm "Ready to deploy the audio files to your game and system prefix. Proceed?"; then

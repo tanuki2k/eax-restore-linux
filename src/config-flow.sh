@@ -26,7 +26,7 @@ show_tweak_blurb() {
 }
 
 # Usage: print_choices_summary
-# Phase 2's "Configuration finished!" recap of every Phase 1 answer, shown
+# Phase 4's "Configuration finished!" recap of every answer from phases 1-3, shown
 # before the player confirms the deploy so they can check it all in one place.
 # Laid out like the GAME PROFILE: Game details, Sound and Setup headings over
 # one aligned list of rows (print_detail_rows), then the chosen game settings
@@ -140,21 +140,23 @@ print_choices_summary() {
 }
 
 if [ "$SCRIPT_ACTION" == "i" ]; then
-    # Fixed step count for this flow (1-12, same regardless of launcher/engine
-    # branch) — read by print_step via the STEP_TOTAL global so headers show
-    # "N/12. Label" instead of just "N. Label". Steps 11 ("Game Audio
-    # Settings") and 12 ("Optional Game Settings") only appear for a game whose
-    # profile has settings of that kind to offer. Step 2 ("Locate Game
-    # Executable") only ever appears on the scan path — resolve_exe_folder
-    # prints it itself — so browse/manual users jump straight from 1 to 3.
-    STEP_TOTAL=12
+    # The install runs in four phases whose steps number from 1 again. Each
+    # phase sets STEP_TOTAL (same regardless of launcher/engine branch) —
+    # read by print_step so headers show "N/5. Label" instead of "N. Label".
+    # Phase 1's step 2 ("Locate Game Executable") only ever appears on the
+    # scan path — resolve_exe_folder prints it itself — so browse/manual
+    # users jump straight from 1 to 3. Phase 3's two steps ("Game Audio
+    # Settings", "Optional Game Settings") only appear for a game whose
+    # profile has settings of that kind to offer. Phase 4 is install-flow.sh.
+    STEP_TOTAL=5
 
     # Nothing is downloaded yet: step 6 fetches only the builds that get
     # picked. This only checks GitHub can be reached, and stops now if it
     # can't and nothing usable is cached.
     check_download_readiness
 
-    print_banner "PHASE 1: CONFIGURATION"
+    print_install_overview
+    print_install_phase 1 "GAME"
 
     # Steps 1-2 loop: at an EAX-impossible dead end (see prompt_restart_or_quit)
     # the user can choose to go back and pick a different game instead of the
@@ -222,8 +224,12 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     # 5. Architecture Scan
     select_architecture 5
 
-    # 6. Engine Selection
-    print_step 6 "Audio Engine Selection"
+    # Phase 2: the sound fix itself
+    print_install_phase 2 "SOUND FIX"
+    STEP_TOTAL=5
+
+    # 1. Engine Selection
+    print_step 1 "Audio Engine Selection"
 
     if [ -n "$OPENAL_NATIVE_MODE" ]; then
         ENGINE_CHOICE=2
@@ -285,13 +291,13 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         PRIMARY_DLL_FILENAME="OpenAL32.dll"
     fi
 
-    # 7. VC++ Runtime Dependencies
+    # 2. VC++ Runtime Dependencies
     # Both engines are kcat builds (DSOAL, OpenAL Soft) that need the genuine
     # MS runtime on older Proton/Wine, so this step always runs now rather
     # than being gated on the engine choice.
     INSTALL_VCRUN="n"
     VCRUN_CHECKED="n"
-    print_step 7 "VC++ Runtime Dependencies"
+    print_step 2 "VC++ Runtime Dependencies"
     print_paragraph "Genuine Microsoft C++ runtime libraries are needed for older Proton/Wine" \
         "builds (9 and below) to load kcat's DSOAL / OpenAL Soft."
 
@@ -322,18 +328,14 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     fi
     choose_companion_vcrun "$VCRUN_CHECKED"
 
-    # 8. Audio Configuration
-    print_step 8 "Speaker Configuration"
+    # 3. Speaker Configuration
+    print_step 3 "Speaker Configuration"
     print_paragraph "This step sets up ${GAME_NAME:-the game}'s 3D sound for your speakers or headphones, so" \
         "sounds come from the right direction."
     ask_speaker_configuration
 
-    # The game profile's alsoft.ini values (e.g. a reverb boost) are
-    # OpenAL Soft settings, so they're offered here with the rest of them.
-    offer_alsoft_settings
-
-    # 9. Advanced Compatibility Tweaks
-    print_step 9 "Advanced Compatibility Tweaks"
+    # 4. Advanced Compatibility Tweaks
+    print_step 4 "Advanced Compatibility Tweaks"
     print_paragraph "This step offers workarounds for the few games that don't play EAX sound even with the" \
         "fix in place."
 
@@ -476,8 +478,8 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         fi
     fi
 
-    # 10. Automatic DLL Override
-    print_step 10 "DLL Override"
+    # 5. Automatic DLL Override
+    print_step 5 "DLL Override"
     print_paragraph "$(runner_label) needs to be told to load the new ${PRIMARY_DLL_FILENAME} instead of its built-in one." \
         "Where would you like to set that up?"
 
@@ -488,9 +490,13 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     choose_override_method
     choose_companion_overrides
 
-    # 11. Game Settings — changes to the game's own config files, from its
-    # game profile. Last, since it's about the game rather than the
-    # audio fix, and the speaker answer from step 8 decides some of them.
-    game_settings_step 11
+    # Phase 3: the game's own settings, from its game profile (its config
+    # files, and the alsoft.ini values such as a reverb boost). After the
+    # sound fix, since the speaker answer decides some of them.
+    print_install_phase 3 "GAME SETTINGS"
+    STEP_TOTAL=2
+    GAME_SETTINGS_STEP_SHOWN=""
+    game_settings_step 1
+    [ -n "$GAME_SETTINGS_STEP_SHOWN" ] || print_paragraph "${GAME_NAME} has no settings of its own to change."
 
     # (continues below: "if" opened above closes at the bottom of install-flow.sh)
