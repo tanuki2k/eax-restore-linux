@@ -19,6 +19,13 @@
             "Galaxy.GalaxyAudioSubsystem": { "Use3dHardware": "True", "UseSpatial": "True" }
           }
         }
+      },
+      {
+        "title": "Enable Dolby Pro Logic",
+        "reason": "Turns on Dolby Pro Logic, A compatible AV receiver or Soundbar is required for Surround sound. Dolby Pro Logic is an analog matrix surround-sound codec technology.",
+        "only_if": { "speakers": "matrix" },
+        "changes": { "System.ini": { "Galaxy.GalaxyAudioSubsystem": { "UseSurround": true } } },
+        "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic."
       }
     ],
     "optional_settings": [

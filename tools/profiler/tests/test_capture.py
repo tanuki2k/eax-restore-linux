@@ -87,6 +87,19 @@ class NewStub(unittest.TestCase):
                     os.remove(dbio._path("untested", g))
 
 
+class ConfigTxt(unittest.TestCase):
+    def test_sectioned_txt_is_captured_as_ini_but_a_readme_is_not(self):
+        before = "[Sound]\r\nsoundvolume = 75\r\neaxenabled = 0\r\n"
+        after = before.replace("eaxenabled = 0", "eaxenabled = 1")
+        readme = "Thanks for playing.\nSee the manual = good\n"
+        with tempfile.TemporaryDirectory() as t:
+            game, sd = world(t, {"Profiles/Player.txt": before, "readme.txt": readme},
+                             {"Profiles/Player.txt": after, "readme.txt": readme + "x\n"})
+            self.assertEqual([d["file"] for d in capture.diff_snapshots(game, sd, "a", "b")], ["Player.txt"])
+            gc, skipped = classify.draft_game_config(capture.diff_snapshots(game, sd, "a", "b"), [])
+        self.assertEqual(gc["files"]["Player.txt"], {"format": "ini", "locations": ["game:Profiles/Player.txt"]})
+
+
 class Noise(unittest.TestCase):
     def test_flags_bookkeeping_not_options(self):
         self.assertTrue(classify.noise_reason("WindowPosX", "1", "2"))

@@ -16,18 +16,10 @@
         "title": "Enable EAX reverb",
         "reason": "Descent 3's launcher sets the sound mixer to DirectSound instead of 'Creative EAX', so the game plays without reverb.",
         "changes": {
-          "system.reg": { "Software\\Wow6432Node\\Outrage\\Descent3": { "SoundMixer": "6" } }
-        }
-      },
-      {
-        "title": "Enable EAX reverb",
-        "reason": "TODO",
-        "changes": {
           "system.reg": {
             "Software\\Wow6432Node\\Outrage\\Descent3": {
-              "LauncherSoundEnabled": "1",
-              "SoundcardName": "Primary Sound Driver",
-              "SoundMixer": "6"
+              "SoundMixer": "6",
+              "SoundcardName": "Primary Sound Driver"
             }
           }
         }
@@ -35,8 +27,8 @@
     ],
     "optional_settings": [
       {
-        "title": "TODO",
-        "reason": "TODO",
+        "title": "Set detail level to a fixed preset and LAN connection",
+        "reason": "Descent 3 saves its detail preset and network connection type in the registry. The changes show it was set to detail setting 3, marked as configured, with a LAN connection at Fast speed.",
         "changes": {
           "system.reg": {
             "Software\\Wow6432Node\\Outrage\\Descent3": {

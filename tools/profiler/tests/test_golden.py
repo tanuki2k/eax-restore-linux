@@ -77,24 +77,15 @@ class Descent3(unittest.TestCase):
     KEY = "Software\\\\Wow6432Node\\\\Outrage\\\\Descent3"
 
     def test_registry_changes_match_the_entry(self):
-        entry = dbio.load("untested", "descent-3")
+        entry = dbio.load("tested", "descent-3")
         want = entry["game_config"]["audio_settings"][0]["changes"]
         before = self.HDR + f'[{self.KEY}] 1\n"SoundMixer"=dword:00000001\n[Software\\\\Wine\\\\Drivers] 1\n"Audio"="alsa"\n'
-        after = self.HDR + f'[{self.KEY}] 1\n"SoundMixer"=dword:00000006\n[Software\\\\Wine\\\\Drivers] 1\n"Audio"="pulse"\n'
+        after = self.HDR + f'[{self.KEY}] 1\n"SoundMixer"=dword:00000006\n"SoundcardName"="Primary Sound Driver"\n[Software\\\\Wine\\\\Drivers] 1\n"Audio"="pulse"\n'
         with tempfile.TemporaryDirectory() as t:
             game, sd = world(t, {"~system.reg": before}, {"~system.reg": after})
             gc, _ = classify.draft_game_config(capture.diff_snapshots(game, sd, "a", "b"), [])
         self.assertEqual(gc["audio_settings"][0]["changes"], want)
         self.assertEqual(gc["files"]["system.reg"], entry["game_config"]["files"]["system.reg"])
-
-    def test_string_and_dword_values_together(self):
-        want = dbio.load("untested", "descent-3")["game_config"]["audio_settings"][1]["changes"]
-        before = self.HDR + f'[{self.KEY}] 1\n"SoundMixer"=dword:00000001\n'
-        after = self.HDR + f'[{self.KEY}] 1\n"LauncherSoundEnabled"=dword:00000001\n"SoundMixer"=dword:00000006\n"SoundcardName"="Primary Sound Driver"\n'
-        with tempfile.TemporaryDirectory() as t:
-            game, sd = world(t, {"~system.reg": before}, {"~system.reg": after})
-            gc, _ = classify.draft_game_config(capture.diff_snapshots(game, sd, "a", "b"), [])
-        self.assertEqual(gc["audio_settings"][0]["changes"], want)
 
 
 if __name__ == "__main__":

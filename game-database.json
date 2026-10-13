@@ -753,6 +753,21 @@
                 }
               }
             }
+          },
+          {
+            "title": "Enable Dolby Pro Logic",
+            "reason": "Turns on Dolby Pro Logic, A compatible AV receiver or Soundbar is required for Surround sound. Dolby Pro Logic is an analog matrix surround-sound codec technology.",
+            "only_if": {
+              "speakers": "matrix"
+            },
+            "changes": {
+              "System.ini": {
+                "Galaxy.GalaxyAudioSubsystem": {
+                  "UseSurround": true
+                }
+              }
+            },
+            "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic."
           }
         ],
         "optional_settings": [
@@ -855,20 +870,8 @@
             "changes": {
               "system.reg": {
                 "Software\\Wow6432Node\\Outrage\\Descent3": {
-                  "SoundMixer": "6"
-                }
-              }
-            }
-          },
-          {
-            "title": "Enable EAX reverb",
-            "reason": "TODO",
-            "changes": {
-              "system.reg": {
-                "Software\\Wow6432Node\\Outrage\\Descent3": {
-                  "LauncherSoundEnabled": "1",
-                  "SoundcardName": "Primary Sound Driver",
-                  "SoundMixer": "6"
+                  "SoundMixer": "6",
+                  "SoundcardName": "Primary Sound Driver"
                 }
               }
             }
@@ -876,8 +879,8 @@
         ],
         "optional_settings": [
           {
-            "title": "TODO",
-            "reason": "TODO",
+            "title": "Set detail level to a fixed preset and LAN connection",
+            "reason": "Descent 3 saves its detail preset and network connection type in the registry. The changes show it was set to detail setting 3, marked as configured, with a LAN connection at Fast speed.",
             "changes": {
               "system.reg": {
                 "Software\\Wow6432Node\\Outrage\\Descent3": {
@@ -943,6 +946,21 @@
                 }
               }
             }
+          },
+          {
+            "title": "Enable Dolby Pro Logic ",
+            "reason": "Turns on Dolby Pro Logic, A compatible AV receiver or Soundbar is required for Surround sound. Dolby Pro Logic is an analog matrix surround-sound codec technology.",
+            "only_if": {
+              "speakers": "matrix"
+            },
+            "changes": {
+              "DeusEx.ini": {
+                "Galaxy.GalaxyAudioSubsystem": {
+                  "UseSurround": true
+                }
+              }
+            },
+            "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic."
           }
         ],
         "optional_settings": [
@@ -2847,7 +2865,23 @@
             "changes": {
               "swkotor.ini": {
                 "Sound Options": {
-                  "EAX": "1"
+                  "EAX": "3"
+                }
+              }
+            }
+          }
+        ],
+        "optional_settings": [
+          {
+            "title": "Raise anti-aliasing and anisotropic filtering",
+            "reason": "The game's graphics options default to no anti-aliasing and no anisotropic filtering. This sets 8x anti-aliasing and 16x anisotropic filtering for sharper edges and textures.",
+            "changes": {
+              "swkotor.ini": {
+                "Graphics Options": {
+                  "Anisotropy": "16",
+                  "Anti Aliasing": "8",
+                  "Frame Buffer": "1",
+                  "Soft Shadows": "1"
                 }
               }
             }
@@ -3617,7 +3651,11 @@
       "name": "TRON 2.0",
       "description": "TRON 2.0 is a singleplayer and multiplayer first-person shooter game in the Tron series.",
       "released": "2003-08-26",
+      "exe": "Lithtech.exe",
       "stores": {
+        "steam": {
+          "id": 327740
+        },
         "gog": {
           "id": 1655444396
         }
@@ -3627,6 +3665,29 @@
         "versions": [
           "2.0",
           "3.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "Player.txt": {
+            "format": "ini",
+            "locations": [
+              "game:Profiles/Player.txt"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX reverb",
+            "reason": "TRON 2.0 only plays EAX reverb with the EAX option in its player profile turned on.",
+            "changes": {
+              "Player.txt": {
+                "Sound": {
+                  "eaxenabled": "1"
+                }
+              }
+            }
+          }
         ]
       }
     },
@@ -3684,6 +3745,21 @@
                 }
               }
             }
+          },
+          {
+            "title": "Enable Dolby Pro Logic ",
+            "reason": "Turns on Dolby Pro Logic, A compatible AV receiver or Soundbar is required for Surround sound. Dolby Pro Logic is an analog matrix surround-sound codec technology.",
+            "only_if": {
+              "speakers": "matrix"
+            },
+            "changes": {
+              "Unreal.ini": {
+                "GalaxyAudioSubsystem": {
+                  "UseSurround": true
+                }
+              }
+            },
+            "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic."
           }
         ],
         "optional_settings": [
@@ -3734,7 +3810,7 @@
                   "C": "Duck",
                   "Ctrl": "Duck",
                   "RightMouse": "AltFire",
-                  "MiddleMouse": "",
+                  "MiddleMouse": " ",
                   "MouseWheelUp": "PrevWeapon",
                   "MouseWheelDown": "NextWeapon"
                 }
@@ -3885,11 +3961,25 @@
             "changes": {
               "UTEngine.ini": {
                 "ALAudio.ALAudioDevice": {
-                  "DeviceName": "",
                   "UseEffectsProcessing": "True"
                 }
               }
             }
+          },
+          {
+            "title": "Enable Dolby Pro Logic ",
+            "reason": "Turns on Dolby Pro Logic, A compatible AV receiver or Soundbar is required for Surround sound. Dolby Pro Logic is an analog matrix surround-sound codec technology.",
+            "only_if": {
+              "speakers": "matrix"
+            },
+            "changes": {
+              "UTEngine.ini": {
+                "Galaxy.GalaxyAudioSubsystem": {
+                  "UseSurround": true
+                }
+              }
+            },
+            "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic."
           }
         ]
       }
@@ -3951,6 +4041,21 @@
                 }
               }
             }
+          },
+          {
+            "title": "Enable Dolby Pro Logic ",
+            "reason": "Turns on Dolby Pro Logic, A compatible AV receiver or Soundbar is required for Surround sound. Dolby Pro Logic is an analog matrix surround-sound codec technology.",
+            "only_if": {
+              "speakers": "matrix"
+            },
+            "changes": {
+              "UnrealTournament.ini": {
+                "Galaxy.GalaxyAudioSubsystem": {
+                  "UseSurround": true
+                }
+              }
+            },
+            "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic."
           }
         ],
         "optional_settings": [
@@ -4001,7 +4106,6 @@
                   "C": "Duck",
                   "Ctrl": "Duck",
                   "RightMouse": "AltFire",
-                  "MiddleMouse": "",
                   "MouseWheelUp": "PrevWeapon",
                   "MouseWheelDown": "NextWeapon"
                 }
@@ -4058,6 +4162,21 @@
                 }
               }
             }
+          },
+          {
+            "title": "Enable Dolby Pro Logic ",
+            "reason": "Turns on Dolby Pro Logic, A compatible AV receiver or Soundbar is required for Surround sound. Dolby Pro Logic is an analog matrix surround-sound codec technology.",
+            "only_if": {
+              "speakers": "matrix"
+            },
+            "changes": {
+              "XCom.ini": {
+                "Galaxy.GalaxyAudioSubsystem": {
+                  "UseSurround": true
+                }
+              }
+            },
+            "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic."
           }
         ],
         "optional_settings": [

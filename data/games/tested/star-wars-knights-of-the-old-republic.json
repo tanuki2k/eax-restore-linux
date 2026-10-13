@@ -15,7 +15,23 @@
       {
         "title": "Enable EAX reverb",
         "reason": "KOTOR ships with EAX off.",
-        "changes": { "swkotor.ini": { "Sound Options": { "EAX": "1" } } }
+        "changes": { "swkotor.ini": { "Sound Options": { "EAX": "3" } } }
+      }
+    ],
+    "optional_settings": [
+      {
+        "title": "Raise anti-aliasing and anisotropic filtering",
+        "reason": "The game's graphics options default to no anti-aliasing and no anisotropic filtering. This sets 8x anti-aliasing and 16x anisotropic filtering for sharper edges and textures.",
+        "changes": {
+          "swkotor.ini": {
+            "Graphics Options": {
+              "Anisotropy": "16",
+              "Anti Aliasing": "8",
+              "Frame Buffer": "1",
+              "Soft Shadows": "1"
+            }
+          }
+        }
       }
     ]
   }

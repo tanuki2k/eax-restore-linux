@@ -3,7 +3,7 @@
 
 load ../helpers
 
-setup() { load_script_functions; }
+setup() { load_script_functions; source "$REPO_ROOT/src/detection.sh"; }
 
 sel() { parse_selection "$1" "$2"; local i out=""; for ((i = 1; i <= $1; i++)); do out+="${SELECTED[$i]}"; done; echo "$out"; }
 
@@ -62,4 +62,15 @@ sel() { parse_selection "$1" "$2"; local i out=""; for ((i = 1; i <= $1; i++)); 
     OUTPUT_MODE=surround SURROUND_CHANNELS=surround51; [ "$(speaker_label)" == "Surround 5.1" ]
     OUTPUT_MODE=matrix; [ "$(speaker_label)" == "Matrix encoding" ]
     OUTPUT_MODE=stereo STEREO_MODE=headphones ENABLE_HRTF=y; [ "$(speaker_label)" == "Headphones, HRTF on" ]
+}
+
+@test "detect_api_from_binary: the profile's exe mentioning DirectSound beats a side DLL naming it" {
+    local d="$BATS_TEST_TMPDIR/tron"
+    mkdir -p "$d"
+    printf 'xx DirectSound xx' > "$d/Lithtech.exe"
+    printf 'xx dsound.dll xx' > "$d/binkw32.dll"
+    printf 'launcher' > "$d/TRON.exe"
+    IFS=$'\x1f' read -r api ds _ < <(detect_api_from_binary "$d" Lithtech.exe)
+    [ "$api" == "directsound3d" ]
+    [ "$ds" == "Lithtech.exe" ]
 }

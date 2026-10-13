@@ -1070,8 +1070,10 @@ detect_api_from_binary() {
     # the plain alphabetical first hit was usually binkw32.dll (Bink video),
     # SDL2.dll or testapp.exe. So .exe files are read before .dll files, the
     # exe folder before its subfolders, and a file naming the DLL beats one
-    # that only mentions the API. The profile's exe, when given, goes first
-    # of all: the locale sort put Quake4Ded.exe (the dedicated server) ahead
+    # that only mentions the API, except that the profile's exe wins with
+    # either: TRON 2.0's Lithtech.exe only mentions DirectSound, but it is the
+    # game, while the Bink video DLL beside it names dsound.dll. The profile's
+    # exe, when given, goes first of all: the locale sort put Quake4Ded.exe (the dedicated server) ahead
     # of Quake4.exe. "both" is common (an engine with more than
     # one backend) and the caller treats it as a low-confidence DirectSound3D
     # guess, not a confirmation. On a reinstall, this script's own
@@ -1080,7 +1082,7 @@ detect_api_from_binary() {
     # about the game itself — excluded by name.
     local dir="${1%/}" main_exe=""
     local ds_named="" ds_mentioned="" openal_named="" openal_mentioned=""
-    local f rel depth ext
+    local ds_main="" openal_main="" f rel depth ext
     [ -n "${2:-}" ] && main_exe="$(find "$dir" -maxdepth 1 -type f -iname "$2" -print -quit 2>/dev/null)"
     # Pass "0exe" is the profile's exe on its own, read before anything else;
     # the later passes skip it.
@@ -1107,12 +1109,19 @@ detect_api_from_binary() {
                         ds_mentioned="$rel"
                     fi
                 fi
+                # Whatever the profile's exe itself showed is kept apart, so
+                # it can win below.
+                if [ "$depth$ext" == "0exe" ]; then
+                    ds_main="${ds_named:-$ds_mentioned}"
+                    openal_main="${openal_named:-$openal_mentioned}"
+                fi
             done < <(if [ "$depth$ext" == "0exe" ]; then printf '%s\0' "$main_exe"
                 else find "$dir" -mindepth "$depth" -maxdepth "$depth" -type f -iname "*.$ext" -print0 2>/dev/null | sort -z; fi)
         done
     done
 
-    local ds_file="${ds_named:-$ds_mentioned}" openal_file="${openal_named:-$openal_mentioned}"
+    local ds_file="${ds_main:-${ds_named:-$ds_mentioned}}"
+    local openal_file="${openal_main:-${openal_named:-$openal_mentioned}}"
     local api=""
     if [ -n "$openal_file" ] && [ -n "$ds_file" ]; then
         api="both"

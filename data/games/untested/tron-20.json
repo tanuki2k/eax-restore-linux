@@ -3,8 +3,20 @@
   "name": "TRON 2.0",
   "description": "TRON 2.0 is a singleplayer and multiplayer first-person shooter game in the Tron series.",
   "released": "2003-08-26",
+  "exe": "Lithtech.exe",
   "stores": {
+    "steam": { "id": 327740 },
     "gog": { "id": 1655444396 }
   },
-  "eax": { "api": "directsound3d", "versions": ["2.0", "3.0"] }
+  "eax": { "api": "directsound3d", "versions": ["2.0", "3.0"] },
+  "game_config": {
+    "files": { "Player.txt": { "format": "ini", "locations": ["game:Profiles/Player.txt"] } },
+    "audio_settings": [
+      {
+        "title": "Enable EAX reverb",
+        "reason": "TRON 2.0 only plays EAX reverb with the EAX option in its player profile turned on.",
+        "changes": { "Player.txt": { "Sound": { "eaxenabled": "1" } } }
+      }
+    ]
+  }
 }

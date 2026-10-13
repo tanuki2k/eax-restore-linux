@@ -7,6 +7,10 @@ HOME = os.path.expanduser("~")
 STATE = os.path.join(os.environ.get("XDG_STATE_HOME", os.path.join(HOME, ".local/state")),
                      "eax-restore-linux", "profiler")
 CONFIG_RE = re.compile(r".*\.(cfg|ini|ltx|gdb|con)$", re.I)
+# A .txt is only a config file when it reads as one: [Section] lines and
+# key = value lines (TRON 2.0's Profiles/Player.txt), not a readme or licence.
+TXT_SECTION_RE = re.compile(r"^\s*\[[^\]\r\n]+\]\s*$", re.M)
+TXT_KEY_RE = re.compile(r"^\s*[^=\s\[;#][^=\r\n]*=", re.M)
 NOISE_RE = re.compile(r"(^|/)(unins\d*\.|alsoft\.ini$|dxdiag|crash|log|cache|shadercache|"
                       r"openal|dsoal|drivers?\.ini$|goggame|galaxy)", re.I)
 MAX_SNAPSHOT_BYTES = 4_000_000
@@ -145,6 +149,11 @@ def location_of(game, abspath):
     return f"{best[0]}:{os.path.relpath(abspath, best[1])}"
 
 
+def _is_config_txt(fn, data):
+    return fn.lower().endswith(".txt") and bool(TXT_SECTION_RE.search(data.decode("utf-8", "replace"))
+                                                 and TXT_KEY_RE.search(data.decode("utf-8", "replace")))
+
+
 def snapshot(game, session_dir, label):
     """Copies every config-looking file, plus the registry files, into
     session_dir/<label>/ with an index.json mapping abs path -> sha256."""
@@ -158,13 +167,16 @@ def snapshot(game, session_dir, label):
                 dns[:] = []
             for fn in fns:
                 p = os.path.join(dp, fn)
-                if not CONFIG_RE.match(fn) or os.path.islink(p) or NOISE_RE.search(os.path.relpath(p, root)):
+                is_txt = fn.lower().endswith(".txt")
+                if not (CONFIG_RE.match(fn) or is_txt) or os.path.islink(p) or NOISE_RE.search(os.path.relpath(p, root)):
                     continue
                 try:
                     if os.path.getsize(p) > MAX_SNAPSHOT_BYTES:
                         continue
                     data = _rd(p)
                 except OSError:
+                    continue
+                if is_txt and not _is_config_txt(fn, data):
                     continue
                 h = hashlib.sha256(data).hexdigest()
                 index[p] = h

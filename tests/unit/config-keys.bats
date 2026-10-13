@@ -172,3 +172,9 @@ setup() {
     config_set_key "$F" ini general a 2
     [ -z "$(ls -A "$BATS_TEST_TMPDIR" | grep eax-restore-cfg)" ]
 }
+
+@test "ini: Player.txt style spacing around = is kept (TRON 2.0)" {
+    write_file "$F" '[Sound]\nsoundvolume = 75\neaxenabled = 0\n'
+    config_set_key "$F" ini sound eaxenabled 1
+    [ "$(cat "$F")" == $'[Sound]\nsoundvolume = 75\neaxenabled = 1' ]
+}
