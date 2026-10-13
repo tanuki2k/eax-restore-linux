@@ -2,7 +2,7 @@
 // Schema-driven editor: field types, enums, help text and limits come from data/schema.json at
 // runtime, so a new schema field shows up here without touching this file. Only the layout
 // (which fields sit in which section) is written out below.
-let SCHEMA, GAMES = [], STALE = [], AI = null, CUR = null, GAME = null, DIRTY = false, ERRS = [], SECTION = "overview", validateTimer;
+let SCHEMA, GAMES = [], STALE = [], AI = null, CUR = null, GAME = null, DIRTY = false, ERRS = [], SECTION = "overview", validateTimer, CHOSEN_STORE = null;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 const LONG = /^(description|notes|reason|problem|fix|store_details|patches|follow_up)$/;
@@ -203,12 +203,8 @@ function fieldNode(schema, parent, key, path, label) {
     count();
     const extra = [counter];
     if (key === "exe") {
-      // The browser only reveals the picked file's name, which is all this field holds.
-      const pick = el("input", { type: "file", accept: ".exe", hidden: true, onchange: () => {
-        const f = pick.files[0]; if (!f) return;
-        inp.value = f.name; set(f.name); pick.value = "";
-      } });
-      extra.push(pick, el("button", { type: "button", class: "btn sm", title: "Pick the game's .exe to fill in its file name", onclick: () => pick.click() }, "Browse…"));
+      inp.addEventListener("input", () => syncSessionExe(inp.value.trim()));
+      extra.push(...exeBrowse((name) => { inp.value = name; set(name); syncSessionExe(name); }));
     }
     if (key === "description") extra.push(aiButton("description", () => ({ name: GAME.name, released: GAME.released }), (r) => { set(r.description); inp.value = r.description || ""; }));
     if (key === "notes") extra.push(aiButton("notes", () => ({ game: prune(GAME) }), (r) => { set(r.notes); inp.value = r.notes || ""; }));
@@ -491,7 +487,7 @@ function drawList() {
 async function openGame(folder, id) {
   if (DIRTY && !confirm("Discard unsaved changes?")) return;
   const j = await api(`/api/game/${folder}/${id}`);
-  CUR = { folder, id }; GAME = j.game; DIRTY = false; if (SECTION === "capture") SECTION = "overview";
+  CUR = { folder, id }; GAME = j.game; CHOSEN_STORE = null; DIRTY = false; if (SECTION === "capture") SECTION = "overview";
   drawList(); showErrors(j.errors); renderEdit(); $("#main").scrollTop = 0;
   $("#preview").textContent = JSON.stringify(prune(GAME), null, 2);
 }
@@ -563,13 +559,10 @@ async function openCleanup(game) {
 }
 
 // ---------------------------------------------------------------- capture
-let LIB = [], SESS = null, POLL = null;
+let LIB = [], SESS = null, POLL = null, DRAFT = null;
 const STEPS = [
-  ["pre", "Snapshot the config files", "Records every config file and the registry before anything changes. Launches the game once first if it has never run."],
-  ["installed", "Install the fix (no prompts)", "Runs the installer with canned answers and no game settings, then records the files again."],
-  ["baseline", "Baseline run (optional)", "Start the game and quit without changing anything. Options the game rewrites on its own are then ignored."],
-  ["audio", "Audio run: your turn", "The game starts. Switch ON the EAX / hardware 3D audio options, then quit the game."],
-  ["optional", "Optional run (optional)", "Same again for quality-of-life options such as resolution or textures. These become optional settings."],
+  ["pre", "Config files before the install"], ["installed", "After the install"], ["baseline", "Baseline run"],
+  ["audio", "Audio options"], ["optional", "Other options"],
 ];
 const stepTitle = (label) => (label.startsWith("spk-") ? runName(label) : (STEPS.find(([k]) => k === label) || [0, label])[1]);
 const tilde = (p) => (p || "").replace(/^\/home\/[^/]+/, "~");
@@ -600,14 +593,22 @@ const SPEAKERS = [
 ];
 const runName = (label) => (label.startsWith("spk-") ? `${(SPEAKERS.find(([k]) => k === label.slice(4)) || [0, label])[1]} speaker run` : `${label} run`);
 async function ensureLib() { if (!LIB.length) LIB = (await api("/api/library")).games; return LIB; }
-const libMatch = (g) => LIB.find((l) => g && g.stores && g.stores[l.store] && g.stores[l.store].id === l.id);
+// Every installed copy of the game (a game sold on Steam and GOG can have both); CHOSEN_STORE picks one.
+const libMatches = (g) => LIB.filter((l) => g && g.stores && g.stores[l.store] && g.stores[l.store].id === l.id);
+const libMatch = (g) => { const m = libMatches(g); return m.length > 1 ? m.find((l) => l.store === CHOSEN_STORE) || null : m[0]; };
+const STORE_NAMES = { steam: "Steam", gog: "GOG" };
 async function renderCapture() { await ensureLib(); drawCapture(); }
 function drawCapture() {
   const box = $("#capturebox"); if (!box) return;
-  const mine = libMatch(GAME);
+  const copies = libMatches(GAME), mine = libMatch(GAME);
   if (SESS && SESS.lib !== mine) { SESS = null; clearInterval(POLL); }
-  fill(box, 
+  if (SESS && GAME && GAME.exe && !SESS.state.exe) setExe(GAME.exe).then(() => drawSteps());
+  const picker = copies.length > 1 && !SESS ? el("div", { class: "exerow" }, el("label", {}, "Capture which copy?"),
+    ...copies.map((l) => el("button", { type: "button", class: l.store === CHOSEN_STORE ? "primary" : "", onclick: () => { CHOSEN_STORE = l.store; drawCapture(); } }, STORE_NAMES[l.store] || l.store)),
+    el("span", { class: "muted" }, "Installed in both; each copy is captured separately.")) : null;
+  fill(box, picker,
     !GAME ? el("div", { class: "empty-note" }, "Open a game on the left, or add an installed one.")
+      : !mine && copies.length > 1 ? el("div", { class: "empty-note" }, "Pick which copy to capture.")
       : !mine ? el("div", { class: "empty-note" }, `${GAME.name} isn't installed in Steam or Heroic (matched by store ID), so it can't be captured here.`)
       : !SESS ? el("div", { class: "empty-note" }, "Press “Capture this game” at the top of the page to start. Your earlier capture steps for this game, if any, come back when you do.") : null,
     el("div", { id: "steps" }));
@@ -616,6 +617,7 @@ function drawCapture() {
 async function captureCurrent() {
   if (!GAME) return toast("Open a game first");
   await ensureLib(); const g = libMatch(GAME);
+  if (!g && libMatches(GAME).length > 1) { setSection("capture"); return toast("Installed in both stores: pick which copy to capture", 6000); }
   if (!g) return toast("Not installed in Steam or Heroic (matched by store ID)", 6000);
   if (DIRTY) await save();
   setSection("capture"); await startCapture(g);
@@ -623,12 +625,8 @@ async function captureCurrent() {
 async function startCapture(g) {
   SESS = { lib: g, sid: `${g.store}-${g.id}`, state: { steps: {} }, job: { state: "idle" } };
   await refreshSession();
-  if (!SESS.state.exe) {
-    const exe = (GAME && GAME.exe) || prompt(`Executable to watch for (e.g. Game.exe) for ${g.name}:`) || "";
-    await api(`/api/session/${SESS.sid}/exe`, "POST", { exe });
-    if (exe && GAME && !GAME.exe) { GAME.exe = exe; changed(); }
-    await refreshSession();
-  }
+  if (!SESS.state.exe && GAME && GAME.exe) await setExe(GAME.exe);
+  DRAFT = SESS.state.draft || null; seedDrop(SESS.state.drop);
   startPoll(); drawCapture();
 }
 // Installed games with no profile yet (matched by store ID against every entry, drafts included).
@@ -649,39 +647,98 @@ async function addInstalled() {
     } }, el("span", { class: "nm" }, l.name), el("span", { class: "tag" }, l.store))).concat(todo.length ? [] : [el("p", { class: "muted", style: "padding:12px" }, "Every installed game already has a profile.")])));
   q.oninput = draw; draw(); q.focus();
 }
-async function refreshSession() { const j = await api(`/api/session/${SESS.sid}`); SESS.state = j.session; SESS.job = j.job; }
-function startPoll() { clearInterval(POLL); POLL = setInterval(async () => { if (!SESS) return; const was = SESS.job.state; await refreshSession(); if (was === "running" || SESS.job.state === "running") drawSteps(); }, 2000); }
+async function refreshSession() { const j = await api(`/api/session/${SESS.sid}`); SESS.state = j.session; SESS.job = j.job; SESS.live = j.live; }
+// The browser only reveals the picked file's name, which is all the exe fields hold.
+function exeBrowse(onPick) {
+  const pick = el("input", { type: "file", accept: ".exe", hidden: true, onchange: () => {
+    const f = pick.files[0]; if (!f) return;
+    onPick(f.name); pick.value = "";
+  } });
+  return [pick, el("button", { type: "button", class: "btn sm", title: "Pick the game's .exe to fill in its file name", onclick: () => pick.click() }, "Browse…")];
+}
+// An exe typed into the profile reaches the open capture session too.
+let EXE_SYNC;
+function syncSessionExe(exe) {
+  if (!SESS) return;
+  clearTimeout(EXE_SYNC);
+  EXE_SYNC = setTimeout(async () => { if (SESS && SESS.state.exe !== exe) { await setExe(exe); drawSteps(); } }, 400);
+}
+async function setExe(exe) {
+  await api(`/api/session/${SESS.sid}/exe`, "POST", { exe });
+  if (exe && GAME && !GAME.exe) { GAME.exe = exe; changed(); }
+  await refreshSession();
+}
+function startPoll() { clearInterval(POLL); POLL = setInterval(async () => { if (!SESS) return; const was = SESS.job.state; await refreshSession(); if (was === "running" || SESS.job.state === "running" || SESS.live) drawSteps(); }, 2000); }
+const SPEAKER_SHORT = { headphones: "Headphones", matrix: "Pro Logic", quad: "4.0", surround51: "5.1", surround61: "6.1", surround71: "7.1", stereo: "Stereo" };
+// One card per stage of the capture: what the tool does by itself, what the player does in the game, and the review.
+function stage(num, done, title, desc, ...rest) {
+  return el("div", { class: "stage" + (done ? " done" : "") }, el("div", { class: "num" }, done ? "✓" : num),
+    el("div", { class: "sbody" }, el("div", { class: "shead" }, el("b", {}, title)), desc ? el("p", { class: "muted" }, desc) : null, ...rest));
+}
 function drawSteps() {
-  const box = $("#steps"); if (!box) return; const st = SESS.state.steps, run = SESS.job.state === "running";
-  const jobText = SESS.job.state === "idle" ? "" : `${SESS.job.state === "running" ? "Working: " : SESS.job.state === "error" ? "Problem: " : "Done: "}${SESS.job.message}`;
-  fill(box, 
-    el("p", { class: "muted" }, `Watching for ${SESS.state.exe || "an unknown exe"}. The only manual part is the audio run (and the optional run): change the options in the game, then quit it.`),
-    el("div", { class: "steps" }, ...STEPS.map(([k, t, d], i) => el("div", { class: "step" + (st[k] ? " done" : "") },
-      el("div", { class: "num" }, st[k] ? "✓" : i + 1), el("div", { class: "body" }, el("b", {}, t), el("span", {}, d)),
-      st[k] ? el("span", { class: "meta" }, `${st[k].files} files`) : null,
-      st[k] ? el("button", { type: "button", class: "btn sm", title: "See what this step captured", onclick: () => viewStep(k).catch((x) => toast(x.message, 8000)) }, "View") : null,
-      el("button", { type: "button", class: st[k] ? "" : "primary", disabled: run, onclick: async () => { try { await api(`/api/session/${SESS.sid}/action`, "POST", { action: k }); await refreshSession(); drawSteps(); } catch (x) { toast(x.message, 8000); } } }, st[k] ? "Redo" : "Run")))),
-    el("div", { class: "blockhead" }, el("h3", {}, "Speaker layouts (optional)"), helpIcon("Do this for each speaker setup the game's own audio options offer. Choose that layout in the game, quit, and the tool records what changed against the audio run. Skip any the game doesn't have. Layouts that change the same values are merged for you.")),
-    el("div", { class: "steps" }, ...SPEAKERS.map(([k, name]) => { const key = "spk-" + k;
-      return el("div", { class: "step" + (st[key] ? " done" : "") }, el("div", { class: "num" }, st[key] ? "✓" : "♪"),
-        el("div", { class: "body" }, el("b", {}, name), el("span", {}, "Set this in the game's audio options, then quit.")),
-        st[key] ? el("span", { class: "meta" }, `${st[key].files} files`) : null,
-        st[key] ? el("button", { type: "button", class: "btn sm", title: "See what this layout run captured", onclick: () => viewStep(key).catch((x) => toast(x.message, 8000)) }, "View") : null,
-        el("button", { type: "button", disabled: run || !st.audio, title: st.audio ? "" : "Do the audio run first", onclick: async () => { try { await api(`/api/session/${SESS.sid}/action`, "POST", { action: key }); await refreshSession(); drawSteps(); } catch (x) { toast(x.message, 8000); } } }, st[key] ? "Redo" : "Run")); })),
-    jobText ? el("div", { class: "status " + SESS.job.state }, jobText) : null,
-    el("div", { class: "barrow" }, el("button", { type: "button", class: "primary", disabled: run || !st.audio, title: "Compare the snapshots and draft the game's settings. You can untick anything before merging.", onclick: makeDraft }, "Build settings from the captures"),
-      el("span", { class: "sp" }), el("button", { type: "button", class: "danger-link", onclick: async () => { if (confirm("Delete this capture session and its snapshots?")) { await api(`/api/session/${SESS.sid}/reset`, "POST"); await refreshSession(); drawSteps(); } } }, "Reset session")),
+  const box = $("#steps"); if (!box) return;
+  const st = SESS.state.steps, job = SESS.job, run = job.state === "running", live = SESS.live, exe = SESS.state.exe;
+  const act = (action) => async () => { try { await api(`/api/session/${SESS.sid}/action`, "POST", { action }); await refreshSession(); drawSteps(); } catch (x) { toast(x.message, 8000); } };
+  const view = (k) => st[k] ? el("button", { type: "button", class: "btn sm", title: "See what this step captured", onclick: () => viewStep(k).catch((x) => toast(x.message, 8000)) }, "View") : null;
+  const status = (a) => job.action === a && job.state !== "idle" ? el("div", { class: "status " + job.state }, `${job.state === "error" ? "Problem: " : ""}${job.message}`) : null;
+  const prepDone = !!(st.pre && st.installed);
+
+  // ---- 1. prepare
+  const prepRows = [["pre", "Config files recorded"], ["installed", "Fix installed with no prompts"], ["baseline", "Baseline run: the game starts and closes itself"]].map(([k, t]) =>
+    el("div", { class: "chk" + (st[k] ? " on" : "") }, el("span", { class: "tick" }, st[k] ? "✓" : "○"), el("span", {}, t), st[k] ? el("span", { class: "meta" }, `${st[k].files} files`) : null, view(k)));
+  const exeInput = el("input", { placeholder: "Game.exe", value: exe || "" });
+  const exeRow = el("div", { class: "exerow" }, el("label", {}, "Game executable"), exeInput,
+    ...exeBrowse(async (name) => { exeInput.value = name; await setExe(name); drawSteps(); }),
+    el("button", { type: "button", class: "btn sm", onclick: async () => { await setExe(exeInput.value.trim()); drawSteps(); } }, "Save"),
+    el("span", { class: "muted" }, exe ? "The tool watches for this to know when the game is open." : "Needed so the tool can tell when the game is running. The baseline run is skipped without it."));
+  const s1 = stage(1, prepDone, "Prepare", "Runs by itself, no input needed. It records the config files, installs the fix, then starts the game once and closes it to learn what the game rewrites on its own.",
+    exeRow, ...prepRows, status("prepare"),
+    el("div", { class: "barrow" }, el("button", { type: "button", class: prepDone ? "" : "primary", disabled: run, onclick: act("prepare") }, prepDone ? "Redo prepare" : "Start capture")));
+
+  // ---- 2. your turn
+  const snap = (label, text, title) => el("button", { type: "button", class: st[label] ? "" : "primary", disabled: !live || !!live.snap || (label.startsWith("spk-") && !st.audio), title, onclick: act("snap:" + label) }, st[label] ? `${text} ✓ again` : text);
+  const chips = SPEAKERS.map(([k]) => { const key = "spk-" + k; return el("span", { class: "chip" + (st[key] ? " on" : "") },
+    el("button", { type: "button", disabled: !live || !!live.snap || !st.audio, title: st.audio ? "Pick this speaker setup in the game, then press this." : "Take the audio snapshot first.", onclick: act("snap:" + key) }, (st[key] ? "✓ " : "") + SPEAKER_SHORT[k]),
+    st[key] ? el("button", { type: "button", class: "vw", title: "See what this layout captured", onclick: () => viewStep(key).catch((x) => toast(x.message, 8000)) }, "view") : null); });
+  const left = live && live.snap ? Math.max(0, Math.ceil(live.until - Date.now() / 1000)) : 0;
+  const s2body = !prepDone ? [el("p", { class: "muted" }, "Finish the preparation first.")]
+    : !live ? [status("live"), el("div", { class: "barrow" }, el("button", { type: "button", class: "primary", disabled: run, onclick: act("live") }, st.audio ? "Open the game again" : "Open the game"),
+        el("span", { class: "muted" }, "The game stays open while you take every snapshot below, so it starts once, not once per setting."))]
+    : [el("ol", { class: "todo" },
+        el("li", {}, "In the game, switch ON the EAX / hardware 3D audio options. Then press ", snap("audio", "Snapshot: audio options", "Records the config files now and compares them with the baseline.")),
+        el("li", { class: "opt" }, "Optional: change quality-of-life options such as resolution or textures. Then press ", snap("optional", "Snapshot: other options", "These become optional settings.")),
+        el("li", { class: "opt" }, "Optional: for each speaker setup the game offers, pick it in the game and press its button. Layouts that change the same values are merged for you.", el("div", { class: "chips" }, ...chips)),
+        el("li", {}, "Done? ", el("button", { type: "button", onclick: act("stop"), title: "Asks the game to quit" }, "Close the game"))),
+      live.snap ? el("div", { class: "status running" }, `Taking the “${stepTitle(live.snap)}” snapshot. Wine saves its registry about every 30 seconds, so leave the game as it is for ${left || "a few"} s.`) : status("live")];
+  const keptRows = ["audio", "optional"].filter((k) => st[k] && !live).map((k) => el("div", { class: "chk on" }, el("span", { class: "tick" }, "✓"), el("span", {}, stepTitle(k)), el("span", { class: "meta" }, `${st[k].files} files`), view(k)));
+  const s2 = stage(2, !!st.audio, "Your turn", "The only manual part: change the options in the game.", ...s2body, ...keptRows);
+
+  // ---- 3. review
+  const s3 = stage(3, !!DRAFT, "Review", "Compares the snapshots and drafts the game's settings. You can untick anything before it goes into the entry.",
+    el("div", { class: "barrow" }, el("button", { type: "button", class: "primary", disabled: run || !st.audio || !!(live && live.snap), title: st.audio ? "" : "Take the audio snapshot first.", onclick: makeDraft }, DRAFT ? "Build again" : "Build settings from the captures"),
+      el("span", { class: "sp" }), el("button", { type: "button", class: "danger-link", onclick: async () => { if (confirm("Delete this capture session and its snapshots?")) { await api(`/api/session/${SESS.sid}/reset`, "POST"); DRAFT = null; DROP.clear(); await refreshSession(); drawSteps(); } } }, "Reset session")),
     el("div", { id: "draftbox" }));
+  fill(box, el("div", { class: "stages" }, s1, s2, s3));
+  if (DRAFT) showDraft();
 }
 const DROP = new Set();
-async function makeDraft() {
+const dropKey = (f, c) => [f.file, f.format, c.section, c.key].join("\0");
+function seedDrop(saved) {
   DROP.clear();
+  if (Array.isArray(saved)) return saved.forEach((k) => DROP.add(k));
+  if (DRAFT) for (const list of Object.values(DRAFT.diffs)) for (const f of list) for (const c of f.changes) if (c.suspect_reason) DROP.add(dropKey(f, c));
+}
+async function makeDraft() {
   const box = $("#draftbox"); box.textContent = "Working…";
-  const d = await api(`/api/session/${SESS.sid}/draft`, "POST", { ai: true });
-  for (const list of Object.values(d.diffs)) for (const f of list) for (const c of f.changes) if (c.suspect_reason) DROP.add([f.file, f.format, c.section, c.key].join("\0"));
+  DRAFT = await api(`/api/session/${SESS.sid}/draft`, "POST", { ai: true });
+  seedDrop(null); drawSteps();
+}
+function showDraft() {
+  const box = $("#draftbox"), d = DRAFT; if (!box || !d) return;
+  const saveDrop = () => api(`/api/session/${SESS.sid}/drop`, "POST", { drop: [...DROP] }).catch(() => {});
   fill(box, el("div", { class: "blockhead" }, el("h2", {}, "Captured changes"), helpIcon("Tick the changes to keep. Ones that look like the game's own bookkeeping start unticked, with the reason shown.")),
     ...Object.entries(d.diffs).flatMap(([label, list]) => [el("p", {}, el("b", {}, runName(label))), ...(list.length ? list.map((f) => el("details", { class: "cfile", open: true }, el("summary", {}, `${f.file}  →  ${f.location || "(outside known folders)"}  [${f.format}]`),
-      el("div", { class: "tblwrap" }, el("table", {}, el("tr", {}, ["Keep", "Section", "Key", "Was", "Now", ""].map((h) => el("th", {}, h))), ...f.changes.map((c) => el("tr", {}, el("td", {}, el("input", { type: "checkbox", checked: c.expressible && !c.suspect_reason, disabled: !c.expressible, title: "Include when merging", onchange: (e) => { const k = [f.file, f.format, c.section, c.key].join("\0"); e.target.checked ? DROP.delete(k) : DROP.add(k); } })), el("td", {}, c.section), el("td", {}, c.key), el("td", { class: "muted" }, String(c.old)), el("td", {}, String(c.new)), el("td", { class: c.expressible ? "muted" : "bad" }, c.expressible ? (c.suspect_reason ? "left out: " + c.suspect_reason : "") : "not allowed by schema"))))))) : [el("p", { class: "muted" }, "No changes.")])]),
+      el("div", { class: "tblwrap" }, el("table", {}, el("tr", {}, ["Keep", "Section", "Key", "Was", "Now", ""].map((h) => el("th", {}, h))), ...f.changes.map((c) => el("tr", {}, el("td", {}, el("input", { type: "checkbox", checked: c.expressible && !DROP.has(dropKey(f, c)), disabled: !c.expressible, title: "Include when merging", onchange: (e) => { const k = dropKey(f, c); e.target.checked ? DROP.delete(k) : DROP.add(k); saveDrop(); } })), el("td", {}, c.section), el("td", {}, c.key), el("td", { class: "muted" }, String(c.old)), el("td", {}, String(c.new)), el("td", { class: c.expressible ? "muted" : "bad" }, c.expressible ? (c.suspect_reason ? "left out: " + c.suspect_reason : "") : "not allowed by schema"))))))) : [el("p", { class: "muted" }, "No changes.")])]),
     ...(d.skipped.length ? [el("div", { class: "blockhead" }, el("h2", {}, "Needs a human")), el("ul", {}, d.skipped.map((x) => el("li", {}, x)))] : []),
     d.ai && d.ai !== "ok" ? el("p", { class: "bad" }, d.ai) : null,
     suggestionsBlock(d.suggestions),

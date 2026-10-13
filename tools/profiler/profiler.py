@@ -13,6 +13,8 @@ import ai, capture, classify, cleanup, dbio  # noqa: E402
 WEB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 SCRIPT = os.path.join(dbio.ROOT, "dist", "eax-restore-linux.sh")
 JOBS = {}  # session id -> {"state": idle|running|done|error, "message": str}
+LIVE = {}  # session id -> {"snap": label being taken or None, "until": time it finishes}; set while a live session has the game open
+REG_SAVE_WAIT = 35  # Wine writes its registry files to disk about every 30 s while the game runs
 
 
 def sdir(sid):
@@ -43,11 +45,12 @@ def save_session(sid, s):
         json.dump(s, f, indent=1)
 
 
-def job(sid, fn):
-    """Runs fn in a thread; the UI polls JOBS[sid]."""
+def job(sid, fn, action=None):
+    """Runs fn in a thread; the UI polls JOBS[sid]. `action` says which step it is, so the
+    page can show the progress on that step."""
     if JOBS.get(sid, {}).get("state") == "running":
         raise RuntimeError("a step is already running")
-    JOBS[sid] = {"state": "running", "message": "starting"}
+    JOBS[sid] = {"state": "running", "message": "starting", "action": action}
 
     def say(msg):
         JOBS[sid]["message"] = msg
@@ -55,10 +58,10 @@ def job(sid, fn):
     def run():
         try:
             fn(say)
-            JOBS[sid] = {"state": "done", "message": JOBS[sid]["message"]}
+            JOBS[sid] = {"state": "done", "message": JOBS[sid]["message"], "action": action}
         except Exception as e:  # noqa: BLE001 - shown in the UI
             traceback.print_exc()
-            JOBS[sid] = {"state": "error", "message": f"{type(e).__name__}: {e}"}
+            JOBS[sid] = {"state": "error", "message": f"{type(e).__name__}: {e}", "action": action}
     threading.Thread(target=run, daemon=True).start()
 
 
@@ -105,7 +108,7 @@ def do_action(sid, action):
             time.sleep(2)
         game = find_game(sid)
 
-    def wait_pass(label, say):
+    def start_game(say):
         capture.launch(game)
         say("waiting for the game to start (up to 3 minutes)...")
         t = time.time()
@@ -113,18 +116,103 @@ def do_action(sid, action):
             time.sleep(2)
         if not capture.game_running(exe):
             raise RuntimeError(f"{exe or 'the game'} never started; launch it by hand, then press the step again")
-        say("game running: change the sound options, then quit the game")
-        while capture.game_running(exe):
-            time.sleep(2)
+
+    def finish_game(say):
         say("game closed, waiting for Wine to save the registry...")
         t = time.time()
         while game.get("prefix") and capture.wineserver_running(game["prefix"]) and time.time() - t < 90:
             time.sleep(2)
+
+    def take(label, say):
         n = capture.snapshot(game, d, label)
         mark(sid, label, files=n)
         say(f"snapshot '{label}' taken ({n} files)")
 
-    if action == "pre":
+    def wait_pass(label, say):
+        start_game(say)
+        say("game running: change the sound options, then quit the game")
+        while capture.game_running(exe):
+            time.sleep(2)
+        finish_game(say)
+        take(label, say)
+
+    def live_session(say):
+        """The game stays open while the player takes several snapshots from the page."""
+        if not exe:
+            raise RuntimeError("Enter the game's executable name first so the tool can tell when it is running.")
+        start_game(say)
+        LIVE[sid] = {"snap": None, "until": 0}
+        try:
+            say("game running: take each snapshot from this page, then close the game")
+            while capture.game_running(exe):
+                time.sleep(2)
+        finally:
+            LIVE.pop(sid, None)
+        finish_game(say)
+        say("game closed")
+
+    def live_snap(label):
+        live = LIVE.get(sid)
+        if not live:
+            raise ValueError("The game isn't open from this page. Press “Open the game” first.")
+        if live["snap"]:
+            raise ValueError("A snapshot is already being taken.")
+        if label.startswith("spk-"):
+            if label[4:] not in capture.SPEAKER_LAYOUTS:
+                raise ValueError("unknown speaker layout")
+            if "audio" not in load_session(sid)["steps"]:
+                raise ValueError("Take the audio snapshot first: speaker layouts are compared with it.")
+        elif label not in ("audio", "optional"):
+            raise ValueError("unknown snapshot")
+        live.update(snap=label, until=time.time() + REG_SAVE_WAIT)
+
+        def run():
+            try:
+                time.sleep(REG_SAVE_WAIT)  # lets Wine write the registry changes to disk first
+                mark(sid, label, files=capture.snapshot(game, d, label))
+            except Exception:  # noqa: BLE001 - the page just sees the snapshot missing
+                traceback.print_exc()
+            finally:
+                live.update(snap=None, until=0)
+        threading.Thread(target=run, daemon=True).start()
+
+    def prepare(say):
+        if not has_prefix(game):
+            first_run(say)
+        say("recording the config files before anything changes...")
+        take("pre", say)
+        if not os.path.exists(SCRIPT):
+            subprocess.run([os.path.join(dbio.ROOT, "build.sh")], check=True, capture_output=True, cwd=dbio.ROOT)
+        say("running the install (empty game database, canned answers)...")
+        r = capture.run_install(game, d, SCRIPT)
+        if not r["ok"]:
+            raise RuntimeError("install did not finish:\n" + r["tail"])
+        take("installed", say)
+        if not exe:
+            say("Install done. The baseline run was skipped because the executable name isn't known yet.")
+            return
+        start_game(say)
+        say("baseline run: the game is starting up on its own, no need to touch it...")
+        time.sleep(25)  # long enough for the game to write the files it rewrites on every start
+        t = time.time()
+        while capture.game_running(exe) and time.time() - t < 60:
+            capture.stop_game(exe)
+            time.sleep(3)
+        finish_game(say)
+        take("baseline", say)
+        say("Ready for your turn: open the game and change its sound options.")
+
+    if action == "prepare":
+        job(sid, prepare, "prepare")
+    elif action == "live":
+        job(sid, live_session, "live")
+    elif action.startswith("snap:"):
+        live_snap(action[5:])
+    elif action == "stop":
+        if not exe:
+            raise ValueError("The executable name isn't known.")
+        capture.stop_game(exe)
+    elif action == "pre":
         def f(say):
             if not has_prefix(game):
                 first_run(say)
@@ -188,11 +276,20 @@ def cleanup_run(e, action):
 
 
 def previous_label(steps, label):
-    """The snapshot taken just before this one, by time, so the order the player did the
-    runs in doesn't matter (e.g. the optional run before the audio run)."""
-    mine = steps[label]["time"]
-    before = [(v["time"], k) for k, v in steps.items() if v["time"] < mine and k != label and not k.startswith("spk-")]
-    return max(before)[1] if before else None
+    """What this snapshot is compared with. The audio and optional runs compare with each
+    other when the other came first (the game keeps the earlier run's options), otherwise
+    with the baseline, the install or the pre-install snapshot. Redoing an unrelated step
+    can't change it."""
+    if label.startswith("spk-"):
+        return "audio"
+    if label in ("audio", "optional"):
+        other = "optional" if label == "audio" else "audio"
+        if other in steps and steps[other]["time"] < steps[label]["time"]:
+            return other
+    order = ["pre", "installed", "baseline"]
+    if label in order:
+        return order[order.index(label) - 1] if order.index(label) and order[order.index(label) - 1] in steps else None
+    return next((k for k in ("baseline", "installed", "pre") if k in steps), None)
 
 
 def step_view(sid, label):
@@ -200,7 +297,7 @@ def step_view(sid, label):
     steps, d = s["steps"], sdir(sid)
     if label not in steps:
         raise ValueError("That step hasn't been captured yet.")
-    ref = "audio" if label.startswith("spk-") else previous_label(steps, label)
+    ref = previous_label(steps, label)
     noise = set()
     if "baseline" in steps and label != "baseline":
         noise = classify.noise_keys(capture.diff_snapshots(game, d, "installed", "baseline"))
@@ -220,7 +317,10 @@ def draft(sid, use_ai):
     if "audio" in steps:
         for label in sorted(k for k in steps if k.startswith("spk-")):
             diffs[label] = capture.diff_snapshots(game, d, "audio", label, ignore=noise)
-    return classify.build(game["name"], diffs, use_ai)
+    out = classify.build(game["name"], diffs, use_ai)
+    s["draft"], s["drop"] = out, None
+    save_session(sid, s)
+    return out
 
 
 class H(BaseHTTPRequestHandler):
@@ -313,7 +413,10 @@ class H(BaseHTTPRequestHandler):
             if m:
                 sid, what = m.groups()
                 if method == "GET" and not what:
-                    return self.reply({"session": load_session(sid), "job": JOBS.get(sid, {"state": "idle"})})
+                    return self.reply({"session": load_session(sid), "job": JOBS.get(sid, {"state": "idle"}), "live": LIVE.get(sid)})
+                if method == "POST" and what == "drop":
+                    s = load_session(sid); s["drop"] = self.body()["drop"]; save_session(sid, s)
+                    return self.reply({"ok": True})
                 if method == "POST" and what == "exe":
                     s = load_session(sid); s["exe"] = self.body()["exe"]; save_session(sid, s)
                     return self.reply({"ok": True})

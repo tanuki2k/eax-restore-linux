@@ -62,3 +62,19 @@ profiler_uninstall() {
     [ ! -e "$GAME/dsoal-aldrv.dll" ]
     grep -q 'WINEDLLOVERRIDES' "$HOME/.config/heroic/GamesConfig/$HEROIC_ID.json"
 }
+
+# What a capture snapshot is compared with must not depend on which step was redone last.
+@test "the profiler compares each snapshot with a fixed reference" {
+    run python3 -I -c '
+import sys; sys.path.insert(0, sys.argv[1])
+import profiler
+s = {k: {"time": t} for t, k in enumerate(["pre", "installed", "baseline", "audio", "optional"])}
+p = lambda k: profiler.previous_label(s, k)
+assert (p("pre"), p("installed"), p("baseline"), p("audio"), p("optional"), p("spk-quad")) == (None, "pre", "installed", "baseline", "audio", "audio")
+s["baseline"]["time"] = 99  # redoing the baseline must not move the audio comparison
+assert p("audio") == "baseline" and p("optional") == "audio"
+s["optional"]["time"] = 0.5  # optional first: audio compares with it
+assert p("audio") == "optional"
+' "$REPO_ROOT/tools/profiler"
+    [ "$status" -eq 0 ]
+}

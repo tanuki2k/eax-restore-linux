@@ -184,6 +184,17 @@ dialog.dlg h3{font-size:17px;margin-bottom:12px}
 .step.done .num{background:var(--ok-weak);border-color:var(--ok);color:var(--ok)}
 .step .body{flex:1;min-width:0}.step .body b{display:block}.step .body span{color:var(--mut);font-size:13px}
 .step .meta{color:var(--ok);font-size:12.5px;font-weight:600;white-space:nowrap}
+.stages{display:grid;gap:14px}
+.stage{display:flex;gap:16px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px}
+.stage .num{flex:0 0 32px;height:32px;border-radius:50%;display:grid;place-items:center;font-weight:700;background:var(--surface2);border:1px solid var(--line2);color:var(--mut)}
+.stage.done .num{background:var(--ok-weak);border-color:var(--ok);color:var(--ok)}
+.stage .sbody{flex:1;min-width:0}.stage .shead b{font-size:15px}.stage .sbody>p{margin:4px 0 10px}
+.chk{display:flex;align-items:center;gap:10px;padding:5px 0;color:var(--mut)}.chk.on{color:var(--fg)}.chk .tick{width:18px;text-align:center}.chk.on .tick{color:var(--ok);font-weight:700}
+.chk .meta{color:var(--ok);font-size:12.5px;font-weight:600}
+.exerow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}.exerow input{width:200px}.exerow label{font-weight:600}
+.todo{margin:0;padding-left:22px;display:grid;gap:12px}.todo li{line-height:1.9}.todo li.opt::marker{color:var(--mut)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}.chip{display:inline-flex;border-radius:8px;overflow:hidden}.chip.on button:first-child{border-color:var(--ok);color:var(--ok)}
+.chip .vw{font-size:12px;padding:0 8px;color:var(--mut)}
 .status{border-radius:8px;padding:10px 14px;margin:12px 0;white-space:pre-wrap;font-size:13.5px;background:var(--surface2);border:1px solid var(--line)}
 .status.running{border-color:var(--acc);background:var(--acc-weak)}.status.error{border-color:var(--bad);background:var(--bad-weak)}
 .barrow{display:flex;gap:10px;align-items:center;margin:16px 0}
