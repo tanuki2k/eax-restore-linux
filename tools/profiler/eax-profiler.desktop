@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=EAX profile editor
+Comment=Edit and capture game profiles for EAX Restore
+Exec="@LAUNCHER@"
+Icon=applications-games
+Terminal=false
+Type=Application
+Categories=Development;
+StartupNotify=false

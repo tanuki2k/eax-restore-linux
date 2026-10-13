@@ -867,6 +867,15 @@ async function merge(gc0) {
   changed(); setSection("settings"); toast(bits.join(" "), 14000);
 }
 
+// Tells the server this page is still open (it can stop itself once pings stop) and handles the Quit button.
+const ping = () => fetch("/api/ping").catch(() => {});
+ping(); setInterval(ping, 10000);
+$("#quitbtn").onclick = async () => {
+  if (!(await askConfirm(DIRTY ? "Quit the editor? You have unsaved changes, and they will be lost." : "Quit the editor?", "Quit", DIRTY))) return;
+  await fetch("/api/quit", { method: "POST" }).catch(() => {});
+  document.body.replaceChildren(el("div", { class: "empty" }, el("h2", {}, "The editor has stopped."), el("p", {}, "You can close this tab. Start it again from the app menu or with tools/profiler/eax-profiler.")));
+};
+
 window.addEventListener("error", (e) => toast("JS error: " + e.message, 20000));
 window.addEventListener("unhandledrejection", (e) => toast("Error: " + (e.reason && e.reason.message || e.reason), 20000));
 (async () => {

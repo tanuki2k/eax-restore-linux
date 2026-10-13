@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Game profile capture & editor: a local web UI over the game database.
 
-    python3 tools/profiler/profiler.py [--port 8765] [--no-open]
+    python3 tools/profiler/profiler.py [--port 8765] [--no-open] [--quit-when-closed]
 
 Standard library only (plus `jsonschema` for validation). See tools/profiler/README.md."""
 import argparse, json, os, re, subprocess, sys, threading, time, traceback, webbrowser
@@ -14,6 +14,9 @@ WEB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 SCRIPT = os.path.join(dbio.ROOT, "dist", "eax-restore-linux.sh")
 JOBS = {}  # session id -> {"state": idle|running|done|error, "message": str}
 LIVE = {}  # session id -> {"snap": label being taken or None, "until": time it finishes}; set while a live session has the game open
+LAST_PING = time.time()  # the page pings every 10 s; --quit-when-closed stops the server when they stop
+SERVER = None
+QUIET_QUIT_SECONDS = int(os.environ.get("EAX_PROFILER_QUIT_SECONDS", 180))  # generous: a hidden browser tab runs its timers about once a minute
 REG_SAVE_WAIT = 35  # Wine writes its registry files to disk about every 30 s while the game runs
 
 
@@ -407,6 +410,14 @@ class H(BaseHTTPRequestHandler):
             if method == "POST" and p == "/api/ai":
                 b = self.body()
                 return self.reply(ai.ask(b["task"], b.get("context", {})))
+            if method == "GET" and p == "/api/ping":
+                global LAST_PING
+                LAST_PING = time.time()
+                return self.reply({"ok": True})
+            if method == "POST" and p == "/api/quit":
+                self.reply({"ok": True})
+                threading.Thread(target=SERVER.shutdown, daemon=True).start()
+                return
             if method == "GET" and p == "/api/library":
                 return self.reply({"games": capture.library()})
             m = re.match(r"^/api/session/([a-z]+-[A-Za-z0-9_]+)(?:/(\w+))?$", p)
@@ -444,12 +455,23 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=8765)
     ap.add_argument("--no-open", action="store_true")
+    ap.add_argument("--quit-when-closed", action="store_true", help="exit once the page has stopped pinging and no capture is running")
     a = ap.parse_args()
-    srv = ThreadingHTTPServer(("127.0.0.1", a.port), H)
+    global SERVER
+    srv = SERVER = ThreadingHTTPServer(("127.0.0.1", a.port), H)
     url = f"http://127.0.0.1:{a.port}/"
     print(f"Game profile editor: {url}  (AI: {ai.available() or 'off - set ANTHROPIC_API_KEY or log in to claude'})")
     if not a.no_open:
         threading.Timer(0.5, lambda: webbrowser.open(url)).start()
+    if a.quit_when_closed:
+        def watch():
+            while True:
+                time.sleep(5)
+                busy = LIVE or any(j.get("state") == "running" for j in JOBS.values())
+                if not busy and time.time() - LAST_PING > QUIET_QUIT_SECONDS:
+                    srv.shutdown()
+                    return
+        threading.Thread(target=watch, daemon=True).start()
     try:
         srv.serve_forever()
     except KeyboardInterrupt:

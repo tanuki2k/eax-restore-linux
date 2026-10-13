@@ -2,7 +2,9 @@
 
 A local web UI over `data/games/*` and `data/drafts/`. Standard-library Python; validation uses `jsonschema`.
 
-    python3 tools/profiler/profiler.py        # opens http://127.0.0.1:8765
+    tools/profiler/eax-profiler               # starts it and opens http://127.0.0.1:8765
+
+To get it in the app menu as "EAX profile editor", run `tools/profiler/install-launcher.sh` once (`--remove` takes it out again). Launched this way there is no terminal: the **Quit** button in the page's header stops it, and it also stops by itself a few minutes after the page is closed (never during a capture or while a game is open from the page). Running it a second time while it is up only opens the page again. If `chromium` or `google-chrome` is installed the page opens in its own window without browser chrome. The plain command still works: `python3 tools/profiler/profiler.py [--port 8765] [--no-open] [--quit-when-closed]`.
 
 **Edit**: forms are generated from `data/schema.json` (dropdowns, checkboxes, a table for a setting's changes), with live validation. Save shows the exact change to the file first, then writes it, runs `tools/format-game-database.sh`, and shows what's still invalid. "Move to…" does the `git mv` between drafts / untested / tested. **Rebuild database** runs `tools/build-game-database.sh`.
 
