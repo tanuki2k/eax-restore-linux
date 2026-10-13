@@ -318,7 +318,7 @@ def draft(sid, use_ai):
         for label in sorted(k for k in steps if k.startswith("spk-")):
             diffs[label] = capture.diff_snapshots(game, d, "audio", label, ignore=noise)
     out = classify.build(game["name"], diffs, use_ai)
-    s["draft"], s["drop"] = out, None
+    s["draft"], s["drop"], s["cats"] = out, None, None
     save_session(sid, s)
     return out
 
@@ -415,7 +415,7 @@ class H(BaseHTTPRequestHandler):
                 if method == "GET" and not what:
                     return self.reply({"session": load_session(sid), "job": JOBS.get(sid, {"state": "idle"}), "live": LIVE.get(sid)})
                 if method == "POST" and what == "drop":
-                    s = load_session(sid); s["drop"] = self.body()["drop"]; save_session(sid, s)
+                    b = self.body(); s = load_session(sid); s["drop"] = b["drop"]; s["cats"] = b.get("cats", {}); save_session(sid, s)
                     return self.reply({"ok": True})
                 if method == "POST" and what == "exe":
                     s = load_session(sid); s["exe"] = self.body()["exe"]; save_session(sid, s)

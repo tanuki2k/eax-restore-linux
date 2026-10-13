@@ -31,10 +31,30 @@ def noise_reason(key, old, new):
     return None
 
 
+AUDIO_KEY = re.compile(r"eax|reverb|sound|audio|openal|dsound|3d|hardware|speaker|mixer|occlusion|surround|stereo|hrtf|music|volume|effects", re.I)
+
+
+def category_of(section, key):
+    """Which list a changed key most likely belongs in: "audio" (what the sound fix needs) or
+    "optional" (everything else). A first guess; the Review table lets the player flip it."""
+    return "audio" if AUDIO_KEY.search(f"{section} {key}") else "optional"
+
+
+def assign_categories(diffs):
+    """Sets each change's `category` in the options run(s); speaker runs have their own path."""
+    for label, lst in diffs.items():
+        if label.startswith("spk-"):
+            continue
+        for f in lst:
+            for c in f["changes"]:
+                c.setdefault("category", category_of(c["section"], c["key"]))
+
+
 def draft_game_config(diffs_audio, diffs_optional, existing=None):
-    """Turns diffs into (game_config fragment, notes for a human). The audio run becomes
-    audio_settings, the optional run optional_settings. Titles and reasons are placeholders
-    for the AI step or the person reviewing."""
+    """Turns diffs into (game_config fragment, notes for a human). Each change goes to
+    audio_settings or optional_settings by its `category` (guessed from its name when unset).
+    One options snapshot is the normal case; an older session may also have a second one.
+    Titles and reasons are placeholders for the AI step or the person reviewing."""
     gc = {"files": dict((existing or {}).get("files", {})), "audio_settings": [], "optional_settings": []}
     skipped = []
 
@@ -54,6 +74,8 @@ def draft_game_config(diffs_audio, diffs_optional, existing=None):
             if d["created"]:
                 gc["files"][d["file"]]["if_missing"] = "create"
             for c in d["changes"]:
+                if (c.get("category") or category_of(c["section"], c["key"])) != ("audio" if kind == "audio_settings" else "optional"):
+                    continue
                 if not c["expressible"] or c["new"] is None:
                     skipped.append(f"{d['file']} {c['section']} {c['key']}: value {c['new']!r} can't be expressed in the schema")
                     continue
@@ -64,12 +86,13 @@ def draft_game_config(diffs_audio, diffs_optional, existing=None):
         if group:
             gc[kind].append({"title": "TODO title", "reason": "TODO reason", "changes": group})
 
-    add(diffs_audio, "audio_settings")
-    add(diffs_optional, "optional_settings")
+    both = list(diffs_audio) + list(diffs_optional)
+    add(both, "audio_settings")
+    add(both, "optional_settings")
     for k in ("audio_settings", "optional_settings"):
         if not gc[k]:
             del gc[k]
-    return gc, skipped
+    return gc, list(dict.fromkeys(skipped))  # each kind's pass notes the same unreadable file
 
 
 # Speaker layouts, in the order a list of them is written, and the title each gets. The titles are
@@ -184,6 +207,7 @@ def ai_pass(game_name, gc, rest):
 
 def build(game_name, diffs, use_ai):
     """Everything the Capture tab shows after "Build settings from the captures"."""
+    assign_categories(diffs)
     gc, skipped = draft_game_config(diffs.get("audio", []), diffs.get("optional", []))
     skipped += draft_speaker_settings({k: v for k, v in diffs.items() if k.startswith("spk-")}, gc)
     out = {"diffs": diffs, "game_config": gc, "skipped": skipped, "ai": None, "suggestions": None}

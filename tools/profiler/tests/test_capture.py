@@ -100,6 +100,39 @@ class ConfigTxt(unittest.TestCase):
         self.assertEqual(gc["files"]["Player.txt"], {"format": "ini", "locations": ["game:Profiles/Player.txt"]})
 
 
+class Categories(unittest.TestCase):
+    def test_category_of_guesses_audio_from_the_name(self):
+        for sec, key in (("", "s_useEAXReverb"), ("Sound", "volume"), ("Engine", "UseHardware3D"), ("", "SoundMixer")):
+            self.assertEqual(classify.category_of(sec, key), "audio", key)
+        for sec, key in (("", "Width"), ("Display", "TextureQuality")):
+            self.assertEqual(classify.category_of(sec, key), "optional", key)
+
+    def test_one_snapshot_drafts_both_lists_and_a_flipped_category_moves_the_key(self):
+        before = "[Sound]\neaxenabled = 0\n[Display]\nWidth = 800\n"
+        after = "[Sound]\neaxenabled = 1\n[Display]\nWidth = 1920\n"
+        with tempfile.TemporaryDirectory() as t:
+            game, sd = world(t, {"game.ini": before}, {"game.ini": after})
+            diffs = capture.diff_snapshots(game, sd, "a", "b")
+            classify.assign_categories({"audio": diffs})
+            gc, _ = classify.draft_game_config(diffs, [])
+            self.assertEqual(gc["audio_settings"][0]["changes"], {"game.ini": {"Sound": {"eaxenabled": "1"}}})
+            self.assertEqual(gc["optional_settings"][0]["changes"], {"game.ini": {"Display": {"Width": "1920"}}})
+            for f in diffs:
+                for c in f["changes"]:
+                    c["category"] = "audio"
+            gc, _ = classify.draft_game_config(diffs, [])
+        self.assertNotIn("optional_settings", gc)
+        self.assertEqual(gc["audio_settings"][0]["changes"]["game.ini"]["Display"], {"Width": "1920"})
+
+    def test_an_older_session_with_a_second_snapshot_still_drafts(self):
+        before = "[Display]\nWidth = 800\n"
+        with tempfile.TemporaryDirectory() as t:
+            game, sd = world(t, {"game.ini": before}, {"game.ini": before.replace("800", "1920")})
+            diffs = capture.diff_snapshots(game, sd, "a", "b")
+            gc, _ = classify.draft_game_config([], diffs)
+        self.assertEqual(gc["optional_settings"][0]["changes"], {"game.ini": {"Display": {"Width": "1920"}}})
+
+
 class Noise(unittest.TestCase):
     def test_flags_bookkeeping_not_options(self):
         self.assertTrue(classify.noise_reason("WindowPosX", "1", "2"))
