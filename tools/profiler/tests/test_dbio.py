@@ -15,8 +15,13 @@ class BuildState(unittest.TestCase):
         self.assertEqual(dbio.build_state("tested", "t", self.GAME, self.built())["state"], "current")
 
     def test_changed_names_the_fields_that_differ(self):
-        s = dbio.build_state("untested", "t", {**self.GAME, "notes": "x", "name": "U"}, self.built())
+        s = dbio.build_state("untested", "t", {**self.GAME, "notes": "x", "name": "U"}, self.built(tested=False))
         self.assertEqual((s["state"], s["fields"]), ("changed", ["name", "notes"]))
+
+    def test_an_untested_game_is_built_with_tested_false(self):
+        self.assertEqual(dbio.build_state("untested", "t", self.GAME, self.built(tested=False))["state"], "current")
+        self.assertEqual(dbio.build_state("untested", "t", self.GAME, self.built())["state"], "changed")
+        self.assertEqual(dbio.build_state("tested", "t", self.GAME, self.built(tested=False))["fields"], ["tested"])
 
     def test_new_when_not_built_yet_and_draft_never_built(self):
         self.assertEqual(dbio.build_state("untested", "t", self.GAME, {})["state"], "new")

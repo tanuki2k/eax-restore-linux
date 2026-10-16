@@ -32,12 +32,15 @@ def built_entries():
 
 def build_state(folder, gid, game, built):
     """How a game file stands against game-database.json, mirroring what
-    tools/build-game-database.sh puts there ({id} + the file minus $schema):
+    tools/build-game-database.sh puts there ({id} + the file minus $schema,
+    plus tested: false for a game in untested/):
     current, changed (with the top-level fields that differ), new (not built yet),
     or draft (drafts are never built)."""
     if folder == "drafts":
         return {"state": "draft", "fields": []}
     want = {"id": gid, **{k: v for k, v in game.items() if k != "$schema"}}
+    if folder == "untested":
+        want["tested"] = False  # the build marks these; the browser filters on it
     have = built.get(gid)
     if have is None:
         return {"state": "new", "fields": []}
