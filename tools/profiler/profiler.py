@@ -74,7 +74,7 @@ def mark(sid, step, **extra):
     save_session(sid, s)
 
 
-def do_action(sid, action):
+def do_action(sid, action, profile=None):
     game = find_game(sid)
     d = sdir(sid)
     os.makedirs(d, exist_ok=True)
@@ -186,8 +186,8 @@ def do_action(sid, action):
         take("pre", say)
         if not os.path.exists(SCRIPT):
             subprocess.run([os.path.join(dbio.ROOT, "build.sh")], check=True, capture_output=True, cwd=dbio.ROOT)
-        say("running the install (empty game database, canned answers)...")
-        r = capture.run_install(game, d, SCRIPT)
+        say("running the install (the game's exe and API only, no game settings, canned answers)...")
+        r = capture.run_install(game, d, SCRIPT, profile)
         if not r["ok"]:
             raise RuntimeError("install did not finish:\n" + r["tail"])
         take("installed", say)
@@ -227,8 +227,8 @@ def do_action(sid, action):
                 first_run(say)
             if not os.path.exists(SCRIPT):
                 subprocess.run([os.path.join(dbio.ROOT, "build.sh")], check=True, capture_output=True, cwd=dbio.ROOT)
-            say("running the install (empty game database, canned answers)...")
-            r = capture.run_install(game, d, SCRIPT)
+            say("running the install (the game's exe and API only, no game settings, canned answers)...")
+            r = capture.run_install(game, d, SCRIPT, profile)
             if not r["ok"]:
                 raise RuntimeError("install did not finish:\n" + r["tail"])
             n = capture.snapshot(game, d, "installed"); mark(sid, "installed", files=n)
@@ -432,7 +432,8 @@ class H(BaseHTTPRequestHandler):
                     s = load_session(sid); s["exe"] = self.body()["exe"]; save_session(sid, s)
                     return self.reply({"ok": True})
                 if method == "POST" and what == "action":
-                    do_action(sid, self.body()["action"])
+                    b = self.body()
+                    do_action(sid, b["action"], b.get("profile"))
                     return self.reply({"ok": True})
                 if method == "POST" and what == "draft":
                     return self.reply(draft(sid, self.body().get("ai", True)))

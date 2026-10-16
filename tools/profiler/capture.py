@@ -421,15 +421,47 @@ def install_answers(game_dir, store):
     return lines
 
 
-def run_install(game, session_dir, script):
-    """Runs the built script with an empty game database (so no Game Settings are
-    applied: the capture needs the config files untouched) and canned answers."""
-    empty_db = os.path.join(session_dir, "empty-db.json")
-    _wr(empty_db, '{"schema_version": 3, "games": []}')
+def find_exe_dir(root, exe):
+    """The folder under root holding exe (shallowest first, any letter case); root
+    when it isn't found. Many games keep their exe in bin/, not the install root."""
+    want = (exe or "").lower()
+    if not want or not os.path.isdir(root):
+        return root
+    best = None
+    for d, _, files in os.walk(root):
+        if want in (f.lower() for f in files):
+            depth = os.path.relpath(d, root).count(os.sep)
+            if best is None or depth < best[0]:
+                best = (depth, d)
+    return best[1] if best else root
+
+
+def profile_db(game, profile):
+    """A database with just this game: its exe, API and extra exe folders, and none
+    of its Game Settings (the capture needs the config files untouched). None when
+    the profile doesn't name an exe or an API, so the script has nothing to go by."""
+    if not profile or not profile.get("exe") or not profile.get("api"):
+        return None
+    store = {"id": game["id"]}
+    if profile.get("extra_exe_folders"):
+        store["extra_exe_folders"] = profile["extra_exe_folders"]
+    eax = {"api": profile["api"], "versions": profile.get("versions") or ["2.0"]}
+    entry = {"id": "capture", "name": profile.get("name") or "capture", "exe": profile["exe"],
+             "stores": {game["store"]: store}, "eax": eax}
+    return json.dumps({"schema_version": 3, "games": [entry]})
+
+
+def run_install(game, session_dir, script, profile=None):
+    """Runs the built script with canned answers and a database that holds no Game
+    Settings: empty, or just this game's exe and API when the profile has them."""
+    db = os.path.join(session_dir, "capture-db.json")
+    text = profile_db(game, profile)
+    _wr(db, text or '{"schema_version": 3, "games": []}')
+    exe_dir = find_exe_dir(game["dir"], profile.get("exe") if profile else "")
     answers = os.path.join(session_dir, "answers.txt")
-    _wr(answers, "\n".join(install_answers(game["dir"], game["store"])) + "\n")
+    _wr(answers, "\n".join(install_answers(exe_dir, game["store"])) + "\n")
     env = dict(os.environ, EAX_RESTORE_SKIP_PREFLIGHT="1", EAX_RESTORE_DSOAL_PIN="1",
-               EAX_RESTORE_GAME_DATABASE_FILE=empty_db, EAX_RESTORE_ANSWERS_FILE=answers)
+               EAX_RESTORE_GAME_DATABASE_FILE=db, EAX_RESTORE_ANSWERS_FILE=answers)
     log = os.path.join(session_dir, "install.log")
     with open(log, "w") as lf:
         r = subprocess.run([script], env=env, stdin=subprocess.DEVNULL, stdout=lf, stderr=subprocess.STDOUT, timeout=900)

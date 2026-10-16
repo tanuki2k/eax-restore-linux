@@ -706,7 +706,13 @@ function stage(num, done, title, desc, ...rest) {
 function drawSteps() {
   const box = $("#steps"); if (!box) return;
   const st = SESS.state.steps, job = SESS.job, run = job.state === "running", live = SESS.live, exe = SESS.state.exe;
-  const act = (action) => async () => { try { await api(`/api/session/${SESS.sid}/action`, "POST", { action }); await refreshSession(); drawSteps(); } catch (x) { toast(x.message, 8000); } };
+  // What the install needs from the profile: its exe and API, so it deploys the right engine in the right folder.
+  const captureProfile = () => {
+    const store = SESS.sid.split("-")[0];
+    return { name: GAME.name, exe: GAME.exe || SESS.state.exe || "", api: GAME.eax && GAME.eax.api, versions: GAME.eax && GAME.eax.versions,
+      extra_exe_folders: GAME.stores && GAME.stores[store] && GAME.stores[store].extra_exe_folders };
+  };
+  const act = (action) => async () => { try { await api(`/api/session/${SESS.sid}/action`, "POST", { action, profile: captureProfile() }); await refreshSession(); drawSteps(); } catch (x) { toast(x.message, 8000); } };
   const view = (k) => st[k] ? el("button", { type: "button", class: "btn sm", title: "See what this step captured", onclick: () => viewStep(k).catch((x) => toast(x.message, 8000)) }, "View") : null;
   const status = (a) => job.action === a && job.state !== "idle" ? el("div", { class: "status " + job.state }, `${job.state === "error" ? "Problem: " : ""}${job.message}`) : null;
   const prepDone = !!(st.pre && st.installed);
