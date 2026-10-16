@@ -2502,16 +2502,11 @@
         }
       },
       "eax": {
-        "api": "directsound3d",
+        "api": "openal",
         "versions": [
           "1.0",
           "2.0",
           "3.0"
-        ]
-      },
-      "install": {
-        "tweaks": [
-          "eax_unified"
         ]
       }
     },
@@ -2553,16 +2548,11 @@
         }
       },
       "eax": {
-        "api": "directsound3d",
+        "api": "openal",
         "versions": [
           "1.0",
           "2.0",
           "3.0"
-        ]
-      },
-      "install": {
-        "tweaks": [
-          "eax_unified"
         ]
       }
     },
@@ -2604,16 +2594,11 @@
         }
       },
       "eax": {
-        "api": "directsound3d",
+        "api": "openal",
         "versions": [
           "1.0",
           "2.0",
           "3.0"
-        ]
-      },
-      "install": {
-        "tweaks": [
-          "eax_unified"
         ]
       }
     },
