@@ -83,6 +83,23 @@ ensure_game_database() {
         fi
     fi
 
+    # Profiles nobody has checked on a real install (built with "tested":
+    # false) are left out unless EAX_RESTORE_UNTESTED is set: their config edits
+    # and engine choice could be wrong for a player's copy. The full file
+    # stays in GAME_DATABASE_FULL_FILE for the profile browser, which has its
+    # own tested / untested filter. The visible copy goes next to the cache,
+    # which is writable and overwritten each run, so it needs no cleanup.
+    GAME_DATABASE_FULL_FILE="$GAME_DATABASE_FILE"
+    if is_truthy "${EAX_RESTORE_UNTESTED:-}"; then
+        print_note "Game profiles nobody has checked on a real install yet are included," \
+            "so their settings may be wrong." >&2
+    elif jq -e 'any(.games[]; .tested == false)' "$GAME_DATABASE_FILE" >/dev/null 2>&1; then
+        local visible="${GAME_DATABASE_CACHE}.visible"
+        if jq '.games |= map(select(.tested != false))' "$GAME_DATABASE_FILE" > "$visible" 2>/dev/null && [ -s "$visible" ]; then
+            GAME_DATABASE_FILE="$visible"
+        fi
+    fi
+
     # The database schema evolves alongside this script. If the loaded copy
     # predates the schema this version expects (served from a branch that
     # hasn't merged a schema change yet, or a stale offline cache), several
@@ -983,6 +1000,9 @@ fzf_at_least() {
 # filters as four lines and the key bar on a border line.
 browse_game_database() {
     local dir defs state
+    # The browser filters tested and untested itself, so it starts from the
+    # database before ensure_game_database left the untested games out.
+    local GAME_DATABASE_FILE="${GAME_DATABASE_FULL_FILE:-$GAME_DATABASE_FILE}"
     # A run killed while browsing (its terminal closed) leaves its folder
     # behind, so each start clears out any a day old.
     find "${TMPDIR:-/tmp}" -maxdepth 1 -type d -name 'eax-restore-browse.*' -user "$(id -u)" -mmin +1440 \

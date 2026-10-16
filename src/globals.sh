@@ -98,6 +98,7 @@ DSOAL_PINNED_SHA256="5abe990ff5692fa070d549a8c28df2435842c5d3f586a59b0da5281bc1c
 GAME_DATABASE_URL="https://raw.githubusercontent.com/tanuki2k/eax-restore-linux/dev/game-database.json"
 GAME_DATABASE_CACHE="$BASE_SHARE/game-database.v3.json"
 GAME_DATABASE_FILE=""
+GAME_DATABASE_FULL_FILE=""
 GAME_DATABASE_ATTEMPTED=""
 # Schema version this script expects. ensure_game_database warns once if the
 # loaded copy is older (a branch that hasn't merged a schema bump yet, or a

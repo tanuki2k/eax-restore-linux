@@ -116,6 +116,11 @@
 #   edits to the database before they've been pushed to the branch it's
 #   normally fetched from.
 #
+# * EAX_RESTORE_UNTESTED=1  Includes the game profiles nobody has checked on a
+#   real install yet. Without it they're left out, so those games are treated
+#   as having no profile. The Tools menu's profile browser always has them,
+#   behind its own tested / untested filter.
+#
 # --- License ---
 # MIT License
 # Copyright (c) 2026 Tanuki2k

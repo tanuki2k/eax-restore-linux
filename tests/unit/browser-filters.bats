@@ -67,3 +67,18 @@ listed() { browse_game_stores "$STATE" | cut -f1 | paste -sd,; }
     run browse_filter_header "$STATE" list
     [[ "$output" == *"Ctrl-T Show  Untested"* ]]
 }
+
+# ensure_game_database leaves the untested games out unless EAX_RESTORE_UNTESTED is set;
+# the browser starts from the full file.
+@test "ensure_game_database hides untested games unless EAX_RESTORE_UNTESTED is set" {
+    export EAX_RESTORE_GAME_DATABASE_FILE="$GAME_DATABASE_FILE"
+    GAME_DATABASE_FILE=""; GAME_DATABASE_ATTEMPTED=""
+    GAME_DATABASE_CACHE="$BATS_TEST_TMPDIR/cache.json"; GAME_DATABASE_SCHEMA_VERSION=3
+    ensure_game_database 2>/dev/null
+    [ "$(jq -r '[.games[].id]|join(",")' "$GAME_DATABASE_FILE")" == "alpha" ]
+    [ "$(jq -r '[.games[].id]|join(",")' "$GAME_DATABASE_FULL_FILE")" == "alpha,beta,gamma" ]
+
+    GAME_DATABASE_FILE=""; GAME_DATABASE_ATTEMPTED=""
+    EAX_RESTORE_UNTESTED=1 ensure_game_database 2>/dev/null
+    [ "$(jq -r '[.games[].id]|join(",")' "$GAME_DATABASE_FILE")" == "alpha,beta,gamma" ]
+}

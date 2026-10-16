@@ -30,6 +30,8 @@ prompts is done via environment variables:
   EAX_RESTORE_VCRUN_ONLY=1            Only (re)install the VC++ runtime
   EAX_RESTORE_SKIP_CACHE_CHECK=1      Only use builds already downloaded
   EAX_RESTORE_GAME_DATABASE_FILE=PATH   Use a local game database file
+  EAX_RESTORE_UNTESTED=1              Include game profiles not yet checked on a
+                                      real install (left out otherwise)
   EAX_RESTORE_ANSWERS_FILE=PATH       Read the answers to every prompt from a file
   EAX_RESTORE_NO_LOG=1                Don't write a run log (normally saved to
                                       ~/.local/state/eax-restore-linux/logs/)
