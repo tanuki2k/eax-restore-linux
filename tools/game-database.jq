@@ -83,3 +83,14 @@ def render_game:
         | "  " + $k + ": " + (.value | render("  "; ($k | length) + 2;
             ($key == "stores" or $key == "install" or $key == "game_config")))] | join(",\n"))
     + "\n}";
+
+# One game's entry in game-database.json: its id and file (minus the editor's
+# "$schema" hint), marked "tested": false when the file lives in untested/.
+def built_entry($id; $untested):
+    { id: $id } + del(.["$schema"]) + (if $untested then { tested: false } else {} end);
+
+# A built game-database.json with this entry added, or replacing the one with
+# the same id, sorted the way tools/build-game-database.sh sorts it. How the
+# profile editor adds one submitted game without rebuilding from its own files.
+def splice_entry($entry):
+    .games |= ((map(select(.id != $entry.id)) + [$entry]) | sort_by(.name | ascii_downcase));

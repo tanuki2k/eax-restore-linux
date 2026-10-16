@@ -8,7 +8,7 @@ import argparse, json, os, re, subprocess, sys, threading, time, traceback, webb
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import ai, capture, classify, cleanup, dbio  # noqa: E402
+import ai, capture, classify, cleanup, dbio, submit  # noqa: E402
 
 WEB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 SCRIPT = os.path.join(dbio.ROOT, "dist", "eax-restore-linux.sh")
@@ -404,9 +404,33 @@ class H(BaseHTTPRequestHandler):
                 b = self.body()
                 dbio.promote(b["id"], b["from"], b["to"])
                 return self.reply({"ok": True})
+            ms2 = re.match(r"^/api/submit(/prepare)?/(tested|untested|drafts)/([a-z0-9-]+)$", p)
+            if ms2 and method == "POST":
+                prepare, folder, gid = ms2.groups()
+                b = self.body()
+                if prepare:
+                    return self.reply(submit.prepare(folder, gid, b))
+                return self.reply(submit.submit(folder, gid, b["game"], b.get("note", ""), bool(b.get("checked_install")),
+                                                bool(b.get("checked_ids")), b.get("via", "gh")))
             if method == "POST" and p == "/api/rebuild":
                 ok, msg = dbio.rebuild()
                 return self.reply({"ok": ok, "message": msg})
+            if method == "GET" and p == "/api/ai/status":
+                return self.reply(ai.status())
+            if method == "POST" and p == "/api/ai/key":
+                return self.reply(ai.save_key(self.body().get("key", "")))
+            if method == "POST" and p == "/api/ai/key/forget":
+                ai.forget_key()
+                return self.reply({"ok": True})
+            if method == "POST" and p == "/api/ai/cli":
+                action = self.body().get("action")
+                if action == "login":
+                    ai.cli_login()
+                elif action == "logout":
+                    ai.cli_logout()
+                else:
+                    raise ValueError("unknown action")
+                return self.reply({"ok": True})
             if method == "POST" and p == "/api/ai":
                 b = self.body()
                 return self.reply(ai.ask(b["task"], b.get("context", {})))
@@ -441,6 +465,8 @@ class H(BaseHTTPRequestHandler):
                     import shutil; shutil.rmtree(sdir(sid), ignore_errors=True); JOBS.pop(sid, None)
                     return self.reply({"ok": True})
             return self.reply({"error": "not found"}, 404)
+        except (submit.SubmitError, ai.AIError) as e:
+            return self.reply({"error": str(e)}, 400)
         except (KeyError, ValueError, RuntimeError, FileNotFoundError) as e:
             return self.reply({"error": f"{type(e).__name__}: {e}"}, 400)
         except Exception as e:  # noqa: BLE001
@@ -461,7 +487,7 @@ def main():
     global SERVER
     srv = SERVER = ThreadingHTTPServer(("127.0.0.1", a.port), H)
     url = f"http://127.0.0.1:{a.port}/"
-    print(f"Game profile editor: {url}  (AI: {ai.available() or 'off - set ANTHROPIC_API_KEY or log in to claude'})")
+    print(f"Game profile editor: {url}  (AI: {ai.available() or 'off - use the AI chip in the page, or set ANTHROPIC_API_KEY'})")
     if not a.no_open:
         threading.Timer(0.5, lambda: webbrowser.open(url)).start()
     if a.quit_when_closed:

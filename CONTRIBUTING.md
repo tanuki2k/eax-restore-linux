@@ -26,6 +26,8 @@ Open an issue describing the use case. If it's specific to a particular game or 
 
 Game profiles are the JSON files under `data/games/` and `data/drafts/`. The README's "Contributing to the game database" section covers the fields, and `python3 tools/profiler/profiler.py` is a browser editor whose Capture tab finds the config keys for you (see `tools/profiler/README.md`). A new entry starts in `data/games/untested/`. Please check each store ID against the store's own page before you move an entry to `tested/`; the editor marks IDs it found on your install as `local_install_verified`, which only means they were seen locally.
 
+The easy way to send a profile is the editor's **Submit…** button. With the GitHub CLI (`gh`) installed and logged in, it forks the repo if needed and opens a pull request against `dev` containing just that game's profile and the matching `game-database.json` entry. Without it, it opens GitHub's new-file page with the profile filled in, and a maintainer rebuilds `game-database.json` when merging. Either way the profile goes in `data/games/untested/` (or stays in the folder it's already in) until someone has checked it on a real install. Branching from `dev` instead of `main` applies to game profiles until `dev` becomes `main`; the steps above still work if you'd rather do the pull request yourself.
+
 ## Style
 
 * Match the existing script's conventions: `UPPER_CASE` for variables that persist across functions, `snake_case` for function-local variables, and the existing color/echo helpers for output.

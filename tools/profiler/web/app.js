@@ -403,6 +403,7 @@ function renderEdit() {
     el("div", { class: "gactions" },
       AI ? el("button", { type: "button", class: "btn", onclick: research, title: "Fill in release date, executable, description and EAX details from what the AI knows. Check them against a source." }, "✨ Research") : null,
       el("select", { id: "promo", title: "Move this entry to another folder (tested, untested or draft)", onchange: promote }, [el("option", { value: "" }, "Move to…"), ...["drafts", "untested", "tested"].filter((x) => x !== CUR.folder).map((x) => el("option", {}, x))]),
+      el("button", { type: "button", class: "btn", id: "submitbtn", title: "Send this profile to the project as a pull request", onclick: submitClicked }, "Submit…"),
       el("button", { type: "button", class: "btn primary", id: "savebtn", title: "Save (Ctrl+S): shows what will change in the file first", onclick: saveClicked }, "Save"))));
   drawNav(); renderPane(); drawBuildBadge();
 }
@@ -456,6 +457,58 @@ async function save() {
   $("#preview").textContent = JSON.stringify(prune(GAME), null, 2);
   toast(r.errors.length ? `Saved, with ${r.errors.length} problem${r.errors.length === 1 ? "" : "s"} to fix` : "Saved ✓"); loadList();
 }
+// Submit…: checks the profile, shows what looks private, then sends it as a pull request (GitHub CLI) or opens GitHub with it filled in.
+async function submitClicked() {
+  if (!GAME) return;
+  if (DIRTY) await save();
+  const info = await api(`/api/submit/prepare/${CUR.folder}/${CUR.id}`, "POST", prune(GAME));
+  const note = el("textarea", { rows: 3, style: "width:100%", placeholder: "Anything the reviewer should know (optional)" });
+  const onInstall = el("input", { type: "checkbox" }), idsChecked = el("input", { type: "checkbox" }), okPrivate = el("input", { type: "checkbox" });
+  let useBrowser = false;
+  const go = el("button", { type: "button", class: "primary" }, "Send");
+  const via = el("p", { class: "muted" });
+  const drawVia = () => {
+    via.replaceChildren(info.gh_user && !useBrowser
+      ? `This opens a pull request on ${info.upstream} from your GitHub account (${info.gh_user}), with just ${info.name}'s profile. `
+      : `This opens GitHub in your browser with the profile filled in, ready for you to send. `,
+      "Your captured files stay on your computer.", " ",
+      info.gh_user ? el("a", { href: "#", onclick: (e) => { e.preventDefault(); useBrowser = !useBrowser; drawVia(); } }, useBrowser ? "Use my GitHub login instead" : "Use the browser instead") : null);
+  };
+  drawVia();
+  const refresh = () => { go.disabled = info.errors.length > 0 || (info.findings.length > 0 && !okPrivate.checked); };
+  okPrivate.onchange = refresh;
+  const dlg = dialog(el("h3", {}, `Send ${info.name} to the project?`), via,
+    CUR.folder === "tested" ? null : el("p", { class: "muted" }, "It's added as untested until someone has checked it on a real install."),
+    info.errors.length ? el("div", {}, el("p", {}, el("strong", {}, "Fix these first:")), el("ul", {}, info.errors.map((x) => el("li", {}, x)))) : null,
+    info.findings.length ? el("div", {}, el("p", {}, el("strong", {}, "These look like they came from your computer:")),
+      el("ul", {}, info.findings.map((f) => el("li", {}, el("code", {}, f.where), ` “${f.value}” ${f.why}`))),
+      el("label", { class: "switch muted" }, okPrivate, "I've checked these and they're fine to share")) : null,
+    note,
+    el("label", { class: "switch muted" }, onInstall, "I checked this on my own install"),
+    el("label", { class: "switch muted" }, idsChecked, "I checked the store IDs on the store's page"),
+    el("div", { class: "btns" }, el("span", { class: "sp" }), el("button", { type: "button", onclick: () => dlg.close() }, "Cancel"), go));
+  refresh();
+  go.onclick = async () => {
+    go.disabled = true; go.textContent = "Sending…";
+    try {
+      const r = await api(`/api/submit/${CUR.folder}/${CUR.id}`, "POST", { game: prune(GAME), note: note.value, checked_install: onInstall.checked, checked_ids: idsChecked.checked, via: useBrowser ? "browser" : "gh" });
+      dlg.close(); submitDone(r);
+    } catch (x) { go.disabled = false; go.textContent = "Send"; toast(x.message, 9000); }
+  };
+}
+function submitDone(r) {
+  if (r.mode === "gh") {
+    const d = dialog(el("h3", {}, "Pull request opened"), el("p", {}, "Thank you! A maintainer will look at it. You can follow it here:"),
+      el("p", {}, el("a", { href: r.url, target: "_blank", rel: "noopener" }, r.url)), el("div", { class: "btns" }, el("span", { class: "sp" }), el("button", { type: "button", class: "primary", onclick: () => d.close() }, "Done")));
+    return;
+  }
+  const kids = [el("h3", {}, "GitHub is ready")];
+  if (r.json) kids.push(el("p", {}, "This profile is too long to fill in by itself. Open GitHub, then paste the profile into the file."),
+    el("button", { type: "button", class: "btn", onclick: async (e) => { try { await navigator.clipboard.writeText(r.json); e.target.textContent = "Copied ✓"; } catch { toast("Couldn't copy. Select the text in the JSON panel instead.", 6000); } } }, "Copy the profile"));
+  else kids.push(el("p", {}, "The new file is filled in. Check it over, then press “Propose new file” on GitHub."));
+  const d = dialog(...kids, el("div", { class: "btns" }, el("span", { class: "sp" }), el("button", { type: "button", onclick: () => d.close() }, "Close"),
+    el("a", { class: "btn primary", href: r.url, target: "_blank", rel: "noopener" }, "Open GitHub")));
+}
 async function promote(e) {
   const to = e.target.value; if (!to) return;
   if (DIRTY) await save();
@@ -486,8 +539,8 @@ function drawRebuild() {
 }
 async function loadList() {
   const j = await api("/api/games"); GAMES = j.games; STALE = j.stale || []; AI = j.ai;
-  $("#aistate").textContent = AI ? `AI: ${AI === "api" ? "API key" : "claude CLI"}` : "AI off";
-  $("#aistate").dataset.tip = AI ? "AI drafting is available (✨ buttons)." : "Set ANTHROPIC_API_KEY or log in to the claude command to turn on the ✨ drafting buttons.";
+  $("#aistate").textContent = AI ? `AI: ${AI === "api" ? "API key" : "Claude sign-in"}` : "AI off";
+  $("#aistate").dataset.tip = AI ? "AI drafting is on, so the ✨ buttons work. Click to change how it signs in." : "Click to sign in or add an API key, which turns on the ✨ drafting buttons.";
   drawList(); drawRebuild();
   if (GAME && CUR) drawBuildBadge();
 }
@@ -519,6 +572,42 @@ async function addByName() {
 }
 $("#filter").oninput = drawList;
 $("#addinstalled").onclick = addInstalled;
+$("#aistate").onclick = () => aiSettings();
+$("#aistate").onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); aiSettings(); } };
+// The AI chip's dialog: sign in with the claude command, or save an Anthropic API key (kept in a private file).
+async function aiSettings() {
+  let st = await api("/api/ai/status"), timer;
+  const body = el("div", {});
+  const dlg = dialog(el("h3", {}, "AI drafting"), body, el("div", { class: "btns" }, el("span", { class: "sp" }), el("button", { type: "button", class: "primary", onclick: () => dlg.close() }, "Done")));
+  dlg.addEventListener("close", () => { clearInterval(timer); loadList(); });
+  const refresh = async () => { st = await api("/api/ai/status"); draw(); };
+  const run = (fn, done) => async (e) => { e.target.disabled = true; try { await fn(); if (done) toast(done); } catch (x) { toast(x.message, 8000); } await refresh(); };
+  function draw() {
+    const cli = st.cli;
+    const using = st.env_key ? "Using the ANTHROPIC_API_KEY variable." : st.in_use === "api" ? `Using your saved API key (${st.saved_key}).`
+      : st.in_use === "cli" ? "Using your Claude sign-in." : "AI drafting is off. Sign in or add an API key below to turn on the ✨ buttons.";
+    clearInterval(timer);
+    if (st.login.running) timer = setInterval(refresh, 2000);
+    const keyInput = el("input", { type: "password", placeholder: "sk-ant-…", autocomplete: "off", spellcheck: false });
+    body.replaceChildren(el("p", {}, el("strong", {}, using)),
+      el("h4", {}, "Sign in with Claude"),
+      el("p", { class: "muted" }, "Uses your Claude subscription, through the claude command's own sign-in."),
+      !cli.installed ? el("p", {}, "Claude Code isn't installed, or the editor can't find it. If you have it, make sure the `claude` command works in a terminal; if you don't, install it or use an API key instead.")
+        : el("div", {}, el("p", {}, st.login.running ? "Waiting for you to finish signing in, in your browser…" : cli.logged_in ? `Signed in${cli.email ? " as " + cli.email : ""}.` : "Not signed in."),
+          st.login.running && st.login.output ? el("pre", { class: "muted", style: "white-space:pre-wrap;word-break:break-all;font-size:12px" }, st.login.output) : null,
+          cli.logged_in && !st.login.running
+            ? el("button", { type: "button", class: "btn", onclick: run(() => api("/api/ai/cli", "POST", { action: "logout" }), "Signed out") }, "Sign out")
+            : el("button", { type: "button", class: "btn primary", disabled: st.login.running, onclick: run(() => api("/api/ai/cli", "POST", { action: "login" })) }, "Sign in")),
+      el("h4", {}, "Anthropic API key"),
+      st.saved_key ? el("p", {}, `Saved key ${st.saved_key} `, el("button", { type: "button", class: "btn sm", onclick: run(() => api("/api/ai/key/forget", "POST"), "Key removed") }, "Remove")) : null,
+      keyInput,
+      el("div", { class: "btns" }, el("span", { class: "sp" }), el("button", { type: "button", class: "btn", onclick: run(async () => {
+        const r = await api("/api/ai/key", "POST", { key: keyInput.value }); toast(r.checked ? "Key saved ✓" : r.note, 8000);
+      }) }, st.saved_key ? "Replace key" : "Save and check")),
+      el("p", { class: "muted" }, `The key is kept in ${st.config}, readable only by you, and sent only to Anthropic. The ANTHROPIC_API_KEY variable, when set, is used instead.`));
+  }
+  draw();
+}
 $("#rebuild").onclick = async () => { const r = await api("/api/rebuild", "POST"); toast(r.ok ? "game-database.json rebuilt ✓" : r.message, 8000); await loadList(); };
 $("#cleanupbtn").onclick = () => openCleanup(GAME);
 $("#jsontoggle").onclick = () => { const l = $("#layout"); const hidden = getComputedStyle($("#rail")).display === "none"; l.classList.toggle("norail", !hidden); l.classList.toggle("rail-on", hidden); if (hidden) $("#rail").style.display = "block"; else $("#rail").style.display = ""; };
