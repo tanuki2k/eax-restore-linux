@@ -41,11 +41,14 @@ if [ -n "$errors" ]; then
     exit 1
 fi
 
+# A game from data/games/untested/ is marked "tested": false (the browser filters on it);
+# a tested one carries nothing, and a missing field means tested.
 built="$(for f in "${game_files[@]}"; do
-    jq --arg id "$(basename "$f" .json)" '{ id: $id } + del(.["$schema"])' "$f"
+    jq --arg id "$(basename "$f" .json)" --argjson untested "$([[ "$f" == data/games/untested/* ]] && echo true || echo false)" \
+        '{ id: $id } + del(.["$schema"]) + (if $untested then { tested: false } else {} end)' "$f"
 done | jq -s '{
     schema_version: 3,
-    _readme: "Generated from data/games/tested/*.json and data/games/untested/*.json by tools/build-game-database.sh; do not edit by hand. Field reference: data/schema.json and README.md, \"Contributing to the game database\".",
+    _readme: "Generated from data/games/tested/*.json and data/games/untested/*.json by tools/build-game-database.sh; do not edit by hand. Games from untested/ carry \"tested\": false. Field reference: data/schema.json and README.md, \"Contributing to the game database\".",
     games: sort_by(.name | ascii_downcase)
 }')"
 

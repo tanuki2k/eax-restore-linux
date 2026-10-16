@@ -1,6 +1,6 @@
 {
   "schema_version": 3,
-  "_readme": "Generated from data/games/tested/*.json and data/games/untested/*.json by tools/build-game-database.sh; do not edit by hand. Field reference: data/schema.json and README.md, \"Contributing to the game database\".",
+  "_readme": "Generated from data/games/tested/*.json and data/games/untested/*.json by tools/build-game-database.sh; do not edit by hand. Games from untested/ carry \"tested\": false. Field reference: data/schema.json and README.md, \"Contributing to the game database\".",
   "games": [
     {
       "id": "aliens-versus-predator-classic-2000",
@@ -22,7 +22,8 @@
           "1.0"
         ]
       },
-      "notes": "Both stores label this 'Classic 2000' to set it apart from 2010's Aliens vs. Predator, a different game."
+      "notes": "Both stores label this 'Classic 2000' to set it apart from 2010's Aliens vs. Predator, a different game.",
+      "tested": false
     },
     {
       "id": "alpha-centauri",
@@ -45,7 +46,8 @@
         "versions": [
           "1.0"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "alpha-prime",
@@ -166,7 +168,8 @@
           }
         ]
       },
-      "notes": "Alpha Prime sets its speaker option back to stereo every time it starts, so the speaker settings offered later don't last. That happened with Proton's default PipeWire audio driver, and with a 7.1 output on the PulseAudio driver."
+      "notes": "Alpha Prime sets its speaker option back to stereo every time it starts, so the speaker settings offered later don't last. That happened with Proton's default PipeWire audio driver, and with a 7.1 output on the PulseAudio driver.",
+      "tested": false
     },
     {
       "id": "anachronox",
@@ -187,7 +190,8 @@
         "versions": [
           "1.0"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "aquanox",
@@ -205,7 +209,8 @@
           "1.0",
           "2.0"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "arx-fatalis",
@@ -256,7 +261,8 @@
           }
         ]
       },
-      "notes": "On Linux, the Arx Libertatis engine reimplementation (arx-libertatis.org) is a strong alternative: it runs natively without Wine or Proton, reuses your Arx Fatalis data files and plays the game's environmental reverb out of the box. Use it or EAX, not both."
+      "notes": "On Linux, the Arx Libertatis engine reimplementation (arx-libertatis.org) is a strong alternative: it runs natively without Wine or Proton, reuses your Arx Fatalis data files and plays the game's environmental reverb out of the box. Use it or EAX, not both.",
+      "tested": false
     },
     {
       "id": "assassins-creed",
@@ -286,7 +292,8 @@
           "eax_unified"
         ]
       },
-      "notes": "The PC 'Director's Cut Edition' sold on both stores is the original 2008 PC port of the 2007 console game, with four PC-exclusive bonus missions and DirectX 10 support added on top."
+      "notes": "The PC 'Director's Cut Edition' sold on both stores is the original 2008 PC port of the 2007 console game, with four PC-exclusive bonus missions and DirectX 10 support added on top.",
+      "tested": false
     },
     {
       "id": "avencast-rise-of-the-mage",
@@ -306,7 +313,8 @@
           "4.0",
           "5.0"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "baldurs-gate-2-complete",
@@ -465,7 +473,8 @@
           "3.0",
           "4.0"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "bioshock",
@@ -643,7 +652,8 @@
             }
           }
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "brothers-in-arms-hells-highway",
@@ -665,7 +675,8 @@
           "4.0",
           "5.0"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "brothers-in-arms-road-to-hill-30",
@@ -713,7 +724,8 @@
             }
           }
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "clive-barkers-undying",
@@ -832,7 +844,8 @@
         "tweaks": [
           "eax_unified"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "descent-3",
@@ -1147,7 +1160,8 @@
           "3.0",
           "4.0"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "dungeon-keeper-ii",
@@ -1167,7 +1181,8 @@
         "versions": [
           "1.0"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "dungeon-siege",
@@ -1188,7 +1203,8 @@
         "versions": [
           "1.0"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "dungeon-siege-ii",
@@ -1212,7 +1228,8 @@
           "3.0",
           "4.0"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "dungeons-and-dragons-dragonshard",
@@ -1228,7 +1245,8 @@
       "eax": {
         "api": "directsound3d"
       },
-      "notes": "Turn on 'Creative EAX' in the game's Audio Settings (per the Vogons Wiki)."
+      "notes": "Turn on 'Creative EAX' in the game's Audio Settings (per the Vogons Wiki).",
+      "tested": false
     },
     {
       "id": "fear",
@@ -1607,7 +1625,8 @@
         "tweaks": [
           "eax_unified"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "freedom-fighters",
@@ -1634,7 +1653,8 @@
         "tweaks": [
           "eax_unified"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "half-life",
@@ -1716,7 +1736,8 @@
         "versions": [
           "3.0"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "icewind-dale-complete",
@@ -1851,7 +1872,8 @@
         "tweaks": [
           "eax_unified"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "max-payne-2-the-fall-of-max-payne",
@@ -1876,7 +1898,8 @@
         "tweaks": [
           "eax_unified"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "medal-of-honor-allied-assault",
@@ -1895,7 +1918,8 @@
           "1.0",
           "2.0"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "messiah",
@@ -1912,7 +1936,8 @@
         "versions": [
           "2.0"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "neverwinter-nights-2",
@@ -2216,7 +2241,8 @@
           "1.0"
         ]
       },
-      "notes": "This is the 'Outcast 1.1' listing — a 2014 official update to the classic 1999 game. 2017's 'Outcast: Second Contact' and 2024's 'Outcast: A New Beginning' are separate games."
+      "notes": "This is the 'Outcast 1.1' listing — a 2014 official update to the classic 1999 game. 2017's 'Outcast: Second Contact' and 2024's 'Outcast: A New Beginning' are separate games.",
+      "tested": false
     },
     {
       "id": "planescape-torment",
@@ -2241,7 +2267,8 @@
           "title": "GOG forum: Planescape: Torment: Enhanced Edition announcement",
           "url": "https://www.gog.com/forum/planescape_torment/planescape_torment_enhanced_edition_1"
         }
-      ]
+      ],
+      "tested": false
     },
     {
       "id": "project-eden",
@@ -2258,7 +2285,8 @@
         "versions": [
           "1.0"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "psychonauts",
@@ -2310,7 +2338,8 @@
           "title": "PCGamingWiki: Psychonauts",
           "url": "https://www.pcgamingwiki.com/wiki/Psychonauts"
         }
-      ]
+      ],
+      "tested": false
     },
     {
       "id": "quake-4",
@@ -2447,7 +2476,8 @@
         "tweaks": [
           "eax_unified"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "requiem-avenging-angel",
@@ -2464,7 +2494,8 @@
         "versions": [
           "1.0"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "rune-classic",
@@ -2485,7 +2516,8 @@
         "versions": [
           "2.0"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "stalker-call-of-pripyat",
@@ -2508,7 +2540,8 @@
           "2.0",
           "3.0"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "stalker-call-of-prypiat-enhanced-edition",
@@ -2531,7 +2564,8 @@
         ],
         "status": "built_in",
         "problem": "Unlike the original Call of Pripyat, it comes with OpenAL Soft, which has EAX built in, so its reverb doesn't depend on a Creative sound card."
-      }
+      },
+      "tested": false
     },
     {
       "id": "stalker-clear-sky",
@@ -2554,7 +2588,8 @@
           "2.0",
           "3.0"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "stalker-clear-sky-enhanced-edition",
@@ -2577,7 +2612,8 @@
         ],
         "status": "built_in",
         "problem": "Unlike the original Clear Sky, it comes with OpenAL Soft, which has EAX built in, so its reverb doesn't depend on a Creative sound card."
-      }
+      },
+      "tested": false
     },
     {
       "id": "stalker-shadow-of-chernobyl",
@@ -2600,7 +2636,8 @@
           "2.0",
           "3.0"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "stalker-shadow-of-chornobyl-enhanced-edition",
@@ -2623,7 +2660,8 @@
         ],
         "status": "built_in",
         "problem": "Unlike the original Shadow of Chernobyl, it comes with OpenAL Soft, which has EAX built in, so its reverb doesn't depend on a Creative sound card."
-      }
+      },
+      "tested": false
     },
     {
       "id": "shogo-mobile-armor-division",
@@ -2640,7 +2678,8 @@
         "versions": [
           "1.0"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "soldier-of-fortune-ii-double-helix",
@@ -2681,7 +2720,8 @@
           }
         ]
       },
-      "notes": "Only single-player has EAX — multiplayer (SoF2MP.exe) has none."
+      "notes": "Only single-player has EAX — multiplayer (SoF2MP.exe) has none.",
+      "tested": false
     },
     {
       "id": "star-trek-elite-force-ii",
@@ -2701,7 +2741,8 @@
           "3.0"
         ]
       },
-      "notes": "Also supports A3D, per the Vogons Wiki citation for this title."
+      "notes": "Also supports A3D, per the Vogons Wiki citation for this title.",
+      "tested": false
     },
     {
       "id": "star-wars-jedi-knight-ii-jedi-outcast",
@@ -2755,7 +2796,8 @@
             }
           }
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "star-wars-jedi-knight-jedi-academy",
@@ -2810,7 +2852,8 @@
             }
           }
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "star-wars-knights-of-the-old-republic",
@@ -2900,7 +2943,8 @@
         "problem": "The original release used DirectSound3D, but a later patch replaced it with a newer audio engine that dropped EAX entirely.",
         "fix": "Steam beta branch 'legacypc' reverts to the pre-patch build with EAX intact (right-click the game -> Properties -> Betas).",
         "fix_in_place": true
-      }
+      },
+      "tested": false
     },
     {
       "id": "star-wars-republic-commando",
@@ -2948,7 +2992,8 @@
             }
           }
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "swat-4",
@@ -2994,7 +3039,8 @@
             }
           }
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "system-shock-2",
@@ -3061,7 +3107,8 @@
           "url": "https://github.com/JarrodDoyle/rogue-patcher/blob/0e355105dd7d520d0364c5f96d03ae7f9d437353/Resources/NewDark/Docs/NewDark/new_config_vars.txt"
         }
       ],
-      "notes": "It comes with NewDark pre-installed, which has its own 'Hardware Acceleration' option in the in-game Audio menu — worth trying if EAX doesn't sound right."
+      "notes": "It comes with NewDark pre-installed, which has its own 'Hardware Acceleration' option in the in-game Audio menu — worth trying if EAX doesn't sound right.",
+      "tested": false
     },
     {
       "id": "system-shock-2-25th-anniversary-remaster",
@@ -3176,7 +3223,8 @@
           "title": "PCGamingWiki: The Wheel of Time",
           "url": "https://www.pcgamingwiki.com/wiki/The_Wheel_of_Time"
         }
-      ]
+      ],
+      "tested": false
     },
     {
       "id": "the-witcher",
@@ -3197,7 +3245,8 @@
           "4.0"
         ]
       },
-      "notes": "If audio isn't right, the game's readme.rtf ('Known Issues') lists EAX caveats."
+      "notes": "If audio isn't right, the game's readme.rtf ('Known Issues') lists EAX caveats.",
+      "tested": false
     },
     {
       "id": "thief-gold",
@@ -3261,7 +3310,8 @@
           "title": "NewDark's config documentation (new_config_vars.txt)",
           "url": "https://github.com/JarrodDoyle/rogue-patcher/blob/0e355105dd7d520d0364c5f96d03ae7f9d437353/Resources/NewDark/Docs/NewDark/new_config_vars.txt"
         }
-      ]
+      ],
+      "tested": false
     },
     {
       "id": "thief-ii-the-metal-age",
@@ -3326,7 +3376,8 @@
           "title": "NewDark's config documentation (new_config_vars.txt)",
           "url": "https://github.com/JarrodDoyle/rogue-patcher/blob/0e355105dd7d520d0364c5f96d03ae7f9d437353/Resources/NewDark/Docs/NewDark/new_config_vars.txt"
         }
-      ]
+      ],
+      "tested": false
     },
     {
       "id": "thief-deadly-shadows",
@@ -3384,7 +3435,8 @@
           "title": "Creative's Thief: Deadly Shadows EAX guide (archived)",
           "url": "https://web.archive.org/web/20060114204401/http://www.soundblaster.com/resources/read.asp?articleid=53835&cat=1"
         }
-      ]
+      ],
+      "tested": false
     },
     {
       "id": "timeshift",
@@ -3402,7 +3454,8 @@
           "4.0",
           "5.0"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "titan-quest-immortal-throne",
@@ -3425,7 +3478,8 @@
           "4.0"
         ]
       },
-      "notes": "New purchases get Titan Quest Anniversary Edition instead, which is a separate game."
+      "notes": "New purchases get Titan Quest Anniversary Edition instead, which is a separate game.",
+      "tested": false
     },
     {
       "id": "tom-clancys-ghost-recon-advanced-warfighter-2",
@@ -3447,7 +3501,8 @@
           "3.0",
           "4.0"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "tom-clancys-rainbow-six-vegas",
@@ -3471,7 +3526,8 @@
         "tweaks": [
           "eax_unified"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "tom-clancys-rainbow-six-vegas-2",
@@ -3496,7 +3552,8 @@
         "tweaks": [
           "eax_unified"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "tom-clancys-splinter-cell",
@@ -3548,7 +3605,8 @@
             }
           }
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "tom-clancys-splinter-cell-chaos-theory",
@@ -3574,7 +3632,8 @@
           "eax_unified",
           "com_registry_routing"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "tom-clancys-splinter-cell-double-agent",
@@ -3601,7 +3660,8 @@
           "eax_unified"
         ]
       },
-      "notes": "Double Agent installs single-player and multiplayer as two separate builds — the multiplayer build (SCDA-Online) no longer works, so set up the single-player build in SCDA-Offline."
+      "notes": "Double Agent installs single-player and multiplayer as two separate builds — the multiplayer build (SCDA-Online) no longer works, so set up the single-player build in SCDA-Offline.",
+      "tested": false
     },
     {
       "id": "tomb-raider-the-angel-of-darkness",
@@ -3629,7 +3689,8 @@
         "tweaks": [
           "eax_unified"
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "tron-20",
@@ -3674,7 +3735,8 @@
             }
           }
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "unreal-gold",
@@ -3908,7 +3970,8 @@
             }
           }
         ]
-      }
+      },
+      "tested": false
     },
     {
       "id": "unreal-tournament-3",
@@ -4104,7 +4167,8 @@
           "title": "OldUnreal",
           "url": "https://www.oldunreal.com"
         }
-      ]
+      ],
+      "tested": false
     },
     {
       "id": "x-com-enforcer",
