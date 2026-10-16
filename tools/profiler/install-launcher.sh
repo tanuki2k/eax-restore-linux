@@ -9,7 +9,8 @@ if [ "${1:-}" == "--remove" ]; then
     echo "Removed $dest"
 else
     mkdir -p "$(dirname "$dest")"
-    sed "s|@LAUNCHER@|$here/eax-profiler|" "$here/eax-profiler.desktop" > "$dest"
+    # The repo's file finds the launcher beside itself (%k); the installed copy names it outright.
+    sed "s|^Exec=.*|Exec=\"$here/eax-profiler\"|" "$here/eax-profiler.desktop" > "$dest"
     chmod +x "$dest"
     echo "Added \"EAX profile editor\" to the app menu ($dest)"
 fi

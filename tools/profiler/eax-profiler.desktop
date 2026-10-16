@@ -1,7 +1,8 @@
+#!/usr/bin/env xdg-open
 [Desktop Entry]
 Name=EAX profile editor
 Comment=Edit and capture game profiles for EAX Restore
-Exec="@LAUNCHER@"
+Exec=sh -c 'exec "$(dirname "$1")/eax-profiler"' sh %k
 Icon=applications-games
 Terminal=false
 Type=Application
