@@ -938,6 +938,22 @@ resolve_exe_folder() {
         cand_exe_name["$d"]="${dir_exe_name[$d]}"
     done
 
+    # A folder whose own files name an audio API is the engine's; one that
+    # doesn't (a launcher or setup program next to it) goes after, however
+    # high the name ranking put it. The database's exe pick stays first.
+    local keep_first=0 audio_dirs=() quiet_dirs=() i
+    [ -n "${hint_exe:-}" ] && keep_first=1
+    for (( i = keep_first; i < ${#cand_dirs[@]}; i++ )); do
+        if folder_names_audio_api "${cand_dirs[$i]}"; then
+            audio_dirs+=("${cand_dirs[$i]}")
+        else
+            quiet_dirs+=("${cand_dirs[$i]}")
+        fi
+    done
+    if [ ${#audio_dirs[@]} -gt 0 ] && [ ${#quiet_dirs[@]} -gt 0 ]; then
+        cand_dirs=("${cand_dirs[@]:0:keep_first}" "${audio_dirs[@]}" "${quiet_dirs[@]}")
+    fi
+
     if [ ${#cand_dirs[@]} -eq 0 ]; then
         print_warning "No .exe files were found anywhere under this install."
         if [ -n "$beta_branch" ]; then
@@ -1050,6 +1066,21 @@ show_profile_if_unseen() {
     return 0
 }
 
+folder_names_audio_api() {
+    # Usage: folder_names_audio_api <dir>
+    # True when an .exe or .dll directly in <dir> names an audio API (the same
+    # strings detect_api_from_binary looks for). Ranks the exe scan's folders:
+    # the engine does, a launcher or setup program doesn't.
+    local f
+    while IFS= read -r -d '' f; do
+        case "$(basename "$f" | tr '[:upper:]' '[:lower:]')" in
+            dsound.dll|dsoal-aldrv.dll|openal32.dll) continue ;;
+        esac
+        grep -qai "dsound\.dll\|DirectSound\|OpenAL32\.dll\|alcOpenDevice" "$f" 2>/dev/null && return 0
+    done < <(find "$1" -maxdepth 1 -type f \( -iname '*.exe' -o -iname '*.dll' \) -print0 2>/dev/null)
+    return 1
+}
+
 detect_api_from_binary() {
     # Usage: detect_api_from_binary <game_dir> [exe name]
     # Lower-confidence heuristic behind the game database: greps the game's
@@ -1082,7 +1113,7 @@ detect_api_from_binary() {
     # about the game itself — excluded by name.
     local dir="${1%/}" main_exe=""
     local ds_named="" ds_mentioned="" openal_named="" openal_mentioned=""
-    local ds_main="" openal_main="" f rel depth ext
+    local ds_main="" openal_main="" shipped_openal="" f rel depth ext
     [ -n "${2:-}" ] && main_exe="$(find "$dir" -maxdepth 1 -type f -iname "$2" -print -quit 2>/dev/null)"
     # Pass "0exe" is the profile's exe on its own, read before anything else;
     # the later passes skip it.
@@ -1090,11 +1121,22 @@ detect_api_from_binary() {
         for ext in exe dll; do
             [ "$depth" == 0 ] && { [ "$ext" == exe ] && [ -n "$main_exe" ] || continue; }
             while IFS= read -r -d '' f; do
+                rel="${f#"$dir"/}"
                 case "$(basename "$f")" in
-                    dsound.dll|dsoal-aldrv.dll|OpenAL32.dll) continue ;;
+                    dsound.dll|dsoal-aldrv.dll) continue ;;
+                esac
+                # An OpenAL32.dll is read for what it is, not for what it names:
+                # OpenAL Soft is this script's own (or the player's) and says
+                # nothing about the game, while Creative's router (or its
+                # wrap_oal.dll) shipped with the game means it plays through OpenAL.
+                case "$(basename "$f" | tr '[:upper:]' '[:lower:]')" in
+                    openal32.dll)
+                        is_openal_soft_dll "$f" || [ -n "$shipped_openal" ] || shipped_openal="$rel"
+                        continue ;;
+                    wrap_oal.dll)
+                        [ -n "$shipped_openal" ] || shipped_openal="$rel" ;;
                 esac
                 [ "$f" == "$main_exe" ] && [ "$depth$ext" != "0exe" ] && continue
-                rel="${f#"$dir"/}"
                 if [ -z "$openal_named" ]; then
                     if grep -qai "OpenAL32\.dll" "$f" 2>/dev/null; then
                         openal_named="$rel"
@@ -1124,7 +1166,14 @@ detect_api_from_binary() {
     local openal_file="${openal_main:-${openal_named:-$openal_mentioned}}"
     local api=""
     if [ -n "$openal_file" ] && [ -n "$ds_file" ]; then
-        api="both"
+        # An engine that names both is a coin flip, unless the game came with
+        # Creative's OpenAL: then it plays through OpenAL (the way Stalker's
+        # xrSound.dll names dsound.dll too).
+        if [ -n "$shipped_openal" ]; then
+            api="openal"; openal_file="$shipped_openal"
+        else
+            api="both"
+        fi
     elif [ -n "$openal_file" ]; then
         api="openal"
     elif [ -n "$ds_file" ]; then

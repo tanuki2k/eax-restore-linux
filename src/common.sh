@@ -38,6 +38,15 @@ is_genuine_dll() {
     grep -qa "Wine builtin DLL\|Wine placeholder DLL" "$file" 2>/dev/null && return 1
     return 0
 }
+is_openal_soft_dll() {
+    # Usage: is_openal_soft_dll <path>
+    # Tells kcat's OpenAL Soft from Creative's OpenAL32.dll by content, since
+    # the file name is the same: OpenAL Soft carries its own name and its
+    # ALSOFT_ environment variable prefix, while Creative's router (a ~50 KB
+    # DLL that hands off to wrap_oal.dll) names neither. A repacked build
+    # without those strings counts as "not OpenAL Soft".
+    [ -s "$1" ] && grep -qa "OpenAL Soft\|ALSOFT_" "$1" 2>/dev/null
+}
 # Usage: swap_in <temp file> <target>
 # Replaces the target with the temp file written next to it, keeping the
 # target's permissions. A failed move removes the temp file and returns 1, so
