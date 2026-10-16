@@ -234,7 +234,7 @@
     },
     "config_file_name": {
       "type": "string",
-      "pattern": "^[A-Za-z0-9._ -]+\\.([iI][nN][iI]|[cC][fF][gG]|[gG][dD][bB]|[rR][eE][gG]|[tT][xX][tT])$"
+      "pattern": "^[A-Za-z0-9._ -]+\\.([iI][nN][iI]|[cC][fF][gG]|[gG][dD][bB]|[rR][eE][gG]|[tT][xX][tT]|[lL][tT][xX])$"
     },
     "config_file": {
       "type": "object",
@@ -252,7 +252,7 @@
           "items": {
             "type": "string",
             "anyOf": [
-              { "pattern": "^(game|install|prefix_documents|prefix_appdata|prefix_localappdata|prefix_public_documents):(?!/)(?!.*\\.\\.)[^\\\\]+\\.([iI][nN][iI]|[cC][fF][gG]|[gG][dD][bB]|[tT][xX][tT])$" },
+              { "pattern": "^(game|install|prefix_documents|prefix_appdata|prefix_localappdata|prefix_public_documents):(?!/)(?!.*\\.\\.)[^\\\\]+\\.([iI][nN][iI]|[cC][fF][gG]|[gG][dD][bB]|[tT][xX][tT]|[lL][tT][xX])$" },
               { "pattern": "^prefix:(system|user)\\.reg$" }
             ]
           }

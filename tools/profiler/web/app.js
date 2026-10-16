@@ -384,7 +384,7 @@ function drawNav() {
   nav.replaceChildren(...SECTIONS.map(([id, label]) => {
     const n = id === "capture" ? 0 : ERRS.filter((e) => sectionOfPath(e.split(": ")[0]) === id).length;
     return el("button", { type: "button", class: id === SECTION ? "on" : "", onclick: () => setSection(id) }, label, n ? el("span", { class: "nb", title: `${n} problem${n === 1 ? "" : "s"} in this section` }, n) : null);
-  }));
+  }), el("span", { class: "sp" }), GACTIONS);
 }
 function setSection(id) { SECTION = id; drawNav(); renderPane(); $("#main").scrollTop = 0; }
 function showTab(t) { if (t === "capture") setSection("capture"); else if (SECTION === "capture") setSection("overview"); }
@@ -393,6 +393,7 @@ function showTab(t) { if (t === "capture") setSection("capture"); else if (SECTI
 function drawHeadStatus() {
   const d = $("#dirtybadge"); if (d) d.hidden = !DIRTY;
 }
+let GACTIONS = null;
 function renderEdit() {
   $("#empty").hidden = true; $("#game").hidden = false;
   const folderLabel = { tested: "Tested", untested: "Untested", drafts: "Draft" }[CUR.folder];
@@ -400,11 +401,14 @@ function renderEdit() {
     el("div", { class: "gtitle" }, el("h1", {}, GAME.name || CUR.id),
       el("div", { class: "gmeta" }, el("span", { class: "badge " + CUR.folder, title: { tested: "Checked against a real install.", untested: "Shipped, but not checked on a real install yet.", drafts: "Incomplete or doubtful; never shipped." }[CUR.folder] }, folderLabel),
         el("code", {}, `${CUR.folder}/${CUR.id}.json`), el("span", { id: "buildbadge", class: "badge" }), el("span", { id: "dirtybadge", class: "badge dirty", hidden: !DIRTY }, "● Unsaved changes"))),
+    null));
+  // The actions sit in the sticky section bar (drawNav), so they stay in view while scrolling.
+  GACTIONS =
     el("div", { class: "gactions" },
       AI ? el("button", { type: "button", class: "btn", onclick: research, title: "Fill in release date, executable, description and EAX details from what the AI knows. Check them against a source." }, "✨ Research") : null,
       el("select", { id: "promo", title: "Move this entry to another folder (tested, untested or draft)", onchange: promote }, [el("option", { value: "" }, "Move to…"), ...["drafts", "untested", "tested"].filter((x) => x !== CUR.folder).map((x) => el("option", {}, x))]),
       el("button", { type: "button", class: "btn", id: "submitbtn", title: "Send this profile to the project as a pull request", onclick: submitClicked }, "Submit…"),
-      el("button", { type: "button", class: "btn primary", id: "savebtn", title: "Save (Ctrl+S): shows what will change in the file first", onclick: saveClicked }, "Save"))));
+      el("button", { type: "button", class: "btn primary", id: "savebtn", title: "Save (Ctrl+S): shows what will change in the file first", onclick: saveClicked }, "Save"));
   drawNav(); renderPane(); drawBuildBadge();
 }
 function drawBuildBadge() {
@@ -869,8 +873,11 @@ async function makeDraft() {
 function showDraft() {
   const box = $("#draftbox"), d = DRAFT; if (!box || !d) return;
   const saveDrop = () => api(`/api/session/${SESS.sid}/drop`, "POST", { drop: [...DROP], cats: Object.fromEntries(CAT) }).catch(() => {});
+  // Unticking a whole file first is quicker than unticking dozens when only a few settings matter.
+  const setFile = (f, keep) => { for (const c of f.changes) { const k = dropKey(f, c); keep ? DROP.delete(k) : DROP.add(k); } saveDrop(); showDraft(); };
   fill(box, el("div", { class: "blockhead" }, el("h2", {}, "Captured changes"), helpIcon("Tick the changes to keep. Ones that look like the game's own bookkeeping start unticked, with the reason shown.")),
     ...Object.entries(d.diffs).flatMap(([label, list]) => [el("p", {}, el("b", {}, runName(label))), ...(list.length ? list.map((f) => el("details", { class: "cfile", open: true }, el("summary", {}, `${f.file}  →  ${f.location || "(outside known folders)"}  [${f.format}]`),
+      el("div", { class: "barrow" }, el("button", { type: "button", class: "btn sm", onclick: () => setFile(f, false) }, "Untick all in this file"), el("button", { type: "button", class: "btn sm", onclick: () => setFile(f, true) }, "Tick all in this file")),
       el("div", { class: "tblwrap" }, el("table", {}, el("tr", {}, ["Keep", "Category", "Section", "Key", "Was", "Now", ""].map((h) => el("th", {}, h))), ...f.changes.map((c) => el("tr", {}, el("td", {}, el("input", { type: "checkbox", checked: c.expressible && !DROP.has(dropKey(f, c)), disabled: !c.expressible, title: "Include when merging", onchange: (e) => { const k = dropKey(f, c); e.target.checked ? DROP.delete(k) : DROP.add(k); saveDrop(); } })), el("td", {}, c.section), el("td", {}, c.key), el("td", { class: "muted" }, String(c.old)), el("td", {}, String(c.new)), el("td", { class: c.expressible ? "muted" : "bad" }, c.expressible ? (c.suspect_reason ? "left out: " + c.suspect_reason : "") : "not allowed by schema"))))))) : [el("p", { class: "muted" }, "No changes.")])]),
     ...(d.skipped.length ? [el("div", { class: "blockhead" }, el("h2", {}, "Needs a human")), el("ul", {}, d.skipped.map((x) => el("li", {}, x)))] : []),
     d.ai && d.ai !== "ok" ? el("p", { class: "bad" }, d.ai) : null,

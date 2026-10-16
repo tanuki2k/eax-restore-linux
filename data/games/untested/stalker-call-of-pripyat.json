@@ -8,5 +8,21 @@
     "steam": { "id": 41700 },
     "gog": { "id": 1207660583 }
   },
-  "eax": { "api": "openal", "versions": ["1.0", "2.0", "3.0"] }
+  "eax": { "api": "openal", "versions": ["1.0", "2.0", "3.0"] },
+  "game_config": {
+    "files": {
+      "user.ltx": {
+        "format": "ltx",
+        "locations": ["prefix_documents:stalker-cop/user.ltx"],
+        "if_missing": "create"
+      }
+    },
+    "audio_settings": [
+      {
+        "title": "Enable EAX sound effects",
+        "reason": "The game ships with EAX (environmental audio effects) off, so room reverb and similar effects are not used. Turning it on lets OpenAL Soft apply them.",
+        "changes": { "user.ltx": { "snd_device": "OpenAL Soft", "snd_efx": "on" } }
+      }
+    ]
+  }
 }
