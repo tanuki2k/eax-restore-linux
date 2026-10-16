@@ -282,7 +282,7 @@ function fileCards(parent, key, valueSchema, path) {
     })) : el("div", { class: "empty-note" }, "No config files yet."),
       el("div", { class: "addrow" }, el("button", { type: "button", class: "btn", onclick: async () => {
         const n = await askText("Add a config file", "File name, e.g. game.ini, Quake4Config.cfg, Profile000.gdb or system.reg", "Add"); if (!n) return;
-        m()[n] = { format: n.endsWith(".reg") ? "wine_reg" : n.endsWith(".gdb") ? "gadb" : "ini", locations: [n.endsWith(".reg") ? "prefix:" + n : "game:" + n] }; changed(); draw();
+        m()[n] = { format: n.endsWith(".reg") ? "wine_reg" : n.endsWith(".gdb") ? "gadb" : n.endsWith(".ltx") ? "ltx" : "ini", locations: [n.endsWith(".reg") ? "prefix:" + n : "game:" + n] }; changed(); draw();
       } }, "+ Add a config file")));
   };
   draw(); return box;

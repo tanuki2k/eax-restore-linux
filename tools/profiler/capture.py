@@ -224,6 +224,8 @@ def guess_format(path, text):
     kv = sum(1 for ln in lines if re.match(r"^[A-Za-z_][\w.]*\s+\S", ln))
     if low.endswith((".cfg", ".con", ".ini")) and kv > eq and kv >= 3:
         return "dark_cfg"  # "Key Value" lines, e.g. Alpha Prime's settings.cfg
+    if low.endswith(".ltx"):
+        return "ltx"  # X-Ray's user.ltx: "key value" lines
     if low.endswith(".cfg") or low.endswith(".con"):
         return "dark_cfg" if re.search(r"^;?[A-Za-z_]\w*\s*$", text, re.M) and not eq else "flat_ini"
     return "flat_ini"
@@ -253,6 +255,11 @@ def parse_values(fmt, text):
     elif fmt == "brace_cfg":
         for m in re.finditer(r"^\s*\{([^}]*)\}\s*=\s*\{([^}]*)\}", text, re.M):
             out[("", m.group(1).strip())] = m.group(2).strip()
+    elif fmt == "ltx":
+        for ln in text.splitlines():
+            m = re.match(r"^\s*([A-Za-z_][\w.]*)(?:\s+(.*?))?\s*$", ln)
+            if m:
+                out[("", m.group(1))] = m.group(2) or ""
     elif fmt == "dark_cfg":
         for ln in text.splitlines():
             ln = ln.strip()

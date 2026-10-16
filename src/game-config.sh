@@ -152,7 +152,7 @@ _wine_reg_set() {
     swap_in "$tmp" "$file"
 }
 
-# Usage: config_get_key <file> <ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gadb|wine_reg> <section> <key>
+# Usage: config_get_key <file> <ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|ltx|gadb|wine_reg> <section> <key>
 # Prints the key's current value, __ABSENT__ if it isn't set, or (dark_cfg
 # only) __TRUE__ for an active bare flag and __FALSE__ for a flag that's only
 # present commented out. Section and key names match case-insensitively, like
@@ -199,6 +199,12 @@ config_get_key() {
             v = substr(line, length(a[1]) + 1); gsub(/^[ \t]+|[ \t]+$/, "", v)
             print (v == "" ? "__TRUE__" : v); found = 1; exit
         }
+        fmt == "ltx" {
+            line = $0; sub(/^[ \t]+/, "", line); split(line, a, /[ \t]+/)
+            if (tolower(a[1]) != lkey) next
+            v = substr(line, length(a[1]) + 1); gsub(/^[ \t]+|[ \t]+$/, "", v)
+            print v; found = 1; exit
+        }
         fmt == "brace_cfg" {
             if (!match($0, /^[ \t]*\{[^}]*\}[ \t]*=[ \t]*\{/)) next
             k = substr($0, 1, RLENGTH); sub(/^[ \t]*\{[ \t]*/, "", k); sub(/[ \t]*\}.*$/, "", k)
@@ -232,12 +238,13 @@ _gadb_set() {
     return 1
 }
 
-# Usage: config_set_key <file> <ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gadb|wine_reg> <section> <key> <value>
+# Usage: config_set_key <file> <ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|ltx|gadb|wine_reg> <section> <key> <value>
 # Sets (or with __DELETE__ removes) one key, keeping everything else in the
 # file as it was — including CRLF line endings, the original spelling of an
 # existing key, and "key = value" spacing. A missing ini key goes at the end
 # of its section (or a new section at the end of the file); a missing flat_ini
-# or cfg key is appended. An existing brace_cfg key only has the text between
+# or cfg key is appended. ltx is
+# the X-Ray engine's user.ltx (S.T.A.L.K.E.R.): "key value" lines, no sections, no flags. An existing brace_cfg key only has the text between
 # its value's braces replaced. flat_ini is ini without [sections] — the whole file
 # is one section, so its rows carry no section name. For dark_cfg, a commented-out example line is left in place and
 # the active line is added right after it. gadb only switches an existing
@@ -312,6 +319,11 @@ config_set_key() {
             }
             next
         }
+        fmt == "ltx" {
+            line = $0; t = line; sub(/^[ \t]+/, "", t); split(t, a, /[ \t]+/)
+            if (!done && tolower(a[1]) == lkey) { done = 1; if (!del) out(a[1] " " val); next }
+            out(line); next
+        }
         fmt == "brace_cfg" {
             if (!done && match($0, /^[ \t]*\{[^}]*\}[ \t]*=[ \t]*\{/)) {
                 head = substr($0, 1, RLENGTH); k = head
@@ -331,6 +343,7 @@ config_set_key() {
             } else if (!done && !del && val != "__FALSE__") {
                 if (fmt == "idtech_cfg") out("seta " key " \"" val "\"")
                 else if (fmt == "brace_cfg") out("{" key "} = {" val "}")
+                else if (fmt == "ltx") out(key " " val)
                 else out(val == "__TRUE__" ? key : key " " val)
             }
         }
@@ -514,7 +527,7 @@ config_row_is_safe() {
     local fmt="$1" locations="$2" sec="$3" key="$4" value="$5" loc
     local name_re='^[A-Za-z0-9._ -]+$' value_re='^[A-Za-z0-9._ ()-]*$'
     local reg_key_re='^[A-Za-z0-9._ ()-]+(\\[A-Za-z0-9._ ()-]+)*$'
-    [[ "$fmt" =~ ^(ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gadb|wine_reg)$ ]] || return 1
+    [[ "$fmt" =~ ^(ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|ltx|gadb|wine_reg)$ ]] || return 1
     [ -n "$locations" ] || return 1
     IFS='|' read -ra locs <<< "$locations"
     for loc in "${locs[@]}"; do

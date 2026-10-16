@@ -24,7 +24,7 @@ the fields.
 **Design rule: anything specific to a game or engine lives in the database, never as a
 special case in the script's code** — config edits, the audio API (and so the engine),
 alsoft.ini values, recommended tweaks. The script only knows how to read and edit the
-seven config formats (`ini`, `flat_ini`, `idtech_cfg`, `dark_cfg`, `brace_cfg`, the binary `gadb`,
+eight config formats (`ini`, `flat_ini`, `idtech_cfg`, `dark_cfg`, `brace_cfg`, `ltx`, the binary `gadb`,
 and `wine_reg`, the prefix's registry files), not which game needs what.
 
 `eax-restore-linux.sh` is **not committed to the repo** — it's a generated build

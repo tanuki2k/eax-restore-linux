@@ -144,6 +144,25 @@ setup() {
     [ "$(config_get_key "$F" dark_cfg "" snd_vol)" == "8" ]
 }
 
+# ---- ltx -------------------------------------------------------------------
+
+@test "ltx: reads a key=value line, case-insensitive, absent otherwise" {
+    write_file "$F" 'snd_efx on\r\nvid_mode 1024x768\r\n'
+    [ "$(config_get_key "$F" ltx "" SND_EFX)" == "on" ]
+    [ "$(config_get_key "$F" ltx "" vid_mode)" == "1024x768" ]
+    [ "$(config_get_key "$F" ltx "" nothing)" == "__ABSENT__" ]
+}
+
+@test "ltx: replaces in place keeping spelling and CRLF, appends and deletes" {
+    write_file "$F" 'Snd_Efx off\r\nsnd_targets 32\r\n'
+    config_set_key "$F" ltx "" snd_efx on
+    [ "$(cat "$F")" == $'Snd_Efx on\r\nsnd_targets 32\r' ]
+    config_set_key "$F" ltx "" snd_volume_eff 1.0
+    [ "$(config_get_key "$F" ltx "" snd_volume_eff)" == "1.0" ]
+    config_set_key "$F" ltx "" snd_targets __DELETE__
+    [ "$(config_get_key "$F" ltx "" snd_targets)" == "__ABSENT__" ]
+}
+
 # ---- brace_cfg -------------------------------------------------------------
 
 @test "brace_cfg: reads and replaces only the text inside the value braces" {
@@ -157,7 +176,7 @@ setup() {
 
 @test "a set then get round-trips for every text format" {
     local fmt
-    for fmt in ini flat_ini idtech_cfg dark_cfg brace_cfg; do
+    for fmt in ini flat_ini idtech_cfg dark_cfg ltx brace_cfg; do
         rm -f "$F"
         write_file "$F" ''
         config_set_key "$F" "$fmt" sec key 7
