@@ -798,7 +798,7 @@ print_game_profile_stores() {
     detail_heading "Game details"
     detail_row "Name" "${BOLD}${name}${NC}"
     if [ -n "$untested" ]; then
-        detail_row "Verified" "${NOTE}Untested ${DIM}(nobody has tried this profile on a real install)${NC}"
+        detail_row "Verified" "${NOTE}Untested${NC}"
     else
         detail_row "Verified" "${GREEN}Tested${NC}"
     fi
@@ -844,8 +844,9 @@ print_game_profile_stores() {
         detail_row "Audio API" "$value"
     fi
     [ "$eax_unified" == "true" ] && detail_row "EAX Unified" "${WHITE}Yes${NC}"
-    # Settings limited to one store (only_if.stores) can make the counts
-    # differ; each count is then shown with its store.
+    # Always shown, even at 0, so the label column keeps one width from game
+    # to game. Settings limited to one store (only_if.stores) can make the
+    # counts differ; each count is then shown with its store.
     local col label_text
     local -a nums fields
     for col in 0 1; do
@@ -856,7 +857,7 @@ print_game_profile_stores() {
             nums[i]="${fields[col]:-0}"
         done
         if _same_for_all nums; then
-            [ "${nums[0]}" -gt 0 ] && detail_row "$label_text" "${WHITE}${nums[0]}${NC}"
+            detail_row "$label_text" "${WHITE}${nums[0]}${NC}"
         else
             value="" sep=""
             for i in "${!stores[@]}"; do value+="${sep}${WHITE}${nums[i]}${NC} on ${labels[i]}"; sep=$'\n'; done
