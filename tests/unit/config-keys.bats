@@ -217,3 +217,10 @@ setup() {
     config_row_is_safe ini "game_exe:a.ini" s k v
     config_row_is_safe ini "game_root:a.ini" s k v
 }
+
+@test "print_config_rows: a key that already has its value shows ticked" {
+    NC="" DIM="" GREEN=""
+    run print_config_rows $'bia.ini\x1fA\x1fUseEAX\x1f__SET__\x1fTrue\nbia.ini\x1fA\x1fUse3DSound\x1fFalse\x1fTrue\n'
+    [[ "$output" == *"UseEAX"*"True ✓ already set"* ]]
+    [[ "$output" == *"Use3DSound"*"False → True"* ]]
+}

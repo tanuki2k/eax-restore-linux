@@ -571,7 +571,8 @@ config_row_is_safe() {
 # the row above. <rows> is newline-separated \x1f rows of
 # file, section, key, old, new. An old value of __ANY__ prints just
 # "key  → new", for the database browser, which has no install to read the
-# current value from.
+# current value from, and one of __SET__ prints "key  value ✓ already set",
+# for a key that already has its new value.
 print_config_rows() {
     local r prev_file="" prev_sec="" file sec key old new indent
     local -a g
@@ -595,7 +596,9 @@ print_config_rows() {
         else
             indent="      "
         fi
-        if [ "$old" == "__ANY__" ]; then
+        if [ "$old" == "__SET__" ]; then
+            printf "%s%-${key_len}s  ${DIM}%s${NC} ${GREEN}✓${NC} ${DIM}already set${NC}\n" "$indent" "$key" "$(config_display_value "$new")"
+        elif [ "$old" == "__ANY__" ]; then
             printf "%s%-${key_len}s  → ${GREEN}%s${NC}\n" "$indent" "$key" "$(config_display_value "$new")"
         else
             printf "%s%-${key_len}s  %s → ${GREEN}%s${NC}\n" "$indent" "$key" "$(config_display_value "$old")" "$(config_display_value "$new")"
@@ -1029,7 +1032,7 @@ game_settings_step() {
 
     # Per-fix state, keyed "category:number" in database order.
     local -a fix_order=()
-    local -A fix_title=() fix_reason=() fix_follow=() fix_status=() fix_rows=() fix_missing_file=() fix_untested=()
+    local -A fix_title=() fix_reason=() fix_follow=() fix_status=() fix_rows=() fix_missing_file=() fix_untested=() fix_view=()
     # Per fix: |-joined files it changes that this build doesn't have, whether
     # any of its files was found, and the files its offered rows change.
     local -A fix_absent_files=() fix_has_file=() fix_files=()
@@ -1102,8 +1105,14 @@ game_settings_step() {
         old="$(config_get_key "$path" "$fmt" "$sec" "$key")"
         if [ "$value" == "__FALSE__" ] && [ "$old" == "__ABSENT__" ]; then continue; fi
         if [ "$value" == "__DELETE__" ] && [ "$old" == "__ABSENT__" ]; then continue; fi
-        config_values_equal "$fmt" "$old" "$value" && continue
+        # A key that already has its value still shows (ticked) under a setting
+        # that has other keys to change, so the player sees what's done.
+        if config_values_equal "$fmt" "$old" "$value"; then
+            fix_view[$id]+="$file"$'\x1f'"$sec"$'\x1f'"$key"$'\x1f'"__SET__"$'\x1f'"$value"$'\n'
+            continue
+        fi
         fix_status[$id]="offer"
+        fix_view[$id]+="$file"$'\x1f'"$sec"$'\x1f'"$key"$'\x1f'"$old"$'\x1f'"$value"$'\n'
         [[ "|${fix_files[$id]:-}|" == *"|$file|"* ]] || fix_files[$id]+="${fix_files[$id]:+|}$file"
         fix_rows[$id]+="$cat"$'\x1f'"$title"$'\x1f'"$path"$'\x1f'"$fmt"$'\x1f'"$sec"$'\x1f'"$key"$'\x1f'"$value"$'\x1f'"$file"$'\x1f'"$old"$'\x1f'"${file_state[$file]}"$'\n'
     done
@@ -1141,7 +1150,7 @@ game_settings_step() {
         local id="$1"
         printf '%s\n' "${fix_reason[$id]}" | fold -s -w 74 | sed 's/^/    /'
         echo ""
-        print_config_rows "$(fix_rows_for_display "${fix_rows[$id]}")"
+        print_config_rows "${fix_view[$id]}"
         _print_absent_note "$id"
     }
     # Tools → Optional settings: the body of one this script applied, with
