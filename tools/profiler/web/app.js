@@ -20,11 +20,10 @@ const LABELS = {
   default_reverb: "Default reverb", "default-reverb": "Default reverb", versions: "EAX versions", tweaks: "Compatibility tweaks",
 };
 const SECTIONS = [
-  ["overview", "Overview", ["name", "description", "released", "exe"]],
+  ["overview", "Overview", ["name", "description", "released", "exe", "sources", "notes"]],
   ["stores", "Stores", ["stores"]],
   ["audio", "Audio & install", ["eax", "install"]],
   ["settings", "Game settings", ["game_config"]],
-  ["notes", "Notes & sources", ["sources", "notes"]],
   ["capture", "Capture", []],
 ];
 const human = (k) => LABELS[k] || (k.replace(/[_-]/g, " ").replace(/^./, (c) => c.toUpperCase()));
@@ -126,7 +125,20 @@ function showErrors(errs) {
     const i = e.indexOf(": "), path = i > 0 ? e.slice(0, i) : "", msg = i > 0 ? e.slice(i + 2) : e;
     return el("li", { title: "Go to the field with this problem", onclick: () => path && goToProblem(path, msg) }, path ? el("code", {}, path) : null, msg);
   }) : [el("li", { class: "ok" }, "✓ No problems")]));
-  drawNav(); drawRailTab();
+  drawNav(); drawRailTab(); markErrors();
+}
+// Puts each problem on the field it belongs to (red outline and the message under it), so it shows even with
+// the side bar closed. The side bar list still has them all.
+function markErrors() {
+  $$(".f.has-err").forEach((f) => { f.classList.remove("has-err"); f.querySelector(":scope>.errmsg")?.remove(); f.querySelector("[aria-invalid]")?.removeAttribute("aria-invalid"); });
+  for (const e of ERRS) {
+    const i = e.indexOf(": "), path = i > 0 ? e.slice(0, i) : "", msg = i > 0 ? e.slice(i + 2) : e;
+    const hit = path && [...document.querySelectorAll("[data-path]")].find((n) => n.dataset.path === problemPath(path, msg));
+    if (!hit || !hit.classList.contains("f")) continue;
+    hit.classList.add("has-err");
+    hit.querySelector("input:not([type=checkbox]), textarea, select")?.setAttribute("aria-invalid", "true");
+    if (!hit.querySelector(":scope>.errmsg")) hit.append(el("div", { class: "errmsg" }, msg));
+  }
 }
 
 // ---------------------------------------------------------------- form building
@@ -148,6 +160,24 @@ function chips(options, selected, onChange) {
   return el("div", { class: "chips" }, options.map((o) => el("label", { class: "chip" },
     el("input", { type: "checkbox", checked: sel.has(o), onchange: (e) => { e.target.checked ? sel.add(o) : sel.delete(o); onChange(options.filter((x) => sel.has(x))); } }),
     el("span", {}, o))));
+}
+// One tick per row, for a short list whose names are long.
+const checklist = (options, selected, onChange) => {
+  const sel = new Set(selected);
+  return el("div", { class: "checklist" }, options.map((o) => el("label", { class: "chkrow" },
+    el("input", { type: "checkbox", checked: sel.has(o), onchange: (e) => { e.target.checked ? sel.add(o) : sel.delete(o); onChange(options.filter((x) => sel.has(x))); } }), el("code", {}, o))));
+};
+// The choices are OpenAL Soft's own lists (its alsoft.ini comments); the schema leaves the values free text, so one outside them stays selectable.
+const ALSOFT_CHOICES = {
+  boost: ["0", "3", "6", "9", "12"], sources: ["256", "512", "1024"], frequency: ["22050", "44100", "48000", "96000"],
+  resampler: ["point", "linear", "spline", "gaussian", "bsinc12", "fast_bsinc12", "bsinc24", "fast_bsinc24"],
+  "default-reverb": ["Generic", "PaddedCell", "Room", "Bathroom", "Livingroom", "Stoneroom", "Auditorium", "ConcertHall", "Cave", "Arena", "Hangar",
+    "CarpetedHallway", "Hallway", "StoneCorridor", "Alley", "Forest", "City", "Mountains", "Quarry", "Plain", "ParkingLot", "SewerPipe", "Underwater", "Drugged", "Dizzy", "Psychotic"],
+};
+function choiceSelect(options, cur, set) {
+  const all = cur && !options.includes(cur) ? [...options, cur] : options;
+  const sel = el("select", { onchange: () => set(sel.value) }, [el("option", { value: "" }, "Not set"), ...all.map((o) => el("option", { selected: o === cur }, o))]);
+  return sel;
 }
 // replaceChildren writes the word "null" for a null argument, so anything that may be empty goes through here.
 const fill = (node, ...kids) => node.replaceChildren(...kids.flat().filter((k) => k != null && k !== false));
@@ -174,15 +204,18 @@ function fieldNode(schema, parent, key, path, label) {
   if (/\.stores$/.test(path) && s.type === "array") return F(chips(resolve(s.items).enum, cur || [], set));
   if (/\.locations$/.test(path)) return F(listEditor(parent, key, (v, upd) => {
     const [b, ...r] = (v || "game_exe:").split(":");
-    const base = el("select", { style: "flex:0 0 190px", onchange: () => upd(base.value + ":" + p.value) }, BASES.map((x) => el("option", { value: x, selected: x === b, title: BASE_HELP[x] }, x)));
+    // Options can't show a tooltip, so the select itself explains the base it's showing.
+    const base = el("select", { style: "flex:0 0 190px", title: BASE_HELP[b] || "", onchange: () => { base.dataset.tip = BASE_HELP[base.value] || ""; upd(base.value + ":" + p.value); } }, BASES.map((x) => el("option", { value: x, selected: x === b }, x)));
     const p = el("input", { value: r.join(":"), placeholder: "folder/file.cfg", oninput: () => upd(base.value + ":" + p.value) });
     return [base, p];
   }, "game_exe:", "Add a place to look"), { wide: true });
   if (/\.changes$/.test(path)) return F(changesEditor(parent, key), { wide: true });
   if (path === "sources") return F(listEditor(parent, key, (v, upd) => {
     const o = typeof v === "object" ? v : { title: "", url: v || "" };
-    const t = el("input", { value: o.title, placeholder: "Title (optional)", style: "flex:0 0 38%", oninput: () => upd(t.value ? { title: t.value, url: u.value } : u.value) });
-    const u = el("input", { value: o.url, placeholder: "https://…", oninput: () => upd(t.value ? { title: t.value, url: u.value } : u.value) });
+    const t = el("input", { value: o.title, placeholder: "Title (optional)", "aria-label": "Source title", style: "flex:0 1 30%", oninput: () => upd(t.value ? { title: t.value, url: u.value } : u.value) });
+    const checkUrl = () => u.classList.toggle("invalid", !!u.value && !/^https?:\/\/\S+$/.test(u.value));
+    const u = el("input", { value: o.url, placeholder: "https://…", "aria-label": "Source address", style: "flex:1 1 60%", oninput: () => { checkUrl(); upd(t.value ? { title: t.value, url: u.value } : u.value); } });
+    checkUrl();
     return [t, u];
   }, "", "Add a source"), { wide: true });
 
@@ -192,6 +225,7 @@ function fieldNode(schema, parent, key, path, label) {
   }
   if (s.type === "boolean") return F(el("label", { class: "switch" }, el("input", { type: "checkbox", checked: !!cur, onchange: (e) => set(e.target.checked || undefined) }), el("span", { class: "muted" }, "Yes")));
   if (s.type === "integer") return F(el("input", { type: "number", value: cur ?? "", onchange: (e) => set(e.target.value === "" ? undefined : parseInt(e.target.value, 10)) }), { req: key === "id" });
+  if (ALSOFT_CHOICES[key] && /\.alsoft_ini\./.test(path)) return F(choiceSelect(ALSOFT_CHOICES[key], cur, set));
   if (s.type === "string") {
     const long = LONG.test(key);
     const inp = el(long ? "textarea" : "input", { value: cur ?? "", maxLength: s.maxLength || 1e6, oninput: (e) => { set(e.target.value); count(); } });
@@ -214,7 +248,7 @@ function fieldNode(schema, parent, key, path, label) {
   }
   if (s.type === "array") {
     const it = resolve(s.items) || {};
-    if (it.enum) return F(chips(it.enum, cur || [], set));
+    if (it.enum) return F(key === "tweaks" ? checklist(it.enum, cur || [], set) : chips(it.enum, cur || [], set), key === "tweaks" ? { wide: true } : {});
     if (it.type === "object") return F(cards(parent, key, it, path), { wide: true });
     return F(listEditor(parent, key, (v, upd) => [el("input", { value: v ?? "", placeholder: it.type === "integer" ? "Number" : "", oninput: (e) => upd(it.type === "integer" ? parseInt(e.target.value, 10) || undefined : e.target.value) })], it.type === "integer" ? undefined : "", "Add"), { wide: true });
   }
@@ -236,6 +270,16 @@ function listEditor(parent, key, rowFn, blank, addLabel = "Add") {
   };
   draw(); return box;
 }
+const SET_OPEN = new WeakMap();
+// A setting's fields in two columns: the text on the left, when it applies and what it changes on the right
+// for the short ones; the changes table gets the whole width underneath.
+function setBody(fields) {
+  const by = (k) => fields.find((f) => f.dataset.path.endsWith("." + k));
+  const left = ["title", "reason", "follow_up"].map(by).filter(Boolean), right = ["only_if", "tested"].map(by).filter(Boolean);
+  const wide = by("changes"), rest = fields.filter((f) => ![...left, ...right, wide].includes(f));
+  for (const f of [...left, ...right, ...rest]) f.classList.remove("wide");
+  return [el("div", { class: "setcols" }, el("div", { class: "stack" }, left), el("div", { class: "stack" }, right, rest)), wide ? grid([wide]) : null];
+}
 function settingSummaryCount(o) { return Object.values(o.changes || {}).reduce((n, f) => n + Object.values(f).reduce((m, v) => m + (v && typeof v === "object" ? Object.keys(v).length : 1), 0), 0); }
 function cards(parent, key, itemSchema, path) {
   const box = el("div");
@@ -254,13 +298,17 @@ function cards(parent, key, itemSchema, path) {
         if (k === "title") { n.classList.add("wide"); n.querySelector("input").addEventListener("input", refresh); n.querySelector(".grow").after(aiButton("setting", () => ({ game: GAME.name, changes: o.changes, kind: key }), (r) => { o.title = (r.title || "").slice(0, 60); o.reason = r.reason; draw(); })); }
         return n;
       });
-      const d = el("details", { class: "setcard", open: list.length <= 2 || !o.title },
+      // Open state follows the setting object, not its position, so moving or redrawing keeps it.
+      if (!SET_OPEN.has(o)) { SET_OPEN.set(o, list.length <= 2 || !o.title); }
+      const d = el("details", { class: "setcard", open: SET_OPEN.get(o) },
         el("summary", {}, stitle, cond, badge,
-          el("button", { type: "button", class: "icon", disabled: i === 0, title: "Move this setting up", onclick: (e) => { e.preventDefault(); [list[i - 1], list[i]] = [list[i], list[i - 1]]; changed(); draw(); } }, "↑"),
-          el("button", { type: "button", class: "icon", disabled: i === list.length - 1, title: "Move this setting down", onclick: (e) => { e.preventDefault(); [list[i + 1], list[i]] = [list[i], list[i + 1]]; changed(); draw(); } }, "↓"),
-          (key === "audio_settings" || key === "optional_settings") ? el("button", { type: "button", class: "btn sm", title: key === "audio_settings" ? "Move this setting to the optional settings" : "Move this setting to the audio settings", onclick: (e) => { e.preventDefault(); const to = key === "audio_settings" ? "optional_settings" : "audio_settings"; parent[to] = parent[to] || []; parent[to].push(list.splice(i, 1)[0]); changed(); renderPane(); } }, key === "audio_settings" ? "→ Optional" : "→ Audio") : null,
-          el("button", { type: "button", class: "icon", title: "Delete this setting", onclick: async (e) => { e.preventDefault(); if (await askConfirm(`Delete “${o.title || "this setting"}”?`, "Delete", true)) { arr().splice(i, 1); changed(); draw(); } } }, "✕")),
-        el("div", { class: "setbody" }, grid(fields)));
+          el("span", { class: "sacts" },
+            el("button", { type: "button", class: "icon", "aria-label": "Move up", disabled: i === 0, title: "Move this setting up", onclick: (e) => { e.preventDefault(); [list[i - 1], list[i]] = [list[i], list[i - 1]]; changed(); draw(); } }, "↑"),
+            el("button", { type: "button", class: "icon", "aria-label": "Move down", disabled: i === list.length - 1, title: "Move this setting down", onclick: (e) => { e.preventDefault(); [list[i + 1], list[i]] = [list[i], list[i + 1]]; changed(); draw(); } }, "↓"),
+            (key === "audio_settings" || key === "optional_settings") ? el("button", { type: "button", class: "btn sm", title: key === "audio_settings" ? "Move this setting to the optional settings" : "Move this setting to the audio settings", onclick: (e) => { e.preventDefault(); const to = key === "audio_settings" ? "optional_settings" : "audio_settings"; parent[to] = parent[to] || []; parent[to].push(list.splice(i, 1)[0]); changed(); renderPane(); } }, key === "audio_settings" ? "→ Optional" : "→ Audio") : null,
+            el("button", { type: "button", class: "icon", "aria-label": "Delete", title: "Delete this setting", onclick: async (e) => { e.preventDefault(); if (await askConfirm(`Delete “${o.title || "this setting"}”?`, "Delete", true)) { arr().splice(i, 1); changed(); draw(); } } }, "✕"))),
+        el("div", { class: "setbody" }, setBody(fields)));
+      d.addEventListener("toggle", () => SET_OPEN.set(o, d.open));
       d.dataset.path = `${path}[${i}]`;
       d.addEventListener("input", refresh); d.addEventListener("change", refresh); refresh();
       return d;
@@ -277,12 +325,17 @@ function fileCards(parent, key, valueSchema, path) {
     box.replaceChildren(names.length ? el("div", { class: "filegrid" }, names.map((name) => {
       const val = m()[name];
       return el("div", { class: "filecard", "data-path": `${path}.${name}` },
-        el("header", {}, el("h4", {}, name), el("button", { type: "button", class: "icon", title: "Remove this file from the profile. Settings that change it will need fixing.", onclick: () => { delete m()[name]; changed(); draw(); } }, "✕")),
+        el("header", {}, el("h4", {}, name), el("button", { type: "button", class: "icon", title: "Remove this file from the profile. Settings that change it will need fixing.", "aria-label": `Remove ${name}`, onclick: async () => {
+          const gc = GAME.game_config || {}, used = [...(gc.audio_settings || []), ...(gc.optional_settings || [])].filter((s) => s.changes && s.changes[name]).length;
+          if (used && !(await askConfirm(`${used} setting${used === 1 ? " changes" : "s change"} ${name}. Remove it anyway? Those changes will need fixing.`, "Remove", true))) return;
+          delete m()[name]; changed(); draw();
+        } }, "✕")),
         grid(Object.entries(resolve(valueSchema).properties).map(([k, sub]) => node(sub, val, k, `${path}.${name}.${k}`))));
     })) : el("div", { class: "empty-note" }, "No config files yet."),
       el("div", { class: "addrow" }, el("button", { type: "button", class: "btn", onclick: async () => {
         const n = await askText("Add a config file", "File name, e.g. game.ini, Quake4Config.cfg, Profile000.gdb or system.reg", "Add"); if (!n) return;
-        m()[n] = { format: n.endsWith(".reg") ? "wine_reg" : n.endsWith(".gdb") ? "gadb" : n.endsWith(".ltx") ? "ltx" : "ini", locations: [n.endsWith(".reg") ? "prefix:" + n : "game:" + n] }; changed(); draw();
+        if (m()[n] && !(await askConfirm(`${n} is already in this profile. Replace it with an empty entry?`, "Replace", true))) return;
+        m()[n] = { format: n.endsWith(".reg") ? "wine_reg" : n.endsWith(".gdb") ? "gadb" : n.endsWith(".ltx") ? "ltx" : "ini", locations: [n.endsWith(".reg") ? "prefix:" + n : "game_exe:" + n] }; changed(); draw();
       } }, "+ Add a config file")));
   };
   draw(); return box;
@@ -332,30 +385,42 @@ const card = (title, help, ...body) => el("section", { class: "card" }, el("head
 function blockHead(title, help, count, ...actions) {
   return el("div", { class: "blockhead" }, el("h2", {}, title), helpIcon(help), count != null ? el("span", { class: "pill" }, count) : null, el("span", { class: "sp" }), ...actions);
 }
+// Cards that sit side by side when the pane is wide enough and stack when it isn't.
+const cols = (...cards) => el("div", { class: "cols" }, cards.flat());
+// Adds a visible hint under a field (the ? tooltip is easy to miss and doesn't exist on touch screens).
+function hint(f, text) { f.append(el("div", { class: "hint" }, text)); return f; }
 function paneOverview() {
-  return [card("Basics", "The name, a one-line description and the details used to recognise the game's install.",
-    grid([node(P().name, GAME, "name", "name"), node(P().released, GAME, "released", "released"), node(P().exe, GAME, "exe", "exe"), node(P().description, GAME, "description", "description")]))];
+  const d = node(P().description, GAME, "description", "description"), n = node(P().notes, GAME, "notes", "notes");
+  const rel = node(P().released, GAME, "released", "released"), exe = node(P().exe, GAME, "exe", "exe");
+  const src = node(P().sources, GAME, "sources", "sources");
+  // The card already names these two single-field cards, so the field's own label and ? would repeat it.
+  for (const f of [n, src]) f.classList.add("solo");
+  return [cols(
+    card("Basics", "The name, a one-line description and the details used to recognise the game's install.",
+      grid([node(P().name, GAME, "name", "name"), hint(rel, "A year, a year and month, or a full date."), hint(exe, "Just the file name, as in Game.exe."), hint(d, "One sentence that starts with the game's name.")])),
+    card("Sources", P().sources.description, src),
+  ), card("Notes", P().notes.description, hint(n, "Anything else a player should know. Keep it short."))];
 }
 function paneStores() {
   GAME.stores = GAME.stores || {};
   const sp = P().stores.properties, defs = resolve(sp.steam).properties;
   const only = { beta_branch: "steam", companion_apps: "steam", extra_exe_folders: "gog" };
-  return ["steam", "gog"].map((st) => {
+  return [cols(["steam", "gog"].map((st) => {
     const name = st === "steam" ? "Steam" : "GOG";
     if (!GAME.stores[st]) return el("section", { class: "card" }, el("header", {}, el("h3", {}, name)),
       el("div", { class: "empty-note" }, `Not sold on ${name}. `, el("button", { type: "button", class: "btn sm", onclick: () => { GAME.stores[st] = {}; renderPane(); } }, `+ Add ${name} entry`)));
     const fields = Object.entries(defs).filter(([k]) => !only[k] || only[k] === st).map(([k, sub]) => node(sub, GAME.stores[st], k, `stores.${st}.${k}`));
     return el("section", { class: "card" }, el("header", {}, el("h3", {}, name), helpIcon(resolve(sp[st]).description || "A store's ID and notes for this game."), el("span", { class: "sp" }),
       el("button", { type: "button", class: "danger-link", onclick: async () => { if (await askConfirm(`Remove the ${name} entry?`, "Remove", true)) { delete GAME.stores[st]; changed(); renderPane(); } } }, `Remove ${name}`)), grid(fields));
-  });
+  }))];
 }
 function paneAudio() {
   GAME.eax = GAME.eax || {}; GAME.install = GAME.install || {};
   const ep = P().eax.properties, ip = P().install.properties;
-  return [
+  return [cols(
     card("EAX", P().eax.description, grid(Object.entries(ep).map(([k, sub]) => node(sub, GAME.eax, k, `eax.${k}`)))),
     card("Install options", P().install.description, grid(Object.entries(ip).map(([k, sub]) => node(sub, GAME.install, k, `install.${k}`)))),
-  ];
+  )];
 }
 function paneSettings() {
   GAME.game_config = GAME.game_config || {};
@@ -369,21 +434,19 @@ function paneSettings() {
     cards(gc, "optional_settings", resolve(gp.optional_settings.items), "game_config.optional_settings"),
   ];
 }
-function paneNotes() {
-  return [card("Sources", P().sources.description, node(P().sources, GAME, "sources", "sources")),
-    card("Notes", P().notes.description, node(P().notes, GAME, "notes", "notes"))];
-}
 function renderPane() {
   const pane = $("#pane");
   if (SECTION === "capture") { pane.replaceChildren(el("div", { id: "capturebox" })); renderCapture(); return; }
-  const build = { overview: paneOverview, stores: paneStores, audio: paneAudio, settings: paneSettings, notes: paneNotes }[SECTION];
+  const build = { overview: paneOverview, stores: paneStores, audio: paneAudio, settings: paneSettings }[SECTION];
   pane.replaceChildren(...build());
+  markErrors();
 }
 function drawNav() {
   const nav = $("#snav"); if (!nav) return;
+  nav.setAttribute("role", "tablist");
   nav.replaceChildren(...SECTIONS.map(([id, label]) => {
     const n = id === "capture" ? 0 : ERRS.filter((e) => sectionOfPath(e.split(": ")[0]) === id).length;
-    return el("button", { type: "button", class: id === SECTION ? "on" : "", onclick: () => setSection(id) }, label, n ? el("span", { class: "nb", title: `${n} problem${n === 1 ? "" : "s"} in this section` }, n) : null);
+    return el("button", { type: "button", role: "tab", "aria-selected": String(id === SECTION), class: id === SECTION ? "on" : "", onclick: () => setSection(id) }, label, n ? el("span", { class: "nb", title: `${n} problem${n === 1 ? "" : "s"} in this section` }, n) : null);
   }), el("span", { class: "sp" }), GACTIONS);
 }
 function setSection(id) { SECTION = id; drawNav(); renderPane(); $("#main").scrollTop = 0; }
