@@ -4,21 +4,22 @@
 <body>
 <header class="top">
   <div class="brand"><span class="logo">EAX</span> Game profiles</div>
-  <span id="version" class="chip-s" hidden data-tip="The editor's build number, and the checkout it's running from"></span>
+  <span id="version" class="chip-s" hidden data-tip="Build number: how many commits have changed the editor. The branch and commit it's running from follow."></span>
   <span class="sp"></span>
+  <button id="jsontoggle" class="btn ghost" data-tip="Show or hide the panel on the right that lists this profile's problems and shows its JSON file.">{ } JSON</button>
   <span id="aistate" class="chip-s" role="button" tabindex="0"></span>
-  <button id="quitbtn" class="btn ghost" data-tip="Stop the editor. Use this when you started it from the app menu and there is no terminal to close.">Quit</button>
+  <button id="quitbtn" class="btn danger" data-tip="Stop the editor. Use this if you opened it from the app menu, where there's no terminal to close.">Quit</button>
 </header>
 <div id="updatebar" class="updatebar" hidden></div>
 <div id="layout">
   <aside id="side">
     <input id="filter" class="search" placeholder="Search games…" autocomplete="off">
     <div class="side-actions">
-      <button id="addinstalled" class="btn primary wide" data-tip="Add a game: pick one installed in Steam or Heroic that has no profile yet, or add one by name">+ Add game</button>
-      <button id="cleanupbtn" class="btn wide" data-tip="Remove what the script installed, or delete a game's Wine prefix, so you can test from scratch">Manage installs…</button>
+      <button id="addinstalled" class="btn primary wide" data-tip="Add a game that's installed in Steam or Heroic but has no profile yet, or add one by typing its name.">+ Add game</button>
+      <button id="cleanupbtn" class="btn wide" data-tip="Uninstall what this script put in a game, or delete its Wine prefix, to test again from a clean start.">Manage installs…</button>
     </div>
     <div id="list"></div>
-    <div class="side-foot"><button id="rebuild" class="btn wide" data-tip="Regenerate game-database.json from the per-game files">Rebuild database</button></div>
+    <div class="side-foot"><button id="rebuild" class="btn wide" data-tip="Rebuild game-database.json from the game files, so it matches what you've saved.">Rebuild database</button></div>
   </aside>
   <main id="main">
     <div id="empty" class="empty">

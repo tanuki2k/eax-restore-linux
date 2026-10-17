@@ -9,7 +9,7 @@
   "properties": {
     "$schema": { "type": "string" },
     "name": {
-      "description": "Display name, as the stores list the game.",
+      "description": "The game's name as the stores show it.",
       "type": "string",
       "minLength": 1
     },
@@ -19,17 +19,17 @@
       "minLength": 1
     },
     "released": {
-      "description": "The game's first Windows release, earliest region: YYYY-MM-DD, or YYYY-MM / YYYY when only that much is verified. A bundle, Gold, Complete, GOTY or Classic edition takes its base game's date; an Enhanced Edition, Remaster or Anniversary Edition its own.",
+      "description": "When the game first came out on Windows (earliest region), as YYYY-MM-DD. Use YYYY-MM or YYYY if that's all you can confirm. Bundles and Gold, Complete, GOTY or Classic editions use the base game's date; Enhanced Editions, Remasters and Anniversary Editions use their own.",
       "type": "string",
       "pattern": "^\\d{4}(-(0[1-9]|1[0-2])(-(0[1-9]|[12]\\d|3[01]))?)?$"
     },
     "exe": {
-      "description": "The main game executable's file name only (no folders), with its exact case, e.g. \"DeusEx.exe\". Used to pick the right folder when scanning an install.",
+      "description": "The game's main program file, with its exact capitalisation and no folders, e.g. \"DeusEx.exe\". The script uses it to recognise the right folder.",
       "type": "string",
       "pattern": "^[^/\\\\]+\\.[eE][xX][eE]$"
     },
     "stores": {
-      "description": "Where the game is sold. Omit a store entirely when the game isn't sold there.",
+      "description": "Where the game is sold. Leave a store out if the game isn't sold there.",
       "type": "object",
       "minProperties": 1,
       "additionalProperties": false,
@@ -39,26 +39,26 @@
       }
     },
     "eax": {
-      "description": "How the game does 3D audio, which EAX versions it supports, and whether EAX works on the current build.",
+      "description": "How the game plays 3D audio, which EAX versions it supports, and whether EAX works in the current build.",
       "type": "object",
       "required": ["api"],
       "additionalProperties": false,
       "properties": {
         "api": { "$ref": "#/$defs/api" },
         "versions": {
-          "description": "Supported EAX versions, from a verifiable source.",
+          "description": "The EAX versions the game supports, from a source you can check.",
           "type": "array",
           "uniqueItems": true,
           "items": { "enum": ["1.0", "2.0", "3.0", "4.0", "5.0"] },
           "default": []
         },
         "status": {
-          "description": "supported; removed_by_patch (an update stripped EAX from the current build); not_implemented (a remaster/rewrite that never had EAX); built_in (EAX already works in this build without the script, e.g. it ships its own OpenAL32.dll with EAX).",
+          "description": "Where EAX stands today: supported; removed_by_patch (an update took EAX out of the current build); not_implemented (a remaster or rewrite that never had EAX); built_in (EAX already works in this build without the script, for example because the game ships its own OpenAL32.dll with EAX).",
           "enum": ["supported", "removed_by_patch", "not_implemented", "built_in"],
           "default": "supported"
         },
         "problem": {
-          "description": "Why the current build is in the state `status` describes.",
+          "description": "Why the current build isn't simply supported, in plain words, matching the status above.",
           "type": "string"
         },
         "fix": {
@@ -66,26 +66,26 @@
           "type": "string"
         },
         "fix_in_place": {
-          "description": "true when `fix` works on the same install the script is pointed at (e.g. a Steam beta branch), so the script warns and offers to continue instead of blocking.",
+          "description": "Tick this when the fix works on the install the script is already pointed at (for example a Steam beta branch), so the script warns and offers to continue instead of stopping.",
           "type": "boolean",
           "default": false
         }
       }
     },
     "install": {
-      "description": "What the install itself does differently for this game.",
+      "description": "What the install does differently for this game.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "tweaks": {
-          "description": "Advanced Compatibility Tweaks recommended for this game (default-yes prompts).",
+          "description": "Advanced Compatibility Tweaks the script recommends for this game; each is asked as a Yes/No question that defaults to Yes.",
           "type": "array",
           "uniqueItems": true,
           "items": { "enum": ["eax_unified", "expand_audio_limits", "com_registry_routing"] },
           "default": []
         },
         "alsoft_ini": {
-          "description": "Settings offered on top of the generated alsoft.ini (section -> key -> value). Only these keys are allowed.",
+          "description": "Extra OpenAL Soft settings to offer on top of the generated alsoft.ini, as section, key, value. Only the keys the editor lists are accepted.",
           "type": "object",
           "additionalProperties": false,
           "properties": {
@@ -111,7 +111,7 @@
       }
     },
     "game_config": {
-      "description": "Changes to the game's own config files, offered in the Game Settings step.",
+      "description": "Changes to the game's own config files, offered to the player in the Game Settings step.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -122,12 +122,12 @@
           "additionalProperties": { "$ref": "#/$defs/config_file" }
         },
         "audio_settings": {
-          "description": "Settings that turn on EAX and 3D sound (or make them sound right), so the player doesn't have to.",
+          "description": "Settings that turn on EAX and 3D sound, or make them sound right, so the player doesn't have to change them by hand.",
           "type": "array",
           "items": { "$ref": "#/$defs/setting" }
         },
         "optional_settings": {
-          "description": "Optional quality-of-life settings and fixes that aren't needed for EAX (e.g. Quake 4's low-res textures).",
+          "description": "Extras that aren't needed for EAX, such as sharper textures. The player picks which to apply.",
           "type": "array",
           "items": { "$ref": "#/$defs/setting" }
         }
@@ -135,7 +135,7 @@
       "required": ["files"]
     },
     "sources": {
-      "description": "Pages backing this entry's claims, listed as links at the end of the game profile screen. Each is a URL, or {title, url} to show a name instead of the site's address.",
+      "description": "Pages that back up this profile's claims. They're listed as links at the bottom of the game's profile screen. Each is a web address, or a title with an address to show a name instead of the address.",
       "type": "array",
       "uniqueItems": true,
       "items": {
@@ -154,7 +154,7 @@
       }
     },
     "notes": {
-      "description": "Caveats not covered by the other fields.",
+      "description": "Anything worth telling the player that the other fields don't cover.",
       "type": "string"
     }
   },
@@ -171,11 +171,11 @@
       "additionalProperties": false,
       "properties": {
         "id": {
-          "description": "Steam AppID / GOG game ID, verified against the store. For GOG, use the game's own ID as Heroic installs it (its appName, the same as the gameId in the game's goggame-<id>.info) — for a game sold inside a pack or collection, the game inside it, never the pack.",
+          "description": "The store's ID for the game (Steam AppID or GOG game ID), checked against the store. For GOG, use the ID Heroic installs it under (its appName, the same as the gameId in the game's goggame-<id>.info). For a game sold inside a pack or collection, use the game's own ID, never the pack's.",
           "type": "integer"
         },
         "delisted": {
-          "description": "Pulled from sale; existing owners keep access.",
+          "description": "The game is no longer on sale; people who already own it keep access.",
           "type": "boolean",
           "default": false
         },
@@ -184,38 +184,38 @@
           "default": "storefront_verified"
         },
         "api": {
-          "description": "Overrides eax.api for this store's build only.",
+          "description": "The audio API for this store's build only, instead of the game's usual one.",
           "$ref": "#/$defs/api"
         },
         "beta_branch": {
-          "description": "Steam only: the BetaKey of a branch that restores EAX.",
+          "description": "Steam only: the beta branch name that brings EAX back.",
           "type": "string"
         },
         "extra_exe_folders": {
-          "description": "GOG only: other folders under the game's exe folder that hold their own exe (e.g. expansions launched from the same title) and get the same game-folder files.",
+          "description": "GOG only: other folders inside the game's exe folder that have an exe of their own (for example expansions started from the same title). They get the same files as the main folder.",
           "type": "array",
           "uniqueItems": true,
           "items": { "type": "string", "pattern": "^(?!/)(?!.*\\.\\.)[^\\\\]+$" },
           "default": []
         },
         "companion_apps": {
-          "description": "Steam only: AppIDs of other Steam apps that run this game's exe from its own folder (e.g. DOOM 3's Resurrection of Evil, 9070, which starts Doom3.exe with its own arguments). Each has its own Proton prefix and launch options, so an install sets those up the same way as the game's own.",
+          "description": "Steam only: IDs of other Steam apps that run this game's exe from its folder (for example DOOM 3's Resurrection of Evil, 9070, which starts Doom3.exe with its own options). Each has its own Wine/Proton prefix and launch options, which the install sets up like the game's own.",
           "type": "array",
           "uniqueItems": true,
           "items": { "type": "integer" },
           "default": []
         },
-        "store_details": { "type": "string", "description": "What's specific to this store's listing. A game that isn't an Enhanced Edition, remaster or remake doesn't mention one, unless the store sells them as one bundle (then name every game in it)." },
+        "store_details": { "type": "string", "description": "What's different about this store's listing. Don't mention an Enhanced Edition, remaster or remake of a game that isn't one, unless the store sells them together; then name every game in it." },
         "patches": { "type": "string" }
       }
     },
     "name_part": {
-      "description": "A config section or key name.",
+      "description": "The name of a config section or key.",
       "type": "string",
       "pattern": "^[A-Za-z0-9._ -]+$"
     },
     "registry_key": {
-      "description": "A wine_reg file's section: a registry key path below its hive, backslash-separated, as it appears in the prefix's .reg file, e.g. Software\\Wow6432Node\\Outrage\\Descent3.",
+      "description": "A registry path, written with single backslashes as it appears under its hive in the prefix's .reg file, for example Software\\Wow6432Node\\Outrage\\Descent3.",
       "type": "string",
       "pattern": "^[A-Za-z0-9._ ()-]+(\\\\[A-Za-z0-9._ ()-]+)+$",
       "not": { "pattern": "\\.\\." }
@@ -225,7 +225,7 @@
       "pattern": "^[A-Za-z0-9._ ()-]*$"
     },
     "value": {
-      "description": "A string sets the value (for a wine_reg dword, a decimal number); true/false turns a dark_cfg flag on or off; null deletes the key.",
+      "description": "Text sets the value (for a registry number, a decimal number). true or false switches a NewDark flag on or off. null removes the key.",
       "anyOf": [
         { "$ref": "#/$defs/value_string" },
         { "type": "boolean" },
@@ -242,11 +242,11 @@
       "additionalProperties": false,
       "properties": {
         "format": {
-          "description": "ini: [Section] key=value. flat_ini: key=value lines with no [sections]. idtech_cfg: seta key \"value\". dark_cfg: NewDark key value, bare flags, ;flag = off. brace_cfg: {key} = {value} lines (Fallout Tactics' bos.cfg). ltx: key value lines with no sections, the X-Ray engine's user.ltx (S.T.A.L.K.E.R.). gadb: Monolith's binary game database (F.E.A.R.'s Profile000.gdb); only switches an existing on/off setting, values \"0\"/\"1\". wine_reg: the prefix's system.reg (HKLM) or user.reg (HKCU), for a game that keeps its options in the registry; changes go key path -> value name -> value, a dword as a decimal number, and only dword and string values are changed.",
+          "description": "ini: [Section] then key=value. flat_ini: key=value lines with no sections. idtech_cfg: seta key \"value\". dark_cfg: NewDark \"key value\" lines, where a bare key is a flag that's on and ;key turns it off. brace_cfg: {key} = {value} lines (Fallout Tactics' bos.cfg). ltx: key value lines with no sections (S.T.A.L.K.E.R.'s user.ltx). gadb: Monolith's binary profile (F.E.A.R.'s Profile000.gdb); it can only switch an existing on/off setting, so values are \"0\" or \"1\". wine_reg: the prefix's system.reg or user.reg, for a game that keeps its options in the registry; only numbers and text can be changed, a number as a decimal.",
           "enum": ["ini", "flat_ini", "idtech_cfg", "dark_cfg", "brace_cfg", "ltx", "gadb", "wine_reg"]
         },
         "locations": {
-          "description": "Where to look, in order, as \"base:path\". The first one that exists is used. A wine_reg file's only locations are prefix:system.reg and prefix:user.reg.",
+          "description": "Where to look for the file, in order, written as \"base:path\". The first one that exists is used. A registry file can only be prefix:system.reg or prefix:user.reg.",
           "type": "array",
           "minItems": 1,
           "items": {
@@ -258,11 +258,11 @@
           }
         },
         "if_missing": {
-          "description": "When no location exists. Omitted: ask the player to launch the game once, then check again. skip: leave out this file's part of each setting and tell the player. create: create it.",
+          "description": "What to do when none of the locations exist. Leave empty to ask the player to launch the game once and check again; skip to leave this file's part out of each setting and tell the player; create to create the file.",
           "enum": ["skip", "create"]
         },
         "crash_marker": {
-          "description": "A file in the same folder that the game creates while running and deletes when quit normally. If it's left behind, the game resets this config file on its next start, so it's removed (when the game isn't running) before this file is changed. Never restored on uninstall.",
+          "description": "A file in the same folder that the game creates while it runs and deletes when it quits normally. If it's left behind, the game resets this config file the next time it starts, so the script removes it (when the game isn't running) before changing this file. It isn't put back on uninstall.",
           "type": "string",
           "pattern": "^[A-Za-z0-9._ -]+$",
           "not": { "enum": [".", ".."] }
@@ -278,7 +278,7 @@
       "additionalProperties": false,
       "properties": {
         "title": {
-          "description": "Enable / Fix / Remove / Raise + the result, e.g. \"Enable EAX reverb\".",
+          "description": "Starts with Enable, Fix, Remove or Raise, then the result, for example \"Enable EAX reverb\".",
           "type": "string",
           "minLength": 1,
           "maxLength": 60
@@ -289,7 +289,7 @@
           "minLength": 1
         },
         "only_if": {
-          "description": "Conditions for offering the setting; it's skipped silently otherwise.",
+          "description": "When to offer the setting. If the conditions aren't met it's skipped without a message.",
           "type": "object",
           "minProperties": 1,
           "additionalProperties": false,
@@ -301,7 +301,7 @@
               "items": { "enum": ["steam", "gog"] }
             },
             "speakers": {
-              "description": "The Speaker Configuration answer: stereo, headphones (Stereo, then Headphones), matrix, surround (any surround layout), or one exact layout (quad, surround51, surround61, surround71). A list matches any of its values.",
+              "description": "Offer only for these answers to the Speaker Configuration question: stereo, headphones (Stereo, then Headphones), matrix, surround (any surround layout), or one exact layout (quad, surround51, surround61, surround71). A list matches any of its values.",
               "anyOf": [
                 { "$ref": "#/$defs/speaker_choice" },
                 { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/speaker_choice" } }
@@ -310,7 +310,7 @@
           }
         },
         "changes": {
-          "description": "file -> section -> key -> value for ini files; file -> key -> value for cfg files; file -> registry key path -> value name -> value for wine_reg. Files must be defined in game_config.files.",
+          "description": "What to change. ini files: file, section, key, value. Other text files: file, key, value. Registry files: file, registry key, value name, value. Every file must first be defined under game_config.files.",
           "type": "object",
           "minProperties": 1,
           "propertyNames": { "$ref": "#/$defs/config_file_name" },
@@ -332,7 +332,7 @@
           }
         },
         "follow_up": {
-          "description": "Something the player does after installing, shown in the final summary.",
+          "description": "Something the player should do after installing. It's shown in the final summary.",
           "type": "string"
         }
       }

@@ -58,9 +58,6 @@ input[type=checkbox]{width:16px;height:16px;min-height:0;padding:0;accent-color:
 .search{margin-bottom:10px}
 .side-actions{display:grid;gap:6px;margin-bottom:12px}
 .side-foot{position:sticky;bottom:-12px;margin:12px -12px -12px;padding:10px 12px;background:var(--surface);border-top:1px solid var(--line)}
-#snav .jsonbtn{margin:0 0 6px 4px;white-space:nowrap}
-#snav .jsonbtn.on{background:var(--acc-weak);border-color:var(--acc)}
-#snav .jsonbtn .nb{margin-left:6px}
 select{padding-right:26px}
 
 /* ---- sidebar list */
@@ -246,3 +243,17 @@ button.danger:hover:not(:disabled){background:var(--bad);filter:brightness(1.1)}
 .updatebar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 16px;background:var(--acc-weak);color:var(--fg);border-bottom:1px solid var(--line)}
 .updatebar[hidden]{display:none}
 .updatebar .sp{flex:1}
+
+#jsontoggle.on{background:var(--acc-weak);border-color:var(--acc)}
+
+/* ---- AI drafting dialog */
+.aistatus{display:flex;align-items:center;gap:8px;font-weight:600;margin-bottom:14px}
+.aistatus .dot{width:9px;height:9px;border-radius:50%;background:var(--mut)}
+.aistatus.on{color:var(--ok)}.aistatus.on .dot{background:var(--ok)}
+.aicard{border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:12px;background:var(--surface2)}
+.aicard.on{border-color:var(--ok)}
+.aicard>header{display:flex;align-items:center;gap:10px;margin-bottom:2px}
+.aicard h4{font-size:14px}
+.aicard>p{margin:0 0 10px}
+.airow{display:flex;align-items:center;gap:10px;margin-top:8px}
+.airow .grow,.airow input{flex:1;min-width:0}

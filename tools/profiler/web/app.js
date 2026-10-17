@@ -124,9 +124,9 @@ function showErrors(errs) {
   const ul = $("#errors");
   ul.replaceChildren(...(errs.length ? errs.map((e) => {
     const i = e.indexOf(": "), path = i > 0 ? e.slice(0, i) : "", msg = i > 0 ? e.slice(i + 2) : e;
-    return el("li", { title: "Go to this", onclick: () => path && goToProblem(path, msg) }, path ? el("code", {}, path) : null, msg);
+    return el("li", { title: "Go to the field with this problem", onclick: () => path && goToProblem(path, msg) }, path ? el("code", {}, path) : null, msg);
   }) : [el("li", { class: "ok" }, "✓ No problems")]));
-  drawNav();
+  drawNav(); drawRailTab();
 }
 
 // ---------------------------------------------------------------- form building
@@ -137,7 +137,7 @@ function field(label, control, { help, wide, extra, req } = {}) {
 }
 function aiButton(task, ctx, apply) {
   if (!AI) return null;
-  return el("button", { type: "button", class: "btn sm", title: "Draft this with AI. You can edit the result.", onclick: async (e) => {
+  return el("button", { type: "button", class: "btn sm", title: "Ask the AI to fill this in. You can edit what it writes.", onclick: async (e) => {
     e.preventDefault(); const b = e.currentTarget; b.disabled = true; b.textContent = "Drafting…";
     try { apply(await api("/api/ai", "POST", { task, context: ctx() })); changed(); } catch (x) { toast("AI: " + x.message, 6000); }
     b.disabled = false; b.textContent = "✨ Draft";
@@ -256,8 +256,8 @@ function cards(parent, key, itemSchema, path) {
       });
       const d = el("details", { class: "setcard", open: list.length <= 2 || !o.title },
         el("summary", {}, stitle, cond, badge,
-          el("button", { type: "button", class: "icon", disabled: i === 0, title: "Move up", onclick: (e) => { e.preventDefault(); [list[i - 1], list[i]] = [list[i], list[i - 1]]; changed(); draw(); } }, "↑"),
-          el("button", { type: "button", class: "icon", disabled: i === list.length - 1, title: "Move down", onclick: (e) => { e.preventDefault(); [list[i + 1], list[i]] = [list[i], list[i + 1]]; changed(); draw(); } }, "↓"),
+          el("button", { type: "button", class: "icon", disabled: i === 0, title: "Move this setting up", onclick: (e) => { e.preventDefault(); [list[i - 1], list[i]] = [list[i], list[i - 1]]; changed(); draw(); } }, "↑"),
+          el("button", { type: "button", class: "icon", disabled: i === list.length - 1, title: "Move this setting down", onclick: (e) => { e.preventDefault(); [list[i + 1], list[i]] = [list[i], list[i + 1]]; changed(); draw(); } }, "↓"),
           (key === "audio_settings" || key === "optional_settings") ? el("button", { type: "button", class: "btn sm", title: key === "audio_settings" ? "Move this setting to the optional settings" : "Move this setting to the audio settings", onclick: (e) => { e.preventDefault(); const to = key === "audio_settings" ? "optional_settings" : "audio_settings"; parent[to] = parent[to] || []; parent[to].push(list.splice(i, 1)[0]); changed(); renderPane(); } }, key === "audio_settings" ? "→ Optional" : "→ Audio") : null,
           el("button", { type: "button", class: "icon", title: "Delete this setting", onclick: async (e) => { e.preventDefault(); if (await askConfirm(`Delete “${o.title || "this setting"}”?`, "Delete", true)) { arr().splice(i, 1); changed(); draw(); } } }, "✕")),
         el("div", { class: "setbody" }, grid(fields)));
@@ -277,7 +277,7 @@ function fileCards(parent, key, valueSchema, path) {
     box.replaceChildren(names.length ? el("div", { class: "filegrid" }, names.map((name) => {
       const val = m()[name];
       return el("div", { class: "filecard", "data-path": `${path}.${name}` },
-        el("header", {}, el("h4", {}, name), el("button", { type: "button", class: "icon", title: "Remove this file (settings that use it will need fixing)", onclick: () => { delete m()[name]; changed(); draw(); } }, "✕")),
+        el("header", {}, el("h4", {}, name), el("button", { type: "button", class: "icon", title: "Remove this file from the profile. Settings that change it will need fixing.", onclick: () => { delete m()[name]; changed(); draw(); } }, "✕")),
         grid(Object.entries(resolve(valueSchema).properties).map(([k, sub]) => node(sub, val, k, `${path}.${name}.${k}`))));
     })) : el("div", { class: "empty-note" }, "No config files yet."),
       el("div", { class: "addrow" }, el("button", { type: "button", class: "btn", onclick: async () => {
@@ -307,7 +307,7 @@ function changesEditor(setting, key) {
   };
   const val = (v, upd) => {
     const mode = v === null ? "null" : v === true ? "true" : v === false ? "false" : "text";
-    const sel = el("select", { style: "flex:0 0 84px", title: "text: a value. true / false: turn a flag on or off. null: delete the key.", onchange: () => { sel.value === "text" ? upd("") : upd(sel.value === "null" ? null : sel.value === "true"); draw(); } }, ["text", "true", "false", "null"].map((x) => el("option", { selected: x === mode }, x)));
+    const sel = el("select", { style: "flex:0 0 84px", title: "text: set the value to the text you type. true or false: switch a flag on or off. null: remove the key from the file.", onchange: () => { sel.value === "text" ? upd("") : upd(sel.value === "null" ? null : sel.value === "true"); draw(); } }, ["text", "true", "false", "null"].map((x) => el("option", { selected: x === mode }, x)));
     const inp = el("input", { value: typeof v === "string" ? v : "", placeholder: mode === "text" ? "value" : "", disabled: mode !== "text", oninput: () => upd(inp.value) });
     return el("div", { class: "row" }, sel, inp);
   };
@@ -320,7 +320,7 @@ function changesEditor(setting, key) {
         el("td", {}, el("input", { value: r[1], disabled: !sectioned(r[0]), placeholder: sectioned(r[0]) ? "section" : "n/a", oninput: (e) => { r[1] = e.target.value; commit(); } })),
         el("td", {}, el("input", { value: r[2], placeholder: "key", oninput: (e) => { r[2] = e.target.value; commit(); } })),
         el("td", {}, val(r[3], (v) => { r[3] = v; commit(); })),
-        el("td", {}, el("button", { type: "button", class: "icon", title: "Remove this change", onclick: () => { R.splice(i, 1); commit(); draw(); } }, "✕")))))),
+        el("td", {}, el("button", { type: "button", class: "icon", title: "Remove this change from the setting", onclick: () => { R.splice(i, 1); commit(); draw(); } }, "✕")))))),
       el("div", { class: "addrow" }, el("button", { type: "button", class: "btn sm", onclick: () => { R.push([fnames[0] || "", "", "", ""]); draw(); } }, "+ Add a change")));
   };
   draw(); return box;
@@ -384,8 +384,7 @@ function drawNav() {
   nav.replaceChildren(...SECTIONS.map(([id, label]) => {
     const n = id === "capture" ? 0 : ERRS.filter((e) => sectionOfPath(e.split(": ")[0]) === id).length;
     return el("button", { type: "button", class: id === SECTION ? "on" : "", onclick: () => setSection(id) }, label, n ? el("span", { class: "nb", title: `${n} problem${n === 1 ? "" : "s"} in this section` }, n) : null);
-  }), el("span", { class: "sp" }), GACTIONS,
-    el("button", { type: "button", id: "jsontoggle", class: "btn ghost jsonbtn" + (getComputedStyle($("#rail")).display === "none" ? "" : " on"), title: "Show or hide the live JSON and the list of problems", onclick: toggleRail }, "{ } JSON", ERRS.length ? el("span", { class: "nb" }, String(ERRS.length)) : null));
+  }), el("span", { class: "sp" }), GACTIONS);
 }
 function setSection(id) { SECTION = id; drawNav(); renderPane(); $("#main").scrollTop = 0; }
 function showTab(t) { if (t === "capture") setSection("capture"); else if (SECTION === "capture") setSection("overview"); }
@@ -409,7 +408,7 @@ function renderEdit() {
       AI ? el("button", { type: "button", class: "btn", onclick: research, title: "Fill in release date, executable, description and EAX details from what the AI knows. Check them against a source." }, "✨ Research") : null,
       el("select", { id: "promo", title: "Move this entry to another folder (tested, untested or draft)", onchange: promote }, [el("option", { value: "" }, "Move to…"), ...["drafts", "untested", "tested"].filter((x) => x !== CUR.folder).map((x) => el("option", {}, x))]),
       el("button", { type: "button", class: "btn", id: "submitbtn", title: "Send this profile to the project as a pull request", onclick: submitClicked }, "Submit…"),
-      el("button", { type: "button", class: "btn primary", id: "savebtn", title: "Save (Ctrl+S): shows what will change in the file first", onclick: saveClicked }, "Save"));
+      el("button", { type: "button", class: "btn primary", id: "savebtn", title: "Save (Ctrl+S). It shows what will change in the file first.", onclick: saveClicked }, "Save"));
   drawNav(); renderPane(); drawBuildBadge();
 }
 function drawBuildBadge() {
@@ -529,10 +528,10 @@ async function research() {
 // ---------------------------------------------------------------- sidebar
 // How a saved game file stands against the built game-database.json.
 const BUILD_TEXT = {
-  current: ["In database", "The saved file matches game-database.json."],
-  changed: ["Changed since last build", "The saved file differs from game-database.json. Press “Rebuild database” to update it."],
+  current: ["In database", "game-database.json already has this game exactly as saved."],
+  changed: ["Changed since last build", "The saved file has changes game-database.json doesn't have yet. Press “Rebuild database” to add them."],
   new: ["Not in database yet", "This game isn't in game-database.json yet. Press “Rebuild database” to add it."],
-  draft: ["Draft", "Drafts are never put in game-database.json."],
+  draft: ["Draft", "Drafts are never added to game-database.json."],
 };
 const buildTip = (b) => BUILD_TEXT[b.state][1] + (b.fields && b.fields.length ? ` Differs in: ${b.fields.join(", ")}.` : "");
 function drawRebuild() {
@@ -540,12 +539,12 @@ function drawRebuild() {
   const n = behind.length + STALE.length, b = $("#rebuild");
   b.textContent = n ? `Rebuild database (${n})` : "Rebuild database";
   b.classList.toggle("warn", n > 0);
-  b.dataset.tip = n ? `game-database.json is behind: ${behind.length} changed or new game${behind.length === 1 ? "" : "s"}${STALE.length ? `, ${STALE.length} removed` : ""}. ${behind.slice(0, 6).map((g) => g.name).join(", ")}${behind.length > 6 ? "…" : ""}` : "game-database.json is up to date. Rebuild regenerates it from the per-game files.";
+  b.dataset.tip = n ? `game-database.json is behind by ${behind.length} changed or new game${behind.length === 1 ? "" : "s"}${STALE.length ? `, ${STALE.length} removed` : ""}: ${behind.slice(0, 6).map((g) => g.name).join(", ")}${behind.length > 6 ? "…" : "."}` : "game-database.json is up to date. Rebuild remakes it from the game files.";
 }
 async function loadList() {
   const j = await api("/api/games"); GAMES = j.games; STALE = j.stale || []; AI = j.ai;
   $("#aistate").textContent = AI ? `AI: ${AI === "api" ? "API key" : "Claude sign-in"}` : "AI off";
-  $("#aistate").dataset.tip = AI ? "AI drafting is on, so the ✨ buttons work. Click to change how it signs in." : "Click to sign in or add an API key, which turns on the ✨ drafting buttons.";
+  $("#aistate").dataset.tip = AI ? "AI drafting is on, so the ✨ buttons work. Select to change how you sign in." : "Sign in or add an API key to turn on the ✨ drafting buttons.";
   drawList(); drawRebuild();
   if (GAME && CUR) drawBuildBadge();
 }
@@ -558,7 +557,7 @@ function drawList() {
     const d = el("details", { open: q ? true : OPEN[folder], ontoggle: (e) => { if (!q) OPEN[folder] = e.target.open; } },
       el("summary", {}, el("span", { class: "dot " + folder }), folder, el("span", { class: "cnt" }, g.length)),
       ...g.map((x) => el("div", { class: "item" + (CUR && CUR.id === x.id ? " on" : ""), onclick: () => openGame(x.folder, x.id) }, el("span", { class: "nm" }, x.name), x.build && (x.build.state === "changed" || x.build.state === "new") ? el("span", { class: "tag warn", title: buildTip(x.build) }, x.build.state === "new" ? "not built" : "changed") : null,
-        x.has_config ? el("span", { class: "tag", title: "Has game settings" }, "cfg") : null)));
+        x.has_config ? el("span", { class: "tag", title: "This game has settings for its own config files" }, "cfg") : null)));
     box.append(d);
   }
   if (!box.children.length) box.append(el("p", { class: "muted" }, "No games match."));
@@ -588,34 +587,44 @@ async function aiSettings() {
   const refresh = async () => { st = await api("/api/ai/status"); draw(); };
   const run = (fn, done) => async (e) => { e.target.disabled = true; try { await fn(); if (done) toast(done); } catch (x) { toast(x.message, 8000); } await refresh(); };
   function draw() {
-    const cli = st.cli;
-    const using = st.env_key ? "Using the ANTHROPIC_API_KEY variable." : st.in_use === "api" ? `Using your saved API key (${st.saved_key}).`
-      : st.in_use === "cli" ? "Using your Claude sign-in." : "AI drafting is off. Sign in or add an API key below to turn on the ✨ buttons.";
+    const cli = st.cli, inUse = st.env_key ? "env" : st.in_use;
+    const using = st.env_key ? "On, using the ANTHROPIC_API_KEY variable" : st.in_use === "api" ? "On, using your saved API key"
+      : st.in_use === "cli" ? "On, using your Claude sign-in" : "Off. Sign in or add an API key to turn on the ✨ buttons";
     clearInterval(timer);
     if (st.login.running) timer = setInterval(refresh, 2000);
-    const keyInput = el("input", { type: "password", placeholder: "sk-ant-…", autocomplete: "off", spellcheck: false });
-    body.replaceChildren(el("p", {}, el("strong", {}, using)),
-      el("h4", {}, "Sign in with Claude"),
-      el("p", { class: "muted" }, "Uses your Claude subscription, through the claude command's own sign-in."),
-      !cli.installed ? el("p", {}, "Claude Code isn't installed, or the editor can't find it. If you have it, make sure the `claude` command works in a terminal; if you don't, install it or use an API key instead.")
-        : el("div", {}, el("p", {}, st.login.running ? "Waiting for you to finish signing in, in your browser…" : cli.logged_in ? `Signed in${cli.email ? " as " + cli.email : ""}.` : "Not signed in."),
-          st.login.running && st.login.output ? el("pre", { class: "muted", style: "white-space:pre-wrap;word-break:break-all;font-size:12px" }, st.login.output) : null,
-          cli.logged_in && !st.login.running
-            ? el("button", { type: "button", class: "btn", onclick: run(() => api("/api/ai/cli", "POST", { action: "logout" }), "Signed out") }, "Sign out")
-            : el("button", { type: "button", class: "btn primary", disabled: st.login.running, onclick: run(() => api("/api/ai/cli", "POST", { action: "login" })) }, "Sign in")),
-      el("h4", {}, "Anthropic API key"),
-      st.saved_key ? el("p", {}, `Saved key ${st.saved_key} `, el("button", { type: "button", class: "btn sm", onclick: run(() => api("/api/ai/key/forget", "POST"), "Key removed") }, "Remove")) : null,
-      keyInput,
-      el("div", { class: "btns" }, el("span", { class: "sp" }), el("button", { type: "button", class: "btn", onclick: run(async () => {
-        const r = await api("/api/ai/key", "POST", { key: keyInput.value }); toast(r.checked ? "Key saved ✓" : r.note, 8000);
-      }) }, st.saved_key ? "Replace key" : "Save and check")),
-      el("p", { class: "muted" }, `The key is kept in ${st.config}, readable only by you, and sent only to Anthropic. The ANTHROPIC_API_KEY variable, when set, is used instead.`));
+    const keyInput = el("input", { type: "password", placeholder: st.saved_key ? "Paste a new key to replace it" : "sk-ant-…", autocomplete: "off", spellcheck: false });
+    const card = (title, on, hint, ...kids) => el("section", { class: "aicard" + (on ? " on" : "") },
+      el("header", {}, el("h4", {}, title), on ? el("span", { class: "badge untested", style: "background:var(--ok-weak);color:var(--ok)" }, "In use") : null), el("p", { class: "muted" }, hint), ...kids);
+    body.replaceChildren(
+      el("p", { class: "muted", style: "margin:0 0 12px" }, "Lets the ✨ buttons fill in release dates, EAX details and drafted settings. Check what it writes against a source."),
+      el("div", { class: "aistatus " + (inUse ? "on" : "off") }, el("span", { class: "dot" }), using),
+      card("Claude sign-in", inUse === "cli", "Uses your Claude subscription, through the claude command's own sign-in.",
+        !cli.installed ? el("p", { class: "bad" }, "Claude Code isn't installed, or the editor can't find it. Make sure the `claude` command works in a terminal, or use an API key instead.")
+          : el("div", { class: "airow" },
+            el("span", { class: "grow" }, st.login.running ? "Waiting for you to finish signing in, in your browser…" : cli.logged_in ? `Signed in${cli.email ? " as " + cli.email : ""}.` : "Not signed in."),
+            cli.logged_in && !st.login.running
+              ? el("button", { type: "button", class: "btn", onclick: run(() => api("/api/ai/cli", "POST", { action: "logout" }), "Signed out") }, "Sign out")
+              : el("button", { type: "button", class: "btn primary", disabled: st.login.running, onclick: run(() => api("/api/ai/cli", "POST", { action: "login" })) }, "Sign in")),
+        st.login.running && st.login.output ? el("pre", { class: "muted", style: "white-space:pre-wrap;word-break:break-all;font-size:12px;margin:8px 0 0" }, st.login.output) : null),
+      card("Anthropic API key", inUse === "api" || inUse === "env", st.env_key ? "The ANTHROPIC_API_KEY variable is set, so it is used instead of a saved key." : `Pay-as-you-go. The key is kept in ${st.config}, readable only by you, and sent only to Anthropic.`,
+        st.saved_key ? el("div", { class: "airow" }, el("span", { class: "grow" }, `Saved key ${st.saved_key}`), el("button", { type: "button", class: "btn sm", onclick: run(() => api("/api/ai/key/forget", "POST"), "Key removed") }, "Remove")) : null,
+        el("div", { class: "airow" }, keyInput, el("button", { type: "button", class: "btn", onclick: run(async () => {
+          const r = await api("/api/ai/key", "POST", { key: keyInput.value }); toast(r.checked ? "Key saved ✓" : r.note, 8000);
+        }) }, st.saved_key ? "Replace key" : "Save and check"))));
   }
   draw();
 }
 $("#rebuild").onclick = async () => { const r = await api("/api/rebuild", "POST"); toast(r.ok ? "game-database.json rebuilt ✓" : r.message, 8000); await loadList(); };
 $("#cleanupbtn").onclick = () => openCleanup(GAME);
-function toggleRail() { const l = $("#layout"); const hidden = getComputedStyle($("#rail")).display === "none"; l.classList.toggle("norail", !hidden); l.classList.toggle("rail-on", hidden); if (hidden) $("#rail").style.display = "block"; else $("#rail").style.display = ""; drawNav(); }
+function toggleRail() { const l = $("#layout"); const hidden = getComputedStyle($("#rail")).display === "none"; l.classList.toggle("norail", !hidden); l.classList.toggle("rail-on", hidden); if (hidden) $("#rail").style.display = "block"; else $("#rail").style.display = ""; drawRailTab(); }
+// The header's JSON button: pressed while the side bar is open, and carries the problem count.
+function drawRailTab() {
+  const b = $("#jsontoggle"); if (!b) return;
+  b.classList.toggle("on", getComputedStyle($("#rail")).display !== "none");
+  fill(b, "{ } JSON", ERRS.length ? el("span", { class: "nb" }, String(ERRS.length)) : null);
+}
+$("#jsontoggle").onclick = toggleRail;
+window.addEventListener("resize", drawRailTab);
 document.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); saveClicked(); } });
 window.addEventListener("beforeunload", (e) => { if (DIRTY) { e.preventDefault(); e.returnValue = ""; } });
 
@@ -638,7 +647,7 @@ async function openCleanup(game) {
       const acts = [];
       if (e.can_remove_install) acts.push(el("button", { type: "button", class: "btn sm", onclick: () => confirmClean(e, "remove"), title: e.state === "installed" ? "Run the script's uninstall for this game." : "The game is gone from your library, so the files the script left are removed directly." }, "Remove install"));
       if (e.prefix_exists) acts.push(el("button", { type: "button", class: "btn sm", disabled: !e.can_reset, onclick: () => confirmClean(e, "prefix"), title: e.can_reset ? "Delete this game's Wine prefix. The launcher makes a new one on the next launch." : (e.reset_blocked || "Can't be reset.") }, "Delete prefix"));
-      if (acts.length) acts.push(el("button", { type: "button", class: "btn sm primary", disabled: e.prefix_exists && !e.can_reset && !e.can_remove_install, onclick: () => confirmClean(e, "fresh"), title: "Remove the install, delete the prefix and reset the capture session, ready for a fresh test." }, "Start fresh"));
+      if (acts.length) acts.push(el("button", { type: "button", class: "btn sm primary", disabled: e.prefix_exists && !e.can_reset && !e.can_remove_install, onclick: () => confirmClean(e, "fresh"), title: "Uninstall the script from this game, delete its Wine prefix and clear its captured data, ready for a fresh test." }, "Start fresh"));
       const bits = [];
       if (e.files.length) bits.push(`${e.files_present} of ${e.files.length} files left` + (e.backups ? `, ${e.backups} backup${e.backups === 1 ? "" : "s"} to put back` : ""));
       bits.push(e.prefix_exists ? "has a Wine prefix" : "no Wine prefix");
@@ -757,7 +766,7 @@ async function addInstalled() {
   const have = (l) => GAMES.some((x) => x[l.store] === l.id);
   const todo = LIB.filter((l) => !have(l)).sort((a, b) => a.name.localeCompare(b.name));
   const q = el("input", { placeholder: "Search…" }), list = el("div", { class: "list" });
-  const dlg = dialog(el("h3", {}, `Add a game (${todo.length} installed without a profile)`), q, list, el("div", { class: "btns" }, el("button", { type: "button", class: "danger-link", title: "For a game that isn't installed here, or isn't in the list", onclick: () => { dlg.close(); addByName(); } }, "Not in the list? Add it by name…"), el("span", { class: "sp" }), el("button", { type: "button", onclick: () => dlg.close() }, "Cancel")));
+  const dlg = dialog(el("h3", {}, `Add a game (${todo.length} installed without a profile)`), q, list, el("div", { class: "btns" }, el("button", { type: "button", class: "danger-link", title: "Use this for a game that isn't installed here, or isn't in the list.", onclick: () => { dlg.close(); addByName(); } }, "Not in the list? Add it by name…"), el("span", { class: "sp" }), el("button", { type: "button", onclick: () => dlg.close() }, "Cancel")));
   const draw = () => list.replaceChildren(...(todo.filter((l) => l.name.toLowerCase().includes(q.value.toLowerCase())).map((l) =>
     el("div", { class: "item", onclick: async () => {
       dlg.close();
@@ -776,7 +785,7 @@ function exeBrowse(onPick) {
     const f = pick.files[0]; if (!f) return;
     onPick(f.name); pick.value = "";
   } });
-  return [pick, el("button", { type: "button", class: "btn sm", title: "Pick the game's .exe to fill in its file name", onclick: () => pick.click() }, "Browse…")];
+  return [pick, el("button", { type: "button", class: "btn sm", title: "Choose the game's .exe file to fill in its file name", onclick: () => pick.click() }, "Browse…")];
 }
 // An exe typed into the profile reaches the open capture session too.
 let EXE_SYNC;
@@ -807,7 +816,7 @@ function drawSteps() {
       extra_exe_folders: GAME.stores && GAME.stores[store] && GAME.stores[store].extra_exe_folders };
   };
   const act = (action) => async () => { try { await api(`/api/session/${SESS.sid}/action`, "POST", { action, profile: captureProfile() }); await refreshSession(); drawSteps(); } catch (x) { toast(x.message, 8000); } };
-  const view = (k) => st[k] ? el("button", { type: "button", class: "btn sm", title: "See what this step captured", onclick: () => viewStep(k).catch((x) => toast(x.message, 8000)) }, "View") : null;
+  const view = (k) => st[k] ? el("button", { type: "button", class: "btn sm", title: "Show what was captured at this step", onclick: () => viewStep(k).catch((x) => toast(x.message, 8000)) }, "View") : null;
   const status = (a) => job.action === a && job.state !== "idle" ? el("div", { class: "status " + job.state }, `${job.state === "error" ? "Problem: " : ""}${job.message}`) : null;
   const prepDone = !!(st.pre && st.installed);
 
@@ -827,7 +836,7 @@ function drawSteps() {
   const snap = (label, text, title) => el("button", { type: "button", class: st[label] ? "" : "primary", disabled: !live || !!live.snap || (label.startsWith("spk-") && !st.audio), title, onclick: act("snap:" + label) }, st[label] ? `${text} ✓ again` : text);
   const chips = SPEAKERS.map(([k]) => { const key = "spk-" + k; return el("span", { class: "chip" + (st[key] ? " on" : "") },
     el("button", { type: "button", disabled: !live || !!live.snap || !st.audio, title: st.audio ? "Pick this speaker setup in the game, then press this." : "Take the audio snapshot first.", onclick: act("snap:" + key) }, (st[key] ? "✓ " : "") + SPEAKER_SHORT[k]),
-    st[key] ? el("button", { type: "button", class: "vw", title: "See what this layout captured", onclick: () => viewStep(key).catch((x) => toast(x.message, 8000)) }, "view") : null); });
+    st[key] ? el("button", { type: "button", class: "vw", title: "Show what was captured with this speaker layout", onclick: () => viewStep(key).catch((x) => toast(x.message, 8000)) }, "view") : null); });
   const left = live && live.snap ? Math.max(0, Math.ceil(live.until - Date.now() / 1000)) : 0;
   const s2body = !prepDone ? [el("p", { class: "muted" }, "Finish the preparation first.")]
     : !live ? [status("live"), el("div", { class: "barrow" }, el("button", { type: "button", class: "primary", disabled: run, onclick: act("live") }, st.audio ? "Open the game again" : "Open the game"),
@@ -835,7 +844,7 @@ function drawSteps() {
     : [el("ol", { class: "todo" },
         el("li", {}, "In the game, switch ON the EAX / hardware 3D audio options, and change any other options you want to offer (resolution, textures…). Then press ", snap("audio", "Snapshot: changed options", "Records the config files now and compares them with the baseline. You choose each change's category at the review.")),
         el("li", { class: "opt" }, "Optional: for each speaker setup the game offers, pick it in the game and press its button. Layouts that change the same values are merged for you.", el("div", { class: "chips" }, ...chips)),
-        el("li", {}, "Done? ", el("button", { type: "button", onclick: act("stop"), title: "Asks the game to quit" }, "Close the game"))),
+        el("li", {}, "Done? ", el("button", { type: "button", onclick: act("stop"), title: "Ask the game to quit" }, "Close the game"))),
       live.snap ? el("div", { class: "status running" }, `Taking the “${stepTitle(live.snap)}” snapshot. Wine saves its registry about every 30 seconds, so leave the game as it is for ${left || "a few"} s.`) : status("live")];
   const keptRows = ["audio", "optional"].filter((k) => st[k] && !live).map((k) => el("div", { class: "chk on" }, el("span", { class: "tick" }, "✓"), el("span", {}, stepTitle(k)), el("span", { class: "meta" }, `${st[k].files} files`), view(k)));
   const s2 = stage(2, !!st.audio, "Your turn", "The only manual part: change the options in the game.", ...s2body, ...keptRows);
@@ -876,10 +885,10 @@ function showDraft() {
   const saveDrop = () => api(`/api/session/${SESS.sid}/drop`, "POST", { drop: [...DROP], cats: Object.fromEntries(CAT) }).catch(() => {});
   // Unticking a whole file first is quicker than unticking dozens when only a few settings matter.
   const setFile = (f, keep) => { for (const c of f.changes) { const k = dropKey(f, c); keep ? DROP.delete(k) : DROP.add(k); } saveDrop(); showDraft(); };
-  fill(box, el("div", { class: "blockhead" }, el("h2", {}, "Captured changes"), helpIcon("Tick the changes to keep. Ones that look like the game's own bookkeeping start unticked, with the reason shown.")),
+  fill(box, el("div", { class: "blockhead" }, el("h2", {}, "Captured changes"), helpIcon("Tick the changes to keep. Changes that look like the game's own housekeeping start unticked, with the reason shown.")),
     ...Object.entries(d.diffs).flatMap(([label, list]) => [el("p", {}, el("b", {}, runName(label))), ...(list.length ? list.map((f) => el("details", { class: "cfile", open: true }, el("summary", {}, `${f.file}  →  ${f.location || "(outside known folders)"}  [${f.format}]`),
       el("div", { class: "barrow" }, el("button", { type: "button", class: "btn sm", onclick: () => setFile(f, false) }, "Untick all in this file"), el("button", { type: "button", class: "btn sm", onclick: () => setFile(f, true) }, "Tick all in this file")),
-      el("div", { class: "tblwrap" }, el("table", {}, el("tr", {}, ["Keep", "Category", "Section", "Key", "Was", "Now", ""].map((h) => el("th", {}, h))), ...f.changes.map((c) => el("tr", {}, el("td", {}, el("input", { type: "checkbox", checked: c.expressible && !DROP.has(dropKey(f, c)), disabled: !c.expressible, title: "Include when merging", onchange: (e) => { const k = dropKey(f, c); e.target.checked ? DROP.delete(k) : DROP.add(k); saveDrop(); } })), el("td", {}, c.section), el("td", {}, c.key), el("td", { class: "muted" }, String(c.old)), el("td", {}, String(c.new)), el("td", { class: c.expressible ? "muted" : "bad" }, c.expressible ? (c.suspect_reason ? "left out: " + c.suspect_reason : "") : "not allowed by schema"))))))) : [el("p", { class: "muted" }, "No changes.")])]),
+      el("div", { class: "tblwrap" }, el("table", {}, el("tr", {}, ["Keep", "Category", "Section", "Key", "Was", "Now", ""].map((h) => el("th", {}, h))), ...f.changes.map((c) => el("tr", {}, el("td", {}, el("input", { type: "checkbox", checked: c.expressible && !DROP.has(dropKey(f, c)), disabled: !c.expressible, title: "Keep this change when merging into the profile", onchange: (e) => { const k = dropKey(f, c); e.target.checked ? DROP.delete(k) : DROP.add(k); saveDrop(); } })), el("td", {}, c.section), el("td", {}, c.key), el("td", { class: "muted" }, String(c.old)), el("td", {}, String(c.new)), el("td", { class: c.expressible ? "muted" : "bad" }, c.expressible ? (c.suspect_reason ? "left out: " + c.suspect_reason : "") : "not allowed by schema"))))))) : [el("p", { class: "muted" }, "No changes.")])]),
     ...(d.skipped.length ? [el("div", { class: "blockhead" }, el("h2", {}, "Needs a human")), el("ul", {}, d.skipped.map((x) => el("li", {}, x)))] : []),
     d.ai && d.ai !== "ok" ? el("p", { class: "bad" }, d.ai) : null,
     suggestionsBlock(d.suggestions),
@@ -888,7 +897,7 @@ function showDraft() {
 // Speaker runs are always audio settings gated by speaker layout, so only the options run has a choice.
 function categoryPicker(label, f, c, saveDrop) {
   if (label.startsWith("spk-")) return el("span", { class: "muted" }, "Audio");
-  const k = dropKey(f, c), sel = el("select", { title: "Audio settings are what the sound fix needs; optional settings are offered to the player on top.", onchange: () => { sel.value === (c.category || "optional") ? CAT.delete(k) : CAT.set(k, sel.value); saveDrop(); } },
+  const k = dropKey(f, c), sel = el("select", { title: "Audio: needed for the sound fix. Optional: offered to the player as an extra.", onchange: () => { sel.value === (c.category || "optional") ? CAT.delete(k) : CAT.set(k, sel.value); saveDrop(); } },
     el("option", { value: "audio" }, "Audio"), el("option", { value: "optional" }, "Optional"));
   sel.value = CAT.get(k) || c.category || "optional";
   return sel;
@@ -901,7 +910,7 @@ function suggestionsBlock(sg) {
   if (sg.eax && sg.eax.api) items.push([`EAX API: ${sg.eax.api}`, sg.reasons["eax.api"], () => { GAME.eax = GAME.eax || {}; GAME.eax.api = sg.eax.api; }]);
   if (sg.eax && sg.eax.versions) items.push([`EAX versions: ${sg.eax.versions.join(", ")}`, sg.reasons["eax.versions"], () => { GAME.eax = GAME.eax || {}; GAME.eax.versions = sg.eax.versions; }]);
   if (!items.length) return el("p", { class: "muted" }, "The AI had no extra suggestions.");
-  return el("div", {}, el("div", { class: "blockhead" }, el("h2", {}, "AI suggestions"), helpIcon("Check these against a source before applying. Nothing is applied for you.")), ...items.map(([t, r, apply]) => el("div", { class: "row" },
+  return el("div", {}, el("div", { class: "blockhead" }, el("h2", {}, "AI suggestions"), helpIcon("Check these against a source before using them. Nothing is applied until you press Apply.")), ...items.map(([t, r, apply]) => el("div", { class: "row" },
     el("span", { style: "flex:1" }, t, r ? el("div", { class: "muted" }, r) : null), el("button", { type: "button", class: "btn sm", onclick: (e) => { apply(); changed(); e.currentTarget.disabled = true; e.currentTarget.textContent = "Applied"; toast("Applied. See the Audio & install tab."); } }, "Apply"))));
 }
 // Removes the changes the user unticked (DROP holds file/format/section/key).
@@ -984,7 +993,7 @@ async function showVersion() {
   const v = await api("/api/version").catch(() => null), chip = $("#version");
   // An editor started before this existed has no such route; say so rather than show nothing.
   chip.textContent = v ? [v.build && `Build ${v.build}`, v.commit && `${v.branch} ${v.commit}`, v.dirty && "modified"].filter(Boolean).join(" · ") : "build unknown — restart the editor";
-  chip.dataset.tip = v ? "The editor's build number (editor commits so far), and the checkout it's running from" : "This editor was started before it could report its build. Quit and open it again.";
+  chip.dataset.tip = v ? "Build number: how many commits have changed the editor. The branch and commit it's running from follow." : "This editor was started before it could report its build. Quit and open it again.";
   chip.hidden = !chip.textContent;
 }
 // A newer version upstream: the server fetched it at start-up; Update fast-forwards the checkout.
