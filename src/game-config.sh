@@ -118,6 +118,7 @@ _wine_reg_set() {
             [[ "$value" =~ ^[0-9]{1,10}$ ]] && [ "$((10#$value))" -le 4294967295 ] || return 1
             value="dword:$(printf '%08x' "$((10#$value))")"
         else
+            value="${value//\\/\\\\}"; value="${value//\"/\\\"}"
             value="\"$value\""
         fi
     fi
@@ -231,8 +232,7 @@ _gadb_set() {
         && { if [ "$value" == "1" ]; then printf '\x01\x00\x00\x00'; else printf '\x00\x00\x00\x00'; fi; } \
             | dd of="$tmp" bs=1 seek="${found%% *}" conv=notrunc status=none 2>/dev/null \
         && [ "$(_gadb_find "$tmp" "$key")" == "${found%% *} $value" ]; then
-        chmod --reference="$file" "$tmp" 2>/dev/null
-        mv -f "$tmp" "$file" 2>/dev/null && return 0
+        swap_in "$tmp" "$file" && return 0
     fi
     rm -f "$tmp"
     return 1
@@ -1456,6 +1456,12 @@ apply_game_settings() {
 
             old="$(config_get_key "$path" "$fmt" "$sec" "$key")"
             config_values_equal "$fmt" "$old" "$new" && continue
+            # A value with a tab or line break can't go in a manifest line
+            # (tab-separated), so uninstall couldn't put it back.
+            if [[ "$old" == *[$'\t\n']* ]]; then
+                print_warning_arrow "$key in $(basename "$path") holds a tab or line break, so \"$title\" wasn't applied there."
+                continue
+            fi
             if ! config_set_key "$path" "$fmt" "$sec" "$key" "$new" \
                 || ! { [ "$new" == "__DELETE__" ] || config_values_equal "$fmt" "$(config_get_key "$path" "$fmt" "$sec" "$key")" "$new"; }; then
                 record_deploy_failure "$path"; continue

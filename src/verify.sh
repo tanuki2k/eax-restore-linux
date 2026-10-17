@@ -17,7 +17,7 @@ verify_checksum() {
     local expected="$2"
 
     if ! command -v sha256sum &> /dev/null; then
-        print_error_arrow "sha256sum isn't installed, so this file's checksum can't be checked."
+        print_error_arrow "sha256sum isn't installed, so the checksum for $(basename "$file") can't be checked."
         return 1
     fi
 
@@ -64,7 +64,7 @@ confirm_unverified_download() {
     echo -e " -> ${NOTE}Note: could not obtain a checksum for $label (requires 'jq', or GitHub hasn't published one yet).${NC}"
     echo -e "    ${WHITE}This file is downloaded directly from kcat's official GitHub repository, so it should"
     echo -e "    be safe — but without a checksum, the script can't independently confirm that.${NC}"
-    echo -e "\n    ${YELLOW}Install it anyway? (y/N): ${NC}"
+    echo -e "\n    ${YELLOW}Install $label anyway, without a checksum check? (y/N): ${NC}"
     echo -n "    > "
     read_answer CONFIRM_UNVERIFIED
     echo ""

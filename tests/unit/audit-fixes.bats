@@ -84,3 +84,46 @@ setup() {
     PATH="$BATS_TEST_TMPDIR/nopath" run verify_checksum "$BATS_TEST_TMPDIR/f" deadbeef
     [ "$status" -eq 1 ]
 }
+
+@test "launch options: an & in the options or log path is kept as typed" {
+    run launch_options_with_override 'WINEDLLOVERRIDES="d3d9=n" MY=a&b %command%' dsound
+    [[ "$output" == *'MY=a&b %command%' ]]
+    [[ "$output" != *'WINEDLLOVERRIDES="d3d9=n" '* ]]
+    run launch_options_with_dsoal_log 'FOO=1 %command% -x' 4 'Z:/g/Rock & Roll/dsoal.log'
+    [ "$output" == 'FOO=1 DSOAL_LOGLEVEL=4 DSOAL_LOGFILE="Z:/g/Rock & Roll/dsoal.log" %command% -x' ]
+}
+
+@test "swap_in writes through a symlink and keeps it a symlink" {
+    echo old > "$BATS_TEST_TMPDIR/real.json"
+    ln -s real.json "$BATS_TEST_TMPDIR/link.json"
+    echo new > "$BATS_TEST_TMPDIR/tmp"
+    swap_in "$BATS_TEST_TMPDIR/tmp" "$BATS_TEST_TMPDIR/link.json"
+    [ -L "$BATS_TEST_TMPDIR/link.json" ]
+    [ "$(cat "$BATS_TEST_TMPDIR/real.json")" == new ]
+}
+
+@test "vdf launch options: \\n and \\t escapes survive a read and write" {
+    f="$BATS_TEST_TMPDIR/localconfig.vdf"
+    printf '%s\n' '"UserLocalConfigStore"' '{' '	"Software"' '	{' '		"Valve"' '		{' '			"Steam"' '			{' '				"apps"' '				{' '					"7"' '					{' '						"LaunchOptions"		"a\tb\\c"' '					}' '				}' '			}' '		}' '	}' '}' > "$f"
+    v="$(vdf_get_launch_options "$f" 7)"
+    [ "$v" == $'a\tb\\c' ]
+    vdf_set_launch_options "$f" 7 "$v"
+    grep -qF '"a\tb\\c"' "$f"
+}
+
+@test "wine registry strings are escaped when written" {
+    f="$BATS_TEST_TMPDIR/user.reg"
+    printf '%s\n' 'WINE REGISTRY Version 2' '' '[Software\\Test] 1' '"Name"="x"' > "$f"
+    _wine_reg_set "$f" 'Software\Test' Name 'a"b\c'
+    grep -qF '"Name"="a\"b\\c"' "$f"
+}
+
+@test "games_sharing_prefix: other installs with files in the same prefix" {
+    mkdir -p "$BATS_TEST_TMPDIR/a" "$BATS_TEST_TMPDIR/b" "$BATS_TEST_TMPDIR/c"
+    printf '%s\n' "/p/pfx/drive_c/windows/syswow64/dsound.dll" > "$BATS_TEST_TMPDIR/a/.eax-restore-manifest.txt"
+    printf '%s\n' "/p/pfx/drive_c/windows/syswow64/dsound.dll" > "$BATS_TEST_TMPDIR/b/.eax-restore-manifest.txt"
+    printf '%s\n' "/q/pfx/drive_c/windows/syswow64/dsound.dll" > "$BATS_TEST_TMPDIR/c/.eax-restore-manifest.txt"
+    find_installed_game_dirs() { printf '%s\n' "$BATS_TEST_TMPDIR/a" "$BATS_TEST_TMPDIR/b" "$BATS_TEST_TMPDIR/c"; }
+    run games_sharing_prefix /p/pfx "$BATS_TEST_TMPDIR/a"
+    [ "$output" == "$BATS_TEST_TMPDIR/b" ]
+}

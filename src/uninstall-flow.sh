@@ -42,6 +42,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     REG_HAS_OVERRIDE="n"
     REG_OVERRIDE_DLL=""
     VCRUN_INSTALLED="n"
+    VCRUN_OVERRIDES_ONLY="n"
     CONFIG_LINES=()
     LAUNCHER_LINES=()
     # Companion apps' prefix changes (lines tagged with their AppID, see
@@ -69,7 +70,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
                 # The format header (MANIFEST_HEADER) and any other comment.
                 \#*) continue ;;
                 # A companion app's (its AppID after a tab).
-                VCRUN$'\t'*|REGISTRY:*$'\t'*) note_companion_manifest_line "$manifest_entry"; continue ;;
+                VCRUN$'\t'*|VCRUN:OVERRIDES$'\t'*|REGISTRY:*$'\t'*) note_companion_manifest_line "$manifest_entry"; continue ;;
                 "REGISTRY:COM") REG_HAS_COM="y"; continue ;;
                 # Bare "REGISTRY:OVERRIDE" (no DLL suffix) is only ever read,
                 # never written, by this version of the script — it's kept
@@ -80,6 +81,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
                 "REGISTRY:OVERRIDE:dsound") REG_HAS_OVERRIDE="y"; REG_OVERRIDE_DLL="dsound"; continue ;;
                 "REGISTRY:OVERRIDE:openal32") REG_HAS_OVERRIDE="y"; REG_OVERRIDE_DLL="openal32"; continue ;;
                 "VCRUN") VCRUN_INSTALLED="y"; continue ;;
+                "VCRUN:OVERRIDES") VCRUN_OVERRIDES_ONLY="y"; continue ;;
                 # Game settings changed in the game's own config files —
                 # reverted in step 7, never removed as files.
                 CONFIG:*) CONFIG_LINES+=("$manifest_entry"); continue ;;
@@ -93,7 +95,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
             manifest_entry="${manifest_entry%$'\r'}"
             if [[ "$manifest_entry" != /* || "/$manifest_entry/" == *"/../"* ]] \
                 || ! manifest_file_is_ours "$manifest_entry"; then
-                print_warning_arrow "Skipped a manifest line that isn't one of this script's files: ${manifest_entry}"
+                print_warning_arrow "Skipped ${manifest_entry} because it isn't one of the files this script installed."
                 continue
             fi
             [ -n "${manifest_seen[$manifest_entry]:-}" ] && continue
@@ -103,7 +105,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     else
         print_task "Scanning for EAX files"
         print_status "No install manifest found (an older version of the script, or it was deleted), so looking for known DSOAL/OpenAL file names." ""
-        print_status "Only files that match what this script installs are listed; a game's own copies are left alone." ""
+        print_status "Only files that match what this script installs are listed, so a game's own copies are left alone." ""
 
         TARGET_FILES=("dsound.dll" "dsoal-aldrv.dll" "OpenAL32.dll" "eax.dll" "eaxunified.dll" "alsoft.ini")
 
@@ -131,13 +133,30 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     fi
 
     VCRUN_PRESENT="n"
-    if [ "$VCRUN_INSTALLED" == "y" ]; then
+    if [ "$VCRUN_INSTALLED" == "y" ] || [ "$VCRUN_OVERRIDES_ONLY" == "y" ]; then
         VCRUN_PRESENT="y"
     elif [ -n "$PREFIX_PATH" ] && { is_genuine_dll "$PREFIX_PATH/drive_c/windows/system32/vcruntime140.dll" || is_genuine_dll "$PREFIX_PATH/drive_c/windows/syswow64/vcruntime140.dll"; }; then
         # No manifest record of it, but the runtime is actually there — cover
         # installs done with an older script version, or the standalone
         # VC++-only mode run before manifest tracking existed for it.
         VCRUN_PRESENT="y"
+    fi
+
+    # Another game installed into the same prefix needs the DLLs and registry
+    # keys in it: its install backed up what this one put there, and removing
+    # them would break it. They stay until the last game sharing the prefix is
+    # uninstalled.
+    PREFIX_SHARED=0
+    if [ -n "$PREFIX_PATH" ] && { [ ${#FILES_TO_REMOVE[@]} -gt 0 ] || [ "$REG_HAS_COM" == "y" ] || [ "$REG_HAS_OVERRIDE" == "y" ]; }; then
+        shared_games="$(games_sharing_prefix "$PREFIX_PATH" "$GAME_DIR")"
+        if [ -n "$shared_games" ]; then
+            PREFIX_SHARED=1
+            shared_names="$(while IFS= read -r d; do basename "$d"; done <<< "$shared_games" | paste -sd, | sed 's/,/, /g')"
+            print_warning_arrow "${shared_names} also uses this prefix, so the files and registry keys in it stay until ${shared_names} is uninstalled too."
+            kept_files=()
+            for f in "${FILES_TO_REMOVE[@]}"; do [[ "$f" == "$PREFIX_PATH/"* ]] || kept_files+=("$f"); done
+            FILES_TO_REMOVE=("${kept_files[@]}")
+        fi
     fi
 
     # What was found, one line each — the steps below act on it.
@@ -153,7 +172,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     fi
     for line in "${LAUNCHER_LINES[@]}"; do
         mapfile -t -d $'\t' f_fields < <(printf '%s' "${line#LAUNCHER:}")
-        OVERRIDE_LAUNCHER="${f_fields[0]}"
+        OVERRIDE_LAUNCHER="${f_fields[0]}"; OVERRIDE_ID="${f_fields[2]}"
         print_status "Launcher: a DLL override in $(launcher_override_where)" ""
     done
     reg_what=""
@@ -274,7 +293,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     fi
 
     print_step 5 "Registry and Launcher Cleanup"
-    print_paragraph "This step asks whether to undo the DLL override and any Wine registry changes the install" \
+    print_paragraph "This step undoes the DLL override and any Wine registry changes the install" \
         "made."
 
     # Launcher overrides: ask whether to remove each one. Yes also lets
@@ -314,6 +333,10 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         else
             REMOVE_REG="n"
         fi
+    fi
+    if [ "$PREFIX_SHARED" -eq 1 ] && [[ "$REMOVE_REG" =~ $YES_RE ]]; then
+        print_status "Left the Wine registry changes in place, because ${shared_names} also uses this prefix." ""
+        REMOVE_REG="n"
     fi
     if [[ "$REMOVE_REG" =~ $YES_RE ]] && [ -z "$APPID" ] && [ ! -d "$PREFIX_PATH/drive_c" ]; then
         print_note_arrow "No prefix or AppID was found for this game, so there's nothing to clean up in the registry."
@@ -457,9 +480,9 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
             case "$line" in
                 \#*|"") ;;
                 CONFIG:*|LAUNCHER:*) ;;
-                REGISTRY:*$'\t'*|VCRUN$'\t'*) extra_left+=("$line") ;;
+                REGISTRY:*$'\t'*|VCRUN$'\t'*|VCRUN:OVERRIDES$'\t'*) extra_left+=("$line") ;;
                 REGISTRY:*) [ "$REG_CLEANED" == "y" ] || core_left+=("$line") ;;
-                VCRUN) [ "$UNINSTALL_VCRUN" == "y" ] || extra_left+=("$line") ;;
+                VCRUN|VCRUN:OVERRIDES) [ "$UNINSTALL_VCRUN" == "y" ] || extra_left+=("$line") ;;
                 *) core_left+=("$line") ;;
             esac
         done < "$INSTALL_MANIFEST"

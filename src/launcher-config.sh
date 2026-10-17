@@ -267,7 +267,10 @@ launch_options_with_override() {
     if [[ "$opts" =~ $re ]]; then
         current="${BASH_REMATCH[3]}${BASH_REMATCH[4]}${BASH_REMATCH[5]}"
         merged="$(merge_dll_override "$current" "$dll")"
-        echo "${opts/"${BASH_REMATCH[0]}"/${BASH_REMATCH[1]}WINEDLLOVERRIDES=\"$merged\"}"
+        # Cut and rejoin rather than ${opts/pattern/replacement}: bash 5.2 reads
+        # an & in the replacement as "the matched text".
+        local before="${opts%%"${BASH_REMATCH[0]}"*}" after="${opts#*"${BASH_REMATCH[0]}"}"
+        echo "${before}${BASH_REMATCH[1]}WINEDLLOVERRIDES=\"$merged\"${after}"
     elif [[ "$opts" == *%command%* ]]; then
         echo "WINEDLLOVERRIDES=\"$dll=n,b\" $opts"
     elif [ -z "${opts//[[:space:]]/}" ]; then
@@ -298,7 +301,8 @@ launch_options_with_dsoal_log() {
     opts="$(launch_options_without_dsoal_log "$1")"
     vars="DSOAL_LOGLEVEL=$2 DSOAL_LOGFILE=\"$3\""
     if [[ "$opts" == *%command%* ]]; then
-        echo "${opts/\%command\%/$vars %command%}"
+        local before="${opts%%'%command%'*}" after="${opts#*'%command%'}"
+        echo "${before}${vars} %command%${after}"
     elif [ -z "${opts//[[:space:]]/}" ]; then
         echo "$vars %command%"
     else
@@ -359,9 +363,9 @@ _VDF_AWK_PATH='
 
 # Usage: vdf_get_launch_options <localconfig.vdf> <appid>
 # Prints the game's LaunchOptions (unescaped), __ABSENT__ if its block has
-# none, or __NOAPP__ if there's no block for it. VDF escapes \" and \\ inside
-# values; those are undone in bash rather than awk, whose backslash handling
-# in gsub differs between gawk and mawk.
+# none, or __NOAPP__ if there's no block for it. VDF escapes \" \\ \n \t and
+# \r inside values; those are undone in bash rather than awk, whose backslash
+# handling in gsub differs between gawk and mawk.
 vdf_get_launch_options() {
     local raw
     raw="$(vdf_get_raw_launch_options "$@")"
@@ -370,6 +374,9 @@ vdf_get_launch_options() {
     esac
     raw="${raw//\\\\/$'\001'}"
     raw="${raw//\\\"/\"}"
+    raw="${raw//\\n/$'\n'}"
+    raw="${raw//\\t/$'\t'}"
+    raw="${raw//\\r/$'\r'}"
     printf '%s\n' "${raw//$'\001'/\\}"
 }
 
@@ -397,6 +404,9 @@ vdf_set_launch_options() {
     if [ "$value" != "__DELETE__" ]; then
         value="${value//\\/\\\\}"
         value="${value//\"/\\\"}"
+        value="${value//$'\n'/\\n}"
+        value="${value//$'\t'/\\t}"
+        value="${value//$'\r'/\\r}"
     fi
     tmp="$(mktemp "$(dirname "$file")/.eax-restore-vdf.XXXXXX" 2>/dev/null)" || return 1
     VDF_VALUE="$value" LC_ALL=C awk -v appid="$2" "$_VDF_AWK_PATH"'
@@ -592,6 +602,14 @@ _write_launcher_override() {
         new="$(merge_dll_override "$( [ "$old" == "__ABSENT__" ] || echo "$old")" "$PRIMARY_DLL_NAME")"
     fi
 
+    # The manifest keeps one change per line with tab-separated fields, so a
+    # value with a tab or line break can't be recorded, and uninstall couldn't
+    # put it back. Better set by hand than set and lost.
+    if [[ "$old$new" == *[$'\t\n\r']* ]]; then
+        print_warning_arrow "$(launcher_override_where) contain a tab or line break, so the script can't add the override there safely."
+        return 1
+    fi
+
     if [ "$old" == "$new" ]; then
         # Set by an earlier install: keep its manifest line (with the value
         # from before that install), or uninstall would never put it back.
@@ -662,6 +680,9 @@ revert_launcher_overrides() {
         local target="${f[3]}"
         [ "$target" == "__ABSENT__" ] && target="__DELETE__"
         if launcher_override_set "$target"; then
+            # The one-time copy made before the first change served its
+            # purpose; left behind it would hold an old Steam config for good.
+            rm -f "$OVERRIDE_FILE.eax-restore.bak" 2>/dev/null
             if [ "$target" == "__DELETE__" ]; then
                 print_status "Removed the DLL override from $(launcher_override_where)." "$GREEN"
             else

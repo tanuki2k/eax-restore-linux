@@ -112,7 +112,7 @@ setup() {
     echo "$HOME/precious" >> "$GAME/.eax-restore-manifest.txt"
     uninstall_answers "$BATS_TEST_TMPDIR/un"; run_script "$BATS_TEST_TMPDIR/un"
     [ -f "$HOME/precious/note.txt" ]
-    grep -q "Skipped a manifest line" "$OUT"
+    grep -q "because it isn.t one of the files this script installed" "$OUT"
 }
 
 @test "a reinstall keeps the registry record of the last install" {

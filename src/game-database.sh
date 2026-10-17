@@ -178,6 +178,17 @@ find_installed_game_dirs() {
     done | sort -u
 }
 
+# Usage: games_sharing_prefix <prefix> <game folder to leave out>
+# The other games this script is installed in whose manifests put files in the
+# same Wine prefix (Heroic can share one between games), one folder per line.
+games_sharing_prefix() {
+    local d
+    while IFS= read -r d; do
+        [ "$d" == "$2" ] && continue
+        grep -qF -- "$1/" "$d/.eax-restore-manifest.txt" 2>/dev/null && printf '%s\n' "$d"
+    done < <(find_installed_game_dirs)
+}
+
 # Usage: migrate_recent_games
 # Moves the old recent-games history ($BASE_SHARE/recent_games.txt) into
 # INSTALLED_GAMES_FILE once: entries already in the new file stay first (they

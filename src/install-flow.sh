@@ -83,7 +83,7 @@
         # uninstall still tries to clear any that did get written.
         print_phase_task "Setting up the VC++ runtime that's already in the prefix"
         apply_vcrun_dll_overrides
-        VCRUN_INSTALLED_THIS_RUN="1"
+        VCRUN_INSTALLED_THIS_RUN="2"
     fi
 
     # Manifest of everything THIS run actually deploys, so uninstall only ever
@@ -116,7 +116,7 @@
     if [ -s "$INSTALL_MANIFEST" ]; then
         while IFS= read -r line; do
             [[ "$line" == /* ]] && { PREV_MANIFEST_FILES["$line"]=1; PREV_FILE_LINES+=("$line"); }
-            [[ "$line" == REGISTRY:* || "$line" == VCRUN || "$line" == VCRUN$'\t'* ]] && PREV_STATE_LINES+=("$line")
+            [[ "$line" == REGISTRY:* || "$line" == VCRUN || "$line" == VCRUN:* || "$line" == VCRUN$'\t'* ]] && PREV_STATE_LINES+=("$line")
             [[ "$line" == CONFIG:* ]] && PREV_CONFIG_LINES+=("$line")
             [[ "$line" == LAUNCHER:* ]] && PREV_LAUNCHER_LINES+=("$line")
         done < "$INSTALL_MANIFEST"
@@ -126,7 +126,10 @@
 
     start_manifest "$INSTALL_MANIFEST"
     [ ${#PREV_STATE_LINES[@]} -gt 0 ] && printf '%s\n' "${PREV_STATE_LINES[@]}" >> "$INSTALL_MANIFEST"
+    # "VCRUN:OVERRIDES" when only the overrides were set and the runtime was
+    # there already, so uninstall doesn't say this script installed it.
     [ "$VCRUN_INSTALLED_THIS_RUN" == "1" ] && echo "VCRUN" >> "$INSTALL_MANIFEST"
+    [ "$VCRUN_INSTALLED_THIS_RUN" == "2" ] && echo "VCRUN:OVERRIDES" >> "$INSTALL_MANIFEST"
 
     print_phase_task "Deploying files to local game folder"
 

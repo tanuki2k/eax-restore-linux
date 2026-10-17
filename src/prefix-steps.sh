@@ -285,7 +285,7 @@ install_companion_prefix() {
         # Recorded even if setting them failed (that warns on its own), so
         # uninstall still tries to clear any that did get written.
         apply_vcrun_dll_overrides
-        echo "VCRUN${tag}" >> "$INSTALL_MANIFEST"
+        echo "VCRUN:OVERRIDES${tag}" >> "$INSTALL_MANIFEST"
     fi
     install_openal_runtime
     deploy_prefix_dlls
@@ -382,6 +382,7 @@ note_companion_manifest_line() {
     [[ "$id" =~ ^[0-9]+$ ]] || return 0
     case "$what" in
         VCRUN) UNINSTALL_COMPANION_VCRUN[$id]="y" ;;
+        VCRUN:OVERRIDES) UNINSTALL_COMPANION_VCRUN[$id]="found" ;;
         REGISTRY:COM) UNINSTALL_COMPANION_COM[$id]="y" ;;
         REGISTRY:OVERRIDE:*) UNINSTALL_COMPANION_OVERRIDE[$id]="${what#REGISTRY:OVERRIDE:}" ;;
         *) return 0 ;;
@@ -410,7 +411,8 @@ resolve_uninstall_companions() {
         [ -n "${UNINSTALL_COMPANION_COM[$id]:-}" ] && what="COM routing"
         [ -n "${UNINSTALL_COMPANION_OVERRIDE[$id]:-}" ] && what+="${what:+ and }the ${UNINSTALL_COMPANION_OVERRIDE[$id]} override"
         [ -n "$what" ] && print_status "${name}'s registry: ${what}" ""
-        [ -n "${UNINSTALL_COMPANION_VCRUN[$id]:-}" ] && print_status "${name}'s VC++ runtime: installed by this script" ""
+        [ "${UNINSTALL_COMPANION_VCRUN[$id]:-}" == "y" ] && print_status "${name}'s VC++ runtime: installed by this script" ""
+        [ "${UNINSTALL_COMPANION_VCRUN[$id]:-}" == "found" ] && print_status "Found ${name}'s VC++ runtime in its prefix" ""
     done
 }
 

@@ -92,10 +92,13 @@ oldest_backup() {
 # Usage: swap_in <temp file> <target>
 # Replaces the target with the temp file written next to it, keeping the
 # target's permissions. A failed move removes the temp file and returns 1, so
-# a half-written file is never left behind.
+# a half-written file is never left behind. A target that is a symlink (a
+# dotfile-managed config, say) is written through, so the link stays a link.
 swap_in() {
-    [ -f "$2" ] && chmod --reference="$2" "$1" 2>/dev/null
-    mv -f "$1" "$2" 2>/dev/null || { rm -f "$1"; return 1; }
+    local target="$2"
+    [ -L "$target" ] && target="$(readlink -f "$target")"
+    [ -f "$target" ] && chmod --reference="$target" "$1" 2>/dev/null
+    mv -f "$1" "$target" 2>/dev/null || { rm -f "$1"; return 1; }
 }
 
 # Usage: acf_value <appmanifest_<id>.acf> <key>
