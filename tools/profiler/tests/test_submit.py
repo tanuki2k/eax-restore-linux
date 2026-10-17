@@ -25,7 +25,7 @@ class Privacy(unittest.TestCase):
     def test_flags_home_user_and_long_numbers_but_not_store_ids(self):
         g = {"name": "T", "stores": {"steam": {"id": 123456789012}},
              "notes": "see /home/ben/games and C:\\Users\\ben\\x, key 123456789012345",
-             "game_config": {"files": {"a.ini": {"locations": ["game:a.ini"]}}}}
+             "game_config": {"files": {"a.ini": {"locations": ["game_exe:a.ini"]}}}}
         why = [f["why"] for f in submit.privacy_findings(g, home="/home/ben", user="ben")]
         self.assertTrue(any("home folder" in w for w in why))
         self.assertTrue(any("long number" in w or "home folder" in w for w in why))

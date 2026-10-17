@@ -9,7 +9,7 @@
   },
   "eax": { "api": "openal", "versions": ["3.0"] },
   "game_config": {
-    "files": { "sof2sp.cfg": { "format": "idtech_cfg", "locations": ["game:base/sof2sp.cfg"] } },
+    "files": { "sof2sp.cfg": { "format": "idtech_cfg", "locations": ["game_exe:base/sof2sp.cfg"] } },
     "audio_settings": [
       {
         "title": "Enable EAX reverb",

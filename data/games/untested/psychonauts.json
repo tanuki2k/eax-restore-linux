@@ -12,7 +12,7 @@
     "files": {
       "AudioSettings.ini": {
         "format": "ini",
-        "locations": ["game:AudioSettings.ini"],
+        "locations": ["game_exe:AudioSettings.ini"],
         "if_missing": "create"
       }
     },

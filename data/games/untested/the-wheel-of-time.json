@@ -9,7 +9,7 @@
   },
   "eax": { "api": "directsound3d", "versions": ["1.0"] },
   "game_config": {
-    "files": { "WoT.ini": { "format": "ini", "locations": ["game:WoT.ini"] } },
+    "files": { "WoT.ini": { "format": "ini", "locations": ["game_exe:WoT.ini"] } },
     "audio_settings": [
       {
         "title": "Enable EAX reverb",

@@ -13,8 +13,8 @@
     "files": {
       "user.ltx": {
         "format": "ltx",
-        "locations": ["prefix_documents:stalker-cop/user.ltx"],
-        "if_missing": "create"
+        "locations": ["prefix_documents:stalker-cop/user.ltx", "game_root:user.ltx"],
+        "crash_marker": "tmp.ltx"
       }
     },
     "audio_settings": [

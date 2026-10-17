@@ -21,8 +21,8 @@
   "eax": { "api": "directsound3d", "versions": ["1.0", "2.0"] },
   "game_config": {
     "files": {
-      "UnrealTournament.ini": { "format": "ini", "locations": ["game:UnrealTournament.ini"] },
-      "User.ini": { "format": "ini", "locations": ["game:User.ini"] }
+      "UnrealTournament.ini": { "format": "ini", "locations": ["game_exe:UnrealTournament.ini"] },
+      "User.ini": { "format": "ini", "locations": ["game_exe:User.ini"] }
     },
     "audio_settings": [
       {

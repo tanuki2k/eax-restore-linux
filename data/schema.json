@@ -19,7 +19,7 @@
       "minLength": 1
     },
     "released": {
-      "description": "When the game first came out on Windows (earliest region), as YYYY-MM-DD. Use YYYY-MM or YYYY if that's all you can confirm. Bundles and Gold, Complete, GOTY or Classic editions use the base game's date; Enhanced Editions, Remasters and Anniversary Editions use their own.",
+      "description": "When the game first came out on Windows (earliest region), as YYYY-MM-DD. Use YYYY-MM or YYYY if that's all you can confirm.\nBundles and Gold, Complete, GOTY or Classic editions use the base game's date.\nEnhanced Editions, Remasters and Anniversary Editions use their own.",
       "type": "string",
       "pattern": "^\\d{4}(-(0[1-9]|1[0-2])(-(0[1-9]|[12]\\d|3[01]))?)?$"
     },
@@ -53,7 +53,7 @@
           "default": []
         },
         "status": {
-          "description": "Where EAX stands today: supported; removed_by_patch (an update took EAX out of the current build); not_implemented (a remaster or rewrite that never had EAX); built_in (EAX already works in this build without the script, for example because the game ships its own OpenAL32.dll with EAX).",
+          "description": "Where EAX stands today:\nsupported: EAX works in the current build.\nremoved_by_patch: an update took EAX out of the current build.\nnot_implemented: a remaster or rewrite that never had EAX.\nbuilt_in: EAX already works in this build without the script, for example because the game ships its own OpenAL32.dll with EAX.",
           "enum": ["supported", "removed_by_patch", "not_implemented", "built_in"],
           "default": "supported"
         },
@@ -78,7 +78,7 @@
       "additionalProperties": false,
       "properties": {
         "tweaks": {
-          "description": "Advanced Compatibility Tweaks the script recommends for this game; each is asked as a Yes/No question that defaults to Yes.",
+          "description": "Advanced Compatibility Tweaks the script recommends for this game.\nEach is asked as a Yes/No question that defaults to Yes.",
           "type": "array",
           "uniqueItems": true,
           "items": { "enum": ["eax_unified", "expand_audio_limits", "com_registry_routing"] },
@@ -175,7 +175,7 @@
           "type": "integer"
         },
         "delisted": {
-          "description": "The game is no longer on sale; people who already own it keep access.",
+          "description": "The game is no longer on sale.\nPeople who already own it keep access.",
           "type": "boolean",
           "default": false
         },
@@ -205,7 +205,7 @@
           "items": { "type": "integer" },
           "default": []
         },
-        "store_details": { "type": "string", "description": "What's different about this store's listing. Don't mention an Enhanced Edition, remaster or remake of a game that isn't one, unless the store sells them together; then name every game in it." },
+        "store_details": { "type": "string", "description": "What's different about this store's listing.\nDon't mention an Enhanced Edition, remaster or remake of a game that isn't one, unless the store sells them together. Then name every game in it." },
         "patches": { "type": "string" }
       }
     },
@@ -242,23 +242,23 @@
       "additionalProperties": false,
       "properties": {
         "format": {
-          "description": "ini: [Section] then key=value. flat_ini: key=value lines with no sections. idtech_cfg: seta key \"value\". dark_cfg: NewDark \"key value\" lines, where a bare key is a flag that's on and ;key turns it off. brace_cfg: {key} = {value} lines (Fallout Tactics' bos.cfg). ltx: key value lines with no sections (S.T.A.L.K.E.R.'s user.ltx). gadb: Monolith's binary profile (F.E.A.R.'s Profile000.gdb); it can only switch an existing on/off setting, so values are \"0\" or \"1\". wine_reg: the prefix's system.reg or user.reg, for a game that keeps its options in the registry; only numbers and text can be changed, a number as a decimal.",
+          "description": "How the file is laid out:\nini: [Section] then key=value.\nflat_ini: key=value lines with no sections.\nidtech_cfg: seta key \"value\".\ndark_cfg: NewDark \"key value\" lines. A bare key is a flag that's on, and ;key turns it off.\nbrace_cfg: {key} = {value} lines (Fallout Tactics' bos.cfg).\nltx: key value lines with no sections (S.T.A.L.K.E.R.'s user.ltx).\ngadb: Monolith's binary profile (F.E.A.R.'s Profile000.gdb). It can only switch an existing on/off setting, so values are \"0\" or \"1\".\nwine_reg: the prefix's system.reg or user.reg, for a game that keeps its options in the registry. Only numbers and text can be changed, a number as a decimal.",
           "enum": ["ini", "flat_ini", "idtech_cfg", "dark_cfg", "brace_cfg", "ltx", "gadb", "wine_reg"]
         },
         "locations": {
-          "description": "Where to look for the file, in order, written as \"base:path\". The first one that exists is used. A registry file can only be prefix:system.reg or prefix:user.reg.",
+          "description": "Where to look for the file, in order, written as \"base:path\". The first one that exists is used. The base is one of:\ngame_exe: the folder the game's .exe runs from.\ngame_root: the game's top-level install folder.\nprefix_documents, prefix_appdata, prefix_localappdata: the matching user folder inside the game's Wine prefix.\nprefix_public_documents: the Public Documents folder inside the Wine prefix.\nprefix: only for a registry file, as prefix:system.reg or prefix:user.reg.",
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "string",
             "anyOf": [
-              { "pattern": "^(game|install|prefix_documents|prefix_appdata|prefix_localappdata|prefix_public_documents):(?!/)(?!.*\\.\\.)[^\\\\]+\\.([iI][nN][iI]|[cC][fF][gG]|[gG][dD][bB]|[tT][xX][tT]|[lL][tT][xX])$" },
+              { "pattern": "^(game_exe|game_root|prefix_documents|prefix_appdata|prefix_localappdata|prefix_public_documents):(?!/)(?!.*\\.\\.)[^\\\\]+\\.([iI][nN][iI]|[cC][fF][gG]|[gG][dD][bB]|[tT][xX][tT]|[lL][tT][xX])$" },
               { "pattern": "^prefix:(system|user)\\.reg$" }
             ]
           }
         },
         "if_missing": {
-          "description": "What to do when none of the locations exist. Leave empty to ask the player to launch the game once and check again; skip to leave this file's part out of each setting and tell the player; create to create the file.",
+          "description": "What to do when none of the locations exist:\nLeave empty: ask the player to launch the game once and check again.\nskip: leave this file's part out of each setting and tell the player.\ncreate: create the file.",
           "enum": ["skip", "create"]
         },
         "crash_marker": {
@@ -301,7 +301,7 @@
               "items": { "enum": ["steam", "gog"] }
             },
             "speakers": {
-              "description": "Offer only for these answers to the Speaker Configuration question: stereo, headphones (Stereo, then Headphones), matrix, surround (any surround layout), or one exact layout (quad, surround51, surround61, surround71). A list matches any of its values.",
+              "description": "Offer only for these answers to the Speaker Configuration question:\nstereo\nheadphones (Stereo, then Headphones)\nmatrix\nsurround (any surround layout)\nor one exact layout: quad, surround51, surround61 or surround71.\nA list matches any of its values.",
               "anyOf": [
                 { "$ref": "#/$defs/speaker_choice" },
                 { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/speaker_choice" } }
@@ -310,7 +310,7 @@
           }
         },
         "changes": {
-          "description": "What to change. ini files: file, section, key, value. Other text files: file, key, value. Registry files: file, registry key, value name, value. Every file must first be defined under game_config.files.",
+          "description": "What to change:\nini files: file, section, key, value.\nOther text files: file, key, value.\nRegistry files: file, registry key, value name, value.\nEvery file must first be defined under game_config.files.",
           "type": "object",
           "minProperties": 1,
           "propertyNames": { "$ref": "#/$defs/config_file_name" },

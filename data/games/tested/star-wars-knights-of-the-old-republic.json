@@ -10,7 +10,7 @@
   },
   "eax": { "api": "directsound3d", "versions": ["1.0", "2.0", "3.0"] },
   "game_config": {
-    "files": { "swkotor.ini": { "format": "ini", "locations": ["game:swkotor.ini"] } },
+    "files": { "swkotor.ini": { "format": "ini", "locations": ["game_exe:swkotor.ini"] } },
     "audio_settings": [
       {
         "title": "Enable EAX reverb",

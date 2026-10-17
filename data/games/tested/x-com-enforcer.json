@@ -10,7 +10,7 @@
   },
   "eax": { "api": "directsound3d", "versions": ["1.0"] },
   "game_config": {
-    "files": { "XCom.ini": { "format": "ini", "locations": ["game:XCom.ini"] } },
+    "files": { "XCom.ini": { "format": "ini", "locations": ["game_exe:XCom.ini"] } },
     "audio_settings": [
       {
         "title": "Enable EAX reverb",

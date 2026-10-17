@@ -10,7 +10,7 @@
   },
   "eax": { "api": "openal", "versions": ["2.0", "3.0", "4.0"] },
   "game_config": {
-    "files": { "bia.ini": { "format": "ini", "locations": ["game:bia.ini"] } },
+    "files": { "bia.ini": { "format": "ini", "locations": ["game_exe:bia.ini"] } },
     "audio_settings": [
       {
         "title": "Enable EAX reverb",

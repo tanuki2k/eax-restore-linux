@@ -11,7 +11,7 @@
   "eax": { "api": "openal", "versions": ["2.0", "3.0"] },
   "game_config": {
     "files": {
-      "System.ini": { "format": "ini", "locations": ["install:GameData/Save/System.ini"] }
+      "System.ini": { "format": "ini", "locations": ["game_root:GameData/Save/System.ini"] }
     },
     "audio_settings": [
       {

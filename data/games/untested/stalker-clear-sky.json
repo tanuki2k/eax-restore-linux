@@ -8,5 +8,22 @@
     "steam": { "id": 20510 },
     "gog": { "id": 1207660603 }
   },
-  "eax": { "api": "openal", "versions": ["1.0", "2.0", "3.0"] }
+  "eax": { "api": "openal", "versions": ["1.0", "2.0", "3.0"] },
+  "game_config": {
+    "files": {
+      "user.ltx": {
+        "format": "ltx",
+        "locations": ["prefix_documents:Stalker-STCS/user.ltx", "game_root:user.ltx"],
+        "crash_marker": "tmp.ltx"
+      }
+    },
+    "audio_settings": [
+      {
+        "title": "Enable EAX sound effects",
+        "reason": "EAX",
+        "only_if": { "stores": ["gog"] },
+        "changes": { "user.ltx": { "snd_efx": "on", "snd_device": "OpenAL Soft" } }
+      }
+    ]
+  }
 }

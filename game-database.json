@@ -76,7 +76,7 @@
           "settings.cfg": {
             "format": "dark_cfg",
             "locations": [
-              "game:settings.cfg"
+              "game_exe:settings.cfg"
             ]
           }
         },
@@ -243,7 +243,7 @@
           "cfg.ini": {
             "format": "ini",
             "locations": [
-              "game:cfg.ini"
+              "game_exe:cfg.ini"
             ]
           }
         },
@@ -341,7 +341,7 @@
           "baldur.ini": {
             "format": "ini",
             "locations": [
-              "game:baldur.ini"
+              "game_exe:baldur.ini"
             ]
           }
         },
@@ -432,7 +432,7 @@
           "Baldur.ini": {
             "format": "ini",
             "locations": [
-              "game:Baldur.ini"
+              "game_exe:Baldur.ini"
             ]
           }
         },
@@ -633,7 +633,7 @@
           "EiB.ini": {
             "format": "ini",
             "locations": [
-              "game:EiB.ini"
+              "game_exe:EiB.ini"
             ]
           }
         },
@@ -705,7 +705,7 @@
           "bia.ini": {
             "format": "ini",
             "locations": [
-              "game:bia.ini"
+              "game_exe:bia.ini"
             ]
           }
         },
@@ -749,7 +749,7 @@
           "System.ini": {
             "format": "ini",
             "locations": [
-              "game:System.ini"
+              "game_exe:System.ini"
             ]
           }
         },
@@ -940,7 +940,7 @@
           "DeusEx.ini": {
             "format": "ini",
             "locations": [
-              "game:DeusEx.ini"
+              "game_exe:DeusEx.ini"
             ]
           }
         },
@@ -1051,13 +1051,13 @@
           "DoomConfig.cfg": {
             "format": "idtech_cfg",
             "locations": [
-              "game:base/DoomConfig.cfg"
+              "game_exe:base/DoomConfig.cfg"
             ]
           },
           "d3xp DoomConfig.cfg": {
             "format": "idtech_cfg",
             "locations": [
-              "game:d3xp/DoomConfig.cfg"
+              "game_exe:d3xp/DoomConfig.cfg"
             ],
             "if_missing": "skip"
           }
@@ -1540,7 +1540,7 @@
           "bos.cfg": {
             "format": "brace_cfg",
             "locations": [
-              "game:core/bos.cfg"
+              "game_exe:core/bos.cfg"
             ]
           }
         },
@@ -1582,7 +1582,7 @@
           "bos.cfg": {
             "format": "brace_cfg",
             "locations": [
-              "game:core/bos.cfg"
+              "game_exe:core/bos.cfg"
             ]
           }
         },
@@ -1763,7 +1763,7 @@
           "icewind.ini": {
             "format": "ini",
             "locations": [
-              "game:icewind.ini"
+              "game_exe:icewind.ini"
             ]
           }
         },
@@ -1811,7 +1811,7 @@
           "icewind2.ini": {
             "format": "ini",
             "locations": [
-              "game:icewind2.ini"
+              "game_exe:icewind2.ini"
             ]
           }
         },
@@ -2103,7 +2103,7 @@
           "nwn.ini": {
             "format": "ini",
             "locations": [
-              "game:nwn.ini"
+              "game_exe:nwn.ini"
             ]
           }
         },
@@ -2314,7 +2314,7 @@
           "AudioSettings.ini": {
             "format": "ini",
             "locations": [
-              "game:AudioSettings.ini"
+              "game_exe:AudioSettings.ini"
             ],
             "if_missing": "create"
           }
@@ -2367,13 +2367,13 @@
           "Quake4Config.cfg": {
             "format": "idtech_cfg",
             "locations": [
-              "game:q4base/Quake4Config.cfg"
+              "game_exe:q4base/Quake4Config.cfg"
             ]
           },
           "autoexec.cfg": {
             "format": "idtech_cfg",
             "locations": [
-              "game:q4base/autoexec.cfg"
+              "game_exe:q4base/autoexec.cfg"
             ],
             "if_missing": "create"
           }
@@ -2546,9 +2546,10 @@
           "user.ltx": {
             "format": "ltx",
             "locations": [
-              "prefix_documents:stalker-cop/user.ltx"
+              "prefix_documents:stalker-cop/user.ltx",
+              "game_root:user.ltx"
             ],
-            "if_missing": "create"
+            "crash_marker": "tmp.ltx"
           }
         },
         "audio_settings": [
@@ -2612,6 +2613,35 @@
           "3.0"
         ]
       },
+      "game_config": {
+        "files": {
+          "user.ltx": {
+            "format": "ltx",
+            "locations": [
+              "prefix_documents:Stalker-STCS/user.ltx",
+              "game_root:user.ltx"
+            ],
+            "crash_marker": "tmp.ltx"
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX sound effects",
+            "reason": "EAX",
+            "only_if": {
+              "stores": [
+                "gog"
+              ]
+            },
+            "changes": {
+              "user.ltx": {
+                "snd_efx": "on",
+                "snd_device": "OpenAL Soft"
+              }
+            }
+          }
+        ]
+      },
       "tested": false
     },
     {
@@ -2659,6 +2689,16 @@
           "2.0",
           "3.0"
         ]
+      },
+      "game_config": {
+        "files": {
+          "user.ltx": {
+            "format": "ltx",
+            "locations": [
+              "prefix_documents:stalker-shoc/user.ltx"
+            ]
+          }
+        }
       },
       "tested": false
     },
@@ -2727,7 +2767,7 @@
           "sof2sp.cfg": {
             "format": "idtech_cfg",
             "locations": [
-              "game:base/sof2sp.cfg"
+              "game_exe:base/sof2sp.cfg"
             ]
           }
         },
@@ -2794,13 +2834,13 @@
           "jk2config.cfg": {
             "format": "idtech_cfg",
             "locations": [
-              "game:base/jk2config.cfg"
+              "game_exe:base/jk2config.cfg"
             ]
           },
           "jk2mpconfig.cfg": {
             "format": "idtech_cfg",
             "locations": [
-              "game:base/jk2mpconfig.cfg"
+              "game_exe:base/jk2mpconfig.cfg"
             ],
             "if_missing": "skip"
           }
@@ -2850,13 +2890,13 @@
           "jaconfig.cfg": {
             "format": "idtech_cfg",
             "locations": [
-              "game:base/jaconfig.cfg"
+              "game_exe:base/jaconfig.cfg"
             ]
           },
           "jampconfig.cfg": {
             "format": "idtech_cfg",
             "locations": [
-              "game:base/jampconfig.cfg"
+              "game_exe:base/jampconfig.cfg"
             ],
             "if_missing": "skip"
           }
@@ -2905,7 +2945,7 @@
           "swkotor.ini": {
             "format": "ini",
             "locations": [
-              "game:swkotor.ini"
+              "game_exe:swkotor.ini"
             ]
           }
         },
@@ -2995,7 +3035,7 @@
           "System.ini": {
             "format": "ini",
             "locations": [
-              "install:GameData/Save/System.ini"
+              "game_root:GameData/Save/System.ini"
             ]
           }
         },
@@ -3043,7 +3083,7 @@
           "Swat4.ini": {
             "format": "ini",
             "locations": [
-              "game:Swat4.ini"
+              "game_exe:Swat4.ini"
             ]
           }
         },
@@ -3096,7 +3136,7 @@
           "cam_ext.cfg": {
             "format": "dark_cfg",
             "locations": [
-              "game:cam_ext.cfg"
+              "game_exe:cam_ext.cfg"
             ],
             "if_missing": "skip"
           }
@@ -3176,7 +3216,7 @@
           "WoT.ini": {
             "format": "ini",
             "locations": [
-              "game:WoT.ini"
+              "game_exe:WoT.ini"
             ]
           }
         },
@@ -3300,7 +3340,7 @@
           "cam_ext.cfg": {
             "format": "dark_cfg",
             "locations": [
-              "game:cam_ext.cfg"
+              "game_exe:cam_ext.cfg"
             ],
             "if_missing": "skip"
           }
@@ -3366,7 +3406,7 @@
           "cam_ext.cfg": {
             "format": "dark_cfg",
             "locations": [
-              "game:cam_ext.cfg"
+              "game_exe:cam_ext.cfg"
             ],
             "if_missing": "skip"
           }
@@ -3435,7 +3475,7 @@
           "options.ini": {
             "format": "flat_ini",
             "locations": [
-              "install:save/SaveGames/User Options/options.ini"
+              "game_root:save/SaveGames/User Options/options.ini"
             ]
           }
         },
@@ -3610,7 +3650,7 @@
           "SplinterCellUser.ini": {
             "format": "ini",
             "locations": [
-              "game:SplinterCellUser.ini"
+              "game_exe:SplinterCellUser.ini"
             ]
           }
         },
@@ -3741,7 +3781,7 @@
           "Player.txt": {
             "format": "ini",
             "locations": [
-              "game:Profiles/Player.txt"
+              "game_exe:Profiles/Player.txt"
             ]
           }
         },
@@ -3792,13 +3832,13 @@
           "Unreal.ini": {
             "format": "ini",
             "locations": [
-              "game:Unreal.ini"
+              "game_exe:Unreal.ini"
             ]
           },
           "User.ini": {
             "format": "ini",
             "locations": [
-              "game:User.ini"
+              "game_exe:User.ini"
             ]
           }
         },
@@ -3921,7 +3961,7 @@
           "Unreal2.ini": {
             "format": "ini",
             "locations": [
-              "game:Unreal2.ini"
+              "game_exe:Unreal2.ini"
             ]
           }
         },
@@ -3974,7 +4014,7 @@
           "UT2004.ini": {
             "format": "ini",
             "locations": [
-              "game:UT2004.ini"
+              "game_exe:UT2004.ini"
             ]
           }
         },
@@ -4087,13 +4127,13 @@
           "UnrealTournament.ini": {
             "format": "ini",
             "locations": [
-              "game:UnrealTournament.ini"
+              "game_exe:UnrealTournament.ini"
             ]
           },
           "User.ini": {
             "format": "ini",
             "locations": [
-              "game:User.ini"
+              "game_exe:User.ini"
             ]
           }
         },
@@ -4218,7 +4258,7 @@
           "XCom.ini": {
             "format": "ini",
             "locations": [
-              "game:XCom.ini"
+              "game_exe:XCom.ini"
             ]
           }
         },

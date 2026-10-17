@@ -13,7 +13,7 @@
   },
   "eax": { "api": "directsound3d", "versions": ["1.0"] },
   "game_config": {
-    "files": { "icewind.ini": { "format": "ini", "locations": ["game:icewind.ini"] } },
+    "files": { "icewind.ini": { "format": "ini", "locations": ["game_exe:icewind.ini"] } },
     "audio_settings": [
       {
         "title": "Enable EAX reverb",

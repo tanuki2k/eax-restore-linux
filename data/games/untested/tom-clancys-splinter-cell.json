@@ -14,7 +14,7 @@
   },
   "game_config": {
     "files": {
-      "SplinterCellUser.ini": { "format": "ini", "locations": ["game:SplinterCellUser.ini"] }
+      "SplinterCellUser.ini": { "format": "ini", "locations": ["game_exe:SplinterCellUser.ini"] }
     },
     "audio_settings": [
       {

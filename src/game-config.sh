@@ -376,7 +376,7 @@ config_display_value() {
 }
 
 # Usage: game_install_root
-# The game's install root, for "install:" locations: the folder the library
+# The game's install root, for "game_root:" locations: the folder the library
 # scan matched, else the steamapps/common/<Game> folder GAME_DIR sits in, else
 # the Heroic install_path GAME_DIR sits in, else GAME_DIR itself.
 game_install_root() {
@@ -409,8 +409,9 @@ resolve_config_file() {
         base="${loc%%:*}"; rel="${loc#*:}"
         dirs=()
         case "$base" in
-            game) dirs=("$GAME_DIR") ;;
-            install) dirs=("$(game_install_root)") ;;
+            # game / install are the old names for game_exe / game_root.
+            game_exe|game) dirs=("$GAME_DIR") ;;
+            game_root|install) dirs=("$(game_install_root)") ;;
             prefix_documents|prefix_appdata|prefix_localappdata)
                 [ -n "${PREFIX_PATH:-}" ] || continue
                 for u in steamuser "$USER"; do
@@ -535,7 +536,7 @@ config_row_is_safe() {
             [[ "$loc" =~ ^prefix:(system|user)\.reg$ ]] || return 1
             continue
         fi
-        [[ "$loc" =~ ^(game|install|prefix_documents|prefix_appdata|prefix_localappdata|prefix_public_documents):[^/\\] ]] || return 1
+        [[ "$loc" =~ ^(game_exe|game_root|game|install|prefix_documents|prefix_appdata|prefix_localappdata|prefix_public_documents):[^/\\] ]] || return 1
         [[ "$loc" == *..* || "$loc" == *\\* ]] && return 1
     done
     [[ "$key" =~ $name_re ]] || return 1

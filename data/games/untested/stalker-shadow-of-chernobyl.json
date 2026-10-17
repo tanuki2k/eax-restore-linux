@@ -8,5 +8,10 @@
     "steam": { "id": 4500 },
     "gog": { "id": 1207660573 }
   },
-  "eax": { "api": "openal", "versions": ["1.0", "2.0", "3.0"] }
+  "eax": { "api": "openal", "versions": ["1.0", "2.0", "3.0"] },
+  "game_config": {
+    "files": {
+      "user.ltx": { "format": "ltx", "locations": ["prefix_documents:stalker-shoc/user.ltx"] }
+    }
+  }
 }

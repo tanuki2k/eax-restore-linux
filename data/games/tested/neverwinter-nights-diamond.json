@@ -13,7 +13,7 @@
   },
   "eax": { "api": "directsound3d", "versions": ["1.0", "2.0", "3.0"] },
   "game_config": {
-    "files": { "nwn.ini": { "format": "ini", "locations": ["game:nwn.ini"] } },
+    "files": { "nwn.ini": { "format": "ini", "locations": ["game_exe:nwn.ini"] } },
     "audio_settings": [
       {
         "title": "Enable EAX reverb",

@@ -15,28 +15,28 @@
 *{box-sizing:border-box}
 :root{color-scheme:light dark}
 html,body{height:100%}
+body{display:flex;flex-direction:column}
 body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
 h1,h2,h3,h4{margin:0;font-weight:650;line-height:1.25}
 .sp{flex:1}.muted{color:var(--mut)}.ok{color:var(--ok)}.bad{color:var(--bad)}
 :focus-visible{outline:2px solid var(--acc);outline-offset:1px}
 
 /* ---- top bar */
-.top{display:flex;align-items:center;gap:10px;height:48px;padding:0 16px;background:var(--surface);border-bottom:1px solid var(--line)}
+.top{flex:0 0 auto;display:flex;align-items:center;gap:10px;min-height:48px;padding:0 16px;background:var(--surface);border-bottom:1px solid var(--line)}
 .brand{font-weight:650;letter-spacing:.01em}
 .logo{display:inline-block;background:var(--acc);color:var(--acc-fg);border-radius:6px;padding:1px 7px;margin-right:6px;font-size:12px;font-weight:700}
 .chip-s{font-size:12px;color:var(--mut);border:1px solid var(--line);border-radius:99px;padding:2px 10px}
 #aistate{cursor:pointer}#aistate:hover{border-color:var(--acc);color:var(--fg)}
 
 /* ---- layout */
-#layout{display:grid;grid-template-columns:272px minmax(0,1fr) 340px;height:calc(100vh - 48px)}
+#layout{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:272px minmax(0,1fr) 340px}
 #layout.norail{grid-template-columns:272px minmax(0,1fr)}#layout.norail #rail{display:none}
 #side,#rail{background:var(--surface);overflow:auto}
 #side{border-right:1px solid var(--line);padding:12px}
 #rail{border-left:1px solid var(--line);padding:14px}
 #main{overflow:auto;position:relative}
-@media(max-width:1150px){#layout{grid-template-columns:240px minmax(0,1fr)}#rail{display:none}#layout.rail-on{grid-template-columns:240px minmax(0,1fr)}}
-@media(max-width:760px){#layout{grid-template-columns:1fr;height:auto}#side{max-height:40vh;border-right:0;border-bottom:1px solid var(--line)}}
-
+#railclose{display:none;margin-bottom:10px}
+#main{container-type:inline-size}
 /* ---- buttons & inputs */
 .btn,button{font:inherit;color:var(--fg);background:var(--surface);border:1px solid var(--line2);border-radius:7px;padding:6px 12px;cursor:pointer;line-height:1.2;transition:background .12s,border-color .12s}
 .btn:hover,button:hover:not(:disabled){border-color:var(--acc);background:var(--acc-weak)}
@@ -237,6 +237,7 @@ button.danger:hover:not(:disabled){background:var(--bad);filter:brightness(1.1)}
 #errors li{transition:filter .1s}#errors li:hover{filter:brightness(1.15)}
 
 /* the tip and the toast are popovers, so they sit in the browser's top layer, above any open dialog */
+#tip p{margin:0}#tip p+p{margin-top:6px}
 #tip:not(:popover-open),#toast:not(:popover-open){display:none}
 
 /* ---- update banner */
@@ -257,3 +258,32 @@ button.danger:hover:not(:disabled){background:var(--bad);filter:brightness(1.1)}
 .aicard>p{margin:0 0 10px}
 .airow{display:flex;align-items:center;gap:10px;margin-top:8px}
 .airow .grow,.airow input{flex:1;min-width:0}
+
+/* ---- responsive (last, so these override the rules above) */
+/* Narrower than the three-column layout: the JSON/problems side bar becomes a drawer over the page. */
+@media(max-width:1150px){
+  #layout{grid-template-columns:240px minmax(0,1fr)}
+  #rail{display:none;position:fixed;top:48px;right:0;bottom:0;width:min(380px,92vw);z-index:30;box-shadow:-12px 0 32px rgba(0,0,0,.28)}
+  #railclose{display:inline-flex}
+}
+/* Phone / small window: one column, the page scrolls, the header wraps. */
+@media(max-width:760px){
+  body{display:block;height:auto}
+  .top{flex-wrap:wrap;padding:6px 12px;row-gap:6px}
+  .brand{font-size:0}.brand .logo{font-size:12px}
+  .top .sp{display:none}
+  .top .btn,.top .chip-s{font-size:12.5px}
+  #layout{grid-template-columns:1fr}
+  #side{max-height:38vh;border-right:0;border-bottom:1px solid var(--line)}
+  #main{overflow:visible}
+  #rail{top:0}
+  #ghead{padding:14px 14px 0}
+  #snav{padding:8px 14px 0}
+  .updatebar{padding:8px 12px}
+}
+/* The tab bar and the action buttons don't fit on one row in a narrow main area: actions go below. */
+@container (max-width:1060px){
+  #snav{flex-wrap:wrap;overflow-x:visible}
+  #snav .gactions{flex-wrap:wrap;margin:6px 0 8px;width:100%}
+  #snav .sp{display:none}
+}

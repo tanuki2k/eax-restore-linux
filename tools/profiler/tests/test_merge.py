@@ -4,7 +4,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 class MergeCapture(unittest.TestCase):
     def setUp(self):
-        self.entry = {"files": {"g.ini": {"format": "ini", "locations": ["game:g.ini"]}},
+        self.entry = {"files": {"g.ini": {"format": "ini", "locations": ["game_exe:g.ini"]}},
                       "audio_settings": [{"title": "Enable EAX", "reason": "r", "changes": {"g.ini": {"Audio": {"EAX": "1"}}}}]}
 
     def merge(self, new):
@@ -15,7 +15,7 @@ class MergeCapture(unittest.TestCase):
         st = {"title": title, "reason": "TODO reason", "changes": changes}
         if only_if:
             st["only_if"] = only_if
-        return {"files": files or {"g.ini": {"format": "ini", "locations": ["game:g.ini"]}}, kind: [st]}
+        return {"files": files or {"g.ini": {"format": "ini", "locations": ["game_exe:g.ini"]}}, kind: [st]}
 
     def test_an_identical_setting_is_not_added_again(self):
         merged, rep = self.merge(self.cap({"g.ini": {"Audio": {"EAX": "1"}}}))
@@ -45,7 +45,7 @@ class MergeCapture(unittest.TestCase):
     def test_existing_file_definitions_are_not_overwritten(self):
         other = {"g.ini": {"format": "ini", "locations": ["prefix_documents:g.ini"]}}
         merged, rep = self.merge(self.cap({"g.ini": {"Audio": {"New": "1"}}}, files=other))
-        self.assertEqual(merged["files"]["g.ini"]["locations"], ["game:g.ini"])
+        self.assertEqual(merged["files"]["g.ini"]["locations"], ["game_exe:g.ini"])
         self.assertEqual(rep["files_differ"], ["g.ini"])
 
     def test_merging_twice_adds_nothing_the_second_time(self):

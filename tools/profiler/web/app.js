@@ -6,9 +6,9 @@ let SCHEMA, GAMES = [], STALE = [], AI = null, CUR = null, GAME = null, DIRTY = 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 const LONG = /^(description|notes|reason|problem|fix|store_details|patches|follow_up)$/;
-const BASES = ["game", "install", "prefix_documents", "prefix_appdata", "prefix_localappdata", "prefix_public_documents", "prefix"];
+const BASES = ["game_exe", "game_root", "prefix_documents", "prefix_appdata", "prefix_localappdata", "prefix_public_documents", "prefix"];
 const BASE_HELP = {
-  game: "the folder the game's exe is in", install: "the game's install root",
+  game_exe: "the folder the game's .exe is in", game_root: "the game's top-level install folder",
   prefix_documents: "Documents in the Wine prefix", prefix_appdata: "AppData/Roaming in the prefix",
   prefix_localappdata: "AppData/Local in the prefix", prefix_public_documents: "Public Documents in the prefix",
   prefix: "the prefix itself (registry files)",
@@ -65,7 +65,7 @@ function prune(v) {
 const TIP = () => $("#tip");
 function showTip(target) {
   const t = TIP(), text = target.dataset.tip; if (!text) return;
-  t.textContent = text; popUp(t);
+  t.replaceChildren(...text.split("\n").map((line) => el("p", {}, line))); popUp(t);
   const r = target.getBoundingClientRect(), w = t.offsetWidth, h = t.offsetHeight;
   let x = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), innerWidth - w - 8);
   let y = r.bottom + 8; if (y + h > innerHeight - 8) y = Math.max(8, r.top - h - 8);
@@ -173,11 +173,11 @@ function fieldNode(schema, parent, key, path, label) {
   }
   if (/\.stores$/.test(path) && s.type === "array") return F(chips(resolve(s.items).enum, cur || [], set));
   if (/\.locations$/.test(path)) return F(listEditor(parent, key, (v, upd) => {
-    const [b, ...r] = (v || "game:").split(":");
+    const [b, ...r] = (v || "game_exe:").split(":");
     const base = el("select", { style: "flex:0 0 190px", onchange: () => upd(base.value + ":" + p.value) }, BASES.map((x) => el("option", { value: x, selected: x === b, title: BASE_HELP[x] }, x)));
     const p = el("input", { value: r.join(":"), placeholder: "folder/file.cfg", oninput: () => upd(base.value + ":" + p.value) });
     return [base, p];
-  }, "game:", "Add a place to look"), { wide: true });
+  }, "game_exe:", "Add a place to look"), { wide: true });
   if (/\.changes$/.test(path)) return F(changesEditor(parent, key), { wide: true });
   if (path === "sources") return F(listEditor(parent, key, (v, upd) => {
     const o = typeof v === "object" ? v : { title: "", url: v || "" };
@@ -307,7 +307,7 @@ function changesEditor(setting, key) {
   };
   const val = (v, upd) => {
     const mode = v === null ? "null" : v === true ? "true" : v === false ? "false" : "text";
-    const sel = el("select", { style: "flex:0 0 84px", title: "text: set the value to the text you type. true or false: switch a flag on or off. null: remove the key from the file.", onchange: () => { sel.value === "text" ? upd("") : upd(sel.value === "null" ? null : sel.value === "true"); draw(); } }, ["text", "true", "false", "null"].map((x) => el("option", { selected: x === mode }, x)));
+    const sel = el("select", { style: "flex:0 0 84px", title: "text: set the value to the text you type.\ntrue or false: switch a flag on or off.\nnull: remove the key from the file.", onchange: () => { sel.value === "text" ? upd("") : upd(sel.value === "null" ? null : sel.value === "true"); draw(); } }, ["text", "true", "false", "null"].map((x) => el("option", { selected: x === mode }, x)));
     const inp = el("input", { value: typeof v === "string" ? v : "", placeholder: mode === "text" ? "value" : "", disabled: mode !== "text", oninput: () => upd(inp.value) });
     return el("div", { class: "row" }, sel, inp);
   };
@@ -624,6 +624,7 @@ function drawRailTab() {
   fill(b, "{ } JSON", ERRS.length ? el("span", { class: "nb" }, String(ERRS.length)) : null);
 }
 $("#jsontoggle").onclick = toggleRail;
+$("#railclose").onclick = toggleRail;
 window.addEventListener("resize", drawRailTab);
 document.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); saveClicked(); } });
 window.addEventListener("beforeunload", (e) => { if (DIRTY) { e.preventDefault(); e.returnValue = ""; } });
@@ -868,6 +869,8 @@ async function clearCapture() {
 const DROP = new Set();
 // The Review table's category choice per change ("audio" / "optional"), where it differs from the tool's guess.
 const CAT = new Map();
+// Remembers the ticks and categories in the session, so they survive a reload. Used by the review and by the step viewer.
+const saveDrop = () => api(`/api/session/${SESS.sid}/drop`, "POST", { drop: [...DROP], cats: Object.fromEntries(CAT) }).catch(() => {});
 const dropKey = (f, c) => [f.file, f.format, c.section, c.key].join("\0");
 function seedDrop(saved, cats) {
   DROP.clear(); CAT.clear();
@@ -882,7 +885,6 @@ async function makeDraft() {
 }
 function showDraft() {
   const box = $("#draftbox"), d = DRAFT; if (!box || !d) return;
-  const saveDrop = () => api(`/api/session/${SESS.sid}/drop`, "POST", { drop: [...DROP], cats: Object.fromEntries(CAT) }).catch(() => {});
   // Unticking a whole file first is quicker than unticking dozens when only a few settings matter.
   const setFile = (f, keep) => { for (const c of f.changes) { const k = dropKey(f, c); keep ? DROP.delete(k) : DROP.add(k); } saveDrop(); showDraft(); };
   fill(box, el("div", { class: "blockhead" }, el("h2", {}, "Captured changes"), helpIcon("Tick the changes to keep. Changes that look like the game's own housekeeping start unticked, with the reason shown.")),
@@ -897,7 +899,7 @@ function showDraft() {
 // Speaker runs are always audio settings gated by speaker layout, so only the options run has a choice.
 function categoryPicker(label, f, c, saveDrop) {
   if (label.startsWith("spk-")) return el("span", { class: "muted" }, "Audio");
-  const k = dropKey(f, c), sel = el("select", { title: "Audio: needed for the sound fix. Optional: offered to the player as an extra.", onchange: () => { sel.value === (c.category || "optional") ? CAT.delete(k) : CAT.set(k, sel.value); saveDrop(); } },
+  const k = dropKey(f, c), sel = el("select", { title: "Audio: needed for the sound fix.\nOptional: offered to the player as an extra.", onchange: () => { sel.value === (c.category || "optional") ? CAT.delete(k) : CAT.set(k, sel.value); saveDrop(); } },
     el("option", { value: "audio" }, "Audio"), el("option", { value: "optional" }, "Optional"));
   sel.value = CAT.get(k) || c.category || "optional";
   return sel;

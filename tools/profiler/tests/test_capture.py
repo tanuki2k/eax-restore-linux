@@ -30,7 +30,7 @@ class Capture(unittest.TestCase):
             diffs = capture.diff_snapshots(game, sd, "a", "b")
             gc, skipped = classify.draft_game_config(diffs, [])
         self.assertEqual(gc["audio_settings"][0]["changes"]["Quake4Config.cfg"], want)
-        self.assertEqual(gc["files"]["Quake4Config.cfg"], {"format": "idtech_cfg", "locations": ["game:q4base/Quake4Config.cfg"]})
+        self.assertEqual(gc["files"]["Quake4Config.cfg"], {"format": "idtech_cfg", "locations": ["game_exe:q4base/Quake4Config.cfg"]})
         self.assertEqual(skipped, [])
 
     def test_ini_sections_and_noise(self):
@@ -62,7 +62,7 @@ class Capture(unittest.TestCase):
 
     def test_draft_validates_against_schema(self):
         game = {"name": "T", "stores": {"steam": {"id": 1}}, "eax": {"api": "openal"},
-                "game_config": {"files": {"g.ini": {"format": "ini", "locations": ["game:g.ini"]}},
+                "game_config": {"files": {"g.ini": {"format": "ini", "locations": ["game_exe:g.ini"]}},
                                 "audio_settings": [{"title": "t", "reason": "r", "changes": {"g.ini": {"S": {"k": "1"}}}}]}}
         self.assertEqual(dbio.validate(game), [])
         game["game_config"]["audio_settings"][0]["changes"] = {"other.ini": {"S": {"k": "1"}}}
@@ -97,7 +97,7 @@ class ConfigTxt(unittest.TestCase):
                              {"Profiles/Player.txt": after, "readme.txt": readme + "x\n"})
             self.assertEqual([d["file"] for d in capture.diff_snapshots(game, sd, "a", "b")], ["Player.txt"])
             gc, skipped = classify.draft_game_config(capture.diff_snapshots(game, sd, "a", "b"), [])
-        self.assertEqual(gc["files"]["Player.txt"], {"format": "ini", "locations": ["game:Profiles/Player.txt"]})
+        self.assertEqual(gc["files"]["Player.txt"], {"format": "ini", "locations": ["game_exe:Profiles/Player.txt"]})
 
 
 class Categories(unittest.TestCase):
@@ -203,7 +203,7 @@ class StepView(unittest.TestCase):
             game, sd = world(t, {"g.cfg": a}, {"g.cfg": b})
             v = classify.step_view(game, sd, "b", "a", baseline_noise={("g.cfg", "", "Width")})
             first = classify.step_view(game, sd, "a", None)
-        self.assertEqual([f["location"] for f in v["files"]], ["game:g.cfg"])
+        self.assertEqual([f["location"] for f in v["files"]], ["game_exe:g.cfg"])
         rows = {c["key"]: c for f in v["diffs"] for c in f["changes"]}
         self.assertEqual(set(rows), {"LastPlayed", "EAX"})
         self.assertTrue(rows["LastPlayed"]["suspect_reason"])

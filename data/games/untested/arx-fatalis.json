@@ -13,7 +13,7 @@
     "tweaks": ["eax_unified"]
   },
   "game_config": {
-    "files": { "cfg.ini": { "format": "ini", "locations": ["game:cfg.ini"] } },
+    "files": { "cfg.ini": { "format": "ini", "locations": ["game_exe:cfg.ini"] } },
     "audio_settings": [
       {
         "title": "Enable EAX reverb",

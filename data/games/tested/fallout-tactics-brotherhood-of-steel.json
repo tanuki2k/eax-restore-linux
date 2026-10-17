@@ -9,7 +9,7 @@
   },
   "eax": { "api": "directsound3d", "versions": ["1.0", "2.0"] },
   "game_config": {
-    "files": { "bos.cfg": { "format": "brace_cfg", "locations": ["game:core/bos.cfg"] } },
+    "files": { "bos.cfg": { "format": "brace_cfg", "locations": ["game_exe:core/bos.cfg"] } },
     "audio_settings": [
       {
         "title": "Enable EAX reverb",

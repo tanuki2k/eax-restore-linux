@@ -197,3 +197,23 @@ setup() {
     config_set_key "$F" ini sound eaxenabled 1
     [ "$(cat "$F")" == $'[Sound]\nsoundvolume = 75\neaxenabled = 1' ]
 }
+
+# ---- location bases ----------------------------------------------------------
+
+@test "resolve_config_file: game_exe and game_root, and the old game / install names, find the same folders" {
+    GAME_DIR="$BATS_TEST_TMPDIR/steamapps/common/Game/bin"
+    mkdir -p "$GAME_DIR"
+    write_file "$GAME_DIR/a.ini" 'x=1\n'
+    write_file "$BATS_TEST_TMPDIR/steamapps/common/Game/b.ini" 'x=1\n'
+    GAME_INSTALL_ROOT=""
+    find_existing_variant() { echo "$1"; }  # the real one matches case loosely
+    [ "$(resolve_config_file "game_exe:a.ini")" == "$GAME_DIR/a.ini" ]
+    [ "$(resolve_config_file "game:a.ini")" == "$GAME_DIR/a.ini" ]
+    [ "$(resolve_config_file "game_root:b.ini")" == "$BATS_TEST_TMPDIR/steamapps/common/Game/b.ini" ]
+    [ "$(resolve_config_file "install:b.ini")" == "$BATS_TEST_TMPDIR/steamapps/common/Game/b.ini" ]
+}
+
+@test "config_row_is_safe accepts the new base names" {
+    config_row_is_safe ini "game_exe:a.ini" s k v
+    config_row_is_safe ini "game_root:a.ini" s k v
+}

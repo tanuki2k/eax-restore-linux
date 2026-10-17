@@ -135,7 +135,7 @@ PROFILE_API=""
 PROFILE_PATCHES=""
 
 # Game Settings (src/game-config.sh). GAME_INSTALL_ROOT is the install folder
-# the library scan matched (for "install:" config locations). The rest are
+# the library scan matched (for "game_root:" config locations). The rest are
 # filled in during Phase 1 and used by Phase 2, the final summary and
 # uninstall: accepted alsoft.ini values, accepted config rows, settings whose
 # config file doesn't exist yet, settings the player turned down, settings

@@ -19,10 +19,10 @@
   "eax": { "api": "openal", "versions": ["4.0"] },
   "game_config": {
     "files": {
-      "DoomConfig.cfg": { "format": "idtech_cfg", "locations": ["game:base/DoomConfig.cfg"] },
+      "DoomConfig.cfg": { "format": "idtech_cfg", "locations": ["game_exe:base/DoomConfig.cfg"] },
       "d3xp DoomConfig.cfg": {
         "format": "idtech_cfg",
-        "locations": ["game:d3xp/DoomConfig.cfg"],
+        "locations": ["game_exe:d3xp/DoomConfig.cfg"],
         "if_missing": "skip"
       }
     },

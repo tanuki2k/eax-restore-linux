@@ -12,7 +12,7 @@
     "tweaks": ["com_registry_routing"]
   },
   "game_config": {
-    "files": { "settings.cfg": { "format": "dark_cfg", "locations": ["game:settings.cfg"] } },
+    "files": { "settings.cfg": { "format": "dark_cfg", "locations": ["game_exe:settings.cfg"] } },
     "audio_settings": [
       {
         "title": "Enable EAX and sound occlusion",

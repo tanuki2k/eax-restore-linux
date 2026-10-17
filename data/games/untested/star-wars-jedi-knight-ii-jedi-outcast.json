@@ -11,10 +11,10 @@
   "eax": { "api": "openal", "versions": ["1.0", "2.0", "3.0"] },
   "game_config": {
     "files": {
-      "jk2config.cfg": { "format": "idtech_cfg", "locations": ["game:base/jk2config.cfg"] },
+      "jk2config.cfg": { "format": "idtech_cfg", "locations": ["game_exe:base/jk2config.cfg"] },
       "jk2mpconfig.cfg": {
         "format": "idtech_cfg",
-        "locations": ["game:base/jk2mpconfig.cfg"],
+        "locations": ["game_exe:base/jk2mpconfig.cfg"],
         "if_missing": "skip"
       }
     },

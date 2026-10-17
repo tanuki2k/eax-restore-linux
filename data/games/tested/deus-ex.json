@@ -13,7 +13,7 @@
     "alsoft_ini": { "reverb": { "boost": "6" } }
   },
   "game_config": {
-    "files": { "DeusEx.ini": { "format": "ini", "locations": ["game:DeusEx.ini"] } },
+    "files": { "DeusEx.ini": { "format": "ini", "locations": ["game_exe:DeusEx.ini"] } },
     "audio_settings": [
       {
         "title": "Enable EAX reverb",

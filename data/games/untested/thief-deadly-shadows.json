@@ -22,7 +22,7 @@
     "files": {
       "options.ini": {
         "format": "flat_ini",
-        "locations": ["install:save/SaveGames/User Options/options.ini"]
+        "locations": ["game_root:save/SaveGames/User Options/options.ini"]
       }
     },
     "audio_settings": [

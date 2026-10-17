@@ -18,7 +18,7 @@
   },
   "eax": { "api": "openal", "versions": ["1.0", "2.0", "3.0"] },
   "game_config": {
-    "files": { "Unreal2.ini": { "format": "ini", "locations": ["game:Unreal2.ini"] } },
+    "files": { "Unreal2.ini": { "format": "ini", "locations": ["game_exe:Unreal2.ini"] } },
     "audio_settings": [
       {
         "title": "Enable EAX reverb",
