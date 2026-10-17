@@ -797,7 +797,11 @@ print_game_profile_stores() {
     local value sep
     detail_heading "Game details"
     detail_row "Name" "${BOLD}${name}${NC}"
-    [ -n "$untested" ] && detail_row "Checked" "${NOTE}Not yet — nobody has tried this profile on a real install${NC}"
+    if [ -n "$untested" ]; then
+        detail_row "Verified" "${NOTE}Untested ${DIM}(nobody has tried this profile on a real install)${NC}"
+    else
+        detail_row "Verified" "${GREEN}Tested${NC}"
+    fi
     [ -n "$released" ] && detail_row "Released" "${WHITE}$(format_release_date "$released")${NC}"
     # The browser names each store's ID; the install shows its one store
     # under System details instead.
@@ -910,14 +914,19 @@ print_game_profile_stores() {
     fi
     # Every store's titles, in database order; one only some stores offer
     # says which.
-    local cat title
-    local -a eax_titles=() extra_titles=()
-    local -A title_stores=()
+    local cat title flag
+    local -a eax_titles=() extra_titles=() openal_titles=()
+    local -A title_stores=() title_flag=()
     for i in "${!stores[@]}"; do
-        while IFS=$'\t' read -r cat title; do
+        while IFS=$'\t' read -r cat title flag; do
             if [ -z "${title_stores[$cat$'\t'$title]+x}" ]; then
-                [ "$cat" == "audio" ] && eax_titles+=("$title") || extra_titles+=("$title")
+                case "$cat" in
+                    audio) eax_titles+=("$title") ;;
+                    openal) openal_titles+=("$title") ;;
+                    *) extra_titles+=("$title") ;;
+                esac
                 title_stores[$cat$'\t'$title]="${labels[i]}"
+                title_flag[$cat$'\t'$title]="$flag"
             else
                 title_stores[$cat$'\t'$title]+=" and ${labels[i]}"
             fi
@@ -925,10 +934,12 @@ print_game_profile_stores() {
     done
     _setting_title() {
         local only="${title_stores[$1$'\t'$2]}"
+        local tag
+        tag="$(verified_tag "${title_flag[$1$'\t'$2]}")"
         if [ "$n" -gt 1 ] && [ "$(grep -o ' and ' <<< "$only" | wc -l)" -lt $(( n - 1 )) ]; then
-            echo "$2 ($only only)"
+            echo "$2 ($only only) $tag"
         else
-            echo "$2"
+            echo "$2 $tag"
         fi
     }
     if [ ${#eax_titles[@]} -gt 0 ]; then
@@ -938,6 +949,10 @@ print_game_profile_stores() {
     if [ ${#extra_titles[@]} -gt 0 ]; then
         print_subheading "Optional settings"
         for title in "${extra_titles[@]}"; do print_wrapped "$(_setting_title optional "$title")"; done
+    fi
+    if [ ${#openal_titles[@]} -gt 0 ]; then
+        print_subheading "OpenAL settings"
+        for title in "${openal_titles[@]}"; do print_wrapped "$(_setting_title openal "$title")"; done
     fi
     unset -f _setting_title
     if [ -n "$restore_details" ]; then
@@ -1208,7 +1223,7 @@ browse_filter_header() {
     local -A label=([all]="All" [steam]="Steam" [gog]="GOG" [delisted]="Delisted"
         [steam-delisted]="Steam delisted" [gog-delisted]="GOG delisted"
         [directsound3d]="DirectSound3D" [openal]="OpenAL" [match]="Best match" [az]="A–Z" [tested]="Tested" [untested]="Untested")
-    local -a names=("Store" "Audio" "Order" "Show") keys=("Ctrl-S" "Ctrl-A" "Ctrl-R" "Ctrl-T") values=()
+    local -a names=("Store" "Audio" "Order" "Verified") keys=("Ctrl-S" "Ctrl-A" "Ctrl-R" "Ctrl-T") values=()
     local v
     for v in "$store" "$audio" "$order" "${tested:-tested}"; do values+=("${label[$v]:-EAX ${v#eax}}"); done
     # Usage: _browse_cell <filter> [value width]
@@ -1281,7 +1296,7 @@ browse_help() {
         "" "Filters"
         "Ctrl-A" "Audio: All → DirectSound3D → OpenAL → EAX 1.0 … 5.0."
         "Ctrl-S" "Store: All → Steam → GOG → Delisted → Steam delisted → GOG delisted. Delisted games are no longer sold on that store."
-        "Ctrl-T" "Show: Tested → All → Untested. It opens on Tested, the games checked on a real install. Untested are profiles nobody has checked yet."
+        "Ctrl-T" "Verified: Tested → All → Untested. It opens on Tested, the games checked on a real install. Untested ones are profiles nobody has checked yet."
         "Ctrl-R" "Order: best match first, or A–Z."
         "" "View"
         "Ctrl-F" "Open the right pane full screen; q comes back."

@@ -307,12 +307,16 @@ print_note() {
     for line in "$@"; do body+="\n${line}"; done
     echo -e "$(tilde_path "$body")${NC}"
 }
-# Usage: untested_tag [plain]
-# The "(untested)" label beside a game or setting nobody has checked on a real
-# install, in the Note colour; "plain" leaves the colour off, for a tick list's
-# title. One place so every screen says it the same way.
-untested_tag() {
-    if [ "${1:-}" == "plain" ]; then printf '(untested)'; else printf '%b(untested)%b' "$NOTE" "$NC"; fi
+# Usage: verified_tag [plain] <untested flag>
+# "(tested)" beside a game or setting somebody has checked on a real install,
+# "(untested)" (in the Note colour) when the flag is non-empty; "plain" leaves
+# the colours off, for a tick list's title. One place so every screen says it
+# the same way.
+verified_tag() {
+    local plain="" word=tested colour="$GREEN"
+    if [ "${1:-}" == "plain" ]; then plain=1; shift; fi
+    [ -n "${1:-}" ] && { word=untested; colour="$NOTE"; }
+    if [ -n "$plain" ]; then printf '(%s)' "$word"; else printf '%b(%s)%b' "$colour" "$word" "$NC"; fi
 }
 print_note_arrow() {
     local first="$1"; shift

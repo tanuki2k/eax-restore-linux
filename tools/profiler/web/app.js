@@ -16,7 +16,7 @@ const BASE_HELP = {
 const LABELS = {
   id: "Store ID", id_source: "Where the ID came from", api: "Audio API", exe: "Executable", store_details: "Store details",
   extra_exe_folders: "Extra exe folders", companion_apps: "Companion apps", beta_branch: "Beta branch", fix_in_place: "Fix works in place",
-  alsoft_ini: "alsoft.ini settings", only_if: "Only offer when…", follow_up: "Follow-up for the player", tested: "Checked on a real install", eax: "EAX",
+  alsoft_ini: "alsoft.ini settings", only_if: "Only offer when…", follow_up: "Follow-up for the player", tested: "Verified on a real install", alsoft_tested: "alsoft.ini values verified on a real install", eax: "EAX",
   default_reverb: "Default reverb", "default-reverb": "Default reverb", versions: "EAX versions", tweaks: "Compatibility tweaks",
 };
 const SECTIONS = [

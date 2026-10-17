@@ -36,3 +36,25 @@ JSON
     run load_game_config_rows 1 steam all
     [[ "$output" == *"Fix risky thing"* ]]
 }
+
+@test "the profile tags every setting tested or untested" {
+    source "$REPO_ROOT/src/game-database.sh"
+    run game_setting_titles 1 steam
+    [[ "$output" == *$'audio\tEnable EAX effects\t'* ]]
+    [[ "$output" != *$'Enable EAX effects\t1'* ]]
+    [[ "$output" == *$'Fix risky thing\t1'* ]]
+    [ "$(verified_tag plain)" == "(tested)" ]
+    [ "$(verified_tag plain 1)" == "(untested)" ]
+}
+
+@test "alsoft.ini values follow install.alsoft_tested" {
+    source "$REPO_ROOT/src/game-database.sh"
+    jq '.games[0].install = {alsoft_ini: {reverb: {boost: "6"}}, alsoft_tested: false}' "$GAME_DATABASE_FILE" > "$BATS_TEST_TMPDIR/o.json"
+    GAME_DATABASE_FILE="$BATS_TEST_TMPDIR/o.json"
+    run game_setting_titles 1 steam
+    [[ "$output" == *$'openal\treverb boost = 6\t1'* ]]
+    current_profile() { return 0; }
+    KG_ID=1; KG_STORE=steam
+    offer_alsoft_settings
+    [ ${#ALSOFT_OVERRIDES[@]} -eq 0 ]
+}

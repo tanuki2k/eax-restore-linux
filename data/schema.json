@@ -90,23 +90,30 @@
           "additionalProperties": false,
           "properties": {
             "reverb": {
+              "description": "alsoft.ini's [reverb] section: how the reverb effects sound.",
               "type": "object",
               "additionalProperties": false,
               "properties": {
-                "boost": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$" }
+                "boost": { "description": "Makes all reverb louder (or quieter, if negative) by this many decibels. Raise it for a game whose reverb is hard to hear; too high and the reverb pops.", "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$" }
               }
             },
             "general": {
+              "description": "alsoft.ini's [general] section: sound output and playback limits.",
               "type": "object",
               "additionalProperties": false,
               "properties": {
-                "sources": { "type": "string", "pattern": "^[0-9]+$" },
-                "frequency": { "type": "string", "pattern": "^[0-9]+$" },
-                "default-reverb": { "$ref": "#/$defs/value_string" },
-                "resampler": { "$ref": "#/$defs/value_string" }
+                "sources": { "description": "How many sounds the game can play at once. Raise it for a game that cuts sounds off in busy scenes.", "type": "string", "pattern": "^[0-9]+$" },
+                "frequency": { "description": "The sample rate the sound is mixed at, in Hz (for example 48000). Set it when a game sounds too high or too low in pitch.", "type": "string", "pattern": "^[0-9]+$" },
+                "default-reverb": { "description": "The reverb preset used for sounds where the game doesn't choose one, such as GenericHall or Cave.", "$ref": "#/$defs/value_string" },
+                "resampler": { "description": "How sounds recorded at another sample rate are converted. Higher-quality methods sound cleaner and use a little more CPU.", "$ref": "#/$defs/value_string" }
               }
             }
           }
+        },
+        "alsoft_tested": {
+          "description": "True once you've checked these alsoft.ini values on a real install. False when nobody has: they're then left out unless the player sets EAX_RESTORE_UNTESTED_SETTINGS=1, and tagged \"(untested)\" when shown. Without the field they count as checked.",
+          "type": "boolean",
+          "default": true
         }
       }
     },

@@ -28,7 +28,9 @@ def normalize_eax:
     | order_keys(["api", "versions", "status", "problem", "fix", "fix_in_place"]);
 
 def normalize_install:
-    drop_empty | order_keys(["tweaks", "alsoft_ini"]);
+    drop_empty
+    | if .alsoft_tested == true then del(.alsoft_tested) else . end
+    | order_keys(["tweaks", "alsoft_ini", "alsoft_tested"]);
 
 def normalize_fix:
     (.changes // {}) as $changes

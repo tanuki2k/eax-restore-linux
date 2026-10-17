@@ -467,14 +467,20 @@ count_game_settings() {
 }
 
 # Usage: game_setting_titles <id> <steam|gog>
-# One "audio|optional<TAB>title" line per setting count_game_settings counts,
-# audio settings first, for the game profile screen.
+# One "audio|optional<TAB>title<TAB>flag" line per setting count_game_settings
+# counts, audio settings first, for the game profile screen; flag is "1" for a
+# setting nobody has checked on a real install. Then one "openal<TAB>key =
+# value<TAB>flag" line per alsoft.ini value, flagged when install.alsoft_tested
+# is false.
 game_setting_titles() {
     gdb_jq "$1" "$2" '
-        entry0 | .game_config // {}
+        entry0 | . as $e | .game_config // {}
         | def offered: [.[]? | select((.only_if.stores // [$store]) | index($store))];
-          (.audio_settings | offered | .[] | "audio\t\(.title)"),
-          (.optional_settings | offered | .[] | "optional\t\(.title)")'
+          def flag: if .tested == false then "1" else "" end;
+          (.audio_settings | offered | .[] | "audio\t\(.title)\t\(flag)"),
+          (.optional_settings | offered | .[] | "optional\t\(.title)\t\(flag)"),
+          ($e.install.alsoft_ini // {} | to_entries[] | .key as $sec | .value | to_entries[]
+           | "openal\t\($sec) \(.key) = \(.value)\t\(if $e.install.alsoft_tested == false then "1" else "" end)")'
 }
 
 # Usage: speakers_match <comma list>
@@ -598,6 +604,33 @@ print_config_rows() {
     done <<< "$1"
 }
 
+# Usage: print_alsoft_details <name> <store key> <store id>
+# The Tab view's OpenAL section: the game's alsoft.ini values, each with a
+# short explanation, and whether anyone has checked them on a real install.
+print_alsoft_details() {
+    local line sec key value
+    local -a lines
+    mapfile -t lines < <(gdb_jq "$3" "$2" 'entry0 | .install.alsoft_ini // {}
+        | to_entries[] | .key as $sec | .value | to_entries[] | [$sec, .key, (.value | tostring)] | join("\u001f")')
+    [ ${#lines[@]} -gt 0 ] && [ -n "${lines[0]}" ] || return 0
+    local flag
+    flag="$(gdb_jq "$3" "$2" 'entry0 | if .install.alsoft_tested == false then "1" else "" end')"
+    echo -e "\n${WHITE}OpenAL settings for ${1}:${NC}"
+    for line in "${lines[@]}"; do
+        IFS=$'\x1f' read -r sec key value <<< "$line"
+        echo -e "\n  ${BOLD}${key} = ${value}${NC} $(verified_tag "$flag")"
+        case "$sec/$key" in
+            reverb/boost) echo "    Makes all reverb louder by this many decibels." ;;
+            general/sources) echo "    How many sounds the game can play at once." ;;
+            general/frequency) echo "    The sample rate the sound is mixed at, in Hz." ;;
+            general/default-reverb) echo "    The reverb preset used where the game doesn't choose one." ;;
+            general/resampler) echo "    How sounds at another sample rate are converted." ;;
+        esac
+        echo -e "    ${DIM}In alsoft.ini, section [${sec}]${NC}"
+    done
+    [ -n "$flag" ] && echo -e "    ${DIM}Not checked on a real install yet.${NC}"
+}
+
 # Usage: print_game_settings_details <game id>
 # The database browser's Game settings view: every audio and optional
 # setting in the game's entry, each with its reason, the file (and where it
@@ -617,6 +650,7 @@ print_game_settings_details() {
     if [ ${#rows[@]} -eq 0 ]; then
         echo ""
         print_wrapped "${name:-This game} has no game settings in the database."
+        [ -n "$store_id" ] && print_alsoft_details "$name" "$store_key" "$store_id" && echo ""
         return
     fi
 
@@ -658,7 +692,7 @@ print_game_settings_details() {
                     || echo -e "\n${WHITE}Optional settings for ${name}:${NC}"
                 prev_cat="${f[0]}"
             fi
-            echo -e "\n  ${BOLD}${f[2]}${NC}${f[14]:+ $(untested_tag)}"
+            echo -e "\n  ${BOLD}${f[2]}${NC} $(verified_tag "${f[14]:-}")"
             printf '%s\n' "${f[3]}" | fold -s -w "$width" | sed 's/^/    /'
             echo ""
             display_rows="" stores="${f[4]}" speakers="${f[5]}" follow="${f[6]}" untested="${f[14]:-}"
@@ -677,6 +711,7 @@ print_game_settings_details() {
     done
     _flush_setting
     unset -f _flush_setting
+    print_alsoft_details "$name" "$store_key" "$store_id"
     echo ""
 }
 
@@ -880,7 +915,14 @@ speaker_config_from_alsoft() {
 offer_alsoft_settings() {
     ALSOFT_OVERRIDES=()
     current_profile || return
-    local sec key value asked="" entry
+    local sec key value asked="" entry tag
+    # Values nobody has checked on a real install are held back like
+    # untested game settings.
+    if ! is_truthy "${EAX_RESTORE_UNTESTED_SETTINGS:-}" \
+        && [ "$(gdb_jq "$KG_ID" "$KG_STORE" 'entry0 | .install.alsoft_tested // true')" == "false" ]; then
+        return
+    fi
+    tag="$(verified_tag "$(gdb_jq "$KG_ID" "$KG_STORE" 'entry0 | if .install.alsoft_tested == false then "1" else "" end')")"
     # Read first, then ask: a confirm inside a loop fed by the query would
     # read its answer from the query's output, not from the player.
     local -a entries=()
@@ -895,9 +937,11 @@ offer_alsoft_settings() {
         if [ "$sec/$key" == "reverb/boost" ]; then
             echo ""
             echo -e "${WHITE}${GAME_NAME}'s reverb is quiet at the default level.${NC}"
-            confirm "Raise the reverb boost to +${value} dB?" Y || continue
+            confirm "Raise the reverb boost to +${value} dB? ${tag}" Y || continue
+        elif [ "$sec/$key" == "general/sources" ]; then
+            confirm "Let ${GAME_NAME} play up to ${value} sounds at once, set in alsoft.ini? ${tag}" Y || continue
         else
-            confirm "Set ${key} to ${value} in alsoft.ini for ${GAME_NAME}?" Y || continue
+            confirm "Set ${key} to ${value} in alsoft.ini for ${GAME_NAME}? ${tag}" Y || continue
         fi
         ALSOFT_OVERRIDES+=("$sec"$'\x1f'"$key"$'\x1f'"$value")
     done
@@ -1084,9 +1128,9 @@ game_settings_step() {
     done
     [ "$shown" -eq 0 ] && return
 
-    # " (untested)" after the title of a setting nobody has checked on a real
-    # install; only shown when EAX_RESTORE_UNTESTED_SETTINGS lets them through.
-    _untested_suffix() { [ -n "${fix_untested[$1]:-}" ] && printf ' %s' "$(untested_tag)"; return 0; }
+    # "(tested)" or "(untested)" after a setting's title; untested ones only
+    # show when EAX_RESTORE_UNTESTED_SETTINGS lets them through.
+    _untested_suffix() { printf ' %s' "$(verified_tag "${fix_untested[$1]:-}")"; return 0; }
     # Prints one fix: title, reason, and each row's current → new value.
     _print_fix() {
         echo -e "\n  ${BOLD}${fix_title[$1]}${NC}$(_untested_suffix "$1")"
@@ -1199,7 +1243,7 @@ game_settings_step() {
         local -a offered=() offered_titles=() initial=() bodies=() unoffered=()
         for id in "${optional[@]}"; do
             if [ "${fix_status[$id]}" == "offer" ]; then
-                offered+=("$id"); offered_titles+=("${fix_title[$id]}${fix_untested[$id]:+ $(untested_tag plain)}"); initial+=(0)
+                offered+=("$id"); offered_titles+=("${fix_title[$id]} $(verified_tag plain "${fix_untested[$id]:-}")"); initial+=(0)
                 bodies+=("$(_fix_body "$id")")
             elif [ "${fix_status[$id]}" == "applied" ]; then
                 offered+=("$id"); offered_titles+=("${fix_title[$id]} (Active)"); initial+=(1)

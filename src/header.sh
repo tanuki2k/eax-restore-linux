@@ -125,9 +125,9 @@
 #   behind its own tested / untested filter.
 #
 # * EAX_RESTORE_UNTESTED_SETTINGS=1  Offers the game settings (audio and
-#   optional) nobody has checked on a real install yet. Without it they're
-#   left out; with it they're tagged "(untested)". The profile browser always
-#   shows them.
+#   optional) and alsoft.ini values nobody has checked on a real install yet.
+#   Without it they're left out; with it they're tagged "(untested)" (checked
+#   ones show "(tested)"). The profile browser always shows them.
 #
 # --- License ---
 # MIT License

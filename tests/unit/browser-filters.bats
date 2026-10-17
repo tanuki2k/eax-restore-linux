@@ -65,7 +65,7 @@ listed() { browse_game_stores "$STATE" | cut -f1 | paste -sd,; }
     echo "all all profile 0 match side side untested" > "$STATE"
     NC="" CYAN="" BOLD="" GREEN="" BROWSE_SIDE_PERCENT=50
     run browse_filter_header "$STATE" list
-    [[ "$output" == *"Ctrl-T Show  Untested"* ]]
+    [[ "$output" == *"Ctrl-T Verified"*"Untested"* ]]
 }
 
 # ensure_game_database leaves the untested games out unless EAX_RESTORE_UNTESTED is set;
