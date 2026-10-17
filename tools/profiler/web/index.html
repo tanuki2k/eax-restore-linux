@@ -4,12 +4,10 @@
 <body>
 <header class="top">
   <div class="brand"><span class="logo">EAX</span> Game profiles</div>
+  <span id="version" class="chip-s" hidden data-tip="The editor's version, and the checkout it's running from"></span>
   <span class="sp"></span>
   <span id="aistate" class="chip-s" role="button" tabindex="0"></span>
-  <button id="cleanupbtn" class="btn ghost" data-tip="Remove what the script installed, or delete a game's Wine prefix, so you can test from scratch">Clean up…</button>
-  <button id="jsontoggle" class="btn ghost" data-tip="Show or hide the live JSON and the list of problems">{ } JSON</button>
   <button id="quitbtn" class="btn ghost" data-tip="Stop the editor. Use this when you started it from the app menu and there is no terminal to close.">Quit</button>
-  <button id="rebuild" class="btn ghost" data-tip="Regenerate game-database.json from the per-game files">Rebuild database</button>
 </header>
 <div id="updatebar" class="updatebar" hidden></div>
 <div id="layout">
@@ -17,8 +15,10 @@
     <input id="filter" class="search" placeholder="Search games…" autocomplete="off">
     <div class="side-actions">
       <button id="addinstalled" class="btn primary wide" data-tip="Add a game: pick one installed in Steam or Heroic that has no profile yet, or add one by name">+ Add game</button>
+      <button id="cleanupbtn" class="btn wide" data-tip="Remove what the script installed, or delete a game's Wine prefix, so you can test from scratch">Manage installs…</button>
     </div>
     <div id="list"></div>
+    <div class="side-foot"><button id="rebuild" class="btn wide" data-tip="Regenerate game-database.json from the per-game files">Rebuild database</button></div>
   </aside>
   <main id="main">
     <div id="empty" class="empty">

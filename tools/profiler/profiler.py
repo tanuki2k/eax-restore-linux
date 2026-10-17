@@ -438,6 +438,8 @@ class H(BaseHTTPRequestHandler):
                 global LAST_PING
                 LAST_PING = time.time()
                 return self.reply({"ok": True})
+            if method == "GET" and p == "/api/version":
+                return self.reply(update.version())
             if method == "GET" and p == "/api/update":
                 return self.reply(update.state())
             if method == "POST" and p == "/api/update":

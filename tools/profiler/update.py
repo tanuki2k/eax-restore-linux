@@ -2,6 +2,7 @@
 import os, subprocess, threading
 
 import dbio
+from version import PROFILER_MAJOR
 
 STATE = {"behind": 0, "subjects": [], "can_update": False, "reason": ""}
 _lock = threading.Lock()
@@ -30,6 +31,21 @@ def check():
     with _lock:
         STATE.update(behind=behind, subjects=subjects, can_update=ahead == 0,
                      reason="" if ahead == 0 else "This checkout has commits of its own that aren't upstream, so it can't be fast-forwarded. Run git pull yourself.")
+
+
+def version():
+    """The editor's version (major.commits that touched tools/profiler) and the checkout it runs from:
+    branch, short commit, and whether it has uncommitted changes. Empty strings outside a git checkout."""
+    try:
+        branch = _git("branch", "--show-current").stdout.strip() or "detached"
+        commit = _git("rev-parse", "--short", "HEAD").stdout.strip()
+        dirty = bool(_git("status", "--porcelain").stdout.strip())
+        count = _git("rev-list", "--count", "HEAD", "--", "tools/profiler").stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        branch = commit = count = ""
+        dirty = False
+    return {"version": f"{PROFILER_MAJOR}.{count}" if count.isdigit() else PROFILER_MAJOR,
+            "branch": branch, "commit": commit, "dirty": dirty}
 
 
 def state():

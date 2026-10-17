@@ -57,6 +57,10 @@ input:disabled{background:var(--surface2);color:var(--mut)}
 input[type=checkbox]{width:16px;height:16px;min-height:0;padding:0;accent-color:var(--acc)}
 .search{margin-bottom:10px}
 .side-actions{display:grid;gap:6px;margin-bottom:12px}
+.side-foot{position:sticky;bottom:-12px;margin:12px -12px -12px;padding:10px 12px;background:var(--surface);border-top:1px solid var(--line)}
+#snav .jsonbtn{margin:0 0 6px 4px;white-space:nowrap}
+#snav .jsonbtn.on{background:var(--acc-weak);border-color:var(--acc)}
+#snav .jsonbtn .nb{margin-left:6px}
 select{padding-right:26px}
 
 /* ---- sidebar list */

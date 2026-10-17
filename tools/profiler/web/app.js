@@ -384,7 +384,8 @@ function drawNav() {
   nav.replaceChildren(...SECTIONS.map(([id, label]) => {
     const n = id === "capture" ? 0 : ERRS.filter((e) => sectionOfPath(e.split(": ")[0]) === id).length;
     return el("button", { type: "button", class: id === SECTION ? "on" : "", onclick: () => setSection(id) }, label, n ? el("span", { class: "nb", title: `${n} problem${n === 1 ? "" : "s"} in this section` }, n) : null);
-  }), el("span", { class: "sp" }), GACTIONS);
+  }), el("span", { class: "sp" }), GACTIONS,
+    el("button", { type: "button", id: "jsontoggle", class: "btn ghost jsonbtn" + (getComputedStyle($("#rail")).display === "none" ? "" : " on"), title: "Show or hide the live JSON and the list of problems", onclick: toggleRail }, "{ } JSON", ERRS.length ? el("span", { class: "nb" }, String(ERRS.length)) : null));
 }
 function setSection(id) { SECTION = id; drawNav(); renderPane(); $("#main").scrollTop = 0; }
 function showTab(t) { if (t === "capture") setSection("capture"); else if (SECTION === "capture") setSection("overview"); }
@@ -614,7 +615,7 @@ async function aiSettings() {
 }
 $("#rebuild").onclick = async () => { const r = await api("/api/rebuild", "POST"); toast(r.ok ? "game-database.json rebuilt ✓" : r.message, 8000); await loadList(); };
 $("#cleanupbtn").onclick = () => openCleanup(GAME);
-$("#jsontoggle").onclick = () => { const l = $("#layout"); const hidden = getComputedStyle($("#rail")).display === "none"; l.classList.toggle("norail", !hidden); l.classList.toggle("rail-on", hidden); if (hidden) $("#rail").style.display = "block"; else $("#rail").style.display = ""; };
+function toggleRail() { const l = $("#layout"); const hidden = getComputedStyle($("#rail")).display === "none"; l.classList.toggle("norail", !hidden); l.classList.toggle("rail-on", hidden); if (hidden) $("#rail").style.display = "block"; else $("#rail").style.display = ""; drawNav(); }
 document.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); saveClicked(); } });
 window.addEventListener("beforeunload", (e) => { if (DIRTY) { e.preventDefault(); e.returnValue = ""; } });
 
@@ -627,7 +628,7 @@ async function openCleanup(game) {
   const search = el("input", { placeholder: "Search…" });
   const sel = el("select", {}, [["installs", "Installed or left behind by the script"], ["all", "Everything, including prefixes only"]].map(([v, t]) => el("option", { value: v }, t)));
   const list = el("div", { class: "list" }), note = el("div", { class: "muted", style: "min-height:20px" });
-  const dlg = dialog(el("h3", {}, "Clean up"), el("p", { class: "muted", style: "margin:0" }, "Remove what the script installed, or delete a game's Wine prefix, so you can test from scratch. Nothing is changed until you confirm."),
+  const dlg = dialog(el("h3", {}, "Manage installs"), el("p", { class: "muted", style: "margin:0" }, "Remove what the script installed, or delete a game's Wine prefix, so you can test from scratch. Nothing is changed until you confirm."),
     el("div", { class: "ctools" }, search, sel), list, note, el("div", { class: "btns" }, el("button", { type: "button", onclick: () => dlg.close() }, "Close")));
   dlg.classList.add("wide");
   const draw = () => {
@@ -978,6 +979,14 @@ $("#quitbtn").onclick = async () => {
   document.body.replaceChildren(el("div", { class: "empty" }, el("h2", {}, "The editor has stopped."), el("p", {}, "You can close this tab. Start it again from the app menu or with tools/profiler/eax-profiler.")));
 };
 
+// The checkout the editor runs from, in the header next to the brand.
+async function showVersion() {
+  const v = await api("/api/version").catch(() => null), chip = $("#version");
+  // An editor started before this existed has no such route; say so rather than show nothing.
+  chip.textContent = v ? `v${v.version}${v.commit ? ` · ${v.branch} ${v.commit}${v.dirty ? " · modified" : ""}` : ""}` : "version unknown — restart the editor";
+  chip.dataset.tip = v ? "The editor's version, and the checkout it's running from" : "This editor was started before it could report its version. Quit and open it again.";
+  chip.hidden = false;
+}
 // A newer version upstream: the server fetched it at start-up; Update fast-forwards the checkout.
 async function showUpdateBar() {
   const u = await api("/api/update").catch(() => null), bar = $("#updatebar");
@@ -998,7 +1007,7 @@ async function showUpdateBar() {
 window.addEventListener("error", (e) => toast("JS error: " + e.message, 20000));
 window.addEventListener("unhandledrejection", (e) => toast("Error: " + (e.reason && e.reason.message || e.reason), 20000));
 (async () => {
-  SCHEMA = await api("/api/schema"); await loadList(); showErrors([]); showUpdateBar();
+  SCHEMA = await api("/api/schema"); await loadList(); showErrors([]); showVersion(); showUpdateBar();
   const q = new URLSearchParams(location.search), o = q.get("open");
   if (o) await openGame(...o.split("/"));
   if (q.get("section")) setSection(q.get("section"));
