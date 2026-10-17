@@ -42,7 +42,7 @@ Sessions are kept in `~/.local/state/eax-restore-linux/profiler/<store>-<id>/`.
 
 On start the editor fetches its checkout's upstream branch in the background; when it is behind, a banner offers **Update**, which runs `git pull --ff-only` and rebuilds `dist/`, then asks you to restart the editor. A checkout with commits of its own, no upstream or no network gets no offer. `EAX_PROFILER_NO_UPDATE_CHECK=1` turns the check off.
 
-The editor has its own version number, shown next to the title with the branch and commit it runs from: `PROFILER_MAJOR` in `version.py`, then the number of commits that touched `tools/profiler` (counted from git, so there is nothing to bump; change the major only for a rewrite).
+The header shows a build number: how many commits have touched `tools/profiler`, counted from git, so there is nothing to bump. It sits next to the title with the branch and commit the editor runs from.
 
 Layout: `capture.py` (library, snapshots, diffs), `classify.py` (noise flags, the drafted `game_config`, the AI passes), `cleanup.py`, `dbio.py`, `ai.py`, `profiler.py` (server). Tests: `python3 -I -m unittest discover -s tools/profiler/tests` (includes golden checks that F.E.A.R.'s `gadb` and Descent 3's registry changes come out as their database entries say); `tests/integration/profiler-answers.bats` fails if the script's prompts drift from the canned answers in `capture.py`.
 

@@ -64,14 +64,14 @@ class UpdateTest(unittest.TestCase):
         update.check()
         self.assertEqual(update.state()["behind"], 0)
 
-    def test_version_counts_the_commits_that_touched_the_editor(self):
-        self.assertEqual(update.version()["version"], "0.0")  # the origin's commit is outside tools/profiler
+    def test_build_counts_the_commits_that_touched_the_editor(self):
+        self.assertEqual(update.version()["build"], "0")  # the origin's commit is outside tools/profiler
         os.makedirs(os.path.join(self.clone, "tools", "profiler"))
         git(self.clone, "add", "build.sh")  # setUp's stub is untracked
         git(self.clone, "commit", "-m", "add build.sh")
-        self.assertEqual(update.version()["version"], "0.0")
+        self.assertEqual(update.version()["build"], "0")
         commit(self.clone, os.path.join("tools", "profiler", "x.py"))
-        self.assertEqual(update.version()["version"], "0.1")
+        self.assertEqual(update.version()["build"], "1")
 
     def test_version_names_the_branch_and_commit_and_flags_changes(self):
         git(self.clone, "add", "build.sh")  # setUp's stub is untracked

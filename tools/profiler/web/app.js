@@ -983,9 +983,9 @@ $("#quitbtn").onclick = async () => {
 async function showVersion() {
   const v = await api("/api/version").catch(() => null), chip = $("#version");
   // An editor started before this existed has no such route; say so rather than show nothing.
-  chip.textContent = v ? `v${v.version}${v.commit ? ` · ${v.branch} ${v.commit}${v.dirty ? " · modified" : ""}` : ""}` : "version unknown — restart the editor";
-  chip.dataset.tip = v ? "The editor's version, and the checkout it's running from" : "This editor was started before it could report its version. Quit and open it again.";
-  chip.hidden = false;
+  chip.textContent = v ? [v.build && `Build ${v.build}`, v.commit && `${v.branch} ${v.commit}`, v.dirty && "modified"].filter(Boolean).join(" · ") : "build unknown — restart the editor";
+  chip.dataset.tip = v ? "The editor's build number (editor commits so far), and the checkout it's running from" : "This editor was started before it could report its build. Quit and open it again.";
+  chip.hidden = !chip.textContent;
 }
 // A newer version upstream: the server fetched it at start-up; Update fast-forwards the checkout.
 async function showUpdateBar() {

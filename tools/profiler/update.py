@@ -2,7 +2,6 @@
 import os, subprocess, threading
 
 import dbio
-from version import PROFILER_MAJOR
 
 STATE = {"behind": 0, "subjects": [], "can_update": False, "reason": ""}
 _lock = threading.Lock()
@@ -34,8 +33,8 @@ def check():
 
 
 def version():
-    """The editor's version (major.commits that touched tools/profiler) and the checkout it runs from:
-    branch, short commit, and whether it has uncommitted changes. Empty strings outside a git checkout."""
+    """The editor's build number (how many commits have touched tools/profiler) and the checkout it runs
+    from: branch, short commit, and whether it has uncommitted changes. Empty strings outside a git checkout."""
     try:
         branch = _git("branch", "--show-current").stdout.strip() or "detached"
         commit = _git("rev-parse", "--short", "HEAD").stdout.strip()
@@ -44,8 +43,7 @@ def version():
     except (OSError, subprocess.SubprocessError):
         branch = commit = count = ""
         dirty = False
-    return {"version": f"{PROFILER_MAJOR}.{count}" if count.isdigit() else PROFILER_MAJOR,
-            "branch": branch, "commit": commit, "dirty": dirty}
+    return {"build": count if count.isdigit() else "", "branch": branch, "commit": commit, "dirty": dirty}
 
 
 def state():
