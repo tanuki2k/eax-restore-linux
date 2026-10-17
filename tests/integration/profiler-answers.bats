@@ -1,21 +1,28 @@
 #!/usr/bin/env bats
-# tools/profiler runs the built script from a canned answers file; this fails
-# when a new prompt makes those answers drift from the ones the tests use.
+# tools/profiler runs the built script from a canned answers file; these run those answers
+# for real, so a new prompt that makes them drift fails here.
 
 load env
 
-@test "the profiler's Steam install answers match install_answers" {
-    make_world
-    OVERRIDE_CHOICE=2 install_answers "$BATS_TEST_TMPDIR/want"
-    python3 "$REPO_ROOT/tools/profiler/capture.py" --print-answers steam "$GAME" > "$BATS_TEST_TMPDIR/got"
-    diff "$BATS_TEST_TMPDIR/want" "$BATS_TEST_TMPDIR/got"
+# The profiler runs the script with EAX_RESTORE_DSOAL_PIN=1, which skips the main menu, so its
+# answers differ from install_answers in where the first ones land. Run them for real.
+profiler_install() {
+    python3 "$REPO_ROOT/tools/profiler/capture.py" --print-answers "$1" "$GAME" > "$BATS_TEST_TMPDIR/in"
+    EAX_RESTORE_DSOAL_PIN=1 run_script "$BATS_TEST_TMPDIR/in"
+    grep -q "INSTALLATION COMPLETE" "$OUT" || { tail -30 "$OUT"; false; }
 }
 
-@test "the profiler's Heroic install answers match heroic_install_answers" {
+@test "the profiler's Steam install answers install the game" {
     make_world
-    heroic_install_answers "$BATS_TEST_TMPDIR/want"
-    python3 "$REPO_ROOT/tools/profiler/capture.py" --print-answers gog "$GAME" > "$BATS_TEST_TMPDIR/got"
-    diff "$BATS_TEST_TMPDIR/want" "$BATS_TEST_TMPDIR/got"
+    profiler_install steam
+    [ -f "$GAME/.eax-restore-manifest.txt" ]
+    grep -q '^REGISTRY:OVERRIDE:dsound' "$GAME/.eax-restore-manifest.txt"
+}
+
+@test "the profiler's Heroic install answers install the game" {
+    make_world
+    profiler_install gog
+    [ -f "$GAME/.eax-restore-manifest.txt" ]
 }
 
 # The profiler's "Remove install" runs the script's uninstall unattended, choosing the game by

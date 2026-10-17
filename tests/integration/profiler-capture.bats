@@ -25,7 +25,8 @@ profile = {"name": "Test Game", "exe": "game.exe", "api": api, "versions": ["2.0
 open(db, "w").write(capture.profile_db(game, profile))
 open(answers, "w").write("\n".join(capture.install_answers(capture.find_exe_dir(root, "game.exe"), "steam")) + "\n")
 PY
-    run_script "$BATS_TEST_TMPDIR/in"
+    # As the profiler runs it: DSOAL_PIN skips the main menu.
+    EAX_RESTORE_DSOAL_PIN=1 run_script "$BATS_TEST_TMPDIR/in"
     grep -q "INSTALLATION COMPLETE" "$OUT" || { tail -40 "$OUT"; false; }
 }
 
