@@ -58,3 +58,14 @@ setup() { load_script_functions; F="$BATS_TEST_TMPDIR/file"; }
     [ "$status" -eq 1 ]
     [ ! -e "$F.tmp" ]
 }
+
+@test "print_final_step: wraps a long line under its label, short ones stay on one line" {
+    NC="" YELLOW="" BOLD="" WHITE=""
+    run print_final_step 1 "Launch the game:" "The DLL Override is set in Heroic's environment variables for Brothers in Arms - Road to Hill 30, so just hit Play."
+    [ "$(wc -l <<< "$output")" -eq 2 ]
+    while IFS= read -r l; do [ ${#l} -le 76 ]; done <<< "$output"
+    [[ "$(head -1 <<< "$output")" == " 1. Launch the game: The DLL Override"* ]]
+    [[ "$(tail -1 <<< "$output")" == "    "[a-z]* ]]
+    run print_final_step 2 "Launch the game:" "Start the game as you normally would."
+    [ "$output" == " 2. Launch the game: Start the game as you normally would." ]
+}

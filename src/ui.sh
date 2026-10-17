@@ -392,6 +392,19 @@ print_wrapped() {
     echo -e "${WHITE}$(tilde_path "$1" | fold -s -w "${WRAP_COLUMNS:-76}" | sed 's/^/  /')${NC}"
 }
 
+# Usage: print_final_step <number> "Label:" "text"
+# One numbered line of "Final Steps to activate EAX": ` 1. Label: text`, with
+# the label in bold yellow and the text wrapped at WRAP_COLUMNS, continuation
+# lines lined up under the label.
+print_final_step() {
+    local num="$1" label="$2" text lines first rest
+    text="$(tilde_path "$3")"
+    mapfile -t lines < <(printf '%s %s\n' "$label" "$text" | fold -s -w $(( ${WRAP_COLUMNS:-76} - 4 )))
+    first="${lines[0]#"$label"}"
+    echo -e " ${num}. ${YELLOW}${BOLD}${label}${NC}${WHITE}${first}${NC}"
+    for rest in "${lines[@]:1}"; do echo -e "    ${WHITE}${rest}${NC}"; done
+}
+
 # Usage: read_answer VAR
 # Drop-in for `read -r VAR` at a user prompt that also puts the answer in
 # the run log. The terminal echoes typed keys straight to the screen, so

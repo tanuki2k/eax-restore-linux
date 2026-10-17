@@ -62,6 +62,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         MANIFEST_FOUND=1
         print_task "Reading the install manifest"
         print_detected "Found" "$INSTALL_MANIFEST"
+        declare -A manifest_seen=()
         while IFS= read -r manifest_entry; do
             [ -z "$manifest_entry" ] && continue
             case "$manifest_entry" in
@@ -86,14 +87,25 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
                 # environment variables — reverted in step 5.
                 LAUNCHER:*) LAUNCHER_LINES+=("$manifest_entry"); continue ;;
             esac
+            # Only files the install itself puts down, by absolute path: a
+            # manifest sits in a folder anyone can write to, and whatever it
+            # lists gets deleted.
+            manifest_entry="${manifest_entry%$'\r'}"
+            if [[ "$manifest_entry" != /* || "/$manifest_entry/" == *"/../"* ]] \
+                || ! manifest_file_is_ours "$manifest_entry"; then
+                print_warning_arrow "Skipped a manifest line that isn't one of this script's files: ${manifest_entry}"
+                continue
+            fi
+            [ -n "${manifest_seen[$manifest_entry]:-}" ] && continue
+            manifest_seen["$manifest_entry"]=1
             { [ -e "$manifest_entry" ] || [ -L "$manifest_entry" ]; } && FILES_TO_REMOVE+=("$manifest_entry")
         done < "$INSTALL_MANIFEST"
     else
         print_task "Scanning for EAX files"
         print_status "No install manifest found (an older version of the script, or it was deleted), so looking for known DSOAL/OpenAL file names." ""
-        print_warning_arrow "This can also pick up files that were already there before the script ran."
+        print_status "Only files that match what this script installs are listed; a game's own copies are left alone." ""
 
-        TARGET_FILES=("dsound.dll" "dsoal-aldrv.dll" "dsound.vxd" "OpenAL32.dll" "eax.dll" "eaxunified.dll" "alsoft.ini")
+        TARGET_FILES=("dsound.dll" "dsoal-aldrv.dll" "OpenAL32.dll" "eax.dll" "eaxunified.dll" "alsoft.ini")
 
         # Check the game folder, plus any extra exe folders the game profile
         # entry lists (GOG's F.E.A.R. Platinum expansions), which an install
@@ -105,17 +117,15 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         fi
         for scan_dir in "$GAME_DIR" "${EXTRA_GAME_DIRS[@]}"; do
             for file in "${TARGET_FILES[@]}"; do
-                [ -e "$scan_dir/$file" ] && FILES_TO_REMOVE+=("$scan_dir/$file")
-                [ -L "$scan_dir/$file" ] && FILES_TO_REMOVE+=("$scan_dir/$file")
+                looks_like_our_file "$scan_dir/$file" && FILES_TO_REMOVE+=("$scan_dir/$file")
             done
-            [ -d "$scan_dir/OpenAL" ] && FILES_TO_REMOVE+=("$scan_dir/OpenAL")
         done
 
         # Check prefix system folders
         if [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows" ]; then
             for file in "dsound.dll" "dsoal-aldrv.dll" "OpenAL32.dll"; do
-                [ -f "$PREFIX_PATH/drive_c/windows/syswow64/$file" ] && FILES_TO_REMOVE+=("$PREFIX_PATH/drive_c/windows/syswow64/$file")
-                [ -f "$PREFIX_PATH/drive_c/windows/system32/$file" ] && FILES_TO_REMOVE+=("$PREFIX_PATH/drive_c/windows/system32/$file")
+                looks_like_our_file "$PREFIX_PATH/drive_c/windows/syswow64/$file" && FILES_TO_REMOVE+=("$PREFIX_PATH/drive_c/windows/syswow64/$file")
+                looks_like_our_file "$PREFIX_PATH/drive_c/windows/system32/$file" && FILES_TO_REMOVE+=("$PREFIX_PATH/drive_c/windows/system32/$file")
             done
         fi
     fi
@@ -132,7 +142,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
 
     # What was found, one line each — the steps below act on it.
     bak_count=0
-    for f in "${FILES_TO_REMOVE[@]}"; do compgen -G "$f.bak*" >/dev/null && bak_count=$((bak_count + 1)); done
+    for f in "${FILES_TO_REMOVE[@]}"; do oldest_backup "$f" >/dev/null && bak_count=$((bak_count + 1)); done
     if [ ${#FILES_TO_REMOVE[@]} -eq 0 ]; then
         if [ "$MANIFEST_FOUND" -eq 1 ]; then print_status "Game files: none left to remove" ""
         else print_status "Game files: none found" ""; fi
@@ -187,11 +197,11 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         RESTORE_SOURCES=()
         for f in "${FILES_TO_REMOVE[@]}"; do
             # The OLDEST backup, not the newest: if a reinstall ever created
-            # a redundant backup of our own previous output (fixed above,
-            # but older installs from before that fix may have left these
-            # behind), the earliest one is the one most likely to actually
-            # be the genuine original.
-            OLDEST_BAK=$(ls -tr "$f".bak* 2>/dev/null | head -n 1)
+            # a redundant backup of our own previous output (cache.sh no
+            # longer does, but older installs may have left these behind),
+            # the earliest one is the one most likely to actually be the
+            # genuine original.
+            OLDEST_BAK=$(oldest_backup "$f")
             if [ -n "$OLDEST_BAK" ]; then
                 RESTORE_TARGETS+=("$f")
                 RESTORE_SOURCES+=("$OLDEST_BAK")
@@ -370,30 +380,23 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
 
     if [ ${#FINAL_REMOVE[@]} -gt 0 ]; then
         print_phase_task "Removing game files"
-        for f in "${FINAL_REMOVE[@]}"; do rm -rf "$f"; done
+        for f in "${FINAL_REMOVE[@]}"; do rm -f "$f"; done
         for i in "${!FINAL_RESTORE_TARGETS[@]}"; do
-            mv "${FINAL_RESTORE_SOURCES[$i]}" "${FINAL_RESTORE_TARGETS[$i]}" \
-                && print_status "Restored original $(basename "${FINAL_RESTORE_TARGETS[$i]}") in $(dirname "${FINAL_RESTORE_TARGETS[$i]}")"
-            # Any other .bak* files still sitting around for this
-            # same target are leftover junk — most likely backups
-            # of our own prior output from before reinstalls were
-            # handled correctly, not additional genuine originals —
-            # so there's nothing left worth keeping them for.
-            rm -f "${FINAL_RESTORE_TARGETS[$i]}".bak* 2>/dev/null
+            if mv "${FINAL_RESTORE_SOURCES[$i]}" "${FINAL_RESTORE_TARGETS[$i]}"; then
+                print_status "Restored original $(basename "${FINAL_RESTORE_TARGETS[$i]}") in $(dirname "${FINAL_RESTORE_TARGETS[$i]}")"
+                # Any other timestamped backups of this target are leftover
+                # junk — most likely backups of our own prior output from
+                # before reinstalls were handled correctly, not additional
+                # genuine originals — so there's nothing left worth keeping
+                # them for. Only after the original is back: a failed
+                # restore must not cost the player their backups.
+                rm -f "${FINAL_RESTORE_TARGETS[$i]}".bak.[0-9]*_[0-9]* 2>/dev/null
+            else
+                print_warning_arrow "Couldn't put back $(basename "${FINAL_RESTORE_TARGETS[$i]}"), so its backup was kept at $(tilde_path "${FINAL_RESTORE_SOURCES[$i]}")."
+            fi
         done
+        manifest_forget_paths "${FINAL_REMOVE[@]}"
         print_status "Selected files removed successfully." "$GREEN"
-    fi
-
-    if [ "$FILES_DECLINED" == "0" ]; then
-        # Leave a sentinel behind rather than deleting the manifest outright.
-        # If uninstall gets run again on this same game later, this lets the
-        # script recognize "already cleaned up, nothing to do" and exit safely
-        # instead of falling back to a filename-based guess — which could
-        # otherwise mistake a just-restored original dsound.dll for one of
-        # ours and delete it a second time. Skipped entirely if the user
-        # declined removal in step 4, since the original manifest still
-        # describes files that are genuinely still there.
-        echo "# EAX Restore: uninstalled on $(date -u +"%Y-%m-%dT%H:%M:%SZ"). Nothing left to remove." > "$INSTALL_MANIFEST"
     fi
 
     LAUNCHER_LINES_KEPT=()
@@ -402,6 +405,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         revert_launcher_overrides
     fi
 
+    REG_CLEANED="n"
     if [[ "$REMOVE_REG" =~ $YES_RE ]]; then
         print_phase_task "Cleaning registry"
         reg_dll=""
@@ -411,6 +415,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
             reg_dll="${REG_OVERRIDE_DLL:-both}"
         fi
         if remove_prefix_registry "$REG_HAS_COM" "$reg_dll"; then
+            REG_CLEANED="y"
             print_status "Registry keys safely removed." "$GREEN"
         else
             print_warning_arrow "The registry keys couldn't be removed from the Wine prefix. The run log has the full output."
@@ -436,20 +441,38 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         revert_game_settings
     fi
 
-    # Settings the player chose to keep stay in the manifest, so a later
-    # uninstall can still put them back. If the files step already replaced
-    # the manifest with the "uninstalled" marker, the kept lines replace the
-    # marker instead — that marker makes a later run stop before reaching
-    # step 7. The same goes for launcher overrides left in place.
+    # Last of all, so an uninstall that stops part way (Ctrl-C, a failed
+    # registry cleanup) still has the manifest to go on. What was done is
+    # dropped from it: the files removed or restored, the registry keys once
+    # they're gone, the VC++ and companion records once nothing is left to
+    # undo. Settings the player chose to keep, and launcher overrides left in
+    # place, stay in it so a later uninstall can still put them back.
     kept_lines=("${GAME_SETTINGS_KEPT[@]}" "${LAUNCHER_LINES_KEPT[@]}")
-    if { [ ${#CONFIG_LINES[@]} -gt 0 ] || [ ${#LAUNCHER_LINES[@]} -gt 0 ]; } && [ -f "$INSTALL_MANIFEST" ]; then
-        if manifest_is_uninstalled "$INSTALL_MANIFEST"; then
-            if [ ${#kept_lines[@]} -gt 0 ]; then
-                start_manifest "$INSTALL_MANIFEST"
-                printf '%s\n' "${kept_lines[@]}" >> "$INSTALL_MANIFEST"
-            fi
+    if [ -f "$INSTALL_MANIFEST" ] && ! manifest_is_uninstalled "$INSTALL_MANIFEST"; then
+        # "core" lines are what still needs undoing: files, and registry keys
+        # that weren't cleaned. The VC++ and companion records only matter
+        # while one of those is left.
+        core_left=(); extra_left=()
+        while IFS= read -r line; do
+            case "$line" in
+                \#*|"") ;;
+                CONFIG:*|LAUNCHER:*) ;;
+                REGISTRY:*$'\t'*|VCRUN$'\t'*) extra_left+=("$line") ;;
+                REGISTRY:*) [ "$REG_CLEANED" == "y" ] || core_left+=("$line") ;;
+                VCRUN) [ "$UNINSTALL_VCRUN" == "y" ] || extra_left+=("$line") ;;
+                *) core_left+=("$line") ;;
+            esac
+        done < "$INSTALL_MANIFEST"
+        local_left=("${core_left[@]}")
+        [ ${#core_left[@]} -gt 0 ] && local_left+=("${extra_left[@]}")
+        if [ ${#local_left[@]} -eq 0 ] && [ ${#kept_lines[@]} -eq 0 ]; then
+            # A marker rather than deleting the manifest: a later uninstall
+            # of this game then sees "already cleaned up, nothing to do"
+            # instead of falling back to a filename-based guess.
+            echo "# EAX Restore: uninstalled on $(date -u +"%Y-%m-%dT%H:%M:%SZ"). Nothing left to remove." > "$INSTALL_MANIFEST"
         else
-            { grep -v '^CONFIG:\|^LAUNCHER:' "$INSTALL_MANIFEST"
+            { printf '%s\n' "$MANIFEST_HEADER"
+              [ ${#local_left[@]} -gt 0 ] && printf '%s\n' "${local_left[@]}"
               [ ${#kept_lines[@]} -gt 0 ] && printf '%s\n' "${kept_lines[@]}"
               true
             } > "$INSTALL_MANIFEST.tmp" && mv -f "$INSTALL_MANIFEST.tmp" "$INSTALL_MANIFEST"

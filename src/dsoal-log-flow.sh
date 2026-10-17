@@ -8,7 +8,8 @@
 # and the API calls, 4 (Debug) adds every EAX property call, which is what
 # shows which EAX version a game actually uses. Changes nothing else, and
 # isn't recorded in the install manifest: running this again turns it off,
-# and uninstall drops the variables along with the DLL override.
+# and uninstall drops the variables along with the DLL override when that was
+# set through the launcher (it has no launcher record otherwise).
 if [ -n "$DSOAL_LOG_MODE" ]; then
     print_banner "DSOAL LOGGING"
     tool_gate "This turns DSOAL's own log on or off for one game. It records what the game asks" \
@@ -161,7 +162,9 @@ if [ -n "$DSOAL_LOG_MODE" ]; then
         print_banner "DSOAL LOGGING TURNED OFF"
         if [ -f "$dsoal_log_linux" ]; then
             print_status "The last log is still at $(tilde_path "$dsoal_log_linux")."
-            if confirm "Delete it?" N; then
+            # Only a log inside the game folder is offered for deletion: the
+            # path comes from launcher settings the player may have edited.
+            if [[ "$dsoal_log_linux" == "$GAME_DIR"/* && "$dsoal_log_linux" != *"/../"* ]] && confirm "Delete it?" N; then
                 rm -f "$dsoal_log_linux" && print_status "Deleted." "$GREEN"
             fi
         fi

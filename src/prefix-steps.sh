@@ -44,7 +44,7 @@ resolve_companion_apps() {
     COMPANION_IDS=(); COMPANION_NAMES=(); COMPANION_PREFIXES=()
     [ "$LAUNCHER_TYPE" == "1" ] && [ -n "$1" ] || return 0
     ensure_game_database || return 0
-    local lib="${GAME_DIR%/common/*}" id acf name prefix
+    local lib="${GAME_DIR%%/steamapps/common/*}/steamapps" id acf name prefix
     local -a ids
     # Read first: the confirm below must read the player's answer, not jq's
     # output, which a "while read ... < <(jq)" loop would hand it.
@@ -94,7 +94,7 @@ companion_name_for_id() {
     for i in "${!COMPANION_IDS[@]}"; do
         [ "${COMPANION_IDS[$i]}" == "$1" ] && { echo "${COMPANION_NAMES[$i]}"; return; }
     done
-    name="$(steam_acf_name "${GAME_DIR%/common/*}/appmanifest_$1.acf")"
+    name="$(steam_acf_name "${GAME_DIR%%/steamapps/common/*}/steamapps/appmanifest_$1.acf")"
     echo "${name:-AppID $1}"
 }
 

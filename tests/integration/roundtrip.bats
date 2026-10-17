@@ -91,3 +91,36 @@ setup() {
     grep -q "INSTALLATION COMPLETE" "$OUT" || { tail -30 "$OUT"; false; }
     [ -f "$GAME/.eax-restore-manifest.txt" ]
 }
+
+@test "a partial uninstall leaves only the files it didn't touch in the manifest" {
+    install_answers "$BATS_TEST_TMPDIR/in"; run_script "$BATS_TEST_TMPDIR/in"
+    n_before=$(grep -c '^/' "$GAME/.eax-restore-manifest.txt")
+    # step 4: keep the first listed file, remove the rest
+    answers "$BATS_TEST_TMPDIR/un" u 1 "" "" "" "^1" "" "" ""
+    run_script "$BATS_TEST_TMPDIR/un"
+    grep -q "UNINSTALL COMPLETE" "$OUT" || { tail -30 "$OUT"; false; }
+    [ "$(grep -c '^/' "$GAME/.eax-restore-manifest.txt")" -eq 1 ]
+    ! grep -q "^# EAX Restore: uninstalled" "$GAME/.eax-restore-manifest.txt"
+    # every path still listed is still there, and not one that was restored
+    while IFS= read -r p; do [ -e "$p" ]; done < <(grep '^/' "$GAME/.eax-restore-manifest.txt")
+    [ "$n_before" -gt 1 ]
+}
+
+@test "uninstall skips a manifest line that isn't one of the script's files" {
+    install_answers "$BATS_TEST_TMPDIR/in"; run_script "$BATS_TEST_TMPDIR/in"
+    mkdir -p "$HOME/precious"; echo keep > "$HOME/precious/note.txt"
+    echo "$HOME/precious" >> "$GAME/.eax-restore-manifest.txt"
+    uninstall_answers "$BATS_TEST_TMPDIR/un"; run_script "$BATS_TEST_TMPDIR/un"
+    [ -f "$HOME/precious/note.txt" ]
+    grep -q "Skipped a manifest line" "$OUT"
+}
+
+@test "a reinstall keeps the registry record of the last install" {
+    OVERRIDE_CHOICE=2 install_answers "$BATS_TEST_TMPDIR/in"; run_script "$BATS_TEST_TMPDIR/in"
+    grep -q '^REGISTRY:OVERRIDE:dsound' "$GAME/.eax-restore-manifest.txt"
+    # same install again, this time with the launcher override
+    install_answers "$BATS_TEST_TMPDIR/in2"; run_script "$BATS_TEST_TMPDIR/in2"
+    grep -q 'INSTALLATION COMPLETE' "$OUT" || { tail -30 "$OUT"; false; }
+    grep -q '^REGISTRY:OVERRIDE:dsound' "$GAME/.eax-restore-manifest.txt"
+    [ "$(grep -c '^REGISTRY:OVERRIDE:dsound' "$GAME/.eax-restore-manifest.txt")" -eq 1 ]
+}

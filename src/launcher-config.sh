@@ -646,6 +646,10 @@ revert_launcher_overrides() {
         # options; Heroic's are removed below).
         current="$(launcher_override_get)"
         [ "$OVERRIDE_LAUNCHER" == "steam" ] && current="$(launch_options_without_dsoal_log "$current")"
+        if [ "$current" != "${f[4]}" ]; then
+            print_status "Kept $(launcher_override_where) as they are — they've been changed since install." "$DIM"
+            continue
+        fi
         if [ "$OVERRIDE_LAUNCHER" == "heroic" ]; then
             local var
             for var in DSOAL_LOGLEVEL DSOAL_LOGFILE; do
@@ -654,10 +658,6 @@ revert_launcher_overrides() {
                     *) heroic_set_env "$OVERRIDE_FILE" "$OVERRIDE_ID" "$var" __DELETE__ ;;
                 esac
             done
-        fi
-        if [ "$current" != "${f[4]}" ]; then
-            print_status "Kept $(launcher_override_where) as they are — they've been changed since install." "$DIM"
-            continue
         fi
         local target="${f[3]}"
         [ "$target" == "__ABSENT__" ] && target="__DELETE__"

@@ -52,7 +52,12 @@ ensure_game_database() {
             code=$(curl -fsSL --compressed --max-time 10 "${if_changed[@]}" -D "$hdr" -o "$tmp" \
                 -w '%{http_code}' "$GAME_DATABASE_URL" 2>/dev/null)
         fi
-        if [ "$code" == "200" ] && jq empty "$tmp" 2>/dev/null; then
+        # The file is plain text from the network and its strings get printed,
+        # so control characters (terminal escape sequences) are stripped from
+        # every string before it's kept; tabs and line breaks stay.
+        if [ "$code" == "200" ] \
+            && jq 'walk(if type == "string" then gsub("[\u0000-\u0008\u000b-\u001f\u007f]"; "") else . end)' "$tmp" > "$tmp.clean" 2>/dev/null \
+            && [ -s "$tmp.clean" ] && mv "$tmp.clean" "$tmp"; then
             mkdir -p "$BASE_SHARE" 2>/dev/null
             mv "$tmp" "$GAME_DATABASE_CACHE"
             etag="$(grep -i '^etag:' "$hdr" | tail -n 1 | sed 's/^[^:]*:[[:space:]]*//' | tr -d '\r')"
@@ -68,7 +73,7 @@ ensure_game_database() {
             GAME_DATABASE_FILE="$GAME_DATABASE_CACHE"
             print_status "Up to date: $(jq '.games | length' "$GAME_DATABASE_FILE" 2>/dev/null) games" "$GREEN" >&2
         else
-            rm -f "$tmp" "$hdr" 2>/dev/null
+            rm -f "$tmp" "$tmp.clean" "$hdr" 2>/dev/null
             if [ "$cache_ok" -eq 1 ]; then
                 GAME_DATABASE_FILE="$GAME_DATABASE_CACHE"
                 print_status "Couldn't reach GitHub, so the copy from $(date -r "$GAME_DATABASE_CACHE" +%F) is used." "$YELLOW" >&2

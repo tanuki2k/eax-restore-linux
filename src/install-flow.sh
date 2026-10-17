@@ -107,9 +107,16 @@
     # launcher step finds it "already set" and keeps the line, so uninstall
     # can still put back what was there before the first install.
     PREV_LAUNCHER_LINES=()
+    # Its registry, VC++ and companion records, and its files, are carried over
+    # too (below): a reinstall that chooses differently (another engine or
+    # override method) doesn't undo what the last one put down, so uninstall
+    # still has to know about it.
+    PREV_STATE_LINES=()
+    PREV_FILE_LINES=()
     if [ -s "$INSTALL_MANIFEST" ]; then
         while IFS= read -r line; do
-            [[ "$line" == /* ]] && PREV_MANIFEST_FILES["$line"]=1
+            [[ "$line" == /* ]] && { PREV_MANIFEST_FILES["$line"]=1; PREV_FILE_LINES+=("$line"); }
+            [[ "$line" == REGISTRY:* || "$line" == VCRUN || "$line" == VCRUN$'\t'* ]] && PREV_STATE_LINES+=("$line")
             [[ "$line" == CONFIG:* ]] && PREV_CONFIG_LINES+=("$line")
             [[ "$line" == LAUNCHER:* ]] && PREV_LAUNCHER_LINES+=("$line")
         done < "$INSTALL_MANIFEST"
@@ -118,6 +125,7 @@
     DEPLOY_FAILURES=0
 
     start_manifest "$INSTALL_MANIFEST"
+    [ ${#PREV_STATE_LINES[@]} -gt 0 ] && printf '%s\n' "${PREV_STATE_LINES[@]}" >> "$INSTALL_MANIFEST"
     [ "$VCRUN_INSTALLED_THIS_RUN" == "1" ] && echo "VCRUN" >> "$INSTALL_MANIFEST"
 
     print_phase_task "Deploying files to local game folder"
@@ -401,6 +409,15 @@ EOF
     # variables. Drops back to manual instructions if it can't be written.
     apply_launcher_override
 
+    # Files from the last install that this one didn't write again (another
+    # engine, say) are still ours and still in the folder, so they stay in the
+    # manifest. A file that now holds something else is left out.
+    for line in "${PREV_FILE_LINES[@]}"; do
+        grep -qxF -- "$line" "$INSTALL_MANIFEST" && continue
+        manifest_file_is_ours "$line" && looks_like_our_file "$line" && echo "$line" >> "$INSTALL_MANIFEST"
+    done
+    manifest_dedupe
+
     # Always runs, even with nothing new to apply: it also carries last
     # install's still-active game settings over into the new manifest.
     apply_game_settings
@@ -427,19 +444,19 @@ EOF
         override_where="the $(runner_label) prefix registry"
         [ "$OVERRIDE_METHOD" == "launcher" ] && override_where="$(launcher_override_where)"
         print_result "${BOLD}Final Steps to activate EAX:" "$YELLOW"
-        echo -e " 1. ${YELLOW}${BOLD}Launch the game:${NC} ${WHITE}The DLL Override is set in $(tilde_path "$override_where"), so just hit Play.${NC}"
+        print_final_step 1 "Launch the game:" "The DLL Override is set in ${override_where}, so just hit Play."
         print_companion_final_steps
         # The game profile's audio settings already switched EAX on in the
         # game's own settings, so there's nothing left to do in its menus.
         game_audio_settings_done \
-            || echo -e " 2. ${YELLOW}${BOLD}In-Game Settings:${NC} ${WHITE}Go to Audio settings and enable 'EAX', '3D Sound', or 'Hardware Acceleration'.${NC}"
+            || print_final_step 2 "In-Game Settings:" "Go to Audio settings and enable 'EAX', '3D Sound', or 'Hardware Acceleration'."
     else
         print_result "${BOLD}Final Steps to activate EAX:" "$YELLOW"
-        echo -e " 1. ${YELLOW}${BOLD}Set the Override:${NC} ${WHITE}Apply the WINEDLLOVERRIDES rule (see below).${NC}"
+        print_final_step 1 "Set the Override:" "Apply the WINEDLLOVERRIDES rule (see below)."
         print_companion_final_steps
-        echo -e " 2. ${YELLOW}${BOLD}Launch the game:${NC} ${WHITE}Start the game as you normally would.${NC}"
+        print_final_step 2 "Launch the game:" "Start the game as you normally would."
         game_audio_settings_done \
-            || echo -e " 3. ${YELLOW}${BOLD}In-Game Settings:${NC} ${WHITE}Go to Audio settings and enable 'EAX', '3D Sound', or 'Hardware Acceleration'.${NC}"
+            || print_final_step 3 "In-Game Settings:" "Go to Audio settings and enable 'EAX', '3D Sound', or 'Hardware Acceleration'."
         echo ""
 
         OVERRIDE_VALUE="${PRIMARY_DLL_NAME}=n,b"

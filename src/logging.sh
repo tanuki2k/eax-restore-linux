@@ -169,7 +169,7 @@ if ! is_truthy "${EAX_RESTORE_NO_LOG:-}" && mkdir -p "$LOG_DIR" 2>/dev/null; the
     ln -sfn "$(basename "$EAX_LOG_FILE")" "$LOG_DIR/latest.log"
     write_log_header
     # Keep the newest 10 (this run's included).
-    ls -1t "$LOG_DIR"/eax-restore-*.log 2>/dev/null | tail -n +11 | xargs -r rm -f --
+    ls -1t "$LOG_DIR"/eax-restore-*.log 2>/dev/null | tail -n +11 | xargs -r -d '\n' rm -f --
     # Mirror everything on screen into the log, minus colour codes, with
     # curl's \r progress bars collapsed to their final state, and the
     # answers read_answer sends as a private OSC unwrapped onto their

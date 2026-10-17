@@ -173,9 +173,13 @@ install_vcrun_dependencies() {
 
     if [ ! -s "$VCRUN_SHARE/$VCRUN_EXE" ]; then
         print_status "Downloading $VCRUN_EXE from Microsoft..."
-        fetch_with_progress "$VCRUN_URL" "$VCRUN_SHARE/$VCRUN_EXE"
+        fetch_vcrun_installer "$VCRUN_URL" "$VCRUN_SHARE/$VCRUN_EXE"
     else
         print_status "Using cached $VCRUN_EXE"
+    fi
+    if [ ! -s "$VCRUN_SHARE/$VCRUN_EXE" ]; then
+        print_error_arrow "Couldn't download $VCRUN_EXE from Microsoft."
+        return 1
     fi
 
     # Already registered in the prefix (an earlier install, even one whose
@@ -216,6 +220,22 @@ install_vcrun_dependencies() {
     fi
 }
 
+# Usage: fetch_vcrun_installer <url> <dest>
+# Downloads Microsoft's installer to a .part file and only moves it into place
+# once the download succeeded and it looks like a Windows program (starts with
+# "MZ"), so an interrupted or replaced download is never kept as the cached
+# copy. Microsoft publishes no fixed checksum for this "latest" link. Returns 1
+# and leaves nothing behind otherwise.
+fetch_vcrun_installer() {
+    local url="$1" dest="$2"
+    if fetch_with_progress "$url" "$dest.part" && [ "$(head -c 2 "$dest.part" 2>/dev/null)" == "MZ" ]; then
+        mv -f "$dest.part" "$dest"
+        return 0
+    fi
+    rm -f "$dest.part"
+    return 1
+}
+
 remove_vcrun_msi_registration() {
     # Deletes the Windows "Programs and Features" (MSI uninstall registry)
     # entries for VC++, searched by DisplayName rather than a hardcoded GUID
@@ -246,9 +266,24 @@ remove_vcrun_msi_registration() {
             continue
         fi
 
+        # reg query /s lists a key, then the values that matched under it. Only
+        # keys whose name is a plain registry path (protontricks runs the delete
+        # through a shell, and a prefix can hold any key name) and whose
+        # DisplayName is the 2015-2022 runtime are deleted: older redistributables
+        # (2008, 2010...) may belong to other software in the prefix.
+        local -a del_keys=()
+        local cur_key=""
         while IFS= read -r line; do
-            [[ "$line" == HKEY_LOCAL_MACHINE* ]] || continue
-            key="${line%$'\r'}"
+            line="${line%$'\r'}"
+            if [[ "$line" == HKEY_LOCAL_MACHINE* ]]; then
+                cur_key="$line"
+            elif [ -n "$cur_key" ] && [[ "$line" == *DisplayName* ]] \
+                && [[ "$line" =~ Visual\ C\+\+\ (2015|2017|2019|2022|v14) ]] \
+                && [[ "$cur_key" =~ ^HKEY_LOCAL_MACHINE(\\[A-Za-z0-9_{}.()\ +-]+)+$ ]]; then
+                del_keys+=("$cur_key"); cur_key=""
+            fi
+        done <<< "$query_output"
+        for key in "${del_keys[@]}"; do
             if [ "$LAUNCHER_TYPE" == "1" ]; then
                 log_cmd "protontricks wine reg delete $key"
                 protontricks -c "wine reg delete \"$key\" /f" "$APPID" &>> "$EAX_LOG_FILE"
@@ -257,7 +292,7 @@ remove_vcrun_msi_registration() {
                 WINEPREFIX="$PREFIX_PATH" "$WINE_CMD" reg delete "$key" /f &>> "$EAX_LOG_FILE"
             fi
             removed_any=1
-        done <<< "$query_output"
+        done
     done
 
     if [ "$removed_any" -eq 1 ]; then
@@ -322,7 +357,7 @@ uninstall_vcrun_dependencies() {
         # it doesn't.
         if [ ! -s "$vcrun_share/$vcrun_exe" ]; then
             print_status "Fetching the official $arch uninstaller (best-effort)..."
-            fetch_with_progress "https://aka.ms/vs/17/release/$vcrun_exe" "$vcrun_share/$vcrun_exe"
+            fetch_vcrun_installer "https://aka.ms/vs/17/release/$vcrun_exe" "$vcrun_share/$vcrun_exe"
         fi
         if [ -s "$vcrun_share/$vcrun_exe" ]; then
             if [ "$LAUNCHER_TYPE" == "1" ]; then

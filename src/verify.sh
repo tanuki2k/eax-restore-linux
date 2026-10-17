@@ -10,16 +10,15 @@ print_offline_instructions() {
 
 verify_checksum() {
     # Usage: verify_checksum <downloaded_file> <expected_sha256>
-    # Verifies a downloaded file against a checksum. If sha256sum isn't
-    # available, this skips verification with a warning rather than blocking
-    # the install over a missing local tool. A mismatch against a known-good
-    # hash, however, is treated as a hard failure.
+    # Verifies a downloaded file against a checksum. Without sha256sum there
+    # is nothing to check against, so that is a failure too: carrying on would
+    # install files nobody verified. A mismatch is a hard failure as well.
     local file="$1"
     local expected="$2"
 
     if ! command -v sha256sum &> /dev/null; then
-        print_status "sha256sum not found. Skipping checksum verification." "$YELLOW"
-        return 0
+        print_error_arrow "sha256sum isn't installed, so this file's checksum can't be checked."
+        return 1
     fi
 
     local actual
@@ -65,11 +64,11 @@ confirm_unverified_download() {
     echo -e " -> ${NOTE}Note: could not obtain a checksum for $label (requires 'jq', or GitHub hasn't published one yet).${NC}"
     echo -e "    ${WHITE}This file is downloaded directly from kcat's official GitHub repository, so it should"
     echo -e "    be safe — but without a checksum, the script can't independently confirm that.${NC}"
-    echo -e "\n    ${YELLOW}Install it anyway? (Y/n): ${NC}"
+    echo -e "\n    ${YELLOW}Install it anyway? (y/N): ${NC}"
     echo -n "    > "
     read_answer CONFIRM_UNVERIFIED
     echo ""
-    [[ ! "$CONFIRM_UNVERIFIED" =~ $NO_RE ]]
+    [[ "$CONFIRM_UNVERIFIED" =~ $YES_RE ]]
 }
 
 verify_or_confirm() {

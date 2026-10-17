@@ -256,7 +256,10 @@ config_set_key() {
     local crlf=0 current tmp
     [ "$fmt" == "gadb" ] && { _gadb_set "$file" "$key" "$value"; return; }
     [ "$fmt" == "wine_reg" ] && { _wine_reg_set "$file" "$sec" "$key" "$value"; return; }
-    [ -f "$file" ] && LC_ALL=C grep -q $'\r' "$file" 2>/dev/null && crlf=1
+    # Anything else would match no rule below and write out an empty file.
+    [[ "$fmt" =~ ^(ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|ltx)$ ]] || return 1
+    # Judged by the first line, so one stray CR doesn't turn a whole file CRLF.
+    [ -f "$file" ] && head -n 1 "$file" 2>/dev/null | LC_ALL=C grep -q $'\r' && crlf=1
     current="$(config_get_key "$file" "$fmt" "$sec" "$key")"
     tmp="$(mktemp "$(dirname "$file")/.eax-restore-cfg.XXXXXX" 2>/dev/null)" || return 1
     { [ -f "$file" ] && cat "$file"; } | LC_ALL=C awk -v fmt="$fmt" -v sec="$sec" -v key="$key" -v val="$value" \
@@ -380,7 +383,7 @@ config_display_value() {
 # scan matched, else the steamapps/common/<Game> folder GAME_DIR sits in, else
 # the Heroic install_path GAME_DIR sits in, else GAME_DIR itself.
 game_install_root() {
-    if [ -n "${GAME_INSTALL_ROOT:-}" ] && [[ "$GAME_DIR" == "$GAME_INSTALL_ROOT"* ]]; then
+    if [ -n "${GAME_INSTALL_ROOT:-}" ] && { [ "$GAME_DIR" == "$GAME_INSTALL_ROOT" ] || [[ "$GAME_DIR" == "$GAME_INSTALL_ROOT"/* ]]; }; then
         echo "$GAME_INSTALL_ROOT"; return
     fi
     if [[ "$GAME_DIR" == */steamapps/common/* ]]; then
@@ -390,7 +393,7 @@ game_install_root() {
     local json path best=""
     while IFS= read -r json; do
         while IFS= read -r path; do
-            [ -n "$path" ] && [[ "$GAME_DIR" == "$path"* ]] && [ ${#path} -gt ${#best} ] && best="$path"
+            [ -n "$path" ] && { [ "$GAME_DIR" == "$path" ] || [[ "$GAME_DIR" == "$path"/* ]]; } && [ ${#path} -gt ${#best} ] && best="$path"
         done < <(jq -r '.. | objects | (.install_path // .installPath // empty)' "$json" 2>/dev/null)
     done < <(heroic_installed_jsons)
     echo "${best:-$GAME_DIR}"
@@ -718,18 +721,6 @@ print_game_settings_details() {
     echo ""
 }
 
-# Usage: fix_rows_for_display <plan rows>
-# Turns GAME_SETTINGS_PLAN-style rows into print_config_rows input.
-fix_rows_for_display() {
-    local r
-    local -a g
-    while IFS= read -r r; do
-        [ -n "$r" ] || continue
-        mapfile -t -d $'\x1f' g < <(printf '%s' "$r")
-        printf '%s\x1f%s\x1f%s\x1f%s\x1f%s\n' "${g[7]}" "${g[4]}" "${g[5]}" "${g[8]}" "${g[6]}"
-    done <<< "$1"
-}
-
 # Usage: ask_speaker_configuration
 # Step 8's speaker questions, shared with Tools → Speaker configuration. Sets
 # OUTPUT_MODE (stereo / surround / matrix), STEREO_MODE (stereo only),
@@ -922,7 +913,7 @@ offer_alsoft_settings() {
     # Values nobody has checked on a real install are held back like
     # untested game settings.
     if ! is_truthy "${EAX_RESTORE_UNTESTED_SETTINGS:-}" \
-        && [ "$(gdb_jq "$KG_ID" "$KG_STORE" 'entry0 | .install.alsoft_tested // true')" == "false" ]; then
+        && [ "$(gdb_jq "$KG_ID" "$KG_STORE" 'entry0 | (.install.alsoft_tested | if . == null then true else . end)')" == "false" ]; then
         return
     fi
     tag="$(verified_tag "$(gdb_jq "$KG_ID" "$KG_STORE" 'entry0 | if .install.alsoft_tested == false then "1" else "" end')")"
@@ -935,6 +926,8 @@ offer_alsoft_settings() {
     for entry in "${entries[@]}"; do
         IFS=$'\x1f' read -r sec key value <<< "$entry"
         [ -n "$key" ] || continue
+        # The same check every other database-driven write gets.
+        config_row_is_safe ini "game:alsoft.ini" "$sec" "$key" "$value" || continue
         if [ -z "$asked" ] && [ $# -gt 0 ]; then "$@"; fi
         asked=1
         if [ "$sec/$key" == "reverb/boost" ]; then
@@ -1447,6 +1440,7 @@ apply_game_settings() {
                 fi
                 if touch "$path" 2>/dev/null; then
                     echo "$path" >> "$INSTALL_MANIFEST"
+                    backed_up[$path]=1   # nothing of the player's to back up in a file just created
                     print_status "Created: $(basename "$path")"
                 else
                     record_deploy_failure "$path"; continue
@@ -1466,7 +1460,7 @@ apply_game_settings() {
                 || ! { [ "$new" == "__DELETE__" ] || config_values_equal "$fmt" "$(config_get_key "$path" "$fmt" "$sec" "$key")" "$new"; }; then
                 record_deploy_failure "$path"; continue
             fi
-            old="${prev_old["$path"$'\x1f'"$sec"$'\x1f'"$key"]:-$old}"
+            [ -n "${prev_old["$path"$'\x1f'"$sec"$'\x1f'"$key"]+x}" ] && old="${prev_old["$path"$'\x1f'"$sec"$'\x1f'"$key"]}"
             printf 'CONFIG:%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$cat" "$title" "$path" "$fmt" "$sec" "$key" "$old" "$new" >> "$INSTALL_MANIFEST"
             recorded["$path"$'\x1f'"$sec"$'\x1f'"$key"]=1
             changed_count[$path]=$(( ${changed_count[$path]:-0} + 1 ))
@@ -1501,7 +1495,6 @@ update_game_settings_in_manifest() {
     local entry lines line tmp
     local -A dropped=()
     GAME_SETTINGS_KEPT=()
-    DEPLOY_FAILURES=0
     revert_game_settings
     for entry in "${GAME_SETTINGS_REVERT_GROUPS[@]}"; do
         lines="${entry#*$'\x1f'}"; lines="${lines#*$'\x1f'}"

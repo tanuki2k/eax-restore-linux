@@ -473,6 +473,26 @@ start_manifest() {
     printf '%s\n' "$MANIFEST_HEADER" > "$1"
 }
 
+# Usage: manifest_dedupe
+# Drops repeated lines from INSTALL_MANIFEST, keeping the first of each (a
+# reinstall carries the last install's records over, and re-records some).
+manifest_dedupe() {
+    [ -f "$INSTALL_MANIFEST" ] || return 0
+    local tmp="$INSTALL_MANIFEST.tmp"
+    if awk '!seen[$0]++' "$INSTALL_MANIFEST" > "$tmp"; then mv -f "$tmp" "$INSTALL_MANIFEST"; else rm -f "$tmp"; fi
+}
+
+# Usage: manifest_forget_paths <path>...
+# Drops those exact lines from INSTALL_MANIFEST, right after uninstall removed
+# or restored them, so the manifest never lists a file that is no longer ours
+# (a second uninstall or a reinstall would take a restored original for ours).
+manifest_forget_paths() {
+    [ $# -gt 0 ] && [ -f "$INSTALL_MANIFEST" ] || return 0
+    local tmp="$INSTALL_MANIFEST.tmp"
+    printf '%s\n' "$@" | grep -vxFf - "$INSTALL_MANIFEST" > "$tmp"
+    if [ $? -le 1 ]; then mv -f "$tmp" "$INSTALL_MANIFEST"; else rm -f "$tmp"; fi
+}
+
 deploy_copy() {
     # Usage: deploy_copy <src> <dest> <verb>
     # Copies one file and only records it in the manifest (and reports it)
@@ -484,6 +504,13 @@ deploy_copy() {
         return 0
     fi
     record_deploy_failure "$2"
+    # The copy failed after the original was moved aside: put it back, so the
+    # game isn't left without its file (and with nothing for uninstall to find).
+    local b last=""
+    for b in "$2".bak.[0-9]*_[0-9]*; do [ -e "$b" ] && last="$b"; done
+    if [ ! -e "$2" ] && [ -n "$last" ] && mv "$last" "$2"; then
+        print_status "Put back the original $(basename "$2")." "$YELLOW"
+    fi
     return 1
 }
 
@@ -497,7 +524,7 @@ handle_conflict() {
     local existing
     existing=$(find_existing_variant "$target_file")
     if [ -n "$existing" ]; then
-        if [ "${PREV_MANIFEST_FILES[$target_file]:-0}" == "1" ]; then
+        if [ "${PREV_MANIFEST_FILES[$target_file]:-0}" == "1" ] && looks_like_our_file "$existing"; then
             # Already ours from a previous install (tracked in the prior
             # manifest before it was reset) — not a genuine original, so
             # there's nothing here worth backing up. Overwrite directly;
@@ -555,7 +582,7 @@ auto_backup_and_overwrite() {
     local existing
     existing=$(find_existing_variant "$target_file")
     if [ -n "$existing" ]; then
-        if [ "${PREV_MANIFEST_FILES[$target_file]:-0}" == "1" ]; then
+        if [ "${PREV_MANIFEST_FILES[$target_file]:-0}" == "1" ] && looks_like_our_file "$existing"; then
             if rm -f "$existing"; then return 0; fi
             record_deploy_failure "$target_file"
             return 1

@@ -309,11 +309,16 @@ cached copy.
 
 **Manifest-driven uninstall:** installs write a manifest of every file/registry key
 they touched; when a manifest exists, uninstall only ever removes what's in it and
-restores the timestamped backups made at install time. If no manifest is found (e.g.
-an install predating this mechanism), uninstall falls back to a best-effort scan for
-known filenames (`dsound.dll`, `dsoal-aldrv.dll`, `OpenAL32.dll`, etc.) — a last resort
-that's less precise than the manifest path, so avoid removing/renaming the manifest
-mechanism itself.
+restores the timestamped backups made at install time. Manifest file lines are
+only acted on when they're absolute and have one of the deployed names
+(`manifest_file_is_ours`). If no manifest is found (e.g. an install predating this
+mechanism), uninstall falls back to a scan for known filenames (`dsound.dll`,
+`dsoal-aldrv.dll`, `OpenAL32.dll`, etc.) that lists only files whose content is what
+this script puts there (`looks_like_our_file`) — a last resort that's less precise
+than the manifest path, so avoid removing/renaming the manifest mechanism itself.
+Uninstall drops what it removed from the manifest as it goes (`manifest_forget_paths`)
+and rewrites the rest at the very end; a reinstall carries the last install's
+registry, VC++ and file records over (`manifest_dedupe` removes repeats).
 The manifest (`.eax-restore-manifest.txt` in the game's exe folder) is plain
 text, one line per change: a deployed file's path, `VCRUN`, `REGISTRY:…`,
 `LAUNCHER:…` or `CONFIG:…` (tab-separated). A companion app's `VCRUN` /
@@ -354,6 +359,9 @@ for a new call site.
 - `print_detected "Label" "value"` — the ` -> Label: value` line (label in GREEN)
   reporting what auto-detection found, right before the `confirm` asking whether
   to use it, e.g. `Detected Prefix:`, `Detected Architecture:`.
+- `print_final_step N "Label:" "text"` — one numbered line of INSTALLATION COMPLETE's
+  "Final Steps to activate EAX": bold yellow label, text wrapped at 76 columns with
+  the continuation lined up under the label.
 - `print_task "text"` — the `\n${CYAN}STATUS: text...${NC}` header announcing a chunk
   of work about to run (a scan, a download, a deploy step). Own leading blank line;
   the trailing `...` is added by the helper, so pass just the phrase. A capturing

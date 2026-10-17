@@ -31,7 +31,8 @@ clean_typed_path() {
         p="$(printf '%s' "$p" | sed 's/\\\(.\)/\1/g')"
     fi
     [ "$p" != "/" ] && p="${p%/}"
-    p="${p/#\~/$HOME}"
+    [ "$p" == "~" ] && p="$HOME"
+    [[ "$p" == "~/"* ]] && p="$HOME/${p:2}"
     printf '%s' "$p"
 }
 
@@ -51,6 +52,10 @@ prompt_manual_game_dir() {
     if ! read_answer GAME_DIR; then GAME_DIR=""; return 1; fi
     GAME_DIR="$(clean_typed_path "$GAME_DIR")"
     [ -z "$GAME_DIR" ] && return 1
+    # The manifest records paths as written, so a typed 'games/Foo' has to
+    # become absolute or uninstall would look for it relative to wherever
+    # it's run from.
+    [[ "$GAME_DIR" == /* ]] || GAME_DIR="$PWD/$GAME_DIR"
     return 0
 }
 
@@ -369,11 +374,12 @@ heroic_installed_jsons() {
 
 heroic_installed_records() {
     # Usage: heroic_installed_records <installed.json>
-    # One "install_path<TAB>app_name" line per installed game. Read with awk
-    # rather than jq: GOG's, Epic's and older Heroic files spell the keys
-    # differently (install_path/installPath, app_name/appName) and nest them
-    # at different depths.
-    awk 'BEGIN { RS="}"; FS="," } { ip=""; an=""; for (i=1; i<=NF; i++) { if ($i ~ /"(install_path|installPath)"/) { line=$i; sub(/^.*"(install_path|installPath)"[ \t]*:[ \t]*"/, "", line); sub(/".*$/, "", line); ip=line } if ($i ~ /"(app_name|appName)"/) { line=$i; sub(/^.*"(app_name|appName)"[ \t]*:[ \t]*"/, "", line); sub(/".*$/, "", line); an=line } } if (ip != "") print ip "\t" an }' "$1"
+    # One "install_path<TAB>app_name" line per installed game. GOG's, Epic's
+    # and older Heroic files spell the keys differently (install_path/
+    # installPath, app_name/appName) and nest them at different depths, so
+    # jq walks the whole file for any object with an install path.
+    jq -r '.. | objects | select((.install_path // .installPath) != null)
+        | [(.install_path // .installPath), (.app_name // .appName // "")] | join("\t")' "$1" 2>/dev/null
 }
 
 heroic_json_value() {
@@ -690,14 +696,14 @@ identify_game_dir() {
     GAME_ID_STORE=""; GAME_ID=""; GAME_ID_NAME=""; GAME_ID_ROOT=""
     if [[ "$dir" == */steamapps/common/* ]]; then
         want="${dir#*/steamapps/common/}"; want="${want%%/*}"
-        for acf in "${dir%%/common/*}"/appmanifest_*.acf; do
+        for acf in "${dir%%/steamapps/common/*}/steamapps"/appmanifest_*.acf; do
             [ -f "$acf" ] || continue
             installdir=$(acf_value "$acf" installdir)
             [ "$installdir" == "$want" ] || continue
             GAME_ID_STORE="steam"
             GAME_ID="$(basename "$acf" | tr -dc '0-9')"
             GAME_ID_NAME=$(acf_value "$acf" name)
-            GAME_ID_ROOT="${dir%%/common/*}/common/$want"
+            GAME_ID_ROOT="${dir%%/steamapps/common/*}/steamapps/common/$want"
             return 0
         done
     fi
@@ -1500,7 +1506,7 @@ detect_game_environment() {
                 # also relies on \s as a wildcard, which -F would otherwise take
                 # away by disabling regex interpretation entirely.
                 INSTALL_DIR_ESCAPED=$(printf '%s' "$INSTALL_DIR" | sed 's/[][\.*^$]/\\&/g')
-                MANIFEST_FILE=$(grep -il "\"installdir\"\s*\"$INSTALL_DIR_ESCAPED\"" "${GAME_DIR%/common/*}"/appmanifest_*.acf 2>/dev/null | head -n 1)
+                MANIFEST_FILE=$(grep -il "\"installdir\"\s*\"$INSTALL_DIR_ESCAPED\"" "${GAME_DIR%%/steamapps/common/*}/steamapps"/appmanifest_*.acf 2>/dev/null | head -n 1)
 
                 if [ -n "$MANIFEST_FILE" ]; then
                     AUTO_APPID=$(basename "$MANIFEST_FILE" | tr -dc '0-9')
@@ -1542,7 +1548,7 @@ detect_game_environment() {
                 print_detected "Detected Prefix" "$DETECTED_STEAM_PREFIX"
                 if confirm "Use this detected prefix?"; then
                     PREFIX_PATH="$DETECTED_STEAM_PREFIX"
-                    ACF_FILE="${GAME_DIR%/common/*}/appmanifest_${APPID}.acf"
+                    ACF_FILE="${GAME_DIR%%/steamapps/common/*}/steamapps/appmanifest_${APPID}.acf"
                     if [ -z "$GAME_NAME" ]; then
                         # Same source appid/gog_id already come from, not the
                         # curated JSON — the appmanifest's own "name" key.
@@ -1642,6 +1648,7 @@ detect_game_environment() {
                 # check all happen.
                 [ -z "$PREFIX_PATH" ] && continue
                 PREFIX_PATH="$(clean_typed_path "$PREFIX_PATH")"
+                [ -n "$PREFIX_PATH" ] && [[ "$PREFIX_PATH" != /* ]] && PREFIX_PATH="$PWD/$PREFIX_PATH"
             fi
 
             if [ -d "$PREFIX_PATH/drive_c" ]; then
