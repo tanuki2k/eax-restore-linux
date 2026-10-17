@@ -24,7 +24,8 @@
         "title": "Enable EAX reverb",
         "reason": "BioShock ships with 'Use Creative EAX Audio' off, which keeps it on DirectSound with no EAX instead of the OpenAL32.dll this script installs.",
         "changes": { "Bioshock.ini": { "ShockGame.ShockUserSettings": { "bEAXEnabled": "True" } } },
-        "follow_up": "If BioShock starts with EAX turned off, make sure you quit the game from its main menu, otherwise it assumes the game crashed and resets Bioshock.ini to its previous state. If this happens, manually turn on 'Use Creative EAX Audio' in the game's audio settings."
+        "follow_up": "If BioShock starts with EAX turned off, make sure you quit the game from its main menu, otherwise it assumes the game crashed and resets Bioshock.ini to its previous state. If this happens, manually turn on 'Use Creative EAX Audio' in the game's audio settings.",
+        "tested": true
       },
       {
         "title": "Enable 4.0 surround sound",
@@ -32,7 +33,8 @@
         "only_if": { "speakers": "quad" },
         "changes": {
           "Bioshock.ini": { "ShockGame.ShockUserSettings": { "SpeakerMode": "SM_Quad" } }
-        }
+        },
+        "tested": true
       },
       {
         "title": "Enable 5.1 surround sound",
@@ -40,7 +42,8 @@
         "only_if": { "speakers": ["surround51", "surround61"] },
         "changes": {
           "Bioshock.ini": { "ShockGame.ShockUserSettings": { "SpeakerMode": "SM_5_1" } }
-        }
+        },
+        "tested": true
       },
       {
         "title": "Enable 7.1 surround sound",
@@ -48,7 +51,8 @@
         "only_if": { "speakers": "surround71" },
         "changes": {
           "Bioshock.ini": { "ShockGame.ShockUserSettings": { "SpeakerMode": "SM_7_1" } }
-        }
+        },
+        "tested": true
       },
       {
         "title": "Enable Pro Logic surround",
@@ -56,7 +60,8 @@
         "only_if": { "speakers": "matrix" },
         "changes": {
           "Bioshock.ini": { "ShockGame.ShockUserSettings": { "SpeakerMode": "SM_ProLogic" } }
-        }
+        },
+        "tested": true
       }
     ],
     "optional_settings": [
@@ -68,7 +73,8 @@
             "D3DDrv.D3DRenderDevice": { "LevelOfAnisotropy": "16" },
             "D3DDrv10.D3DRenderDevice10": { "LevelOfAnisotropy": "16" }
           }
-        }
+        },
+        "tested": true
       }
     ]
   },

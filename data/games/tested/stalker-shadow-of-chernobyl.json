@@ -8,13 +8,26 @@
     "steam": { "id": 4500 },
     "gog": { "id": 1207660573 }
   },
-  "eax": { "api": "openal", "versions": ["1.0", "2.0", "3.0"] },
+  "eax": {
+    "api": "openal",
+    "versions": ["1.0", "2.0", "3.0"],
+    "problem": "Stalker's X-Ray engine supports EAX via OpenAL.However, very few of it's maps actually contain environmental audio.",
+    "fix": "A community patch is available that adds environmental effects to the game's levels."
+  },
   "game_config": {
     "files": {
       "user.ltx": {
         "format": "ltx",
         "locations": ["prefix_documents:stalker-shoc/user.ltx", "game_root:_appdata_/user.ltx"]
       }
-    }
+    },
+    "optional_settings": [
+      {
+        "title": "Remove head bob.",
+        "reason": "The game's default setting has a rather aggressive head bob, this may make some users feel uncomfortable.",
+        "changes": { "user.ltx": { "cam_inert": "0" } },
+        "tested": true
+      }
+    ]
   }
 }

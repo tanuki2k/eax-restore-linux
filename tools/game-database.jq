@@ -35,7 +35,7 @@ def normalize_fix:
     | del(.changes) | drop_empty
     | if .only_if then .only_if |= (drop_empty | order_keys(["stores", "speakers"])) else . end
     | .changes = $changes
-    | order_keys(["title", "reason", "only_if", "changes", "follow_up"]);
+    | order_keys(["title", "reason", "only_if", "changes", "follow_up", "tested"]);
 
 def normalize_game_config:
     drop_empty

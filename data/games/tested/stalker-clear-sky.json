@@ -22,7 +22,8 @@
         "title": "Enable EAX sound effects",
         "reason": "EAX",
         "only_if": { "stores": ["gog"] },
-        "changes": { "user.ltx": { "snd_efx": "on", "snd_device": "OpenAL Soft" } }
+        "changes": { "user.ltx": { "snd_efx": "on", "snd_device": "OpenAL Soft" } },
+        "tested": true
       }
     ]
   }

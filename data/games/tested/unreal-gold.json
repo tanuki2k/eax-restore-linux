@@ -36,31 +36,36 @@
               "UseSpatial": "True"
             }
           }
-        }
+        },
+        "tested": true
       },
       {
         "title": "Enable Dolby Pro Logic ",
         "reason": "Turns on Dolby Pro Logic, A compatible AV receiver or Soundbar is required for Surround sound. Dolby Pro Logic is an analog matrix surround-sound codec technology.",
         "only_if": { "speakers": "matrix" },
         "changes": { "Unreal.ini": { "GalaxyAudioSubsystem": { "UseSurround": true } } },
-        "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic."
+        "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+        "tested": true
       }
     ],
     "optional_settings": [
       {
         "title": "Raise sound quality",
         "reason": "Unreal Gold mixes its sound at a low sample rate, which dulls high-pitched sounds.",
-        "changes": { "Unreal.ini": { "Galaxy.GalaxyAudioSubsystem": { "OutputRate": "48000Hz" } } }
+        "changes": { "Unreal.ini": { "Galaxy.GalaxyAudioSubsystem": { "OutputRate": "48000Hz" } } },
+        "tested": true
       },
       {
         "title": "Raise texture filtering",
         "reason": "Unreal Gold filters textures at a low level, so a visible line shows where each floor and wall texture switches to a blurrier version.",
-        "changes": { "Unreal.ini": { "D3DDrv.D3DRenderDevice": { "UseTrilinear": "True" } } }
+        "changes": { "Unreal.ini": { "D3DDrv.D3DRenderDevice": { "UseTrilinear": "True" } } },
+        "tested": true
       },
       {
         "title": "Raise color depth",
         "reason": "Unreal Gold runs fullscreen with a reduced color range, so smooth shading like skies and shadows shows visible bands.",
-        "changes": { "Unreal.ini": { "WinDrv.WindowsClient": { "FullscreenColorBits": "32" } } }
+        "changes": { "Unreal.ini": { "WinDrv.WindowsClient": { "FullscreenColorBits": "32" } } },
+        "tested": true
       },
       {
         "title": "Enable WASD controls",
@@ -81,7 +86,8 @@
               "MouseWheelDown": "NextWeapon"
             }
           }
-        }
+        },
+        "tested": true
       }
     ]
   }

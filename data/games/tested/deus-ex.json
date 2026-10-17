@@ -23,31 +23,36 @@
             "Engine.Engine": { "AudioDevice": "Galaxy.GalaxyAudioSubsystem" },
             "Galaxy.GalaxyAudioSubsystem": { "Use3dHardware": "True", "UseReverb": "True" }
           }
-        }
+        },
+        "tested": true
       },
       {
         "title": "Enable Dolby Pro Logic ",
         "reason": "Turns on Dolby Pro Logic, A compatible AV receiver or Soundbar is required for Surround sound. Dolby Pro Logic is an analog matrix surround-sound codec technology.",
         "only_if": { "speakers": "matrix" },
         "changes": { "DeusEx.ini": { "Galaxy.GalaxyAudioSubsystem": { "UseSurround": true } } },
-        "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic."
+        "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+        "tested": true
       }
     ],
     "optional_settings": [
       {
         "title": "Raise sound quality",
         "reason": "Deus Ex mixes its sound at a lower rate than most sound systems play at, so it's resampled before you hear it.",
-        "changes": { "DeusEx.ini": { "Galaxy.GalaxyAudioSubsystem": { "OutputRate": "48000Hz" } } }
+        "changes": { "DeusEx.ini": { "Galaxy.GalaxyAudioSubsystem": { "OutputRate": "48000Hz" } } },
+        "tested": true
       },
       {
         "title": "Raise texture filtering",
         "reason": "Deus Ex filters textures at a low level, so a visible line shows where each floor and wall texture switches to a blurrier version.",
-        "changes": { "DeusEx.ini": { "D3DDrv.D3DRenderDevice": { "UseTrilinear": "True" } } }
+        "changes": { "DeusEx.ini": { "D3DDrv.D3DRenderDevice": { "UseTrilinear": "True" } } },
+        "tested": true
       },
       {
         "title": "Raise color depth",
         "reason": "Deus Ex runs fullscreen with a reduced color range, so smooth shading like skies and shadows shows visible bands.",
-        "changes": { "DeusEx.ini": { "WinDrv.WindowsClient": { "FullscreenColorBits": "32" } } }
+        "changes": { "DeusEx.ini": { "WinDrv.WindowsClient": { "FullscreenColorBits": "32" } } },
+        "tested": true
       }
     ]
   },

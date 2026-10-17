@@ -21,7 +21,8 @@
       {
         "title": "Enable EAX sound effects",
         "reason": "The game ships with EAX (environmental audio effects) off, so room reverb and similar effects are not used. Turning it on lets OpenAL Soft apply them.",
-        "changes": { "user.ltx": { "snd_device": "OpenAL Soft", "snd_efx": "on" } }
+        "changes": { "user.ltx": { "snd_device": "OpenAL Soft", "snd_efx": "on" } },
+        "tested": true
       }
     ]
   }

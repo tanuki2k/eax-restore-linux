@@ -31,13 +31,15 @@
             "s_useEAXReverb": "1",
             "s_useEAXOcclusion": "1"
           }
-        }
+        },
+        "tested": true
       },
       {
         "title": "Enable 5.1 surround sound",
         "reason": "Quake 4 mixes its sound for two speakers by default.",
         "only_if": { "speakers": "surround" },
-        "changes": { "Quake4Config.cfg": { "s_numberOfSpeakers": "6" } }
+        "changes": { "Quake4Config.cfg": { "s_numberOfSpeakers": "6" } },
+        "tested": true
       }
     ],
     "optional_settings": [
@@ -68,12 +70,14 @@
             "image_lodbias": "-2",
             "image_filter": "GL_LINEAR_MIPMAP_LINEAR"
           }
-        }
+        },
+        "tested": true
       },
       {
         "title": "Fix blurry text",
         "reason": "Quake 4 limits how sharply it draws its smaller text, so menu and HUD text looks blurry at high resolutions. A few multiplayer menus can cut off text with this on.",
-        "changes": { "autoexec.cfg": { "gui_smallFontLimit": "0", "gui_mediumFontLimit": "0" } }
+        "changes": { "autoexec.cfg": { "gui_smallFontLimit": "0", "gui_mediumFontLimit": "0" } },
+        "tested": true
       }
     ]
   },

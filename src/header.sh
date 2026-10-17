@@ -124,6 +124,11 @@
 #   as having no profile. The Tools menu's profile browser always has them,
 #   behind its own tested / untested filter.
 #
+# * EAX_RESTORE_UNTESTED_SETTINGS=1  Offers the game settings (audio and
+#   optional) nobody has checked on a real install yet. Without it they're
+#   left out; with it they're tagged "(untested)". The profile browser always
+#   shows them.
+#
 # --- License ---
 # MIT License
 # Copyright (c) 2026 Tanuki2k

@@ -31,7 +31,8 @@
               "Use3DSound": "True"
             }
           }
-        }
+        },
+        "tested": true
       }
     ]
   }

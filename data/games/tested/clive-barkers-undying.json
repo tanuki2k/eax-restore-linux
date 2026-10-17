@@ -18,31 +18,36 @@
           "System.ini": {
             "Galaxy.GalaxyAudioSubsystem": { "Use3dHardware": "True", "UseSpatial": "True" }
           }
-        }
+        },
+        "tested": true
       },
       {
         "title": "Enable Dolby Pro Logic",
         "reason": "Turns on Dolby Pro Logic, A compatible AV receiver or Soundbar is required for Surround sound. Dolby Pro Logic is an analog matrix surround-sound codec technology.",
         "only_if": { "speakers": "matrix" },
         "changes": { "System.ini": { "Galaxy.GalaxyAudioSubsystem": { "UseSurround": true } } },
-        "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic."
+        "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+        "tested": true
       }
     ],
     "optional_settings": [
       {
         "title": "Raise sound quality",
         "reason": "Clive Barker's Undying mixes its sound at a low sample rate, which dulls high-pitched sounds.",
-        "changes": { "System.ini": { "Galaxy.GalaxyAudioSubsystem": { "OutputRate": "48000Hz" } } }
+        "changes": { "System.ini": { "Galaxy.GalaxyAudioSubsystem": { "OutputRate": "48000Hz" } } },
+        "tested": true
       },
       {
         "title": "Raise texture filtering",
         "reason": "Clive Barker's Undying filters textures at a low level, so a visible line shows where each floor and wall texture switches to a blurrier version.",
-        "changes": { "System.ini": { "D3DDrv.D3DRenderDevice": { "UseTrilinear": "True" } } }
+        "changes": { "System.ini": { "D3DDrv.D3DRenderDevice": { "UseTrilinear": "True" } } },
+        "tested": true
       },
       {
         "title": "Raise color depth",
         "reason": "Clive Barker's Undying runs fullscreen with a reduced color range, so smooth shading like skies and shadows shows visible bands.",
-        "changes": { "System.ini": { "WinDrv.WindowsClient": { "FullscreenColorBits": "32" } } }
+        "changes": { "System.ini": { "WinDrv.WindowsClient": { "FullscreenColorBits": "32" } } },
+        "tested": true
       }
     ]
   },

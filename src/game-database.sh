@@ -760,12 +760,13 @@ print_game_profile_stores() {
     # Game-level fields: the same for every store entry, so read from the
     # first.
     local name eax_versions eax_status eax_status_details restore_details eax_unified notes
-    local released description
+    local released description untested
     IFS=$'\x1f' read -r name released description eax_versions eax_status eax_status_details \
-        restore_details eax_unified notes < <(gdb_fields "$id" "$store" \
+        restore_details eax_unified notes untested < <(gdb_fields "$id" "$store" \
         '.name // ""' '.released // ""' '.description // ""' '.eax.versions // [] | join(", ")' \
         '.eax.status // "supported"' '.eax.problem // ""' '.eax.fix // ""' \
-        '.install.tweaks // [] | index("eax_unified") != null' '.notes // ""')
+        '.install.tweaks // [] | index("eax_unified") != null' '.notes // ""' \
+        '(if .tested == false then "1" else "" end)')
     [ -z "$eax_status" ] && eax_status="supported"
 
     # Store-level fields, one per entry.
@@ -796,6 +797,7 @@ print_game_profile_stores() {
     local value sep
     detail_heading "Game details"
     detail_row "Name" "${BOLD}${name}${NC}"
+    [ -n "$untested" ] && detail_row "Checked" "${NOTE}Not yet — nobody has tried this profile on a real install${NC}"
     [ -n "$released" ] && detail_row "Released" "${WHITE}$(format_release_date "$released")${NC}"
     # The browser names each store's ID; the install shows its one store
     # under System details instead.

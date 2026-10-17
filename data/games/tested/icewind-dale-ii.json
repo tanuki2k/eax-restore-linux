@@ -14,7 +14,8 @@
       {
         "title": "Enable EAX reverb",
         "reason": "Icewind Dale II ships with 'Environmental Audio' off, so there's no reverb.",
-        "changes": { "icewind2.ini": { "Game Options": { "Environmental Audio": "1" } } }
+        "changes": { "icewind2.ini": { "Game Options": { "Environmental Audio": "1" } } },
+        "tested": true
       }
     ]
   }

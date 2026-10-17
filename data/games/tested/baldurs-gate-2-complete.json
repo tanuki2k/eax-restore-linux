@@ -18,7 +18,8 @@
       {
         "title": "Enable EAX reverb",
         "reason": "Baldur's Gate II ships with 'Environmental Audio' unset and only turns it on by itself the first time it starts with EAX available.",
-        "changes": { "baldur.ini": { "Game Options": { "Environmental Audio": "1" } } }
+        "changes": { "baldur.ini": { "Game Options": { "Environmental Audio": "1" } } },
+        "tested": true
       }
     ]
   },

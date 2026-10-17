@@ -22,7 +22,8 @@
               "SoundcardName": "Primary Sound Driver"
             }
           }
-        }
+        },
+        "tested": true
       }
     ],
     "optional_settings": [
@@ -38,7 +39,8 @@
               "PredefDetailSetting": "3"
             }
           }
-        }
+        },
+        "tested": true
       }
     ]
   }

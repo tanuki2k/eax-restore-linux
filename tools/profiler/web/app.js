@@ -16,7 +16,7 @@ const BASE_HELP = {
 const LABELS = {
   id: "Store ID", id_source: "Where the ID came from", api: "Audio API", exe: "Executable", store_details: "Store details",
   extra_exe_folders: "Extra exe folders", companion_apps: "Companion apps", beta_branch: "Beta branch", fix_in_place: "Fix works in place",
-  alsoft_ini: "alsoft.ini settings", only_if: "Only offer when…", follow_up: "Follow-up for the player", eax: "EAX",
+  alsoft_ini: "alsoft.ini settings", only_if: "Only offer when…", follow_up: "Follow-up for the player", tested: "Checked on a real install", eax: "EAX",
   default_reverb: "Default reverb", "default-reverb": "Default reverb", versions: "EAX versions", tweaks: "Compatibility tweaks",
 };
 const SECTIONS = [
@@ -431,6 +431,18 @@ function askConfirm(message, okLabel = "OK", danger = false) {
     dlg.addEventListener("close", () => resolve(answer));
   });
 }
+// Save / Discard / Cancel for leaving a game with unsaved changes: "save", "discard" or null (stay).
+function askUnsaved() {
+  return new Promise((resolve) => {
+    let answer = null;
+    const pick = (v) => () => { answer = v; dlg.close(); };
+    const dlg = dialog(el("p", {}, "This game has unsaved changes."), el("div", { class: "btns" }, el("span", { class: "sp" }),
+      el("button", { type: "button", onclick: pick(null) }, "Cancel"),
+      el("button", { type: "button", class: "danger", onclick: pick("discard") }, "Discard"),
+      el("button", { type: "button", class: "primary", onclick: pick("save") }, "Save")));
+    dlg.addEventListener("close", () => resolve(answer));
+  });
+}
 function askText(title, hint = "", okLabel = "OK") {
   return new Promise((resolve) => {
     let answer = null;
@@ -563,7 +575,11 @@ function drawList() {
   if (!box.children.length) box.append(el("p", { class: "muted" }, "No games match."));
 }
 async function openGame(folder, id) {
-  if (DIRTY && !(await askConfirm("Discard unsaved changes?", "Discard", true))) return;
+  if (DIRTY) {
+    const choice = await askUnsaved();
+    if (!choice) return;
+    if (choice === "save") { try { await save(); } catch { return; } }
+  }
   const j = await api(`/api/game/${folder}/${id}`);
   CUR = { folder, id }; GAME = j.game; CHOSEN_STORE = null; DIRTY = false; if (SECTION === "capture") SECTION = "overview";
   drawList(); showErrors(j.errors); renderEdit(); $("#main").scrollTop = 0;

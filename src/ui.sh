@@ -307,6 +307,13 @@ print_note() {
     for line in "$@"; do body+="\n${line}"; done
     echo -e "$(tilde_path "$body")${NC}"
 }
+# Usage: untested_tag [plain]
+# The "(untested)" label beside a game or setting nobody has checked on a real
+# install, in the Note colour; "plain" leaves the colour off, for a tick list's
+# title. One place so every screen says it the same way.
+untested_tag() {
+    if [ "${1:-}" == "plain" ]; then printf '(untested)'; else printf '%b(untested)%b' "$NOTE" "$NC"; fi
+}
 print_note_arrow() {
     local first="$1"; shift
     local body=" -> ${NOTE}Note: ${first}"

@@ -15,7 +15,8 @@
       {
         "title": "Enable EAX reverb",
         "reason": "KOTOR ships with EAX off.",
-        "changes": { "swkotor.ini": { "Sound Options": { "EAX": "3" } } }
+        "changes": { "swkotor.ini": { "Sound Options": { "EAX": "3" } } },
+        "tested": true
       }
     ],
     "optional_settings": [
@@ -31,7 +32,8 @@
               "Soft Shadows": "1"
             }
           }
-        }
+        },
+        "tested": true
       }
     ]
   }

@@ -494,13 +494,18 @@ speakers_match() {
     return 1
 }
 
-# Usage: load_game_config_rows <id> <steam|gog>
+# Usage: load_game_config_rows <id> <steam|gog> [all]
 # Flattens the entry's fixes into one \x1f-separated row per changed key:
 # category, fix number, title, reason, only_if stores (comma list),
 # only_if speakers (comma list), follow_up, file, format, if_missing, locations
 # (|-joined), section ("" for cfg formats), key, value (with the markers
-# above). \x1f rather than tabs so empty fields survive `read`.
+# above), "1" for a setting marked "tested": false. Those are left out unless
+# EAX_RESTORE_UNTESTED_SETTINGS is set, or the caller passes "all" (the
+# database browser, which shows everything). \x1f rather than tabs so empty
+# fields survive `read`.
 load_game_config_rows() {
+    local with_untested=false
+    { is_truthy "${EAX_RESTORE_UNTESTED_SETTINGS:-}" || [ "${3:-}" == "all" ]; } && with_untested=true
     gdb_jq "$1" "$2" '
         def enc: if type == "boolean" then (if . then "__TRUE__" else "__FALSE__" end)
                  elif . == null then "__DELETE__" else tostring end;
@@ -508,6 +513,7 @@ load_game_config_rows() {
         | (.files // {}) as $files
         | ((.audio_settings // []) | to_entries[] | {cat: "audio", i: .key, f: .value}),
           ((.optional_settings // []) | to_entries[] | {cat: "optional", i: .key, f: .value})
+        | select('"$with_untested"' or .f.tested != false)
         | .cat as $cat | .i as $i | .f as $f
         | $f.changes | to_entries[] | .key as $file | ($files[$file] // {}) as $def
         | (if $def.format == "ini" or $def.format == "wine_reg"
@@ -515,7 +521,8 @@ load_game_config_rows() {
              else (.value | to_entries[] | ["", .key, .value]) end) as $kv
         | [$cat, ($i | tostring), $f.title, $f.reason, (($f.only_if.stores // []) | join(",")),
            ([$f.only_if.speakers // empty] | flatten | join(",")), ($f.follow_up // ""), $file, ($def.format // ""),
-           ($def.if_missing // ""), (($def.locations // []) | join("|")), $kv[0], $kv[1], ($kv[2] | enc)]
+           ($def.if_missing // ""), (($def.locations // []) | join("|")), $kv[0], $kv[1], ($kv[2] | enc),
+           (if $f.tested == false then "1" else "" end)]
         | join("\u001f")'
 }
 
@@ -606,7 +613,7 @@ print_game_settings_details() {
     local -a rows f
     local row
     while IFS= read -r row; do [ -n "$row" ] && rows+=("$row"); done \
-        < <([ -n "$store_id" ] && load_game_config_rows "$store_id" "$store_key")
+        < <([ -n "$store_id" ] && load_game_config_rows "$store_id" "$store_key" all)
     if [ ${#rows[@]} -eq 0 ]; then
         echo ""
         print_wrapped "${name:-This game} has no game settings in the database."
@@ -619,12 +626,13 @@ print_game_settings_details() {
         [surround]="Surround (any layout)" [quad]="Quad (4.0)" [surround51]="Surround 5.1"
         [surround61]="Surround 6.1" [surround71]="Surround 7.1")
     local width=$(( ${WRAP_COLUMNS:-76} - 2 ))
-    local id prev_id="" prev_cat="" display_rows="" stores speakers follow file_label loc s
+    local id prev_id="" prev_cat="" display_rows="" stores speakers follow untested file_label loc s
     local -a locs labels
     # One setting's rows are printed together, after its last row is read.
     _flush_setting() {
         [ -n "$prev_id" ] || return 0
         print_config_rows "$display_rows"
+        [ -n "$untested" ] && echo -e "    ${DIM}Not checked on a real install yet.${NC}"
         if [ -n "$stores" ]; then
             labels=()
             for s in ${stores//,/ }; do [ "$s" == "gog" ] && labels+=("GOG") || labels+=("Steam"); done
@@ -650,10 +658,10 @@ print_game_settings_details() {
                     || echo -e "\n${WHITE}Optional settings for ${name}:${NC}"
                 prev_cat="${f[0]}"
             fi
-            echo -e "\n  ${BOLD}${f[2]}${NC}"
+            echo -e "\n  ${BOLD}${f[2]}${NC}${f[14]:+ $(untested_tag)}"
             printf '%s\n' "${f[3]}" | fold -s -w "$width" | sed 's/^/    /'
             echo ""
-            display_rows="" stores="${f[4]}" speakers="${f[5]}" follow="${f[6]}"
+            display_rows="" stores="${f[4]}" speakers="${f[5]}" follow="${f[6]}" untested="${f[14]:-}"
             prev_id="$id"
         fi
         # The file as the rows group it, then where the game keeps it.
@@ -977,7 +985,7 @@ game_settings_step() {
 
     # Per-fix state, keyed "category:number" in database order.
     local -a fix_order=()
-    local -A fix_title=() fix_reason=() fix_follow=() fix_status=() fix_rows=() fix_missing_file=()
+    local -A fix_title=() fix_reason=() fix_follow=() fix_status=() fix_rows=() fix_missing_file=() fix_untested=()
     # Per fix: |-joined files it changes that this build doesn't have, whether
     # any of its files was found, and the files its offered rows change.
     local -A fix_absent_files=() fix_has_file=() fix_files=()
@@ -990,6 +998,7 @@ game_settings_step() {
         follow="${f[6]}"; file="${f[7]}"; fmt="${f[8]}"; ifmissing="${f[9]}"; locs="${f[10]}"
         sec="${f[11]}"; key="${f[12]}"; value="${f[13]}"
         id="$cat:$idx"
+        [ -n "${f[14]:-}" ] && fix_untested[$id]=1
 
         if [ -z "${fix_status[$id]+x}" ]; then
             fix_order+=("$id"); fix_title[$id]="$title"; fix_reason[$id]="$reason"; fix_follow[$id]="$follow"
@@ -1075,9 +1084,12 @@ game_settings_step() {
     done
     [ "$shown" -eq 0 ] && return
 
+    # " (untested)" after the title of a setting nobody has checked on a real
+    # install; only shown when EAX_RESTORE_UNTESTED_SETTINGS lets them through.
+    _untested_suffix() { [ -n "${fix_untested[$1]:-}" ] && printf ' %s' "$(untested_tag)"; return 0; }
     # Prints one fix: title, reason, and each row's current → new value.
     _print_fix() {
-        echo -e "\n  ${BOLD}${fix_title[$1]}${NC}"
+        echo -e "\n  ${BOLD}${fix_title[$1]}${NC}$(_untested_suffix "$1")"
         _fix_body "$1"
     }
     # A fix's reason and rows, under its title (or its box in a tick list).
@@ -1187,7 +1199,7 @@ game_settings_step() {
         local -a offered=() offered_titles=() initial=() bodies=() unoffered=()
         for id in "${optional[@]}"; do
             if [ "${fix_status[$id]}" == "offer" ]; then
-                offered+=("$id"); offered_titles+=("${fix_title[$id]}"); initial+=(0)
+                offered+=("$id"); offered_titles+=("${fix_title[$id]}${fix_untested[$id]:+ $(untested_tag plain)}"); initial+=(0)
                 bodies+=("$(_fix_body "$id")")
             elif [ "${fix_status[$id]}" == "applied" ]; then
                 offered+=("$id"); offered_titles+=("${fix_title[$id]} (Active)"); initial+=(1)
@@ -1228,7 +1240,7 @@ game_settings_step() {
                     if ! checklist_select "Press Enter to keep these as they are, type the numbers you want on (e.g. \"$example\"), or 'n' for none:" \
                         "${offered_titles[@]}"; then
                         GAME_SETTINGS_CANCELLED=1
-                        unset -f _print_fix _fix_body _applied_fix_body _print_absent_note _decline_fix _plan_fix _print_status_line
+                        unset -f _untested_suffix _print_fix _fix_body _applied_fix_body _print_absent_note _decline_fix _plan_fix _print_status_line
                         return
                     fi
                     picks=("${SELECTED[@]}")
@@ -1270,7 +1282,7 @@ game_settings_step() {
             fi
         fi
     fi
-    unset -f _print_fix _fix_body _applied_fix_body _print_absent_note _decline_fix _plan_fix _print_status_line
+    unset -f _untested_suffix _print_fix _fix_body _applied_fix_body _print_absent_note _decline_fix _plan_fix _print_status_line
 }
 
 # Usage: profile_field <jq path, e.g. .exe>

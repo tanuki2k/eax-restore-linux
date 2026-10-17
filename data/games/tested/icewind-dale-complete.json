@@ -18,7 +18,8 @@
       {
         "title": "Enable EAX reverb",
         "reason": "Icewind Dale turns on 'Environmental Audio' by itself the first time it starts.",
-        "changes": { "icewind.ini": { "Game Options": { "Environmental Audio": "1" } } }
+        "changes": { "icewind.ini": { "Game Options": { "Environmental Audio": "1" } } },
+        "tested": true
       }
     ]
   },

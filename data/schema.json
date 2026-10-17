@@ -334,6 +334,11 @@
         "follow_up": {
           "description": "Something the player should do after installing. It's shown in the final summary.",
           "type": "string"
+        },
+        "tested": {
+          "description": "True once you've checked this setting on a real install. False when nobody has: it's then hidden unless the player sets EAX_RESTORE_UNTESTED_SETTINGS=1, and tagged \"(untested)\" when shown. A setting without the field counts as checked.",
+          "type": "boolean",
+          "default": true
         }
       }
     }
