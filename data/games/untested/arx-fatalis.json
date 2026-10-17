@@ -18,7 +18,8 @@
       {
         "title": "Enable EAX reverb",
         "reason": "Arx Fatalis ships with EAX off.",
-        "changes": { "cfg.ini": { "AUDIO": { "EAX": "1" } } }
+        "changes": { "cfg.ini": { "AUDIO": { "EAX": "1" } } },
+        "tested": false
       }
     ]
   },

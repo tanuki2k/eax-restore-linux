@@ -25,7 +25,8 @@
         "changes": {
           "jaconfig.cfg": { "s_UseOpenAL": "1" },
           "jampconfig.cfg": { "s_UseOpenAL": "1" }
-        }
+        },
+        "tested": false
       }
     ]
   }

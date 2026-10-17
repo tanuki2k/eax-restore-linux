@@ -25,7 +25,8 @@
         "changes": {
           "jk2config.cfg": { "s_UseOpenAL": "1" },
           "jk2mpconfig.cfg": { "s_UseOpenAL": "1" }
-        }
+        },
+        "tested": false
       }
     ]
   }

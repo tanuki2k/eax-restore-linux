@@ -33,7 +33,8 @@
             "Engine.Engine": { "AudioDevice": "Galaxy.GalaxyAudioSubsystem" },
             "Galaxy.GalaxyAudioSubsystem": { "Use3dHardware": "True", "UseReverb": "True" }
           }
-        }
+        },
+        "tested": false
       },
       {
         "title": "Enable Dolby Pro Logic ",
@@ -42,7 +43,8 @@
         "changes": {
           "UnrealTournament.ini": { "Galaxy.GalaxyAudioSubsystem": { "UseSurround": true } }
         },
-        "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic."
+        "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+        "tested": false
       }
     ],
     "optional_settings": [
@@ -51,21 +53,24 @@
         "reason": "Unreal Tournament: Game of the Year Edition mixes its sound at a low sample rate, which dulls high-pitched sounds.",
         "changes": {
           "UnrealTournament.ini": { "Galaxy.GalaxyAudioSubsystem": { "OutputRate": "48000Hz" } }
-        }
+        },
+        "tested": false
       },
       {
         "title": "Raise texture filtering",
         "reason": "Unreal Tournament: Game of the Year Edition filters textures at a low level, so a visible line shows where each floor and wall texture switches to a blurrier version.",
         "changes": {
           "UnrealTournament.ini": { "D3DDrv.D3DRenderDevice": { "UseTrilinear": "True" } }
-        }
+        },
+        "tested": false
       },
       {
         "title": "Raise color depth",
         "reason": "Unreal Tournament: Game of the Year Edition runs fullscreen with a reduced color range, so smooth shading like skies and shadows shows visible bands.",
         "changes": {
           "UnrealTournament.ini": { "WinDrv.WindowsClient": { "FullscreenColorBits": "32" } }
-        }
+        },
+        "tested": false
       },
       {
         "title": "Enable WASD controls",
@@ -85,7 +90,8 @@
               "MouseWheelDown": "NextWeapon"
             }
           }
-        }
+        },
+        "tested": false
       }
     ]
   },

@@ -89,7 +89,8 @@
                 "EnableEAX": "1",
                 "EnableSoundOcclusion": "1"
               }
-            }
+            },
+            "tested": false
           },
           {
             "title": "Enable Stereo output",
@@ -101,7 +102,8 @@
               "settings.cfg": {
                 "Speakers": "2"
               }
-            }
+            },
+            "tested": false
           },
           {
             "title": "Enable headphone output",
@@ -113,7 +115,8 @@
               "settings.cfg": {
                 "Speakers": "4"
               }
-            }
+            },
+            "tested": false
           },
           {
             "title": "Enable Surround Sound output",
@@ -125,7 +128,8 @@
               "settings.cfg": {
                 "Speakers": "5"
               }
-            }
+            },
+            "tested": false
           },
           {
             "title": "Enable 4.0 surround output",
@@ -137,7 +141,8 @@
               "settings.cfg": {
                 "Speakers": "3"
               }
-            }
+            },
+            "tested": false
           },
           {
             "title": "Enable 5.1 surround output",
@@ -152,7 +157,8 @@
               "settings.cfg": {
                 "Speakers": "6"
               }
-            }
+            },
+            "tested": false
           },
           {
             "title": "Enable 7.1 surround output",
@@ -164,7 +170,8 @@
               "settings.cfg": {
                 "Speakers": "7"
               }
-            }
+            },
+            "tested": false
           }
         ]
       },
@@ -257,7 +264,8 @@
                   "EAX": "1"
                 }
               }
-            }
+            },
+            "tested": false
           }
         ]
       },
@@ -657,7 +665,8 @@
                   "Use3DSound": "True"
                 }
               }
-            }
+            },
+            "tested": false
           }
         ]
       },
@@ -729,7 +738,8 @@
                   "Use3DSound": "True"
                 }
               }
-            }
+            },
+            "tested": false
           }
         ]
       },
@@ -2375,7 +2385,8 @@
                   "UseEAX": "true"
                 }
               }
-            }
+            },
+            "tested": false
           }
         ]
       },
@@ -2843,7 +2854,8 @@
               "sof2sp.cfg": {
                 "snd_dll": "al"
               }
-            }
+            },
+            "tested": false
           }
         ]
       },
@@ -2920,7 +2932,8 @@
               "jk2mpconfig.cfg": {
                 "s_UseOpenAL": "1"
               }
-            }
+            },
+            "tested": false
           }
         ]
       },
@@ -2976,7 +2989,8 @@
               "jampconfig.cfg": {
                 "s_UseOpenAL": "1"
               }
-            }
+            },
+            "tested": false
           }
         ]
       },
@@ -3118,7 +3132,8 @@
                   "SelectedEAXVersion": "3"
                 }
               }
-            }
+            },
+            "tested": false
           }
         ]
       },
@@ -3165,7 +3180,8 @@
                   "Use3DSound": "True"
                 }
               }
-            }
+            },
+            "tested": false
           }
         ]
       },
@@ -3215,7 +3231,8 @@
               "cam_ext.cfg": {
                 "force_underwater_reverb": true
               }
-            }
+            },
+            "tested": false
           }
         ],
         "optional_settings": [
@@ -3226,7 +3243,8 @@
               "cam_ext.cfg": {
                 "use_raw_mouse_input": true
               }
-            }
+            },
+            "tested": false
           }
         ]
       },
@@ -3297,7 +3315,8 @@
                   "UseSpatial": "True"
                 }
               }
-            }
+            },
+            "tested": false
           }
         ],
         "optional_settings": [
@@ -3310,7 +3329,8 @@
                   "OutputRate": "48000Hz"
                 }
               }
-            }
+            },
+            "tested": false
           },
           {
             "title": "Raise texture filtering",
@@ -3321,7 +3341,8 @@
                   "UseTrilinear": "True"
                 }
               }
-            }
+            },
+            "tested": false
           },
           {
             "title": "Raise color depth",
@@ -3332,7 +3353,8 @@
                   "FullscreenColorBits": "32"
                 }
               }
-            }
+            },
+            "tested": false
           },
           {
             "title": "Enable detail textures",
@@ -3343,7 +3365,8 @@
                   "DetailTextures": "True"
                 }
               }
-            }
+            },
+            "tested": false
           }
         ]
       },
@@ -3419,7 +3442,8 @@
               "cam_ext.cfg": {
                 "force_underwater_reverb": true
               }
-            }
+            },
+            "tested": false
           }
         ],
         "optional_settings": [
@@ -3430,7 +3454,8 @@
               "cam_ext.cfg": {
                 "use_raw_mouse_input": true
               }
-            }
+            },
+            "tested": false
           }
         ]
       },
@@ -3485,7 +3510,8 @@
               "cam_ext.cfg": {
                 "force_underwater_reverb": true
               }
-            }
+            },
+            "tested": false
           }
         ],
         "optional_settings": [
@@ -3496,7 +3522,8 @@
               "cam_ext.cfg": {
                 "use_raw_mouse_input": true
               }
-            }
+            },
+            "tested": false
           }
         ]
       },
@@ -3555,7 +3582,8 @@
                 "UseEAX": "1",
                 "EAXMultipleEnvironments": "1"
               }
-            }
+            },
+            "tested": false
           }
         ]
       },
@@ -3731,7 +3759,8 @@
                   "Sound3DAcc": "True"
                 }
               }
-            }
+            },
+            "tested": false
           }
         ]
       },
@@ -3861,7 +3890,8 @@
                   "eaxenabled": "1"
                 }
               }
-            }
+            },
+            "tested": false
           }
         ]
       },
@@ -4103,7 +4133,8 @@
                   "Use3DSound": "True"
                 }
               }
-            }
+            },
+            "tested": false
           }
         ]
       },
@@ -4226,7 +4257,8 @@
                   "UseReverb": "True"
                 }
               }
-            }
+            },
+            "tested": false
           },
           {
             "title": "Enable Dolby Pro Logic ",
@@ -4241,7 +4273,8 @@
                 }
               }
             },
-            "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic."
+            "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+            "tested": false
           }
         ],
         "optional_settings": [
@@ -4254,7 +4287,8 @@
                   "OutputRate": "48000Hz"
                 }
               }
-            }
+            },
+            "tested": false
           },
           {
             "title": "Raise texture filtering",
@@ -4265,7 +4299,8 @@
                   "UseTrilinear": "True"
                 }
               }
-            }
+            },
+            "tested": false
           },
           {
             "title": "Raise color depth",
@@ -4276,7 +4311,8 @@
                   "FullscreenColorBits": "32"
                 }
               }
-            }
+            },
+            "tested": false
           },
           {
             "title": "Enable WASD controls",
@@ -4296,7 +4332,8 @@
                   "MouseWheelDown": "NextWeapon"
                 }
               }
-            }
+            },
+            "tested": false
           }
         ]
       },

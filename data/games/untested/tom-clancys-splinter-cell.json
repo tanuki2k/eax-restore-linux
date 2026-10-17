@@ -24,7 +24,8 @@
           "SplinterCellUser.ini": {
             "Engine.EPCGameOptions": { "EAX": "True", "Sound3DAcc": "True" }
           }
-        }
+        },
+        "tested": false
       }
     ]
   }

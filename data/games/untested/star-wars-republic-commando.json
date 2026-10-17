@@ -26,7 +26,8 @@
               "SelectedEAXVersion": "3"
             }
           }
-        }
+        },
+        "tested": false
       }
     ]
   }

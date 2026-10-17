@@ -31,7 +31,8 @@
         "reason": "Thief: Deadly Shadows ships with 'Audio Hardware Mixing', 'EAX ADVANCED HD' and 'EAX Multiple Environments' off.",
         "changes": {
           "options.ini": { "UseHWMixing": "1", "UseEAX": "1", "EAXMultipleEnvironments": "1" }
-        }
+        },
+        "tested": false
       }
     ]
   },

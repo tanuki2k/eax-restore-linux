@@ -14,7 +14,8 @@
       {
         "title": "Enable EAX reverb",
         "reason": "Soldier of Fortune II plays its sound through snd_dsx86.dll out of the box, which has no EAX — only snd_alx86.dll does.",
-        "changes": { "sof2sp.cfg": { "snd_dll": "al" } }
+        "changes": { "sof2sp.cfg": { "snd_dll": "al" } },
+        "tested": false
       }
     ]
   },

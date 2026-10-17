@@ -17,43 +17,50 @@
       {
         "title": "Enable EAX and sound occlusion",
         "reason": "Out of the box, Alpha Prime has EAX and sound occlusion turned on.",
-        "changes": { "settings.cfg": { "EnableEAX": "1", "EnableSoundOcclusion": "1" } }
+        "changes": { "settings.cfg": { "EnableEAX": "1", "EnableSoundOcclusion": "1" } },
+        "tested": false
       },
       {
         "title": "Enable Stereo output",
         "reason": "The game has a Speakers setting in settings.cfg. This sets it to 2, which is stereo output.",
         "only_if": { "speakers": "stereo" },
-        "changes": { "settings.cfg": { "Speakers": "2" } }
+        "changes": { "settings.cfg": { "Speakers": "2" } },
+        "tested": false
       },
       {
         "title": "Enable headphone output",
         "reason": "Alpha Prime's sound output defaults to a speaker layout, so headphones get a mix made for speakers. Setting Speakers to 4 in settings.cfg switches it to the headphone output.",
         "only_if": { "speakers": "headphones" },
-        "changes": { "settings.cfg": { "Speakers": "4" } }
+        "changes": { "settings.cfg": { "Speakers": "4" } },
+        "tested": false
       },
       {
         "title": "Enable Surround Sound output",
         "reason": "The game sets its speaker output to stereo by default. Setting Speakers to 5 selects 5.1 surround, which suits a matrix-encoded surround setup.",
         "only_if": { "speakers": "matrix" },
-        "changes": { "settings.cfg": { "Speakers": "5" } }
+        "changes": { "settings.cfg": { "Speakers": "5" } },
+        "tested": false
       },
       {
         "title": "Enable 4.0 surround output",
         "reason": "With quad speakers, the game's sound setting is not set to the quad mode. The rear speakers can stay silent or play the wrong channels.",
         "only_if": { "speakers": "quad" },
-        "changes": { "settings.cfg": { "Speakers": "3" } }
+        "changes": { "settings.cfg": { "Speakers": "3" } },
+        "tested": false
       },
       {
         "title": "Enable 5.1 surround output",
         "reason": "The game's Speakers setting is not set to 6 by default, so it does not use all six channels of a 5.1 setup. Setting it to 6 makes the game send surround sound to a 5.1 speaker system.",
         "only_if": { "speakers": ["surround51", "surround61"] },
-        "changes": { "settings.cfg": { "Speakers": "6" } }
+        "changes": { "settings.cfg": { "Speakers": "6" } },
+        "tested": false
       },
       {
         "title": "Enable 7.1 surround output",
         "reason": "The game's Speakers option defaults to a lower channel count. Setting it to 7 makes the game send 7.1 sound to OpenAL Soft.",
         "only_if": { "speakers": "surround71" },
-        "changes": { "settings.cfg": { "Speakers": "7" } }
+        "changes": { "settings.cfg": { "Speakers": "7" } },
+        "tested": false
       }
     ]
   },
