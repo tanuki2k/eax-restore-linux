@@ -13,7 +13,7 @@
     "files": {
       "user.ltx": {
         "format": "ltx",
-        "locations": ["prefix_documents:Stalker-STCS/user.ltx", "game_root:user.ltx"],
+        "locations": ["prefix_documents:Stalker-STCS/user.ltx", "game_root:_appdata_/user.ltx"],
         "crash_marker": "tmp.ltx"
       }
     },

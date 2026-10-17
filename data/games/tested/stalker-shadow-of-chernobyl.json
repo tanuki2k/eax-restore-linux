@@ -11,7 +11,10 @@
   "eax": { "api": "openal", "versions": ["1.0", "2.0", "3.0"] },
   "game_config": {
     "files": {
-      "user.ltx": { "format": "ltx", "locations": ["prefix_documents:stalker-shoc/user.ltx"] }
+      "user.ltx": {
+        "format": "ltx",
+        "locations": ["prefix_documents:stalker-shoc/user.ltx", "game_root:_appdata_/user.ltx"]
+      }
     }
   }
 }

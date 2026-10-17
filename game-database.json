@@ -2564,8 +2564,7 @@
             }
           }
         ]
-      },
-      "tested": false
+      }
     },
     {
       "id": "stalker-call-of-prypiat-enhanced-edition",
@@ -2619,7 +2618,7 @@
             "format": "ltx",
             "locations": [
               "prefix_documents:Stalker-STCS/user.ltx",
-              "game_root:user.ltx"
+              "game_root:_appdata_/user.ltx"
             ],
             "crash_marker": "tmp.ltx"
           }
@@ -2695,12 +2694,12 @@
           "user.ltx": {
             "format": "ltx",
             "locations": [
-              "prefix_documents:stalker-shoc/user.ltx"
+              "prefix_documents:stalker-shoc/user.ltx",
+              "game_root:_appdata_/user.ltx"
             ]
           }
         }
-      },
-      "tested": false
+      }
     },
     {
       "id": "stalker-shadow-of-chornobyl-enhanced-edition",
