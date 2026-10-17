@@ -8,7 +8,7 @@ import argparse, json, os, re, subprocess, sys, threading, time, traceback, webb
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import ai, capture, classify, cleanup, dbio, submit  # noqa: E402
+import ai, capture, classify, cleanup, dbio, submit, update  # noqa: E402
 
 WEB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 SCRIPT = os.path.join(dbio.ROOT, "dist", "eax-restore-linux.sh")
@@ -438,6 +438,10 @@ class H(BaseHTTPRequestHandler):
                 global LAST_PING
                 LAST_PING = time.time()
                 return self.reply({"ok": True})
+            if method == "GET" and p == "/api/update":
+                return self.reply(update.state())
+            if method == "POST" and p == "/api/update":
+                return self.reply(update.apply())
             if method == "POST" and p == "/api/quit":
                 self.reply({"ok": True})
                 threading.Thread(target=SERVER.shutdown, daemon=True).start()
@@ -488,6 +492,7 @@ def main():
     srv = SERVER = ThreadingHTTPServer(("127.0.0.1", a.port), H)
     url = f"http://127.0.0.1:{a.port}/"
     print(f"Game profile editor: {url}  (AI: {ai.available() or 'off - use the AI chip in the page, or set ANTHROPIC_API_KEY'})")
+    threading.Thread(target=update.check, daemon=True).start()
     if not a.no_open:
         threading.Timer(0.5, lambda: webbrowser.open(url)).start()
     if a.quit_when_closed:

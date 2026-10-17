@@ -8,6 +8,8 @@
 # globals.sh (needs SCRIPT_VERSION/SCRIPT_DATE/color vars only) and before
 # guards.sh's root/Gaming-Mode checks and preflight.sh's screen clear, so both
 # flags return instantly with no side effects.
+# Kept for the self-update restart, which runs the new script the same way.
+ORIGINAL_ARGS=("$@")
 case "${1:-}" in
     -h|--help)
         # echo -e (not cat) because BOLD/NC etc. are literal backslash-escape
@@ -28,6 +30,7 @@ prompts is done via environment variables:
   EAX_RESTORE_SKIP_PREFLIGHT=1        Skip the dependency scan
   EAX_RESTORE_DSOAL_PIN=1             Use the stable DSOAL build without asking
   EAX_RESTORE_VCRUN_ONLY=1            Only (re)install the VC++ runtime
+  EAX_RESTORE_SKIP_UPDATE_CHECK=1     Don't check for a newer version of the script
   EAX_RESTORE_SKIP_CACHE_CHECK=1      Only use builds already downloaded
   EAX_RESTORE_GAME_DATABASE_FILE=PATH   Use a local game database file
   EAX_RESTORE_UNTESTED=1              Include game profiles not yet checked on a

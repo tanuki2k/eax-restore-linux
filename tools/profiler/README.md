@@ -40,6 +40,8 @@ Every action shows exactly what it will delete first, and nothing is touched unt
 
 Sessions are kept in `~/.local/state/eax-restore-linux/profiler/<store>-<id>/`.
 
+On start the editor fetches its checkout's upstream branch in the background; when it is behind, a banner offers **Update**, which runs `git pull --ff-only` and rebuilds `dist/`, then asks you to restart the editor. A checkout with commits of its own, no upstream or no network gets no offer. `EAX_PROFILER_NO_UPDATE_CHECK=1` turns the check off.
+
 Layout: `capture.py` (library, snapshots, diffs), `classify.py` (noise flags, the drafted `game_config`, the AI passes), `cleanup.py`, `dbio.py`, `ai.py`, `profiler.py` (server). Tests: `python3 -I -m unittest discover -s tools/profiler/tests` (includes golden checks that F.E.A.R.'s `gadb` and Descent 3's registry changes come out as their database entries say); `tests/integration/profiler-answers.bats` fails if the script's prompts drift from the canned answers in `capture.py`.
 
 Binary `gadb` files (F.E.A.R.'s profile) are read by key name, the same way the script reads them, so a switched on/off setting comes through like any other change. Launching through Heroic's `heroic://launch?appName=…&runner=gog` URL has been checked on a real install.

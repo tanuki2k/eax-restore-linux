@@ -29,6 +29,7 @@ COMPONENTS=(
     verify.sh
     cache.sh
     prefix-steps.sh
+    self-update.sh
     preflight.sh
     vcrun-only-flow.sh
     dsoal-log-flow.sh

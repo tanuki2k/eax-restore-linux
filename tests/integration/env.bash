@@ -75,7 +75,7 @@ VDF
     printf 'fake soft_oal 64\n' > "$share/openal-soft/official/openal-soft-test-bin/bin/Win64/soft_oal.dll"
     echo "test" > "$share/openal-soft/updated_at.txt"
     export PATH="$REPO_ROOT/tests/fixtures/bin:$PATH"
-    export EAX_RESTORE_SKIP_PREFLIGHT=1 EAX_RESTORE_SKIP_CACHE_CHECK=1 EAX_RESTORE_NO_LOG=1
+    export EAX_RESTORE_SKIP_PREFLIGHT=1 EAX_RESTORE_SKIP_CACHE_CHECK=1 EAX_RESTORE_NO_LOG=1 EAX_RESTORE_SKIP_UPDATE_CHECK=1
     export TERM=dumb
 }
 

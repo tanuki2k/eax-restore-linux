@@ -89,6 +89,8 @@ browse_game_database_tool() {
     browse_game_database
 }
 
+check_for_script_update
+
 while true; do
 VCRUN_ONLY_MODE=""
 DSOAL_LOG_MODE=""

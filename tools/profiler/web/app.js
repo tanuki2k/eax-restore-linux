@@ -978,10 +978,27 @@ $("#quitbtn").onclick = async () => {
   document.body.replaceChildren(el("div", { class: "empty" }, el("h2", {}, "The editor has stopped."), el("p", {}, "You can close this tab. Start it again from the app menu or with tools/profiler/eax-profiler.")));
 };
 
+// A newer version upstream: the server fetched it at start-up; Update fast-forwards the checkout.
+async function showUpdateBar() {
+  const u = await api("/api/update").catch(() => null), bar = $("#updatebar");
+  if (!u || !u.behind) return;
+  const n = u.behind, what = `${n} newer change${n === 1 ? "" : "s"} available for the editor and the game database`;
+  const close = el("button", { type: "button", class: "btn sm ghost", onclick: () => { bar.hidden = true; } }, "Later");
+  if (!u.can_update) { fill(bar, el("span", {}, `${what}. ${u.reason}`), el("span", { class: "sp" }), close); bar.hidden = false; return; }
+  const go = el("button", { type: "button", class: "btn sm primary", onclick: async () => {
+    if (!(await askConfirm((DIRTY ? "You have unsaved changes, and they will be lost when you restart the editor. Save them first.\n\n" : "") + "Update now?\n\n" + u.subjects.map((x) => "• " + x).join("\n") + (n > u.subjects.length ? `\n…and ${n - u.subjects.length} more` : ""), "Update", DIRTY))) return;
+    go.disabled = true; go.textContent = "Updating…";
+    try {
+      const r = await api("/api/update", "POST");
+      fill(bar, el("span", {}, "Updated." + (r.build_ok ? "" : " The script couldn't be rebuilt; run ./build.sh.") + " Quit the editor and open it again to use the new version."), el("span", { class: "sp" }), el("button", { type: "button", class: "btn sm primary", onclick: () => $("#quitbtn").click() }, "Quit"));
+    } catch (x) { go.disabled = false; go.textContent = "Update"; toast(x.message, 10000); }
+  } }, "Update");
+  fill(bar, el("span", {}, what + "."), el("span", { class: "sp" }), go, close); bar.hidden = false;
+}
 window.addEventListener("error", (e) => toast("JS error: " + e.message, 20000));
 window.addEventListener("unhandledrejection", (e) => toast("Error: " + (e.reason && e.reason.message || e.reason), 20000));
 (async () => {
-  SCHEMA = await api("/api/schema"); await loadList(); showErrors([]);
+  SCHEMA = await api("/api/schema"); await loadList(); showErrors([]); showUpdateBar();
   const q = new URLSearchParams(location.search), o = q.get("open");
   if (o) await openGame(...o.split("/"));
   if (q.get("section")) setSection(q.get("section"));

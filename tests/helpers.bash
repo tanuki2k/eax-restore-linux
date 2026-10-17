@@ -6,7 +6,7 @@ REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
 load_script_functions() {
     local f
     # shellcheck disable=SC1090
-    for f in globals ui common game-config launcher-config; do
+    for f in globals ui common game-config launcher-config verify self-update; do
         source "$REPO_ROOT/src/$f.sh"
     done
 }

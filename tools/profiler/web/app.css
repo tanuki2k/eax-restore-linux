@@ -237,3 +237,8 @@ button.danger:hover:not(:disabled){background:var(--bad);filter:brightness(1.1)}
 
 /* the tip and the toast are popovers, so they sit in the browser's top layer, above any open dialog */
 #tip:not(:popover-open),#toast:not(:popover-open){display:none}
+
+/* ---- update banner */
+.updatebar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 16px;background:var(--acc-weak);color:var(--fg);border-bottom:1px solid var(--line)}
+.updatebar[hidden]{display:none}
+.updatebar .sp{flex:1}
