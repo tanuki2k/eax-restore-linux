@@ -308,7 +308,7 @@ print_note() {
     echo -e "$(tilde_path "$body")${NC}"
 }
 # Usage: verified_tag [plain] <untested flag>
-# "(tested)" beside a game or setting somebody has checked on a real install,
+# "(tested)" beside a game or setting verified on a real install,
 # "(untested)" (in the Note colour) when the flag is non-empty; "plain" leaves
 # the colours off, for a tick list's title. One place so every screen says it
 # the same way.

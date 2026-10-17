@@ -208,9 +208,8 @@ get_game_directory() {
                 return
                 ;;
             scan)
-                print_note "the game database is a work in progress, so the scan only finds the games" \
-                    "added so far. If your game isn't listed, it may still have EAX — choose [M] under" \
-                    "the list to type its path yourself."
+                print_note "the game database is a work in progress. If your game isn't listed, it may" \
+                    "still have EAX — choose [M] under the list to type its path yourself."
                 # No goes back to the locate menu.
                 if ! confirm "Scan your libraries, knowing the game database is a work in progress?"; then
                     continue

@@ -133,7 +133,7 @@ def pr_body(game, gid, store_ids, note, checked_install, checked_ids, replaced):
         lines += [note.strip(), ""]
     lines += [f"- [{'x' if checked_install else ' '}] Checked on my own install",
               f"- [{'x' if checked_ids else ' '}] Store IDs checked on the store's page", "",
-              "It goes in `data/games/untested/` until someone has checked it on a real install."
+              "It goes in `data/games/untested/`, unverified, until someone has tried it on a real install."
               if not replaced else "It keeps the folder it's already in."]
     return "\n".join(lines) + "\n"
 

@@ -16,7 +16,7 @@ setup() {
 # profile_install_answers without Game Audio Settings' and Optional Game
 # Settings' answers, with the boost question (the first of $2) after the override.
 boost_answers() {
-    answers "$1" m "$GAME" \
+    answers "$1" m "" "$GAME" \
         "" "" "" \
         "" "" \
         "" "" \

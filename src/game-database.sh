@@ -88,7 +88,7 @@ ensure_game_database() {
         fi
     fi
 
-    # Profiles nobody has checked on a real install (built with "tested":
+    # Unverified profiles (built with "tested":
     # false) are left out unless EAX_RESTORE_UNTESTED is set: their config edits
     # and engine choice could be wrong for a player's copy. The full file
     # stays in GAME_DATABASE_FULL_FILE for the profile browser, which has its
@@ -96,8 +96,7 @@ ensure_game_database() {
     # which is writable and overwritten each run, so it needs no cleanup.
     GAME_DATABASE_FULL_FILE="$GAME_DATABASE_FILE"
     if is_truthy "${EAX_RESTORE_UNTESTED:-}"; then
-        print_note "Game profiles nobody has checked on a real install yet are included," \
-            "so their settings may be wrong." >&2
+        print_note "Unverified game profiles are included, so their settings may be wrong." >&2
     elif jq -e 'any(.games[]; .tested == false)' "$GAME_DATABASE_FILE" >/dev/null 2>&1; then
         local visible="${GAME_DATABASE_CACHE}.visible"
         if jq '.games |= map(select(.tested != false))' "$GAME_DATABASE_FILE" > "$visible" 2>/dev/null && [ -s "$visible" ]; then
@@ -1313,7 +1312,7 @@ browse_help() {
         "" "Filters"
         "Ctrl-A" "Audio: All → DirectSound3D → OpenAL → EAX 1.0 … 5.0."
         "Ctrl-S" "Store: All → Steam → GOG → Delisted → Steam delisted → GOG delisted. Delisted games are no longer sold on that store."
-        "Ctrl-T" "Verified: Tested → All → Untested. It opens on Tested, the games checked on a real install. Untested ones are profiles nobody has checked yet."
+        "Ctrl-T" "Verified: Tested → All → Untested. It opens on Tested."
         "Ctrl-R" "Order: best match first, or A–Z."
         "" "View"
         "Ctrl-F" "Open the right pane full screen; q comes back."

@@ -472,7 +472,7 @@ count_game_settings() {
 # Usage: game_setting_titles <id> <steam|gog>
 # One "audio|optional<TAB>title<TAB>flag" line per setting count_game_settings
 # counts, audio settings first, for the game profile screen; flag is "1" for a
-# setting nobody has checked on a real install. Then one "openal<TAB>key =
+# setting unverified. Then one "openal<TAB>key =
 # value<TAB>flag" line per alsoft.ini value, flagged when install.alsoft_tested
 # is false.
 game_setting_titles() {
@@ -612,7 +612,7 @@ print_config_rows() {
 
 # Usage: print_alsoft_details <name> <store key> <store id>
 # The Tab view's OpenAL section: the game's alsoft.ini values, each with a
-# short explanation, and whether anyone has checked them on a real install.
+# short explanation, and whether they are verified.
 print_alsoft_details() {
     local line sec key value
     local -a lines
@@ -634,7 +634,7 @@ print_alsoft_details() {
         esac
         echo -e "    ${DIM}In alsoft.ini, section [${sec}]${NC}"
     done
-    [ -n "$flag" ] && echo -e "    ${DIM}Not checked on a real install yet.${NC}"
+    [ -n "$flag" ] && echo -e "    ${DIM}Unverified.${NC}"
 }
 
 # Usage: print_game_settings_details <game id>
@@ -672,7 +672,7 @@ print_game_settings_details() {
     _flush_setting() {
         [ -n "$prev_id" ] || return 0
         print_config_rows "$display_rows"
-        [ -n "$untested" ] && echo -e "    ${DIM}Not checked on a real install yet.${NC}"
+        [ -n "$untested" ] && echo -e "    ${DIM}Unverified.${NC}"
         if [ -n "$stores" ]; then
             labels=()
             for s in ${stores//,/ }; do [ "$s" == "gog" ] && labels+=("GOG") || labels+=("Steam"); done
@@ -910,7 +910,7 @@ offer_alsoft_settings() {
     ALSOFT_OVERRIDES=()
     current_profile || return
     local sec key value asked="" entry tag
-    # Values nobody has checked on a real install are held back like
+    # Unverified values are held back like
     # untested game settings.
     if ! is_truthy "${EAX_RESTORE_UNTESTED_SETTINGS:-}" \
         && [ "$(gdb_jq "$KG_ID" "$KG_STORE" 'entry0 | (.install.alsoft_tested | if . == null then true else . end)')" == "false" ]; then

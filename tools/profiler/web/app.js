@@ -16,7 +16,7 @@ const BASE_HELP = {
 const LABELS = {
   id: "Store ID", id_source: "Where the ID came from", api: "Audio API", exe: "Executable", store_details: "Store details",
   extra_exe_folders: "Extra exe folders", companion_apps: "Companion apps", beta_branch: "Beta branch", fix_in_place: "Fix works in place",
-  alsoft_ini: "alsoft.ini settings", only_if: "Only offer when…", follow_up: "Follow-up for the player", tested: "Verified on a real install", alsoft_tested: "alsoft.ini values verified on a real install", eax: "EAX",
+  alsoft_ini: "alsoft.ini settings", only_if: "Only offer when…", follow_up: "Follow-up for the player", tested: "Verified", alsoft_tested: "alsoft.ini values verified", eax: "EAX",
   default_reverb: "Default reverb", "default-reverb": "Default reverb", versions: "EAX versions", tweaks: "Compatibility tweaks",
 };
 const SECTIONS = [
@@ -399,7 +399,7 @@ function renderEdit() {
   const folderLabel = { tested: "Tested", untested: "Untested", drafts: "Draft" }[CUR.folder];
   $("#ghead").replaceChildren(el("div", { class: "gtop" },
     el("div", { class: "gtitle" }, el("h1", {}, GAME.name || CUR.id),
-      el("div", { class: "gmeta" }, el("span", { class: "badge " + CUR.folder, title: { tested: "Checked against a real install.", untested: "Shipped, but not checked on a real install yet.", drafts: "Incomplete or doubtful; never shipped." }[CUR.folder] }, folderLabel),
+      el("div", { class: "gmeta" }, el("span", { class: "badge " + CUR.folder, title: { tested: "Verified against a real install.", untested: "Included, but unverified.", drafts: "Incomplete or doubtful; never shipped." }[CUR.folder] }, folderLabel),
         el("code", {}, `${CUR.folder}/${CUR.id}.json`), el("span", { id: "buildbadge", class: "badge" }), el("span", { id: "dirtybadge", class: "badge dirty", hidden: !DIRTY }, "● Unsaved changes"))),
     null));
   // The actions sit in the sticky section bar (drawNav), so they stay in view while scrolling.
@@ -494,7 +494,7 @@ async function submitClicked() {
   const refresh = () => { go.disabled = info.errors.length > 0 || (info.findings.length > 0 && !okPrivate.checked); };
   okPrivate.onchange = refresh;
   const dlg = dialog(el("h3", {}, `Send ${info.name} to the project?`), via,
-    CUR.folder === "tested" ? null : el("p", { class: "muted" }, "It's added as untested until someone has checked it on a real install."),
+    CUR.folder === "tested" ? null : el("p", { class: "muted" }, "It's added as untested, and stays that way until someone has tried it on a real install."),
     info.errors.length ? el("div", {}, el("p", {}, el("strong", {}, "Fix these first:")), el("ul", {}, info.errors.map((x) => el("li", {}, x)))) : null,
     info.findings.length ? el("div", {}, el("p", {}, el("strong", {}, "These look like they came from your computer:")),
       el("ul", {}, info.findings.map((f) => el("li", {}, el("code", {}, f.where), ` “${f.value}” ${f.why}`))),

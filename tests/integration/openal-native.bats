@@ -14,7 +14,7 @@ setup() {
 }
 
 openal_answers() {
-    answers "$1" m "$GAME" \
+    answers "$1" m "" "$GAME" \
         "" "" "" \
         "" "" \
         "" "" \

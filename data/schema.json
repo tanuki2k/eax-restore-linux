@@ -111,7 +111,7 @@
           }
         },
         "alsoft_tested": {
-          "description": "True once you've checked these alsoft.ini values on a real install. False when nobody has: they're then left out unless the player sets EAX_RESTORE_UNTESTED_SETTINGS=1, and tagged \"(untested)\" when shown. Without the field they count as checked.",
+          "description": "True once these alsoft.ini values are verified on a real install. False while they're unverified: they're then left out unless the player sets EAX_RESTORE_UNTESTED_SETTINGS=1, and tagged \"(untested)\" when shown. Without the field they count as checked.",
           "type": "boolean",
           "default": true
         }
@@ -343,7 +343,7 @@
           "type": "string"
         },
         "tested": {
-          "description": "True once you've checked this setting on a real install. False when nobody has: it's then hidden unless the player sets EAX_RESTORE_UNTESTED_SETTINGS=1, and tagged \"(untested)\" when shown. A setting without the field counts as checked.",
+          "description": "True once this setting is verified on a real install. False while it's unverified: it's then hidden unless the player sets EAX_RESTORE_UNTESTED_SETTINGS=1, and tagged \"(untested)\" when shown. A setting without the field counts as checked.",
           "type": "boolean",
           "default": true
         }

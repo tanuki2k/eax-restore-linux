@@ -156,6 +156,9 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     check_download_readiness
 
     print_install_overview
+    # Only Enter continues; nothing has changed yet, so there's nothing to cancel.
+    prompt "Press Enter to continue:"
+    read_answer _
     print_install_phase 1 "GAME"
 
     # Steps 1-2 loop: at an EAX-impossible dead end (see prompt_restart_or_quit)

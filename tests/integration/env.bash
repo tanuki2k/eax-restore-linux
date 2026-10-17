@@ -115,7 +115,7 @@ answers() {
 # OVERRIDE_CHOICE picks step 10's DLL override method (default 1: launch options;
 # 2: the prefix registry).
 install_answers() {
-    answers "$1" m "$GAME" \
+    answers "$1" m "" "$GAME" \
         "" "" "" \
         "" "" \
         "" "" \
@@ -139,7 +139,7 @@ uninstall_answers() {
 # Settings (review: y, pick #1 "Skip intro movies"). The last Enter is spare: a typed pick
 # is followed by an "Apply?" question in some versions of the script, not others.
 profile_install_answers() {
-    answers "$1" m "$GAME" \
+    answers "$1" m "" "$GAME" \
         "" "" "" \
         "" "" \
         "" "" \
@@ -206,7 +206,7 @@ JSON
 
 # Heroic has no AppID step, so one prompt fewer in launcher identification.
 heroic_install_answers() {
-    answers "$1" m "$GAME" \
+    answers "$1" m "" "$GAME" \
         "" "" \
         "" "" \
         "" "" \

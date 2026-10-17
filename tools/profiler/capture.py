@@ -422,9 +422,9 @@ def install_answers(game_dir, store):
     registry_route = "2"  # leaves the launcher (and so a running Steam/Heroic) alone
     e = ""
     if store == "steam":
-        lines = ["m", game_dir, e, e, e, e, e, e, e, e, e, e, "n", e, e, e, e, registry_route, e, e]
+        lines = ["m", e, game_dir, e, e, e, e, e, e, e, e, e, e, "n", e, e, e, e, registry_route, e, e]
     else:
-        lines = ["m", game_dir, e, e, e, e, e, e, e, e, e, "n", e, e, e, e, e, e, e]
+        lines = ["m", e, game_dir, e, e, e, e, e, e, e, e, e, "n", e, e, e, e, e, e, e]
     return lines
 
 

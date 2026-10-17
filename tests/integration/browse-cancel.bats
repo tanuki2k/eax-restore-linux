@@ -15,14 +15,14 @@ setup() {
 }
 
 @test "cancelling the picker and answering Yes opens it again" {
-    answers "$BATS_TEST_TMPDIR/in" b y n q
+    answers "$BATS_TEST_TMPDIR/in" b "" y n q
     run_script "$BATS_TEST_TMPDIR/in"
     [ "$(grep -c -- '--file-selection' "$STUB_LOG")" -eq 2 ]
     [ "$(grep -c 'Browse for the game folder again?' "$OUT")" -eq 2 ]
 }
 
 @test "cancelling the picker and answering No goes back to the main menu" {
-    answers "$BATS_TEST_TMPDIR/in" b n q
+    answers "$BATS_TEST_TMPDIR/in" b "" n q
     run_script "$BATS_TEST_TMPDIR/in"
     [ "$(grep -c -- '--file-selection' "$STUB_LOG")" -eq 1 ]
     # the main menu is shown a second time
