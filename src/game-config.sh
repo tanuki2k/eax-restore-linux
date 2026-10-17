@@ -403,10 +403,13 @@ game_install_root() {
 # Prints the first location that exists (matching the file name's case
 # loosely, like find_existing_variant does for DLLs). Prints nothing if none
 # does. With a second argument "create", prints the first location whose
-# folder exists instead, for a file that's about to be created.
+# folder exists instead, for a file that's about to be created. With "all",
+# prints every location that exists, one per line, for a game that keeps
+# the same file in several places (the file's all_locations).
 resolve_config_file() {
-    local locations="$1" mode="${2:-}" loc base rel dir candidate found u
-    local -a dirs
+    local locations="$1" mode="${2:-}" loc base rel dir candidate found u p seen
+    # locs is local: the caller's own list of locations has the same name.
+    local -a dirs have=() locs
     IFS='|' read -ra locs <<< "$locations"
     for loc in "${locs[@]}"; do
         base="${loc%%:*}"; rel="${loc#*:}"
@@ -441,7 +444,12 @@ resolve_config_file() {
                 [ -d "$(dirname "$candidate")" ] && { echo "$candidate"; return; }
             else
                 found="$(find_existing_variant "$candidate")"
-                [ -n "$found" ] && [ -f "$found" ] && { echo "$found"; return; }
+                [ -n "$found" ] && [ -f "$found" ] || continue
+                [ "$mode" == "all" ] || { echo "$found"; return; }
+                # steamuser and $USER can be the same folder.
+                seen=""
+                for p in "${have[@]}"; do [ "$p" -ef "$found" ] && seen=1; done
+                [ -n "$seen" ] || { have+=("$found"); echo "$found"; }
             fi
         done
     done
@@ -479,11 +487,11 @@ game_setting_titles() {
     gdb_jq "$1" "$2" '
         entry0 | . as $e | .game_config // {}
         | def offered: [.[]? | select((.only_if.stores // [$store]) | index($store))];
-          def flag: if .tested == false then "1" else "" end;
+          def flag: if .tested != true then "1" else "" end;
           (.audio_settings | offered | .[] | "audio\t\(.title)\t\(flag)"),
           (.optional_settings | offered | .[] | "optional\t\(.title)\t\(flag)"),
           ($e.install.alsoft_ini // {} | to_entries[] | .key as $sec | .value | to_entries[]
-           | "openal\t\($sec) \(.key) = \(.value)\t\(if $e.install.alsoft_tested == false then "1" else "" end)")'
+           | "openal\t\($sec) \(.key) = \(.value)\t\(if $e.install.alsoft_tested != true then "1" else "" end)")'
 }
 
 # Usage: speakers_match <comma list>
@@ -508,7 +516,8 @@ speakers_match() {
 # category, fix number, title, reason, only_if stores (comma list),
 # only_if speakers (comma list), follow_up, file, format, if_missing, locations
 # (|-joined), section ("" for cfg formats), key, value (with the markers
-# above), "1" for a setting marked "tested": false. Those are left out unless
+# above), "1" for a setting not marked "tested": true, then "1" when the file's
+# all_locations is set. Untested ones are left out unless
 # EAX_RESTORE_UNTESTED_SETTINGS is set, or the caller passes "all" (the
 # database browser, which shows everything). \x1f rather than tabs so empty
 # fields survive `read`.
@@ -522,7 +531,7 @@ load_game_config_rows() {
         | (.files // {}) as $files
         | ((.audio_settings // []) | to_entries[] | {cat: "audio", i: .key, f: .value}),
           ((.optional_settings // []) | to_entries[] | {cat: "optional", i: .key, f: .value})
-        | select('"$with_untested"' or .f.tested != false)
+        | select('"$with_untested"' or .f.tested == true)
         | .cat as $cat | .i as $i | .f as $f
         | $f.changes | to_entries[] | .key as $file | ($files[$file] // {}) as $def
         | (if $def.format == "ini" or $def.format == "wine_reg"
@@ -531,7 +540,8 @@ load_game_config_rows() {
         | [$cat, ($i | tostring), $f.title, $f.reason, (($f.only_if.stores // []) | join(",")),
            ([$f.only_if.speakers // empty] | flatten | join(",")), ($f.follow_up // ""), $file, ($def.format // ""),
            ($def.if_missing // ""), (($def.locations // []) | join("|")), $kv[0], $kv[1], ($kv[2] | enc),
-           (if $f.tested == false then "1" else "" end)]
+           (if $f.tested != true then "1" else "" end),
+           (if $def.all_locations then "1" else "" end)]
         | join("\u001f")'
 }
 
@@ -542,6 +552,7 @@ load_game_config_rows() {
 # them; its section is a registry key path, backslash-separated.
 config_row_is_safe() {
     local fmt="$1" locations="$2" sec="$3" key="$4" value="$5" loc
+    local -a locs
     local name_re='^[A-Za-z0-9._ -]+$' value_re='^[A-Za-z0-9._ ()-]*$'
     local reg_key_re='^[A-Za-z0-9._ ()-]+(\\[A-Za-z0-9._ ()-]+)*$'
     [[ "$fmt" =~ ^(ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|ltx|gadb|wine_reg)$ ]] || return 1
@@ -620,7 +631,7 @@ print_alsoft_details() {
         | to_entries[] | .key as $sec | .value | to_entries[] | [$sec, .key, (.value | tostring)] | join("\u001f")')
     [ ${#lines[@]} -gt 0 ] && [ -n "${lines[0]}" ] || return 0
     local flag
-    flag="$(gdb_jq "$3" "$2" 'entry0 | if .install.alsoft_tested == false then "1" else "" end')"
+    flag="$(gdb_jq "$3" "$2" 'entry0 | if .install.alsoft_tested != true then "1" else "" end')"
     echo -e "\n${WHITE}OpenAL settings for ${1}:${NC}"
     for line in "${lines[@]}"; do
         IFS=$'\x1f' read -r sec key value <<< "$line"
@@ -666,7 +677,7 @@ print_game_settings_details() {
         [surround]="Surround (any layout)" [quad]="Quad (4.0)" [surround51]="Surround 5.1"
         [surround61]="Surround 6.1" [surround71]="Surround 7.1")
     local width=$(( ${WRAP_COLUMNS:-76} - 2 ))
-    local id prev_id="" prev_cat="" display_rows="" stores speakers follow untested file_label loc s
+    local id prev_id="" prev_cat="" display_rows="" stores speakers follow untested file_label loc s joiner
     local -a locs labels
     # One setting's rows are printed together, after its last row is read.
     _flush_setting() {
@@ -712,7 +723,8 @@ print_game_settings_details() {
             [ "${loc#*:}" == "${f[7]}" ] || s+=": ${loc#*:}"
             labels+=("$s")
         done
-        file_label="${f[7]}  ($(IFS='|'; s="${labels[*]}"; echo "${s//|/ or }"))"
+        joiner=" or "; [ -n "${f[15]:-}" ] && joiner=" and "
+        file_label="${f[7]}  ($(IFS='|'; s="${labels[*]}"; echo "${s//|/$joiner}"))"
         display_rows+="${file_label}"$'\x1f'"${f[11]}"$'\x1f'"${f[12]}"$'\x1f'"__ANY__"$'\x1f'"${f[13]}"$'\n'
     done
     _flush_setting
@@ -913,10 +925,10 @@ offer_alsoft_settings() {
     # Unverified values are held back like
     # untested game settings.
     if ! is_truthy "${EAX_RESTORE_UNTESTED_SETTINGS:-}" \
-        && [ "$(gdb_jq "$KG_ID" "$KG_STORE" 'entry0 | (.install.alsoft_tested | if . == null then true else . end)')" == "false" ]; then
+        && [ "$(gdb_jq "$KG_ID" "$KG_STORE" 'entry0 | (.install.alsoft_tested == true)')" == "false" ]; then
         return
     fi
-    tag="$(verified_tag "$(gdb_jq "$KG_ID" "$KG_STORE" 'entry0 | if .install.alsoft_tested == false then "1" else "" end')")"
+    tag="$(verified_tag "$(gdb_jq "$KG_ID" "$KG_STORE" 'entry0 | if .install.alsoft_tested != true then "1" else "" end')")"
     # Read first, then ask: a confirm inside a loop fed by the query would
     # read its answer from the query's output, not from the player.
     local -a entries=()
@@ -1030,13 +1042,14 @@ game_settings_step() {
     # any of its files was found, and the files its offered rows change.
     local -A fix_absent_files=() fix_has_file=() fix_files=()
     local -A file_path=() file_state=()
-    local cat idx title reason stores speakers follow file fmt ifmissing locs sec key value id path old
+    local cat idx title reason stores speakers follow file fmt ifmissing locs sec key value id path old all_locs
+    local -a paths
     local -a f
     for row in "${rows[@]}"; do
         mapfile -t -d $'\x1f' f < <(printf '%s' "$row")
         cat="${f[0]}"; idx="${f[1]}"; title="${f[2]}"; reason="${f[3]}"; stores="${f[4]}"; speakers="${f[5]}"
         follow="${f[6]}"; file="${f[7]}"; fmt="${f[8]}"; ifmissing="${f[9]}"; locs="${f[10]}"
-        sec="${f[11]}"; key="${f[12]}"; value="${f[13]}"
+        sec="${f[11]}"; key="${f[12]}"; value="${f[13]}"; all_locs="${f[15]:-}"
         id="$cat:$idx"
         [ -n "${f[14]:-}" ] && fix_untested[$id]=1
 
@@ -1058,7 +1071,7 @@ game_settings_step() {
 
         # Find the file once per run.
         if [ -z "${file_state[$file]+x}" ]; then
-            path="$(resolve_config_file "$locs")"
+            path="$(resolve_config_file "$locs" ${all_locs:+all})"
             if [ -n "$path" ]; then file_state[$file]="found"
             elif [ "$ifmissing" == "create" ]; then
                 path="$(resolve_config_file "$locs" create)"
@@ -1078,7 +1091,7 @@ game_settings_step() {
                     print_paragraph "If you just installed ${GAME_NAME}, it creates ${file} the first time it runs." \
                         "Please launch the game at least once, close it, and try again."
                     confirm "Check for ${file} again?" || break
-                    path="$(resolve_config_file "$locs")"
+                    path="$(resolve_config_file "$locs" ${all_locs:+all})"
                 done
                 file_state[$file]="$( [ -n "$path" ] && echo found || echo missing )"
             fi
@@ -1094,20 +1107,23 @@ game_settings_step() {
         [ "${fix_status[$id]}" == "missing" ] && continue
         fix_has_file[$id]=1
 
-        path="${file_path[$file]}"
-        old="$(config_get_key "$path" "$fmt" "$sec" "$key")"
-        if [ "$value" == "__FALSE__" ] && [ "$old" == "__ABSENT__" ]; then continue; fi
-        if [ "$value" == "__DELETE__" ] && [ "$old" == "__ABSENT__" ]; then continue; fi
-        # A key that already has its value still shows (ticked) under a setting
-        # that has other keys to change, so the player sees what's done.
-        if config_values_equal "$fmt" "$old" "$value"; then
-            fix_view[$id]+="$file"$'\x1f'"$sec"$'\x1f'"$key"$'\x1f'"__SET__"$'\x1f'"$value"$'\n'
-            continue
-        fi
-        fix_status[$id]="offer"
-        fix_view[$id]+="$file"$'\x1f'"$sec"$'\x1f'"$key"$'\x1f'"$old"$'\x1f'"$value"$'\n'
-        [[ "|${fix_files[$id]:-}|" == *"|$file|"* ]] || fix_files[$id]+="${fix_files[$id]:+|}$file"
-        fix_rows[$id]+="$cat"$'\x1f'"$title"$'\x1f'"$path"$'\x1f'"$fmt"$'\x1f'"$sec"$'\x1f'"$key"$'\x1f'"$value"$'\x1f'"$file"$'\x1f'"$old"$'\x1f'"${file_state[$file]}"$'\n'
+        # One copy, or every copy found when the file's all_locations is set.
+        mapfile -t paths <<< "${file_path[$file]}"
+        for path in "${paths[@]}"; do
+            old="$(config_get_key "$path" "$fmt" "$sec" "$key")"
+            if [ "$value" == "__FALSE__" ] && [ "$old" == "__ABSENT__" ]; then continue; fi
+            if [ "$value" == "__DELETE__" ] && [ "$old" == "__ABSENT__" ]; then continue; fi
+            # A key that already has its value still shows (ticked) under a setting
+            # that has other keys to change, so the player sees what's done.
+            if config_values_equal "$fmt" "$old" "$value"; then
+                fix_view[$id]+="$(tilde_path "$path")"$'\x1f'"$sec"$'\x1f'"$key"$'\x1f'"__SET__"$'\x1f'"$value"$'\n'
+                continue
+            fi
+            fix_status[$id]="offer"
+            fix_view[$id]+="$(tilde_path "$path")"$'\x1f'"$sec"$'\x1f'"$key"$'\x1f'"$old"$'\x1f'"$value"$'\n'
+            [[ "|${fix_files[$id]:-}|" == *"|$file|"* ]] || fix_files[$id]+="${fix_files[$id]:+|}$file"
+            fix_rows[$id]+="$cat"$'\x1f'"$title"$'\x1f'"$path"$'\x1f'"$fmt"$'\x1f'"$sec"$'\x1f'"$key"$'\x1f'"$value"$'\x1f'"$file"$'\x1f'"$old"$'\x1f'"${file_state[$file]}"$'\n'
+        done
     done
 
     # Every file this setting changes is one this build doesn't have.
@@ -1156,7 +1172,7 @@ game_settings_step() {
         while IFS= read -r line; do
             [ -n "$line" ] || continue
             mapfile -t -d $'\t' c < <(printf '%s' "${line#CONFIG:}")
-            display_rows+="$(basename "${c[2]}")"$'\x1f'"${c[4]}"$'\x1f'"${c[5]}"$'\x1f'"${c[6]}"$'\x1f'"${c[7]}"$'\n'
+            display_rows+="$(tilde_path "${c[2]}")"$'\x1f'"${c[4]}"$'\x1f'"${c[5]}"$'\x1f'"${c[6]}"$'\x1f'"${c[7]}"$'\n'
         done <<< "${GAME_SETTINGS_RECORDED[${fix_title[$id]}]}"
         print_config_rows "$display_rows"
     }
@@ -1630,7 +1646,7 @@ choose_game_settings_to_revert() {
             while IFS= read -r line; do
                 [ -n "$line" ] || continue
                 mapfile -t -d $'\t' f < <(printf '%s' "${line#CONFIG:}")
-                display_rows+="$(basename "${f[2]}")"$'\x1f'"${f[4]}"$'\x1f'"${f[5]}"$'\x1f'"${f[7]}"$'\x1f'"${f[6]}"$'\n'
+                display_rows+="$(tilde_path "${f[2]}")"$'\x1f'"${f[4]}"$'\x1f'"${f[5]}"$'\x1f'"${f[7]}"$'\x1f'"${f[6]}"$'\n'
             done <<< "${group_lines[$g]}"
             bodies+=("$(print_config_rows "$display_rows")")
         done

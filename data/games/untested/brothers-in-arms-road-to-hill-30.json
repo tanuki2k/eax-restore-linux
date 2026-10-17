@@ -10,7 +10,17 @@
   },
   "eax": { "api": "openal", "versions": ["2.0", "3.0", "4.0"] },
   "game_config": {
-    "files": { "bia.ini": { "format": "ini", "locations": ["game_exe:bia.ini"] } },
+    "files": {
+      "bia.ini": {
+        "format": "ini",
+        "locations": [
+          "game_exe:bia.ini",
+          "prefix_appdata:Gearbox Software/Brothers In Arms/MattBaker/bia.ini"
+        ],
+        "all_locations": true
+      },
+      "Default.ini": { "format": "ini", "locations": ["game_exe:Default.ini"] }
+    },
     "audio_settings": [
       {
         "title": "Enable EAX reverb",
@@ -22,9 +32,33 @@
               "UseEAX": "True",
               "Use3DSound": "True"
             }
+          },
+          "Default.ini": {
+            "ALAudio.ALAudioSubsystem": {
+              "UseDefaultDriver": "False",
+              "UseEAX": "True",
+              "Use3DSound": "True"
+            }
           }
         },
         "tested": false
+      }
+    ],
+    "optional_settings": [
+      {
+        "title": "Raise anisotropic filtering, grass and decal detail",
+        "reason": "Out of the box the game uses lower detail settings. This raises anisotropic filtering to 16, grass detail and decoration draw distance to 2, and bullet decals to 256.",
+        "changes": {
+          "bia.ini": {
+            "Engine.GameInfo": { "bBlobShadowsOnly": "False" },
+            "Engine.TerrainInfo": { "DecoDrawDistanceScale": "2.000000" },
+            "gbxBase.ImpactManager": { "MaxBulletDecals": "256" },
+            "D3DDrv.D3DRenderDevice": {
+              "LevelOfAnisotropy": "16",
+              "UseCubeMapRenderTarget": "True"
+            }
+          }
+        }
       }
     ]
   }

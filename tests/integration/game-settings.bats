@@ -75,3 +75,56 @@ config_get_ini() {
     [ "$(config_get_ini Audio UseEAX)" == "1" ]
     [ -z "$(config_get_ini Video SkipIntro)" ]
 }
+
+# A file kept in two places (Brothers in Arms' bia.ini) with all_locations:
+# both copies are changed, each recorded by its own path, and uninstall puts
+# both back. Without the flag only the first copy changes.
+two_copies_world() {
+    local copy="$PREFIX/drive_c/users/steamuser/AppData/Roaming/Test"
+    mkdir -p "$copy"
+    cp "$GAME/settings.ini" "$copy/settings.ini"
+    TWO="$copy/settings.ini"
+    DB_FILE="$BATS_TEST_TMPDIR/db.json"
+    jq --argjson all "$1" '.games[0].game_config.files["settings.ini"] |=
+        (.locations += ["prefix_appdata:Test/settings.ini"] | if $all then .all_locations = true else . end)' \
+        "$REPO_ROOT/tests/fixtures/game-database.json" > "$DB_FILE"
+}
+
+@test "all_locations changes every copy of the file and names each in the manifest" {
+    two_copies_world true
+    install_profile
+    [ "$(config_get_ini Audio UseEAX)" == "1" ]
+    grep -q '^UseEAX=1' "$TWO"
+    grep -P "^CONFIG:audio\t.*\t$TWO\tini\tAudio\tUseEAX\t0\t1$" "$GAME/.eax-restore-manifest.txt"
+}
+
+@test "without all_locations only the first copy is changed" {
+    two_copies_world false
+    install_profile
+    [ "$(config_get_ini Audio UseEAX)" == "1" ]
+    grep -q '^UseEAX=0' "$TWO"
+}
+
+@test "uninstall puts every copy back" {
+    two_copies_world true
+    snapshot "$BATS_TEST_TMPDIR/before"
+    install_profile
+    uninstall_profile_answers "$BATS_TEST_TMPDIR/un"
+    run_script "$BATS_TEST_TMPDIR/un"
+    snapshot "$BATS_TEST_TMPDIR/after"
+    diff "$BATS_TEST_TMPDIR/before" "$BATS_TEST_TMPDIR/after" || { tail -25 "$OUT"; false; }
+}
+
+@test "a later location is used when the first one doesn't exist" {
+    two_copies_world false
+    rm "$GAME/settings.ini"
+    install_profile
+    grep -q '^UseEAX=1' "$TWO"
+}
+
+@test "the settings screen names the file by its path, once per copy" {
+    two_copies_world true
+    install_profile
+    [ "$(grep -c "Test Game/settings.ini" "$OUT")" -ge 1 ]
+    grep -q "Roaming/Test/settings.ini" "$OUT"
+}

@@ -29,7 +29,6 @@ def normalize_eax:
 
 def normalize_install:
     drop_empty
-    | if .alsoft_tested == true then del(.alsoft_tested) else . end
     | order_keys(["tweaks", "alsoft_ini", "alsoft_tested"]);
 
 def normalize_fix:
@@ -41,7 +40,7 @@ def normalize_fix:
 
 def normalize_game_config:
     drop_empty
-    | if .files then .files |= map_values(drop_empty | order_keys(["format", "locations", "if_missing"])) else . end
+    | if .files then .files |= map_values(drop_empty | order_keys(["format", "locations", "all_locations", "if_missing"])) else . end
     | if .audio_settings then .audio_settings |= map(normalize_fix) else . end
     | if .optional_settings then .optional_settings |= map(normalize_fix) else . end
     | order_keys(["files", "audio_settings", "optional_settings"]);

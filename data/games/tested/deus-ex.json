@@ -10,7 +10,8 @@
   },
   "eax": { "api": "directsound3d", "versions": ["1.0"] },
   "install": {
-    "alsoft_ini": { "reverb": { "boost": "6" } }
+    "alsoft_ini": { "reverb": { "boost": "6" } },
+    "alsoft_tested": true
   },
   "game_config": {
     "files": { "DeusEx.ini": { "format": "ini", "locations": ["game_exe:DeusEx.ini"] } },

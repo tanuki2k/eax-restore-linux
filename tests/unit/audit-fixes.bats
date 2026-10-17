@@ -11,14 +11,14 @@ setup() {
     source "$REPO_ROOT/src/cache.sh" 2>/dev/null || true
 }
 
-@test "alsoft_tested: false is read as false, an absent flag as true" {
+@test "alsoft_tested: only true counts as verified, an absent flag does not" {
     GAME_DATABASE_FILE="$BATS_TEST_TMPDIR/db.json"
     echo '{"games":[{"id":"g","stores":{"steam":{"id":1}},"install":{"alsoft_ini":{"reverb":{"boost":"6"}},"alsoft_tested":false}},
                       {"id":"h","stores":{"steam":{"id":2}},"install":{"alsoft_ini":{"reverb":{"boost":"6"}}}}]}' > "$GAME_DATABASE_FILE"
-    run gdb_jq 1 steam 'entry0 | (.install.alsoft_tested | if . == null then true else . end)'
+    run gdb_jq 1 steam 'entry0 | (.install.alsoft_tested == true)'
     [ "$output" == "false" ]
-    run gdb_jq 2 steam 'entry0 | (.install.alsoft_tested | if . == null then true else . end)'
-    [ "$output" == "true" ]
+    run gdb_jq 2 steam 'entry0 | (.install.alsoft_tested == true)'
+    [ "$output" == "false" ]
 }
 
 @test "manifest_file_is_ours: only the names the install deploys" {

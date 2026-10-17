@@ -9,7 +9,7 @@ setup() {
     [ -x "$REPO_ROOT/dist/eax-restore-linux.sh" ] || skip "run ./build.sh first"
     make_world
     DB_FILE="$BATS_TEST_TMPDIR/boost-db.json"
-    jq '.games[0] |= (del(.game_config) | .install = {alsoft_ini: {reverb: {boost: "6"}}})' \
+    jq '.games[0] |= (del(.game_config) | .install = {alsoft_ini: {reverb: {boost: "6"}}, alsoft_tested: true})' \
         "$REPO_ROOT/tests/fixtures/game-database.json" > "$DB_FILE"
 }
 

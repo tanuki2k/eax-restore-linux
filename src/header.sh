@@ -124,8 +124,8 @@
 #   behind its own tested / untested filter.
 #
 # * EAX_RESTORE_UNTESTED_SETTINGS=1  Offers the game settings (audio and
-#   optional) and alsoft.ini values that are unverified. Without it they're
-#   left out; with it they're tagged "(untested)" (checked
+#   optional) and alsoft.ini values that aren't marked verified. Without it they're
+#   left out; with it they're tagged "(untested)" (verified
 #   ones show "(tested)"). The profile browser always shows them.
 #
 # --- License ---

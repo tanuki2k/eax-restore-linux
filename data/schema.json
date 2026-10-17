@@ -111,9 +111,9 @@
           }
         },
         "alsoft_tested": {
-          "description": "True once these alsoft.ini values are verified on a real install. False while they're unverified: they're then left out unless the player sets EAX_RESTORE_UNTESTED_SETTINGS=1, and tagged \"(untested)\" when shown. Without the field they count as checked.",
+          "description": "True once these alsoft.ini values are verified on a real install. Without it, or while false, they're unverified: they're left out unless the player sets EAX_RESTORE_UNTESTED_SETTINGS=1, and tagged \"(untested)\" when shown.",
           "type": "boolean",
-          "default": true
+          "default": false
         }
       }
     },
@@ -264,6 +264,11 @@
             ]
           }
         },
+        "all_locations": {
+          "description": "Change the file in every location that exists, not just the first. For a game that keeps the same file in more than one place and reads whichever it finds.",
+          "type": "boolean",
+          "default": false
+        },
         "if_missing": {
           "description": "What to do when none of the locations exist:\nLeave empty: ask the player to launch the game once and check again.\nskip: leave this file's part out of each setting and tell the player.\ncreate: create the file.",
           "enum": ["skip", "create"]
@@ -343,9 +348,9 @@
           "type": "string"
         },
         "tested": {
-          "description": "True once this setting is verified on a real install. False while it's unverified: it's then hidden unless the player sets EAX_RESTORE_UNTESTED_SETTINGS=1, and tagged \"(untested)\" when shown. A setting without the field counts as checked.",
+          "description": "True once this setting is verified on a real install. Without it, or while false, it's unverified: it's hidden unless the player sets EAX_RESTORE_UNTESTED_SETTINGS=1, and tagged \"(untested)\" when shown.",
           "type": "boolean",
-          "default": true
+          "default": false
         }
       }
     }

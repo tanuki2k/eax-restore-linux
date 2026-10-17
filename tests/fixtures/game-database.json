@@ -16,6 +16,7 @@
           {
             "title": "Enable EAX effects",
             "reason": "Test Game ships with EAX off.",
+            "tested": true,
             "changes": { "settings.ini": { "Audio": { "UseEAX": "1", "Provider": "DSOUND" } } }
           }
         ],
@@ -23,6 +24,7 @@
           {
             "title": "Skip intro movies",
             "reason": "Test Game plays its intro movies on every start.",
+            "tested": true,
             "changes": { "settings.ini": { "Video": { "SkipIntro": "1" } } }
           }
         ]
