@@ -20,14 +20,36 @@
         "changes": {
           "System.ini": {
             "ALAudio.ALAudioSubsystem": {
-              "UseDefaultDriver": "False",
+              "SelectedEAXVersion": "3",
               "UseEAX": "True",
               "Use3DSound": "True",
-              "SelectedEAXVersion": "3"
+              "UseDefaultDriver": "False",
+              "Channels": "32"
             }
           }
         },
-        "tested": false
+        "tested": true
+      }
+    ],
+    "optional_settings": [
+      {
+        "title": "MAX",
+        "reason": "MAX",
+        "changes": {
+          "System.ini": {
+            "WinDrv.WindowsClient": {
+              "TextureDetailInterface": "UltraHigh",
+              "TextureDetailTerrain": "UltraHigh",
+              "TextureDetailWeaponSkin": "UltraHigh",
+              "TextureDetailWorld": "UltraHigh",
+              "TextureDetailRenderMap": "UltraHigh",
+              "TextureDetailLightmap": "UltraHigh",
+              "FSAA": "8",
+              "BumpmappingQuality": "2",
+              "Shadows": "True"
+            }
+          }
+        }
       }
     ]
   }
