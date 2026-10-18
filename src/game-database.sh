@@ -893,7 +893,9 @@ print_game_profile_stores() {
     fi
 
     # --- Blocks: status -> problem -> solution ---
-    if [ "$eax_status" != "supported" ]; then
+    # A supported game shows it too when its entry has a problem text: a
+    # known limitation worth knowing before installing.
+    if [ "$eax_status" != "supported" ] || [ -n "$eax_status_details" ]; then
         # The entry's own problem text says why; the generic lead-in is only
         # for an entry without one.
         local state_line="" after_line=""

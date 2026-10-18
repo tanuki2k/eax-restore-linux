@@ -58,7 +58,7 @@
           "default": "supported"
         },
         "problem": {
-          "description": "Why the current build isn't simply supported, in plain words, matching the status above.",
+          "description": "Why the current build isn't simply supported, in plain words, matching the status above. Shown in the game profile whatever the status, so a supported game can use it for a known limitation, for example maps with no environmental audio.",
           "type": "string"
         },
         "fix": {

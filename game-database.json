@@ -2164,7 +2164,7 @@
         "status": "not_implemented",
         "problem": "This is the 2025 Enhanced Edition, not the classic Neverwinter Nights 2, and it has no EAX."
       },
-      "notes": "If you also own the classic Neverwinter Nights 2, it's a separate GOG purchase, 'Neverwinter Nights 2 Complete', and that one has EAX."
+      "notes": "GOG still sells the classic edition of Neverwinter Nights 2, which supports EAX, as Neverwinter Nights 2 Complete."
     },
     {
       "id": "neverwinter-nights-diamond",
@@ -2639,7 +2639,9 @@
           "1.0",
           "2.0",
           "3.0"
-        ]
+        ],
+        "problem": "Stalker's X-Ray engine supports EAX via OpenAL. However the game's map data lacks environmental audio effects.",
+        "fix": "A community patch is available that adds environmental effects to the game's levels."
       },
       "game_config": {
         "files": {
@@ -2711,7 +2713,9 @@
           "1.0",
           "2.0",
           "3.0"
-        ]
+        ],
+        "problem": "Stalker's X-Ray engine supports EAX via OpenAL. However the game's map data lacks environmental audio effects.",
+        "fix": "A community patch is available that adds environmental effects to the game's levels."
       },
       "game_config": {
         "files": {
@@ -2789,7 +2793,7 @@
           "2.0",
           "3.0"
         ],
-        "problem": "Stalker's X-Ray engine supports EAX via OpenAL.However, very few of it's maps actually contain environmental audio.",
+        "problem": "Stalker's X-Ray engine supports EAX via OpenAL. However the game's map data lacks environmental audio effects.",
         "fix": "A community patch is available that adds environmental effects to the game's levels."
       },
       "game_config": {
@@ -3469,6 +3473,20 @@
             "format": "dark_cfg",
             "locations": [
               "game_exe:cam_ext.cfg"
+            ],
+            "if_missing": "skip"
+          },
+          "DARK.CFG": {
+            "format": "dark_cfg",
+            "locations": [
+              "game_exe:DARK.CFG"
+            ],
+            "if_missing": "skip"
+          },
+          "dark.cfg": {
+            "format": "dark_cfg",
+            "locations": [
+              "game_exe:dark.cfg"
             ],
             "if_missing": "skip"
           }

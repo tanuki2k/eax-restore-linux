@@ -11,7 +11,7 @@
   "eax": {
     "api": "openal",
     "versions": ["1.0", "2.0", "3.0"],
-    "problem": "Stalker's X-Ray engine supports EAX via OpenAL.However, very few of it's maps actually contain environmental audio.",
+    "problem": "Stalker's X-Ray engine supports EAX via OpenAL. However the game's map data lacks environmental audio effects.",
     "fix": "A community patch is available that adds environmental effects to the game's levels."
   },
   "game_config": {
