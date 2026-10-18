@@ -23,7 +23,8 @@
       {
         "title": "Enable EAX reverb",
         "reason": "Dungeon Siege ships with 'Environmental Audio' off.",
-        "changes": { "prefs.gas": { "prefs": { "eax_enabled": "true" } } }
+        "changes": { "prefs.gas": { "prefs": { "eax_enabled": "true" } } },
+        "tested": true
       }
     ]
   }
