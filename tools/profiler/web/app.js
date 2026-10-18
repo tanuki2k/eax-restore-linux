@@ -325,7 +325,16 @@ function fileCards(parent, key, valueSchema, path) {
     box.replaceChildren(names.length ? el("div", { class: "filegrid" }, names.map((name) => {
       const val = m()[name];
       return el("div", { class: "filecard", "data-path": `${path}.${name}` },
-        el("header", {}, el("h4", {}, name), el("button", { type: "button", class: "icon", title: "Remove this file from the profile. Settings that change it will need fixing.", "aria-label": `Remove ${name}`, onclick: async () => {
+        el("header", {}, el("input", { class: "filename", value: name, "aria-label": "File name", title: "The file's name in this profile. Settings that change it follow a rename.", onchange: async (e) => {
+          const to = e.target.value.trim();
+          if (!to || to === name) { e.target.value = name; return; }
+          if (m()[to]) { e.target.value = name; await askConfirm(`${to} is already in this profile.`, "OK"); return; }
+          const rekey = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k === name ? to : k, v]));
+          parent[key] = rekey(m());
+          const gc = GAME.game_config || {};
+          for (const s of [...(gc.audio_settings || []), ...(gc.optional_settings || [])]) if (s.changes && s.changes[name]) s.changes = rekey(s.changes);
+          changed(); renderPane();
+        } }), el("button", { type: "button", class: "icon", title: "Remove this file from the profile. Settings that change it will need fixing.", "aria-label": `Remove ${name}`, onclick: async () => {
           const gc = GAME.game_config || {}, used = [...(gc.audio_settings || []), ...(gc.optional_settings || [])].filter((s) => s.changes && s.changes[name]).length;
           if (used && !(await askConfirm(`${used} setting${used === 1 ? " changes" : "s change"} ${name}. Remove it anyway? Those changes will need fixing.`, "Remove", true))) return;
           delete m()[name]; changed(); draw();

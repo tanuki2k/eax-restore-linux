@@ -152,11 +152,12 @@ input[aria-invalid],textarea[aria-invalid],select[aria-invalid],input.invalid{bo
 .setcols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:14px 18px;align-items:start}
 .stack{display:grid;gap:14px;align-content:start}.stack:empty{display:none}
 .sacts{display:flex;align-items:center;gap:4px;flex:0 0 auto}
-.filegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr));gap:12px}
+.filegrid{display:grid;grid-template-columns:1fr;gap:12px}
 .filecard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow)}
 .filecard>.grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
 .filecard>header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
-.filecard h4{font:600 13.5px ui-monospace,SFMono-Regular,Menlo,monospace;flex:1;overflow-wrap:anywhere}
+.filecard h4,.filecard .filename{font:600 13.5px ui-monospace,SFMono-Regular,Menlo,monospace;flex:1;overflow-wrap:anywhere}
+.filecard .filename{min-width:0}
 
 /* ---- changes table */
 .tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
