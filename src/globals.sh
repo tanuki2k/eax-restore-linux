@@ -182,10 +182,6 @@ OVERRIDE_FILE=""
 OVERRIDE_ID=""
 LAUNCHER_LINES=()
 LAUNCHER_LINES_KEPT=()
-# Uninstall: "y" for a launcher (steam/heroic) whose DLL override the player
-# chose to remove in Phase 1, so Phase 2 closes and reopens it, if it's
-# running, without asking. Empty during install, which asks when it gets there.
-declare -A LAUNCHER_CLOSE_ANSWER=()
 # Uninstall: the LAUNCHER: manifest lines whose override the player chose
 # to keep in Phase 1.
 declare -A LAUNCHER_REMOVE_DECLINED=()

@@ -279,7 +279,7 @@ their execution order in the assembled script):
     should add its answer there. `uninstall-flow.sh` follows the
     same split in one file: Phase 1 (steps 1-7) only asks and records answers
     (e.g. `choose_game_settings_to_revert`, whether to remove each launcher
-    override — Phase 2 then closes and reopens that launcher without asking), then
+    override — Phase 2 then asks, with a countdown, before closing and reopening a running launcher), then
     one "Proceed?" and Phase 2 makes every change under the phase progress bar.
     Keep new uninstall questions in Phase 1.
 

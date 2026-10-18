@@ -296,9 +296,8 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     print_paragraph "This step undoes the DLL override and any Wine registry changes the install" \
         "made."
 
-    # Launcher overrides: ask whether to remove each one. Yes also lets
-    # Phase 2 close the launcher (if it's running then) and reopen it,
-    # without stopping to ask.
+    # Launcher overrides: ask whether to remove each one. If the launcher is
+    # running then, Phase 2 asks before closing it (offer_close_launcher).
     LAUNCHER_WORK=0
     print_task "Checking launcher and registry changes"
     if [ ${#LAUNCHER_LINES[@]} -gt 0 ]; then
@@ -308,8 +307,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
             [ -f "$OVERRIDE_FILE" ] || continue
             where="$(launcher_override_where)"
             print_status "Launcher: the install added a DLL override to ${where}" ""
-            if confirm_override_removal "$where"; then
-                LAUNCHER_CLOSE_ANSWER[$OVERRIDE_LAUNCHER]="y"
+            if confirm "Remove the DLL override from ${where}?" Y; then
                 LAUNCHER_WORK=1
             else
                 LAUNCHER_REMOVE_DECLINED["$line"]=1

@@ -168,8 +168,7 @@ print_launcher_open() {
 # player has to close it themselves. Sets LAUNCHER_CLOSE_ASKED to 1 when it
 # showed the "is open" message and asked, and LAUNCHER_CLOSE_DECLINED to 1
 # when the player said No, which means skip the override rather than close it
-# themselves. When uninstall's Phase 1 already had the player choose to
-# remove the override (LAUNCHER_CLOSE_ANSWER y), it closes without asking.
+# themselves.
 offer_close_launcher() {
     local label cmd
     LAUNCHER_CLOSE_ASKED=0; LAUNCHER_CLOSE_DECLINED=0
@@ -180,14 +179,10 @@ offer_close_launcher() {
     fi
     cmd="$(launcher_launch_cmd "$1")"
     [ -n "$cmd" ] || return 1
-    case "${LAUNCHER_CLOSE_ANSWER[$1]:-}" in
-        y) ;;
-        *)
-            print_launcher_open "$1" "$2"
-            LAUNCHER_CLOSE_ASKED=1
-            confirm_countdown "Close ${label}, $(launcher_change_text "$2" short), then reopen ${label}?" Y 25 || { LAUNCHER_CLOSE_DECLINED=1; return 1; }
-            [ "$CONFIRM_TIMED_OUT" -eq 1 ] && print_status "No answer after 25 seconds, so closing ${label}." ;;
-    esac
+    print_launcher_open "$1" "$2"
+    LAUNCHER_CLOSE_ASKED=1
+    confirm_countdown "Close ${label}, $(launcher_change_text "$2" short), then reopen ${label}?" Y 25 || { LAUNCHER_CLOSE_DECLINED=1; return 1; }
+    [ "$CONFIRM_TIMED_OUT" -eq 1 ] && print_status "No answer after 25 seconds, so closing ${label}."
     if run_with_spinner "Waiting for ${label} to close..." "$EAX_LOG_FILE" _close_launcher_and_wait "$1" 30; then
         log_cmd "closed $1 ($(launcher_kind "$1")); will reopen with: ${cmd//$'\x1f'/ }"
         LAUNCHERS_TO_REOPEN+=("${label}"$'\x1f'"${cmd}")
@@ -196,25 +191,6 @@ offer_close_launcher() {
     fi
     print_warning_arrow "${label} didn't close in time."
     return 1
-}
-
-# Usage: confirm_override_removal <where the override is, for the question>
-# Uninstall step 5's question for the launcher setting in OVERRIDE_LAUNCHER.
-# When the launcher is open and can be closed (no game running from it), Phase 2
-# will close it and open it again, so the question says that and counts down
-# the way the install's does, taking Yes if nobody answers. Otherwise it's the
-# plain question.
-confirm_override_removal() {
-    local label
-    label="$(launcher_label "$OVERRIDE_LAUNCHER")"
-    if launcher_running "$OVERRIDE_LAUNCHER" && ! launcher_game_running "$OVERRIDE_LAUNCHER" \
-        && [ -n "$(launcher_launch_cmd "$OVERRIDE_LAUNCHER")" ]; then
-        print_launcher_open "$OVERRIDE_LAUNCHER" remove
-        confirm_countdown "Close ${label}, $(launcher_change_text remove short), then reopen ${label}?" Y 25 || return 1
-        [ "$CONFIRM_TIMED_OUT" -eq 1 ] && print_status "No answer after 25 seconds, so that's a Yes: ${label} will be closed, the override removed and ${label} reopened once you confirm."
-        return 0
-    fi
-    confirm "Remove the DLL override from ${1}?" Y
 }
 
 # Usage: reopen_launchers
