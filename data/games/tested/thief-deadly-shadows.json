@@ -7,11 +7,11 @@
   "stores": {
     "steam": {
       "id": 6980,
-      "patches": "The unofficial 'Sneaky Upgrade' patch fixes a well-documented multi-core CPU problem and other modern-system quirks, and is worth installing alongside EAX."
+      "patches": "The unofficial 'Sneaky Upgrade' patch  contains various bugfixes and game improvements such as widescreen support."
     },
     "gog": {
       "id": 1207659036,
-      "patches": "The unofficial 'Sneaky Upgrade' patch fixes a well-documented multi-core CPU problem and other modern-system quirks, and is worth installing alongside EAX."
+      "patches": "The unofficial 'Sneaky Upgrade' patch  contains various bugfixes and game improvements such as widescreen support."
     }
   },
   "eax": { "api": "directsound3d", "versions": ["3.0", "4.0"] },
@@ -22,7 +22,10 @@
     "files": {
       "options.ini": {
         "format": "flat_ini",
-        "locations": ["game_root:save/SaveGames/User Options/options.ini"]
+        "locations": [
+          "game_root:save/SaveGames/User Options/options.ini",
+          "prefix_documents:Thief - Deadly Shadows/SaveGames/User Options/options.ini"
+        ]
       }
     },
     "audio_settings": [
@@ -32,14 +35,15 @@
         "changes": {
           "options.ini": { "UseHWMixing": "1", "UseEAX": "1", "EAXMultipleEnvironments": "1" }
         },
-        "tested": false
+        "tested": true
       }
     ]
   },
   "sources": [
+    { "title": "PC Gaming Wiki", "url": "https://www.pcgamingwiki.com/wiki/Thief:_Deadly_Shadows" },
     {
-      "title": "Creative's Thief: Deadly Shadows EAX guide (archived)",
-      "url": "https://web.archive.org/web/20060114204401/http://www.soundblaster.com/resources/read.asp?articleid=53835&cat=1"
+      "title": "Thief 3 Sneaky Upgrade",
+      "url": "https://www.moddb.com/mods/thief-3-sneaky-upgrade"
     }
   ]
 }
