@@ -6,7 +6,7 @@ import hashlib, json, os, re, shutil, subprocess, sys, time
 HOME = os.path.expanduser("~")
 STATE = os.path.join(os.environ.get("XDG_STATE_HOME", os.path.join(HOME, ".local/state")),
                      "eax-restore-linux", "profiler")
-CONFIG_RE = re.compile(r".*\.(cfg|ini|ltx|gdb|con)$", re.I)
+CONFIG_RE = re.compile(r".*\.(cfg|ini|ltx|gdb|gas|con)$", re.I)
 # A .txt is only a config file when it reads as one: [Section] lines and
 # key = value lines (TRON 2.0's Profiles/Player.txt), not a readme or licence.
 TXT_SECTION_RE = re.compile(r"^\s*\[[^\]\r\n]+\]\s*$", re.M)
@@ -215,6 +215,8 @@ def guess_format(path, text):
         return "idtech_cfg"
     if re.search(r"^\s*\{[^}]+\}\s*=\s*\{", text, re.M):
         return "brace_cfg"
+    if low.endswith(".gas") or re.search(r"^\s*\[[^\]]+\]\s*\n\s*\{", text, re.M):
+        return "gas_cfg"  # Siege Engine: [section], "{", then "key = value;" lines
     if re.search(r"^\s*\[[^\]]+\]\s*$", text, re.M):
         return "ini"
     if low.endswith(".ini"):
@@ -244,6 +246,16 @@ def parse_values(fmt, text):
             elif "=" in ln and not ln.startswith((";", "#")):
                 k, v = ln.split("=", 1)
                 out[(sec, k.strip())] = v.strip()
+    elif fmt == "gas_cfg":
+        sec = ""
+        for ln in text.splitlines():
+            ln = ln.strip()
+            m = re.match(r"^\[(.+)\]$", ln)
+            if m:
+                sec = m.group(1).strip()
+            elif "=" in ln and not ln.startswith(("//", "#")):
+                k, v = ln.split("=", 1)
+                out[(sec, k.strip())] = re.sub(r";\s*$", "", v.strip())
     elif fmt == "flat_ini":
         for ln in text.splitlines():
             if "=" in ln and not ln.strip().startswith((";", "#", "//")):

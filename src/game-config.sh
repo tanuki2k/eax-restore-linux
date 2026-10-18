@@ -153,12 +153,13 @@ _wine_reg_set() {
     swap_in "$tmp" "$file"
 }
 
-# Usage: config_get_key <file> <ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|ltx|gadb|wine_reg> <section> <key>
+# Usage: config_get_key <file> <ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gas_cfg|ltx|gadb|wine_reg> <section> <key>
 # Prints the key's current value, __ABSENT__ if it isn't set, or (dark_cfg
 # only) __TRUE__ for an active bare flag and __FALSE__ for a flag that's only
 # present commented out. Section and key names match case-insensitively, like
 # the games themselves read them. brace_cfg is Fallout Tactics' "{key} = {value}"
-# lines. A gadb key is one on/off setting, 0 or 1.
+# lines. gas_cfg is Dungeon Siege's prefs.gas: a "[section]" line, "{" on its own
+# line, then "key = value;" lines up to "}". A gadb key is one on/off setting, 0 or 1.
 config_get_key() {
     local file="$1" fmt="$2" sec="$3" key="$4" found
     [ -f "$file" ] || { echo "__ABSENT__"; return; }
@@ -172,7 +173,7 @@ config_get_key() {
         return
     fi
     LC_ALL=C awk -v fmt="$fmt" -v sec="$sec" -v key="$key" '
-        BEGIN { lsec = tolower(sec); lkey = tolower(key); insec = (fmt != "ini"); found = 0; commented = 0 }
+        BEGIN { lsec = tolower(sec); lkey = tolower(key); insec = (fmt != "ini" && fmt != "gas_cfg"); found = 0; commented = 0 }
         { sub(/\r$/, "") }
         fmt == "ini" || fmt == "flat_ini" {
             if (fmt == "ini" && $0 ~ /^[ \t]*\[.*\][ \t]*$/) {
@@ -213,6 +214,17 @@ config_get_key() {
             v = substr($0, RLENGTH + 1); sub(/\}[ \t]*$/, "", v)
             print v; found = 1; exit
         }
+        fmt == "gas_cfg" {
+            if ($0 ~ /^[ \t]*\[.*\][ \t]*$/) {
+                s = $0; gsub(/^[ \t]*\[|\][ \t]*$/, "", s); insec = (tolower(s) == lsec); next
+            }
+            if (!insec) next
+            p = index($0, "="); if (p == 0) next
+            k = substr($0, 1, p - 1); gsub(/^[ \t]+|[ \t]+$/, "", k)
+            if (tolower(k) != lkey) next
+            v = substr($0, p + 1); gsub(/^[ \t]+|;?[ \t]*$/, "", v)
+            print v; found = 1; exit
+        }
         END { if (!found) print ((fmt == "dark_cfg" && commented) ? "__FALSE__" : "__ABSENT__") }
     ' "$file"
 }
@@ -238,7 +250,7 @@ _gadb_set() {
     return 1
 }
 
-# Usage: config_set_key <file> <ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|ltx|gadb|wine_reg> <section> <key> <value>
+# Usage: config_set_key <file> <ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gas_cfg|ltx|gadb|wine_reg> <section> <key> <value>
 # Sets (or with __DELETE__ removes) one key, keeping everything else in the
 # file as it was — including CRLF line endings, the original spelling of an
 # existing key, and "key = value" spacing. A missing ini key goes at the end
@@ -257,7 +269,7 @@ config_set_key() {
     [ "$fmt" == "gadb" ] && { _gadb_set "$file" "$key" "$value"; return; }
     [ "$fmt" == "wine_reg" ] && { _wine_reg_set "$file" "$sec" "$key" "$value"; return; }
     # Anything else would match no rule below and write out an empty file.
-    [[ "$fmt" =~ ^(ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|ltx)$ ]] || return 1
+    [[ "$fmt" =~ ^(ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gas_cfg|ltx)$ ]] || return 1
     # Judged by the first line, so one stray CR doesn't turn a whole file CRLF.
     [ -f "$file" ] && head -n 1 "$file" 2>/dev/null | LC_ALL=C grep -q $'\r' && crlf=1
     current="$(config_get_key "$file" "$fmt" "$sec" "$key")"
@@ -291,6 +303,30 @@ config_set_key() {
                         if (del) next
                         sp = (substr($0, p + 1, 1) == " ") ? " " : ""
                         out(k "=" sp val); next
+                    }
+                }
+            }
+            out($0); next
+        }
+        fmt == "gas_cfg" {
+            if ($0 ~ /^[ \t]*\[.*\][ \t]*$/) {
+                if (insec && !done && !del) { out("\t" key " = " val ";"); done = 1 }
+                s = $0; gsub(/^[ \t]*\[|\][ \t]*$/, "", s); insec = (tolower(s) == lsec); if (insec) seen_sec = 1
+                out($0); next
+            }
+            if (insec && !done && $0 ~ /^[ \t]*\}/) {
+                if (!del) out("\t" key " = " val ";")
+                done = 1; out($0); insec = 0; next
+            }
+            if (insec && !done) {
+                p = index($0, "=")
+                if (p > 0) {
+                    k = substr($0, 1, p - 1); kt = k; gsub(/^[ \t]+|[ \t]+$/, "", kt)
+                    if (tolower(kt) == lkey) {
+                        done = 1
+                        if (del) next
+                        sp = (substr($0, p + 1, 1) == " ") ? " " : ""
+                        out(k "=" sp val ";"); next
                     }
                 }
             }
@@ -336,7 +372,11 @@ config_set_key() {
             out($0); next
         }
         END {
-            if (fmt == "ini" || fmt == "flat_ini") {
+            if (fmt == "gas_cfg") {
+                if (insec && !done && !del) { out("\t" key " = " val ";"); out("}"); done = 1 }
+                else if (!seen_sec && !done && !del) { if (NR > 0) out(""); out("[" sec "]"); out("{"); out("\t" key " = " val ";"); out("}") }
+                flush_blanks()
+            } else if (fmt == "ini" || fmt == "flat_ini") {
                 if (insec && !done && !del) { out(ini_line()); done = 1 }
                 flush_blanks()
                 if (!seen_sec && !done && !del) {
@@ -361,7 +401,7 @@ config_set_key() {
 config_values_equal() {
     if [ "$1" == "wine_reg" ] && [[ "$2" =~ ^[0-9]{1,10}$ && "$3" =~ ^[0-9]{1,10}$ ]]; then
         [ "$((10#$2))" -eq "$((10#$3))" ]
-    elif [ "$1" == "ini" ] || [ "$1" == "wine_reg" ]; then [ "${2,,}" == "${3,,}" ]
+    elif [ "$1" == "ini" ] || [ "$1" == "gas_cfg" ] || [ "$1" == "wine_reg" ]; then [ "${2,,}" == "${3,,}" ]
     else [ "$2" == "$3" ]; fi
 }
 
@@ -534,7 +574,7 @@ load_game_config_rows() {
         | select('"$with_untested"' or .f.tested == true)
         | .cat as $cat | .i as $i | .f as $f
         | $f.changes | to_entries[] | .key as $file | ($files[$file] // {}) as $def
-        | (if $def.format == "ini" or $def.format == "wine_reg"
+        | (if $def.format == "ini" or $def.format == "gas_cfg" or $def.format == "wine_reg"
              then (.value | to_entries[] | .key as $sec | .value | to_entries[] | [$sec, .key, .value])
              else (.value | to_entries[] | ["", .key, .value]) end) as $kv
         | [$cat, ($i | tostring), $f.title, $f.reason, (($f.only_if.stores // []) | join(",")),
@@ -555,7 +595,7 @@ config_row_is_safe() {
     local -a locs
     local name_re='^[A-Za-z0-9._ -]+$' value_re='^[A-Za-z0-9._ ()-]*$'
     local reg_key_re='^[A-Za-z0-9._ ()-]+(\\[A-Za-z0-9._ ()-]+)*$'
-    [[ "$fmt" =~ ^(ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|ltx|gadb|wine_reg)$ ]] || return 1
+    [[ "$fmt" =~ ^(ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gas_cfg|ltx|gadb|wine_reg)$ ]] || return 1
     [ -n "$locations" ] || return 1
     IFS='|' read -ra locs <<< "$locations"
     for loc in "${locs[@]}"; do
@@ -567,7 +607,7 @@ config_row_is_safe() {
         [[ "$loc" == *..* || "$loc" == *\\* ]] && return 1
     done
     [[ "$key" =~ $name_re ]] || return 1
-    if [ "$fmt" == "ini" ]; then [[ "$sec" =~ $name_re ]] || return 1; fi
+    if [ "$fmt" == "ini" ] || [ "$fmt" == "gas_cfg" ]; then [[ "$sec" =~ $name_re ]] || return 1; fi
     if [ "$fmt" == "wine_reg" ]; then [[ "$sec" =~ $reg_key_re ]] && [[ "$sec" != *..* ]] || return 1; fi
     # A gadb setting can only be switched on or off in place.
     if [ "$fmt" == "gadb" ]; then [[ "$value" =~ ^[01]$ ]] || return 1; fi

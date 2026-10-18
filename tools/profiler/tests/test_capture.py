@@ -99,6 +99,17 @@ class ConfigTxt(unittest.TestCase):
             gc, skipped = classify.draft_game_config(capture.diff_snapshots(game, sd, "a", "b"), [])
         self.assertEqual(gc["files"]["Player.txt"], {"format": "ini", "locations": ["game_exe:Profiles/Player.txt"]})
 
+    def test_gas_file_is_captured_as_gas_cfg_with_the_semicolon_dropped(self):
+        before = "[prefs]\n{\n\tblood = red;\n\teax_enabled = false;\n}\n"
+        after = before.replace("eax_enabled = false", "eax_enabled = true")
+        self.assertEqual(capture.guess_format("prefs.gas", before), "gas_cfg")
+        self.assertEqual(capture.parse_values("gas_cfg", after)[("prefs", "eax_enabled")], "true")
+        with tempfile.TemporaryDirectory() as t:
+            game, sd = world(t, {"prefs.gas": before}, {"prefs.gas": after})
+            gc, skipped = classify.draft_game_config(capture.diff_snapshots(game, sd, "a", "b"), [])
+        self.assertEqual(gc["files"]["prefs.gas"]["format"], "gas_cfg")
+        self.assertEqual(gc["audio_settings"][0]["changes"], {"prefs.gas": {"prefs": {"eax_enabled": "true"}}})
+
 
 class Categories(unittest.TestCase):
     def test_category_of_guesses_audio_from_the_name(self):

@@ -335,7 +335,7 @@ function fileCards(parent, key, valueSchema, path) {
       el("div", { class: "addrow" }, el("button", { type: "button", class: "btn", onclick: async () => {
         const n = await askText("Add a config file", "File name, e.g. game.ini, Quake4Config.cfg, Profile000.gdb or system.reg", "Add"); if (!n) return;
         if (m()[n] && !(await askConfirm(`${n} is already in this profile. Replace it with an empty entry?`, "Replace", true))) return;
-        m()[n] = { format: n.endsWith(".reg") ? "wine_reg" : n.endsWith(".gdb") ? "gadb" : n.endsWith(".ltx") ? "ltx" : "ini", locations: [n.endsWith(".reg") ? "prefix:" + n : "game_exe:" + n] }; changed(); draw();
+        m()[n] = { format: n.endsWith(".reg") ? "wine_reg" : n.endsWith(".gdb") ? "gadb" : n.endsWith(".ltx") ? "ltx" : n.endsWith(".gas") ? "gas_cfg" : "ini", locations: [n.endsWith(".reg") ? "prefix:" + n : "game_exe:" + n] }; changed(); draw();
       } }, "+ Add a config file")));
   };
   draw(); return box;
@@ -344,7 +344,7 @@ function fileCards(parent, key, valueSchema, path) {
 function changesEditor(setting, key) {
   const box = el("div");
   const files = () => (GAME.game_config && GAME.game_config.files) || {};
-  const sectioned = (f) => ["ini", "wine_reg"].includes((files()[f] || {}).format);
+  const sectioned = (f) => ["ini", "gas_cfg", "wine_reg"].includes((files()[f] || {}).format);
   const rows = () => {
     const out = [];
     for (const [f, a] of Object.entries(setting[key] || {})) for (const [k, v] of Object.entries(a)) {
@@ -1003,7 +1003,7 @@ function applyDrops(gc) {
     out[kind] = out[kind].filter((st) => {
       for (const [file, body] of Object.entries(st.changes)) {
         const fmt = (out.files[file] || {}).format;
-        const sectioned = ["ini", "wine_reg"].includes(fmt);
+        const sectioned = ["ini", "gas_cfg", "wine_reg"].includes(fmt);
         for (const [a, v] of Object.entries(body)) {
           if (sectioned) { for (const k of Object.keys(v)) if (DROP.has([file, fmt, a, k].join("\0"))) delete v[k]; if (!Object.keys(v).length) delete body[a]; }
           else if (DROP.has([file, fmt, "", a].join("\0"))) delete body[a];
@@ -1029,7 +1029,7 @@ function moveByCategory(gc) {
   for (const [from, to] of [["audio_settings", "optional"], ["optional_settings", "audio"]]) {
     for (const st of (gc[from] || []).filter((x) => !x.only_if)) {
       for (const [file, body] of Object.entries(st.changes)) {
-        const fmt = (gc.files[file] || {}).format, sectioned = ["ini", "wine_reg"].includes(fmt);
+        const fmt = (gc.files[file] || {}).format, sectioned = ["ini", "gas_cfg", "wine_reg"].includes(fmt);
         const move = (sec, key, val) => {
           if (CAT.get([file, fmt, sec, key].join("\0")) !== to) return false;
           const dest = into(to === "audio" ? "audio_settings" : "optional_settings").changes;

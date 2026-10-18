@@ -241,7 +241,7 @@
     },
     "config_file_name": {
       "type": "string",
-      "pattern": "^[A-Za-z0-9._ -]+\\.([iI][nN][iI]|[cC][fF][gG]|[gG][dD][bB]|[rR][eE][gG]|[tT][xX][tT]|[lL][tT][xX])$"
+      "pattern": "^[A-Za-z0-9._ -]+\\.([iI][nN][iI]|[cC][fF][gG]|[gG][dD][bB]|[rR][eE][gG]|[tT][xX][tT]|[lL][tT][xX]|[gG][aA][sS])$"
     },
     "config_file": {
       "type": "object",
@@ -249,8 +249,8 @@
       "additionalProperties": false,
       "properties": {
         "format": {
-          "description": "How the file is laid out:\nini: [Section] then key=value.\nflat_ini: key=value lines with no sections.\nidtech_cfg: seta key \"value\".\ndark_cfg: NewDark \"key value\" lines. A bare key is a flag that's on, and ;key turns it off.\nbrace_cfg: {key} = {value} lines (Fallout Tactics' bos.cfg).\nltx: key value lines with no sections (S.T.A.L.K.E.R.'s user.ltx).\ngadb: Monolith's binary profile (F.E.A.R.'s Profile000.gdb). It can only switch an existing on/off setting, so values are \"0\" or \"1\".\nwine_reg: the prefix's system.reg or user.reg, for a game that keeps its options in the registry. Only numbers and text can be changed, a number as a decimal.",
-          "enum": ["ini", "flat_ini", "idtech_cfg", "dark_cfg", "brace_cfg", "ltx", "gadb", "wine_reg"]
+          "description": "How the file is laid out:\nini: [Section] then key=value.\nflat_ini: key=value lines with no sections.\nidtech_cfg: seta key \"value\".\ndark_cfg: NewDark \"key value\" lines. A bare key is a flag that's on, and ;key turns it off.\nbrace_cfg: {key} = {value} lines (Fallout Tactics' bos.cfg).\ngas_cfg: [section], then key = value; lines between { and } (Dungeon Siege's prefs.gas).\nltx: key value lines with no sections (S.T.A.L.K.E.R.'s user.ltx).\ngadb: Monolith's binary profile (F.E.A.R.'s Profile000.gdb). It can only switch an existing on/off setting, so values are \"0\" or \"1\".\nwine_reg: the prefix's system.reg or user.reg, for a game that keeps its options in the registry. Only numbers and text can be changed, a number as a decimal.",
+          "enum": ["ini", "flat_ini", "idtech_cfg", "dark_cfg", "brace_cfg", "gas_cfg", "ltx", "gadb", "wine_reg"]
         },
         "locations": {
           "description": "Where to look for the file, in order, written as \"base:path\". The first one that exists is used. The base is one of:\ngame_exe: the folder the game's .exe runs from.\ngame_root: the game's top-level install folder.\nprefix_documents, prefix_appdata, prefix_localappdata: the matching user folder inside the game's Wine prefix.\nprefix_public_documents: the Public Documents folder inside the Wine prefix.\nprefix: only for a registry file, as prefix:system.reg or prefix:user.reg.",
@@ -259,7 +259,7 @@
           "items": {
             "type": "string",
             "anyOf": [
-              { "pattern": "^(game_exe|game_root|prefix_documents|prefix_appdata|prefix_localappdata|prefix_public_documents):(?!/)(?!.*\\.\\.)[^\\\\]+\\.([iI][nN][iI]|[cC][fF][gG]|[gG][dD][bB]|[tT][xX][tT]|[lL][tT][xX])$" },
+              { "pattern": "^(game_exe|game_root|prefix_documents|prefix_appdata|prefix_localappdata|prefix_public_documents):(?!/)(?!.*\\.\\.)[^\\\\]+\\.([iI][nN][iI]|[cC][fF][gG]|[gG][dD][bB]|[tT][xX][tT]|[lL][tT][xX]|[gG][aA][sS])$" },
               { "pattern": "^prefix:(system|user)\\.reg$" }
             ]
           }

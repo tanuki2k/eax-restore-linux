@@ -172,11 +172,37 @@ setup() {
     [ "$(cat "$F")" == $'{Sound} = {off}\n{Other} = {1}' ]
 }
 
+# ---- gas_cfg ---------------------------------------------------------------
+
+@test "gas_cfg: reads a value without its semicolon and keeps tabs, spacing and the semicolon on a change" {
+    write_file "$F" '[prefs]\n{\n\tblood = red;\n\teax_enabled = false;\n}\n'
+    [ "$(config_get_key "$F" gas_cfg prefs EAX_Enabled)" == "false" ]
+    config_set_key "$F" gas_cfg prefs eax_enabled true
+    [ "$(cat "$F")" == $'[prefs]\n{\n\tblood = red;\n\teax_enabled = true;\n}' ]
+}
+
+@test "gas_cfg: a missing key goes before the closing brace, and a missing section is added" {
+    write_file "$F" '[prefs]\r\n{\r\n\tblood = red;\r\n}\r\n'
+    config_set_key "$F" gas_cfg prefs eax_enabled true
+    [ "$(cat "$F")" == $'[prefs]\r\n{\r\n\tblood = red;\r\n\teax_enabled = true;\r\n}\r' ]
+    [ "$(config_get_key "$F" gas_cfg prefs eax_enabled)" == "true" ]
+    [ "$(config_get_key "$F" gas_cfg other eax_enabled)" == "__ABSENT__" ]
+    config_set_key "$F" gas_cfg other a 1
+    [ "$(config_get_key "$F" gas_cfg other a)" == "1" ]
+    [ "$(config_get_key "$F" gas_cfg prefs blood)" == "red" ]
+}
+
+@test "gas_cfg: __DELETE__ removes the line" {
+    write_file "$F" '[prefs]\n{\n\ta = 1;\n\tb = 2;\n}\n'
+    config_set_key "$F" gas_cfg prefs a __DELETE__
+    [ "$(cat "$F")" == $'[prefs]\n{\n\tb = 2;\n}' ]
+}
+
 # ---- cross-format ----------------------------------------------------------
 
 @test "a set then get round-trips for every text format" {
     local fmt
-    for fmt in ini flat_ini idtech_cfg dark_cfg ltx brace_cfg; do
+    for fmt in ini flat_ini idtech_cfg dark_cfg ltx brace_cfg gas_cfg; do
         rm -f "$F"
         write_file "$F" ''
         config_set_key "$F" "$fmt" sec key 7
