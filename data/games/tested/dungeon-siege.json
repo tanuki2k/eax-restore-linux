@@ -22,7 +22,7 @@
     "audio_settings": [
       {
         "title": "Enable EAX reverb",
-        "reason": "Dungeon Siege keeps its EAX option in prefs.gas, and it only works when that option is on.",
+        "reason": "Dungeon Siege ships with 'Environmental Audio' off.",
         "changes": { "prefs.gas": { "prefs": { "eax_enabled": "true" } } }
       }
     ]

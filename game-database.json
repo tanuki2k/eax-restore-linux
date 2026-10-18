@@ -1290,7 +1290,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX reverb",
-            "reason": "Dungeon Siege keeps its EAX option in prefs.gas, and it only works when that option is on.",
+            "reason": "Dungeon Siege ships with 'Environmental Audio' off.",
             "changes": {
               "prefs.gas": {
                 "prefs": {
@@ -1300,8 +1300,7 @@
             }
           }
         ]
-      },
-      "tested": false
+      }
     },
     {
       "id": "dungeon-siege-ii",
@@ -1327,7 +1326,29 @@
           "4.0"
         ]
       },
-      "tested": false
+      "game_config": {
+        "files": {
+          "prefs.gas": {
+            "format": "gas_cfg",
+            "locations": [
+              "prefix_documents:My Games/Dungeon Siege 2/Save/prefs.gas"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX reverb",
+            "reason": "Dungeon Siege ships with 'Environmental Audio' off.",
+            "changes": {
+              "prefs.gas": {
+                "prefs": {
+                  "eax_enabled": "true"
+                }
+              }
+            }
+          }
+        ]
+      }
     },
     {
       "id": "dungeons-and-dragons-dragonshard",
@@ -1925,7 +1946,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX reverb",
-            "reason": "Icewind Dale II ships with 'Environmental Audio' off, so there's no reverb.",
+            "reason": "Icewind Dale II ships with 'Environmental Audio' off.",
             "changes": {
               "icewind2.ini": {
                 "Game Options": {
