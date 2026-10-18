@@ -551,7 +551,7 @@ print_option() {
 # A numbered pick list split into pages as tall as the terminal allows (at
 # least 10 rows), so the top of a long list doesn't scroll away. Numbers run
 # on across pages and any of them works from any page; [N]ext / [P]revious
-# show only when there's a page that way. Each extra "x|[X]label" is a letter
+# show only when there's a page that way (Enter alone is [N]ext). Each extra "x|[X]label" is a letter
 # option after them ("|" alone is a blank line). With no terminal (piped
 # answers) it's one page. Sets PAGED_CHOICE to the number or letter typed;
 # returns 1 when input ends.
@@ -588,10 +588,12 @@ paged_select() {
             prompt "Selection [1-${total}${keys[*]:+/}$(IFS=/; echo "${keys[*]}")]: "
             read_answer choice || return 1
             choice="${choice,,}"
+            # Enter alone pages forward, same as N (the last page has no N).
+            [ -z "$choice" ] && [[ " ${keys[*]} " == *" n "* ]] && choice=n
             if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "$total" ]; then
                 PAGED_CHOICE="$choice"; return 0
             fi
-            case " ${keys[*]} " in
+            [ -n "$choice" ] && case " ${keys[*]} " in
                 *" $choice "*)
                     case "$choice" in
                         n) page=$(( page + 1 )); continue 2 ;;

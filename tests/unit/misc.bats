@@ -74,3 +74,11 @@ sel() { parse_selection "$1" "$2"; local i out=""; for ((i = 1; i <= $1; i++)); 
     [ "$api" == "directsound3d" ]
     [ "$ds" == "Lithtech.exe" ]
 }
+
+@test "paged_select: Enter alone is refused when there is no next page" {
+    PAGED_LABELS=(a b); PAGED_DETAILS=()
+    run paged_select "Games" <<< $'\n2'
+    [[ "$output" == *"not a valid option"* ]]
+    paged_select "Games" <<< $'\n2' >/dev/null
+    [ "$PAGED_CHOICE" == "2" ]
+}
