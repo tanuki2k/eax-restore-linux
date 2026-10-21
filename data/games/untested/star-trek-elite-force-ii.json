@@ -14,7 +14,7 @@
     },
     "audio_settings": [
       {
-        "title": "Enable headphone speaker mode ",
+        "title": "Enable headphone speaker mode",
         "reason": "The game starts in fullscreen and does not select the headphone speaker mode on its own. This sets windowed mode and speaker type 1, which is the headphone setting.",
         "only_if": { "speakers": "headphones" },
         "changes": { "steamuser.cfg": { "s_speaker_type": "1" } }
