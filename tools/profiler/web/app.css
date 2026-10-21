@@ -102,6 +102,12 @@ select{padding-right:26px}
 .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:0 18px;align-items:start}
 .cols>.card{min-width:0}
 .hint{margin-top:4px;font-size:12px;color:var(--mut)}
+.f.unsaved:not(:has(.f)):not(.granular) :is(input:not([type=checkbox]),select,textarea),.chg :is(input:not([type=checkbox]),select),:is(input,select).chg,.chip.chg span{border-color:#f08c00;box-shadow:0 0 0 1px #f08c00}
+.f.unsaved:not(:has(.f)):not(.granular) :is(input,select,textarea):focus,.chg :is(input,select):focus,:is(input,select).chg:focus,.chip.chg input:focus-visible+span{outline-color:#f08c00}
+.f.unsaved:not(:has(.f)):not(.granular) input[type=checkbox],.chkrow.chg input{outline:2px solid #f08c00;outline-offset:1px}
+button.rv{visibility:hidden;min-height:0;height:20px;padding:0 6px}button.rv:hover:not(:disabled){color:#f08c00;border-color:#f08c00;background:var(--surface2)}
+.f.unsaved:not(:has(.f))>.flabel>.rv,details.revertable>summary .rv{visibility:visible}
+details.unsaved{outline:2px solid #f08c00;outline-offset:2px;border-radius:6px}
 .f.has-err>.errmsg{margin-top:4px;font-size:12px;color:var(--bad)}
 input[aria-invalid],textarea[aria-invalid],select[aria-invalid],input.invalid{border-color:var(--bad);background:var(--bad-weak)}
 .solo>.flabel{font-size:0}.solo>.flabel .btn{font-size:12.5px}.solo>.flabel .qm{display:none}

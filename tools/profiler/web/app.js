@@ -2,7 +2,7 @@
 // Schema-driven editor: field types, enums, help text and limits come from data/schema.json at
 // runtime, so a new schema field shows up here without touching this file. Only the layout
 // (which fields sit in which section) is written out below.
-let SCHEMA, GAMES = [], STALE = [], AI = null, CUR = null, GAME = null, DIRTY = false, ERRS = [], SECTION = "overview", validateTimer, CHOSEN_STORE = null;
+let SCHEMA, GAMES = [], STALE = [], AI = null, CUR = null, GAME = null, DIRTY = false, SAVED = {}, ERRS = [], SECTION = "overview", validateTimer, CHOSEN_STORE = null;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 const LONG = /^(description|notes|reason|problem|fix|store_details|patches|follow_up)$/;
@@ -111,9 +111,90 @@ function goToProblem(path, msg) {
   const input = target.querySelector("input:not([type=checkbox]), textarea, select");
   if (input && target.tagName !== "DETAILS") setTimeout(() => input.focus({ preventScroll: true }), 350);
 }
+// Finds {parent, key} for a path like game_config.audio_settings[2].reason. File names in a path hold dots
+// (game_config.files.options.ini.format), so keys are matched against the object, not split on ".".
+function pathRef(o, p) {
+  let parent = null, key = null;
+  p = p.replace(/^\./, "");
+  while (p) {
+    if (o == null || typeof o !== "object") return null;
+    const idx = p.match(/^\[(\d+)\]/);
+    let k, rest;
+    if (idx) { k = +idx[1]; rest = p.slice(idx[0].length); }
+    else {
+      k = Object.keys(o).filter((k) => p === k || p.startsWith(k + ".") || p.startsWith(k + "[")).sort((x, y) => y.length - x.length)[0] ?? p.match(/^[^.\[]+/)[0];
+      rest = p.slice(k.length);
+    }
+    parent = o; key = k; o = o[k]; p = rest.replace(/^\./, "");
+  }
+  return { parent, key };
+}
+const pathAt = (o, p) => { const r = p.replace(/^\./, "") ? pathRef(o, p) : null; return r ? r.parent[r.key] : (p ? undefined : o); };
+// Puts a field back to its saved value (or removes it when it wasn't saved), keeping the scroll position.
+function revertPath(p) {
+  const r = pathRef(GAME, p); if (!r) return;
+  const was = pathAt(SAVED, p);
+  if (was === undefined) { if (Array.isArray(r.parent)) r.parent.splice(r.key, 1); else delete r.parent[r.key]; }
+  else r.parent[r.key] = JSON.parse(JSON.stringify(was));
+  changed(); const y = $("#main").scrollTop; renderPane(); $("#main").scrollTop = y;
+}
+async function revertAll() {
+  if (!DIRTY || !(await askConfirm("Throw away all unsaved changes to this game?", "Revert", true))) return;
+  GAME = JSON.parse(JSON.stringify(SAVED)); DIRTY = false;
+  renderEdit(); $("#preview").textContent = JSON.stringify(SAVED, null, 2);
+  showErrors((await api("/api/validate", "POST", SAVED)).errors);
+}
+// Marks each field whose value differs from the last saved (or opened) copy. A path like
+// game_config.audio_settings[2].reason is looked up in both; lists and tables compare as a whole.
+function markUnsaved() {
+  const now = prune(GAME);
+  const at = pathAt;
+  const sig = JSON.stringify;
+  const sectioned = (f) => ["ini", "gas_cfg", "wine_reg"].includes((((GAME.game_config || {}).files || {})[f] || {}).format);
+  $$("[data-path]").forEach((f) => {
+    const was = at(SAVED, f.dataset.path);
+    f.classList.toggle("unsaved", sig(at(now, f.dataset.path)) !== sig(was));
+    if (f.tagName === "DETAILS") { f.classList.toggle("revertable", f.classList.contains("unsaved") && was !== undefined); return; }
+    // Controls made of several items (chips, ticks, list rows, the changes table) mark just the items that differ.
+    const items = [...f.querySelectorAll(".chip, .chkrow, :scope > div > .row, tr")].filter((x) => x.tagName !== "TR" || x._row);
+    f.classList.toggle("granular", items.length > 0);
+    const old = [], saved = [].concat(was ?? []);
+    if (f.querySelector("tr")) for (const [file, a] of Object.entries(was || {})) for (const [k, v] of Object.entries(a)) {
+      if (sectioned(file) && v && typeof v === "object") for (const [k2, v2] of Object.entries(v)) old.push([file, k, k2, v2]); else old.push([file, "", k, v]);
+    }
+    for (const x of items) {
+      let diff;
+      if (x._row) {
+        // Pair with the saved row of the same file and key, else the one in the same place, and mark only the cells that differ.
+        const i = [...x.parentNode.querySelectorAll("tr")].filter((t) => t._row).indexOf(x);
+        const m = old.find((o) => sig(o.slice(0, 3)) === sig(x._row.slice(0, 3))) || old[i];
+        [...x.children].forEach((td, c) => {
+          const d = c < 4 && (!m || sig(m[c]) !== sig(x._row[c]));
+          if (c !== 3) return td.classList.toggle("chg", d);
+          // Value cell: the type select and the text box mark separately.
+          const kind = (v) => (typeof v === "string" ? "text" : String(v)), [sel, txt] = td.querySelectorAll("select, input");
+          sel.classList.toggle("chg", !!d && (!m || kind(m[3]) !== kind(x._row[3])));
+          txt.classList.toggle("chg", !!d && kind(x._row[3]) === "text" && (!m || m[3] !== x._row[3]));
+        });
+        continue;
+      }
+      else if (x.matches(".chip, .chkrow")) diff = x.querySelector("input").checked !== saved.includes(x.querySelector("span, code").textContent);
+      else {
+        // A list row's own boxes: a place is "base" + "path", a source is "title" + "address".
+        const sv = Array.isArray(was) ? was[x._i] : undefined, p = f.dataset.path;
+        const parts = /\.locations$/.test(p) ? (sv == null ? [] : [sv.split(":")[0], sv.split(":").slice(1).join(":")])
+          : p === "sources" ? [sv && sv.title || "", sv && (sv.url ?? sv) || ""] : [sv];
+        x.querySelectorAll("input, select").forEach((c, n) => c.classList.toggle("chg", sv === undefined || c.value !== String(parts[n] ?? "")));
+        continue;
+      }
+      x.classList.toggle("chg", diff);
+    }
+  });
+}
 function changed() {
-  DIRTY = true; drawHeadStatus();
   const g = prune(GAME);
+  DIRTY = JSON.stringify(g) !== JSON.stringify(SAVED); drawHeadStatus();
+  markUnsaved();
   $("#preview").textContent = JSON.stringify(g, null, 2);
   clearTimeout(validateTimer);
   validateTimer = setTimeout(async () => showErrors((await api("/api/validate", "POST", g)).errors), 350);
@@ -144,7 +225,7 @@ function markErrors() {
 // ---------------------------------------------------------------- form building
 function field(label, control, { help, wide, extra, req } = {}) {
   const f = el("div", { class: "f" + (wide ? " wide" : "") });
-  f.append(el("div", { class: "flabel" }, label, req ? el("span", { class: "req" }, "*") : null, helpIcon(help), el("span", { class: "grow" }), ...[].concat(extra || [])), control);
+  f.append(el("div", { class: "flabel" }, label, req ? el("span", { class: "req" }, "*") : null, helpIcon(help), el("span", { class: "grow" }), ...[].concat(extra || []), el("button", { type: "button", class: "icon rv", title: "Undo this change", "aria-label": "Undo this change", onclick: () => revertPath(f.dataset.path) }, "↺")), control);
   return f;
 }
 function aiButton(task, ctx, apply) {
@@ -264,8 +345,8 @@ function listEditor(parent, key, rowFn, blank, addLabel = "Add") {
   const box = el("div");
   const arr = () => (parent[key] = parent[key] || []);
   const draw = () => {
-    box.replaceChildren(...arr().map((v, i) => el("div", { class: "row" }, ...rowFn(v, (nv) => { arr()[i] = nv; changed(); }),
-      el("button", { type: "button", class: "icon", title: "Remove", onclick: () => { arr().splice(i, 1); changed(); draw(); } }, "✕"))),
+    box.replaceChildren(...arr().map((v, i) => Object.assign(el("div", { class: "row" }, ...rowFn(v, (nv) => { arr()[i] = nv; changed(); }),
+      el("button", { type: "button", class: "icon", title: "Remove", onclick: () => { arr().splice(i, 1); changed(); draw(); } }, "✕")), { _i: i, _v: () => arr()[i] })),
       el("div", { class: "addrow" }, el("button", { type: "button", class: "btn sm", onclick: () => { arr().push(blank === undefined ? undefined : blank); draw(); } }, "+ " + addLabel)));
   };
   draw(); return box;
@@ -303,6 +384,7 @@ function cards(parent, key, itemSchema, path) {
       const d = el("details", { class: "setcard", open: SET_OPEN.get(o) },
         el("summary", {}, stitle, cond, badge,
           el("span", { class: "sacts" },
+            el("button", { type: "button", class: "icon rv", title: "Undo this setting's changes", "aria-label": "Undo changes", onclick: (e) => { e.preventDefault(); revertPath(d.dataset.path); } }, "↺"),
             el("button", { type: "button", class: "icon", "aria-label": "Move up", disabled: i === 0, title: "Move this setting up", onclick: (e) => { e.preventDefault(); [list[i - 1], list[i]] = [list[i], list[i - 1]]; changed(); draw(); } }, "↑"),
             el("button", { type: "button", class: "icon", "aria-label": "Move down", disabled: i === list.length - 1, title: "Move this setting down", onclick: (e) => { e.preventDefault(); [list[i + 1], list[i]] = [list[i], list[i + 1]]; changed(); draw(); } }, "↓"),
             (key === "audio_settings" || key === "optional_settings") ? el("button", { type: "button", class: "btn sm", title: key === "audio_settings" ? "Move this setting to the optional settings" : "Move this setting to the audio settings", onclick: (e) => { e.preventDefault(); const to = key === "audio_settings" ? "optional_settings" : "audio_settings"; parent[to] = parent[to] || []; parent[to].push(list.splice(i, 1)[0]); changed(); renderPane(); } }, key === "audio_settings" ? "→ Optional" : "→ Audio") : null,
@@ -377,12 +459,12 @@ function changesEditor(setting, key) {
     const fnames = Object.keys(files());
     if (!fnames.length) { box.replaceChildren(el("div", { class: "empty-note" }, "Add a config file under “Config files” first.")); return; }
     box.replaceChildren(el("div", { class: "tblwrap" }, el("table", {}, el("tr", {}, ["File", "Section / registry key", "Key", "Value", ""].map((h) => el("th", {}, h))),
-      ...R.map((r, i) => el("tr", {},
+      ...R.map((r, i) => Object.assign(el("tr", {},
         el("td", {}, (() => { const s = el("select", { onchange: () => { r[0] = s.value; commit(); draw(); } }, [el("option", { value: "" }, "Choose…"), ...fnames.map((n) => el("option", { selected: n === r[0] }, n))]); return s; })()),
         el("td", {}, el("input", { value: r[1], disabled: !sectioned(r[0]), placeholder: sectioned(r[0]) ? "section" : "n/a", oninput: (e) => { r[1] = e.target.value; commit(); } })),
         el("td", {}, el("input", { value: r[2], placeholder: "key", oninput: (e) => { r[2] = e.target.value; commit(); } })),
         el("td", {}, val(r[3], (v) => { r[3] = v; commit(); })),
-        el("td", {}, el("button", { type: "button", class: "icon", title: "Remove this change from the setting", onclick: () => { R.splice(i, 1); commit(); draw(); } }, "✕")))))),
+        el("td", {}, el("button", { type: "button", class: "icon", title: "Remove this change from the setting", onclick: () => { R.splice(i, 1); commit(); draw(); } }, "✕"))), { _row: r })))),
       el("div", { class: "addrow" }, el("button", { type: "button", class: "btn sm", onclick: () => { R.push([fnames[0] || "", "", "", ""]); draw(); } }, "+ Add a change")));
   };
   draw(); return box;
@@ -448,7 +530,7 @@ function renderPane() {
   if (SECTION === "capture") { pane.replaceChildren(el("div", { id: "capturebox" })); renderCapture(); return; }
   const build = { overview: paneOverview, stores: paneStores, audio: paneAudio, settings: paneSettings }[SECTION];
   pane.replaceChildren(...build());
-  markErrors();
+  markErrors(); markUnsaved();
 }
 function drawNav() {
   const nav = $("#snav"); if (!nav) return;
@@ -464,6 +546,7 @@ function showTab(t) { if (t === "capture") setSection("capture"); else if (SECTI
 // ---------------------------------------------------------------- header
 function drawHeadStatus() {
   const d = $("#dirtybadge"); if (d) d.hidden = !DIRTY;
+  const v = $("#revertbtn"); if (v) v.disabled = !DIRTY;
 }
 let GACTIONS = null;
 function renderEdit() {
@@ -480,6 +563,7 @@ function renderEdit() {
       AI ? el("button", { type: "button", class: "btn", onclick: research, title: "Fill in release date, executable, description and EAX details from what the AI knows. Check them against a source." }, "✨ Research") : null,
       el("select", { id: "promo", title: "Move this entry to another folder (tested, untested or draft)", onchange: promote }, [el("option", { value: "" }, "Move to…"), ...["drafts", "untested", "tested"].filter((x) => x !== CUR.folder).map((x) => el("option", {}, x))]),
       el("button", { type: "button", class: "btn", id: "submitbtn", title: "Send this profile to the project as a pull request", onclick: submitClicked }, "Submit…"),
+      el("button", { type: "button", class: "btn", id: "revertbtn", disabled: !DIRTY, title: "Throw away every unsaved change and go back to the saved file", onclick: revertAll }, "Revert"),
       el("button", { type: "button", class: "btn primary", id: "savebtn", title: "Save (Ctrl+S). It shows what will change in the file first.", onclick: saveClicked }, "Save"));
   drawNav(); renderPane(); drawBuildBadge();
 }
@@ -531,7 +615,7 @@ async function saveClicked() {
   if (!GAME) return;
   if (SKIP_PREVIEW) return save();
   const r = await api(`/api/preview/${CUR.folder}/${CUR.id}`, "POST", prune(GAME));
-  if (r.same) { DIRTY = false; drawHeadStatus(); return toast("Nothing to save: the file already matches"); }
+  if (r.same) { DIRTY = false; SAVED = prune(GAME); markUnsaved(); drawHeadStatus(); return toast("Nothing to save: the file already matches"); }
   const skip = el("input", { type: "checkbox" });
   const lines = r.diff.split("\n").map((l) => el("div", { class: l.startsWith("+") && !l.startsWith("+++") ? "add" : l.startsWith("-") && !l.startsWith("---") ? "del" : "ctx" }, l || " "));
   const dlg = dialog(el("h3", {}, r.new_file ? "Create this file?" : "Write these changes?"), el("div", { class: "diff" }, lines),
@@ -541,7 +625,7 @@ async function saveClicked() {
 }
 async function save() {
   const r = await api(`/api/game/${CUR.folder}/${CUR.id}`, "PUT", prune(GAME));
-  GAME = JSON.parse(r.json); delete GAME["$schema"]; DIRTY = false; renderEdit(); showErrors(r.errors);
+  GAME = JSON.parse(r.json); delete GAME["$schema"]; DIRTY = false; SAVED = prune(GAME); renderEdit(); showErrors(r.errors);
   $("#preview").textContent = JSON.stringify(prune(GAME), null, 2);
   toast(r.errors.length ? `Saved, with ${r.errors.length} problem${r.errors.length === 1 ? "" : "s"} to fix` : "Saved ✓"); loadList();
 }
@@ -653,7 +737,7 @@ async function openGame(folder, id) {
     if (choice === "save") { try { await save(); } catch { return; } }
   }
   const j = await api(`/api/game/${folder}/${id}`);
-  CUR = { folder, id }; GAME = j.game; CHOSEN_STORE = null; DIRTY = false; if (SECTION === "capture") SECTION = "overview";
+  CUR = { folder, id }; GAME = j.game; SAVED = prune(GAME); CHOSEN_STORE = null; DIRTY = false; if (SECTION === "capture") SECTION = "overview";
   drawList(); showErrors(j.errors); renderEdit(); $("#main").scrollTop = 0;
   $("#preview").textContent = JSON.stringify(prune(GAME), null, 2);
 }
@@ -934,7 +1018,7 @@ function drawSteps() {
         el("li", {}, "In the game, switch ON the EAX / hardware 3D audio options, and change any other options you want to offer (resolution, textures…). Then press ", snap("audio", "Snapshot: changed options", "Records the config files now and compares them with the baseline. You choose each change's category at the review.")),
         el("li", { class: "opt" }, "Optional: for each speaker setup the game offers, pick it in the game and press its button. Layouts that change the same values are merged for you.", el("div", { class: "chips" }, ...chips)),
         el("li", {}, "Done? ", el("button", { type: "button", onclick: act("stop"), title: "Ask the game to quit" }, "Close the game"))),
-      live.snap ? el("div", { class: "status running" }, `Taking the “${stepTitle(live.snap)}” snapshot. Wine saves its registry about every 30 seconds, so leave the game as it is for ${left || "a few"} s.`) : status("live")];
+      live.snap ? el("div", { class: "status running" }, `Taking the “${stepTitle(live.snap)}” snapshot. Wine saves its registry about every 30 seconds, so leave the game as it is for up to ${left || "a few"} s.`) : status("live")];
   const keptRows = ["audio", "optional"].filter((k) => st[k] && !live).map((k) => el("div", { class: "chk on" }, el("span", { class: "tick" }, "✓"), el("span", {}, stepTitle(k)), el("span", { class: "meta" }, `${st[k].files} files`), view(k)));
   const s2 = stage(2, !!st.audio, "Your turn", "The only manual part: change the options in the game.", ...s2body, ...keptRows);
 
