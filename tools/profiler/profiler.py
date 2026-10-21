@@ -154,6 +154,17 @@ def do_action(sid, action, profile=None):
         finish_game(say)
         say("game closed")
 
+    def wait_for_registry_save(g):
+        # Wine saves the registry on a ~30 s timer that only runs when something changed, so
+        # a registry file newer than the button press means the change is on disk already.
+        regs = [os.path.join(g.get("prefix") or "", n) for n in ("system.reg", "user.reg")]
+        started = time.time()
+        while time.time() - started < REG_SAVE_WAIT:
+            time.sleep(1)
+            if any(os.path.getmtime(r) > started for r in regs if os.path.isfile(r)):
+                time.sleep(1)  # the other file is written right after
+                return
+
     def live_snap(label):
         live = LIVE.get(sid)
         if not live:
@@ -171,7 +182,7 @@ def do_action(sid, action, profile=None):
 
         def run():
             try:
-                time.sleep(REG_SAVE_WAIT)  # lets Wine write the registry changes to disk first
+                wait_for_registry_save(game)
                 mark(sid, label, files=capture.snapshot(game, d, label))
             except Exception:  # noqa: BLE001 - the page just sees the snapshot missing
                 traceback.print_exc()
