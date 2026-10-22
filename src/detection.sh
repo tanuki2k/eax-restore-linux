@@ -1809,10 +1809,10 @@ verify_dll_override() {
 # Creates a new, empty .reg file in GAME_DIR (see the callers for why not
 # /tmp) and sets REG_FILE to its path. mktemp makes the name unguessable and
 # never follows a planted link; finish_run_log removes whatever an interrupted
-# run left in REG_TEMP_FILES. Not a $(...) capture, so the array update stays.
+# run left in TEMP_FILES_AT_EXIT. Not a $(...) capture, so the array update stays.
 make_reg_file() {
     REG_FILE="$(mktemp "$GAME_DIR/.eax-restore-$1-XXXXXX.reg")" || return 1
-    REG_TEMP_FILES+=("$REG_FILE")
+    TEMP_FILES_AT_EXIT+=("$REG_FILE")
 }
 
 apply_registry_patch() {

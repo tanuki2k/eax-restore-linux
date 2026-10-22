@@ -82,7 +82,7 @@
 #
 # --- Environment Variables ---
 # * EAX_RESTORE_SKIP_PREFLIGHT=1  Skips the pre-flight tool scan and its
-#   auto-install prompts, trusting that curl, unzip, file, protontricks,
+#   auto-install prompts, trusting that curl, unzip, file, jq, protontricks,
 #   winetricks, and wine are already available. Speeds up repeat runs on a
 #   machine you've already verified.
 #
@@ -93,7 +93,8 @@
 #   pinned in the script, taken from kcat's "archive" release) without
 #   asking, so only the OpenAL Soft build is chosen. Also selects the DSOAL
 #   engine and skips the main menu (goes straight to install) and the
-#   engine-selection prompt.
+#   engine-selection prompt, except for a game the script already knows uses
+#   OpenAL, which still gets OpenAL Soft.
 #
 # * EAX_RESTORE_VCRUN_ONLY=1  Skips the full install/uninstall flow and just
 #   (re)installs the MS VC++ 2022 Redistributable into a game's prefix.

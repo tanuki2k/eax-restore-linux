@@ -92,6 +92,7 @@ check_for_script_update() {
     fi
     if install_script_update "$SELF_UPDATE_URL" "$0"; then
         print_status "Updated to $SELF_UPDATE_VERSION. Restarting..." "$GREEN"
+        end_run_log_for_restart
         # Started as "bash script.sh" it may not be executable.
         if [ -x "$0" ]; then exec "$0" "${ORIGINAL_ARGS[@]}"; fi
         exec bash "$0" "${ORIGINAL_ARGS[@]}"

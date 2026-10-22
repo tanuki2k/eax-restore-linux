@@ -1,6 +1,6 @@
 """AI drafting. Uses the Anthropic API when ANTHROPIC_API_KEY is set, otherwise the
 `claude` CLI's login (`claude -p`). Output is always a suggestion for the UI."""
-import json, os, re, shutil, subprocess, urllib.error, urllib.request
+import json, os, re, shutil, subprocess, tempfile, urllib.error, urllib.request
 
 MODEL = os.environ.get("PROFILER_MODEL", "claude-sonnet-5-5")
 
@@ -200,8 +200,11 @@ def _call(prompt):
         with urllib.request.urlopen(req, timeout=120) as r:
             return json.load(r)["content"][0]["text"]
     if mode == "cli":
-        r = subprocess.run([claude_path(), "-p", "--model", "sonnet", STYLE + "\n\n" + prompt],
-                           capture_output=True, text=True, timeout=180)
+        # From an empty folder and with no tools: the prompt holds text from game files, so it must not
+        # be able to read the repo (or anything else) through the player's own allow rules.
+        with tempfile.TemporaryDirectory() as cwd:
+            r = subprocess.run([claude_path(), "-p", "--model", "sonnet", "--tools", "", STYLE + "\n\n" + prompt],
+                               capture_output=True, text=True, timeout=180, cwd=cwd, stdin=subprocess.DEVNULL)
         if r.returncode:
             raise RuntimeError(r.stderr.strip()[:300])
         return r.stdout
@@ -229,7 +232,7 @@ def clean_suggestions(raw):
     for sec, keys in (raw.get("alsoft_ini") or {}).items() if isinstance(raw.get("alsoft_ini"), dict) else []:
         for k, v in (keys.items() if isinstance(keys, dict) else []):
             pat = ALLOWED_ALSOFT.get(sec, {}).get(k)
-            if pat and re.match(pat, str(v)):
+            if pat and re.fullmatch(pat, str(v)):
                 out["alsoft_ini"].setdefault(sec, {})[k] = str(v)
     eax = raw.get("eax") if isinstance(raw.get("eax"), dict) else {}
     if eax.get("api") in ("directsound3d", "openal"):

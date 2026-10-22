@@ -40,9 +40,9 @@ class Guard(unittest.TestCase):
 
 class ExeName(unittest.TestCase):
     def test_only_a_bare_exe_file_name_is_accepted(self):
-        for ok in ("game.exe", "Quake4.exe", "Star Trek EF2.exe"):
+        for ok in ("game.exe", "Quake4.exe", "Star Trek EF2.exe", "Prey [Steam].exe", "Bioshock's.exe", "a.exe"):
             self.assertTrue(capture.valid_exe(ok), ok)
-        for bad in ("", "/", "a", "exe", ".exe", "../x.exe", "a/b.exe", "x.exe; rm", None, 5):
+        for bad in ("", "/", "a", "exe", ".exe", "../x.exe", "a/b.exe", "x.exe; rm", "a\\b.exe", "x\n.exe", None, 5):
             self.assertFalse(capture.valid_exe(bad), repr(bad))
 
     def test_match_is_the_whole_file_name(self):
@@ -50,6 +50,8 @@ class ExeName(unittest.TestCase):
         self.assertTrue(capture._runs_exe("game.exe", "wine /opt/g/game.exe"))
         self.assertFalse(capture._runs_exe("game.exe", "tail -f /tmp/mygame.exe.log"))
         self.assertFalse(capture._runs_exe("game.exe", "vim notgame.exe"))
+        self.assertTrue(capture._runs_exe("game.exe", '"Z:\\g\\game.exe" -w'))
+        self.assertFalse(capture._runs_exe("EF2.exe", r"Z:\g\Star Trek EF2.exe"))
 
 
 if __name__ == "__main__":

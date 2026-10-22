@@ -395,7 +395,9 @@ def _cmdlines():
             continue
 
 
-EXE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 ._()\-]{1,100}\.exe$", re.I)
+# Any file name the database allows (no path separators, no control characters);
+# the whole-name match in _runs_exe is what keeps a short name from hitting other processes.
+EXE_RE = re.compile(r"^[^/\\\x00-\x1f]{1,100}\.exe$", re.I)
 
 
 def valid_exe(exe):
@@ -404,8 +406,9 @@ def valid_exe(exe):
 
 
 def _runs_exe(exe, cmdline):
-    # Whole file name only: after a path separator or space, before a space or the end.
-    return re.search(r"(^|[\\/ ])" + re.escape(exe) + r"( |$)", cmdline, re.I) is not None
+    # Whole file name only: after a path separator or quote (or at the start), before a
+    # quote, space or the end. A bare space before it would also match "Star Trek EF2.exe" for "EF2.exe".
+    return re.search(r'(^|[\\/"])' + re.escape(exe) + r'("| |$)', cmdline, re.I) is not None
 
 
 def game_running(exe):

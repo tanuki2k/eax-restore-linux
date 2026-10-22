@@ -32,9 +32,10 @@ class MergeCapture(unittest.TestCase):
         self.assertEqual(merged["audio_settings"][1]["changes"], {"g.ini": {"Audio": {"Reverb": "2"}}})
         self.assertEqual(len(rep["trimmed"]), 1)
 
-    def test_a_different_value_is_kept_and_reported(self):
+    def test_a_different_value_is_reported_and_not_added_a_second_time(self):
         merged, rep = self.merge(self.cap({"g.ini": {"Audio": {"EAX": "0"}}}))
-        self.assertEqual(merged["audio_settings"][1]["changes"], {"g.ini": {"Audio": {"EAX": "0"}}})
+        self.assertEqual(len(merged["audio_settings"]), 1)
+        self.assertEqual(merged["audio_settings"][0]["changes"]["g.ini"]["Audio"]["EAX"], "1")
         self.assertEqual(len(rep["conflicts"]), 1)
 
     def test_the_same_key_under_a_different_speaker_gate_is_new(self):

@@ -105,6 +105,7 @@ ensure_game_database() {
         if ! { jq '.games |= map(select(.tested != false))' "$GAME_DATABASE_FILE" > "$visible" 2>/dev/null && [ -s "$visible" ]; }; then
             # The cache folder isn't writable: filter into a temp file instead.
             visible="$(mktemp 2>/dev/null)"
+            [ -n "$visible" ] && TEMP_FILES_AT_EXIT+=("$visible")
             { [ -n "$visible" ] && jq '.games |= map(select(.tested != false))' "$GAME_DATABASE_FILE" > "$visible" 2>/dev/null && [ -s "$visible" ]; } || visible=""
         fi
         if [ -n "$visible" ]; then

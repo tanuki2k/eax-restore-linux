@@ -59,8 +59,11 @@ def privacy_findings(game, home=None, user=None):
 
 def _run_gh(args, stdin=None):
     # Without input, gh gets no stdin at all, so it can never sit waiting for a prompt.
-    return subprocess.run(["gh", *args], input=stdin, stdin=None if stdin is not None else subprocess.DEVNULL,
-                          capture_output=True, text=True)
+    try:
+        return subprocess.run(["gh", *args], input=stdin, stdin=None if stdin is not None else subprocess.DEVNULL,
+                              capture_output=True, text=True, timeout=60)
+    except subprocess.TimeoutExpired:
+        raise SubmitError("GitHub didn't answer in time. Check the connection and try again.")
 
 
 def _gh(args, stdin=None, check=True):
@@ -88,7 +91,13 @@ def _api_json(path, method="GET", body=None):
 
 def _exists_upstream(path):
     r = _run_gh(["api", f"repos/{UPSTREAM}/contents/{path}?ref={BASE}", "--jq", ".sha"])
-    return r.stdout.strip() if r.returncode == 0 else None
+    if r.returncode == 0:
+        return r.stdout.strip()
+    # Only a 404 means "not there"; a rate limit or a dropped connection must not
+    # send an existing tested profile to untested/ as a second copy.
+    if "404" in (r.stderr or "") or "Not Found" in (r.stderr or ""):
+        return None
+    raise SubmitError("Couldn't check GitHub for an existing profile. Try again in a moment.")
 
 
 def target_folder(gid):
@@ -147,6 +156,8 @@ def _store_ids(game):
 def prepare(folder, gid, game):
     """What the Submit dialog shows before anything is sent."""
     errors = dbio.validate(game)
+    if "TODO" in json.dumps(game.get("game_config") or {}):
+        errors.append("A setting still has a TODO title or reason. Write them before sending.")
     if not _store_ids(game):
         errors.append("Add at least one store with its ID, so the profile can be matched to a game.")
     login = gh_login()
@@ -178,7 +189,14 @@ def submit_with_gh(gid, game, note, checked_install, checked_ids):
     name = UPSTREAM.split("/")[1]
     _gh(["repo", "fork", UPSTREAM, "--clone=false"], check=False)  # fine when the fork already exists
     fork = f"{login}/{name}"
-    _api_json(f"repos/{fork}")  # raises when the fork really isn't there
+    for attempt in range(8):  # a fork made just now takes a moment to exist
+        try:
+            _api_json(f"repos/{fork}")
+            break
+        except Exception:  # noqa: BLE001 - retried, then raised below
+            if attempt == 7:
+                raise
+            time.sleep(1.5)
     head = _gh(["api", f"repos/{UPSTREAM}/git/ref/heads/{BASE}", "--jq", ".object.sha"]).strip()
     branch = f"profile/{gid}-{time.strftime('%Y%m%d%H%M%S')}"
     _api_json(f"repos/{fork}/git/refs", "POST", {"ref": f"refs/heads/{branch}", "sha": head})

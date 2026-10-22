@@ -268,16 +268,18 @@ def merge_game_config(existing, new):
         for st in new.get(kind) or []:
             have = known.setdefault(gate(st), {})
             flat = _flat(st["changes"])
-            fresh = {k: v for k, v in flat.items() if k not in have or have[k] != v}
+            # A key the entry already sets to something else is reported, not added:
+            # a second setting for it would leave the install to pick one of two values.
+            fresh = {k: v for k, v in flat.items() if k not in have}
             title = st.get("title") or "(untitled)"
+            for k, v in flat.items():
+                if k in have and have[k] != v:
+                    report["conflicts"].append(f"{k[2]} is {have[k]!r} in the entry, {v!r} in the capture ({title})")
             if not fresh:
                 report["skipped"].append(title)
                 continue
             if len(fresh) < len(flat):
                 report["trimmed"].append(f"{title}: {len(flat) - len(fresh)} of {len(flat)} changes were already in the entry")
-            for k in fresh:
-                if k in have:
-                    report["conflicts"].append(f"{k[2]} is {have[k]!r} in the entry, {fresh[k]!r} in the capture ({title})")
             add = copy.deepcopy(st)
             add["changes"] = _nest(fresh)
             merged.setdefault(kind, []).append(add)

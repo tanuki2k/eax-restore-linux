@@ -7,7 +7,7 @@ FOLDERS = {
     "untested": "data/games/untested",
     "drafts": "data/drafts",
 }
-ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*\Z")  # \Z, not $: "abc\n" is not an id
 
 
 def _path(folder, gid):
@@ -169,7 +169,10 @@ def promote(gid, src, dst):
     if os.path.exists(b):
         raise ValueError(f"{gid} already exists in {dst}")
     os.makedirs(os.path.dirname(b), exist_ok=True)
-    subprocess.run(["git", "mv", a, b], cwd=ROOT, check=True) if shutil.which("git") else os.rename(a, b)
+    # git mv only knows tracked files; a profile just made with "+ Add game" is not one yet.
+    tracked = shutil.which("git") and subprocess.run(["git", "ls-files", "--error-unmatch", a], cwd=ROOT,
+                                                       capture_output=True).returncode == 0
+    subprocess.run(["git", "mv", a, b], cwd=ROOT, check=True) if tracked else os.rename(a, b)
     _format_all()
 
 

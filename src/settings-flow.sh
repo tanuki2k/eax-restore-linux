@@ -44,7 +44,8 @@ if [ -n "$SETTINGS_TOOL_MODE" ]; then
         settings_alsoft_files=()
         if [ -s "$INSTALL_MANIFEST" ] && ! manifest_is_uninstalled "$INSTALL_MANIFEST"; then
             while IFS= read -r line; do
-                [[ "$line" == /*/alsoft.ini ]] && [ -f "$line" ] && settings_alsoft_files+=("$line")
+                [[ "$line" == /*/alsoft.ini && "/$line/" != *"/../"* ]] && manifest_path_in_scope "$line" "$GAME_DIR" \
+                    && [ -f "$line" ] && settings_alsoft_files+=("$line")
             done < "$INSTALL_MANIFEST"
         fi
         if [ ! -s "$INSTALL_MANIFEST" ] || manifest_is_uninstalled "$INSTALL_MANIFEST" \
@@ -67,7 +68,7 @@ if [ -n "$SETTINGS_TOOL_MODE" ]; then
         else LAUNCHER_TYPE="2"; HEROIC_APP_NAME="$GAME_ID"; fi
     fi
     while IFS= read -r line; do
-        [[ "$line" == /*/drive_c/* ]] && { PREFIX_PATH="${line%%/drive_c/*}"; break; }
+        [[ "$line" == /*/drive_c/* && "/$line/" != *"/../"* ]] && manifest_file_is_ours "$line" && { PREFIX_PATH="${line%%/drive_c/*}"; break; }
     done < "$INSTALL_MANIFEST"
     print_status "Game: ${GAME_NAME}" ""
 

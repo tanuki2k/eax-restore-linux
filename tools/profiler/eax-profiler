@@ -29,8 +29,9 @@ fi
 command -v python3 >/dev/null 2>&1 || fail "python3 is needed to run it."
 python3 -c 'import jsonschema' 2>/dev/null || fail "the Python package jsonschema is missing (install python-jsonschema)."
 cd "$repo" || fail "can't find the repository at $repo."
-# Capturing runs the built installer, so build it once if it isn't there.
-[ -f dist/eax-restore-linux.sh ] || ./build.sh >/dev/null 2>&1 || fail "building dist/eax-restore-linux.sh failed; run ./build.sh to see why."
+# Capturing runs the built installer, so build it if it isn't there or the source is newer.
+{ [ -f dist/eax-restore-linux.sh ] && [ -z "$(find src build.sh -newer dist/eax-restore-linux.sh -print -quit 2>/dev/null)" ]; } \
+    || ./build.sh >/dev/null 2>&1 || fail "building dist/eax-restore-linux.sh failed; run ./build.sh to see why."
 
 # The editor stops itself some minutes after its page is closed, so no terminal is needed.
 # It opens a browser tab by itself unless the --app window above is available.

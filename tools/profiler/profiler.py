@@ -389,6 +389,8 @@ class H(BaseHTTPRequestHandler):
             if method == "GET" and p == "/api/_sleep" and os.environ.get("PROFILER_DEBUG"):
                 time.sleep(4)  # lets a headless screenshot wait for the async page load
                 return self.reply(b"", ctype="image/gif")
+            if method == "GET" and p == "/api/debug":
+                return self.reply({"debug": bool(os.environ.get("PROFILER_DEBUG"))})
             if method == "GET" and p == "/api/schema":
                 return self.reply(dbio.schema())
             if method == "GET" and p == "/api/games":

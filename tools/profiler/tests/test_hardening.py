@@ -57,3 +57,22 @@ class Hardening(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class IdAndValues(unittest.TestCase):
+    def test_an_id_with_a_trailing_newline_is_not_an_id(self):
+        import dbio
+        self.assertIsNotNone(dbio.ID_RE.match("abc"))
+        self.assertIsNone(dbio.ID_RE.match("abc\n"))
+
+    def test_ai_alsoft_values_must_match_whole(self):
+        out = ai.clean_suggestions({"alsoft_ini": {"general": {"sources": "6\n"}, "reverb": {"boost": "3"}}})
+        self.assertNotIn("general", out["alsoft_ini"])
+        self.assertEqual(out["alsoft_ini"]["reverb"]["boost"], "3")
+
+    def test_unfinished_todo_text_blocks_sending(self):
+        import submit
+        g = {"name": "T", "stores": {"steam": {"id": 1}}, "eax": {"api": "directsound3d"},
+             "game_config": {"files": {}, "audio_settings": [{"title": "TODO title", "reason": "TODO reason", "changes": {}}]}}
+        with mock.patch.object(submit, "gh_login", lambda: "x"):
+            self.assertTrue(any("TODO" in e for e in submit.prepare("untested", "t", g)["errors"]))

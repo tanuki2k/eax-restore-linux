@@ -15,7 +15,7 @@ elif a[:2] == ["repo", "fork"]: print("already exists")
 elif a[:1] == ["api"] and "git/ref/heads/" in s: print("abc123")
 elif a[:1] == ["api"] and "game-database.json" in s and "Accept" in s: sys.stdout.write(open(os.environ["FAKE_GH_DB"]).read())
 elif a[:1] == ["api"] and "?ref=" in s and "--jq" in a:
-    sys.exit(1)  # no such file yet, anywhere
+    sys.stderr.write("gh: Not Found (HTTP 404)\n"); sys.exit(1)  # no such file yet, anywhere
 elif a[:1] == ["api"]: print("{}")
 elif a[:2] == ["pr", "create"]: print("https://github.com/up/repo/pull/7")
 '''

@@ -929,7 +929,9 @@ async function captureCurrent() {
 async function startCapture(g) {
   SESS = { lib: g, sid: `${g.store}-${g.id}`, state: { steps: {} }, job: { state: "idle" } };
   await refreshSession();
-  if (!SESS.state.exe && GAME && GAME.exe) await setExe(GAME.exe);
+  if (!SESS.state.exe && GAME && GAME.exe) {
+    try { await setExe(GAME.exe); } catch (e) { toast("Couldn't use this profile's exe name: " + e.message, 8000); }
+  }
   DRAFT = SESS.state.draft || null; seedDrop(SESS.state.drop, SESS.state.cats);
   startPoll(); drawCapture();
 }
@@ -1191,7 +1193,11 @@ window.addEventListener("error", (e) => toast("JS error: " + e.message, 20000));
 window.addEventListener("unhandledrejection", (e) => toast("Error: " + (e.reason && e.reason.message || e.reason), 20000));
 (async () => {
   SCHEMA = await api("/api/schema"); await loadList(); showErrors([]); showVersion(); showUpdateBar();
-  const q = new URLSearchParams(location.search), o = q.get("open");
+  // The URL shortcuts (open a game, click a selector...) are for screenshots and tests. Any web
+  // page can open this one with a query string, so they only work when the server is in debug mode.
+  const debug = (await api("/api/debug")).debug;
+  const q = new URLSearchParams(debug ? location.search : "");
+  const o = q.get("open");
   if (o) await openGame(...o.split("/"));
   if (q.get("section")) setSection(q.get("section"));
   if (q.get("startcapture")) await captureCurrent();

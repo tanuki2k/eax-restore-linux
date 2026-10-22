@@ -141,7 +141,7 @@ finish_run_log() {
         rm -f "$MANIFEST_PREV" "$MANIFEST_PREV.merged" 2>/dev/null
     fi
     # .reg files an interrupted run didn't get to delete.
-    [ ${#REG_TEMP_FILES[@]} -gt 0 ] && rm -f "${REG_TEMP_FILES[@]}" 2>/dev/null
+    [ ${#TEMP_FILES_AT_EXIT[@]} -gt 0 ] && rm -f "${TEMP_FILES_AT_EXIT[@]}" 2>/dev/null
     # A Ctrl-C at a tick list lands here from inside its "IFS= read", with
     # that empty IFS still in effect; put the usual one back for the rest.
     local IFS=$' \t\n'
@@ -175,6 +175,22 @@ finish_run_log() {
     [ -n "$writer_pid" ] && timeout 5 tail --pid="$writer_pid" -f /dev/null 2>/dev/null
     write_log_summary "$rc"
     exit "$rc"
+}
+
+# Usage: end_run_log_for_restart
+# Closes this run's log the way finish_run_log does, but without exiting, for
+# a self-update that re-execs the script: the new process must start with the
+# real terminal on stdout, not this run's tee pipe, or it would think it has no
+# terminal and append its whole run to the old log. Does nothing without a log.
+end_run_log_for_restart() {
+    trap -p EXIT | grep -q finish_run_log || return 0
+    trap - EXIT
+    end_phase_progress
+    exec 1>&3 2>&4 3>&- 4>&-
+    local writer_pid
+    writer_pid=$(cat "$EAX_LOG_FILE.pid" 2>/dev/null); rm -f "$EAX_LOG_FILE.pid"
+    [ -n "$writer_pid" ] && timeout 5 tail --pid="$writer_pid" -f /dev/null 2>/dev/null
+    write_log_summary 0
 }
 
 if ! is_truthy "${EAX_RESTORE_NO_LOG:-}" && mkdir -p "$LOG_DIR" 2>/dev/null; then

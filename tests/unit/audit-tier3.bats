@@ -45,10 +45,10 @@ setup() {
 
 @test "make_reg_file: a private file in the game folder, removed at exit" {
     GAME_DIR="$BATS_TEST_TMPDIR/game"; mkdir -p "$GAME_DIR"
-    REG_TEMP_FILES=()
+    TEMP_FILES_AT_EXIT=()
     make_reg_file test
     [ -f "$REG_FILE" ] && [ "$(dirname "$REG_FILE")" == "$GAME_DIR" ]
-    [ "${REG_TEMP_FILES[0]}" == "$REG_FILE" ]
+    [ "${TEMP_FILES_AT_EXIT[0]}" == "$REG_FILE" ]
 }
 
 @test "start_manifest: sets the old one aside only when asked" {
@@ -73,4 +73,16 @@ setup() {
     install_script_update "http://x/new.sh" "$dir/bin/run.sh"
     [ -L "$dir/bin/run.sh" ]
     grep -q "echo new" "$dir/real/run.sh"
+}
+
+@test "print_wrapped: written-out escapes in database text stay text" {
+    run print_wrapped '\0033[2J and \033[31m and \ec'
+    [[ "$output" == *'\0033[2J and \033[31m and \ec'* ]]
+    ! printf '%s' "$output" | grep -q $'\x1b\\[2J'
+}
+
+@test "end_run_log_for_restart: does nothing when there is no run log" {
+    source <(sed -n '/^end_run_log_for_restart()/,/^}/p' "$REPO_ROOT/src/logging.sh")
+    run end_run_log_for_restart
+    [ "$status" -eq 0 ]
 }

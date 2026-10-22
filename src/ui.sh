@@ -389,7 +389,9 @@ print_error_arrow() {
 # arguments are assumed already wrapped by the caller. WRAP_COLUMNS narrows
 # it for a space smaller than the terminal (the database browser's preview).
 print_wrapped() {
-    echo -e "${WHITE}$(tilde_path "$1" | fold -s -w "${WRAP_COLUMNS:-76}" | sed 's/^/  /')${NC}"
+    # %s for the text: it comes from the game database, and echo -e / %b would turn
+    # a written-out \033 or \0033 in it into a real terminal escape.
+    printf '%b%s%b\n' "$WHITE" "$(tilde_path "$1" | fold -s -w "${WRAP_COLUMNS:-76}" | sed 's/^/  /')" "$NC"
 }
 
 # Usage: print_final_step <number> "Label:" "text"
