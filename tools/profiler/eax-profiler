@@ -27,18 +27,24 @@ if curl -fs --max-time 2 "${url}api/ping" >/dev/null 2>&1; then
 fi
 
 command -v python3 >/dev/null 2>&1 || fail "python3 is needed to run it."
+command -v jq >/dev/null 2>&1 || fail "jq is needed to run it."
 python3 -c 'import jsonschema' 2>/dev/null || fail "the Python package jsonschema is missing (install python-jsonschema)."
 cd "$repo" || fail "can't find the repository at $repo."
 # Capturing runs the built installer, so build it if it isn't there or the source is newer.
 { [ -f dist/eax-restore-linux.sh ] && [ -z "$(find src build.sh -newer dist/eax-restore-linux.sh -print -quit 2>/dev/null)" ]; } \
     || ./build.sh >/dev/null 2>&1 || fail "building dist/eax-restore-linux.sh failed; run ./build.sh to see why."
 
+# Something answers on the port but isn't the editor: say so, rather than showing its page.
+if (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null; then
+    fail "port $port is in use by another program. Close it, or start with --port N."
+fi
 # The editor stops itself some minutes after its page is closed, so no terminal is needed.
 # It opens a browser tab by itself unless the --app window above is available.
 if command -v chromium >/dev/null 2>&1 || command -v google-chrome >/dev/null 2>&1; then
     python3 tools/profiler/profiler.py --port "$port" --no-open --quit-when-closed &
     pid=$!
     for _ in $(seq 1 40); do curl -fs --max-time 1 "${url}api/ping" >/dev/null 2>&1 && break; sleep 0.25; done
+    kill -0 "$pid" 2>/dev/null || fail "the editor didn't start. Run tools/profiler/profiler.py in a terminal to see why."
     open_page
     wait "$pid"
 else

@@ -211,9 +211,36 @@ def _call(prompt):
     raise RuntimeError("No AI is available yet — add an API key or sign in with Claude in the AI settings.")
 
 
+def redact(node, home=None, user=None):
+    """The context with what could identify the player hidden before it leaves the machine: the home
+    folder, a /home/<name> or C:\\Users\\<name> path, the user name, and long numbers (keys, account IDs).
+    Setting names and values are what the AI needs, and stay."""
+    import getpass
+    home = home or os.path.expanduser("~")
+    user = user or getpass.getuser()
+
+    def clean(t):
+        if home and home != "/":
+            t = t.replace(home, "~")
+        t = re.sub(r"/home/[^/\s\"']+", "/home/user", t)
+        t = re.sub(r"([A-Za-z]:\\{1,2}Users\\{1,2})[^\\\s\"']+", r"\1user", t)
+        if user and len(user) > 2:
+            t = re.sub(r"(?<![A-Za-z0-9])" + re.escape(user) + r"(?![A-Za-z0-9])", "user", t)
+        return re.sub(r"\d{9,}", "<number>", t)
+
+    if isinstance(node, str):
+        return clean(node)
+    if isinstance(node, dict):
+        return {clean(k) if isinstance(k, str) else k: redact(v, home, user) for k, v in node.items()}
+    if isinstance(node, list):
+        return [redact(v, home, user) for v in node]
+    return node
+
+
 def ask(task, context):
     if task not in TASKS:
         raise ValueError("unknown task")
+    context = redact(context)
     text = _call(f"{TASKS[task]}\n\nContext (JSON):\n{json.dumps(context, indent=1)[:12000]}")
     a, b = text.find("{"), text.rfind("}")
     return json.loads(text[a:b + 1])

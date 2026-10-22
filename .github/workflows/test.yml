@@ -6,12 +6,18 @@ on:
       - "src/**"
       - "build.sh"
       - "tests/**"
+      - "tools/**"
+      - "data/**"
+      - "game-database.json"
       - ".github/workflows/test.yml"
   pull_request:
     paths:
       - "src/**"
       - "build.sh"
       - "tests/**"
+      - "tools/**"
+      - "data/**"
+      - "game-database.json"
       - ".github/workflows/test.yml"
 
 permissions:
@@ -27,7 +33,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y bats shellcheck
 
       - name: Install runtime tools the script expects
-        run: sudo apt-get install -y jq unzip file
+        run: sudo apt-get install -y jq unzip file python3-jsonschema
 
       - name: Build
         run: ./build.sh
@@ -36,7 +42,10 @@ jobs:
         run: bash -n dist/eax-restore-linux.sh
 
       - name: Shellcheck
-        run: shellcheck --severity=error dist/eax-restore-linux.sh
+        run: shellcheck --severity=error dist/eax-restore-linux.sh build.sh tools/*.sh tools/profiler/*.sh tools/profiler/eax-profiler
 
       - name: Tests
         run: bats tests/unit tests/integration
+
+      - name: Profiler tests
+        run: cd tools/profiler && python3 -m unittest discover -s tests

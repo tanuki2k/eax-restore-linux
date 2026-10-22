@@ -76,3 +76,14 @@ class IdAndValues(unittest.TestCase):
              "game_config": {"files": {}, "audio_settings": [{"title": "TODO title", "reason": "TODO reason", "changes": {}}]}}
         with mock.patch.object(submit, "gh_login", lambda: "x"):
             self.assertTrue(any("TODO" in e for e in submit.prepare("untested", "t", g)["errors"]))
+
+
+class Redaction(unittest.TestCase):
+    def test_home_user_and_long_numbers_are_hidden_but_settings_stay(self):
+        ctx = {"game": "T", "changes": [{"file": "/home/ben/.wine/user.reg", "key": "Name", "old": "ben", "new": "key 123456789012",
+                                         "path": "C:\\Users\\ben\\Documents\\x.ini", "volume": "5"}]}
+        out = json.dumps(ai.redact(ctx, home="/home/ben", user="ben"))
+        for leaked in ("/home/ben", "123456789012", "Users\\\\ben"):
+            self.assertNotIn(leaked, out)
+        self.assertIn("Documents", out)
+        self.assertIn('"volume": "5"', out)

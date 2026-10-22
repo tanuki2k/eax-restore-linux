@@ -86,3 +86,12 @@ setup() {
     run end_run_log_for_restart
     [ "$status" -eq 0 ]
 }
+
+@test "build.sh: a src file missing from COMPONENTS stops the build" {
+    local w="$BATS_TEST_TMPDIR/b"; mkdir -p "$w"
+    cp -r "$REPO_ROOT/src" "$REPO_ROOT/build.sh" "$w/"
+    echo '# stray' > "$w/src/not-listed.sh"
+    run "$w/build.sh"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"not-listed.sh"* ]]
+}

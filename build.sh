@@ -10,9 +10,7 @@ set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
 # Order matters: this is the exact order these sections run in the assembled
-# script (constants/globals are grouped together here even though the
-# original file interleaves a second globals block after the guards — pure
-# variable assignments, so reordering them doesn't change behavior).
+# script.
 COMPONENTS=(
     header.sh
     globals.sh
@@ -38,6 +36,14 @@ COMPONENTS=(
     config-flow.sh
     install-flow.sh
 )
+
+# A src/*.sh missing from the list would silently be left out of the script.
+for f in src/*.sh; do
+    case " ${COMPONENTS[*]} " in
+        *" ${f#src/} "*) ;;
+        *) echo "build.sh: $f is not in COMPONENTS, so it would be left out of the build." >&2; exit 1 ;;
+    esac
+done
 
 mkdir -p dist
 out="dist/eax-restore-linux.sh"

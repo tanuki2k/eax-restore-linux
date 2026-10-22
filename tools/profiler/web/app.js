@@ -769,6 +769,7 @@ async function aiSettings() {
       el("header", {}, el("h4", {}, title), on ? el("span", { class: "badge untested", style: "background:var(--ok-weak);color:var(--ok)" }, "In use") : null), el("p", { class: "muted" }, hint), ...kids);
     body.replaceChildren(
       el("p", { class: "muted", style: "margin:0 0 12px" }, "Lets the ✨ buttons fill in release dates, EAX details and drafted settings. Check what it writes against a source."),
+      el("p", { class: "muted", style: "margin:0 0 12px" }, "What it sends to Anthropic: the game's name and, for drafting, the file names, section names, keys and values of the changes you captured. Your home folder, user name and long numbers are hidden first."),
       el("div", { class: "aistatus " + (inUse ? "on" : "off") }, el("span", { class: "dot" }), using),
       card("Claude sign-in", inUse === "cli", "Uses your Claude subscription, through the claude command's own sign-in.",
         !cli.installed ? el("p", { class: "bad" }, "Claude Code isn't installed, or the editor can't find it. Make sure the `claude` command works in a terminal, or use an API key instead.")

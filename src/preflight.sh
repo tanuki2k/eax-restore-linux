@@ -29,6 +29,16 @@ else
         if command -v "$pkg" &> /dev/null; then echo -e "${GREEN}FOUND${NC}"; else echo -e "${YELLOW}${BOLD}MISSING${NC}"; MISSING_BASE_PKGS+=("$pkg"); fi
     done
 
+    # protontricks is for Steam games and winetricks for Heroic/GOG ones: a machine with
+    # only one launcher shouldn't be made to install the other's tool. With neither
+    # launcher found (or both), both are asked for, as before.
+    HAS_STEAM_LIB=0; HAS_HEROIC_LIB=0
+    [ -n "$(steam_roots)" ] && HAS_STEAM_LIB=1
+    [ -n "$(heroic_roots)" ] && HAS_HEROIC_LIB=1
+    NEED_PROTONTRICKS=1; NEED_WINETRICKS=1
+    [ "$HAS_STEAM_LIB" -eq 0 ] && [ "$HAS_HEROIC_LIB" -eq 1 ] && NEED_PROTONTRICKS=0
+    [ "$HAS_HEROIC_LIB" -eq 0 ] && [ "$HAS_STEAM_LIB" -eq 1 ] && NEED_WINETRICKS=0
+
     echo -n -e " -> Checking for ${YELLOW}protontricks${NC}... "
     if command -v protontricks &> /dev/null; then
         echo -e "${GREEN}FOUND${NC}"
@@ -36,6 +46,8 @@ else
         if flatpak info com.github.Matoking.protontricks &> /dev/null; then
             echo -e "${GREEN}FOUND (Flatpak)${NC}"
             protontricks() { flatpak run com.github.Matoking.protontricks "$@"; }
+        elif [ "$NEED_PROTONTRICKS" -eq 0 ]; then
+            echo -e "${DIM}MISSING (only needed for Steam games, and none were found)${NC}"
         else
             echo -e "${YELLOW}MISSING (Required for Steam games)${NC}"
             MISSING_BASE_PKGS+=("protontricks")
@@ -44,6 +56,7 @@ else
 
     echo -n -e " -> Checking for ${YELLOW}winetricks${NC}... "
     if command -v winetricks &> /dev/null; then echo -e "${GREEN}FOUND${NC}"
+    elif [ "$NEED_WINETRICKS" -eq 0 ]; then echo -e "${DIM}MISSING (only needed for Heroic/GOG games, and none were found)${NC}"
     else echo -e "${YELLOW}MISSING (Required for Heroic/GOG games)${NC}"; MISSING_BASE_PKGS+=("winetricks"); fi
 
     echo -n -e " -> Checking for ${YELLOW}wine binary${NC}... "
