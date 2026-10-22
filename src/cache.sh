@@ -95,19 +95,33 @@ lookup_build_versions() {
 # Unpacks a downloaded kcat DSOAL zip into $DSOAL_OFFICIAL (replacing what was
 # there), records the marker in updated_at.txt and deletes the zip.
 install_dsoal_zip_into_official() {
-    unpack_dsoal_zip "$1" "$DSOAL_OFFICIAL"
+    unpack_dsoal_zip "$1" "$DSOAL_OFFICIAL" || return 1
     echo "$2" > "$DSOAL_SHARE/updated_at.txt"
+}
+
+# Usage: extract_zip_into <zip> <dir>
+# Unpacks into a sibling folder and swaps it in only when unzip succeeded, so
+# a full disk or an interrupt can't leave a half-filled cache that the marker
+# files then call up to date. The previous cache stays if it fails.
+extract_zip_into() {
+    local zip="$1" dir="$2" tmp="$2.new"
+    rm -rf "$tmp"; mkdir -p "$tmp"
+    if ! unzip -q "$zip" -d "$tmp"; then rm -rf "$tmp"; return 1; fi
+    rm -rf "$dir"; mv "$tmp" "$dir"
 }
 
 # Usage: unpack_dsoal_zip <zip> <dir>
 # kcat's zips sometimes wrap their real contents in a further nested
 # DSOAL_*.zip, so a second extraction pass is needed to reach the DLLs.
 unpack_dsoal_zip() {
-    local zip="$1" dir="$2" nested
-    rm -rf "$dir"; mkdir -p "$dir"
-    unzip -q "$zip" -d "$dir"
-    nested=$(find "$dir" -maxdepth 1 -name "DSOAL_*.zip" | head -n 1)
-    if [ -n "$nested" ] && unzip -tq "$nested" &>/dev/null; then unzip -q "$nested" -d "$dir"; fi
+    local zip="$1" dir="$2" nested tmp="$2.new"
+    rm -rf "$tmp"; mkdir -p "$tmp"
+    if ! unzip -q "$zip" -d "$tmp"; then rm -rf "$tmp"; rm -f "$zip"; return 1; fi
+    nested=$(find "$tmp" -maxdepth 1 -name "DSOAL_*.zip" | head -n 1)
+    if [ -n "$nested" ] && unzip -tq "$nested" &>/dev/null; then
+        if ! unzip -q "$nested" -d "$tmp"; then rm -rf "$tmp"; rm -f "$zip"; return 1; fi
+    fi
+    rm -rf "$dir"; mv "$tmp" "$dir"
     rm -f "$zip"
 }
 
@@ -146,8 +160,12 @@ ensure_dsoal_build() {
             # Hard-fails on mismatch: a frozen, already-superseded archive
             # asset has a stable SHA256, so a mismatch means the file is wrong.
             if verify_checksum "$DSOAL_SHARE/pinned.zip" "$DSOAL_PINNED_SHA256"; then
-                unpack_dsoal_zip "$DSOAL_SHARE/pinned.zip" "$DSOAL_PINNED"
-                print_status "Done." "$GREEN"; return 0
+                if unpack_dsoal_zip "$DSOAL_SHARE/pinned.zip" "$DSOAL_PINNED"; then
+                    print_status "Done." "$GREEN"; return 0
+                fi
+                print_error_arrow "The stable DSOAL build couldn't be unpacked."
+                rm -f "$DSOAL_SHARE/pinned.zip"; rm -rf "$DSOAL_PINNED"
+                return 1
             fi
             print_error_arrow "The stable DSOAL build failed checksum verification."
         else
@@ -180,8 +198,8 @@ ensure_dsoal_build() {
         fi
         print_status "DSOAL latest [$ARCHIVE_REV]: downloading kcat's newest archived build (latest-master is missing upstream)..."
         if fetch_with_progress "$ARCHIVE_URL" "$DSOAL_SHARE/dsoal.zip" && unzip -tq "$DSOAL_SHARE/dsoal.zip" &>/dev/null \
-            && verify_or_confirm "$DSOAL_SHARE/dsoal.zip" "$ARCHIVE_DIGEST" "kcat archived DSOAL [$ARCHIVE_REV]"; then
-            install_dsoal_zip_into_official "$DSOAL_SHARE/dsoal.zip" "archive-$ARCHIVE_REV"
+            && verify_or_confirm "$DSOAL_SHARE/dsoal.zip" "$ARCHIVE_DIGEST" "kcat archived DSOAL [$ARCHIVE_REV]" \
+            && install_dsoal_zip_into_official "$DSOAL_SHARE/dsoal.zip" "archive-$ARCHIVE_REV"; then
             print_status "Done." "$GREEN"; return 0
         fi
     else
@@ -190,8 +208,8 @@ ensure_dsoal_build() {
         fi
         print_status "DSOAL latest [$DSOAL_LATEST_LABEL]: downloading..."
         if fetch_with_progress "$DSOAL_OFFICIAL_URL" "$DSOAL_SHARE/dsoal.zip" && unzip -tq "$DSOAL_SHARE/dsoal.zip" &>/dev/null \
-            && verify_or_confirm "$DSOAL_SHARE/dsoal.zip" "$(get_asset_digest "$DSOAL_OFFICIAL_JSON" "DSOAL.zip")" "kcat DSOAL [$DSOAL_LATEST_LABEL]"; then
-            install_dsoal_zip_into_official "$DSOAL_SHARE/dsoal.zip" "$DSOAL_LATEST_DATE"
+            && verify_or_confirm "$DSOAL_SHARE/dsoal.zip" "$(get_asset_digest "$DSOAL_OFFICIAL_JSON" "DSOAL.zip")" "kcat DSOAL [$DSOAL_LATEST_LABEL]" \
+            && install_dsoal_zip_into_official "$DSOAL_SHARE/dsoal.zip" "$DSOAL_LATEST_DATE"; then
             print_status "Done." "$GREEN"; return 0
         fi
     fi
@@ -224,9 +242,8 @@ ensure_openal_build() {
         url="https://github.com/kcat/openal-soft/releases/download/${OAL_STABLE_TAG}/${asset}"
         if fetch_with_progress "$url" "$OPENAL_SHARE/openal.zip" && unzip -tq "$OPENAL_SHARE/openal.zip" &>/dev/null; then
             digest=$(get_asset_digest "$(curl -s "https://api.github.com/repos/kcat/openal-soft/releases/tags/${OAL_STABLE_TAG}")" "$asset")
-            if verify_or_confirm "$OPENAL_SHARE/openal.zip" "$digest" "kcat OpenAL Soft [$OAL_STABLE_TAG]"; then
-                rm -rf "$OPENAL_OFFICIAL"; mkdir -p "$OPENAL_OFFICIAL"
-                unzip -q "$OPENAL_SHARE/openal.zip" -d "$OPENAL_OFFICIAL"
+            if verify_or_confirm "$OPENAL_SHARE/openal.zip" "$digest" "kcat OpenAL Soft [$OAL_STABLE_TAG]" \
+                && extract_zip_into "$OPENAL_SHARE/openal.zip" "$OPENAL_OFFICIAL"; then
                 echo "$OAL_STABLE_TAG" > "$OPENAL_SHARE/updated_at.txt"; rm -f "$OPENAL_SHARE/openal.zip"
                 print_status "Done." "$GREEN"; return 0
             fi
@@ -247,10 +264,10 @@ ensure_openal_build() {
         build_cached "$OPENAL_PRERELEASE" || return 1
         print_status "OpenAL Soft latest [$OAL_LATEST_LABEL]: using the cached build" "$YELLOW"; return 0
     fi
-    IFS=$'\t' read -r url digest updated version < <(printf '%s' "$OAL_PRERELEASE_JSON" | jq -r '
+    IFS=$'\x1f' read -r url digest updated version < <(printf '%s' "$OAL_PRERELEASE_JSON" | jq -r '
         (.name // "" | sub("^OpenAL Soft v"; "")) as $v
         | (.assets // [])[] | select(.name == "OpenALSoft.zip")
-        | "\(.browser_download_url)\t\(.digest // "" | sub("^sha256:"; ""))\t\(.updated_at)\t\($v)"' 2>/dev/null)
+        | "\(.browser_download_url)\u001f\(.digest // "" | sub("^sha256:"; ""))\u001f\(.updated_at)\u001f\($v)"' 2>/dev/null)
     if [ -z "$url" ]; then
         build_cached "$OPENAL_PRERELEASE" || { print_error_arrow "OpenAL Soft's pre-release build isn't available right now."; return 1; }
         print_status "OpenAL Soft latest: couldn't check for updates, so using the cached build" "$YELLOW"; return 0
@@ -260,9 +277,8 @@ ensure_openal_build() {
     fi
     print_status "OpenAL Soft latest [$OAL_LATEST_LABEL]: downloading..."
     if fetch_with_progress "$url" "$OPENAL_SHARE/prerelease.zip" && unzip -tq "$OPENAL_SHARE/prerelease.zip" &>/dev/null \
-        && verify_or_confirm "$OPENAL_SHARE/prerelease.zip" "$digest" "kcat OpenAL Soft pre-release [$version]"; then
-        rm -rf "$OPENAL_PRERELEASE"; mkdir -p "$OPENAL_PRERELEASE"
-        unzip -q "$OPENAL_SHARE/prerelease.zip" -d "$OPENAL_PRERELEASE"
+        && verify_or_confirm "$OPENAL_SHARE/prerelease.zip" "$digest" "kcat OpenAL Soft pre-release [$version]" \
+        && extract_zip_into "$OPENAL_SHARE/prerelease.zip" "$OPENAL_PRERELEASE"; then
         printf '%s\n%s\n' "$updated" "$OAL_LATEST_LABEL" > "$OPENAL_PRERELEASE/.version"
         rm -f "$OPENAL_SHARE/prerelease.zip"
         print_status "Done." "$GREEN"; return 0

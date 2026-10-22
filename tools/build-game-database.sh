@@ -28,14 +28,20 @@ if [ -n "$dupes" ]; then
     exit 1
 fi
 
-errors="$(for f in "${all_files[@]}"; do
-    jq -r --arg f "$f" '
+# Plain loops, not a $(for ...): errexit doesn't reach into a command
+# substitution, so a file jq can't parse would otherwise be skipped silently
+# and the build would still succeed without that game.
+errors=""
+for f in "${all_files[@]}"; do
+    file_errors="$(jq -r --arg f "$f" '
         (.game_config.files // {} | keys) as $defined
         | (.game_config.audio_settings // []) + (.game_config.optional_settings // [])
-        | .[] | .title as $title | .changes | keys[]
+        | .[] | .title as $title | (.changes // {}) | keys[]
         | select(. as $file | $defined | index($file) | not)
-        | "\($f): \"\($title)\" changes \(.), which isn'\''t defined in game_config.files"' "$f"
-done)"
+        | "\($f): \"\($title)\" changes \(.), which isn'\''t defined in game_config.files"' "$f")" \
+        || { echo "$f: not valid JSON, or not shaped like a game file" >&2; exit 1; }
+    [ -n "$file_errors" ] && errors+="${errors:+$'\n'}$file_errors"
+done
 if [ -n "$errors" ]; then
     printf '%s\n' "$errors" >&2
     exit 1
@@ -43,10 +49,16 @@ fi
 
 # A game from data/games/untested/ is marked "tested": false (the browser filters on it);
 # a tested one carries nothing, and a missing field means tested.
-built="$(for f in "${game_files[@]}"; do
-    jq -L tools --arg id "$(basename "$f" .json)" --argjson untested "$([[ "$f" == data/games/untested/* ]] && echo true || echo false)" \
-        'include "game-database"; built_entry($id; $untested)' "$f"
-done | jq -s '{
+entries=""
+for f in "${game_files[@]}"; do
+    untested=false
+    [[ "$f" == data/games/untested/* ]] && untested=true
+    entry="$(jq -c -L tools --arg id "$(basename "$f" .json)" --argjson untested "$untested" \
+        'include "game-database"; built_entry($id; $untested)' "$f")" \
+        || { echo "$f: couldn't be built" >&2; exit 1; }
+    entries+="$entry"$'\n'
+done
+built="$(printf '%s' "$entries" | jq -s '{
     schema_version: 3,
     _readme: "Generated from data/games/tested/*.json and data/games/untested/*.json by tools/build-game-database.sh; do not edit by hand. Games from untested/ carry \"tested\": false. Field reference: data/schema.json and README.md, \"Contributing to the game database\".",
     games: sort_by(.name | ascii_downcase)

@@ -316,7 +316,7 @@ prompt_installed_game() {
         read_answer choice || return 1
         choice="${choice,,}"
         if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#paths[@]} ]; then
-            GAME_DIR="${paths[$((choice - 1))]}"
+            GAME_DIR="${paths[$((10#$choice - 1))]}"
             return 0
         fi
         [[ " ${keys[*]} " == *" $choice "* ]] && break

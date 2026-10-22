@@ -115,6 +115,15 @@ setup() {
     grep -q "because it isn.t one of the files this script installed" "$OUT"
 }
 
+@test "uninstall skips a script-named file that lives outside the game folder and prefix" {
+    install_answers "$BATS_TEST_TMPDIR/in"; run_script "$BATS_TEST_TMPDIR/in"
+    mkdir -p "$HOME/OtherGame"; echo theirs > "$HOME/OtherGame/dsound.dll"
+    echo "$HOME/OtherGame/dsound.dll" >> "$GAME/.eax-restore-manifest.txt"
+    uninstall_answers "$BATS_TEST_TMPDIR/un"; run_script "$BATS_TEST_TMPDIR/un"
+    [ "$(cat "$HOME/OtherGame/dsound.dll")" == "theirs" ]
+    grep -q "because it isn.t one of the files this script installed" "$OUT"
+}
+
 @test "a reinstall keeps the registry record of the last install" {
     OVERRIDE_CHOICE=2 install_answers "$BATS_TEST_TMPDIR/in"; run_script "$BATS_TEST_TMPDIR/in"
     grep -q '^REGISTRY:OVERRIDE:dsound' "$GAME/.eax-restore-manifest.txt"

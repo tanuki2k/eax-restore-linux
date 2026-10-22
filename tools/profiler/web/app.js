@@ -1158,7 +1158,7 @@ const ping = () => fetch("/api/ping").catch(() => {});
 ping(); setInterval(ping, 10000);
 $("#quitbtn").onclick = async () => {
   if (!(await askConfirm(DIRTY ? "Quit the editor? You have unsaved changes, and they will be lost." : "Quit the editor?", "Quit", DIRTY))) return;
-  await fetch("/api/quit", { method: "POST" }).catch(() => {});
+  await fetch("/api/quit", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }).catch(() => {});
   document.body.replaceChildren(el("div", { class: "empty" }, el("h2", {}, "The editor has stopped."), el("p", {}, "You can close this tab. Start it again from the app menu or with tools/profiler/eax-profiler.")));
 };
 

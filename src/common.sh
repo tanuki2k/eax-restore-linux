@@ -58,6 +58,18 @@ manifest_file_is_ours() {
     return 1
 }
 
+# Usage: manifest_path_in_scope <path> <game dir>
+# True when the path is inside the game folder (extra exe folders live there
+# too) or inside a Wine prefix's C: drive, the only places an install deploys
+# to. A name check alone would let a copied or edited manifest point at another
+# game's dsound.dll.
+manifest_path_in_scope() {
+    case "$1" in
+        "$2"/*|*/drive_c/*) return 0 ;;
+    esac
+    return 1
+}
+
 # Usage: looks_like_our_file <path>
 # True when a regular file with one of the deployed names has the content of
 # what this script puts there: DSOAL's dsound.dll, OpenAL Soft's DLLs, the

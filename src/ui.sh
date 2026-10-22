@@ -591,7 +591,7 @@ paged_select() {
             # Enter alone pages forward, same as N (the last page has no N).
             [ -z "$choice" ] && [[ " ${keys[*]} " == *" n "* ]] && choice=n
             if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "$total" ]; then
-                PAGED_CHOICE="$choice"; return 0
+                PAGED_CHOICE=$((10#$choice)); return 0
             fi
             [ -n "$choice" ] && case " ${keys[*]} " in
                 *" $choice "*)
@@ -820,7 +820,7 @@ radio_select() {
             prompt "Selection [1-$n, Default: $cur]: "
             read_answer answer || exit 0
             answer="${answer:-$cur}"
-            if [[ "$answer" =~ ^[0-9]+$ ]] && [ "$answer" -ge 1 ] && [ "$answer" -le "$n" ]; then break; fi
+            if [[ "$answer" =~ ^[0-9]+$ ]] && [ "$answer" -ge 1 ] && [ "$answer" -le "$n" ]; then answer=$((10#$answer)); break; fi
             print_result "That's not a valid option — please type a number from 1 to $n." "$YELLOW"
         done
         RADIO_CHOICE="$answer"

@@ -1002,7 +1002,7 @@ resolve_exe_folder() {
     while true; do
         prompt "Selection [1-${fb_max}]: "
         read_answer choice || return 1
-        [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "$fb_max" ] && break
+        [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "$fb_max" ] && { choice=$((10#$choice)); break; }
         print_result "That's not a valid option — please enter a number from 1-${fb_max}." "$YELLOW"
     done
 

@@ -347,6 +347,7 @@ class H(BaseHTTPRequestHandler):
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Frame-Options", "DENY")
         self.end_headers()
         self.wfile.write(body)
 
@@ -358,6 +359,16 @@ class H(BaseHTTPRequestHandler):
         # Only the page itself and /api: no way to read arbitrary files.
         if self.headers.get("Host", "").split(":")[0] not in ("127.0.0.1", "localhost"):
             return self.reply({"error": "forbidden"}, 403)
+        if method != "GET":
+            # Any web page can send a POST to localhost; a cross-origin one
+            # always carries Origin / Sec-Fetch-Site, and a JSON content type
+            # can't be sent cross-origin without a preflight we never answer.
+            origin = self.headers.get("Origin")
+            site = self.headers.get("Sec-Fetch-Site")
+            ctype = self.headers.get("Content-Type", "").split(";")[0].strip().lower()
+            if (origin and origin != f"http://{self.headers.get('Host')}") \
+                    or site not in (None, "same-origin", "none") or ctype != "application/json":
+                return self.reply({"error": "forbidden"}, 403)
         p = self.path.split("?")[0]
         try:
             if method == "GET" and p in ("/", "/app.js", "/app.css"):
@@ -470,7 +481,10 @@ class H(BaseHTTPRequestHandler):
                     b = self.body(); s = load_session(sid); s["drop"] = b["drop"]; s["cats"] = b.get("cats", {}); save_session(sid, s)
                     return self.reply({"ok": True})
                 if method == "POST" and what == "exe":
-                    s = load_session(sid); s["exe"] = self.body()["exe"]; save_session(sid, s)
+                    exe = self.body().get("exe", "")
+                    if exe and not capture.valid_exe(exe):
+                        raise ValueError("That isn't an executable file name (like game.exe).")
+                    s = load_session(sid); s["exe"] = exe; save_session(sid, s)
                     return self.reply({"ok": True})
                 if method == "POST" and what == "action":
                     b = self.body()

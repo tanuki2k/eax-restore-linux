@@ -94,7 +94,8 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
             # lists gets deleted.
             manifest_entry="${manifest_entry%$'\r'}"
             if [[ "$manifest_entry" != /* || "/$manifest_entry/" == *"/../"* ]] \
-                || ! manifest_file_is_ours "$manifest_entry"; then
+                || ! manifest_file_is_ours "$manifest_entry" \
+                || ! manifest_path_in_scope "$manifest_entry" "$GAME_DIR"; then
                 print_warning_arrow "Skipped ${manifest_entry} because it isn't one of the files this script installed."
                 continue
             fi
@@ -401,7 +402,16 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
 
     if [ ${#FINAL_REMOVE[@]} -gt 0 ]; then
         print_phase_task "Removing game files"
-        for f in "${FINAL_REMOVE[@]}"; do rm -f "$f"; done
+        # A file that couldn't be removed stays in the manifest, so a later
+        # uninstall still knows it's ours.
+        REMOVED_FILES=()
+        for f in "${FINAL_REMOVE[@]}"; do
+            if rm -f "$f" 2>/dev/null && [ ! -e "$f" ] && [ ! -L "$f" ]; then
+                REMOVED_FILES+=("$f")
+            else
+                print_warning_arrow "Couldn't remove $(tilde_path "$f"), so it stays in the install record."
+            fi
+        done
         for i in "${!FINAL_RESTORE_TARGETS[@]}"; do
             if mv "${FINAL_RESTORE_SOURCES[$i]}" "${FINAL_RESTORE_TARGETS[$i]}"; then
                 print_status "Restored original $(basename "${FINAL_RESTORE_TARGETS[$i]}") in $(dirname "${FINAL_RESTORE_TARGETS[$i]}")"
@@ -416,8 +426,12 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
                 print_warning_arrow "Couldn't put back $(basename "${FINAL_RESTORE_TARGETS[$i]}"), so its backup was kept at $(tilde_path "${FINAL_RESTORE_SOURCES[$i]}")."
             fi
         done
-        manifest_forget_paths "${FINAL_REMOVE[@]}"
-        print_status "Selected files removed successfully." "$GREEN"
+        manifest_forget_paths "${REMOVED_FILES[@]}"
+        if [ ${#REMOVED_FILES[@]} -eq ${#FINAL_REMOVE[@]} ]; then
+            print_status "Selected files removed successfully." "$GREEN"
+        else
+            print_status "Removed ${#REMOVED_FILES[@]} of ${#FINAL_REMOVE[@]} selected files." "$YELLOW"
+        fi
     fi
 
     LAUNCHER_LINES_KEPT=()

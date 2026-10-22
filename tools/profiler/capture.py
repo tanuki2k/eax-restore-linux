@@ -392,8 +392,21 @@ def _cmdlines():
             continue
 
 
+EXE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 ._()\-]{1,100}\.exe$", re.I)
+
+
+def valid_exe(exe):
+    """A bare exe file name; anything shorter or looser would match (and stop) unrelated processes."""
+    return isinstance(exe, str) and bool(EXE_RE.match(exe))
+
+
+def _runs_exe(exe, cmdline):
+    # Whole file name only: after a path separator or space, before a space or the end.
+    return re.search(r"(^|[\\/ ])" + re.escape(exe) + r"( |$)", cmdline, re.I) is not None
+
+
 def game_running(exe):
-    return bool(exe) and any(exe.lower() in c.lower() for pid, c in _cmdlines() if pid != os.getpid())
+    return valid_exe(exe) and any(_runs_exe(exe, c) for pid, c in _cmdlines() if pid != os.getpid())
 
 
 def wineserver_running(prefix):
@@ -410,8 +423,10 @@ def wineserver_running(prefix):
 
 def stop_game(exe):
     """Asks the game's processes (matched by exe name) to quit."""
+    if not valid_exe(exe):
+        return
     for pid, c in _cmdlines():
-        if pid != os.getpid() and exe.lower() in c.lower() and "profiler" not in c:
+        if pid != os.getpid() and _runs_exe(exe, c) and "profiler" not in c:
             try:
                 os.kill(pid, 15)
             except OSError:

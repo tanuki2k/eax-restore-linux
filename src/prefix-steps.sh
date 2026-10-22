@@ -384,7 +384,7 @@ note_companion_manifest_line() {
         VCRUN) UNINSTALL_COMPANION_VCRUN[$id]="y" ;;
         VCRUN:OVERRIDES) UNINSTALL_COMPANION_VCRUN[$id]="found" ;;
         REGISTRY:COM) UNINSTALL_COMPANION_COM[$id]="y" ;;
-        REGISTRY:OVERRIDE:*) UNINSTALL_COMPANION_OVERRIDE[$id]="${what#REGISTRY:OVERRIDE:}" ;;
+        REGISTRY:OVERRIDE:dsound|REGISTRY:OVERRIDE:openal32) UNINSTALL_COMPANION_OVERRIDE[$id]="${what#REGISTRY:OVERRIDE:}" ;;
         *) return 0 ;;
     esac
     for known in "${UNINSTALL_COMPANION_IDS[@]}"; do [ "$known" == "$id" ] && return 0; done
