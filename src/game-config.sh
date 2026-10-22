@@ -84,6 +84,15 @@ _wine_reg_read() {
     sec="$(_wine_reg_section "$1" "$2")"
     SEC="${sec//\\/\\\\}" NAME="$3" LC_ALL=C awk '
         BEGIN { want = "[" tolower(ENVIRON["SEC"]) "]"; pre = tolower("\"" ENVIRON["NAME"] "\"=") }
+        function unesc(t,   i, n, c, d, o) {
+            n = length(t); o = ""
+            for (i = 1; i <= n; i++) {
+                c = substr(t, i, 1)
+                if (c == "\\" && i < n) { d = substr(t, i + 1, 1); if (d == "\\" || d == "\"") { c = d; i++ } }
+                o = o c
+            }
+            return o
+        }
         function hex2dec(h,   i, d) { d = 0; h = tolower(h)
             for (i = 1; i <= length(h); i++) d = d * 16 + index("0123456789abcdef", substr(h, i, 1)) - 1
             return d }
@@ -92,7 +101,7 @@ _wine_reg_read() {
             v = substr($0, length(pre) + 1)
             if (v ~ /^dword:[0-9a-fA-F]+$/) printf "dword\t%d\n", hex2dec(substr(v, 7))
             else if (v ~ /^".*"$/) {
-                v = substr(v, 2, length(v) - 2); gsub(/\\"/, "\"", v); gsub(/\\\\/, "\\", v)
+                v = unesc(substr(v, 2, length(v) - 2))
                 printf "string\t%s\n", v
             } else print "raw\t__RAW__"
             found = 1; exit
@@ -173,12 +182,18 @@ config_get_key() {
         return
     fi
     LC_ALL=C awk -v fmt="$fmt" -v sec="$sec" -v key="$key" '
+        function is_header(l,   n, r) {
+            if (!match(l, /^[ \t]*\[[^]]*\]/)) return 0
+            n = substr(l, 1, RLENGTH); r = substr(l, RLENGTH + 1)
+            if (r !~ /^[ \t]*(([;#]|\/\/).*)?$/) return 0
+            sub(/^[ \t]*\[/, "", n); sub(/\]$/, "", n); hname = n
+            return 1
+        }
         BEGIN { lsec = tolower(sec); lkey = tolower(key); insec = (fmt != "ini" && fmt != "gas_cfg"); found = 0; commented = 0 }
         { sub(/\r$/, "") }
+        NR == 1 && substr($0, 1, 3) == "\357\273\277" { $0 = substr($0, 4) }
         fmt == "ini" || fmt == "flat_ini" {
-            if (fmt == "ini" && $0 ~ /^[ \t]*\[.*\][ \t]*$/) {
-                s = $0; gsub(/^[ \t]*\[|\][ \t]*$/, "", s); insec = (tolower(s) == lsec); next
-            }
+            if (fmt == "ini" && is_header($0)) { insec = (tolower(hname) == lsec); next }
             if (!insec) next
             p = index($0, "="); if (p == 0) next
             k = substr($0, 1, p - 1); gsub(/^[ \t]+|[ \t]+$/, "", k)
@@ -215,9 +230,7 @@ config_get_key() {
             print v; found = 1; exit
         }
         fmt == "gas_cfg" {
-            if ($0 ~ /^[ \t]*\[.*\][ \t]*$/) {
-                s = $0; gsub(/^[ \t]*\[|\][ \t]*$/, "", s); insec = (tolower(s) == lsec); next
-            }
+            if (is_header($0)) { insec = (tolower(hname) == lsec); next }
             if (!insec) next
             p = index($0, "="); if (p == 0) next
             k = substr($0, 1, p - 1); gsub(/^[ \t]+|[ \t]+$/, "", k)
@@ -270,29 +283,46 @@ config_set_key() {
     [ "$fmt" == "wine_reg" ] && { _wine_reg_set "$file" "$sec" "$key" "$value"; return; }
     # Anything else would match no rule below and write out an empty file.
     [[ "$fmt" =~ ^(ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gas_cfg|ltx)$ ]] || return 1
-    # Judged by the first line, so one stray CR doesn't turn a whole file CRLF.
+    # Judged by the first line for lines this adds to an empty or new file; every
+    # existing line keeps its own ending.
     [ -f "$file" ] && head -n 1 "$file" 2>/dev/null | LC_ALL=C grep -q $'\r' && crlf=1
+    # UTF-16 text (NUL bytes) can't be edited as ASCII lines.
+    if [ -s "$file" ] && ! tr -d '\0' < "$file" | cmp -s - "$file"; then return 1; fi
     current="$(config_get_key "$file" "$fmt" "$sec" "$key")"
     tmp="$(mktemp "$(dirname "$file")/.eax-restore-cfg.XXXXXX" 2>/dev/null)" || return 1
     { [ -f "$file" ] && cat "$file"; } | LC_ALL=C awk -v fmt="$fmt" -v sec="$sec" -v key="$key" -v val="$value" \
         -v crlf="$crlf" -v current="$current" '
-        function out(line) { printf "%s%s", line, (crlf ? "\r\n" : "\n") }
-        function flush_blanks() { while (nb > 0) { out(""); nb-- } }
+        function outl(line, e) {
+            if (bom) { line = "\357\273\277" line; bom = 0 }
+            printf "%s%s", line, e
+        }
+        function out(line) { outl(line, eol) }
+        function flush_blanks(   i) { for (i = 1; i <= nb; i++) outl("", beol[i]); nb = 0 }
+        function is_header(l,   n, r) {
+            if (!match(l, /^[ \t]*\[[^]]*\]/)) return 0
+            n = substr(l, 1, RLENGTH); r = substr(l, RLENGTH + 1)
+            if (r !~ /^[ \t]*(([;#]|\/\/).*)?$/) return 0
+            sub(/^[ \t]*\[/, "", n); sub(/\]$/, "", n); hname = n
+            return 1
+        }
         function ini_line() { return key "=" val }
         BEGIN {
             lsec = tolower(sec); lkey = tolower(key); insec = (fmt == "flat_ini"); seen_sec = insec; done = 0; nb = 0
-            del = (val == "__DELETE__")
+            del = (val == "__DELETE__"); eol = (crlf ? "\r\n" : "\n"); prev_c = 0
             active = (current != "__ABSENT__" && current != "__FALSE__")
         }
-        { sub(/\r$/, "") }
+        # Each line keeps its own ending, and a UTF-8 BOM stays on line 1;
+        # lines this adds take the ending of the line before them.
+        { eol = ($0 ~ /\r$/) ? "\r\n" : "\n"; sub(/\r$/, "") }
+        NR == 1 && substr($0, 1, 3) == "\357\273\277" { bom = 1; $0 = substr($0, 4) }
         fmt == "ini" || fmt == "flat_ini" {
-            if (fmt == "ini" && $0 ~ /^[ \t]*\[.*\][ \t]*$/) {
+            if (fmt == "ini" && is_header($0)) {
                 if (insec && !done && !del) { out(ini_line()); done = 1 }
                 flush_blanks()
-                s = $0; gsub(/^[ \t]*\[|\][ \t]*$/, "", s); insec = (tolower(s) == lsec); if (insec) seen_sec = 1
+                insec = (tolower(hname) == lsec); if (insec) seen_sec = 1
                 out($0); next
             }
-            if ($0 ~ /^[ \t]*$/) { nb++; next }
+            if ($0 ~ /^[ \t]*$/) { nb++; beol[nb] = eol; next }
             flush_blanks()
             if (insec && !done) {
                 p = index($0, "=")
@@ -309,9 +339,9 @@ config_set_key() {
             out($0); next
         }
         fmt == "gas_cfg" {
-            if ($0 ~ /^[ \t]*\[.*\][ \t]*$/) {
+            if (is_header($0)) {
                 if (insec && !done && !del) { out("\t" key " = " val ";"); done = 1 }
-                s = $0; gsub(/^[ \t]*\[|\][ \t]*$/, "", s); insec = (tolower(s) == lsec); if (insec) seen_sec = 1
+                insec = (tolower(hname) == lsec); if (insec) seen_sec = 1
                 out($0); next
             }
             if (insec && !done && $0 ~ /^[ \t]*\}/) {
@@ -335,22 +365,34 @@ config_set_key() {
         fmt == "idtech_cfg" {
             line = $0
             if (!done && match(tolower(line), /^[ \t]*seta?[ \t]+/)) {
-                rest = substr(line, RLENGTH + 1); split(rest, a, /[ \t]+/)
-                if (tolower(a[1]) == lkey) { done = 1; if (!del) out("seta " a[1] " \"" val "\""); next }
+                lead = substr(line, 1, RLENGTH); rest = substr(line, RLENGTH + 1); split(rest, a, /[ \t]+/)
+                if (tolower(a[1]) == lkey) {
+                    done = 1; if (del) next
+                    # Keep set / seta, the spacing and whether the value was quoted.
+                    vrest = substr(rest, length(a[1]) + 1); match(vrest, /^[ \t]*/)
+                    gap = substr(vrest, 1, RLENGTH); if (gap == "") gap = " "
+                    quoted = (substr(vrest, RLENGTH + 1, 1) == "\"")
+                    out(lead a[1] gap ((quoted || val == "" || val ~ /[ \t]/) ? "\"" val "\"" : val)); next
+                }
             }
             out(line); next
         }
         fmt == "dark_cfg" {
             line = $0; is_comment = (line ~ /^[ \t]*;/)
             t = line; sub(/^[ \t]*;?[ \t]*/, "", t); split(t, a, /[ \t]+/)
-            if (tolower(a[1]) != lkey) { out(line); next }
+            if (tolower(a[1]) != lkey) { prev_c = 0; out(line); next }
             if (!is_comment) {
                 if (del) next
-                if (val == "__FALSE__") { out(";" line); next }
+                # An active line straight after the commented example of the key is
+                # one an earlier write added: turning it off removes it, so the
+                # file goes back to just the example.
+                if (val == "__FALSE__") { if (prev_c) { prev_c = 0; next } out(";" line); next }
+                prev_c = 0
                 if (done) { out(line); next }
                 done = 1
                 out(val == "__TRUE__" ? a[1] : a[1] " " val); next
             }
+            prev_c = 1
             out(line)
             if (!active && !done && !del && val != "__FALSE__") {
                 done = 1
@@ -391,6 +433,8 @@ config_set_key() {
             }
         }
     ' > "$tmp" || { rm -f "$tmp"; return 1; }
+    # A file that ended without a newline still does.
+    if [ -s "$file" ] && [ -s "$tmp" ] && [ -n "$(tail -c1 "$file")" ]; then truncate -s -1 "$tmp" || { rm -f "$tmp"; return 1; }; fi
     swap_in "$tmp" "$file"
 }
 
@@ -399,7 +443,9 @@ config_set_key() {
 # same), and so do wine_reg strings, while its dwords compare as numbers
 # ("03" is 3); everything else must match exactly.
 config_values_equal() {
-    if [ "$1" == "wine_reg" ] && [[ "$2" =~ ^[0-9]{1,10}$ && "$3" =~ ^[0-9]{1,10}$ ]]; then
+    # Removing a key and the key not being there are the same state.
+    if { [ "$2" == "__ABSENT__" ] && [ "$3" == "__DELETE__" ]; } || { [ "$2" == "__DELETE__" ] && [ "$3" == "__ABSENT__" ]; }; then return 0
+    elif [ "$1" == "wine_reg" ] && [[ "$2" =~ ^[0-9]{1,10}$ && "$3" =~ ^[0-9]{1,10}$ ]]; then
         [ "$((10#$2))" -eq "$((10#$3))" ]
     elif [ "$1" == "ini" ] || [ "$1" == "gas_cfg" ] || [ "$1" == "wine_reg" ]; then [ "${2,,}" == "${3,,}" ]
     else [ "$2" == "$3" ]; fi
@@ -1504,14 +1550,23 @@ apply_game_settings() {
             elif [ -z "${backed_up[$path]:-}" ]; then
                 clear_crash_marker "$file" "$path"
                 if [ ! -e "$path.eax-restore.bak" ] && [ -z "${PREV_MANIFEST_FILES[$path]:-}" ]; then
-                    cp -p "$path" "$path.eax-restore.bak" 2>/dev/null \
-                        && print_status "Backed up $(basename "$path") to $(basename "$path").eax-restore.bak"
+                    if cp -p "$path" "$path.eax-restore.bak" 2>/dev/null; then
+                        print_status "Backed up $(basename "$path") to $(basename "$path").eax-restore.bak"
+                    else
+                        print_warning_arrow "Couldn't back up $(basename "$path") first, so the original value is only in the install record."
+                    fi
                 fi
                 backed_up[$path]=1
             fi
 
             old="$(config_get_key "$path" "$fmt" "$sec" "$key")"
             config_values_equal "$fmt" "$old" "$new" && continue
+            # Revert can only write 0 or 1 back to a gadb flag, so any other
+            # original value would be changed for good.
+            if [ "$fmt" == "gadb" ] && [[ ! "$old" =~ ^[01]$ ]]; then
+                print_warning_arrow "$key in $(basename "$path") isn't a plain on/off value, so \"$title\" wasn't applied there."
+                continue
+            fi
             # A value with a tab or line break can't go in a manifest line
             # (tab-separated), so uninstall couldn't put it back.
             if [[ "$old" == *[$'\t\n']* ]]; then

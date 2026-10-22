@@ -217,8 +217,9 @@ reopen_launchers() {
 # for the same DLL (including from grouped "a,b=mode" entries) and leaving
 # every other rule as it was.
 merge_dll_override() {
-    local list="$1" dll="${2,,}" entry names mode name kept out=""
-    local -a entries
+    local list="$1" dll="${2,,}" entry names mode name name_l kept out=""
+    local -a entries parts
+    dll="${dll%.dll}"
     IFS=';' read -ra entries <<< "$list"
     for entry in "${entries[@]}"; do
         [ -n "$entry" ] || continue
@@ -226,7 +227,7 @@ merge_dll_override() {
         kept=""
         IFS=',' read -ra parts <<< "$names"
         for name in "${parts[@]}"; do
-            [ -n "$name" ] && [ "${name,,}" != "$dll" ] && kept+="${kept:+,}$name"
+            name_l="${name,,}"; [ -n "$name" ] && [ "${name_l%.dll}" != "$dll" ] && kept+="${kept:+,}$name"
         done
         [ -n "$kept" ] && out+="${out:+;}$kept$mode"
     done
@@ -577,6 +578,8 @@ _write_launcher_override() {
     else
         new="$(merge_dll_override "$( [ "$old" == "__ABSENT__" ] || echo "$old")" "$PRIMARY_DLL_NAME")"
     fi
+    # Heroic's file is re-serialised by jq, so it gets the same one-time copy as Steam's.
+    [ "$OVERRIDE_LAUNCHER" == "steam" ] || [ -e "$OVERRIDE_FILE.eax-restore.bak" ] || cp -p "$OVERRIDE_FILE" "$OVERRIDE_FILE.eax-restore.bak" 2>/dev/null
 
     # The manifest keeps one change per line with tab-separated fields, so a
     # value with a tab or line break can't be recorded, and uninstall couldn't

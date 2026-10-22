@@ -32,6 +32,14 @@ install_heroic() {
     grep -q "^LAUNCHER:heroic" "$GAME/.eax-restore-manifest.txt"
 }
 
+@test "install keeps a one-time copy of Heroic's settings, and uninstall removes it" {
+    cp "$CONF" "$BATS_TEST_TMPDIR/conf.orig"
+    install_heroic
+    cmp "$CONF.eax-restore.bak" "$BATS_TEST_TMPDIR/conf.orig"
+    uninstall_answers "$BATS_TEST_TMPDIR/un"; run_script "$BATS_TEST_TMPDIR/un"
+    [ ! -e "$CONF.eax-restore.bak" ]
+}
+
 @test "uninstall restores the game, the prefix and Heroic's settings byte for byte" {
     snapshot "$BATS_TEST_TMPDIR/before"
     install_heroic
