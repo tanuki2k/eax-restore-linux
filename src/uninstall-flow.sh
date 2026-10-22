@@ -36,6 +36,10 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     print_step 3 "Scanning For Installed Files"
 
     FILES_TO_REMOVE=()
+    # Manifest lines with nothing to act on (the file is already gone, or it
+    # isn't one of ours); dropped in Phase 2 so they can't keep the manifest
+    # from ever reading as uninstalled.
+    STALE_MANIFEST_LINES=()
     INSTALL_MANIFEST="$GAME_DIR/.eax-restore-manifest.txt"
     MANIFEST_FOUND=0
     REG_HAS_COM="n"
@@ -97,11 +101,13 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
                 || ! manifest_file_is_ours "$manifest_entry" \
                 || ! manifest_path_in_scope "$manifest_entry" "$GAME_DIR"; then
                 print_warning_arrow "Skipped ${manifest_entry} because it isn't one of the files this script installed."
+                STALE_MANIFEST_LINES+=("$manifest_entry")
                 continue
             fi
             [ -n "${manifest_seen[$manifest_entry]:-}" ] && continue
             manifest_seen["$manifest_entry"]=1
-            { [ -e "$manifest_entry" ] || [ -L "$manifest_entry" ]; } && FILES_TO_REMOVE+=("$manifest_entry")
+            if [ -e "$manifest_entry" ] || [ -L "$manifest_entry" ]; then FILES_TO_REMOVE+=("$manifest_entry")
+            else STALE_MANIFEST_LINES+=("$manifest_entry"); fi
         done < "$INSTALL_MANIFEST"
     else
         print_task "Scanning for EAX files"
@@ -482,6 +488,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     # they're gone, the VC++ and companion records once nothing is left to
     # undo. Settings the player chose to keep, and launcher overrides left in
     # place, stay in it so a later uninstall can still put them back.
+    [ ${#STALE_MANIFEST_LINES[@]} -gt 0 ] && manifest_forget_paths "${STALE_MANIFEST_LINES[@]}"
     kept_lines=("${GAME_SETTINGS_KEPT[@]}" "${LAUNCHER_LINES_KEPT[@]}")
     if [ -f "$INSTALL_MANIFEST" ] && ! manifest_is_uninstalled "$INSTALL_MANIFEST"; then
         # "core" lines are what still needs undoing: files, and registry keys

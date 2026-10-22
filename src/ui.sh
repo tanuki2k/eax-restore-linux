@@ -560,7 +560,7 @@ paged_select() {
     local total=${#PAGED_LABELS[@]} per_page rows page=0 pages first last i opt choice
     local -a keys
     per_page=$total
-    rows="$(stty size < /dev/tty 2>/dev/null | cut -d' ' -f1)"
+    rows="$({ stty size < /dev/tty; } 2>/dev/null | cut -d' ' -f1)"
     if [ -t 0 ] && [[ "$rows" =~ ^[0-9]+$ ]]; then
         per_page=$(( rows - 12 ))
         [ "$per_page" -lt 10 ] && per_page=10
@@ -935,7 +935,7 @@ start_phase_progress() {
     local size rows
     # stdout must be the terminal too (fd 3 holds it while logging).
     { [ -t 1 ] || [ -t 3 ]; } 2>/dev/null || return 0
-    size=$(stty size < /dev/tty 2>/dev/null) || return 0
+    size=$({ stty size < /dev/tty; } 2>/dev/null) || return 0
     rows="${size%% *}"
     [[ "$rows" =~ ^[0-9]+$ ]] && [ "$rows" -ge 13 ] || return 0
     PHASE_ROWS="$rows"
@@ -1015,9 +1015,9 @@ _finish_bg_job() {
 # the caller's error message stands alone. Returns curl's exit status.
 fetch_with_progress() {
     local url="$1" dest="$2" total size frame=0 rc
-    total=$(curl -sIL "$url" 2>/dev/null | tr -d '\r' | awk 'tolower($1) == "content-length:" { n = $2 } END { print n + 0 }')
+    total=$(curl -sIL --connect-timeout 15 --max-time 30 "$url" 2>/dev/null | tr -d '\r' | awk 'tolower($1) == "content-length:" { n = $2 } END { print n + 0 }')
     rm -f "$dest"
-    _start_bg_job _run_logged "${EAX_LOG_FILE:-/dev/null}" curl -fsSL "$url" -o "$dest"
+    _start_bg_job _run_logged "${EAX_LOG_FILE:-/dev/null}" curl -fsSL --connect-timeout 15 --speed-limit 1000 --speed-time 30 "$url" -o "$dest"
     while kill -0 "$_bg_job_pid" 2>/dev/null; do
         size=$(stat -c %s "$dest" 2>/dev/null || echo 0)
         _draw_fetch_line "$size" "$total" "$frame"

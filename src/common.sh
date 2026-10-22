@@ -58,6 +58,20 @@ manifest_file_is_ours() {
     return 1
 }
 
+# Usage: shell_quote <text>
+# The text in single quotes, safe to splice into a string a shell will parse
+# (protontricks -c runs its argument through sh).
+shell_quote() {
+    printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"
+}
+
+# Usage: find_glob_escape <text>
+# The text with find's pattern characters ([ ] * ? \) escaped, for -iname with
+# an exe name from the database: "Game [GOG].exe" must match only itself.
+find_glob_escape() {
+    printf '%s' "$1" | sed 's/[][\*?]/\\&/g'
+}
+
 # Usage: manifest_path_in_scope <path> <game dir>
 # True when the path is inside the game folder (extra exe folders live there
 # too) or inside a Wine prefix's C: drive, the only places an install deploys

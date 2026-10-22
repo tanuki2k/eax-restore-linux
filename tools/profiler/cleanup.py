@@ -61,6 +61,27 @@ def heroic_prefix_bases():
     return [os.path.realpath(b) for b in bases]
 
 
+def heroic_shared_prefixes():
+    """The prefixes Heroic gives every game that has none of its own: config.json's
+    winePrefix, else <prefix folder>/shared (src/detection.sh does the same)."""
+    out = set()
+    for r in heroic_roots():
+        try:
+            c = json.loads(capture._rd(os.path.join(r, "config.json")))
+        except (OSError, ValueError):
+            continue
+        if not isinstance(c, dict):
+            continue
+        ds = c.get("defaultSettings") if isinstance(c.get("defaultSettings"), dict) else {}
+        explicit = c.get("winePrefix") or ds.get("winePrefix")
+        base = c.get("defaultWinePrefixDir") or c.get("defaultWinePrefix") or ds.get("defaultWinePrefixDir")
+        if explicit:
+            out.add(os.path.realpath(os.path.expanduser(explicit)).lower())
+        if base:
+            out.add(os.path.realpath(os.path.join(os.path.expanduser(base), "shared")).lower())
+    return out
+
+
 def heroic_prefix_users(root):
     """How many Heroic game configs point at this prefix (case-insensitively, since two
     entries that differ only by case are the same folder on some setups)."""
@@ -91,6 +112,8 @@ def check_prefix_root(root, store):
     else:
         if not any(real.startswith(b + os.sep) and real != b for b in heroic_prefix_bases()):
             raise Blocked("That prefix isn't inside Heroic's prefix folder, so it's left alone.")
+        if real.lower() in heroic_shared_prefixes():
+            raise Blocked("This is Heroic's shared prefix, which every game without its own uses, so it's left alone.")
         if heroic_prefix_users(root) > 1:
             raise Blocked("More than one Heroic game uses this prefix, so deleting it would break the others.")
     return True

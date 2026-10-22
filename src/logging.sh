@@ -45,7 +45,7 @@ write_log_header() {
         else echo "protontricks:    not found"; fi
         echo "jq:              $(command -v jq &>/dev/null && jq --version 2>/dev/null || echo 'not found')"
         echo "EAX_RESTORE_* set:"
-        env | grep '^EAX_RESTORE_' | sed 's/^/  /' || true
+        tilde_path "$(env | grep '^EAX_RESTORE_' | sed 's/^/  /')" || true; echo
         echo "================================="
         echo ""
     } >> "$EAX_LOG_FILE"
@@ -55,7 +55,9 @@ log_cmd() {
     # Usage: log_cmd <description>
     # Marks, in the log only, which command the following hidden output
     # (redirected with &>> "$EAX_LOG_FILE") came from.
-    echo -e "\n[cmd $(date '+%H:%M:%S')] $*" >> "$EAX_LOG_FILE"
+    # printf %s, not echo -e: a backslash in a path isn't an escape. $HOME is
+    # shown as ~ like the rest of the log.
+    printf '\n[cmd %s] %s\n' "$(date '+%H:%M:%S')" "$(tilde_path "$*")" >> "$EAX_LOG_FILE"
 }
 
 write_log_summary() {
@@ -129,6 +131,17 @@ write_log_summary() {
 finish_run_log() {
     local rc=$?
     trap - EXIT
+    # An install cut short before it carried the last manifest's records over:
+    # put them back next to what this run wrote.
+    if [ -n "${MANIFEST_PREV:-}" ] && [ -f "$MANIFEST_PREV" ]; then
+        if [ -z "${MANIFEST_PREV_DONE:-}" ] && [ -f "$INSTALL_MANIFEST" ]; then
+            { cat "$INSTALL_MANIFEST"; grep -v '^#' "$MANIFEST_PREV"; } | awk '!seen[$0]++' > "$MANIFEST_PREV.merged" \
+                && mv -f "$MANIFEST_PREV.merged" "$INSTALL_MANIFEST"
+        fi
+        rm -f "$MANIFEST_PREV" "$MANIFEST_PREV.merged" 2>/dev/null
+    fi
+    # .reg files an interrupted run didn't get to delete.
+    [ ${#REG_TEMP_FILES[@]} -gt 0 ] && rm -f "${REG_TEMP_FILES[@]}" 2>/dev/null
     # A Ctrl-C at a tick list lands here from inside its "IFS= read", with
     # that empty IFS still in effect; put the usual one back for the rest.
     local IFS=$' \t\n'

@@ -133,3 +133,11 @@ setup() {
     grep -q '^REGISTRY:OVERRIDE:dsound' "$GAME/.eax-restore-manifest.txt"
     [ "$(grep -c '^REGISTRY:OVERRIDE:dsound' "$GAME/.eax-restore-manifest.txt")" -eq 1 ]
 }
+
+@test "uninstall drops manifest lines for files that are already gone and still finishes" {
+    install_answers "$BATS_TEST_TMPDIR/in"; run_script "$BATS_TEST_TMPDIR/in"
+    rm -f "$GAME/dsound.dll"          # the player deleted one by hand
+    uninstall_answers "$BATS_TEST_TMPDIR/un"; run_script "$BATS_TEST_TMPDIR/un"
+    grep -q "UNINSTALL COMPLETE" "$OUT" || { tail -30 "$OUT"; false; }
+    grep -q "^# EAX Restore: uninstalled" "$GAME/.eax-restore-manifest.txt"
+}

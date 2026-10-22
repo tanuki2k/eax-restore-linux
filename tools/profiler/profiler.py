@@ -42,10 +42,17 @@ def load_session(sid):
     return {"id": sid, "steps": {}}
 
 
+SESSION_LOCK = threading.RLock()  # the page, the snapshot thread and the job threads all edit session.json
+
+
 def save_session(sid, s):
     os.makedirs(sdir(sid), exist_ok=True)
-    with open(os.path.join(sdir(sid), "session.json"), "w") as f:
-        json.dump(s, f, indent=1)
+    path = os.path.join(sdir(sid), "session.json")
+    with SESSION_LOCK:
+        # Written aside and renamed, so a poll never reads half a file.
+        with open(path + ".tmp", "w") as f:
+            json.dump(s, f, indent=1)
+        os.replace(path + ".tmp", path)
 
 
 def job(sid, fn, action=None):
@@ -69,9 +76,10 @@ def job(sid, fn, action=None):
 
 
 def mark(sid, step, **extra):
-    s = load_session(sid)
-    s["steps"][step] = dict(time=time.time(), **extra)
-    save_session(sid, s)
+    with SESSION_LOCK:
+        s = load_session(sid)
+        s["steps"][step] = dict(time=time.time(), **extra)
+        save_session(sid, s)
 
 
 def do_action(sid, action, profile=None):
@@ -332,8 +340,10 @@ def draft(sid, use_ai):
         for label in sorted(k for k in steps if k.startswith("spk-")):
             diffs[label] = capture.diff_snapshots(game, d, "audio", label, ignore=noise)
     out = classify.build(game["name"], diffs, use_ai)
-    s["draft"], s["drop"], s["cats"] = out, None, None
-    save_session(sid, s)
+    with SESSION_LOCK:  # reload: a snapshot may have been recorded while this ran
+        s = load_session(sid)
+        s["draft"], s["drop"], s["cats"] = out, None, None
+        save_session(sid, s)
     return out
 
 
@@ -478,13 +488,16 @@ class H(BaseHTTPRequestHandler):
                 if method == "GET" and not what:
                     return self.reply({"session": load_session(sid), "job": JOBS.get(sid, {"state": "idle"}), "live": LIVE.get(sid)})
                 if method == "POST" and what == "drop":
-                    b = self.body(); s = load_session(sid); s["drop"] = b["drop"]; s["cats"] = b.get("cats", {}); save_session(sid, s)
+                    b = self.body()
+                    with SESSION_LOCK:
+                        s = load_session(sid); s["drop"] = b["drop"]; s["cats"] = b.get("cats", {}); save_session(sid, s)
                     return self.reply({"ok": True})
                 if method == "POST" and what == "exe":
                     exe = self.body().get("exe", "")
                     if exe and not capture.valid_exe(exe):
                         raise ValueError("That isn't an executable file name (like game.exe).")
-                    s = load_session(sid); s["exe"] = exe; save_session(sid, s)
+                    with SESSION_LOCK:
+                        s = load_session(sid); s["exe"] = exe; save_session(sid, s)
                     return self.reply({"ok": True})
                 if method == "POST" and what == "action":
                     b = self.body()

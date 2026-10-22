@@ -21,12 +21,12 @@
     "released": {
       "description": "When the game first came out on Windows (earliest region), as YYYY-MM-DD. Use YYYY-MM or YYYY if that's all you can confirm.\nBundles and Gold, Complete, GOTY or Classic editions use the base game's date.\nEnhanced Editions, Remasters and Anniversary Editions use their own.",
       "type": "string",
-      "pattern": "^\\d{4}(-(0[1-9]|1[0-2])(-(0[1-9]|[12]\\d|3[01]))?)?$"
+      "pattern": "^\\d{4}(-(0[1-9]|1[0-2])(-(0[1-9]|[12]\\d|3[01]))?)?(?!\\n)$"
     },
     "exe": {
       "description": "The game's main program file, with its exact capitalisation and no folders, e.g. \"DeusEx.exe\". The script uses it to recognise the right folder.",
       "type": "string",
-      "pattern": "^[^/\\\\]+\\.[eE][xX][eE]$"
+      "pattern": "^[^/\\\\]+\\.[eE][xX][eE](?!\\n)$"
     },
     "stores": {
       "description": "Where the game is sold. Leave a store out if the game isn't sold there.",
@@ -94,7 +94,7 @@
               "type": "object",
               "additionalProperties": false,
               "properties": {
-                "boost": { "description": "Makes all reverb louder (or quieter, if negative) by this many decibels. Raise it for a game whose reverb is hard to hear; too high and the reverb pops.", "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$" }
+                "boost": { "description": "Makes all reverb louder (or quieter, if negative) by this many decibels. Raise it for a game whose reverb is hard to hear; too high and the reverb pops.", "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?(?!\\n)$" }
               }
             },
             "general": {
@@ -102,8 +102,8 @@
               "type": "object",
               "additionalProperties": false,
               "properties": {
-                "sources": { "description": "How many sounds the game can play at once. Raise it for a game that cuts sounds off in busy scenes.", "type": "string", "pattern": "^[0-9]+$" },
-                "frequency": { "description": "The sample rate the sound is mixed at, in Hz (for example 48000). Set it when a game sounds too high or too low in pitch.", "type": "string", "pattern": "^[0-9]+$" },
+                "sources": { "description": "How many sounds the game can play at once. Raise it for a game that cuts sounds off in busy scenes.", "type": "string", "pattern": "^[0-9]+(?!\\n)$" },
+                "frequency": { "description": "The sample rate the sound is mixed at, in Hz (for example 48000). Set it when a game sounds too high or too low in pitch.", "type": "string", "pattern": "^[0-9]+(?!\\n)$" },
                 "default-reverb": { "description": "The reverb preset used for sounds where the game doesn't choose one, such as GenericHall or Cave.", "$ref": "#/$defs/value_string" },
                 "resampler": { "description": "How sounds recorded at another sample rate are converted. Higher-quality methods sound cleaner and use a little more CPU.", "$ref": "#/$defs/value_string" }
               }
@@ -147,14 +147,14 @@
       "uniqueItems": true,
       "items": {
         "anyOf": [
-          { "type": "string", "pattern": "^https?://[^\\s]+$" },
+          { "type": "string", "pattern": "^https?://[^\\s]+(?!\\n)$" },
           {
             "type": "object",
             "required": ["title", "url"],
             "additionalProperties": false,
             "properties": {
               "title": { "type": "string", "minLength": 1 },
-              "url": { "type": "string", "pattern": "^https?://[^\\s]+$" }
+              "url": { "type": "string", "pattern": "^https?://[^\\s]+(?!\\n)$" }
             }
           }
         ]
@@ -202,7 +202,7 @@
           "description": "GOG only: other folders inside the game's exe folder that have an exe of their own (for example expansions started from the same title). They get the same files as the main folder.",
           "type": "array",
           "uniqueItems": true,
-          "items": { "type": "string", "pattern": "^(?!/)(?!.*\\.\\.)[^\\\\]+$" },
+          "items": { "type": "string", "pattern": "^(?!/)(?!.*\\.\\.)[^\\\\]+(?!\\n)$" },
           "default": []
         },
         "companion_apps": {
@@ -219,17 +219,17 @@
     "name_part": {
       "description": "The name of a config section or key.",
       "type": "string",
-      "pattern": "^[A-Za-z0-9._ -]+$"
+      "pattern": "^[A-Za-z0-9._ -]+(?!\\n)$"
     },
     "registry_key": {
       "description": "A registry path, written with single backslashes as it appears under its hive in the prefix's .reg file, for example Software\\Wow6432Node\\Outrage\\Descent3.",
       "type": "string",
-      "pattern": "^[A-Za-z0-9._ ()-]+(\\\\[A-Za-z0-9._ ()-]+)+$",
+      "pattern": "^[A-Za-z0-9._ ()-]+(\\\\[A-Za-z0-9._ ()-]+)+(?!\\n)$",
       "not": { "pattern": "\\.\\." }
     },
     "value_string": {
       "type": "string",
-      "pattern": "^[A-Za-z0-9._ ()-]*$"
+      "pattern": "^[A-Za-z0-9._ ()-]*(?!\\n)$"
     },
     "value": {
       "description": "Text sets the value (for a registry number, a decimal number). true or false switches a NewDark flag on or off. null removes the key.",
@@ -241,7 +241,7 @@
     },
     "config_file_name": {
       "type": "string",
-      "pattern": "^[A-Za-z0-9._ -]+\\.([iI][nN][iI]|[cC][fF][gG]|[gG][dD][bB]|[rR][eE][gG]|[tT][xX][tT]|[lL][tT][xX]|[gG][aA][sS])$"
+      "pattern": "^[A-Za-z0-9._ -]+\\.([iI][nN][iI]|[cC][fF][gG]|[gG][dD][bB]|[rR][eE][gG]|[tT][xX][tT]|[lL][tT][xX]|[gG][aA][sS])(?!\\n)$"
     },
     "config_file": {
       "type": "object",
@@ -259,8 +259,8 @@
           "items": {
             "type": "string",
             "anyOf": [
-              { "pattern": "^(game_exe|game_root|prefix_documents|prefix_appdata|prefix_localappdata|prefix_public_documents):(?!/)(?!.*\\.\\.)[^\\\\]+\\.([iI][nN][iI]|[cC][fF][gG]|[gG][dD][bB]|[tT][xX][tT]|[lL][tT][xX]|[gG][aA][sS])$" },
-              { "pattern": "^prefix:(system|user)\\.reg$" }
+              { "pattern": "^(game_exe|game_root|prefix_documents|prefix_appdata|prefix_localappdata|prefix_public_documents):(?!/)(?!.*\\.\\.)[^\\\\]+\\.([iI][nN][iI]|[cC][fF][gG]|[gG][dD][bB]|[tT][xX][tT]|[lL][tT][xX]|[gG][aA][sS])(?!\\n)$" },
+              { "pattern": "^prefix:(system|user)\\.reg(?!\\n)$" }
             ]
           }
         },
@@ -276,7 +276,7 @@
         "crash_marker": {
           "description": "A file in the same folder that the game creates while it runs and deletes when it quits normally. If it's left behind, the game resets this config file the next time it starts, so the script removes it (when the game isn't running) before changing this file. It isn't put back on uninstall.",
           "type": "string",
-          "pattern": "^[A-Za-z0-9._ -]+$",
+          "pattern": "^[A-Za-z0-9._ -]+(?!\\n)$",
           "not": { "enum": [".", ".."] }
         }
       },

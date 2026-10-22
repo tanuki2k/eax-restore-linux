@@ -124,7 +124,7 @@
 
     DEPLOY_FAILURES=0
 
-    start_manifest "$INSTALL_MANIFEST"
+    start_manifest "$INSTALL_MANIFEST" keep_previous
     [ ${#PREV_STATE_LINES[@]} -gt 0 ] && printf '%s\n' "${PREV_STATE_LINES[@]}" >> "$INSTALL_MANIFEST"
     # "VCRUN:OVERRIDES" when only the overrides were set and the runtime was
     # there already, so uninstall doesn't say this script installed it.
@@ -424,6 +424,7 @@ EOF
     # Always runs, even with nothing new to apply: it also carries last
     # install's still-active game settings over into the new manifest.
     apply_game_settings
+    MANIFEST_PREV_DONE=1   # carried over; finish_run_log has nothing to merge back
 
     end_phase_progress
     print_run_summary

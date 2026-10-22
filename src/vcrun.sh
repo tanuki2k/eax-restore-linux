@@ -69,7 +69,9 @@ apply_vcrun_dll_overrides() {
     # (detection.sh) runs `protontricks -c` for Steam games, which executes
     # inside a Steam Runtime container that may not have /tmp bind-mounted —
     # the game's own library folder is guaranteed to be visible instead.
-    local reg_file="$GAME_DIR/vcrun_overrides_$$.reg"
+    local reg_file
+    make_reg_file vcrun-overrides || return 1
+    reg_file="$REG_FILE"
     print_status "Telling Wine to use Microsoft's VC++ runtime files instead of its own..."
     echo "Windows Registry Editor Version 5.00" > "$reg_file"
     echo "" >> "$reg_file"
@@ -97,7 +99,9 @@ remove_vcrun_dll_overrides() {
     # practice — Wine falls back to builtin — but leaves a clean prefix).
     # See apply_vcrun_dll_overrides above for why this lives in GAME_DIR
     # instead of a temp dir.
-    local reg_file="$GAME_DIR/vcrun_overrides_clean_$$.reg"
+    local reg_file
+    make_reg_file vcrun-overrides-clean || return 1
+    reg_file="$REG_FILE"
     print_status "Removing DLL overrides..."
     echo "Windows Registry Editor Version 5.00" > "$reg_file"
     echo "" >> "$reg_file"

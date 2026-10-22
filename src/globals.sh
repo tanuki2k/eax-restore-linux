@@ -54,6 +54,8 @@ OPENAL_PRERELEASE="$OPENAL_SHARE/prerelease"
 # disk. Without this override, a game can crash on an "unimplemented
 # function" that's simply missing from Wine's builtin, despite the genuine
 # DLL being correctly installed and verified present.
+MANIFEST_PREV=""    # the previous manifest set aside by start_manifest during an install
+REG_TEMP_FILES=()   # .reg files make_reg_file created, removed at exit if still there
 VCRUN_DLL_NAMES=("concrt140" "msvcp140" "msvcp140_1" "msvcp140_2" "msvcp140_atomic_wait" "msvcp140_codecvt_ids" "vcamp140" "vccorlib140" "vcomp140" "vcruntime140" "vcruntime140_1")
 
 DSOAL_OFFICIAL_URL="https://github.com/kcat/dsoal/releases/download/latest-master/DSOAL.zip"

@@ -135,7 +135,10 @@ def _user_dirs(prefix):
 
 def roots(game):
     r = [("game_exe", game["dir"])] + (_user_dirs(game["prefix"]) if game.get("prefix") else [])
-    return [(b, p) for b, p in r if os.path.isdir(p)]
+    # Wine links the prefix's Documents and similar folders to the real home
+    # folder; a snapshot of those would copy unrelated personal files.
+    pfx = os.path.realpath(game["prefix"]) + os.sep if game.get("prefix") else None
+    return [(b, p) for b, p in r if os.path.isdir(p) and (b == "game_exe" or os.path.realpath(p).startswith(pfx))]
 
 
 def location_of(game, abspath):

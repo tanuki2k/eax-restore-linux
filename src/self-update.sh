@@ -65,8 +65,8 @@ install_script_update() {
         || ! verify_checksum "$tmp" "$expected" || ! bash -n "$tmp" 2>/dev/null; then
         rm -f "$tmp"; return 1
     fi
-    chmod --reference="$target" "$tmp" 2>/dev/null
-    mv -f "$tmp" "$target" 2>/dev/null || { rm -f "$tmp"; return 1; }
+    # swap_in writes through a symlinked script instead of replacing the link.
+    swap_in "$tmp" "$target"
 }
 
 check_for_script_update() {
@@ -92,7 +92,9 @@ check_for_script_update() {
     fi
     if install_script_update "$SELF_UPDATE_URL" "$0"; then
         print_status "Updated to $SELF_UPDATE_VERSION. Restarting..." "$GREEN"
-        exec "$0" "${ORIGINAL_ARGS[@]}"
+        # Started as "bash script.sh" it may not be executable.
+        if [ -x "$0" ]; then exec "$0" "${ORIGINAL_ARGS[@]}"; fi
+        exec bash "$0" "${ORIGINAL_ARGS[@]}"
     fi
     print_warning "The update didn't download, so you're staying on v${SCRIPT_VERSION} for now. You can get ${SELF_UPDATE_VERSION} here:"
     print_link "Releases" "$release_page"

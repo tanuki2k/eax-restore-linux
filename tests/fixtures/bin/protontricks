@@ -7,7 +7,8 @@ case "$1" in
     -c) case "$2" in
             *WINEPREFIX*) echo "$STUB_PREFIX" ;;
             regedit*)
-                reg="${2#regedit \"}"; reg="${reg%\"}"
+                # The script quotes the path for sh -c, so parse it the same way.
+                eval "args=($2)"; reg="${args[1]}"
                 python3 -I "$(dirname "${BASH_SOURCE[0]}")/regedit-apply.py" "$reg" ;;
         esac ;;
 esac

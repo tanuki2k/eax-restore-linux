@@ -75,7 +75,12 @@ def _write_config(c):
             pass
         return
     tmp = CONFIG + ".tmp"
-    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    # A leftover file keeps its old mode through O_CREAT, so start from nothing.
+    try:
+        os.remove(tmp)
+    except OSError:
+        pass
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(fd, "w") as f:
         json.dump(c, f)
     os.replace(tmp, CONFIG)

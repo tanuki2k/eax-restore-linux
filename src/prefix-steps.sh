@@ -179,7 +179,8 @@ apply_prefix_registry() {
     # (detection.sh) runs `protontricks -c` for Steam games, which executes
     # inside a Steam Runtime container that may not have /tmp bind-mounted —
     # the game's own library folder is guaranteed to be visible instead.
-    reg_file="$GAME_DIR/dsoal_master_patch_$$.reg"
+    make_reg_file master-patch || { REG_STATUS="failed"; return 1; }
+    reg_file="$REG_FILE"
     {
         echo "Windows Registry Editor Version 5.00"
         echo ""
@@ -243,7 +244,8 @@ EOF
 remove_prefix_registry() {
     local com="$1" dll="$2" reg_file rc
     # In GAME_DIR for the same reason as apply_prefix_registry's.
-    reg_file="$GAME_DIR/dsoal_registry_clean_$$.reg"
+    make_reg_file registry-clean || return 1
+    reg_file="$REG_FILE"
     {
         echo "Windows Registry Editor Version 5.00"
         echo ""

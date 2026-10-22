@@ -57,7 +57,7 @@ lookup_build_versions() {
     fi
 
     if [ "$GITHUB_REACHABLE" -eq 1 ]; then
-        DSOAL_OFFICIAL_JSON=$(curl -s "$DSOAL_OFFICIAL_API_URL")
+        DSOAL_OFFICIAL_JSON=$(curl -fs --connect-timeout 10 --max-time 30 "$DSOAL_OFFICIAL_API_URL")
         DSOAL_LATEST_DATE=$(printf '%s' "$DSOAL_OFFICIAL_JSON" | jq -r '.updated_at // empty' 2>/dev/null)
         if [ -n "$DSOAL_LATEST_DATE" ]; then
             DSOAL_LATEST_LABEL=$(printf '%s' "$DSOAL_OFFICIAL_JSON" | jq -r '.name // empty' | grep -o 'r[0-9]\+' | head -n 1)
@@ -75,9 +75,9 @@ lookup_build_versions() {
     if [ "$GITHUB_REACHABLE" -eq 1 ]; then
         # The /releases/latest redirect names the newest tagged release
         # without spending an API call.
-        OAL_STABLE_TAG=$(curl -sI "$OPENAL_LATEST_RELEASE_URL" | grep -i "^location:" | awk -F '/' '{print $NF}' | tr -d '\r')
+        OAL_STABLE_TAG=$(curl -sI --connect-timeout 10 --max-time 30 "$OPENAL_LATEST_RELEASE_URL" | grep -i "^location:" | awk -F '/' '{print $NF}' | tr -d '\r')
         OAL_STABLE_LABEL="$OAL_STABLE_TAG"
-        OAL_PRERELEASE_JSON=$(curl -s "$OPENAL_PRERELEASE_API_URL")
+        OAL_PRERELEASE_JSON=$(curl -fs --connect-timeout 10 --max-time 30 "$OPENAL_PRERELEASE_API_URL")
         OAL_LATEST_LABEL=$(printf '%s' "$OAL_PRERELEASE_JSON" | jq -r '
             (.name // "" | sub("^OpenAL Soft v"; "")) as $v
             | ((.assets // [])[] | select(.name == "OpenALSoft.zip") | .updated_at[0:10]) as $d
@@ -133,7 +133,7 @@ unpack_dsoal_zip() {
 newest_archive_dsoal() {
     local json line
     ARCHIVE_REV=""; ARCHIVE_URL=""; ARCHIVE_DIGEST=""
-    json=$(curl -s "$DSOAL_ARCHIVE_API_URL") || return 1
+    json=$(curl -fs --connect-timeout 10 --max-time 30 "$DSOAL_ARCHIVE_API_URL") || return 1
     line=$(printf '%s' "$json" | jq -r '
         [(.assets // [])[] | select(.name | test("^DSOAL_r[0-9]+\\.zip$"))
          | {rev: (.name | capture("^DSOAL_r(?<n>[0-9]+)").n | tonumber),
@@ -241,7 +241,7 @@ ensure_openal_build() {
         asset="openal-soft-${OAL_STABLE_TAG}-bin.zip"
         url="https://github.com/kcat/openal-soft/releases/download/${OAL_STABLE_TAG}/${asset}"
         if fetch_with_progress "$url" "$OPENAL_SHARE/openal.zip" && unzip -tq "$OPENAL_SHARE/openal.zip" &>/dev/null; then
-            digest=$(get_asset_digest "$(curl -s "https://api.github.com/repos/kcat/openal-soft/releases/tags/${OAL_STABLE_TAG}")" "$asset")
+            digest=$(get_asset_digest "$(curl -fs --connect-timeout 10 --max-time 30 "https://api.github.com/repos/kcat/openal-soft/releases/tags/${OAL_STABLE_TAG}")" "$asset")
             if verify_or_confirm "$OPENAL_SHARE/openal.zip" "$digest" "kcat OpenAL Soft [$OAL_STABLE_TAG]" \
                 && extract_zip_into "$OPENAL_SHARE/openal.zip" "$OPENAL_OFFICIAL"; then
                 echo "$OAL_STABLE_TAG" > "$OPENAL_SHARE/updated_at.txt"; rm -f "$OPENAL_SHARE/openal.zip"
@@ -486,6 +486,13 @@ check_target_writable() {
 # Starts a manifest afresh: empties it and writes MANIFEST_HEADER as its
 # first line.
 start_manifest() {
+    MANIFEST_PREV=""
+    # With a second argument the old manifest is set aside first: an install
+    # carries its records over only near the end, so if the run is cut short
+    # finish_run_log merges them back instead of losing them.
+    if [ -n "${2:-}" ] && [ -s "$1" ] && ! manifest_is_uninstalled "$1" && cp -p "$1" "$1.prev" 2>/dev/null; then
+        MANIFEST_PREV="$1.prev"
+    fi
     printf '%s\n' "$MANIFEST_HEADER" > "$1"
 }
 

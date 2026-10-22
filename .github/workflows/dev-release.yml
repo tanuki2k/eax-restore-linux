@@ -15,6 +15,9 @@ concurrency:
 jobs:
   dev-release:
     runs-on: ubuntu-latest
+    # A manual run from another branch would move the rolling dev tag and
+    # replace the asset the dev update channel installs.
+    if: github.ref == 'refs/heads/dev'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -43,9 +46,11 @@ jobs:
       - name: Publish rolling dev prerelease
         env:
           GH_TOKEN: ${{ github.token }}
+          STAMP_VERSION: ${{ steps.stamp.outputs.version }}
+          STAMP_DATE: ${{ steps.stamp.outputs.date }}
         run: |
-          title="Dev build ${{ steps.stamp.outputs.version }} (${{ steps.stamp.outputs.date }})"
-          notes="Automated build from the \`dev\` branch. **Not a stable release.** The startup banner reads \`v${{ steps.stamp.outputs.version }}  (${{ steps.stamp.outputs.date }})\`. Stable users: use the Latest release instead."
+          title="Dev build ${STAMP_VERSION} (${STAMP_DATE})"
+          notes="Automated build from the \`dev\` branch. **Not a stable release.** The startup banner reads \`v${STAMP_VERSION}  (${STAMP_DATE})\`. Stable users: use the Latest release instead."
           if gh release view dev >/dev/null 2>&1; then
             git tag -f dev
             git push -f origin refs/tags/dev

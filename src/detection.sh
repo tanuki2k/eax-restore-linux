@@ -844,7 +844,7 @@ resolve_exe_folder() {
     # store's build may not match the database's spelling exactly.
     if [ -n "$exe_hint" ]; then
         local hint_exe
-        hint_exe="$(find "$root" -maxdepth 4 -type f -iname "$exe_hint" -printf '%d\t%p\n' 2>/dev/null | sort -n | head -n 1 | cut -f2-)"
+        hint_exe="$(find "$root" -maxdepth 4 -type f -iname "$(find_glob_escape "$exe_hint")" -printf '%d\t%p\n' 2>/dev/null | sort -n | head -n 1 | cut -f2-)"
         if [ -n "$hint_exe" ]; then
             cand_dirs+=("$(dirname "$hint_exe")")
             cand_exe_name["$(dirname "$hint_exe")"]="$(basename "$hint_exe")"
@@ -1046,7 +1046,7 @@ confirm_game_dir_has_exe() {
     local exe_name
     exe_name=$(gdb_field "$1" "$2" '.exe // empty')
     [ -n "$exe_name" ] && [ -n "$GAME_DIR" ] || return 0
-    find "$GAME_DIR" -maxdepth 1 -type f -iname "$exe_name" -print -quit 2>/dev/null | grep -q . && return 0
+    find "$GAME_DIR" -maxdepth 1 -type f -iname "$(find_glob_escape "$exe_name")" -print -quit 2>/dev/null | grep -q . && return 0
 
     print_warning "$exe_name isn't in $(tilde_path "$GAME_DIR")."
     confirm "Choose the folder that contains $3's $exe_name?" Y || return 0
@@ -1119,7 +1119,7 @@ detect_api_from_binary() {
     local dir="${1%/}" main_exe=""
     local ds_named="" ds_mentioned="" openal_named="" openal_mentioned=""
     local ds_main="" openal_main="" shipped_openal="" f rel depth ext
-    [ -n "${2:-}" ] && main_exe="$(find "$dir" -maxdepth 1 -type f -iname "$2" -print -quit 2>/dev/null)"
+    [ -n "${2:-}" ] && main_exe="$(find "$dir" -maxdepth 1 -type f -iname "$(find_glob_escape "$2")" -print -quit 2>/dev/null)"
     # Pass "0exe" is the profile's exe on its own, read before anything else;
     # the later passes skip it.
     for depth in 0 1 2; do
@@ -1805,6 +1805,16 @@ verify_dll_override() {
     return 1
 }
 
+# Usage: make_reg_file <name>
+# Creates a new, empty .reg file in GAME_DIR (see the callers for why not
+# /tmp) and sets REG_FILE to its path. mktemp makes the name unguessable and
+# never follows a planted link; finish_run_log removes whatever an interrupted
+# run left in REG_TEMP_FILES. Not a $(...) capture, so the array update stays.
+make_reg_file() {
+    REG_FILE="$(mktemp "$GAME_DIR/.eax-restore-$1-XXXXXX.reg")" || return 1
+    REG_TEMP_FILES+=("$REG_FILE")
+}
+
 apply_registry_patch() {
     # Returns regedit's exit status, or 1 when there was nothing to run it
     # with (no AppID / Wine binary / prefix) or the .reg file couldn't be
@@ -1817,7 +1827,7 @@ apply_registry_patch() {
     fi
     if [ "$LAUNCHER_TYPE" == "1" ] && [ -n "$APPID" ]; then
         log_cmd "protontricks regedit $reg_file (AppID $APPID)"; sed 's/^/  | /' "$reg_file" >> "$EAX_LOG_FILE" 2>/dev/null
-        run_with_spinner "Updating the prefix's registry..." "$EAX_LOG_FILE" protontricks -c "regedit \"$reg_file\"" "$APPID"
+        run_with_spinner "Updating the prefix's registry..." "$EAX_LOG_FILE" protontricks -c "regedit $(shell_quote "$reg_file")" "$APPID"
         rc=$?; echo "[exit $rc]" >> "$EAX_LOG_FILE"
     elif [ "$LAUNCHER_TYPE" == "2" ] && [ -d "$PREFIX_PATH/drive_c" ] && [ -n "$WINE_CMD" ]; then
         log_cmd "$WINE_CMD regedit $reg_file (prefix $PREFIX_PATH)"; sed 's/^/  | /' "$reg_file" >> "$EAX_LOG_FILE" 2>/dev/null

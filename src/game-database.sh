@@ -54,9 +54,11 @@ ensure_game_database() {
         fi
         # The file is plain text from the network and its strings get printed,
         # so control characters (terminal escape sequences) are stripped from
-        # every string before it's kept; tabs and line breaks stay.
+        # every string before it's kept; tabs and line breaks stay. The same
+        # goes for the written-out forms (\033, \x1b, \e[) that the echo -e
+        # behind print_wrapped would turn into a real escape.
         if [ "$code" == "200" ] \
-            && jq 'walk(if type == "string" then gsub("[\u0000-\u0008\u000b-\u001f\u007f]"; "") else . end)' "$tmp" > "$tmp.clean" 2>/dev/null \
+            && jq 'walk(if type == "string" then gsub("[\u0000-\u0008\u000b-\u001f\u007f]"; "") | gsub("\\\\(033|x1[bB]|u001[bB]|[eE][\\[\\]])"; "") else . end)' "$tmp" > "$tmp.clean" 2>/dev/null \
             && [ -s "$tmp.clean" ] && mv "$tmp.clean" "$tmp"; then
             mkdir -p "$BASE_SHARE" 2>/dev/null
             mv "$tmp" "$GAME_DATABASE_CACHE"
@@ -99,8 +101,16 @@ ensure_game_database() {
         print_note "Unverified game profiles are included, so their settings may be wrong." >&2
     elif jq -e 'any(.games[]; .tested == false)' "$GAME_DATABASE_FILE" >/dev/null 2>&1; then
         local visible="${GAME_DATABASE_CACHE}.visible"
-        if jq '.games |= map(select(.tested != false))' "$GAME_DATABASE_FILE" > "$visible" 2>/dev/null && [ -s "$visible" ]; then
+        mkdir -p "$(dirname "$visible")" 2>/dev/null
+        if ! { jq '.games |= map(select(.tested != false))' "$GAME_DATABASE_FILE" > "$visible" 2>/dev/null && [ -s "$visible" ]; }; then
+            # The cache folder isn't writable: filter into a temp file instead.
+            visible="$(mktemp 2>/dev/null)"
+            { [ -n "$visible" ] && jq '.games |= map(select(.tested != false))' "$GAME_DATABASE_FILE" > "$visible" 2>/dev/null && [ -s "$visible" ]; } || visible=""
+        fi
+        if [ -n "$visible" ]; then
             GAME_DATABASE_FILE="$visible"
+        else
+            print_warning "Couldn't hide the unverified game profiles, so they may show up with their settings unchecked." >&2
         fi
     fi
 
@@ -133,18 +143,23 @@ manifest_is_live() {
 # Every Steam library's steamapps folder, one per line: each Steam root's own
 # plus the "path" entries in its libraryfolders.vdf, without repeats.
 steam_library_dirs() {
-    local root vdf extra
+    local root vdf extra key
     local -A seen=()
+    # Keyed by the real folder: a Steam root that is a symlink would otherwise
+    # list its own library a second time through libraryfolders.vdf.
     while IFS=$'\t' read -r _ root; do
-        if [ -d "$root/steamapps" ] && [ -z "${seen["$root/steamapps"]:-}" ]; then
-            printf '%s\n' "$root/steamapps"; seen["$root/steamapps"]=1
+        key="$(readlink -f "$root/steamapps" 2>/dev/null)"
+        if [ -d "$root/steamapps" ] && [ -z "${seen["$key"]:-}" ]; then
+            printf '%s\n' "$root/steamapps"; seen["$key"]=1
         fi
         vdf="$root/steamapps/libraryfolders.vdf"
         [ -f "$vdf" ] || continue
         while IFS= read -r extra; do
             [ -n "$extra" ] || continue
-            if [ -d "$extra/steamapps" ] && [ -z "${seen["$extra/steamapps"]:-}" ]; then
-                printf '%s\n' "$extra/steamapps"; seen["$extra/steamapps"]=1
+            extra="${extra//\\\\/\\}"   # the VDF writes a backslash as \\
+            key="$(readlink -f "$extra/steamapps" 2>/dev/null)"
+            if [ -d "$extra/steamapps" ] && [ -z "${seen["$key"]:-}" ]; then
+                printf '%s\n' "$extra/steamapps"; seen["$key"]=1
             fi
         done < <(sed -n 's/^[[:space:]]*"path"[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$vdf" 2>/dev/null)
     done < <(steam_roots)
