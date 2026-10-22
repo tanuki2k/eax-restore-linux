@@ -1063,7 +1063,7 @@ browse_game_database() {
     # The right pane sits beside the list (BROWSE_SIDE_PERCENT of the
     # width). Below BROWSE_STACK_COLUMNS that leaves both too narrow, so it
     # starts under the list instead, and (fzf 0.58+) moves there or back
-    # when a resize crosses that width (browse_layout).
+    # when a resize crosses that width (the pane's own "<N(...)" option).
     local cols boxed=0 layout=side
     read -r _ cols < <({ stty size < /dev/tty; } 2>/dev/null)
     [ "${cols:-0}" -lt "$BROWSE_STACK_COLUMNS" ] && layout=stack
@@ -1075,6 +1075,12 @@ browse_game_database() {
     local side="right,$BROWSE_SIDE_PERCENT%,wrap,$border"
     local now="$side" other="$stack"
     [ "$layout" == "stack" ] && now="$stack" other="$side"
+    # fzf moves the pane under the list by itself below BROWSE_STACK_COLUMNS
+    # (the "<N(...)" part: N is the pane's own width there, not the terminal's). A resize handler that changed the layout or the
+    # filters header made Konsole's whole screen go blank, so a resize only
+    # repaints the key bar; the filters refit on the next key.
+    local pane="$now"
+    [ "$boxed" -eq 1 ] && pane="$side,<$(( BROWSE_STACK_COLUMNS * BROWSE_SIDE_PERCENT / 100 ))($stack)"
     # fzf runs the preview and the keys' commands in a new shell, which has
     # none of this script's functions or colours. Every function goes in,
     # not a list of the ones print_game_profile calls, so a helper it picks
@@ -1097,21 +1103,23 @@ browse_game_database() {
         header="+transform-header($load; browse_filter_header ${state@Q})"
         label="+transform-preview-label($load; browse_pane_label ${state@Q})"
         # The key bar sits on the last row, outside fzf (whose own labels
-        # only go on a border line): fzf gets every row above it, on the
-        # alternate screen so the menu underneath is back afterwards. fzf
+        # only go on a border line): the margin keeps that row free. fzf runs
+        # full screen, on its own alternate screen; its inline --height mode
+        # draws relative to the cursor, and in Konsole a resize or the mouse
+        # wheel left old frames on screen and then a blank one. fzf
         # clears below itself as it starts, at a moment none of its events
         # reliably follow, so the bar is drawn again whenever the selection
         # moves as well as on every resize, which also refits the filters.
-        # Ctrl-L goes through browse_layout too, so it and a resize agree
-        # on where the pane is; fzf's own [a|b] cycle would lose track.
-        swap="transform($load; browse_layout ${state@Q} toggle ${side@Q} ${stack@Q})"
-        fzf_opts=(--height=-1 --input-border rounded --input-label " Search " --prompt "> " --info inline-right
+        # Ctrl-L goes through browse_layout, which knows which layout the
+        # width gives; fzf's own [a|b] cycle would lose track of that.
+        swap="transform($load; browse_layout ${state@Q} ${side@Q} ${stack@Q})"
+        fzf_opts=(--margin 0,0,1,0 --input-border rounded --input-label " Search " --prompt "> " --info inline-right
             --header "$(browse_filter_header "$state")"
             --header-border rounded --header-label " Filters "
             --list-border rounded --list-label " Games "
             --preview-label " Game profile "
             --bind "start,load,focus:execute-silent(bash ${bar@Q})"
-            --bind "resize:execute-silent(bash ${bar@Q})+transform($load; browse_layout ${state@Q} resize ${side@Q} ${stack@Q})$header")
+            --bind "resize:execute-silent(bash ${bar@Q})")
     else
         swap="execute-silent($next layout)+change-preview-window[$other|$now]"
         fzf_opts=(--header-lines 4 --prompt "Search: " --info inline
@@ -1119,18 +1127,13 @@ browse_game_database() {
     fi
     # Ctrl-F (browse_zoom) needs less; without it the key does nothing.
     command -v less &> /dev/null && fzf_opts+=(--bind "ctrl-f:execute($load; browse_zoom ${state@Q} {1})")
-    if [ "$boxed" -eq 1 ]; then
-        printf '\e[?1049h\e[H\e[2J' > /dev/tty
-        browse_key_bar
-        printf '\e[H' > /dev/tty
-    fi
     # Ctrl-L's change-preview-window takes its argument in [...]: fzf ends
     # a (...) one at the first ")", and a layout can hold parentheses.
     browse_game_rows "$state" \
         | SHELL="$BASH" fzf --ansi --delimiter $'\t' --with-nth 2 \
             --layout reverse --tiebreak index "${fzf_opts[@]}" \
-            --preview "$load; WRAP_COLUMNS=\$((FZF_PREVIEW_COLUMNS < 100 ? FZF_PREVIEW_COLUMNS - 4 : 96)) browse_game_preview ${state@Q} {1}" \
-            --preview-window "$now" \
+            --preview "$load; WRAP_COLUMNS=\$(browse_wrap_columns \"\$FZF_PREVIEW_COLUMNS\") browse_game_preview ${state@Q} {1}" \
+            --preview-window "$pane" \
             --no-mouse --bind "enter:ignore" \
             --bind "shift-up:preview-up,shift-down:preview-down,page-up:preview-page-up,page-down:preview-page-down" \
             --bind "f1:execute-silent($next help)+refresh-preview$label" \
@@ -1141,7 +1144,6 @@ browse_game_database() {
             --bind "ctrl-r:execute-silent($next order)+toggle-sort+reload($rows)$header" \
             --bind "ctrl-l:$swap$header" \
             > /dev/null || true
-    [ "$boxed" -eq 1 ] && printf '\e[?1049l' > /dev/tty
     rm -rf "$dir"
     return 0
 }
@@ -1287,6 +1289,17 @@ browse_filter_header() {
     unset -f _browse_cell
 }
 
+# Usage: browse_wrap_columns <pane width>
+# The width the right pane's text is wrapped to: the pane less its border and
+# gutter, at most 96. Never below 24: the wrapping helpers take a few more
+# columns off (the help 15), and fold fails on a width of 0 or less, which
+# left the pane empty on a narrow window. A pane narrower than that wraps the
+# overflow itself.
+browse_wrap_columns() {
+    local width=$(( ${1:-80} < 100 ? ${1:-80} - 4 : 96 ))
+    echo $(( width < 24 ? 24 : width ))
+}
+
 # Usage: browse_game_preview <state file> <game id>
 # The browser's right pane: the F1 help when it's on; else one profile for
 # the game, covering each of its store entries that passes the filters
@@ -1397,28 +1410,24 @@ browse_state_next() {
     echo "$store $audio $view $help $order $layout $fit $tested" > "$1"
 }
 
-# Usage: browse_layout <state file> <toggle|resize> <side window> <stack window>
-# Prints the fzf action that puts the right pane where the state says, for
-# fzf's transform. toggle is Ctrl-L. resize switches to the layout that fits
-# the terminal (under the list below BROWSE_STACK_COLUMNS) only when the
-# width crosses that line, so a Ctrl-L choice stays until the window
-# gets wider or narrower past it.
+# Usage: browse_layout <state file> <side window> <stack window>
+# Ctrl-L's action, for fzf's transform: prints the one that puts the right
+# pane in the other layout, or back in the one the terminal's width gives it
+# (under the list below BROWSE_STACK_COLUMNS, which fzf applies on its own).
 browse_layout() {
-    local store audio view help order layout fit tested cols now
+    local store audio view help order layout fit tested cols natural=side
     read -r store audio view help order layout fit tested < "$1"
-    case "$2" in
-        toggle) [ "$layout" == "stack" ] && layout=side || layout=stack ;;
-        resize)
-            # fzf passes its width (the terminal's, at --height=-1).
-            cols="${FZF_COLUMNS:-}"
-            [ -n "$cols" ] || read -r _ cols < <({ stty size < /dev/tty; } 2>/dev/null)
-            now=side
-            [ "${cols:-0}" -lt "$BROWSE_STACK_COLUMNS" ] && now=stack
-            [ "$now" == "$fit" ] && return 0
-            fit="$now" layout="$now" ;;
-    esac
+    # fzf passes its width (the terminal's, with the bottom margin only taking rows).
+    cols="${FZF_COLUMNS:-}"
+    [ -n "$cols" ] || read -r _ cols < <({ stty size < /dev/tty; } 2>/dev/null)
+    [ "${cols:-0}" -lt "$BROWSE_STACK_COLUMNS" ] && natural=stack
+    if [ "$layout" == "$natural" ]; then
+        [ "$natural" == "stack" ] && layout=side || layout=stack
+    else
+        layout="$natural"
+    fi
     echo "$store $audio $view $help $order $layout $fit $tested" > "$1"
-    if [ "$layout" == "stack" ]; then echo "change-preview-window[$4]"; else echo "change-preview-window[$3]"; fi
+    if [ "$layout" == "stack" ]; then echo "change-preview-window[$3]"; else echo "change-preview-window[$2]"; fi
 }
 
 # Usage: browse_pane_label <state file>
@@ -1438,7 +1447,7 @@ browse_pane_label() {
 browse_zoom() {
     local cols
     read -r _ cols < <({ stty size < /dev/tty; } 2>/dev/null)
-    WRAP_COLUMNS=$(( ${cols:-80} < 100 ? ${cols:-80} - 4 : 96 )) browse_game_preview "$1" "$2" \
+    WRAP_COLUMNS=$(browse_wrap_columns "${cols:-80}") browse_game_preview "$1" "$2" \
         | sed $'s/\e]8;;[^\a]*\a//g' | less -R
 }
 

@@ -186,15 +186,20 @@ their execution order in the assembled script):
    `browse_state_next` updates; Ctrl-R is fzf's `toggle-sort` (`--tiebreak
    index` otherwise); Ctrl-L swaps the right pane between beside the list
    (`BROWSE_SIDE_PERCENT` of the width) and under it, which it also does by
-   itself (fzf 0.58+) when a resize crosses `BROWSE_STACK_COLUMNS`, both
-   through `browse_layout`, and
+   itself (fzf 0.58+, the pane's own `<N(...)` option) when a resize crosses
+   `BROWSE_STACK_COLUMNS`; Ctrl-L goes through `browse_layout`, and
    `browse_filter_header` refits the Filters box (three filters on one, two
    or three lines, by the list's width) through
-   `transform-header` after every key and resize; fzf runs with `--no-mouse`, so the terminal keeps the mouse for selecting text and Ctrl+clicking links; Enter is
+   `transform-header` after every key, but never on a resize: any action
+   run from fzf's `resize` event (a transform that changed the header or the
+   pane) left Konsole's whole screen blank, so a resize only repaints the key
+   bar (`execute-silent`); fzf runs with `--no-mouse`, so the terminal keeps the mouse for selecting text and Ctrl+clicking links; Enter is
    ignored, so only Esc and fzf's abort keys close it;
    Ctrl-F is `browse_zoom` (the pane in `less -R`). Needs fzf 0.35
-   (`fzf_at_least`). 0.58+ gets the boxed sections and runs with
-   `--height=-1` on the alternate screen, so `browse_key_bar` can draw the
+   (`fzf_at_least`). 0.58+ gets the boxed sections and runs full
+   screen with a one-row bottom margin (`--margin`; not `--height=-1`, whose
+   cursor-relative drawing left ghost frames and a blank screen in Konsole on
+   resize and wheel scroll), so `browse_key_bar` can draw the
    key bar and version on the last row; older fzf puts the bar on a border
    line and the filters in four `--header-lines` (`BROWSE_HEADER_LINES`)),
    `confirm_continue_if_eax_impossible`, etc.

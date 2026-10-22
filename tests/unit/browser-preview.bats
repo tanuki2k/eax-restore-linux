@@ -53,3 +53,16 @@ in_fresh_shell() {
     grep -q "Status" <<< "$plain"
     grep -q "The maps have no environmental audio." <<< "$plain"
 }
+
+@test "the browser's right pane has text at every window width" {
+    echo "all all profile 0 match side side tested" > "$BATS_TEST_TMPDIR/state"
+    for cols in 1 3 5 8 12 16 19 24 40 80 120; do
+        wrap="$(browse_wrap_columns "$cols")"
+        [ "$wrap" -ge 24 ]
+        out="$(WRAP_COLUMNS=$wrap browse_game_preview "$BATS_TEST_TMPDIR/state" test-game)"
+        [ -n "$out" ] || { echo "profile empty at $cols"; false; }
+        help="$(WRAP_COLUMNS=$wrap browse_help)"
+        [ -n "$help" ] || { echo "help empty at $cols"; false; }
+        [ "$(wc -l <<< "$help")" -gt 20 ]
+    done
+}
