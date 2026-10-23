@@ -51,6 +51,5 @@
         "changes": { "steamuser.cfg": { "s_khz": "44", "s_milesdriver": "eax3" } }
       }
     ]
-  },
-  "notes": "Also supports A3D."
+  }
 }
