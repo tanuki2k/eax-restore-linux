@@ -123,5 +123,68 @@ class Cli(Base):
         self.assertIn("https://example.com/login", st["login"]["output"])
 
 
+class Switches(Base):
+    def setUp(self):
+        super().setUp()
+        self.asked = []
+        self._call = ai._call
+        ai._call = lambda prompt: (self.asked.append(prompt), '{"notes": "x"}')[1]
+        os.environ["ANTHROPIC_API_KEY"] = KEY
+
+    def tearDown(self):
+        ai._call = self._call
+        super().tearDown()
+
+    def test_defaults(self):
+        s = ai.settings()
+        self.assertTrue(s["enabled"])
+        self.assertEqual([k for k, v in s["features"].items() if not v], ["classify", "suggest"])
+
+    def test_master_off_turns_everything_off(self):
+        ai.save_settings({"enabled": False})
+        self.assertIsNone(ai.available())
+        with self.assertRaises(ai.AIError):
+            ai.ask("notes", {})
+        self.assertEqual(self.asked, [])
+
+    def test_one_feature_off_blocks_only_that_task(self):
+        ai.save_settings({"features": {"notes": False}})
+        with self.assertRaises(ai.AIError):
+            ai.ask("notes", {})
+        self.assertEqual(ai.ask("description", {}), {"notes": "x"})
+
+    def test_experimental_tasks_need_turning_on(self):
+        with self.assertRaises(ai.AIError):
+            ai.ask("classify", {})
+        ai.save_settings({"features": {"classify": True}})
+        self.assertEqual(ai.ask("classify", {}), {"notes": "x"})
+
+    def test_bad_settings_are_refused(self):
+        for bad in ({"enabled": "no"}, {"features": {"nope": True}}, {"features": {"notes": 1}}, {"features": []}, []):
+            with self.assertRaises(ai.AIError):
+                ai.save_settings(bad)
+        self.assertEqual(ai.settings(), {"enabled": True, "features": dict(ai.FEATURE_DEFAULTS)})
+
+    def test_settings_and_key_survive_each_other(self):
+        os.environ.pop("ANTHROPIC_API_KEY")
+        ai.save_key(KEY)
+        ai.save_settings({"enabled": False})
+        self.assertEqual(ai._config()["anthropic_api_key"], KEY)
+        ai.forget_key()
+        self.assertFalse(ai.settings()["enabled"])
+        self.assertEqual(stat.S_IMODE(os.stat(ai.CONFIG).st_mode), 0o600)
+
+    def test_capture_draft_runs_only_the_passes_that_are_on(self):
+        import classify
+        gc = {"audio_settings": [{"title": "t", "reason": "r", "changes": []}]}
+        self.assertIsNone(classify.ai_pass("G", gc, []))
+        self.assertEqual(self.asked and len(self.asked), 1)  # only the setting pass
+        ai.save_settings({"features": {"suggest": True, "setting": False}})
+        self.asked.clear()
+        ai._call = lambda prompt: (self.asked.append(prompt), '{}')[1]
+        classify.ai_pass("G", gc, [])
+        self.assertEqual(len(self.asked), 1)  # only suggest
+
+
 if __name__ == "__main__":
     unittest.main()

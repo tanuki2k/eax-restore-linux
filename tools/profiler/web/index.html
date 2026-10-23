@@ -1,12 +1,13 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Game Profile Editor</title><link rel="stylesheet" href="/app.css"></head>
+<title>Game Profile Editor</title><script>try{var t=localStorage.getItem("eax-profiler-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script><link rel="stylesheet" href="/app.css"></head>
 <body>
 <header class="top">
   <div class="brand"><span class="logo">EAX</span> Game profiles</div>
   <span id="version" class="chip-s" hidden data-tip="Build number: how many commits have changed the editor. The branch and commit it's running from follow."></span>
   <span class="sp"></span>
   <button id="jsontoggle" class="btn ghost" data-tip="Show or hide the panel on the right that lists this profile's problems and shows its JSON file.">{ } JSON</button>
+  <button id="settingsbtn" class="btn ghost" data-tip="Appearance, AI sign-in and which AI drafting buttons are on.">Settings</button>
   <span id="aistate" class="chip-s" role="button" tabindex="0"></span>
   <button id="quitbtn" class="btn danger" data-tip="Stop the editor. Use this if you opened it from the app menu, where there's no terminal to close.">Quit</button>
 </header>
@@ -27,6 +28,7 @@
       <h2>Pick a game to edit</h2>
       <p>Choose one from the list, or add a game you have installed. Everything is edited with forms; the JSON file is written for you.</p>
     </div>
+    <div id="settings" hidden></div>
     <div id="game" hidden>
       <div id="ghead"></div>
       <nav id="snav" aria-label="Sections"></nav>

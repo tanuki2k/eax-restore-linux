@@ -185,15 +185,16 @@ def flag_suspects(diffs):
 
 
 def ai_pass(game_name, gc, rest):
-    """The AI's three jobs; raises on failure so the caller can report it. Returns suggestions."""
-    for kind in ("audio_settings", "optional_settings"):
+    """The AI's three jobs, each only when its switch is on; raises on failure so the caller can
+    report it. Returns suggestions (None when that job is off)."""
+    for kind in ("audio_settings", "optional_settings") if ai.feature_on("setting") else ():
         for st in gc.get(kind, []):
             r = ai.ask("setting", {"game": game_name, "kind": kind, "changes": st["changes"], "only_if": st.get("only_if")})
             st["title"], st["reason"] = r.get("title", st["title"])[:60], r.get("reason", st["reason"])
     sample = rest[:AI_SAMPLE]
     r = ai.ask("classify", {"game": game_name, "changes": [
         {"i": i, "file": f["file"], "section": c["section"], "key": c["key"], "old": c["old"], "new": c["new"]}
-        for i, (f, c) in enumerate(sample)]})
+        for i, (f, c) in enumerate(sample)]}) if ai.feature_on("classify") else None
     for item in r.get("changes", []) if isinstance(r, dict) else []:
         try:
             f, c = sample[int(item["i"])]
@@ -201,6 +202,8 @@ def ai_pass(game_name, gc, rest):
             continue
         if item.get("keep") is False:
             c["suspect_reason"] = "AI: " + str(item.get("reason") or "looks like noise")[:120]
+    if not ai.feature_on("suggest"):
+        return None
     keys = [{"file": f["file"], "key": c["key"], "new": c["new"]} for f, c in rest[:AI_SAMPLE]]
     return ai.clean_suggestions(ai.ask("suggest", {"game": game_name, "keys": keys}))
 

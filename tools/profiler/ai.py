@@ -91,7 +91,51 @@ def api_key():
     return os.environ.get("ANTHROPIC_API_KEY") or _config().get("anthropic_api_key") or ""
 
 
+# One switch per task. classify and suggest are the weakest drafts, so they start off.
+FEATURE_DEFAULTS = {"description": True, "notes": True, "setting": True, "research": True,
+                    "classify": False, "suggest": False}
+
+
+def settings():
+    """The player's AI switches: the master one and one per feature, defaults filled in."""
+    saved = _config().get("ai_settings")
+    saved = saved if isinstance(saved, dict) else {}
+    feats = saved.get("features") if isinstance(saved.get("features"), dict) else {}
+    return {"enabled": saved.get("enabled") is not False,
+            "features": {k: feats[k] if isinstance(feats.get(k), bool) else d for k, d in FEATURE_DEFAULTS.items()}}
+
+
+def save_settings(new):
+    """Merges the given switches into the saved ones; unknown names and non-booleans are refused."""
+    if not isinstance(new, dict):
+        raise AIError("Those AI settings weren't understood, so nothing was saved.")
+    cur = settings()
+    if "enabled" in new:
+        if not isinstance(new["enabled"], bool):
+            raise AIError("Those AI settings weren't understood, so nothing was saved.")
+        cur["enabled"] = new["enabled"]
+    feats = new.get("features", {})
+    if not isinstance(feats, dict):
+        raise AIError("Those AI settings weren't understood, so nothing was saved.")
+    for k, v in feats.items():
+        if k not in FEATURE_DEFAULTS or not isinstance(v, bool):
+            raise AIError("Those AI settings weren't understood, so nothing was saved.")
+        cur["features"][k] = v
+    c = _config()
+    c["ai_settings"] = cur
+    _write_config(c)
+    return cur
+
+
+def feature_on(task):
+    """Whether AI is on at all and this task's switch is on."""
+    s = settings()
+    return s["enabled"] and s["features"].get(task, False)
+
+
 def available():
+    if not settings()["enabled"]:
+        return None
     if api_key():
         return "api"
     return "cli" if claude_path() else None
@@ -128,7 +172,7 @@ def status():
             pass
     return {"in_use": available(), "env_key": bool(os.environ.get("ANTHROPIC_API_KEY")),
             "saved_key": ("…" + saved[-4:]) if saved else None, "config": CONFIG.replace(os.path.expanduser("~"), "~", 1),
-            "cli": cli_status(), "login": {"running": running, "output": out}}
+            "settings": settings(), "cli": cli_status(), "login": {"running": running, "output": out}}
 
 
 def check_key(key):
@@ -240,6 +284,8 @@ def redact(node, home=None, user=None):
 def ask(task, context):
     if task not in TASKS:
         raise ValueError("unknown task")
+    if not feature_on(task):
+        raise AIError("That AI feature is turned off in Settings.")
     context = redact(context)
     text = _call(f"{TASKS[task]}\n\nContext (JSON):\n{json.dumps(context, indent=1)[:12000]}")
     a, b = text.find("{"), text.rfind("}")

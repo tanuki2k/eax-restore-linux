@@ -32,6 +32,19 @@ class Guard(unittest.TestCase):
         same = {"Content-Type": "application/json", "Origin": f"http://127.0.0.1:{self.port}", "Sec-Fetch-Site": "same-origin"}
         self.assertNotEqual(self.post(same), 403)
 
+    def test_ai_settings_route_validates(self):
+        same = {"Content-Type": "application/json", "Origin": f"http://127.0.0.1:{self.port}", "Sec-Fetch-Site": "same-origin"}
+        import ai, tempfile
+        old = ai.CONFIG; ai.CONFIG = os.path.join(tempfile.mkdtemp(), "profiler.json")
+        try:
+            c = http.client.HTTPConnection("127.0.0.1", self.port)
+            c.request("POST", "/api/ai/settings", body=json.dumps({"features": {"nope": True}}), headers=same)
+            r = c.getresponse(); r.read(); self.assertEqual(r.status, 400)
+            c.request("POST", "/api/ai/settings", body=json.dumps({"enabled": False}), headers=same)
+            r = c.getresponse(); self.assertEqual(r.status, 200); self.assertFalse(json.load(r)["enabled"])
+        finally:
+            ai.CONFIG = old
+
     def test_pages_cannot_be_framed(self):
         c = http.client.HTTPConnection("127.0.0.1", self.port)
         c.request("GET", "/api/schema"); r = c.getresponse(); r.read()

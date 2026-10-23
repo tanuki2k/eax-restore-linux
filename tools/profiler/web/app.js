@@ -2,7 +2,7 @@
 // Schema-driven editor: field types, enums, help text and limits come from data/schema.json at
 // runtime, so a new schema field shows up here without touching this file. Only the layout
 // (which fields sit in which section) is written out below.
-let SCHEMA, GAMES = [], STALE = [], AI = null, CUR = null, GAME = null, DIRTY = false, SAVED = {}, ERRS = [], SECTION = "overview", validateTimer, CHOSEN_STORE = null;
+let SCHEMA, GAMES = [], STALE = [], AI = null, AIF = {}, CUR = null, GAME = null, DIRTY = false, SAVED = {}, ERRS = [], SECTION = "overview", validateTimer, CHOSEN_STORE = null;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 const LONG = /^(description|notes|reason|problem|fix|store_details|patches|follow_up)$/;
@@ -229,7 +229,7 @@ function field(label, control, { help, wide, extra, req } = {}) {
   return f;
 }
 function aiButton(task, ctx, apply) {
-  if (!AI) return null;
+  if (!AI || !AIF[task]) return null;
   return el("button", { type: "button", class: "btn sm", title: "Ask the AI to fill this in. You can edit what it writes.", onclick: async (e) => {
     e.preventDefault(); const b = e.currentTarget; b.disabled = true; b.textContent = "Drafting…";
     try { apply(await api("/api/ai", "POST", { task, context: ctx() })); changed(); } catch (x) { toast("AI: " + x.message, 6000); }
@@ -550,7 +550,7 @@ function drawHeadStatus() {
 }
 let GACTIONS = null;
 function renderEdit() {
-  $("#empty").hidden = true; $("#game").hidden = false;
+  $("#empty").hidden = true; $("#settings").hidden = true; $("#game").hidden = false;
   const folderLabel = { tested: "Tested", untested: "Untested", drafts: "Draft" }[CUR.folder];
   $("#ghead").replaceChildren(el("div", { class: "gtop" },
     el("div", { class: "gtitle" }, el("h1", {}, GAME.name || CUR.id),
@@ -560,7 +560,7 @@ function renderEdit() {
   // The actions sit in the sticky section bar (drawNav), so they stay in view while scrolling.
   GACTIONS =
     el("div", { class: "gactions" },
-      AI ? el("button", { type: "button", class: "btn", onclick: research, title: "Fill in release date, executable, description and EAX details from what the AI knows. Check them against a source." }, "✨ Research") : null,
+      AI && AIF.research ? el("button", { type: "button", class: "btn", onclick: research, title: "Fill in release date, executable, description and EAX details from what the AI knows. Check them against a source." }, "✨ Research") : null,
       el("select", { id: "promo", title: "Move this entry to another folder (tested, untested or draft)", onchange: promote }, [el("option", { value: "" }, "Move to…"), ...["drafts", "untested", "tested"].filter((x) => x !== CUR.folder).map((x) => el("option", {}, x))]),
       el("button", { type: "button", class: "btn", id: "submitbtn", title: "Send this profile to the project as a pull request", onclick: submitClicked }, "Submit…"),
       el("button", { type: "button", class: "btn", id: "revertbtn", disabled: !DIRTY, title: "Throw away every unsaved change and go back to the saved file", onclick: revertAll }, "Revert"),
@@ -710,9 +710,9 @@ function drawRebuild() {
   b.dataset.tip = n ? `game-database.json is behind by ${behind.length} changed or new game${behind.length === 1 ? "" : "s"}${STALE.length ? `, ${STALE.length} removed` : ""}: ${behind.slice(0, 6).map((g) => g.name).join(", ")}${behind.length > 6 ? "…" : "."}` : "game-database.json is up to date. Rebuild remakes it from the game files.";
 }
 async function loadList() {
-  const j = await api("/api/games"); GAMES = j.games; STALE = j.stale || []; AI = j.ai;
+  const j = await api("/api/games"); GAMES = j.games; STALE = j.stale || []; AI = j.ai; AIF = j.ai_features || {};
   $("#aistate").textContent = AI ? `AI: ${AI === "api" ? "API key" : "Claude sign-in"}` : "AI off";
-  $("#aistate").dataset.tip = AI ? "AI drafting is on, so the ✨ buttons work. Select to change how you sign in." : "Sign in or add an API key to turn on the ✨ drafting buttons.";
+  $("#aistate").dataset.tip = AI ? "AI drafting is on, so the ✨ buttons work. Select to open Settings." : "AI is off. Select to open Settings and sign in, add an API key or turn it back on.";
   drawList(); drawRebuild();
   if (GAME && CUR) drawBuildBadge();
 }
@@ -748,42 +748,87 @@ async function addByName() {
 }
 $("#filter").oninput = drawList;
 $("#addinstalled").onclick = addInstalled;
-$("#aistate").onclick = () => aiSettings();
-$("#aistate").onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); aiSettings(); } };
-// The AI chip's dialog: sign in with the claude command, or save an Anthropic API key (kept in a private file).
-async function aiSettings() {
-  let st = await api("/api/ai/status"), timer;
-  const body = el("div", {});
-  const dlg = dialog(el("h3", {}, "AI drafting"), body, el("div", { class: "btns" }, el("span", { class: "sp" }), el("button", { type: "button", class: "primary", onclick: () => dlg.close() }, "Done")));
-  dlg.addEventListener("close", () => { clearInterval(timer); loadList(); });
+$("#aistate").onclick = () => openSettings();
+$("#aistate").onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openSettings(); } };
+$("#settingsbtn").onclick = () => openSettings();
+
+// Theme is per browser, so it lives in localStorage; "system" removes the attribute and the stylesheet follows the OS.
+const THEME_KEY = "eax-profiler-theme";
+function getTheme() { try { const t = localStorage.getItem(THEME_KEY); return t === "light" || t === "dark" ? t : "system"; } catch { return "system"; } }
+function setTheme(t) {
+  try { if (t === "system") localStorage.removeItem(THEME_KEY); else localStorage.setItem(THEME_KEY, t); } catch { /* private window: applies for this tab only */ }
+  if (t === "system") document.documentElement.removeAttribute("data-theme"); else document.documentElement.dataset.theme = t;
+}
+
+// The Settings view: appearance, AI sign-in (the claude command, or an Anthropic API key kept in a private file) and the AI switches.
+const AI_FEATURES = [
+  ["description", "Description", "Drafts the one-sentence description."],
+  ["notes", "Notes", "Drafts the notes shown on the game's profile."],
+  ["setting", "Setting titles and reasons", "Drafts a title and reason for each game setting."],
+  ["research", "Research", "Fills in release date, executable, description and EAX details from what the AI knows. Check them against a source."],
+];
+const AI_EXPERIMENTAL = [
+  ["classify", "Untick unrelated changes", "Marks captured changes that look unrelated to sound, so they start unticked."],
+  ["suggest", "Suggest values", "Suggests alsoft.ini values and EAX details from the captured changes."],
+];
+let SETTINGS_TIMER;
+async function openSettings() {
+  $("#empty").hidden = true; $("#game").hidden = true; $("#settings").hidden = false; $("#main").scrollTop = 0;
+  await drawSettings();
+}
+function closeSettings() {
+  clearInterval(SETTINGS_TIMER); $("#settings").hidden = true;
+  if (GAME && CUR) $("#game").hidden = false; else $("#empty").hidden = false;
+  loadList();
+}
+async function drawSettings() {
+  let st = await api("/api/ai/status");
+  const root = $("#settings");
   const refresh = async () => { st = await api("/api/ai/status"); draw(); };
   const run = (fn, done) => async (e) => { e.target.disabled = true; try { await fn(); if (done) toast(done); } catch (x) { toast(x.message, 8000); } await refresh(); };
+  const save = async (patch) => { try { await api("/api/ai/settings", "POST", patch); } catch (x) { toast(x.message, 8000); } await refresh(); };
+  const toggle = (id, title, hint, on, onchange, off, extra) => el("div", { class: "srow" + (off ? " off" : "") + (extra ? " " + extra : "") },
+    el("input", { type: "checkbox", id, checked: on, disabled: !!off, onchange: (e) => onchange(e.target.checked) }),
+    el("label", { for: id }, el("b", {}, title), el("span", { class: "muted" }, hint)));
   function draw() {
-    const cli = st.cli, inUse = st.env_key ? "env" : st.in_use;
-    const using = st.env_key ? "On, using the ANTHROPIC_API_KEY variable" : st.in_use === "api" ? "On, using your saved API key"
+    const cli = st.cli, inUse = st.env_key ? "env" : st.in_use, s = st.settings, masterOff = !s.enabled;
+    const using = masterOff ? "Off, so everything below is switched off." : st.env_key ? "On, using the ANTHROPIC_API_KEY variable" : st.in_use === "api" ? "On, using your saved API key"
       : st.in_use === "cli" ? "On, using your Claude sign-in" : "Off. Sign in or add an API key to turn on the ✨ buttons";
-    clearInterval(timer);
-    if (st.login.running) timer = setInterval(refresh, 2000);
+    clearInterval(SETTINGS_TIMER);
+    if (st.login.running) SETTINGS_TIMER = setInterval(refresh, 2000);
     const keyInput = el("input", { type: "password", placeholder: st.saved_key ? "Paste a new key to replace it" : "sk-ant-…", autocomplete: "off", spellcheck: false });
-    const card = (title, on, hint, ...kids) => el("section", { class: "aicard" + (on ? " on" : "") },
-      el("header", {}, el("h4", {}, title), on ? el("span", { class: "badge untested", style: "background:var(--ok-weak);color:var(--ok)" }, "In use") : null), el("p", { class: "muted" }, hint), ...kids);
-    body.replaceChildren(
-      el("p", { class: "muted", style: "margin:0 0 12px" }, "Lets the ✨ buttons fill in release dates, EAX details and drafted settings. Check what it writes against a source."),
-      el("p", { class: "muted", style: "margin:0 0 12px" }, "What it sends to Anthropic: the game's name and, for drafting, the file names, section names, keys and values of the changes you captured. Your home folder, user name and long numbers are hidden first."),
-      el("div", { class: "aistatus " + (inUse ? "on" : "off") }, el("span", { class: "dot" }), using),
-      card("Claude sign-in", inUse === "cli", "Uses your Claude subscription, through the claude command's own sign-in.",
-        !cli.installed ? el("p", { class: "bad" }, "Claude Code isn't installed, or the editor can't find it. Make sure the `claude` command works in a terminal, or use an API key instead.")
-          : el("div", { class: "airow" },
-            el("span", { class: "grow" }, st.login.running ? "Waiting for you to finish signing in, in your browser…" : cli.logged_in ? `Signed in${cli.email ? " as " + cli.email : ""}.` : "Not signed in."),
-            cli.logged_in && !st.login.running
-              ? el("button", { type: "button", class: "btn", onclick: run(() => api("/api/ai/cli", "POST", { action: "logout" }), "Signed out") }, "Sign out")
-              : el("button", { type: "button", class: "btn primary", disabled: st.login.running, onclick: run(() => api("/api/ai/cli", "POST", { action: "login" })) }, "Sign in")),
-        st.login.running && st.login.output ? el("pre", { class: "muted", style: "white-space:pre-wrap;word-break:break-all;font-size:12px;margin:8px 0 0" }, st.login.output) : null),
-      card("Anthropic API key", inUse === "api" || inUse === "env", st.env_key ? "The ANTHROPIC_API_KEY variable is set, so it is used instead of a saved key." : `Pay-as-you-go. The key is kept in ${st.config}, readable only by you, and sent only to Anthropic.`,
-        st.saved_key ? el("div", { class: "airow" }, el("span", { class: "grow" }, `Saved key ${st.saved_key}`), el("button", { type: "button", class: "btn sm", onclick: run(() => api("/api/ai/key/forget", "POST"), "Key removed") }, "Remove")) : null,
-        el("div", { class: "airow" }, keyInput, el("button", { type: "button", class: "btn", onclick: run(async () => {
-          const r = await api("/api/ai/key", "POST", { key: keyInput.value }); toast(r.checked ? "Key saved ✓" : r.note, 8000);
-        }) }, st.saved_key ? "Replace key" : "Save and check"))));
+    const card = (title, on, hint, ...kids) => el("section", { class: "aicard" + (on && !masterOff ? " on" : "") },
+      el("header", {}, el("h4", {}, title), on && !masterOff ? el("span", { class: "badge untested", style: "background:var(--ok-weak);color:var(--ok)" }, "In use") : null), el("p", { class: "muted" }, hint), ...kids);
+    const theme = getTheme();
+    const radio = (v, label) => el("label", { class: "chkrow" }, el("input", { type: "radio", name: "theme", checked: theme === v, onchange: () => setTheme(v) }), " " + label);
+    root.replaceChildren(
+      el("div", { class: "shead" }, el("h1", {}, "Settings"), el("button", { type: "button", class: "btn primary", onclick: closeSettings }, "Back")),
+      el("section", {}, el("h2", {}, "Appearance"),
+        el("p", { class: "muted" }, "Saved in this browser."),
+        el("div", { class: "airow", style: "gap:18px" }, radio("light", "Light"), radio("dark", "Dark"), radio("system", "Match system"))),
+      el("section", {}, el("h2", {}, "AI"),
+        el("p", { class: "muted" }, "Lets the ✨ buttons fill in text and EAX details, which you should check against a source. To do that it sends Anthropic the game's name and, when drafting from captures, the file names, section names, keys and values of the changes you captured. Your home folder, user name and long numbers are hidden first."),
+        toggle("ai-enabled", "Use AI", "Turn this off to hide every ✨ button and send nothing to Anthropic.", s.enabled, (v) => save({ enabled: v })),
+        el("div", { class: "aistatus " + (inUse && !masterOff ? "on" : "off"), style: "margin-top:12px" }, el("span", { class: "dot" }), using),
+        card("Claude sign-in", inUse === "cli", "Uses your Claude subscription, through the claude command's own sign-in.",
+          !cli.installed ? el("p", { class: "bad" }, "Claude Code isn't installed, or the editor can't find it. Make sure the `claude` command works in a terminal, or use an API key instead.")
+            : el("div", { class: "airow" },
+              el("span", { class: "grow" }, st.login.running ? "Waiting for you to finish signing in, in your browser…" : cli.logged_in ? `Signed in${cli.email ? " as " + cli.email : ""}.` : "Not signed in."),
+              cli.logged_in && !st.login.running
+                ? el("button", { type: "button", class: "btn", onclick: run(() => api("/api/ai/cli", "POST", { action: "logout" }), "Signed out") }, "Sign out")
+                : el("button", { type: "button", class: "btn primary", disabled: st.login.running, onclick: run(() => api("/api/ai/cli", "POST", { action: "login" })) }, "Sign in")),
+          st.login.running && st.login.output ? el("pre", { class: "muted", style: "white-space:pre-wrap;word-break:break-all;font-size:12px;margin:8px 0 0" }, st.login.output) : null),
+        card("Anthropic API key", inUse === "api" || inUse === "env", st.env_key ? "The ANTHROPIC_API_KEY variable is set, so it is used instead of a saved key." : `Pay-as-you-go. The key is kept in ${st.config}, readable only by you, and sent only to Anthropic.`,
+          st.saved_key ? el("div", { class: "airow" }, el("span", { class: "grow" }, `Saved key ${st.saved_key}`), el("button", { type: "button", class: "btn sm", onclick: run(() => api("/api/ai/key/forget", "POST"), "Key removed") }, "Remove")) : null,
+          el("div", { class: "airow" }, keyInput, el("button", { type: "button", class: "btn", onclick: run(async () => {
+            const r = await api("/api/ai/key", "POST", { key: keyInput.value }); toast(r.checked ? "Key saved ✓" : r.note, 8000);
+          }) }, st.saved_key ? "Replace key" : "Save and check"))),
+        el("h2", {}, "Drafting"),
+        el("p", { class: "muted" }, "Choose which ✨ buttons show."),
+        ...AI_FEATURES.map(([id, title, hint]) => toggle("ai-" + id, title, hint, s.features[id], (v) => save({ features: { [id]: v } }), masterOff))),
+      el("section", {}, el("h2", {}, "Experimental"),
+        el("p", { class: "muted" }, "These work on captured changes and often get it wrong. They are off until you turn them on, and anything they change is only a suggestion to check."),
+        ...AI_EXPERIMENTAL.map(([id, title, hint]) => toggle("ai-" + id, title, hint, s.features[id], (v) => save({ features: { [id]: v } }), masterOff))));
   }
   draw();
 }

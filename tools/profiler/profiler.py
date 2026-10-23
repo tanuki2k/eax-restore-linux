@@ -394,7 +394,7 @@ class H(BaseHTTPRequestHandler):
             if method == "GET" and p == "/api/schema":
                 return self.reply(dbio.schema())
             if method == "GET" and p == "/api/games":
-                return self.reply({"games": dbio.list_games(), "stale": dbio.stale_entries(), "ai": ai.available()})
+                return self.reply({"games": dbio.list_games(), "stale": dbio.stale_entries(), "ai": ai.available(), "ai_features": ai.settings()["features"]})
             m = re.match(r"^/api/game/(tested|untested|drafts)/([a-z0-9-]+)$", p)
             if m and method == "GET":
                 g = dbio.load(*m.groups())
@@ -451,6 +451,8 @@ class H(BaseHTTPRequestHandler):
                 return self.reply({"ok": ok, "message": msg})
             if method == "GET" and p == "/api/ai/status":
                 return self.reply(ai.status())
+            if method == "POST" and p == "/api/ai/settings":
+                return self.reply(ai.save_settings(self.body()))
             if method == "POST" and p == "/api/ai/key":
                 return self.reply(ai.save_key(self.body().get("key", "")))
             if method == "POST" and p == "/api/ai/key/forget":
