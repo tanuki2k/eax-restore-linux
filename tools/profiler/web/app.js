@@ -711,8 +711,6 @@ function drawRebuild() {
 }
 async function loadList() {
   const j = await api("/api/games"); GAMES = j.games; STALE = j.stale || []; AI = j.ai; AIF = j.ai_features || {};
-  $("#aistate").textContent = AI ? `AI: ${AI === "api" ? "API key" : "Claude sign-in"}` : "AI off";
-  $("#aistate").dataset.tip = AI ? "AI drafting is on, so the ✨ buttons work. Select to open Settings." : "AI is off. Select to open Settings and sign in, add an API key or turn it back on.";
   drawList(); drawRebuild();
   if (GAME && CUR) drawBuildBadge();
 }
@@ -748,8 +746,6 @@ async function addByName() {
 }
 $("#filter").oninput = drawList;
 $("#addinstalled").onclick = addInstalled;
-$("#aistate").onclick = () => openSettings();
-$("#aistate").onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openSettings(); } };
 $("#settingsbtn").onclick = () => openSettings();
 
 // Theme is per browser, so it lives in localStorage; "system" removes the attribute and the stylesheet follows the OS.

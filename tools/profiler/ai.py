@@ -247,8 +247,9 @@ def _call(prompt):
         # From an empty folder and with no tools: the prompt holds text from game files, so it must not
         # be able to read the repo (or anything else) through the player's own allow rules.
         with tempfile.TemporaryDirectory() as cwd:
-            r = subprocess.run([claude_path(), "-p", "--model", "sonnet", "--tools", "", STYLE + "\n\n" + prompt],
-                               capture_output=True, text=True, timeout=180, cwd=cwd, stdin=subprocess.DEVNULL)
+            # The prompt goes on stdin: --tools takes a list, so a prompt argument after it is read as a tool name.
+            r = subprocess.run([claude_path(), "-p", "--model", "sonnet", "--tools", ""],
+                               input=STYLE + "\n\n" + prompt, capture_output=True, text=True, timeout=180, cwd=cwd)
         if r.returncode:
             raise RuntimeError(r.stderr.strip()[:300])
         return r.stdout

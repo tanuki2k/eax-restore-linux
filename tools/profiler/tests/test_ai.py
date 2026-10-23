@@ -123,6 +123,15 @@ class Cli(Base):
         self.assertIn("https://example.com/login", st["login"]["output"])
 
 
+class CliPrompt(Base):
+    def test_prompt_is_sent_on_stdin_not_after_the_tools_list(self):
+        with open(os.path.join(self.d, "claude"), "w") as f:
+            f.write('#!/bin/sh\n[ $# -eq 5 ] || { echo "args: $*" >&2; exit 1; }\ncat > "$0.in"\necho \'{"ok": 1}\'\n')
+        os.chmod(os.path.join(self.d, "claude"), 0o755)
+        self.assertEqual(ai._call("hello"), '{"ok": 1}\n')
+        self.assertIn("hello", open(os.path.join(self.d, "claude.in")).read())
+
+
 class Switches(Base):
     def setUp(self):
         super().setUp()

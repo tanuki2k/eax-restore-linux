@@ -535,7 +535,7 @@ def main():
     global SERVER
     srv = SERVER = ThreadingHTTPServer(("127.0.0.1", a.port), H)
     url = f"http://127.0.0.1:{a.port}/"
-    print(f"Game profile editor: {url}  (AI: {ai.available() or 'off - use the AI chip in the page, or set ANTHROPIC_API_KEY'})")
+    print(f"Game profile editor: {url}  (AI: {ai.available() or 'off - use Settings in the page, or set ANTHROPIC_API_KEY'})")
     threading.Thread(target=update.check, daemon=True).start()
     if not a.no_open:
         threading.Timer(0.5, lambda: webbrowser.open(url)).start()
