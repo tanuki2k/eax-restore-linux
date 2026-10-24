@@ -28,6 +28,8 @@ TASKS = {
                "Only include a value when the evidence supports it; omit everything else. Allowed alsoft_ini keys: reverb.boost (number), "
                "general.sources, general.frequency (digits), general.default-reverb, general.resampler.",
 }
+# The capture draft's titles have their own switch, apart from the profile page's button.
+TASKS["capture_setting"] = TASKS["setting"]
 
 
 CONFIG = os.path.join(os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"),
@@ -91,9 +93,9 @@ def api_key():
     return os.environ.get("ANTHROPIC_API_KEY") or _config().get("anthropic_api_key") or ""
 
 
-# One switch per task. classify and suggest are the weakest drafts, so they start off.
+# One switch per task. suggest and the capture draft's titles are the weakest drafts, so they start off.
 FEATURE_DEFAULTS = {"description": True, "notes": True, "setting": True, "research": True,
-                    "classify": False, "suggest": False}
+                    "classify": True, "suggest": False, "capture_setting": False}
 
 
 def settings():

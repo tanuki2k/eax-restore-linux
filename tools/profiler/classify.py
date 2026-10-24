@@ -187,9 +187,9 @@ def flag_suspects(diffs):
 def ai_pass(game_name, gc, rest):
     """The AI's three jobs, each only when its switch is on; raises on failure so the caller can
     report it. Returns suggestions (None when that job is off)."""
-    for kind in ("audio_settings", "optional_settings") if ai.feature_on("setting") else ():
+    for kind in ("audio_settings", "optional_settings") if ai.feature_on("capture_setting") else ():
         for st in gc.get(kind, []):
-            r = ai.ask("setting", {"game": game_name, "kind": kind, "changes": st["changes"], "only_if": st.get("only_if")})
+            r = ai.ask("capture_setting", {"game": game_name, "kind": kind, "changes": st["changes"], "only_if": st.get("only_if")})
             st["title"], st["reason"] = r.get("title", st["title"])[:60], r.get("reason", st["reason"])
     sample = rest[:AI_SAMPLE]
     r = ai.ask("classify", {"game": game_name, "changes": [

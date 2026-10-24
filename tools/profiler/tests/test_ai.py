@@ -147,7 +147,7 @@ class Switches(Base):
     def test_defaults(self):
         s = ai.settings()
         self.assertTrue(s["enabled"])
-        self.assertEqual([k for k, v in s["features"].items() if not v], ["classify", "suggest"])
+        self.assertEqual([k for k, v in s["features"].items() if not v], ["suggest", "capture_setting"])
 
     def test_master_off_turns_everything_off(self):
         ai.save_settings({"enabled": False})
@@ -164,9 +164,9 @@ class Switches(Base):
 
     def test_experimental_tasks_need_turning_on(self):
         with self.assertRaises(ai.AIError):
-            ai.ask("classify", {})
-        ai.save_settings({"features": {"classify": True}})
-        self.assertEqual(ai.ask("classify", {}), {"notes": "x"})
+            ai.ask("capture_setting", {})
+        ai.save_settings({"features": {"capture_setting": True}})
+        self.assertEqual(ai.ask("capture_setting", {}), {"notes": "x"})
 
     def test_bad_settings_are_refused(self):
         for bad in ({"enabled": "no"}, {"features": {"nope": True}}, {"features": {"notes": 1}}, {"features": []}, []):
@@ -187,8 +187,12 @@ class Switches(Base):
         import classify
         gc = {"audio_settings": [{"title": "t", "reason": "r", "changes": []}]}
         self.assertIsNone(classify.ai_pass("G", gc, []))
-        self.assertEqual(self.asked and len(self.asked), 1)  # only the setting pass
-        ai.save_settings({"features": {"suggest": True, "setting": False}})
+        self.assertEqual(len(self.asked), 1)  # only classify; the capture titles start off
+        ai.save_settings({"features": {"capture_setting": True, "setting": False}})
+        self.asked.clear()
+        classify.ai_pass("G", gc, [])
+        self.assertEqual(len(self.asked), 2)  # the profile page's switch doesn't gate the capture titles
+        ai.save_settings({"features": {"suggest": True, "capture_setting": False, "classify": False}})
         self.asked.clear()
         ai._call = lambda prompt: (self.asked.append(prompt), '{}')[1]
         classify.ai_pass("G", gc, [])

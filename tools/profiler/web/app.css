@@ -297,6 +297,7 @@ button.danger:hover:not(:disabled){background:var(--bad);filter:brightness(1.1)}
 #settings .shead{display:flex;align-items:center;gap:12px;margin-bottom:18px}
 #settings h1{font-size:22px;flex:1}
 #settings h2{font-size:16px;margin:26px 0 4px}
+#settings h3{font-size:14px;margin:20px 0 4px}
 #settings>p,#settings section>p{margin:0 0 12px}
 .srow{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
 .srow input{margin-top:4px}

@@ -394,7 +394,7 @@ function cards(parent, key, itemSchema, path) {
       d.dataset.path = `${path}[${i}]`;
       d.addEventListener("input", refresh); d.addEventListener("change", refresh); refresh();
       return d;
-    }) : [el("div", { class: "empty-note" }, "None yet. Capture the game to draft some, or add one by hand.")]),
+    }) : [el("div", { class: "empty-note" }, CAPTURE_ON ? "None yet. Capture the game to draft some, or add one by hand." : "None yet. Add one by hand.")]),
       el("div", { class: "addrow" }, el("button", { type: "button", class: "btn", onclick: () => { arr().push({ title: "", reason: "", changes: {} }); changed(); draw(); } }, "+ Add a setting")));
   };
   draw(); return box;
@@ -535,12 +535,12 @@ function renderPane() {
 function drawNav() {
   const nav = $("#snav"); if (!nav) return;
   nav.setAttribute("role", "tablist");
-  nav.replaceChildren(...SECTIONS.map(([id, label]) => {
+  nav.replaceChildren(...SECTIONS.filter(([id]) => id !== "capture" || CAPTURE_ON).map(([id, label]) => {
     const n = id === "capture" ? 0 : ERRS.filter((e) => sectionOfPath(e.split(": ")[0]) === id).length;
     return el("button", { type: "button", role: "tab", "aria-selected": String(id === SECTION), class: id === SECTION ? "on" : "", onclick: () => setSection(id) }, label, n ? el("span", { class: "nb", title: `${n} problem${n === 1 ? "" : "s"} in this section` }, n) : null);
   }), el("span", { class: "sp" }), GACTIONS);
 }
-function setSection(id) { SECTION = id; drawNav(); renderPane(); $("#main").scrollTop = 0; }
+function setSection(id) { SECTION = id === "capture" && !CAPTURE_ON ? "overview" : id; drawNav(); renderPane(); $("#main").scrollTop = 0; }
 function showTab(t) { if (t === "capture") setSection("capture"); else if (SECTION === "capture") setSection("overview"); }
 
 // ---------------------------------------------------------------- header
@@ -550,6 +550,7 @@ function drawHeadStatus() {
 }
 let GACTIONS = null;
 function renderEdit() {
+  if (SECTION === "capture" && !CAPTURE_ON) SECTION = "overview";
   $("#empty").hidden = true; $("#settings").hidden = true; $("#game").hidden = false;
   const folderLabel = { tested: "Tested", untested: "Untested", drafts: "Draft" }[CUR.folder];
   $("#ghead").replaceChildren(el("div", { class: "gtop" },
@@ -755,17 +756,26 @@ function setTheme(t) {
   try { if (t === "system") localStorage.removeItem(THEME_KEY); else localStorage.setItem(THEME_KEY, t); } catch { /* private window: applies for this tab only */ }
   if (t === "system") document.documentElement.removeAttribute("data-theme"); else document.documentElement.dataset.theme = t;
 }
+// The Capture tab is experimental, so it's hidden until turned on in Settings; per browser like the theme.
+const CAPTURE_KEY = "eax-profiler-capture";
+let CAPTURE_ON = (() => { try { return localStorage.getItem(CAPTURE_KEY) === "1"; } catch { return false; } })();
+function setCaptureOn(v) {
+  CAPTURE_ON = v;
+  try { if (v) localStorage.setItem(CAPTURE_KEY, "1"); else localStorage.removeItem(CAPTURE_KEY); } catch { /* private window: applies for this tab only */ }
+}
 
 // The Settings view: appearance, AI sign-in (the claude command, or an Anthropic API key kept in a private file) and the AI switches.
+// In the order they come up in the editor: the Research button at the top, then the tabs left to right.
 const AI_FEATURES = [
-  ["description", "Description", "Drafts the one-sentence description."],
-  ["notes", "Notes", "Drafts the notes shown on the game's profile."],
-  ["setting", "Setting titles and reasons", "Drafts a title and reason for each game setting."],
-  ["research", "Research", "Fills in release date, executable, description and EAX details from what the AI knows. Check them against a source."],
+  ["research", "Research", "The ✨ Research button at the top of a game. Fills in release date, executable, description and EAX details from what the AI knows. Check them against a source."],
+  ["description", "Description", "Drafts the one-sentence description on the Overview tab."],
+  ["notes", "Notes", "Drafts the notes on the Overview tab, shown on the game's profile."],
+  ["setting", "Setting titles and reasons", "Drafts a title and reason for a setting when you press its ✨ button on the Game settings tab."],
+  ["classify", "Untick unrelated changes", "On the Capture tab, marks captured changes that look unrelated to sound, so they start unticked.", true],
 ];
 const AI_EXPERIMENTAL = [
-  ["classify", "Untick unrelated changes", "Marks captured changes that look unrelated to sound, so they start unticked."],
-  ["suggest", "Suggest values", "Suggests alsoft.ini values and EAX details from the captured changes."],
+  ["capture_setting", "Setting titles and reasons from captures", "Drafts a title and reason for every setting built from a capture.", true],
+  ["suggest", "Suggest values", "Suggests alsoft.ini values and EAX details from the captured changes.", true],
 ];
 let SETTINGS_TIMER;
 async function openSettings() {
@@ -774,13 +784,15 @@ async function openSettings() {
 }
 function closeSettings() {
   clearInterval(SETTINGS_TIMER); $("#settings").hidden = true;
-  if (GAME && CUR) $("#game").hidden = false; else $("#empty").hidden = false;
+  // Redrawn rather than just shown: the AI switches decide which ✨ buttons it has.
+  if (GAME && CUR) renderEdit(); else $("#empty").hidden = false;
   loadList();
 }
 async function drawSettings() {
   let st = await api("/api/ai/status");
   const root = $("#settings");
-  const refresh = async () => { st = await api("/api/ai/status"); draw(); };
+  // Keep the editor's copy current too, so leaving by any route draws the right ✨ buttons.
+  const refresh = async () => { st = await api("/api/ai/status"); AI = st.in_use; AIF = st.settings.features; draw(); };
   const run = (fn, done) => async (e) => { e.target.disabled = true; try { await fn(); if (done) toast(done); } catch (x) { toast(x.message, 8000); } await refresh(); };
   const save = async (patch) => { try { await api("/api/ai/settings", "POST", patch); } catch (x) { toast(x.message, 8000); } await refresh(); };
   const toggle = (id, title, hint, on, onchange, off, extra) => el("div", { class: "srow" + (off ? " off" : "") + (extra ? " " + extra : "") },
@@ -788,6 +800,8 @@ async function drawSettings() {
     el("label", { for: id }, el("b", {}, title), el("span", { class: "muted" }, hint)));
   function draw() {
     const cli = st.cli, inUse = st.env_key ? "env" : st.in_use, s = st.settings, masterOff = !s.enabled;
+    // A capture-only switch is greyed out while the Capture tab is off.
+    const aiToggle = ([id, title, hint, forCapture]) => toggle("ai-" + id, title, hint, s.features[id], (v) => save({ features: { [id]: v } }), masterOff || (forCapture && !CAPTURE_ON));
     const using = masterOff ? "Off, so everything below is switched off." : st.env_key ? "On, using the ANTHROPIC_API_KEY variable" : st.in_use === "api" ? "On, using your saved API key"
       : st.in_use === "cli" ? "On, using your Claude sign-in" : "Off. Sign in or add an API key to turn on the ✨ buttons";
     clearInterval(SETTINGS_TIMER);
@@ -802,8 +816,11 @@ async function drawSettings() {
       el("section", {}, el("h2", {}, "Appearance"),
         el("p", { class: "muted" }, "Saved in this browser."),
         el("div", { class: "airow", style: "gap:18px" }, radio("light", "Light"), radio("dark", "Dark"), radio("system", "Match system"))),
+      el("section", {}, el("h2", {}, "Capture"),
+        el("p", { class: "muted" }, "Still being worked on, so it's off until you turn it on. Saved in this browser."),
+        toggle("exp-capture", "Show the Capture tab", "The tab installs the fix for a game, records what its options change, and drafts the game's settings from that.", CAPTURE_ON, (v) => { setCaptureOn(v); draw(); })),
       el("section", {}, el("h2", {}, "AI"),
-        el("p", { class: "muted" }, "Lets the ✨ buttons fill in text and EAX details, which you should check against a source. To do that it sends Anthropic the game's name and, when drafting from captures, the file names, section names, keys and values of the changes you captured. Your home folder, user name and long numbers are hidden first."),
+        el("p", { class: "muted" }, "Lets the AI fill in text and EAX details (check them against a source) and spot captured changes that look unrelated to sound. To do that it sends Anthropic the game's name and, when drafting from captures, the file names, section names, keys and values of the changes you captured. Your home folder, user name and long numbers are hidden first."),
         toggle("ai-enabled", "Use AI", "Turn this off to hide every ✨ button and send nothing to Anthropic.", s.enabled, (v) => save({ enabled: v })),
         el("div", { class: "aistatus " + (inUse && !masterOff ? "on" : "off"), style: "margin-top:12px" }, el("span", { class: "dot" }), using),
         card("Claude sign-in", inUse === "cli", "Uses your Claude subscription, through the claude command's own sign-in.",
@@ -819,12 +836,12 @@ async function drawSettings() {
           el("div", { class: "airow" }, keyInput, el("button", { type: "button", class: "btn", onclick: run(async () => {
             const r = await api("/api/ai/key", "POST", { key: keyInput.value }); toast(r.checked ? "Key saved ✓" : r.note, 8000);
           }) }, st.saved_key ? "Replace key" : "Save and check"))),
-        el("h2", {}, "Drafting"),
-        el("p", { class: "muted" }, "Choose which ✨ buttons show."),
-        ...AI_FEATURES.map(([id, title, hint]) => toggle("ai-" + id, title, hint, s.features[id], (v) => save({ features: { [id]: v } }), masterOff))),
-      el("section", {}, el("h2", {}, "Experimental"),
-        el("p", { class: "muted" }, "These work on captured changes and often get it wrong. They are off until you turn them on, and anything they change is only a suggestion to check."),
-        ...AI_EXPERIMENTAL.map(([id, title, hint]) => toggle("ai-" + id, title, hint, s.features[id], (v) => save({ features: { [id]: v } }), masterOff))));
+        el("h3", {}, "Drafting"),
+        el("p", { class: "muted" }, "Choose what the AI does for you."),
+        ...AI_FEATURES.map(aiToggle),
+        el("h3", {}, "Experimental"),
+        el("p", { class: "muted" }, "These work on captured changes and often get it wrong, so they're off until you turn them on, and what they produce is only a suggestion to check."),
+        ...AI_EXPERIMENTAL.map(aiToggle)));
   }
   draw();
 }
@@ -962,6 +979,7 @@ function drawCapture() {
 }
 async function captureCurrent() {
   if (!GAME) return toast("Open a game first");
+  if (!CAPTURE_ON) return;
   await ensureLib(); const g = libMatch(GAME);
   if (!g && libMatches(GAME).length > 1) { setSection("capture"); return toast("Installed in both stores: pick which copy to capture", 6000); }
   if (!g) return toast("Not installed in Steam or Heroic (matched by store ID)", 6000);
