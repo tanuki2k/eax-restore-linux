@@ -9,6 +9,10 @@
     "gog": { "id": 1421405135 }
   },
   "eax": { "api": "openal", "versions": ["2.0", "3.0"] },
+  "install": {
+    "alsoft_ini": { "reverb": { "boost": "6" } },
+    "alsoft_tested": true
+  },
   "game_config": {
     "files": {
       "System.ini": { "format": "ini", "locations": ["game_root:GameData/Save/System.ini"] }

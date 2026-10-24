@@ -26,7 +26,8 @@
           "jk2config.cfg": { "s_UseOpenAL": "1" },
           "jk2mpconfig.cfg": { "s_UseOpenAL": "1" }
         },
-        "tested": false
+        "follow_up": "If there's no music when Jedi Outcast starts, open the console with Shift + ~, type snd_restart and press Enter.",
+        "tested": true
       }
     ]
   }

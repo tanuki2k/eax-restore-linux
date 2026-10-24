@@ -26,8 +26,10 @@
           "jaconfig.cfg": { "s_UseOpenAL": "1" },
           "jampconfig.cfg": { "s_UseOpenAL": "1" }
         },
-        "tested": false
+        "follow_up": "If there's no music when Jedi Academy starts, open the console with Shift + ~, type snd_restart and press Enter. Please note: Jedi Knight has no music in its main menu.",
+        "tested": true
       }
     ]
-  }
+  },
+  "notes": "Game's default graphical settings are low. These could be maxed out by updating the game's profile with its higher settings."
 }

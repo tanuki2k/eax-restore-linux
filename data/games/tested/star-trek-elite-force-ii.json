@@ -14,41 +14,48 @@
     },
     "audio_settings": [
       {
+        "title": "Enable EAX 3 sound",
+        "reason": "The game's sound driver is not set to EAX out of the box. This sets the Miles driver to EAX 3 and the sample rate to 44 kHz.",
+        "changes": { "steamuser.cfg": { "s_khz": "44", "s_milesdriver": "eax3" } },
+        "tested": true
+      },
+      {
+        "title": "Enable Stereo speaker mode",
+        "reason": "Sets the in-game setting to stereo sound.",
+        "only_if": { "speakers": "stereo" },
+        "changes": { "steamuser.cfg": { "s_speaker_type": "0" } },
+        "tested": true
+      },
+      {
         "title": "Enable headphone speaker mode",
-        "reason": "The game starts in fullscreen and does not select the headphone speaker mode on its own. This sets windowed mode and speaker type 1, which is the headphone setting.",
+        "reason": "Sets the in-game settings to headphones.",
         "only_if": { "speakers": "headphones" },
-        "changes": { "steamuser.cfg": { "s_speaker_type": "1" } }
+        "changes": { "steamuser.cfg": { "s_speaker_type": "1" } },
+        "tested": true
       },
       {
         "title": "Enable Pro Logic surround",
-        "reason": "The game starts in fullscreen with its speaker type left at the default. This turns on speaker type 2 and sets the game to run in a window.",
+        "reason": "Sets the in-game settings to surround sound.",
         "only_if": { "speakers": "matrix" },
         "changes": { "steamuser.cfg": { "s_speaker_type": "2" } }
       },
       {
         "title": "Enable 4.0 surround sound",
-        "reason": "The game starts with its speaker type set to stereo, so it never plays rear channels. This sets the speaker type to quad (3) for four speakers. It also turns off fullscreen, which is not a sound change.",
+        "reason": "Sets the in-game settings to Quadrophonic.",
         "only_if": { "speakers": "quad" },
         "changes": { "steamuser.cfg": { "s_speaker_type": "3" } }
       },
       {
         "title": "Enable 5.1 surround sound",
-        "reason": "The game's speaker type defaults to a stereo setup. Setting s_speaker_type to 4 makes it send 5.1 audio, which suits a 5.1 speaker system.",
+        "reason": "Sets the in-game settings to 5.1 surround sound.",
         "only_if": { "speakers": "surround51" },
         "changes": { "steamuser.cfg": { "s_speaker_type": "4" } }
       },
       {
         "title": "Enable 7.1 surround sound",
-        "reason": "The game starts in fullscreen and does not use 7.1 surround output on its own. This sets the speaker type to 7.1 and turns fullscreen off.",
+        "reason": "Sets the in-game settings to 7.1 surround sound.",
         "only_if": { "speakers": "surround71" },
         "changes": { "steamuser.cfg": { "s_speaker_type": "5" } }
-      }
-    ],
-    "optional_settings": [
-      {
-        "title": "Enable EAX 3 sound",
-        "reason": "The game's sound driver is not set to EAX out of the box. This sets the Miles driver to EAX 3 and the sample rate to 44 kHz.",
-        "changes": { "steamuser.cfg": { "s_khz": "44", "s_milesdriver": "eax3" } }
       }
     ]
   }

@@ -29,6 +29,13 @@
         "tested": true
       },
       {
+        "title": "Enable stereo sound",
+        "reason": "Sets the in-game settings to stereo sound.",
+        "only_if": { "speakers": "stereo" },
+        "changes": { "nwn.ini": { "Sound Options": { "Speaker Type": "0" } } },
+        "tested": true
+      },
+      {
         "title": "Enable 4.0 surround sound",
         "reason": "Neverwinter Nights ships set to 2 speakers, so the rear speakers of a 4.0 setup get no sound.",
         "only_if": { "speakers": "quad" },
