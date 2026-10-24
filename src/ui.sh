@@ -174,15 +174,19 @@ print_centred_box() {
 # still has to do (the install's "Before you play" follow-ups). Unlike
 # print_centred_box it doesn't reflow or move anything, so lines come
 # already wrapped to 54 columns; colour codes don't count toward that.
+# TITLED_BOX_CENTRE=1 before the call centres each line instead (the DSOAL
+# logging box, which has no headings of its own to line up under).
 print_titled_box() {
     local colour="$1" title="$2"; shift 2
-    local inner=56 line plain pad rule
+    local inner=56 line plain left pad rule
     printf -v rule '%*s' $(( inner - ${#title} - 3 )) ""; rule="${rule// /─}"
     echo -e "${colour}╭─ ${BOLD}${title}${NC}${colour} ${rule}╮${NC}"
     for line in "$@"; do
         plain="$(printf '%b' "$line" | sed -e 's/\x1b\]8;;[^\x07]*\x07//g' -e 's/\x1b\[[0-9;]*m//g')"
-        pad=$(( inner - 2 - ${#plain} )); [ "$pad" -lt 0 ] && pad=0
-        echo -e "${colour}│${NC} ${WHITE}${line}${NC}$(printf '%*s' "$pad" "") ${colour}│${NC}"
+        left=1
+        is_truthy "${TITLED_BOX_CENTRE:-}" && left=$(( (inner - ${#plain}) / 2 ))
+        pad=$(( inner - left - ${#plain} )); [ "$pad" -lt 1 ] && pad=1
+        echo -e "${colour}│${NC}$(printf '%*s' "$left" "")${WHITE}${line}${NC}$(printf '%*s' "$pad" "")${colour}│${NC}"
     done
     printf -v rule '%*s' "$inner" ""; rule="${rule// /─}"
     echo -e "${colour}╰${rule}╯${NC}"

@@ -155,9 +155,31 @@ if [ -n "$DSOAL_LOG_MODE" ]; then
     fi
 
     if [ "$dsoal_log_action" == "add" ]; then
-        print_banner "DSOAL LOGGING TURNED ON"
-        print_paragraph "DSOAL will log to $(tilde_path "$dsoal_log_linux") the next time you start ${GAME_NAME}." \
-            "It's replaced each time the game starts. Run this again to turn it off."
+        # The box doesn't reflow, so the path is split at its slashes: a cut
+        # in the middle of a folder name would look like a different folder.
+        dsoal_log_chunk="" dsoal_log_first=1
+        mapfile -t dsoal_log_box < <(fold -s -w 54 <<< "Start ${GAME_NAME} to make the log. It goes in:" | sed 's/ *$//')
+        dsoal_log_box+=("")
+        IFS='/' read -ra dsoal_log_parts <<< "$(tilde_path "$dsoal_log_linux")"
+        for dsoal_log_part in "${dsoal_log_parts[@]}"; do
+            if [ "$dsoal_log_first" -eq 1 ]; then
+                dsoal_log_chunk="$dsoal_log_part"; dsoal_log_first=0
+            # 53 leaves room for the slash that ends a broken line.
+            elif [ $(( ${#dsoal_log_chunk} + ${#dsoal_log_part} + 1 )) -gt 53 ]; then
+                dsoal_log_box+=("${dsoal_log_chunk}/"); dsoal_log_chunk="$dsoal_log_part"
+            else
+                dsoal_log_chunk+="/$dsoal_log_part"
+            fi
+            while [ ${#dsoal_log_chunk} -gt 54 ]; do
+                dsoal_log_box+=("${dsoal_log_chunk:0:54}"); dsoal_log_chunk="${dsoal_log_chunk:54}"
+            done
+        done
+        [ -n "$dsoal_log_chunk" ] && dsoal_log_box+=("$dsoal_log_chunk")
+        dsoal_log_box+=("")
+        mapfile -t -O "${#dsoal_log_box[@]}" dsoal_log_box < <(fold -s -w 54 \
+            <<< "Each time the game starts, it replaces the log. To turn logging off, choose Tools → DSOAL logging again." | sed 's/ *$//')
+        echo ""
+        TITLED_BOX_CENTRE=1 print_titled_box "$YELLOW" "DSOAL logging turned on" "${dsoal_log_box[@]}"
     else
         print_banner "DSOAL LOGGING TURNED OFF"
         if [ -f "$dsoal_log_linux" ]; then
