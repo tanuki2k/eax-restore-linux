@@ -26,7 +26,7 @@
           "jaconfig.cfg": { "s_UseOpenAL": "1" },
           "jampconfig.cfg": { "s_UseOpenAL": "1" }
         },
-        "follow_up": "If there's no music when Jedi Academy starts, open the console with Shift + ~, type snd_restart and press Enter. Please note: Jedi Knight has no music in its main menu.",
+        "follow_up": "If there's no music when Jedi Academy starts, open the console with Shift + ~, type snd_restart and press Enter. Please note: Jedi Academy has no music in its main menu.",
         "tested": true
       }
     ]

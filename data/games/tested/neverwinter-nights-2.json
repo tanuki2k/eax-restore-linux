@@ -33,7 +33,7 @@
         "tested": true
       },
       {
-        "title": "Enable stereo sound.",
+        "title": "Enable stereo sound",
         "reason": "Enables stereo sound in the in-game settings.",
         "only_if": { "speakers": "stereo" },
         "changes": { "nwn2.ini": { "Sound Options": { "Speaker Type": "3" } } },
