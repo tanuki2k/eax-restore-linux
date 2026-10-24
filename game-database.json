@@ -2418,6 +2418,7 @@
       "name": "Project Eden",
       "description": "Project Eden is a singleplayer and multiplayer third-person squad action-adventure game.",
       "released": "2001-10-12",
+      "exe": "Eden.exe",
       "stores": {
         "gog": {
           "id": 1207659235
@@ -2429,7 +2430,7 @@
           "1.0"
         ]
       },
-      "tested": false
+      "notes": "Project Eden's profile currently lacks Game settings to automatically enable EAX and or hardware sound."
     },
     {
       "id": "psychonauts",
