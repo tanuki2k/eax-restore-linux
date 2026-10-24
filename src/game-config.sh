@@ -584,12 +584,15 @@ game_setting_titles() {
 # True when the Speaker Configuration answer is one of the listed values:
 # stereo / matrix / surround (any layout) match OUTPUT_MODE, headphones
 # matches the Stereo → Headphones answer (not Auto), and an exact layout
-# (quad, surround51, ...) matches SURROUND_CHANNELS.
+# (quad, surround51, ...) matches SURROUND_CHANNELS. A non-empty
+# <has_headphones> (the entry has its own headphones setting) keeps stereo
+# from also matching Headphones: both usually set the same key.
 speakers_match() {
     local v
     local -a wanted
     IFS=',' read -ra wanted <<< "$1"
     for v in "${wanted[@]}"; do
+        if [ "$v" == "stereo" ] && [ -n "${2:-}" ] && [ "${STEREO_MODE:-}" == "headphones" ]; then continue; fi
         [ "$v" == "$OUTPUT_MODE" ] && return 0
         [ "$v" == "headphones" ] && [ "$OUTPUT_MODE" == "stereo" ] && [ "${STEREO_MODE:-}" == "headphones" ] && return 0
         [ "$OUTPUT_MODE" == "surround" ] && [ "$v" == "${SURROUND_CHANNELS:-}" ] && return 0
@@ -1120,6 +1123,10 @@ game_settings_step() {
     local row
     while IFS= read -r row; do [ -n "$row" ] && rows+=("$row"); done < <(load_game_config_rows "$KG_ID" "$KG_STORE")
     [ ${#rows[@]} -eq 0 ] && return
+    local has_headphones=""
+    for row in "${rows[@]}"; do
+        [[ ",$(cut -d $'\x1f' -f 6 <<< "$row")," == *",headphones,"* ]] && has_headphones=1 && break
+    done
 
     # Per-fix state, keyed "category:number" in database order.
     local -a fix_order=()
@@ -1143,7 +1150,7 @@ game_settings_step() {
             fix_order+=("$id"); fix_title[$id]="$title"; fix_reason[$id]="$reason"; fix_follow[$id]="$follow"
             fix_status[$id]="already"; fix_rows[$id]=""
             if [ -n "$stores" ] && [[ ",$stores," != *",$KG_STORE,"* ]]; then fix_status[$id]="skip"; fi
-            if [ -n "$speakers" ] && ! speakers_match "$speakers"; then fix_status[$id]="skip"; fi
+            if [ -n "$speakers" ] && ! speakers_match "$speakers" "$has_headphones"; then fix_status[$id]="skip"; fi
             [ -n "${GAME_SETTINGS_SPEAKERS_ONLY:-}" ] && [ -z "$speakers" ] && fix_status[$id]="skip"
             [ -n "${GAME_SETTINGS_EDIT_OPTIONAL:-}" ] && [ "$cat" != "optional" ] && fix_status[$id]="skip"
         fi
@@ -1662,6 +1669,7 @@ print_game_settings_summary() {
     [ ${#GAME_SETTINGS_APPLIED[@]} -gt 0 ] || [ ${#GAME_SETTINGS_MISSING[@]} -gt 0 ] \
         || [ ${#GAME_SETTINGS_DECLINED[@]} -gt 0 ] || [ ${#GAME_SETTINGS_ABSENT[@]} -gt 0 ] || return
     local title entry fu t files
+    local -a box=()
     # One line per setting: a tick if it's in place, a cross if not, with a
     # short reason only when the player didn't choose to skip it.
     _summary_skipped() {
@@ -1669,16 +1677,17 @@ print_game_settings_summary() {
     }
     print_result "${BOLD}Game settings:" "$YELLOW"
     for title in "${GAME_SETTINGS_APPLIED[@]}"; do
-        fu=""
+        echo -e " ${GREEN}✓${NC} ${WHITE}${title}${NC}"
+        # Follow-ups go in a box of their own after the list: at the end of
+        # a long run, a line of text under a tick is easy to scroll past.
         for entry in "${GAME_SETTINGS_FOLLOW_UPS[@]}"; do
             IFS=$'\x1f' read -r t fu <<< "$entry"
-            [ "$t" == "$title" ] && break
-            fu=""
+            [ "$t" == "$title" ] || continue
+            [ ${#box[@]} -gt 0 ] && box+=("")
+            box+=("${BOLD}${title}")
+            mapfile -t -O "${#box[@]}" box < <(printf '%s\n' "$fu" | fold -s -w 52 | sed 's/^/  /; s/ *$//')
+            break
         done
-        echo -e " ${GREEN}✓${NC} ${WHITE}${title}${NC}"
-        # Under the title rather than after it: a follow-up can run to a few
-        # sentences, so it's wrapped and indented like a fix's reason.
-        [ -n "$fu" ] && echo -e "${WHITE}$(printf '%s' "$fu" | fold -s -w 74 | sed 's/^/    /; s/ *$//')${NC}"
     done
     for entry in "${GAME_SETTINGS_DECLINED[@]}"; do
         IFS=$'\x1f' read -r title files <<< "$entry"
@@ -1693,6 +1702,10 @@ print_game_settings_summary() {
         _summary_skipped "$title" "${GAME_NAME} has no ${files}"
     done
     unset -f _summary_skipped
+    if [ ${#box[@]} -gt 0 ]; then
+        echo ""
+        print_titled_box "$YELLOW" "Before you play" "${box[@]}"
+    fi
 }
 
 # Usage: choose_game_settings_to_revert <step_number>

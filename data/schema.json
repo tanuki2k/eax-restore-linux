@@ -314,7 +314,7 @@
               "items": { "enum": ["steam", "gog"] }
             },
             "speakers": {
-              "description": "Offer only for these answers to the Speaker Configuration question:\nstereo\nheadphones (Stereo, then Headphones)\nmatrix\nsurround (any surround layout)\nor one exact layout: quad, surround51, surround61 or surround71.\nA list matches any of its values.",
+              "description": "Offer only for these answers to the Speaker Configuration question:\nstereo (also covers headphones, unless the game has its own headphones setting)\nheadphones (Stereo, then Headphones)\nmatrix\nsurround (any surround layout)\nor one exact layout: quad, surround51, surround61 or surround71.\nA list matches any of its values.",
               "anyOf": [
                 { "$ref": "#/$defs/speaker_choice" },
                 { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/speaker_choice" } }

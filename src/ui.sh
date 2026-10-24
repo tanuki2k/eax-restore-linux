@@ -168,6 +168,26 @@ print_centred_box() {
     for line in "${wide[@]}"; do echo -e "${colour}${line}${NC}"; done
 }
 
+# Usage: print_titled_box <colour> "Title" "line" ["line" ...]
+# A rounded-corner frame as wide as the dividers with the title set in its
+# top edge, lines left-aligned in WHITE: a callout for something the player
+# still has to do (the install's "Before you play" follow-ups). Unlike
+# print_centred_box it doesn't reflow or move anything, so lines come
+# already wrapped to 54 columns; colour codes don't count toward that.
+print_titled_box() {
+    local colour="$1" title="$2"; shift 2
+    local inner=56 line plain pad rule
+    printf -v rule '%*s' $(( inner - ${#title} - 3 )) ""; rule="${rule// /─}"
+    echo -e "${colour}╭─ ${BOLD}${title}${NC}${colour} ${rule}╮${NC}"
+    for line in "$@"; do
+        plain="$(printf '%b' "$line" | sed -e 's/\x1b\]8;;[^\x07]*\x07//g' -e 's/\x1b\[[0-9;]*m//g')"
+        pad=$(( inner - 2 - ${#plain} )); [ "$pad" -lt 0 ] && pad=0
+        echo -e "${colour}│${NC} ${WHITE}${line}${NC}$(printf '%*s' "$pad" "") ${colour}│${NC}"
+    done
+    printf -v rule '%*s' "$inner" ""; rule="${rule// /─}"
+    echo -e "${colour}╰${rule}╯${NC}"
+}
+
 # Usage: print_step N "Label"
 # Emits the numbered step header ("2. Launcher Identification") used to
 # separate the sub-stages of an install phase. Same blank/divider/

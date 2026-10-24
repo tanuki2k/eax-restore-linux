@@ -106,15 +106,17 @@ if [ -n "$SETTINGS_TOOL_MODE" ]; then
         # switching to headphones). Found by title among the entry's
         # speaker-dependent settings.
         declare -A settings_speaker_rule=()
+        settings_has_headphones=""
         if current_profile; then
             while IFS= read -r row; do
                 mapfile -t -d $'\x1f' settings_f < <(printf '%s' "$row")
                 [ -n "${settings_f[5]}" ] && settings_speaker_rule[${settings_f[2]}]="${settings_f[5]}"
+                [[ ",${settings_f[5]}," == *",headphones,"* ]] && settings_has_headphones=1
             done < <(load_game_config_rows "$KG_ID" "$KG_STORE")
         fi
         for settings_title in "${settings_titles[@]}"; do
             [ -n "${settings_speaker_rule[$settings_title]+x}" ] || continue
-            speakers_match "${settings_speaker_rule[$settings_title]}" && continue
+            speakers_match "${settings_speaker_rule[$settings_title]}" "$settings_has_headphones" && continue
             GAME_SETTINGS_REVERT_GROUPS+=("${settings_cat[$settings_title]}"$'\x1f'"${settings_title}"$'\x1f'"${settings_lines[$settings_title]}")
         done
         # The settings for the new layout first (the step prints its own

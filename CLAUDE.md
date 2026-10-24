@@ -367,6 +367,11 @@ for a new call site.
 - `print_final_step N "Label:" "text"` — one numbered line of INSTALLATION COMPLETE's
   "Final Steps to activate EAX": bold yellow label, text wrapped at 76 columns with
   the continuation lined up under the label.
+- `print_titled_box <colour> "Title" "line" ...` — a rounded frame as wide as the
+  dividers with the title in its top edge and the lines left-aligned (already
+  wrapped to 54 columns): a callout for something the player still has to do, e.g.
+  the install's "Before you play" box of settings' follow-ups. `print_centred_box`
+  is its centred counterpart (the end-of-run log box).
 - `print_task "text"` — the `\n${CYAN}STATUS: text...${NC}` header announcing a chunk
   of work about to run (a scan, a download, a deploy step). Own leading blank line;
   the trailing `...` is added by the helper, so pass just the phrase. A capturing
