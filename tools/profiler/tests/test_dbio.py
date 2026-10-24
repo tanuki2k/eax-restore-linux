@@ -31,6 +31,17 @@ class BuildState(unittest.TestCase):
         reordered = {"eax": {"api": "openal"}, "stores": {"steam": {"id": 1}}, "name": "T"}
         self.assertEqual(dbio.build_state("tested", "t", reordered, self.built())["state"], "current")
 
+    def test_setting_counts(self):
+        s = lambda tested=None: {"title": "t", "reason": "r", "changes": {}, **({"tested": tested} if tested is not None else {})}
+        self.assertEqual(dbio.setting_counts({"name": "T"}), {"settings": 0, "unverified": 0})
+        self.assertEqual(dbio.setting_counts({"game_config": {"files": {"a": {}}}}), {"settings": 0, "unverified": 0})
+        g = {"game_config": {"audio_settings": [s(True), s()], "optional_settings": [s(False)]}}
+        self.assertEqual(dbio.setting_counts(g), {"settings": 3, "unverified": 2})
+        g["install"] = {"alsoft_ini": {"reverb": {"boost": "6"}}}
+        self.assertEqual(dbio.setting_counts(g)["unverified"], 3)
+        g["install"]["alsoft_tested"] = True
+        self.assertEqual(dbio.setting_counts(g)["unverified"], 2)
+
     def test_every_real_game_has_a_state(self):
         for g in dbio.list_games():
             self.assertIn(g["build"]["state"], ("current", "changed", "new", "draft"))

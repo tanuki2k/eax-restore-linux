@@ -49,6 +49,16 @@ def build_state(folder, gid, game, built):
     return {"state": "changed", "fields": sorted(k for k in set(want) | set(have) if want.get(k) != have.get(k))}
 
 
+def setting_counts(g):
+    """How many game settings an entry has and how many still need verifying, for the list filter.
+    alsoft.ini values are verified as one, so unverified ones count as one more."""
+    gc, inst = g.get("game_config") or {}, g.get("install") or {}
+    settings = gc.get("audio_settings", []) + gc.get("optional_settings", [])
+    return {"settings": len(settings),
+            "unverified": sum(not s.get("tested") for s in settings)
+                          + bool(inst.get("alsoft_ini") and not inst.get("alsoft_tested"))}
+
+
 def list_games():
     out, built, seen = [], built_entries(), set()
     for folder, rel in FOLDERS.items():
@@ -68,6 +78,7 @@ def list_games():
                     "steam": stores.get("steam", {}).get("id"),
                     "gog": stores.get("gog", {}).get("id"),
                     "has_config": bool(g.get("game_config")),
+                    **setting_counts(g),
                     "build": build_state(folder, fn[:-5], g, built),
                 })
     return out

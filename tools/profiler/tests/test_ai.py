@@ -147,22 +147,22 @@ class Switches(Base):
     def test_defaults(self):
         s = ai.settings()
         self.assertTrue(s["enabled"])
-        self.assertEqual([k for k, v in s["features"].items() if not v], ["suggest", "capture_setting"])
+        self.assertFalse(any(s["features"].values()))
 
     def test_master_off_turns_everything_off(self):
-        ai.save_settings({"enabled": False})
+        ai.save_settings({"enabled": False, "features": {"notes": True}})
         self.assertIsNone(ai.available())
         with self.assertRaises(ai.AIError):
             ai.ask("notes", {})
         self.assertEqual(self.asked, [])
 
     def test_one_feature_off_blocks_only_that_task(self):
-        ai.save_settings({"features": {"notes": False}})
+        ai.save_settings({"features": {"description": True}})
         with self.assertRaises(ai.AIError):
             ai.ask("notes", {})
         self.assertEqual(ai.ask("description", {}), {"notes": "x"})
 
-    def test_experimental_tasks_need_turning_on(self):
+    def test_tasks_need_turning_on(self):
         with self.assertRaises(ai.AIError):
             ai.ask("capture_setting", {})
         ai.save_settings({"features": {"capture_setting": True}})
@@ -187,8 +187,8 @@ class Switches(Base):
         import classify
         gc = {"audio_settings": [{"title": "t", "reason": "r", "changes": []}]}
         self.assertIsNone(classify.ai_pass("G", gc, []))
-        self.assertEqual(len(self.asked), 1)  # only classify; the capture titles start off
-        ai.save_settings({"features": {"capture_setting": True, "setting": False}})
+        self.assertEqual(self.asked, [])  # every pass starts off
+        ai.save_settings({"features": {"classify": True, "capture_setting": True, "setting": False}})
         self.asked.clear()
         classify.ai_pass("G", gc, [])
         self.assertEqual(len(self.asked), 2)  # the profile page's switch doesn't gate the capture titles

@@ -93,9 +93,9 @@ def api_key():
     return os.environ.get("ANTHROPIC_API_KEY") or _config().get("anthropic_api_key") or ""
 
 
-# One switch per task. suggest and the capture draft's titles are the weakest drafts, so they start off.
-FEATURE_DEFAULTS = {"description": True, "notes": True, "setting": True, "research": True,
-                    "classify": True, "suggest": False, "capture_setting": False}
+# One switch per task, all off until the player turns them on: nothing goes to Anthropic unasked.
+FEATURE_DEFAULTS = {"description": False, "notes": False, "setting": False, "research": False,
+                    "classify": False, "suggest": False, "capture_setting": False}
 
 
 def settings():

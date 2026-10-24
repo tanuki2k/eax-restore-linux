@@ -170,6 +170,7 @@
       "enum": ["stereo", "headphones", "surround", "matrix", "quad", "surround51", "surround61", "surround71"]
     },
     "api": {
+      "description": "How the game plays its 3D sound:\ndirectsound3d: through DirectSound3D, so the install adds DSOAL on top of OpenAL Soft.\nopenal: through OpenAL, so the install adds OpenAL Soft on its own.",
       "enum": ["directsound3d", "openal"]
     },
     "store": {
@@ -191,7 +192,7 @@
           "default": "storefront_verified"
         },
         "api": {
-          "description": "The audio API for this store's build only, instead of the game's usual one.",
+          "description": "Set only when this store's build uses a different audio API from the one on the EAX card (Overview tab).",
           "$ref": "#/$defs/api"
         },
         "beta_branch": {

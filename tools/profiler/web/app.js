@@ -16,13 +16,13 @@ const BASE_HELP = {
 const LABELS = {
   id: "Store ID", id_source: "Where the ID came from", api: "Audio API", exe: "Executable", store_details: "Store details",
   extra_exe_folders: "Extra exe folders", companion_apps: "Companion apps", beta_branch: "Beta branch", fix_in_place: "Fix works in place",
-  alsoft_ini: "alsoft.ini settings", only_if: "Only offer when…", follow_up: "Follow-up for the player", tested: "Verified", alsoft_tested: "alsoft.ini values verified", eax: "EAX",
+  alsoft_ini: "alsoft.ini settings", only_if: "Only offer when…", follow_up: "Follow-up for the player", eax: "EAX",
   default_reverb: "Default reverb", "default-reverb": "Default reverb", versions: "EAX versions", tweaks: "Compatibility tweaks",
 };
 const SECTIONS = [
-  ["overview", "Overview", ["name", "description", "released", "exe", "sources", "notes"]],
+  ["overview", "Overview", ["name", "description", "released", "exe", "eax", "sources", "notes"]],
   ["stores", "Stores", ["stores"]],
-  ["audio", "Audio & install", ["eax", "install"]],
+  ["audio", "DSOAL settings", ["install"]],
   ["settings", "Game settings", ["game_config"]],
   ["capture", "Capture", []],
 ];
@@ -273,7 +273,8 @@ function node(schema, parent, key, path, label) {
 }
 function fieldNode(schema, parent, key, path, label) {
   const s = resolve(schema) || {};
-  const lab = label ?? human(key), help = s.description;
+  // A description written beside a $ref is about this field, so it wins over the shared definition's.
+  const lab = label ?? human(key), help = (schema && schema.description) ?? s.description;
   const set = (v) => { if (isEmpty(v)) delete parent[key]; else parent[key] = v; changed(); };
   const cur = parent[key];
   const F = (control, opts = {}) => field(lab, control, { help, ...opts });
@@ -351,38 +352,59 @@ function listEditor(parent, key, rowFn, blank, addLabel = "Add") {
   };
   draw(); return box;
 }
+// The script hides an unverified setting from players unless they opt in, so its state sits in the
+// card's header as a button rather than as one more checkbox in the body.
+const VERIFIED_TIP = "Verified means someone has checked this on a real install. Until then the script hides it from players unless they choose to see unverified settings. Click to change.";
+function verifiedChip(obj, key, onToggle) {
+  const b = el("button", { type: "button", class: "vchip", title: VERIFIED_TIP, onclick: (e) => {
+    e.preventDefault(); e.stopPropagation();
+    if (obj[key]) delete obj[key]; else obj[key] = true;
+    changed(); onToggle();
+  } });
+  b.update = () => { b.classList.toggle("on", !!obj[key]); b.textContent = obj[key] ? "✓ Verified" : "Not verified"; };
+  b.update(); return b;
+}
+// What a verified setting changes was checked; editing it means it hasn't been any more.
+function dropVerified(obj, key) {
+  if (!obj[key]) return false;
+  delete obj[key]; toast("Marked not verified, since what it changes is different now.", 5000); return true;
+}
 const SET_OPEN = new WeakMap();
 // A setting's fields in two columns: the text on the left, when it applies and what it changes on the right
 // for the short ones; the changes table gets the whole width underneath.
 function setBody(fields) {
   const by = (k) => fields.find((f) => f.dataset.path.endsWith("." + k));
-  const left = ["title", "reason", "follow_up"].map(by).filter(Boolean), right = ["only_if", "tested"].map(by).filter(Boolean);
+  const left = ["title", "reason", "follow_up"].map(by).filter(Boolean), right = ["only_if"].map(by).filter(Boolean);
   const wide = by("changes"), rest = fields.filter((f) => ![...left, ...right, wide].includes(f));
   for (const f of [...left, ...right, ...rest]) f.classList.remove("wide");
   return [el("div", { class: "setcols" }, el("div", { class: "stack" }, left), el("div", { class: "stack" }, right, rest)), wide ? grid([wide]) : null];
 }
 function settingSummaryCount(o) { return Object.values(o.changes || {}).reduce((n, f) => n + Object.values(f).reduce((m, v) => m + (v && typeof v === "object" ? Object.keys(v).length : 1), 0), 0); }
-function cards(parent, key, itemSchema, path) {
+function cards(parent, key, itemSchema, path, onVerify = () => {}) {
   const box = el("div");
   const arr = () => (parent[key] = parent[key] || []);
+  const hasTested = !!itemSchema.properties.tested;
   const draw = () => {
-    const list = arr();
+    const list = arr(); onVerify();
     box.replaceChildren(...(list.length ? list.map((o, i) => {
       const stitle = el("span", { class: "stitle" }), badge = el("span", { class: "pill" }), cond = el("span", { class: "pill" });
+      let d;
+      const chip = hasTested ? verifiedChip(o, "tested", () => { refresh(); onVerify(); }) : null;
       const refresh = () => {
+        if (chip) chip.update();
         stitle.textContent = o.title || "Untitled setting"; stitle.classList.toggle("untitled", !o.title);
         const n = settingSummaryCount(o); badge.textContent = `${n} change${n === 1 ? "" : "s"}`;
         const c = o.only_if ? [].concat(o.only_if.stores || [], o.only_if.speakers || []).join(", ") : ""; cond.textContent = c ? "only if " + c : ""; cond.hidden = !c;
       };
-      const fields = Object.entries(itemSchema.properties).map(([k, sub]) => {
+      const fields = Object.entries(itemSchema.properties).filter(([k]) => !(hasTested && k === "tested")).map(([k, sub]) => {
         const n = node(sub, o, k, `${path}[${i}].${k}`);
-        if (k === "title") { n.classList.add("wide"); n.querySelector("input").addEventListener("input", refresh); n.querySelector(".grow").after(aiButton("setting", () => ({ game: GAME.name, changes: o.changes, kind: key }), (r) => { o.title = (r.title || "").slice(0, 60); o.reason = r.reason; draw(); })); }
+        if (k === "title") { n.classList.add("wide"); n.querySelector("input").addEventListener("input", refresh); n.querySelector(".grow").after(...[aiButton("setting", () => ({ game: GAME.name, changes: o.changes, kind: key }), (r) => { o.title = (r.title || "").slice(0, 60); o.reason = r.reason; draw(); })].filter(Boolean)); }
         return n;
       });
       // Open state follows the setting object, not its position, so moving or redrawing keeps it.
       if (!SET_OPEN.has(o)) { SET_OPEN.set(o, list.length <= 2 || !o.title); }
-      const d = el("details", { class: "setcard", open: SET_OPEN.get(o) },
-        el("summary", {}, stitle, cond, badge,
+      d = el("details", { class: "setcard", open: SET_OPEN.get(o) },
+        el("summary", {}, stitle, cond, badge, chip,
           el("span", { class: "sacts" },
             el("button", { type: "button", class: "icon rv", title: "Undo this setting's changes", "aria-label": "Undo changes", onclick: (e) => { e.preventDefault(); revertPath(d.dataset.path); } }, "↺"),
             el("button", { type: "button", class: "icon", "aria-label": "Move up", disabled: i === 0, title: "Move this setting up", onclick: (e) => { e.preventDefault(); [list[i - 1], list[i]] = [list[i], list[i - 1]]; changed(); draw(); } }, "↑"),
@@ -392,7 +414,11 @@ function cards(parent, key, itemSchema, path) {
         el("div", { class: "setbody" }, setBody(fields)));
       d.addEventListener("toggle", () => SET_OPEN.set(o, d.open));
       d.dataset.path = `${path}[${i}]`;
-      d.addEventListener("input", refresh); d.addEventListener("change", refresh); refresh();
+      const edited = (e) => {
+        if (hasTested && e.target.closest('[data-path$=".changes"], [data-path$=".only_if"]') && dropVerified(o, "tested")) { changed(); onVerify(); }
+        refresh();
+      };
+      d.addEventListener("input", edited); d.addEventListener("change", edited); refresh();
       return d;
     }) : [el("div", { class: "empty-note" }, CAPTURE_ON ? "None yet. Capture the game to draft some, or add one by hand." : "None yet. Add one by hand.")]),
       el("div", { class: "addrow" }, el("button", { type: "button", class: "btn", onclick: () => { arr().push({ title: "", reason: "", changes: {} }); changed(); draw(); } }, "+ Add a setting")));
@@ -486,11 +512,14 @@ function paneOverview() {
   const src = node(P().sources, GAME, "sources", "sources");
   // The card already names these two single-field cards, so the field's own label and ? would repeat it.
   for (const f of [n, src]) f.classList.add("solo");
+  GAME.eax = GAME.eax || {};
+  const ep = P().eax.properties;
   return [cols(
     card("Basics", "The name, a one-line description and the details used to recognise the game's install.",
       grid([node(P().name, GAME, "name", "name"), hint(rel, "A year, a year and month, or a full date."), hint(exe, "Just the file name, as in Game.exe."), hint(d, "One sentence that starts with the game's name.")])),
-    card("Sources", P().sources.description, src),
-  ), card("Notes", P().notes.description, hint(n, "Anything else a player should know. Keep it short."))];
+    card("EAX", P().eax.description, grid(Object.entries(ep).map(([k, sub]) => node(sub, GAME.eax, k, `eax.${k}`)))),
+  ), card("Notes", P().notes.description, hint(n, "Anything else a player should know. Keep it short.")),
+    card("Sources", P().sources.description, src)];
 }
 function paneStores() {
   GAME.stores = GAME.stores || {};
@@ -506,12 +535,18 @@ function paneStores() {
   }))];
 }
 function paneAudio() {
-  GAME.eax = GAME.eax || {}; GAME.install = GAME.install || {};
-  const ep = P().eax.properties, ip = P().install.properties;
-  return [cols(
-    card("EAX", P().eax.description, grid(Object.entries(ep).map(([k, sub]) => node(sub, GAME.eax, k, `eax.${k}`)))),
-    card("Install options", P().install.description, grid(Object.entries(ip).map(([k, sub]) => node(sub, GAME.install, k, `install.${k}`)))),
-  )];
+  GAME.install = GAME.install || {};
+  const ip = P().install.properties, f = (k) => node(ip[k], GAME.install, k, `install.${k}`);
+  const alsoft = f("alsoft_ini");
+  alsoft.classList.add("solo"); // the card already names it
+  const ac = card("alsoft.ini settings", ip.alsoft_ini.description, grid([alsoft]));
+  const hasValues = () => !isEmpty(prune(GAME.install.alsoft_ini || {}));
+  const chip = verifiedChip(GAME.install, "alsoft_tested", () => show());
+  const show = () => { chip.update(); chip.hidden = !hasValues(); };
+  ac.querySelector("header").append(el("span", { class: "sp" }), chip); show();
+  const edited = () => { if (dropVerified(GAME.install, "alsoft_tested")) changed(); show(); };
+  alsoft.addEventListener("input", edited); alsoft.addEventListener("change", edited);
+  return [cols(card("Install options", P().install.description, grid([f("tweaks")])), ac)];
 }
 function paneSettings() {
   GAME.game_config = GAME.game_config || {};
@@ -519,10 +554,13 @@ function paneSettings() {
   return [
     blockHead("Config files", "The game's own config files that settings can change, and where to find each one.", Object.keys(gc.files || {}).length),
     fileCards(gc, "files", gp.files.additionalProperties, "game_config.files"),
-    blockHead("Audio settings", gp.audio_settings.description, n(gc.audio_settings)),
-    cards(gc, "audio_settings", resolve(gp.audio_settings.items), "game_config.audio_settings"),
-    blockHead("Optional settings", gp.optional_settings.description, n(gc.optional_settings)),
-    cards(gc, "optional_settings", resolve(gp.optional_settings.items), "game_config.optional_settings"),
+    ...["audio_settings", "optional_settings"].flatMap((k) => {
+      const head = blockHead(k === "audio_settings" ? "Audio settings" : "Optional settings", gp[k].description, n(gc[k]));
+      const pill = el("span", { class: "pill warn", title: "Settings the script hides from players until someone verifies them" });
+      head.querySelector(".sp").before(pill);
+      const count = () => { const u = (gc[k] || []).filter((x) => !x.tested).length; pill.textContent = `${u} not verified`; pill.hidden = !u; };
+      return [head, cards(gc, k, resolve(gp[k].items), `game_config.${k}`, count)];
+    }),
   ];
 }
 function renderPane() {
@@ -712,19 +750,36 @@ function drawRebuild() {
 }
 async function loadList() {
   const j = await api("/api/games"); GAMES = j.games; STALE = j.stale || []; AI = j.ai; AIF = j.ai_features || {};
-  drawList(); drawRebuild();
+  drawShow(); drawList(); drawRebuild();
   if (GAME && CUR) drawBuildBadge();
 }
 const OPEN = { untested: true, tested: true, drafts: false };
+// The list filter, for finding games that still need work; per browser like the theme.
+const SHOW_KEY = "eax-profiler-show";
+const SHOWS = [
+  ["all", "All games", () => true],
+  ["nosettings", "No game settings", (x) => !x.settings],
+  ["unverified", "Not all verified", (x) => x.unverified > 0],
+];
+let SHOW = (() => { try { const v = localStorage.getItem(SHOW_KEY); return SHOWS.some(([k]) => k === v) ? v : "all"; } catch { return "all"; } })();
+function drawShow() {
+  $("#show").replaceChildren(...SHOWS.map(([k, label, f]) => el("option", { value: k, selected: k === SHOW }, `${label} (${GAMES.filter(f).length})`)));
+}
+$("#show").onchange = (e) => {
+  SHOW = e.target.value;
+  try { if (SHOW === "all") localStorage.removeItem(SHOW_KEY); else localStorage.setItem(SHOW_KEY, SHOW); } catch { /* private window: applies for this tab only */ }
+  drawList();
+};
 function drawList() {
   const q = $("#filter").value.toLowerCase(), box = $("#list"); box.replaceChildren();
+  const shown = SHOWS.find(([k]) => k === SHOW)[2], narrowed = q || SHOW !== "all";
   for (const folder of ["untested", "tested", "drafts"]) {
-    const g = GAMES.filter((x) => x.folder === folder && (x.name + x.id).toLowerCase().includes(q));
+    const g = GAMES.filter((x) => x.folder === folder && (x.name + x.id).toLowerCase().includes(q) && shown(x));
     if (!g.length) continue;
-    const d = el("details", { open: q ? true : OPEN[folder], ontoggle: (e) => { if (!q) OPEN[folder] = e.target.open; } },
+    const d = el("details", { open: narrowed ? true : OPEN[folder], ontoggle: (e) => { if (!narrowed) OPEN[folder] = e.target.open; } },
       el("summary", {}, el("span", { class: "dot " + folder }), folder, el("span", { class: "cnt" }, g.length)),
       ...g.map((x) => el("div", { class: "item" + (CUR && CUR.id === x.id ? " on" : ""), onclick: () => openGame(x.folder, x.id) }, el("span", { class: "nm" }, x.name), x.build && (x.build.state === "changed" || x.build.state === "new") ? el("span", { class: "tag warn", title: buildTip(x.build) }, x.build.state === "new" ? "not built" : "changed") : null,
-        x.has_config ? el("span", { class: "tag", title: "This game has settings for its own config files" }, "cfg") : null)));
+        x.settings ? el("span", { class: "tag" + (x.unverified ? " warn" : ""), title: `${x.settings} game setting${x.settings === 1 ? "" : "s"}${x.unverified ? `, ${x.unverified} not verified yet` : ", all verified"}` }, "cfg") : null)));
     box.append(d);
   }
   if (!box.children.length) box.append(el("p", { class: "muted" }, "No games match."));
@@ -803,7 +858,7 @@ async function drawSettings() {
     // A capture-only switch is greyed out while the Capture tab is off.
     const aiToggle = ([id, title, hint, forCapture]) => toggle("ai-" + id, title, hint, s.features[id], (v) => save({ features: { [id]: v } }), masterOff || (forCapture && !CAPTURE_ON));
     const using = masterOff ? "Off, so everything below is switched off." : st.env_key ? "On, using the ANTHROPIC_API_KEY variable" : st.in_use === "api" ? "On, using your saved API key"
-      : st.in_use === "cli" ? "On, using your Claude sign-in" : "Off. Sign in or add an API key to turn on the ✨ buttons";
+      : st.in_use === "cli" ? "On, using your Claude sign-in" : "Off. Sign in or add an API key, then turn on the switches you want below";
     clearInterval(SETTINGS_TIMER);
     if (st.login.running) SETTINGS_TIMER = setInterval(refresh, 2000);
     const keyInput = el("input", { type: "password", placeholder: st.saved_key ? "Paste a new key to replace it" : "sk-ant-…", autocomplete: "off", spellcheck: false });
@@ -837,10 +892,10 @@ async function drawSettings() {
             const r = await api("/api/ai/key", "POST", { key: keyInput.value }); toast(r.checked ? "Key saved ✓" : r.note, 8000);
           }) }, st.saved_key ? "Replace key" : "Save and check"))),
         el("h3", {}, "Drafting"),
-        el("p", { class: "muted" }, "Choose what the AI does for you."),
+        el("p", { class: "muted" }, "Choose what the AI does for you. Every switch is off until you turn it on."),
         ...AI_FEATURES.map(aiToggle),
         el("h3", {}, "Experimental"),
-        el("p", { class: "muted" }, "These work on captured changes and often get it wrong, so they're off until you turn them on, and what they produce is only a suggestion to check."),
+        el("p", { class: "muted" }, "These work on captured changes and often get it wrong, so treat what they produce as a suggestion to check."),
         ...AI_EXPERIMENTAL.map(aiToggle)));
   }
   draw();
