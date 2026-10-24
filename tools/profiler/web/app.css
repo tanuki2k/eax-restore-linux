@@ -120,7 +120,7 @@ button.rv{visibility:hidden;min-height:0;height:20px;padding:0 6px}button.rv:hov
 details.unsaved{outline:2px solid #f08c00;outline-offset:2px;border-radius:6px}
 .f.has-err>.errmsg{margin-top:4px;font-size:12px;color:var(--bad)}
 input[aria-invalid],textarea[aria-invalid],select[aria-invalid],input.invalid{border-color:var(--bad);background:var(--bad-weak)}
-.solo>.flabel{font-size:0}.solo>.flabel .btn{font-size:12.5px}.solo>.flabel .qm{display:none}
+.solo>.flabel{font-size:0}.solo>.flabel .btn{font-size:12.5px}.solo>.flabel .rv{font-size:13px}.solo>.flabel .qm{display:none}
 .f.solo textarea{min-height:130px}
 .card .lead{color:var(--mut);margin:-8px 0 14px;font-size:13px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px 18px}
@@ -339,3 +339,7 @@ button.danger:hover:not(:disabled){background:var(--bad);filter:brightness(1.1)}
   #snav .gactions{flex-wrap:wrap;margin:6px 0 8px;width:100%}
   #snav .sp{display:none}
 }
+.loading{display:flex;align-items:center;gap:10px;padding:18px 14px;color:var(--mut)}
+.spinner{width:16px;height:16px;flex:0 0 16px;border:2px solid var(--line2);border-top-color:var(--acc);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spinner{animation-duration:2.4s}}

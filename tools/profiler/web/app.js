@@ -919,7 +919,7 @@ window.addEventListener("beforeunload", (e) => { if (DIRTY) { e.preventDefault()
 const CSTATE = { installed: "Installed", orphan: "Left behind", removed: "Removed", clean: "Prefix only", gone: "Prefix only" };
 const mb = (n) => (n >= 1e9 ? (n / 1e9).toFixed(1) + " GB" : Math.round(n / 1e6) + " MB");
 async function openCleanup(game) {
-  let data = (await api("/api/cleanup")), q = "", view = "installs";
+  let data = null, q = "", view = "installs";
   const mine = (e) => game && game.stores && game.stores[e.store] && game.stores[e.store].id === e.id;
   const search = el("input", { placeholder: "Search…" });
   const sel = el("select", {}, [["installs", "Installed or left behind by the script"], ["all", "Everything, including prefixes only"]].map(([v, t]) => el("option", { value: v }, t)));
@@ -945,10 +945,17 @@ async function openCleanup(game) {
     }) : [el("p", { class: "muted", style: "padding:14px" }, "Nothing to clean up here.")]));
     note.textContent = data.launchers.steam || data.launchers.heroic ? `${data.launchers.steam ? "Steam" : "Heroic"} is running. Removing an install then leaves that launcher's launch-option override in place.` : "";
   };
-  const reload = async () => { data = await api("/api/cleanup"); draw(); };
+  // The scan looks through every game in every library, which takes a while with a big one, so the
+  // dialog opens straight away and shows a spinner until the list arrives.
+  const reload = async () => {
+    search.disabled = sel.disabled = true; note.textContent = "";
+    list.replaceChildren(el("div", { class: "loading" }, el("span", { class: "spinner", "aria-hidden": "true" }), "Looking through your Steam and Heroic games…"));
+    try { data = await api("/api/cleanup"); } catch (x) { list.replaceChildren(el("p", { class: "bad", style: "padding:14px" }, x.message)); return; }
+    search.disabled = sel.disabled = false; draw(); search.focus();
+  };
   search.oninput = () => { q = search.value.toLowerCase(); draw(); };
   sel.onchange = () => { view = sel.value; draw(); };
-  draw(); search.focus();
+  reload();
 
   async function confirmClean(e, action) {
     const plan = await api("/api/cleanup/plan", "POST", { eid: e.eid, action });
