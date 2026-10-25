@@ -9,13 +9,13 @@
       "id": 13240,
       "delisted": true,
       "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.",
-      "patches": "Creative's official 'EAX Library Patch' (uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip) adds full EAX 2.0 reverb and muffling of sounds through walls to the original Deathmatch and Capture the Flag maps — historically mirrored at patches-scrolls.com.\nOldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
+      "patches": "Creative's official 'EAX Library Patch' (uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip) adds full EAX 2.0 reverb and muffling of sounds through walls to the original Deathmatch and Capture the Flag maps — historically mirrored at patches-scrolls.com.\n\nOldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
     },
     "gog": {
       "id": 1207658692,
       "delisted": true,
       "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.",
-      "patches": "Creative's official 'EAX Library Patch' (uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip) adds full EAX 2.0 reverb and muffling of sounds through walls to the original Deathmatch and Capture the Flag maps — historically mirrored at patches-scrolls.com.\nOldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
+      "patches": "Creative's official 'EAX Library Patch' (uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip) adds full EAX 2.0 reverb and muffling of sounds through walls to the original Deathmatch and Capture the Flag maps — historically mirrored at patches-scrolls.com.\n\nOldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
     }
   },
   "eax": { "api": "directsound3d", "versions": ["1.0", "2.0"] },
@@ -95,5 +95,11 @@
       }
     ]
   },
-  "sources": [{ "title": "OldUnreal", "url": "https://www.oldunreal.com" }]
+  "sources": [
+    { "title": "OldUnreal", "url": "https://www.oldunreal.com" },
+    {
+      "title": "Unreal DirectX11 Renderer",
+      "url": "https://www.moddb.com/mods/unreal-directx11-renderer-for-ut-ug-rune-and-dx"
+    }
+  ]
 }

@@ -68,6 +68,9 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         print_task "Reading the install manifest"
         print_detected "Found" "$INSTALL_MANIFEST"
         declare -A manifest_seen=()
+        # The install root, not just the exe folder: a profile's game_root:
+        # extra exe folders (AvP's bin_Crossplay/) sit beside it.
+        manifest_scope="$(game_install_root)"
         while IFS= read -r manifest_entry; do
             [ -z "$manifest_entry" ] && continue
             case "$manifest_entry" in
@@ -99,7 +102,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
             manifest_entry="${manifest_entry%$'\r'}"
             if [[ "$manifest_entry" != /* || "/$manifest_entry/" == *"/../"* ]] \
                 || ! manifest_file_is_ours "$manifest_entry" \
-                || ! manifest_path_in_scope "$manifest_entry" "$GAME_DIR"; then
+                || ! manifest_path_in_scope "$manifest_entry" "$manifest_scope"; then
                 print_warning_arrow "Skipped ${manifest_entry} because it isn't one of the files this script installed."
                 STALE_MANIFEST_LINES+=("$manifest_entry")
                 continue

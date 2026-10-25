@@ -370,12 +370,13 @@ gdb_field() { gdb_jq "$1" "$2" "entry | $3" | head -n 1; }
 # Usage: gdb_fields <id> <steam|gog> <jq expression>...
 # Several fields in one jq run, as one line with the values separated by
 # \x1f (read them with IFS=$'\x1f' read -r). Each expression must give
-# exactly one value (end it in // ""); line breaks inside a value are cut to
-# its first line.
+# exactly one value (end it in // ""). A line break inside a value comes out
+# as \x1e, so the record stays one line; print_wrapped and wrap_text turn it
+# back.
 gdb_fields() {
     local id="$1" store="$2" list="" e; shift 2
     for e in "$@"; do list+="${list:+, }($e)"; done
-    gdb_jq "$id" "$store" "entry | [$list] | map(tostring | (split(\"\\n\")[0] // \"\")) | join(\"\\u001f\")"
+    gdb_jq "$id" "$store" "entry | [$list] | map(tostring | gsub(\"\\n\"; \"\\u001e\")) | join(\"\\u001f\")"
 }
 
 game_eax_status() {
@@ -637,7 +638,7 @@ scan_game_libraries() {
         beta_branch=$(gdb_field "${ids[$idx]}" steam '.stores.steam.beta_branch // empty')
     fi
     exe_name=$(gdb_field "${ids[$idx]}" "${stores[$idx]}" '.exe // empty')
-    resolve_exe_folder "${paths[$idx]}" "$beta_branch" "$exe_name" || return 1
+    resolve_exe_folder "${paths[$idx]}" "$beta_branch" "$exe_name" "${stores[$idx]}" || return 1
     GAME_INSTALL_ROOT="${paths[$idx]}"
 
     [ "${stores[$idx]}" == "steam" ] && SCANNED_APPID="${ids[$idx]}"
@@ -689,15 +690,28 @@ resolve_extra_exe_folders() {
     # its own copy of the game-folder files, while the prefix, registry and
     # launcher override are already shared. A folder missing from this build
     # is skipped without a word.
+    #
+    # A "game_root:" entry is under the install root instead, for builds that
+    # sit side by side: Steam's AvP Classic 2000 runs either bin/ or the GOG
+    # crossplay build in bin_Crossplay/. Such a profile lists both, since
+    # either can be the exe folder, and the one that is gets skipped here.
     EXTRA_GAME_DIRS=()
     [ -n "$1" ] && [ -n "$GAME_DIR" ] || return 0
     ensure_game_database || return 0
-    local rel dir
+    local rel base dir seen
     while IFS= read -r rel; do
+        base="$GAME_DIR"
+        if [[ "$rel" == game_root:* ]]; then
+            rel="${rel#game_root:}"
+            base="$(game_install_root)"
+        fi
         [ -n "$rel" ] || continue
         [[ "$rel" == /* || "$rel" == *..* || "$rel" == *\\* ]] && continue
-        dir="$(find_existing_variant "$GAME_DIR/$rel")"
-        [ -n "$dir" ] && [ -d "$dir" ] && EXTRA_GAME_DIRS+=("$dir")
+        dir="$(find_existing_variant "$base/$rel")"
+        [ -n "$dir" ] && [ -d "$dir" ] || continue
+        [ "$dir" -ef "$GAME_DIR" ] && continue
+        for seen in "${EXTRA_GAME_DIRS[@]}"; do [ "$dir" -ef "$seen" ] && continue 2; done
+        EXTRA_GAME_DIRS+=("$dir")
     done < <(gdb_jq "$1" "$2" 'entry0 | .stores[$store].extra_exe_folders // [] | .[]')
 }
 
@@ -777,8 +791,9 @@ print_game_profile_stores() {
     # what differs (the audio API, store details, patches, delisted) per
     # store. With a location (the install) the fields end with "System
     # details" (where this install was found); without one (the browser),
-    # each store's ID gets a row under the name, and a Description section
-    # follows the fields.
+    # each store's ID gets a row under the name, a Description section
+    # follows the fields, and a "Before you play" section after the
+    # settings lists gives each setting's follow-up.
     local location="$1"; shift
     local -a stores=() ids=() labels=() apis=() listings=() id_sources=() details=() patches=() counts=()
     local entry
@@ -829,9 +844,9 @@ print_game_profile_stores() {
     detail_heading "Game details"
     detail_row "Name" "${BOLD}${name}${NC}"
     if [ -n "$untested" ]; then
-        detail_row "Verified" "${NOTE}Untested${NC}"
+        detail_row "Profile" "${NOTE}Untested${NC}"
     else
-        detail_row "Verified" "${GREEN}Tested${NC}"
+        detail_row "Profile" "${GREEN}Tested${NC}"
     fi
     [ -n "$released" ] && detail_row "Released" "${WHITE}$(format_release_date "$released")${NC}"
     # The browser names each store's ID; the install shows its one store
@@ -902,10 +917,14 @@ print_game_profile_stores() {
         detail_row "Location" "${DIM}$(tilde_path "$location")${NC}"
     fi
     print_detail_rows
+    # The browser's paragraphs are in normal weight, so a long one reads
+    # easily; the install keeps print_wrapped's bold white.
+    local prose_colour="$WHITE"
+    [ -z "$location" ] && prose_colour=""
     # What the game is, for the browser; the install already knows.
     if [ -z "$location" ] && [ -n "$description" ]; then
         print_subheading "Description"
-        print_wrapped "$description"
+        WRAP_COLOUR="$prose_colour" print_wrapped "$description"
     fi
 
     # --- Blocks: status -> problem -> solution ---
@@ -923,17 +942,17 @@ print_game_profile_stores() {
         fi
         print_subheading "Status"
         local status_text="${state_line}${eax_status_details:+ $eax_status_details}${after_line}"
-        print_wrapped "${status_text# }"
+        WRAP_COLOUR="$prose_colour" print_wrapped "${status_text# }"
     fi
     # Store texts the stores share are shown once, under both their names.
     if [ "$n" -gt 1 ] && [ -n "${details[0]}" ] && _same_for_all details; then
         print_subheading "$(printf '%s and ' "${labels[@]:0:n-1}")${labels[n-1]} details"
-        print_wrapped "${details[0]}"
+        WRAP_COLOUR="$prose_colour" print_wrapped "${details[0]}"
     else
         for i in "${!stores[@]}"; do
             [ -n "${details[i]}" ] || continue
             print_subheading "${labels[i]} details"
-            print_wrapped "${details[i]}"
+            WRAP_COLOUR="$prose_colour" print_wrapped "${details[i]}"
         done
     fi
     if [ "$eax_status" == "supported" ]; then
@@ -989,24 +1008,46 @@ print_game_profile_stores() {
         for title in "${openal_titles[@]}"; do print_wrapped "$(_setting_title openal "$title")"; done
     fi
     unset -f _setting_title
+    # What the player does after installing, for the browser; the install
+    # shows these in its "Before you play" box at the end. A setting that
+    # more than one store offers is shown once.
+    if [ -z "$location" ]; then
+        local follow_up shown_follow_ups=0
+        local -A follow_up_seen=()
+        for i in "${!stores[@]}"; do
+            while IFS=$'\t' read -r title follow_up; do
+                [ -n "$title" ] && [ -z "${follow_up_seen[$title]+x}" ] || continue
+                follow_up_seen[$title]=1
+                if [ "$shown_follow_ups" -eq 0 ]; then
+                    print_subheading "Before you play"
+                    shown_follow_ups=1
+                else
+                    echo ""
+                fi
+                # Not print_wrapped: it prints colour codes as text.
+                printf '  %b%s%b\n' "${WHITE}${BOLD}" "$title" "$NC"
+                WRAP_COLOUR="$prose_colour" print_wrapped "$follow_up"
+            done < <(game_setting_follow_ups "${ids[i]}" "${stores[i]}")
+        done
+    fi
     if [ -n "$restore_details" ]; then
         print_subheading "Additional steps"
-        print_wrapped "$restore_details"
+        WRAP_COLOUR="$prose_colour" print_wrapped "$restore_details"
     fi
     if [ -n "$notes" ]; then
         print_subheading "Notes"
-        print_wrapped "$notes"
+        WRAP_COLOUR="$prose_colour" print_wrapped "$notes"
     fi
     if [ "$n" -eq 1 ] || { [ -n "${patches[0]}" ] && _same_for_all patches; }; then
         if [ -n "${patches[0]}" ]; then
             print_subheading "Suggested community patches"
-            print_wrapped "${patches[0]}"
+            WRAP_COLOUR="$prose_colour" print_wrapped "${patches[0]}"
         fi
     else
         for i in "${!stores[@]}"; do
             [ -n "${patches[i]}" ] || continue
             print_subheading "Suggested community patches for ${labels[i]}"
-            print_wrapped "${patches[i]}"
+            WRAP_COLOUR="$prose_colour" print_wrapped "${patches[i]}"
         done
     fi
     unset -f _same_for_all _api_name
@@ -1246,28 +1287,34 @@ browse_game_rows() {
 }
 
 # Usage: browse_filter_header <state file> [list]
-# The Filters box: each filter's key (bold cyan), then the filter and its
-# value (green). All four on one line when the game list is wide enough,
+# The Filters box: each filter's key (bold cyan), then its value (green),
+# with no filter name; "all" reads "All stores", "All APIs" or "All games".
+# Every cell is as wide as the key plus the longest value any filter can
+# show, so the cells are evenly spaced and nothing moves as a filter
+# cycles; by character count, since printf pads bytes and "A–Z" has a
+# multi-byte dash. All four on one line when the game list is wide enough,
 # else two a line, else (or with "list") one a line. The list is as wide as
 # the terminal when the right pane is under it, and BROWSE_SIDE_PERCENT
-# narrower when it's beside it. Values are padded to the longest each can
-# be, so nothing moves as a filter cycles; by character count, since
-# printf pads bytes and "A–Z" has a multi-byte dash.
+# narrower when it's beside it.
 browse_filter_header() {
     local store audio order layout tested cols width
     read -r store audio _ _ order layout _ tested < "$1"
-    local -A label=([all]="All" [steam]="Steam" [gog]="GOG" [delisted]="Delisted"
+    local -A label=([steam]="Steam" [gog]="GOG" [delisted]="Delisted"
         [steam-delisted]="Steam delisted" [gog-delisted]="GOG delisted"
         [directsound3d]="DirectSound3D" [openal]="OpenAL" [match]="Best match" [az]="A–Z" [tested]="Tested" [untested]="Untested")
-    local -a names=("Store" "Audio" "Order" "Verified") keys=("Ctrl-S" "Ctrl-A" "Ctrl-R" "Ctrl-T") values=()
-    local v
-    for v in "$store" "$audio" "$order" "${tested:-tested}"; do values+=("${label[$v]:-EAX ${v#eax}}"); done
-    # Usage: _browse_cell <filter> [value width]
-    # "Ctrl-S Store All": the key, then its filter and value; the value is
-    # padded only when another cell follows it on the line.
+    local -a keys=("Ctrl-S" "Ctrl-A" "Ctrl-R" "Ctrl-T") alls=("All stores" "All APIs" "" "All games") values=()
+    local v i=0 cell=0
+    for v in "$store" "$audio" "$order" "${tested:-tested}"; do
+        if [ "$v" == "all" ]; then values+=("${alls[i]}"); else values+=("${label[$v]:-EAX ${v#eax}}"); fi
+        i=$(( i + 1 ))
+    done
+    for v in "${label[@]}" "${alls[@]}"; do [ "${#v}" -gt "$cell" ] && cell=${#v}; done
+    # Usage: _browse_cell <filter> [pad]
+    # "Ctrl-S All stores": the key, then its value, padded to the cell's
+    # width only when another cell follows it on the line.
     _browse_cell() {
-        printf '%b%s%b %-6s%b%s%b%*s' "${CYAN}${BOLD}" "${keys[$1]}" "$NC" "${names[$1]}" \
-            "$GREEN" "${values[$1]}" "$NC" $(( ${2:-0} > ${#values[$1]} ? ${2:-0} - ${#values[$1]} : 0 )) ""
+        printf '%b%s%b %b%s%b%*s' "${CYAN}${BOLD}" "${keys[$1]}" "$NC" \
+            "$GREEN" "${values[$1]}" "$NC" $(( ${2:-0} ? cell - ${#values[$1]} : 0 )) ""
     }
     cols="${FZF_COLUMNS:-}"
     [ -n "$cols" ] || read -r _ cols < <({ stty size < /dev/tty; } 2>/dev/null)
@@ -1276,13 +1323,14 @@ browse_filter_header() {
     width=$(( ${cols:-0} - 5 ))
     [ "$layout" == "side" ] && width=$(( width - ${cols:-0} * BROWSE_SIDE_PERCENT / 100 ))
     [ "${2:-}" == "list" ] && width=0
-    if [ "$width" -ge 94 ]; then
-        # 7 + 6 + 14, 7 + 6 + 13, 7 + 6 + 10, 7 + 6 + 9, two spaces between.
-        printf '%s  %s  %s  %s\n' "$(_browse_cell 0 14)" "$(_browse_cell 1 13)" "$(_browse_cell 2 10)" "$(_browse_cell 3)"
-    elif [ "$width" -ge 55 ]; then
+    # A cell is the key, a space and the value; two spaces between cells.
+    local full=$(( 7 + cell ))
+    if [ "$width" -ge $(( 4 * full + 6 )) ]; then
+        printf '%s  %s  %s  %s\n' "$(_browse_cell 0 1)" "$(_browse_cell 1 1)" "$(_browse_cell 2 1)" "$(_browse_cell 3)"
+    elif [ "$width" -ge $(( 2 * full + 2 )) ]; then
         # Store and Order in the left column, Audio and Tested on the right.
-        printf '%s  %s\n' "$(_browse_cell 0 14)" "$(_browse_cell 1)"
-        printf '%s  %s\n' "$(_browse_cell 2 14)" "$(_browse_cell 3)"
+        printf '%s  %s\n' "$(_browse_cell 0 1)" "$(_browse_cell 1)"
+        printf '%s  %s\n' "$(_browse_cell 2 1)" "$(_browse_cell 3)"
     else
         for v in 0 1 2 3; do printf '%s\n' "$(_browse_cell "$v")"; done
     fi
@@ -1341,9 +1389,9 @@ browse_help() {
         "Mouse" "Select text to copy it, and Ctrl+click a link to open it. Your terminal's block selection (often Ctrl+Alt+drag) picks text from one pane only."
         "Esc" "Close the browser (Ctrl-C, Ctrl-G and Ctrl-Q too, and Ctrl-D when the search is empty)."
         "" "Filters"
-        "Ctrl-A" "Audio: All → DirectSound3D → OpenAL → EAX 1.0 … 5.0."
-        "Ctrl-S" "Store: All → Steam → GOG → Delisted → Steam delisted → GOG delisted. Delisted games are no longer sold on that store."
-        "Ctrl-T" "Verified: Tested → All → Untested. It opens on Tested."
+        "Ctrl-A" "Audio: All APIs → DirectSound3D → OpenAL → EAX 1.0 … 5.0."
+        "Ctrl-S" "Store: All stores → Steam → GOG → Delisted → Steam delisted → GOG delisted. Delisted games are no longer sold on that store."
+        "Ctrl-T" "Verified: Tested → All games → Untested. It opens on Tested."
         "Ctrl-R" "Order: best match first, or A–Z."
         "" "View"
         "Ctrl-F" "Open the right pane full screen; q comes back."

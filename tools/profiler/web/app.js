@@ -299,7 +299,7 @@ function fieldNode(schema, parent, key, path, label) {
     const u = el("input", { value: o.url, placeholder: "https://…", "aria-label": "Source address", style: "flex:1 1 60%", oninput: () => { checkUrl(); upd(t.value ? { title: t.value, url: u.value } : u.value); } });
     checkUrl();
     return [t, u];
-  }, "", "Add a source"), { wide: true });
+  }, "", "Add a source", "source"), { wide: true });
 
   if (s.enum) {
     const sel = el("select", { onchange: () => set(sel.value) }, [el("option", { value: "" }, s.default ? `Default (${s.default})` : "Not set"), ...s.enum.map((o) => el("option", { selected: o === cur }, o))]);
@@ -342,11 +342,16 @@ function fieldNode(schema, parent, key, path, label) {
   }
   return F(el("span", { class: "muted" }, "(unsupported)"));
 }
-function listEditor(parent, key, rowFn, blank, addLabel = "Add") {
+// With a noun ("source"), each row gets ↑/↓ buttons to move it, for lists whose order players see.
+function listEditor(parent, key, rowFn, blank, addLabel = "Add", noun) {
   const box = el("div");
   const arr = () => (parent[key] = parent[key] || []);
+  const move = (i, d) => { const a = arr(); [a[i + d], a[i]] = [a[i], a[i + d]]; changed(); draw(); };
   const draw = () => {
+    const n = arr().length;
     box.replaceChildren(...arr().map((v, i) => Object.assign(el("div", { class: "row" }, ...rowFn(v, (nv) => { arr()[i] = nv; changed(); }),
+      noun ? el("button", { type: "button", class: "icon", "aria-label": "Move up", disabled: i === 0, title: `Move this ${noun} up`, onclick: () => move(i, -1) }, "↑") : null,
+      noun ? el("button", { type: "button", class: "icon", "aria-label": "Move down", disabled: i === n - 1, title: `Move this ${noun} down`, onclick: () => move(i, 1) }, "↓") : null,
       el("button", { type: "button", class: "icon", title: "Remove", onclick: () => { arr().splice(i, 1); changed(); draw(); } }, "✕")), { _i: i, _v: () => arr()[i] })),
       el("div", { class: "addrow" }, el("button", { type: "button", class: "btn sm", onclick: () => { arr().push(blank === undefined ? undefined : blank); draw(); } }, "+ " + addLabel)));
   };
@@ -524,7 +529,7 @@ function paneOverview() {
 function paneStores() {
   GAME.stores = GAME.stores || {};
   const sp = P().stores.properties, defs = resolve(sp.steam).properties;
-  const only = { beta_branch: "steam", companion_apps: "steam", extra_exe_folders: "gog" };
+  const only = { beta_branch: "steam", companion_apps: "steam" };
   return [cols(["steam", "gog"].map((st) => {
     const name = st === "steam" ? "Steam" : "GOG";
     if (!GAME.stores[st]) return el("section", { class: "card" }, el("header", {}, el("h3", {}, name)),

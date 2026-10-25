@@ -40,6 +40,8 @@ Every action shows exactly what it will delete first, and nothing is touched unt
 
 **Setting order:** in Game settings each setting has ↑ and ↓ to reorder it, and **→ Optional** / **→ Audio** to move it to the other list. The order in the file is the order the player sees.
 
+**Source order:** on the Overview tab each source has ↑ and ↓ to move it. The game profile lists them in that order.
+
 Sessions are kept in `~/.local/state/eax-restore-linux/profiler/<store>-<id>/`.
 
 On start the editor fetches its checkout's upstream branch in the background; when it is behind, a banner offers **Update**, which runs `git pull --ff-only` and rebuilds `dist/`, then asks you to restart the editor. A checkout with commits of its own, no upstream or no network gets no offer. `EAX_PROFILER_NO_UPDATE_CHECK=1` turns the check off.

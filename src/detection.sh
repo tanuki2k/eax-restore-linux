@@ -773,8 +773,43 @@ resolve_exe_manual_entry() {
     return 0
 }
 
+install_is_linux_build() {
+    # Usage: install_is_linux_build <install_root>
+    # True when the install has no .exe but does hold Linux programs (ELF
+    # files) — a store's native Linux port, which Steam installs by default
+    # for games that have one (KOTOR 2, Psychonauts). Nothing here can fix
+    # that build, and the way to the Windows one is the same for any game, so
+    # this is checked by what's on disk rather than flagged per game.
+    local root="$1" f magic
+    [ -d "$root" ] || return 1
+    find "$root" -maxdepth 4 -type f -iname "*.exe" -print -quit 2>/dev/null | grep -q . && return 1
+    while IFS= read -r -d '' f; do
+        magic=$(head -c4 "$f" 2>/dev/null | od -An -tx1 | tr -d ' \n')
+        [ "$magic" == "7f454c46" ] && return 0
+    done < <(find "$root" -maxdepth 4 -type f \( -perm -u+x -o -name "*.so*" \) -print0 2>/dev/null | head -z -n 200)
+    return 1
+}
+
+print_linux_build_note() {
+    # Usage: print_linux_build_note <steam|gog> [beta_branch]
+    # How to swap a native Linux install for the Windows build. A profile's
+    # beta_branch wins on Steam: it's the build with EAX (KOTOR 2's legacypc),
+    # where forcing Proton would fetch the current one without it.
+    if [ "$1" == "gog" ]; then
+        print_note "To get the Windows version, uninstall ${GAME_NAME:-the game} in Heroic and install it again" \
+            "with Windows chosen as the platform."
+    elif [ -n "$2" ]; then
+        print_note "To get the Windows version, opt into the '$2' beta branch (right-click the" \
+            "game in Steam -> Properties -> Betas) and let Steam download it."
+    else
+        print_note "To get the Windows version, right-click the game in Steam -> Properties ->" \
+            "Compatibility, tick \"Force the use of a specific Steam Play compatibility tool\"," \
+            "choose a Proton version and let Steam download it."
+    fi
+}
+
 resolve_exe_folder() {
-    # Usage: resolve_exe_folder <install_root> [beta_branch]
+    # Usage: resolve_exe_folder <install_root> [beta_branch] [exe_hint] [steam|gog]
     # A scanned install root isn't always the .exe folder — many titles nest
     # it (e.g. GameName/bin/x64), and get_game_directory's own detection
     # comment notes exactly this. Mirrors the prefix stage's shape: first
@@ -801,14 +836,23 @@ resolve_exe_folder() {
     # launcher plus separate single-player and multiplayer builds. When no
     # such file exists (a different build, a moved install) detection
     # carries on as normal.
+    #
+    # store (optional, the scan's match) picks the Linux-build advice; without
+    # it, a path under steamapps/common is Steam and anything else Heroic's.
     local root="$1"
     local beta_branch="$2"
     local exe_hint="$3"
+    local store="$4"
+    [ -n "$store" ] || { [[ "$root" == */steamapps/common/* ]] && store="steam" || store="gog"; }
     GAME_DIR=""
 
-    print_step 2 "Locate Game Executable"
-    print_paragraph "This step finds the folder ${GAME_NAME:-the game}'s .exe runs from, since the game loads" \
-        "its audio DLLs from there."
+    # A look again after a Linux-build switch (below) skips the header and
+    # the "automatically?" gate the player already answered.
+    if [ -z "${RESOLVE_EXE_RETRY:-}" ]; then
+        print_step 2 "Locate Game Executable"
+        print_paragraph "This step finds the folder ${GAME_NAME:-the game}'s .exe runs from, since the game loads" \
+            "its audio DLLs from there."
+    fi
 
     # Nested installs often bundle third-party installers/utilities
     # alongside the real game .exe (redistributables, anti-cheat setup,
@@ -824,7 +868,7 @@ resolve_exe_folder() {
     # some users would rather just type the path. confirm defaults to Yes and
     # returns 1 on EOF, so a closed stdin falls to manual entry, which itself
     # returns 1 on EOF -- a clean bail, no spin.
-    if ! confirm "Find ${GAME_NAME:-the game}'s .exe automatically?"; then
+    if [ -z "${RESOLVE_EXE_RETRY:-}" ] && ! confirm "Find ${GAME_NAME:-the game}'s .exe automatically?"; then
         resolve_exe_manual_entry "$root" && return 0
         return 1
     fi
@@ -841,10 +885,12 @@ resolve_exe_folder() {
     # The database's own exe name wins outright when it's actually there --
     # it was checked against a real install, which no name heuristic can beat.
     # Case-insensitive, since Linux filesystems are case-sensitive and a
-    # store's build may not match the database's spelling exactly.
+    # store's build may not match the database's spelling exactly. Ties at
+    # the same depth (AvP's bin/ and bin_Crossplay/) go by byte order, so
+    # every machine, and every reinstall, picks the same folder.
     if [ -n "$exe_hint" ]; then
         local hint_exe
-        hint_exe="$(find "$root" -maxdepth 4 -type f -iname "$(find_glob_escape "$exe_hint")" -printf '%d\t%p\n' 2>/dev/null | sort -n | head -n 1 | cut -f2-)"
+        hint_exe="$(find "$root" -maxdepth 4 -type f -iname "$(find_glob_escape "$exe_hint")" -printf '%d\t%p\n' 2>/dev/null | LC_ALL=C sort -t$'\t' -k1,1n -k2,2 | head -n 1 | cut -f2-)"
         if [ -n "$hint_exe" ]; then
             cand_dirs+=("$(dirname "$hint_exe")")
             cand_exe_name["$(dirname "$hint_exe")"]="$(basename "$hint_exe")"
@@ -960,12 +1006,23 @@ resolve_exe_folder() {
     fi
 
     if [ ${#cand_dirs[@]} -eq 0 ]; then
-        print_warning "No .exe files were found anywhere under this install."
-        if [ -n "$beta_branch" ]; then
-            print_note "if Steam installed a native Linux build instead of Windows, opting" \
-                "into the '$beta_branch' beta branch (right-click the game -> Properties ->" \
-                "Betas) switches it to the Windows build this script needs."
+        if install_is_linux_build "$root"; then
+            # The install root would only take Windows files a Linux game
+            # never loads, so the way on is the Windows build, then a look again.
+            local launcher_name="Steam"
+            [ "$store" == "gog" ] && launcher_name="Heroic"
+            print_warning "$launcher_name installed the Linux version of ${GAME_NAME:-this game}, which this script can't fix."
+            print_linux_build_note "$store" "$beta_branch"
+            while confirm "Look for ${GAME_NAME:-the game}'s .exe again?"; do
+                if ! install_is_linux_build "$root"; then
+                    RESOLVE_EXE_RETRY=1 resolve_exe_folder "$@"
+                    return
+                fi
+                print_status "$launcher_name still has the Linux version of ${GAME_NAME:-the game}." "$YELLOW"
+            done
+            return 1
         fi
+        print_warning "No .exe files were found anywhere under this install."
         if confirm "Use the install root anyway?" N; then GAME_DIR="$root"; return 0; fi
         return 1
     fi
@@ -1583,17 +1640,17 @@ detect_game_environment() {
                 if ! confirm "Check this AppID again?"; then APPID=""; fi
             else
                 print_error "Proton prefix not found for AppID ${APPID}."
-                print_paragraph "If you just installed this game, Proton has not generated the prefix yet." \
-                    "Please launch the game at least once, close it, and try again."
-                if ensure_game_database; then
-                    local beta_branch
-                    beta_branch=$(gdb_field "$APPID" steam '.stores.steam.beta_branch // empty')
-                    if [ -n "$beta_branch" ]; then
-                        print_note "no prefix at all can also mean Steam installed a native Linux build" \
-                            "instead of Windows — no Proton is used for that. Opting into the" \
-                            "'$beta_branch' beta branch (right-click the game -> Properties -> Betas)" \
-                            "switches it to the Windows build this script needs."
-                    fi
+                if install_is_linux_build "$(game_install_root)"; then
+                    # A Linux build never runs through Proton, so launching it
+                    # won't make a prefix: the Windows build has to come first.
+                    local beta_branch=""
+                    ensure_game_database && beta_branch=$(gdb_field "$APPID" steam '.stores.steam.beta_branch // empty')
+                    print_paragraph "Steam installed the Linux version of ${GAME_NAME:-this game}, which doesn't use Proton."
+                    print_linux_build_note steam "$beta_branch"
+                    print_paragraph "Then launch ${GAME_NAME:-the game} once, close it, and check again."
+                else
+                    print_paragraph "If you just installed this game, Proton has not generated the prefix yet." \
+                        "Please launch the game at least once, close it, and try again."
                 fi
                 # "No" clears the AppID and drops back to the manual prompt for a
                 # corrected value; an empty entry there triggers restart/quit.

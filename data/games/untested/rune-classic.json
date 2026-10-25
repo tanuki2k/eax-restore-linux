@@ -8,5 +8,14 @@
     "steam": { "id": 210950 },
     "gog": { "id": 1207660013 }
   },
-  "eax": { "api": "directsound3d", "versions": ["2.0"] }
+  "eax": {
+    "api": "openal",
+    "versions": ["2.0"],
+    "status": "not_implemented",
+    "problem": "Rune Classic has a broken implementation of OpenAL and lacks environmental reverb (EFX), occlusion, and proper positional sound tracking. ",
+    "fix": "Further investigation is required to see how community patches could fix this and how to incorporate them into the script."
+  },
+  "sources": [
+    { "title": "Rune Classic Remaster", "url": "https://www.nexusmods.com/runeclassic/mods/1" }
+  ]
 }

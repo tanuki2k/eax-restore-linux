@@ -34,10 +34,10 @@ in_fresh_shell() {
     [ "$output" == "$here" ]
 }
 
-@test "the profile says Verified: Tested for a tested game" {
+@test "the profile says Profile: Tested for a tested game" {
     run in_fresh_shell print_game_profile_stores "" steam:424242
     plain="$(sed 's/\x1b\[[0-9;]*m//g' <<< "$output")"
-    grep -Eq "Verified: +Tested" <<< "$plain"
+    grep -Eq "Profile: +Tested" <<< "$plain"
     grep -q "Enable EAX effects (tested)" <<< "$plain"
 }
 

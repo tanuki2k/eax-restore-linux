@@ -43,8 +43,9 @@ if [ -n "$SETTINGS_TOOL_MODE" ]; then
         INSTALL_MANIFEST="$GAME_DIR/.eax-restore-manifest.txt"
         settings_alsoft_files=()
         if [ -s "$INSTALL_MANIFEST" ] && ! manifest_is_uninstalled "$INSTALL_MANIFEST"; then
+            settings_scope="$(game_install_root)"
             while IFS= read -r line; do
-                [[ "$line" == /*/alsoft.ini && "/$line/" != *"/../"* ]] && manifest_path_in_scope "$line" "$GAME_DIR" \
+                [[ "$line" == /*/alsoft.ini && "/$line/" != *"/../"* ]] && manifest_path_in_scope "$line" "$settings_scope" \
                     && [ -f "$line" ] && settings_alsoft_files+=("$line")
             done < "$INSTALL_MANIFEST"
         fi

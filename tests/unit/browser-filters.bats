@@ -61,11 +61,28 @@ listed() { browse_game_stores "$STATE" | cut -f1 | paste -sd,; }
     [ "$(cat "$STATE")" == "steam all profile 0 az side side untested" ]
 }
 
-@test "the Filters box shows the tested filter and its key" {
+@test "the Filters box shows each key and its value, without filter names" {
     echo "all all profile 0 match side side untested" > "$STATE"
     NC="" CYAN="" BOLD="" GREEN="" BROWSE_SIDE_PERCENT=50
     run browse_filter_header "$STATE" list
-    [[ "$output" == *"Ctrl-T Verified"*"Untested"* ]]
+    [ "$output" == $'Ctrl-S All stores\nCtrl-A All APIs\nCtrl-R Best match\nCtrl-T Untested' ]
+    echo "all all profile 0 match side side all" > "$STATE"
+    run browse_filter_header "$STATE" list
+    [[ "$output" == *"Ctrl-T All games"* ]]
+}
+
+@test "the Filters box keeps every key in the same column as the filters change" {
+    NC="" CYAN="" BOLD="" GREEN="" BROWSE_SIDE_PERCENT=50
+    local a b key
+    echo "gog openal profile 0 match stack stack tested" > "$STATE"
+    a="$(FZF_COLUMNS=200 browse_filter_header "$STATE")"
+    echo "steam-delisted directsound3d profile 0 match stack stack all" > "$STATE"
+    b="$(FZF_COLUMNS=200 browse_filter_header "$STATE")"
+    [ "$(wc -l <<< "$a")" -eq 1 ]
+    for key in Ctrl-A Ctrl-R Ctrl-T; do
+        local before_a="${a%%"$key"*}" before_b="${b%%"$key"*}"
+        [ "${#before_a}" -eq "${#before_b}" ]
+    done
 }
 
 # ensure_game_database leaves the untested games out unless EAX_RESTORE_UNTESTED is set;

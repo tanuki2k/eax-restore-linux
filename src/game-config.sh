@@ -580,6 +580,19 @@ game_setting_titles() {
            | "openal\t\($sec) \(.key) = \(.value)\t\(if $e.install.alsoft_tested != true then "1" else "" end)")'
 }
 
+# Usage: game_setting_follow_ups <id> <steam|gog>
+# "<title>\t<follow_up>" for every audio and optional setting offered on
+# that store that has a follow_up, in database order; a line break in it
+# comes out as \x1e (see wrap_text).
+game_setting_follow_ups() {
+    gdb_jq "$1" "$2" '
+        entry0 | .game_config // {}
+        | def offered: [.[]? | select((.only_if.stores // [$store]) | index($store))];
+          (.audio_settings | offered | .[]), (.optional_settings | offered | .[])
+        | select((.follow_up // "") != "")
+        | "\(.title)\t\(.follow_up | gsub("\n"; "\u001e"))"'
+}
+
 # Usage: speakers_match <comma list>
 # True when the Speaker Configuration answer is one of the listed values:
 # stereo / matrix / surround (any layout) match OUTPUT_MODE, headphones
@@ -606,7 +619,8 @@ speakers_match() {
 # only_if speakers (comma list), follow_up, file, format, if_missing, locations
 # (|-joined), section ("" for cfg formats), key, value (with the markers
 # above), "1" for a setting not marked "tested": true, then "1" when the file's
-# all_locations is set. Untested ones are left out unless
+# all_locations is set. A line break in the reason or follow_up comes out as
+# \x1e (see wrap_text), so each row stays one line. Untested ones are left out unless
 # EAX_RESTORE_UNTESTED_SETTINGS is set, or the caller passes "all" (the
 # database browser, which shows everything). \x1f rather than tabs so empty
 # fields survive `read`.
@@ -614,6 +628,7 @@ load_game_config_rows() {
     local with_untested=false
     { is_truthy "${EAX_RESTORE_UNTESTED_SETTINGS:-}" || [ "${3:-}" == "all" ]; } && with_untested=true
     gdb_jq "$1" "$2" '
+        def br: gsub("\n"; "\u001e");
         def enc: if type == "boolean" then (if . then "__TRUE__" else "__FALSE__" end)
                  elif . == null then "__DELETE__" else tostring end;
         entry0 | .game_config // empty
@@ -626,8 +641,8 @@ load_game_config_rows() {
         | (if $def.format == "ini" or $def.format == "gas_cfg" or $def.format == "wine_reg"
              then (.value | to_entries[] | .key as $sec | .value | to_entries[] | [$sec, .key, .value])
              else (.value | to_entries[] | ["", .key, .value]) end) as $kv
-        | [$cat, ($i | tostring), $f.title, $f.reason, (($f.only_if.stores // []) | join(",")),
-           ([$f.only_if.speakers // empty] | flatten | join(",")), ($f.follow_up // ""), $file, ($def.format // ""),
+        | [$cat, ($i | tostring), $f.title, ($f.reason | br), (($f.only_if.stores // []) | join(",")),
+           ([$f.only_if.speakers // empty] | flatten | join(",")), ($f.follow_up // "" | br), $file, ($def.format // ""),
            ($def.if_missing // ""), (($def.locations // []) | join("|")), $kv[0], $kv[1], ($kv[2] | enc),
            (if $f.tested != true then "1" else "" end),
            (if $def.all_locations then "1" else "" end)]
@@ -785,7 +800,7 @@ print_game_settings_details() {
         fi
         if [ -n "$follow" ]; then
             echo -e "    ${DIM}Afterwards:${NC}"
-            printf '%s\n' "$follow" | fold -s -w "$width" | sed 's/^/    /'
+            wrap_text "$width" "    " "$follow"
         fi
     }
     for row in "${rows[@]}"; do
@@ -799,7 +814,7 @@ print_game_settings_details() {
                 prev_cat="${f[0]}"
             fi
             echo -e "\n  ${BOLD}${f[2]}${NC} $(verified_tag "${f[14]:-}")"
-            printf '%s\n' "${f[3]}" | fold -s -w "$width" | sed 's/^/    /'
+            wrap_text "$width" "    " "${f[3]}"
             echo ""
             display_rows="" stores="${f[4]}" speakers="${f[5]}" follow="${f[6]}" untested="${f[14]:-}"
             prev_id="$id"
@@ -1250,7 +1265,7 @@ game_settings_step() {
     # A fix's reason and rows, under its title (or its box in a tick list).
     _fix_body() {
         local id="$1"
-        printf '%s\n' "${fix_reason[$id]}" | fold -s -w 74 | sed 's/^/    /'
+        wrap_text 74 "    " "${fix_reason[$id]}"
         echo ""
         print_config_rows "${fix_view[$id]}"
         _print_absent_note "$id"
@@ -1260,7 +1275,7 @@ game_settings_step() {
     _applied_fix_body() {
         local id="$1" line display_rows=""
         local -a c
-        printf '%s\n' "${fix_reason[$id]}" | fold -s -w 74 | sed 's/^/    /'
+        wrap_text 74 "    " "${fix_reason[$id]}"
         echo ""
         while IFS= read -r line; do
             [ -n "$line" ] || continue
@@ -1685,7 +1700,7 @@ print_game_settings_summary() {
             [ "$t" == "$title" ] || continue
             [ ${#box[@]} -gt 0 ] && box+=("")
             box+=("${BOLD}${title}")
-            mapfile -t -O "${#box[@]}" box < <(printf '%s\n' "$fu" | fold -s -w 52 | sed 's/^/  /; s/ *$//')
+            mapfile -t -O "${#box[@]}" box < <(wrap_text 52 "  " "$fu")
             break
         done
     done

@@ -141,3 +141,31 @@ setup() {
     grep -q "UNINSTALL COMPLETE" "$OUT" || { tail -30 "$OUT"; false; }
     grep -q "^# EAX Restore: uninstalled" "$GAME/.eax-restore-manifest.txt"
 }
+
+# Two builds side by side in one install, as in Steam's AvP Classic 2000
+# (bin/ and bin_Crossplay/): the profile's game_root: extra_exe_folders put
+# the files in both, and uninstall takes them out of both.
+make_side_by_side_world() {
+    ROOT="$GAME"
+    mkdir -p "$ROOT/bin" "$ROOT/bin_Crossplay"
+    mv "$ROOT/game.exe" "$ROOT/bin/game.exe"; mv "$ROOT/dsound.dll" "$ROOT/bin/dsound.dll"
+    cp "$ROOT/bin/game.exe" "$ROOT/bin_Crossplay/game.exe"
+    GAME="$ROOT/bin"
+    DB_FILE="$BATS_TEST_TMPDIR/side-db.json"
+    printf '{"schema_version":3,"games":[{"id":"t","name":"Test Game","exe":"game.exe","stores":{"steam":{"id":%s,"extra_exe_folders":["game_root:bin","game_root:bin_Crossplay"]}},"eax":{"api":"directsound3d","versions":["1.0"]}}]}' "$APPID" > "$DB_FILE"
+}
+
+@test "side-by-side builds: both folders get the files, and uninstall restores the tree" {
+    make_side_by_side_world
+    snapshot "$BATS_TEST_TMPDIR/before"
+    install_answers "$BATS_TEST_TMPDIR/in"; echo "" >> "$BATS_TEST_TMPDIR/in"
+    run_script "$BATS_TEST_TMPDIR/in"
+    grep -q "INSTALLATION COMPLETE" "$OUT" || { tail -40 "$OUT"; false; }
+    [ "$(cat "$ROOT/bin/dsound.dll")" == "fake dsound Win32" ]
+    [ "$(cat "$ROOT/bin_Crossplay/dsound.dll")" == "fake dsound Win32" ]
+    [ "$(cat "$ROOT/bin_Crossplay/dsoal-aldrv.dll")" == "fake soft_oal 32" ]
+    grep -qF "$ROOT/bin_Crossplay/dsound.dll" "$ROOT/bin/.eax-restore-manifest.txt"
+    uninstall_answers "$BATS_TEST_TMPDIR/un"; run_script "$BATS_TEST_TMPDIR/un"
+    snapshot "$BATS_TEST_TMPDIR/after"
+    diff "$BATS_TEST_TMPDIR/before" "$BATS_TEST_TMPDIR/after" || { tail -20 "$OUT"; false; }
+}

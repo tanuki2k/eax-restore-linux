@@ -10,7 +10,12 @@
       "exe": "AvP_Classic.exe",
       "stores": {
         "steam": {
-          "id": 3730
+          "id": 3730,
+          "extra_exe_folders": [
+            "game_root:bin",
+            "game_root:bin_Crossplay"
+          ],
+          "store_details": "The game's launcher offers two builds: the standard Steam one and a crossplay build for multiplayer with GOG players."
         },
         "gog": {
           "id": 1207665883
@@ -22,8 +27,7 @@
           "1.0"
         ]
       },
-      "notes": "Both stores label this 'Classic 2000' to set it apart from 2010's Aliens vs. Predator, a different game.",
-      "tested": false
+      "notes": "Both stores label this 'Classic 2000' to set it apart from 2010's Aliens vs. Predator, a different game."
     },
     {
       "id": "alpha-centauri",
@@ -1085,9 +1089,13 @@
         {
           "title": "DSOAL issue #79",
           "url": "https://github.com/kcat/dsoal/issues/79"
+        },
+        {
+          "title": "Unreal DirectX11 Renderer",
+          "url": "https://www.moddb.com/mods/unreal-directx11-renderer-for-ut-ug-rune-and-dx"
         }
       ],
-      "notes": "Reverb is used sparingly and is quiet by default — Battery Park, the first mission, is a good place to hear it. The community ALAudio mod doesn't pass the game's EAX reverb through, so stay on the default Galaxy driver (per kcat/dsoal#79)."
+      "notes": "Reverb is used sparingly and is quiet by default — Battery Park, the first mission, is a good place to hear it.  The community ALAudio mod doesn't pass the game's EAX reverb through, so stay on the default Galaxy driver (per kcat/dsoal#79)."
     },
     {
       "id": "doom-3",
@@ -2691,11 +2699,20 @@
         }
       },
       "eax": {
-        "api": "directsound3d",
+        "api": "openal",
         "versions": [
           "2.0"
-        ]
+        ],
+        "status": "not_implemented",
+        "problem": "Rune Classic has a broken implementation of OpenAL and lacks environmental reverb (EFX), occlusion, and proper positional sound tracking. ",
+        "fix": "Further investigation is required to see how community patches could fix this and how to incorporate them into the script."
       },
+      "sources": [
+        {
+          "title": "Rune Classic Remaster",
+          "url": "https://www.nexusmods.com/runeclassic/mods/1"
+        }
+      ],
       "tested": false
     },
     {
@@ -4296,7 +4313,17 @@
             "tested": true
           }
         ]
-      }
+      },
+      "sources": [
+        {
+          "title": "OldUnreal",
+          "url": "https://www.oldunreal.com"
+        },
+        {
+          "title": "Unreal DirectX11 Renderer",
+          "url": "https://www.moddb.com/mods/unreal-directx11-renderer-for-ut-ug-rune-and-dx"
+        }
+      ]
     },
     {
       "id": "unreal-ii-the-awakening",
@@ -4349,7 +4376,13 @@
             "tested": true
           }
         ]
-      }
+      },
+      "sources": [
+        {
+          "title": "OldUnreal",
+          "url": "https://www.oldunreal.com"
+        }
+      ]
     },
     {
       "id": "unreal-tournament-2004",
@@ -4404,6 +4437,12 @@
           }
         ]
       },
+      "sources": [
+        {
+          "title": "OldUnreal",
+          "url": "https://www.oldunreal.com"
+        }
+      ],
       "tested": false
     },
     {
@@ -4478,13 +4517,13 @@
           "id": 13240,
           "delisted": true,
           "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.",
-          "patches": "Creative's official 'EAX Library Patch' (uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip) adds full EAX 2.0 reverb and muffling of sounds through walls to the original Deathmatch and Capture the Flag maps — historically mirrored at patches-scrolls.com.\nOldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
+          "patches": "Creative's official 'EAX Library Patch' (uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip) adds full EAX 2.0 reverb and muffling of sounds through walls to the original Deathmatch and Capture the Flag maps — historically mirrored at patches-scrolls.com.\n\nOldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
         },
         "gog": {
           "id": 1207658692,
           "delisted": true,
           "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.",
-          "patches": "Creative's official 'EAX Library Patch' (uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip) adds full EAX 2.0 reverb and muffling of sounds through walls to the original Deathmatch and Capture the Flag maps — historically mirrored at patches-scrolls.com.\nOldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
+          "patches": "Creative's official 'EAX Library Patch' (uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip) adds full EAX 2.0 reverb and muffling of sounds through walls to the original Deathmatch and Capture the Flag maps — historically mirrored at patches-scrolls.com.\n\nOldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
         }
       },
       "eax": {
@@ -4607,6 +4646,10 @@
         {
           "title": "OldUnreal",
           "url": "https://www.oldunreal.com"
+        },
+        {
+          "title": "Unreal DirectX11 Renderer",
+          "url": "https://www.moddb.com/mods/unreal-directx11-renderer-for-ut-ug-rune-and-dx"
         }
       ],
       "tested": false

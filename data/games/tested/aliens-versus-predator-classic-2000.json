@@ -5,7 +5,11 @@
   "released": "1999-05-13",
   "exe": "AvP_Classic.exe",
   "stores": {
-    "steam": { "id": 3730 },
+    "steam": {
+      "id": 3730,
+      "extra_exe_folders": ["game_root:bin", "game_root:bin_Crossplay"],
+      "store_details": "The game's launcher offers two builds: the standard Steam one and a crossplay build for multiplayer with GOG players."
+    },
     "gog": { "id": 1207665883 }
   },
   "eax": { "api": "directsound3d", "versions": ["1.0"] },

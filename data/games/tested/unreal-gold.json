@@ -90,5 +90,12 @@
         "tested": true
       }
     ]
-  }
+  },
+  "sources": [
+    { "title": "OldUnreal", "url": "https://www.oldunreal.com" },
+    {
+      "title": "Unreal DirectX11 Renderer",
+      "url": "https://www.moddb.com/mods/unreal-directx11-renderer-for-ut-ug-rune-and-dx"
+    }
+  ]
 }

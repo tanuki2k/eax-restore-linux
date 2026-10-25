@@ -171,8 +171,9 @@ their execution order in the assembled script):
    prints: a one-store wrapper around `print_game_profile_stores`, which
    takes one or more `<store>:<id>` entries of a game; both screens show
    `released` via `format_release_date`, and without a location (the
-   browser) it adds a `<Store> ID` row per store and a Description section
-   under the fields), `browse_game_database` (Tools → [B]rowse game profiles and
+   browser) it adds a `<Store> ID` row per store, a Description section
+   under the fields and a "Before you play" section of the settings'
+   `follow_up`s), `browse_game_database` (Tools → [B]rowse game profiles and
    `tools/browse-game-database.sh`: one fzf row per game from
    `browse_game_rows`; the preview, `browse_game_preview`, draws one
    `print_game_profile_stores` covering every store entry that passes the
@@ -425,8 +426,13 @@ for a new call site.
 - `print_wrapped "free text"` — wraps data-sourced prose (e.g. the `notes` field in
   `game-database.json`, not already hand-wrapped script text) at 76 columns
   (`WRAP_COLUMNS` overrides it, for the browser's narrower preview) and
-  indents it, in WHITE. Don't hardcode line breaks into stored data; wrap at render
-  time instead.
+  indents it, in WHITE (`WRAP_COLOUR` overrides it; empty is the terminal's
+  normal-weight text, which the browser's profile uses for its paragraphs). Don't hardcode line breaks into stored data just to wrap
+  it; wrap at render time instead. A break the writer meant (a new line or
+  paragraph) is kept: the database readers (`gdb_fields`,
+  `load_game_config_rows`) carry it as `\x1e` so a record stays one line, and
+  `wrap_text <width> <indent> "text"` (which `print_wrapped` uses) turns it back.
+  Wrap database prose with `wrap_text`, never a bare `fold`.
 
 Color meaning, unchanged by the helpers:
 

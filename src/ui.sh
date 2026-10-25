@@ -411,11 +411,23 @@ print_error_arrow() {
 # hand-wrapped script text) at 76 columns and indents it two spaces, in
 # WHITE. Distinct from print_note/print_warning/print_error, whose multi-line
 # arguments are assumed already wrapped by the caller. WRAP_COLUMNS narrows
-# it for a space smaller than the terminal (the database browser's preview).
+# it for a space smaller than the terminal (the database browser's preview),
+# and WRAP_COLOUR sets its colour: empty prints it in the terminal's own
+# normal-weight text (the browser's paragraphs).
 print_wrapped() {
     # %s for the text: it comes from the game database, and echo -e / %b would turn
     # a written-out \033 or \0033 in it into a real terminal escape.
-    printf '%b%s%b\n' "$WHITE" "$(tilde_path "$1" | fold -s -w "${WRAP_COLUMNS:-76}" | sed 's/^/  /')" "$NC"
+    printf '%b%s%b\n' "${WRAP_COLOUR-$WHITE}" "$(wrap_text "${WRAP_COLUMNS:-76}" "  " "$(tilde_path "$1")")" "$NC"
+}
+
+# Usage: wrap_text <width> <indent> "text"
+# Database prose wrapped at <width>, each line indented. A line break in the
+# text is kept, and an empty line between two is a blank line. The database
+# readers pass a break along as \x1e (gdb_fields, load_game_config_rows),
+# since a real one would split their one-line-per-record output; this turns
+# it back.
+wrap_text() {
+    printf '%s\n' "${3//$'\x1e'/$'\n'}" | fold -s -w "$1" | sed "s/ *\$//; s/^/$2/; s/^ *\$//"
 }
 
 # Usage: print_final_step <number> "Label:" "text"
@@ -859,7 +871,7 @@ radio_select() {
     local width=$(( ${WRAP_COLUMNS:-76} - 3 )) tallest=1 count
     local -a wrapped=()
     for ((i = 0; i < n; i++)); do
-        wrapped[i]="$(printf '%s\n' "${details[i]:-}" | fold -s -w "$width" | sed 's/ *$//; s/^/   /')"
+        wrapped[i]="$(wrap_text "$width" "   " "${details[i]:-}")"
         count=$(printf '%s\n' "${wrapped[i]}" | wc -l)
         [ "$count" -gt "$tallest" ] && tallest="$count"
     done
