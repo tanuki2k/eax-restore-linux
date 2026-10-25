@@ -1,6 +1,10 @@
 # Environment variables
 
-For repeat runs or scripting, these can be set to skip prompts:
+For repeat runs or scripting, these can be set to skip prompts. Set them in front of the command:
+
+```bash
+EAX_RESTORE_SKIP_PREFLIGHT=1 EAX_RESTORE_SKIP_UPDATE_CHECK=1 ./eax-restore-linux.sh
+```
 
 | Variable | Effect |
 | --- | --- |

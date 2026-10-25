@@ -6,9 +6,11 @@ PRs adding or correcting games are welcome. Each game is its own file, `<id>.jso
 
 Which folder it's in says how far it's got:
 
-- `data/games/tested/`: checked against a real install. Its store IDs match, its `exe` exists, and any config files and settings it changes are where it says. Shipped.
-- `data/games/untested/`: not checked on a real install yet. Shipped all the same. New games go here.
-- `data/drafts/`: incomplete or doubtful entries. Checked against the schema and formatted, but **not** shipped.
+| Folder | Meaning | Shipped |
+| --- | --- | --- |
+| `data/games/tested/` | Checked against a real install. Its store IDs match, its `exe` exists, and any config files and settings it changes are where it says. | Yes |
+| `data/games/untested/` | Not checked on a real install yet. New games go here. | Yes |
+| `data/drafts/` | Incomplete or doubtful entries. Checked against the schema and formatted. | **No** |
 
 To promote a game, move its file (`git mv`) and re-run `tools/format-game-database.sh`, which also updates its `"$schema"` line for the new folder.
 
@@ -41,8 +43,9 @@ CI checks every file against the schema, that it's formatted, and that `game-dat
 
 ## Rules
 
-- Only add a store `id` you've verified against the storefront's own page or API. A wrong ID would point the script at someone else's prefix.
-- **Leave a field out when it's empty or at its default.** There are no `null`s in these files.
+> [!IMPORTANT]
+> * Only add a store `id` you've verified against the storefront's own page or API. A wrong ID would point the script at someone else's prefix.
+> * **Leave a field out when it's empty or at its default.** There are no `null`s in these files.
 
 ## A game file
 
