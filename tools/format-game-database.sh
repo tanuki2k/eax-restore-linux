@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Rewrites every game file (data/games/tested, data/games/untested, data/drafts)
-# into canonical form: fixed key order, empty and default-valued fields dropped,
+# into canonical form: fixed key order, empty fields and the listed defaults dropped,
 # short objects/arrays kept on one line. Also points each file's "$schema" at
 # data/schema.json from wherever the file sits, so moving a game between
 # folders only needs a re-run of this.

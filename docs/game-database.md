@@ -4,6 +4,8 @@ During install, the script can scan your Steam and Heroic libraries for titles i
 
 Matches are checked against [`game-database.json`](https://github.com/tanuki2k/eax-restore-linux/blob/HEAD/game-database.json), a community-maintained database in this repo (built from the per-game files in [`data/games/`](https://github.com/tanuki2k/eax-restore-linux/blob/HEAD/data/games/)). It's fetched fresh on every run from the `dev` branch and cached locally as `game-database.v3.json`, so a later offline run still works.
 
+Games in `data/games/untested/` are in the database too but marked untested, so install and library scanning skip them unless `EAX_RESTORE_UNTESTED=1` is set. The profile browser always lists them.
+
 ## What the database provides
 
 * the install-time "Heads up" notes
@@ -21,7 +23,7 @@ For games that ship with EAX (or other things) switched off in their own config 
 
 The list is small and hand-verified, so it covers only a fraction of EAX-capable games. The script then falls back in two steps:
 
-1. **File scan.** The OpenAL-vs-DirectSound3D check scans the game's own `.exe`/`.dll` files for `OpenAL32.dll`/`dsound.dll` references. That's a lower-confidence guess, and the script says so.
+1. **File scan.** The OpenAL-vs-DirectSound3D check scans the game's own `.exe`/`.dll` files for references to the OpenAL or DirectSound libraries and API names. That's a lower-confidence guess, and the script says so.
 2. **Ask you.** If the scan is inconclusive too (or you skip it), the script asks you to pick between DirectSound3D/DSOAL and OpenAL native instead of assuming DirectSound3D.
 
 > [!NOTE]

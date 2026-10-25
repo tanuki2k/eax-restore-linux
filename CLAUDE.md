@@ -44,12 +44,12 @@ a manual step: bump `SCRIPT_VERSION` in `src/globals.sh`, run
 `./build.sh`, generate `dist/eax-restore-linux.sh.sha256` with
 `sha256sum dist/eax-restore-linux.sh > dist/eax-restore-linux.sh.sha256` (lets users
 verify the download, see README's "Verifying the download"), and create a GitHub
-release tagged `vX.Y` with `dist/eax-restore-linux.sh`,
+release tagged `vX.Y` (or `vX.Y.Z` for a patch, e.g. `v0.28.6`) with `dist/eax-restore-linux.sh`,
 `dist/eax-restore-linux.sh.sha256`, and `eax-restore-linux.desktop` attached as assets
-(matching the existing `v0.28` release) — mark it as the latest release so the
+(matching the existing `v0.28.6` release) — mark it as the latest release so the
 `releases/latest/download/` URLs resolve to it. `SCRIPT_DATE` is **not** bumped by
 hand: `build.sh` derives it from the HEAD commit date (`git show -s --format=%cs`)
-at build time — a plain `vX.Y` checkout gets that tag's commit date. The
+at build time — a plain `vX.Y[.Z]` checkout gets that tag's commit date. The
 `SCRIPT_DATE="..."` literal in `src/globals.sh` is only the fallback for a build
 with no git available (e.g. a source tarball); refresh it opportunistically so
 those stay roughly current.
@@ -59,7 +59,9 @@ Every push to `dev` (and manual `workflow_dispatch`) instead auto-publishes a ro
 stamps the version `<base>-dev` (base from `src/globals.sh`, triggered by
 `GITHUB_REF_NAME=dev`) and puts the commit date + short SHA in the date field, then
 the workflow updates the single `dev`-tagged release in place
-with `dist/eax-restore-linux.sh` attached. It's marked `--prerelease` so
+with `dist/eax-restore-linux.sh` and its `.sha256` attached, but only after `bash -n`,
+`shellcheck --severity=error`, the bats suites, the profiler's Python tests and
+`jq empty game-database.json` pass. It's marked `--prerelease` so
 `releases/latest` keeps resolving to the stable `vX.Y`, and the workflow fails if that
 ever stops holding. The `dev` prerelease never carries the `.desktop` launcher (the
 launcher hardcodes `releases/latest`).
@@ -97,8 +99,10 @@ launcher hardcodes `releases/latest`).
   `EAX_RESTORE_GAME_DATABASE_FILE=/path/to/file.json` (point at a local JSON edit before
   it's pushed) are useful when iterating — see the script's own
   `--- Environment Variables ---` header comment for the full list.
-- **Tests:** `./build.sh && bats -r tests` (needs `bats`; `.github/workflows/test.yml`
-  runs it plus `bash -n` and `shellcheck --severity=error`). `tests/unit/` sources
+- **Tests:** `./build.sh && bats tests/unit tests/integration` (needs `bats`;
+  `.github/workflows/test.yml` runs them plus `bash -n`, `shellcheck --severity=error`
+  over `dist/`, `build.sh` and `tools/`, and the profiler's Python tests,
+  `cd tools/profiler && python3 -m unittest discover -s tests`). `tests/unit/` sources
   `src/*.sh` directly and covers the config editors (every format, gadb, wine_reg),
   launch-option/VDF/Heroic editing, `parse_selection` and the speaker round trip.
   `tests/integration/` runs the built script against a fake Steam world in a temp
@@ -159,9 +163,14 @@ their execution order in the assembled script):
    `PAGED_CHOICE`. Use it for any new list that can run long.
 5. **`common.sh`** — small helpers used throughout every other file: `is_truthy`,
    `is_genuine_dll`, `parse_selection`, `is_steamos`, `install_packages` (apt /
-   pacman / dnf via sudo; pre-flight and the fzf offer).
+   pacman / dnf via sudo; pre-flight and the fzf offer), and the manifest-trust and
+   backup helpers (`manifest_file_is_ours`, `looks_like_our_file`,
+   `manifest_is_uninstalled`, `oldest_backup`, `swap_in`).
 6. **`guards.sh`** — refuses root / Steam Gaming Mode, runs before any real work
    starts.
+   `logging.sh` (also before `detection.sh`) writes the per-run timestamped log
+   (`write_log_header`, `log_cmd`, `finish_run_log`; `EAX_RESTORE_NO_LOG`, and dev
+   builds log to their own subfolder).
 7. **`detection.sh`** — Steam AppID / Heroic prefix / architecture detection,
    `get_game_directory`, `detect_game_environment`, `select_architecture`, etc.
 8. **`game-database.sh`** — the `game-database.json` helpers:
@@ -205,7 +214,7 @@ their execution order in the assembled script):
    line and the filters in four `--header-lines` (`BROWSE_HEADER_LINES`)),
    `confirm_continue_if_eax_impossible`, etc.
 9. **`game-config.sh`** — the Game Settings feature: `config_get_key` /
-   `config_set_key` (awk readers/writers for the five text config formats, keeping CRLF,
+   `config_set_key` (awk readers/writers for the seven text config formats, keeping CRLF,
    key spelling and spacing, plus `_gadb_find`/`_gadb_set`, which switch an on/off
    setting in place in Monolith's binary `gadb` profile, and `_wine_reg_read`/
    `_wine_reg_set`, which edit a dword or string value in the prefix's
@@ -216,19 +225,19 @@ their execution order in the assembled script):
    manifest lines), `print_game_settings_summary`, `revert_game_settings`
    (uninstall step 7). All of it driven by the entry's `game_config` /
    `install.alsoft_ini`. The speaker step lives here too, shared by install
-   step 8 and Tools → Speaker configuration: `ask_speaker_configuration` (the
+   Phase 2 step 3 and Tools → Speaker configuration: `ask_speaker_configuration` (the
    questions), `speaker_alsoft_values` (answers → alsoft.ini values),
    `speaker_label` and `speaker_config_from_alsoft` (reads them back). The Tools
    items change an installed game through `game_settings_step`'s two modes
    (`GAME_SETTINGS_SPEAKERS_ONLY`, `GAME_SETTINGS_EDIT_OPTIONAL`) and
    `update_game_settings_in_manifest`, which puts settings back and rewrites the
    manifest the way a reinstall does.
-10. **`launcher-config.sh`** — step 10's DLL override via the launcher: reads and
+10. **`launcher-config.sh`** — Phase 2 step 5's DLL override via the launcher: reads and
    writes Steam's `localconfig.vdf` launch options (awk, scoped to the game's block
    under `UserLocalConfigStore/Software/Valve/Steam/apps`) and Heroic's
    `GamesConfig/<app>.json` `enviromentOptions` (jq), merging into any existing
-   `WINEDLLOVERRIDES`; `choose_override_method` (step 10's launcher / registry /
-   manual menu, launcher first), `apply_launcher_override` (Phase 2, writes `LAUNCHER:` manifest
+   `WINEDLLOVERRIDES`; `choose_override_method` (step 5's launcher / registry /
+   manual menu, launcher first), `apply_launcher_override` (Phase 4, writes `LAUNCHER:` manifest
    lines), `revert_launcher_overrides` (uninstall step 5). Both launchers keep these
    files in memory, so before writing, `offer_close_launcher` offers to close the
    copy that owns the file (`launcher_kind`: native/AppImage or Flatpak, from the
@@ -244,9 +253,14 @@ their execution order in the assembled script):
    manifest entries.
 12. **`verify.sh`** — download verification: `verify_checksum`, `verify_or_confirm`,
     `get_asset_digest`, `confirm_unverified_download`.
-13. **`cache.sh`** — `update_local_cache` (the repository-cache step), plus
-    `handle_conflict` (backs up a file already where one is deployed, without
+13. **`cache.sh`** — the download/cache engine (`check_download_readiness`,
+    `choose_builds`, `ensure_dsoal_build` / `ensure_openal_build`) and the manifest
+    writers (`start_manifest`, `manifest_dedupe`, `manifest_forget_paths`,
+    `deploy_copy`), plus `handle_conflict` (backs up a file already where one is deployed, without
     asking — Phase 4 asks nothing).
+`self-update.sh` (after `prefix-steps.sh`) is the once-per-run update check on the
+    stable or dev channel (`check_for_script_update`): silent on failure, skipped
+    with no terminal or an answers file.
 14. **`prefix-steps.sh`** — the install's per-prefix steps as functions
     (`install_openal_runtime`, `deploy_prefix_dlls`, `apply_prefix_registry`,
     and uninstall's `remove_prefix_registry`), so a game's own prefix and its
@@ -269,7 +283,7 @@ their execution order in the assembled script):
     spans two files sharing one `if [ "$SCRIPT_ACTION" == "i" ]` — opened in
     `config-flow.sh` (phases 1-3: Game, Sound fix, Game settings, all the interactive
     prompts; `print_install_overview` introduces them and `print_install_phase`
-    draws each banner, with steps numbering from 1 in each)
+    (both in `ui.sh`) draws each banner, with steps numbering from 1 in each)
     and closed in `install-flow.sh` (phase 4: Install, actually deploying
     files/running protontricks/winetricks). Around all of that, a `while true`
     loop opened just above the main menu in `vcrun-only-flow.sh` and closed
@@ -297,7 +311,7 @@ previously spanned banner sections within the one file.
 
 **Caching model:** nothing is downloaded up front. `check_download_readiness()` (start
 of the install) only probes GitHub, and stops early when it's offline with no OpenAL
-Soft cached. Step 6's `choose_builds()` asks Stable / Latest / each separately, then
+Soft cached. Phase 2 step 1's `choose_builds()` asks Stable / Latest / each separately, then
 `ensure_dsoal_build()` / `ensure_openal_build()` fetch just the chosen builds: check
 remote version metadata (release `updated_at`, the redirect-resolved tag, or the newest
 `archive` asset while `latest-master` is missing upstream) against a local marker,
@@ -361,13 +375,21 @@ for a new call site.
   line, divider, bold label, divider, blank line), e.g. `--- PHASE 1: CONFIGURATION ---`,
   `--- GAME PROFILE ---`.
 - `print_step N "Label"` — the same banner wrapper for a numbered, non-dashed,
-  non-bold CYAN sub-step header, e.g. `2. Launcher Identification`.
+  non-bold CYAN sub-step header, e.g. `2. Launcher Identification`. A flow sets
+  `STEP_TOTAL` first to get `N/TOTAL.` headers.
+- `print_result "text" [COLOR]` — the blank-line-led first line of a component;
+  `print_subheading "Label"` is the `Label:` header above a `print_wrapped` body;
+  `print_paragraph "line" ...` prints already-wrapped prose lines;
+  `print_key_option` is `print_option` for letter keys; `print_phase_task` is
+  `print_task` under the phase progress bar; `run_with_spinner` and
+  `fetch_with_progress` wrap a slow command or download; `tool_gate` is a Tools
+  item's opening "Continue?"; `print_run_summary` closes a run.
 - `print_status "text" [COLOR=CYAN]` — an ` -> ` arrow sub-step/result line.
 - `print_detected "Label" "value"` — the ` -> Label: value` line (label in GREEN)
   reporting what auto-detection found, right before the `confirm` asking whether
   to use it, e.g. `Detected Prefix:`, `Detected Architecture:`.
 - `print_final_step N "Label:" "text"` — one numbered line of INSTALLATION COMPLETE's
-  "Final Steps to activate EAX": bold yellow label, text wrapped at 76 columns with
+  "Final Steps to activate EAX": bold yellow label, text wrapped at 72 columns (`WRAP_COLUMNS` less 4) with
   the continuation lined up under the label.
 - `print_titled_box <colour> "Title" "line" ...` — a rounded frame as wide as the
   dividers with the title in its top edge and the lines left-aligned (already

@@ -2,7 +2,7 @@
 # BUILD DOWNLOADS (DSOAL and OpenAL Soft, stable or latest)
 # ==============================================================================
 # Nothing is downloaded up front. check_download_readiness runs at the start of
-# the install and only works out whether GitHub can be reached; step 6 (Audio
+# the install and only works out whether GitHub can be reached; Phase 2's step 1 (Audio
 # Engine Selection) asks which builds to use (choose_builds) and then fetches
 # just those (ensure_dsoal_build / ensure_openal_build), into the script's own
 # cache — never the game or prefix.
@@ -45,7 +45,7 @@ check_download_readiness() {
 }
 
 # Usage: lookup_build_versions
-# Fills the version labels step 6 shows for each build, without downloading
+# Fills the version labels the build choice shows for each build, without downloading
 # anything: online from the release pages, offline from what's cached. A label
 # is empty when the build can't be had this run (offline and not cached).
 lookup_build_versions() {

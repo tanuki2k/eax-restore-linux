@@ -18,9 +18,6 @@
 #   release) or Latest (DSOAL's newest build + OpenAL Soft's pre-release),
 #   or each separately; only the builds picked are downloaded.
 #
-# * Recent Games: Remembers game folders you've used before and offers them
-#   as a quick pick, without giving up the option to enter a new path.
-#
 # * Smart Detection: Opt-in auto-detection for Steam AppIDs and Heroic Wine
 #   prefixes, plus an opt-in library scan that finds games with a profile already
 #   installed via Steam or Heroic and lets you pick one instead of browsing.
@@ -82,9 +79,9 @@
 #
 # --- Environment Variables ---
 # * EAX_RESTORE_SKIP_PREFLIGHT=1  Skips the pre-flight tool scan and its
-#   auto-install prompts, trusting that curl, unzip, file, jq, protontricks,
-#   winetricks, and wine are already available. Speeds up repeat runs on a
-#   machine you've already verified.
+#   auto-install prompts, trusting that curl, unzip, file, grep, awk, jq,
+#   protontricks, winetricks, and wine are already available. Speeds up
+#   repeat runs on a machine you've already verified.
 #
 # * EAX_RESTORE_SKIP_UPDATE_CHECK=1  Skips the start-up check for a newer
 #   version of the script. The check is also skipped without a terminal.
@@ -103,8 +100,8 @@
 #   The main menu's Tools → [V]C++ install does the same.
 #
 # * EAX_RESTORE_SKIP_CACHE_CHECK=1  Doesn't contact GitHub for DSOAL or
-#   OpenAL Soft at all: step 6 only offers the builds already in the local
-#   cache. Speeds up repeat runs on a machine with a cache you know is
+#   OpenAL Soft at all: the build choice only offers the builds already in
+#   the local cache. Speeds up repeat runs on a machine with a cache you know is
 #   current.
 #
 # * EAX_RESTORE_ANSWERS_FILE=/path/to/answers.txt  Answers every prompt from the

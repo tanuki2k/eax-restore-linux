@@ -536,7 +536,7 @@ wait_for_launcher_closed() {
 }
 
 # Usage: apply_launcher_override
-# Phase 2 for OVERRIDE_METHOD=launcher: writes the merged override into the
+# Phase 4 for OVERRIDE_METHOD=launcher: writes the merged override into the
 # launcher's settings, reads it back, and records it in the manifest. Any
 # reason it can't happen drops back to OVERRIDE_METHOD=manual so the final
 # instructions are shown; a failed write also counts as a deploy failure.

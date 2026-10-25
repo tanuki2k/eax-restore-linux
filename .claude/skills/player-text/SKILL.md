@@ -1,6 +1,6 @@
 ---
 name: player-text
-description: Wording rules and past corrections for any text a player reads in eax-restore-linux. Load BEFORE writing or changing any string passed to print_banner, print_step, print_status, print_detected, print_task, print_note, print_warning, print_error, print_paragraph, print_option, confirm, confirm_countdown, prompt, run_with_spinner, or a raw echo -e/printf in src/ or tools/, and before writing a game database prose field (notes, store_details, patches, eax.problem, eax.fix, description, or a setting's title, reason, follow_up) in data/games/*.json. Also load it when reviewing or rewording such text.
+description: Wording rules and past corrections for any text a player reads in eax-restore-linux. Load BEFORE writing or changing any string passed to print_banner, print_step, print_status, print_detected, print_task, print_result, print_subheading, print_final_step, print_key_option, print_phase_task, print_titled_box, print_link, print_run_summary, print_note, print_warning, print_error, print_paragraph, print_option, confirm, confirm_countdown, prompt, run_with_spinner, or a raw echo -e/printf in src/ or tools/, and before writing a game database prose field (notes, store_details, patches, eax.problem, eax.fix, description, or a setting's title, reason, follow_up) in data/games/*.json. Also load it when reviewing or rewording such text.
 ---
 
 # Player-facing text

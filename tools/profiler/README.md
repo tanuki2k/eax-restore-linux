@@ -6,13 +6,15 @@ A local web UI over `data/games/*` and `data/drafts/`. Standard-library Python; 
 tools/profiler/eax-profiler               # starts it and opens http://127.0.0.1:8765
 ```
 
+It needs `python3`, `jq`, `curl` and the Python `jsonschema` package (`python3-jsonschema`). `--port N` picks another port, and it builds `dist/` itself when that is missing or out of date.
+
 ## Contents
 
 [Starting it](#starting-it) · [Editing](#editing) · [AI](#ai) · [Capture](#capture) · [Submit](#submit) · [Manage installs](#manage-installs) · [Housekeeping](#housekeeping)
 
 ## Starting it
 
-To get it in the app menu as "EAX profile editor", run `tools/profiler/install-launcher.sh` once (`--remove` takes it out again). Launched this way there is no terminal: the **Quit** button in the page's header stops it, and it also stops by itself a few minutes after the page is closed (never during a capture or while a game is open from the page). Running it a second time while it is up only opens the page again. If `chromium` or `google-chrome` is installed the page opens in its own window without browser chrome. The plain command still works: `python3 tools/profiler/profiler.py [--port 8765] [--no-open] [--quit-when-closed]`.
+To get it in the app menu as "EAX profile editor", run `tools/profiler/install-launcher.sh` once (`--remove` takes it out again). Launched this way there is no terminal: the **Quit** button in the page's header stops it, and it also stops by itself a few minutes after the page is closed (`EAX_PROFILER_QUIT_SECONDS`, default 180) (never during a capture or while a game is open from the page). Running it a second time while it is up only opens the page again. If `chromium` or `google-chrome` is installed the page opens in its own window without browser chrome. The plain command still works: `python3 tools/profiler/profiler.py [--port 8765] [--no-open] [--quit-when-closed]`.
 
 ## Editing
 
@@ -24,7 +26,7 @@ To get it in the app menu as "EAX profile editor", run `tools/profiler/install-l
 
 ## AI
 
-The ✨ buttons, "Research game" and setting titles/reasons use AI. It uses `ANTHROPIC_API_KEY` if set, otherwise an API key saved from the editor, otherwise the logged-in `claude` CLI. Open **Settings** in the top bar to set it up without a terminal. **Use AI** there turns every AI feature off. Each feature has its own switch and they all start off, so nothing is sent until you turn one on. Research, Description, Notes and Setting titles and reasons each control a ✨ button (Research at the top of a game, Description and Notes on the Overview tab, setting titles on the Game settings tab), hidden while its switch is off, and "Untick unrelated changes" lets the AI untick captured changes it judges to be bookkeeping. Under **Experimental** there are two more, "Setting titles and reasons from captures" and "Suggest values", whose results are often wrong. The AI switches that only work on captures are greyed out while the Capture tab is off. **Appearance** switches between light, dark and matching your system (saved in the browser). The sign-in options: **Sign in** runs the claude command's own browser sign-in (**Sign out** reverses it), and the key field checks a pasted Anthropic API key with Anthropic and saves it to `~/.config/eax-restore-linux/profiler.json`, readable only by you (**Remove** deletes it). The page never gets the key back, only its last four characters. What is sent to Anthropic: the game's name and, when drafting, the file names, section names, keys and old/new values of the captured changes (up to 150), with your home folder, user name and numbers of nine digits or more replaced first. Nothing else from your machine goes. The `claude` command runs from an empty folder with its tools off. Everything it returns is a suggestion; store IDs are never filled in, and `id_source` is never set for you.
+The ✨ buttons, "Research" and setting titles/reasons use AI. It uses `ANTHROPIC_API_KEY` if set, otherwise an API key saved from the editor, otherwise the logged-in `claude` CLI. Open **Settings** in the top bar to set it up without a terminal. **Use AI** there turns every AI feature off. Each feature has its own switch and they all start off, so nothing is sent until you turn one on. Research, Description, Notes and Setting titles and reasons each control a ✨ button (Research at the top of a game, Description and Notes on the Overview tab, setting titles on the Game settings tab), hidden while its switch is off, and "Untick unrelated changes" lets the AI untick captured changes it judges to be bookkeeping. Under **Experimental** there are two more, "Setting titles and reasons from captures" and "Suggest values", whose results are often wrong. The AI switches that only work on captures are greyed out while the Capture tab is off. **Appearance** switches between light, dark and matching your system (saved in the browser). The sign-in options: **Sign in** runs the claude command's own browser sign-in (**Sign out** reverses it), and the key field checks a pasted Anthropic API key with Anthropic and saves it to `~/.config/eax-restore-linux/profiler.json`, readable only by you (**Remove** deletes it). The page never gets the key back, only its last four characters. What is sent to Anthropic: the game's name and, when drafting, the file names, section names, keys and old/new values of the captured changes (up to 150), with your home folder, user name and numbers of nine digits or more replaced first. Nothing else from your machine goes. The `claude` command runs from an empty folder with its tools off. Everything it returns is a suggestion; store IDs are never filled in, and `id_source` is never set for you.
 
 ## Capture
 
@@ -58,7 +60,7 @@ Every action shows exactly what it will delete first, and nothing is touched unt
 
 ## Housekeeping
 
-**Clearing a game's captures:** *Clear this game's captured data*, top right of the Capture tab, deletes that game's snapshots, draft and ticks after asking (not while the game is open from the page). The game's profile and anything installed are left alone; *Clean up* → *Start fresh* also removes the install and prefix.
+**Clearing a game's captures:** *Clear this game's captured data*, top right of the Capture tab, deletes that game's snapshots, draft and ticks after asking (not while the game is open from the page). The game's profile and anything installed are left alone; **Manage installs…** → *Start fresh* also removes the install and prefix.
 
 **Seeing what a step captured:** every finished capture step has a **View** button. It lists the files that step watched and the keys that changed since the step before it (or since the audio run, for a speaker layout), with the reason a change would be left out of the draft: it looks like bookkeeping (timestamps, window positions), or the baseline run showed the game rewrites it on its own. The install step's own changes (for example the OpenAL registry count) show up there too, though they never feed the draft.
 
@@ -68,12 +70,12 @@ Every action shows exactly what it will delete first, and nothing is touched unt
 
 **Source order:** on the Overview tab each source has ↑ and ↓ to move it. The game profile lists them in that order.
 
-Sessions are kept in `~/.local/state/eax-restore-linux/profiler/<store>-<id>/`.
+Sessions are kept in `~/.local/state/eax-restore-linux/profiler/<store>-<id>/` (under `$XDG_STATE_HOME` if it is set); the saved AI key lives under `$XDG_CONFIG_HOME` (default `~/.config`).
 
-On start the editor fetches its checkout's upstream branch in the background; when it is behind, a banner offers **Update**, which runs `git pull --ff-only` and rebuilds `dist/`, then asks you to restart the editor. A checkout with commits of its own, no upstream or no network gets no offer. `EAX_PROFILER_NO_UPDATE_CHECK=1` turns the check off.
+On start the editor fetches its checkout's upstream branch in the background; when it is behind, a banner offers **Update**, which runs `git pull --ff-only` (or `git merge --ff-only` onto the upstream branch it fetched) and rebuilds `dist/`, then asks you to restart the editor. A checkout with commits of its own, no upstream or no network gets no offer. `EAX_PROFILER_NO_UPDATE_CHECK=1` turns the check off.
 
 The header shows a build number: how many commits have touched `tools/profiler`, counted from git, so there is nothing to bump. It sits next to the title with the branch and commit the editor runs from.
 
-Layout: `capture.py` (library, snapshots, diffs), `classify.py` (noise flags, the drafted `game_config`, the AI passes), `cleanup.py`, `dbio.py`, `ai.py`, `profiler.py` (server). Tests: `python3 -I -m unittest discover -s tools/profiler/tests` (includes golden checks that F.E.A.R.'s `gadb` and Descent 3's registry changes come out as their database entries say); `tests/integration/profiler-answers.bats` fails if the script's prompts drift from the canned answers in `capture.py`.
+Layout: `capture.py` (library, snapshots, diffs), `classify.py` (noise flags, the drafted `game_config`, the AI passes), `cleanup.py`, `dbio.py`, `ai.py`, `profiler.py` (server), `submit.py` (the Submit button), `update.py` (the Update banner), `web/` (the page), `install-launcher.sh` (the app-menu entry). Tests: `python3 -I -m unittest discover -s tools/profiler/tests` (includes golden checks that F.E.A.R.'s `gadb` and Descent 3's registry changes come out as their database entries say); `tests/integration/profiler-answers.bats` fails if the script's prompts drift from the canned answers in `capture.py`.
 
 Binary `gadb` files (F.E.A.R.'s profile) are read by key name, the same way the script reads them, so a switched on/off setting comes through like any other change. Launching through Heroic's `heroic://launch?appName=…&runner=gog` URL has been checked on a real install.

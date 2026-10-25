@@ -10,7 +10,6 @@
 * **Prefix detection:** opt-in detection of Steam AppIDs and Heroic prefix paths, to find where your game is installed.
 * **Prefix validation:** verifies Steam AppIDs via Protontricks and checks that Heroic prefixes are fully initialized before touching any files.
 * **Library scanning:** opt-in scan of your Steam and Heroic libraries against the community-maintained game database. You pick a match from the list instead of hunting for the install folder.
-* **Recent games:** remembers the game folders you have used and offers them as a quick pick. You can still enter a new path.
 
 ## Tweaks and overrides
 
@@ -23,7 +22,7 @@
 
 * **Cache and offline mode:** downloads from GitHub are cached locally, so installing the fix to several games downloads the files once. Pinned or live checksum verification guards against corrupt or tampered downloads.
 * **File backups and manifest:** any file already where the fix goes is backed up with a timestamp before it's replaced, so you keep the original game data. Every install writes a manifest of what it deployed, so uninstall only removes what this script put there and restores your backups.
-* **Uninstall list:** Uninstall and Tools list every game this script is installed in, most recently used first, found from the install records in your Steam and Heroic folders.
+* **Uninstall list:** Uninstall and Tools list every game this script is installed in, most recently used first, found from the install manifests in your Steam and Heroic game folders.
 * **Safety guards:** refuses to run as root or from Steam's Gaming Mode, and won't automatically modify SteamOS's immutable filesystem.
 * **Update check:** at start-up, offers to download a newer version of the script and restart with it (checked against the release's `.sha256`). Set `EAX_RESTORE_SKIP_UPDATE_CHECK=1` to skip it.
 

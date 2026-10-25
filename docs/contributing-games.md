@@ -8,8 +8,8 @@ Which folder it's in says how far it's got:
 
 | Folder | Meaning | Shipped |
 | --- | --- | --- |
-| `data/games/tested/` | Checked against a real install. Its store IDs match, its `exe` exists, and any config files and settings it changes are where it says. | Yes |
-| `data/games/untested/` | Not checked on a real install yet. New games go here. | Yes |
+| `data/games/tested/` | Checked against a real install. Its store IDs match, its `exe` (if it has one) exists, and any config files and settings it changes are where it says. | Yes |
+| `data/games/untested/` | Not checked on a real install yet. New games go here. | Yes, but hidden from players unless `EAX_RESTORE_UNTESTED=1` (the profile browser always lists them) |
 | `data/drafts/` | Incomplete or doubtful entries. Checked against the schema and formatted. | **No** |
 
 To promote a game, move its file (`git mv`) and re-run `tools/format-game-database.sh`, which also updates its `"$schema"` line for the new folder.
@@ -24,7 +24,7 @@ For a game you have installed in Steam or Heroic, the editor's **Capture** tab d
 2. You switch the sound options on and quit.
 3. It works out which keys changed, skips the ones that look like the game's own bookkeeping (timestamps, window positions), and drafts the setting for you to review.
 
-If you have an `ANTHROPIC_API_KEY`, or are logged in to the `claude` command, the editor can also draft titles, descriptions and reason text. Each AI feature can be switched off in the editor's Settings. Check everything it drafts against the game, and every store ID against the store's own page, before you open a PR. See [`tools/profiler/README.md`](https://github.com/tanuki2k/eax-restore-linux/blob/HEAD/tools/profiler/README.md).
+If you have an `ANTHROPIC_API_KEY`, or are logged in to the `claude` command, the editor can also draft titles, descriptions and reason text. Each AI feature is off until you switch it on in the editor's Settings. Check everything it drafts against the game, and every store ID against the store's own page, before you open a PR. See [`tools/profiler/README.md`](https://github.com/tanuki2k/eax-restore-linux/blob/HEAD/tools/profiler/README.md).
 
 To do it by hand instead, compare the game's config files (and, for registry settings, the prefix's `user.reg`/`system.reg`) before and after switching its sound options on, then write the keys that changed into the game's file as an audio setting.
 
@@ -33,19 +33,19 @@ To do it by hand instead, compare the game's config files (and, for registry set
 The formal definition of every field is [`data/schema.json`](https://github.com/tanuki2k/eax-restore-linux/blob/HEAD/data/schema.json); pointing your editor at it (each file's `"$schema"` line does this in VS Code and most JSON-aware editors) gives autocompletion and flags mistakes as you type. Don't edit `game-database.json` by hand, because it's generated from the per-game files. After editing, run:
 
 ```bash
-tools/format-game-database.sh      # puts keys in the standard order and drops empty/default fields
+tools/format-game-database.sh      # puts keys in the standard order and drops empty fields and the defaults listed per field
 tools/build-game-database.sh       # regenerates game-database.json
 ```
 
 CI checks every file against the schema, that it's formatted, and that `game-database.json` is up to date.
 
-`tools/browse-game-database.sh [database.json]` browses the built `game-database.json` with the same browser as Tools → **[B]rowse game profiles** (it needs `fzf`): rebuild, then check how your entry's profile reads to players.
+`tools/browse-game-database.sh [database.json]` browses the built `game-database.json` with the same browser as Tools → **[B]rowse game profiles** (it needs `fzf` 0.35 or newer): rebuild, then check how your entry's profile reads to players.
 
 ## Rules
 
 > [!IMPORTANT]
 > * Only add a store `id` you've verified against the storefront's own page or API. A wrong ID would point the script at someone else's prefix.
-> * **Leave a field out when it's empty or at its default.** There are no `null`s in these files.
+> * **Leave a field out when it's empty or at its default.** There are no `null`s in these files. The formatter drops empty fields and the defaults listed per field; `tested: false` is accepted and kept as written.
 
 ## A game file
 

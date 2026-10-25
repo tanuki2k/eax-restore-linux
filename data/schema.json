@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/tanuki2k/eax-restore-linux/blob/dev/data/schema.json",
   "title": "Game profile",
-  "description": "One game's profile in the game database (data/games/<id>.json). The id is the file name. Optional fields are omitted when empty or at their default. See docs/game-file-reference.md.",
+  "description": "One game's profile in the game database (data/games/tested/<id>.json, data/games/untested/<id>.json or data/drafts/<id>.json). The id is the file name. Optional fields are omitted when empty or at their default. See docs/game-file-reference.md.",
   "type": "object",
   "required": ["name", "stores", "eax"],
   "additionalProperties": false,
@@ -323,7 +323,7 @@
           }
         },
         "changes": {
-          "description": "What to change:\nini files: file, section, key, value.\nOther text files: file, key, value.\nRegistry files: file, registry key, value name, value.\nEvery file must first be defined under game_config.files.",
+          "description": "What to change:\nini and gas_cfg files: file, section, key, value.\nOther text files: file, key, value.\nRegistry files: file, registry key, value name, value.\nEvery file must first be defined under game_config.files.",
           "type": "object",
           "minProperties": 1,
           "propertyNames": { "$ref": "#/$defs/config_file_name" },

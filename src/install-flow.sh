@@ -15,7 +15,7 @@
     # a failure never leaves the prefix half-set-up (and its error isn't
     # shown under an unrelated step's header).
 
-    # Engine-specific paths, from the builds chosen in step 6 (stable or
+    # Engine-specific paths, from the builds chosen in Phase 2 (stable or
     # latest, per component — see dsoal_source_dir / openal_source_dll).
     # Engine 1 deploys DSOAL's dsound.dll plus OpenAL Soft as
     # dsoal-aldrv.dll; engine 2 deploys only OpenAL Soft, as OpenAL32.dll.

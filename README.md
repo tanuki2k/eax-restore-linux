@@ -42,7 +42,7 @@ The full list, with the profile browser's keys, is in [docs/features.md](docs/fe
 
 ## Prerequisites
 
-The script checks for these and offers to install any that are missing.
+The script checks for these and offers to install any that are missing (on apt, pacman and dnf systems; elsewhere it asks you to install them yourself, and on SteamOS it points you to Discover).
 
 | Needed for | Packages |
 | --- | --- |

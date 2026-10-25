@@ -150,7 +150,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     # profile has settings of that kind to offer. Phase 4 is install-flow.sh.
     STEP_TOTAL=5
 
-    # Nothing is downloaded yet: step 6 fetches only the builds that get
+    # Nothing is downloaded yet: the build choice fetches only the builds that get
     # picked. This only checks GitHub can be reached, and stops now if it
     # can't and nothing usable is cached.
     check_download_readiness

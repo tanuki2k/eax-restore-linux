@@ -76,7 +76,7 @@ GITHUB_REACHABLE=0
 DSOAL_BUILD="stable"
 OAL_BUILD="stable"
 
-# The stable DSOAL build (step 6's default; EAX_RESTORE_DSOAL_PIN presets it):
+# The stable DSOAL build (the build choice's default; EAX_RESTORE_DSOAL_PIN presets it):
 # one pinned, tested DSOAL revision from kcat's own "archive" release tag. CI keeps re-uploading
 # the newest revision's asset with a fresher OpenAL Soft, but every
 # already-superseded revision is static forever — so a non-newest asset has a

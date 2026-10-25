@@ -8,8 +8,8 @@ EAX_RESTORE_SKIP_PREFLIGHT=1 EAX_RESTORE_SKIP_UPDATE_CHECK=1 ./eax-restore-linux
 
 | Variable | Effect |
 | --- | --- |
-| `EAX_RESTORE_SKIP_PREFLIGHT=1` | Skips the pre-flight tool scan, trusting that `curl`, `unzip`, `file`, `jq`, `protontricks`, `winetricks`, and `wine` are already available. |
-| `EAX_RESTORE_SKIP_UPDATE_CHECK=1` | Skips the start-up check for a newer version of the script (a stable build looks at the latest release, a `-dev` build at the `dev` one). Without it, the script offers to download the newer version and restart with it; the download is checked against the release's `.sha256` first. |
+| `EAX_RESTORE_SKIP_PREFLIGHT=1` | Skips the pre-flight tool scan, trusting that `curl`, `unzip`, `file`, `grep`, `awk`, `jq`, `protontricks`, `winetricks`, and `wine` are already available. |
+| `EAX_RESTORE_SKIP_UPDATE_CHECK=1` | Skips the start-up check for a newer version of the script (a stable build looks at the latest release, a `-dev` build at the `dev` one). Without it, the script offers to download the newer version and restart with it; the download is checked against the release's `.sha256` first. The check is also skipped when there's no terminal or `EAX_RESTORE_ANSWERS_FILE` is set. |
 | `EAX_RESTORE_DSOAL_PIN=1` | Uses the stable `kcat/dsoal` build (the revision pinned in the script, from kcat's `archive` release) without asking, so only the OpenAL Soft build is chosen. Also selects the DSOAL engine and jumps straight to install, except for a game known to use OpenAL, which still gets OpenAL Soft. |
 | `EAX_RESTORE_VCRUN_ONLY=1` | Skips the full install/uninstall flow and just (re)installs the MS VC++ 2022 Redistributable into a game's prefix. The main menu offers the same under **Tools → [V]C++ install**. |
 | `EAX_RESTORE_SKIP_CACHE_CHECK=1` | Doesn't contact GitHub for DSOAL or OpenAL Soft: the build choice only offers what's already in the local cache. |

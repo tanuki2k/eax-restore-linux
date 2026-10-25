@@ -4,6 +4,8 @@ Every field of a game file, in the order of the [example](contributing-games.md#
 
 ## At a glance
 
+Required: `name`, `stores` (each with an `id`) and `eax` (with `api`). A `game_config` needs `files`, and each setting needs `title`, `reason` and `changes`.
+
 | Section | Fields | What it holds |
 | --- | --- | --- |
 | [Basics](#basics) | `name`, `description`, `released`, `exe` | Who the game is and how to find it |
@@ -166,7 +168,7 @@ What the install itself does differently for this game.
 
 ### `install.tweaks`
 
-Any of the values below. Each turns the matching Advanced Compatibility Tweak into a default-yes prompt.
+Any of the values below. Each turns the matching Advanced Compatibility Tweak into a default-yes prompt. `eax_unified` and `com_registry_routing` are ignored for OpenAL-native installs (`eax.api` is `openal`), which only offer `expand_audio_limits`.
 
 | Value | Use it for |
 | --- | --- |
@@ -233,7 +235,7 @@ Where to look, in order, as `"base:path"`; the first that exists is used. Bases:
 | `prefix` | For a `wine_reg` file, only as `"prefix:system.reg"` or `"prefix:user.reg"` |
 
 > [!WARNING]
-> No `..`, leading `/` or backslashes.
+> No `..`, leading `/` or backslashes. A file name under `files` must end in `.ini`, `.cfg`, `.gdb`, `.reg`, `.txt`, `.ltx` or `.gas`; a location for anything but a `wine_reg` file ends in `.ini`, `.cfg`, `.gdb`, `.txt`, `.ltx` or `.gas`, and a `wine_reg` file takes only `prefix:` locations.
 
 #### `all_locations`
 
@@ -247,7 +249,7 @@ What to do when the file doesn't exist.
 | --- | --- |
 | Omitted | For files the game writes on first launch: the script asks the player to launch the game once, then checks again. |
 | `"skip"` | For files only some builds have (NewDark's `cam_ext.cfg` isn't in the stock Steam Thief games). Only that file's part of a setting is left out, and the Game Settings step and the closing summary tell the player ("left out: Thief Gold has no cam_ext.cfg"). |
-| `"create"` | Creates it (e.g. Quake 4's `autoexec.cfg`). |
+| `"create"` | Creates it in the first location whose folder exists (e.g. Quake 4's `autoexec.cfg`). |
 
 #### `crash_marker`
 
@@ -267,14 +269,14 @@ Each entry in `audio_settings` and `optional_settings` has these fields.
 
 #### `title` and `reason`
 
-`title` is **Enable** / **Fix** / **Remove** / **Raise** plus the result the player gets (`"Enable EAX reverb"`), reused across games for the same result. `reason` is one or two short sentences, starting with the game's name, on what the game does out of the box, without repeating the settings the rows below it show.
+`title` is **Enable** / **Fix** / **Remove** / **Raise** plus the result the player gets (`"Enable EAX reverb"`), reused across games for the same result, 60 characters at most. `reason` is one or two short sentences, starting with the game's name, on what the game does out of the box, without repeating the settings the rows below it show.
 
 #### `changes`
 
-File → section → key → value for `ini` files, file → key → value for `flat_ini` and the cfg formats, and file → registry key → value name → value for `wine_reg`.
+File → section → key → value for `ini` and `gas_cfg` files, file → key → value for `flat_ini`, `idtech_cfg`, `dark_cfg`, `brace_cfg`, `ltx` and `gadb`, and file → registry key → value name → value for `wine_reg`.
 
 - For `wine_reg`, give the key path as the `.reg` file shows it below its hive (`{ "system.reg": { "Software\\Wow6432Node\\Outrage\\Descent3": { "Name": "3" } } }`). The script also finds it without `Wow6432Node\` in a 32-bit prefix.
-- Values are strings; `true`/`false` switches a `dark_cfg` flag; `null` removes the key.
+- Values are strings made of letters, digits, spaces and `. _ ( ) -` (section and key names allow the same, without the brackets); anything else fails the schema. `true`/`false` switches a `dark_cfg` flag; `null` removes the key.
 - Every file must be listed in `files`.
 
 #### `only_if`
