@@ -141,12 +141,9 @@ install_openal_runtime() {
 }
 
 # Usage: deploy_prefix_dlls
-# Copies DEPLOY_SRC/DEPLOY_DEST_NAME into the current prefix's system folder.
-# Index 0 (the primary override DLL) is unconditionally backed up and
-# overwritten — it's the one file Wine is being told to override anyway. Any
-# secondary files (dsoal-aldrv.dll) go through the interactive conflict prompt
-# instead, same as the game-folder copy, since a pre-existing file of that
-# exact name is unusual.
+# Copies DEPLOY_SRC/DEPLOY_DEST_NAME into the current prefix's system folder,
+# backing up any file already there (handle_conflict), the same as the
+# game-folder copy.
 deploy_prefix_dlls() {
     local target_dir dest i
     if [ "$ARCH" == "32" ] && [ -d "$PREFIX_PATH/drive_c/windows/syswow64" ]; then
@@ -156,11 +153,7 @@ deploy_prefix_dlls() {
     fi
     for i in "${!DEPLOY_SRC[@]}"; do
         dest="$target_dir/${DEPLOY_DEST_NAME[$i]}"
-        if [ "$i" -eq 0 ]; then
-            auto_backup_and_overwrite "$dest" && deploy_copy "${DEPLOY_SRC[$i]}" "$dest" "Duplicated"
-        elif handle_conflict "$dest"; then
-            deploy_copy "${DEPLOY_SRC[$i]}" "$dest" "Duplicated"
-        fi
+        handle_conflict "$dest" && deploy_copy "${DEPLOY_SRC[$i]}" "$dest" "Duplicated"
     done
 }
 

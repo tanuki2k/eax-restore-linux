@@ -87,8 +87,8 @@
     fi
 
     # Manifest of everything THIS run actually deploys, so uninstall only ever
-    # touches files the script itself put there (never pre-existing user files
-    # that were left alone because of a [s]kip during a conflict prompt).
+    # touches files the script itself put there (never a pre-existing file,
+    # which handle_conflict backs up for uninstall to put back).
     INSTALL_MANIFEST="$GAME_DIR/.eax-restore-manifest.txt"
 
     # On a reinstall, files this script placed last time (e.g. dsound.dll)
@@ -156,14 +156,7 @@
     for deploy_dir in "${GAME_DIRS[@]}"; do
         for i in "${!DEPLOY_SRC[@]}"; do
             DEPLOY_DEST="$deploy_dir/${DEPLOY_DEST_NAME[$i]}"
-            # The OpenAL games ship their own OpenAL32.dll: skipping it would
-            # leave the game without the fix, so it's backed up without asking.
-            if [ "$ENGINE_CHOICE" == "2" ]; then
-                conflict_handler=auto_backup_and_overwrite
-            else
-                conflict_handler=handle_conflict
-            fi
-            if $conflict_handler "$DEPLOY_DEST"; then
+            if handle_conflict "$DEPLOY_DEST"; then
                 deploy_copy "${DEPLOY_SRC[$i]}" "$DEPLOY_DEST" "Copied"
             fi
         done

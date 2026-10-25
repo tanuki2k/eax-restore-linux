@@ -245,7 +245,8 @@ their execution order in the assembled script):
 12. **`verify.sh`** — download verification: `verify_checksum`, `verify_or_confirm`,
     `get_asset_digest`, `confirm_unverified_download`.
 13. **`cache.sh`** — `update_local_cache` (the repository-cache step), plus
-    `handle_conflict` and `auto_backup_and_overwrite`.
+    `handle_conflict` (backs up a file already where one is deployed, without
+    asking — Phase 4 asks nothing).
 14. **`prefix-steps.sh`** — the install's per-prefix steps as functions
     (`install_openal_runtime`, `deploy_prefix_dlls`, `apply_prefix_registry`,
     and uninstall's `remove_prefix_registry`), so a game's own prefix and its

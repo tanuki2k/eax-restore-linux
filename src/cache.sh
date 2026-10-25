@@ -543,80 +543,39 @@ record_deploy_failure() {
 }
 
 handle_conflict() {
+    # Usage: handle_conflict <target_file>
+    # Clears the way for a file the install is about to put at <target_file>.
+    # A file already there is backed up (timestamped, named after the target
+    # rather than a differently-cased original, so uninstall's "$f".bak*
+    # lookup finds and restores it) without asking: it runs in the middle of
+    # Phase 4, which asks nothing, and the other answers were never what a
+    # player wants there — skipping leaves the game without the fix (the
+    # game-folder dsound.dll is DSOAL itself), and overwriting loses the
+    # original. Returns 1 (and counts a deploy failure) if the existing file
+    # couldn't be moved aside, so the caller skips the copy instead of
+    # overwriting it: cp -f onto the file can still succeed (it needs only
+    # the file's write access, mv needs the folder's), which would destroy
+    # the original with no backup left.
     local target_file="$1"
     local existing
     existing=$(find_existing_variant "$target_file")
-    if [ -n "$existing" ]; then
-        if [ "${PREV_MANIFEST_FILES[$target_file]:-0}" == "1" ] && looks_like_our_file "$existing"; then
-            # Already ours from a previous install (tracked in the prior
-            # manifest before it was reset) — not a genuine original, so
-            # there's nothing here worth backing up. Overwrite directly;
-            # any real original backup from the very first install, if one
-            # exists, is left untouched rather than buried under this.
-            if rm -f "$existing"; then return 0; fi
-            record_deploy_failure "$target_file"
-            return 1
-        fi
-        echo -e "\n${YELLOW}$(basename "$existing")${NC} ${WHITE}already exists at $(tilde_path "$(dirname "$target_file")").${NC}"
-        while true; do
-            prompt "What would you like to do? [B]ackup & overwrite (default), [o]verwrite, [s]kip: "
-            read_answer C_CHOICE
-            C_CHOICE="${C_CHOICE:-b}"
-            case "${C_CHOICE,,}" in
-                o)
-                    if rm -rf "$existing"; then return 0; fi
-                    record_deploy_failure "$target_file"
-                    return 1 ;;
-                b)
-                    # Named after the target (not a differently-cased
-                    # original), so uninstall's "$f".bak* lookup finds it.
-                    # A failed backup skips the copy: cp -f onto the file
-                    # can still succeed (it needs only file write access,
-                    # mv needs the folder's), which would destroy the
-                    # original with no backup left.
-                    TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-                    echo ""
-                    if ! mv "$existing" "${target_file}.bak.${TIMESTAMP}"; then
-                        print_error_arrow "Couldn't back up $(basename "$existing"), so it was left untouched."
-                        DEPLOY_FAILURES=$(( ${DEPLOY_FAILURES:-0} + 1 ))
-                        return 1
-                    fi
-                    print_status "Backed up original $(basename "$existing") to $(basename "$target_file").bak.${TIMESTAMP}"
-                    return 0 ;;
-                s) echo ""; print_status "Skipped $(basename "$target_file")."; return 1 ;;
-                *) print_result "That's not a valid option — please type b, o, or s." "$YELLOW" ;;
-            esac
-        done
+    [ -n "$existing" ] || return 0
+    if [ "${PREV_MANIFEST_FILES[$target_file]:-0}" == "1" ] && looks_like_our_file "$existing"; then
+        # Already ours from a previous install (tracked in the prior
+        # manifest before it was reset) — not a genuine original, so
+        # there's nothing here worth backing up. Overwrite directly;
+        # any real original backup from the very first install, if one
+        # exists, is left untouched rather than buried under this.
+        if rm -f "$existing"; then return 0; fi
+        record_deploy_failure "$target_file"
+        return 1
     fi
-    return 0
-}
-
-auto_backup_and_overwrite() {
-    # Usage: auto_backup_and_overwrite <target_file>
-    # Like handle_conflict's [b]ackup option, but never prompts — always
-    # backs up an existing file (timestamped) before it gets overwritten.
-    # Used for the prefix copy of dsound.dll: it's a genuine system DLL
-    # likely to already exist there, and backup-and-overwrite is already
-    # handle_conflict's own default, so skipping the prompt here removes a
-    # step without changing what actually happens in the common case.
-    # Returns 1 (and counts a deploy failure) if the existing file couldn't
-    # be moved aside, so the caller skips the copy instead of overwriting it.
-    local target_file="$1"
-    local existing
-    existing=$(find_existing_variant "$target_file")
-    if [ -n "$existing" ]; then
-        if [ "${PREV_MANIFEST_FILES[$target_file]:-0}" == "1" ] && looks_like_our_file "$existing"; then
-            if rm -f "$existing"; then return 0; fi
-            record_deploy_failure "$target_file"
-            return 1
-        fi
-        TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-        if ! mv "$existing" "${target_file}.bak.${TIMESTAMP}"; then
-            print_error_arrow "Couldn't back up $(basename "$existing"), so it was left untouched."
-            DEPLOY_FAILURES=$(( ${DEPLOY_FAILURES:-0} + 1 ))
-            return 1
-        fi
-        print_status "Backed up existing $(basename "$existing") to $(basename "$target_file").bak.${TIMESTAMP}"
+    TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+    if ! mv "$existing" "${target_file}.bak.${TIMESTAMP}"; then
+        print_error_arrow "Couldn't back up $(basename "$existing"), so it was left untouched."
+        DEPLOY_FAILURES=$(( ${DEPLOY_FAILURES:-0} + 1 ))
+        return 1
     fi
+    print_status "Backed up the original $(basename "$existing") to $(basename "$target_file").bak.${TIMESTAMP}"
     return 0
 }
