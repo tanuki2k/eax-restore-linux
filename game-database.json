@@ -404,7 +404,7 @@
         "status": "not_implemented",
         "problem": "This is the Enhanced Edition, not the classic Baldur's Gate II, and it has no EAX."
       },
-      "notes": "Boulders Gate II complete, a separate purchase on GOG, is the original 2000 release that still supports EAX."
+      "notes": "Baldur's Gate 2 Complete, a separate purchase on GOG, is the original 2000 release that still supports EAX."
     },
     {
       "id": "baldurs-gate-enhanced-edition",
@@ -425,7 +425,7 @@
         "status": "not_implemented",
         "problem": "This is the Enhanced Edition, not the classic Baldur's Gate, and it has no EAX."
       },
-      "notes": "Baldur's Gate: The Original Saga, a separate purchase on GOG, is the original 1988 release that still supports EAX."
+      "notes": "Baldur's Gate: The Original Saga, a separate purchase on GOG, is the original 1998 release that still supports EAX."
     },
     {
       "id": "baldurs-gate-the-original-saga",
@@ -1104,7 +1104,7 @@
           "url": "https://github.com/kcat/dsoal/issues/79"
         }
       ],
-      "notes": "Reverb is quiet by default however a boost to EAX Reverb will be automaticly appled via OpenALsoft. \n\nThe default Galaxy driver is recommended over the Community ALAudio mod. This is because ALAudio doesn't process the game's EAX reverb."
+      "notes": "Reverb is quiet by default, so the install offers to boost it. Stay on the default Galaxy driver: the community ALAudio mod doesn't pass the game's EAX reverb through."
     },
     {
       "id": "doom-3",
