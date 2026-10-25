@@ -1,55 +1,57 @@
 # Contributing a game
 
-PRs adding or correcting games are welcome. Each game is its own file, `<id>.json`, where `<id>` is a kebab-case version of its name (`quake-4.json`, `thief-ii-the-metal-age.json`).
+Pull requests that add or correct a game are welcome. Each game is one file named `<id>.json`, where `<id>` is the game's name in kebab-case, like `quake-4.json` or `thief-ii-the-metal-age.json`.
 
 ## Where a game file lives
 
-Which folder it's in says how far it's got:
+The folder a file is in says how far along it is.
 
-| Folder | Meaning | Shipped |
+| Folder | What it means | Shipped to players? |
 | --- | --- | --- |
-| `data/games/tested/` | Checked against a real install. Its store IDs match, its `exe` (if it has one) exists, and any config files and settings it changes are where it says. | Yes |
-| `data/games/untested/` | Not checked on a real install yet. New games go here. | Yes, but hidden from players unless `EAX_RESTORE_UNTESTED=1` (the profile browser always lists them) |
-| `data/drafts/` | Incomplete or doubtful entries. Checked against the schema and formatted. | **No** |
+| `data/games/tested/` | Checked against a real install: its store IDs match, its `exe` exists if it has one, and every config file and setting is where the file says. | Yes |
+| `data/games/untested/` | Not checked on a real install yet. New games start here. | Yes, but hidden unless the player sets `EAX_RESTORE_UNTESTED=1`. The profile browser always lists them. |
+| `data/drafts/` | Incomplete or doubtful entries. They are validated against the schema and formatted, nothing more. | No |
 
-To promote a game, move its file (`git mv`) and re-run `tools/format-game-database.sh`, which also updates its `"$schema"` line for the new folder.
+To promote a game, `git mv` its file to the next folder and run `tools/format-game-database.sh`. That also updates the file's `"$schema"` line for the new location.
 
 ## Adding a game
 
-The quickest way to add a game or its settings is the profile editor, `tools/profiler/eax-profiler`, which opens in your browser. It edits any game file through forms, so there's no JSON to type.
+The quickest route is the profile editor, `tools/profiler/eax-profiler`. It opens in your browser and edits a game file through forms, so there's no JSON to type.
 
-For a game you have installed in Steam or Heroic, the editor's **Capture** tab does most of the work:
+If you have the game installed through Steam or Heroic, the editor's Capture tab does most of the work:
 
 1. It saves a copy of the game's config files and the prefix's registry, installs the EAX fix without asking you anything, and launches the game.
-2. You switch the sound options on and quit.
-3. It works out which keys changed, skips the ones that look like the game's own bookkeeping (timestamps, window positions), and drafts the setting for you to review.
+2. You switch the sound options on in the game and quit.
+3. It compares the files, ignores keys that look like the game's own bookkeeping (timestamps, window positions), and drafts a setting for you to review.
 
-If you have an `ANTHROPIC_API_KEY`, or are logged in to the `claude` command, the editor can also draft titles, descriptions and reason text. Each AI feature is off until you switch it on in the editor's Settings. Check everything it drafts against the game, and every store ID against the store's own page, before you open a PR. See [`tools/profiler/README.md`](https://github.com/tanuki2k/eax-restore-linux/blob/HEAD/tools/profiler/README.md).
+With an `ANTHROPIC_API_KEY`, or after logging in to the `claude` command, the editor can also draft titles, descriptions and reasons. Every AI feature is off until you switch it on in the editor's Settings. Whatever it drafts, check it against the game, and check every store ID against the store's own page, before you open a PR. The [profiler README](https://github.com/tanuki2k/eax-restore-linux/blob/HEAD/tools/profiler/README.md) has the details.
 
-To do it by hand instead, compare the game's config files (and, for registry settings, the prefix's `user.reg`/`system.reg`) before and after switching its sound options on, then write the keys that changed into the game's file as an audio setting.
+You can also do it by hand. Compare the game's config files before and after you switch its sound options on (for settings kept in the registry, compare the prefix's `user.reg` and `system.reg`), then write the keys that changed into the game's file as an audio setting.
 
-### Format and build
+## Formatting and building
 
-The formal definition of every field is [`data/schema.json`](https://github.com/tanuki2k/eax-restore-linux/blob/HEAD/data/schema.json); pointing your editor at it (each file's `"$schema"` line does this in VS Code and most JSON-aware editors) gives autocompletion and flags mistakes as you type. Don't edit `game-database.json` by hand, because it's generated from the per-game files. After editing, run:
+[`data/schema.json`](https://github.com/tanuki2k/eax-restore-linux/blob/HEAD/data/schema.json) defines every field. Each game file's `"$schema"` line points at it, so VS Code and most JSON-aware editors will autocomplete and flag mistakes as you type.
+
+Don't edit `game-database.json` yourself. It's generated from the per-game files. After you edit a game, run:
 
 ```bash
-tools/format-game-database.sh      # puts keys in the standard order and drops empty fields and the defaults listed per field
+tools/format-game-database.sh      # standard key order; drops empty fields and per-field defaults
 tools/build-game-database.sh       # regenerates game-database.json
 ```
 
-CI checks every file against the schema, that it's formatted, and that `game-database.json` is up to date.
+CI checks every file against the schema, checks that it's formatted, and checks that `game-database.json` is up to date.
 
-`tools/browse-game-database.sh [database.json]` browses the built `game-database.json` with the same browser as Tools → **[B]rowse game profiles** (it needs `fzf` 0.35 or newer): rebuild, then check how your entry's profile reads to players.
+To see how your entry reads to a player, rebuild and run `tools/browse-game-database.sh [database.json]`. It opens the same browser as Tools → **[B]rowse game profiles** and needs `fzf` 0.35 or newer.
 
-## Rules
+## Two rules
 
 > [!IMPORTANT]
-> * Only add a store `id` you've verified against the storefront's own page or API. A wrong ID would point the script at someone else's prefix.
-> * **Leave a field out when it's empty or at its default.** There are no `null`s in these files. The formatter drops empty fields and the defaults listed per field; `tested: false` is accepted and kept as written.
+> * Only add a store `id` you've checked against the store's own page or API. A wrong ID points the script at somebody else's prefix.
+> * Leave a field out when it's empty or at its default. These files have no `null`s. The formatter drops empty fields and each field's default, though `tested: false` is accepted and kept as written.
 
 ## A game file
 
-A game file looks like this, trimmed (see `data/games/tested/` for more). Every field is described in the [game file reference](game-file-reference.md).
+Here is a trimmed example. `data/games/tested/` has plenty more, and the [game file reference](game-file-reference.md) explains every field.
 
 ```json
 {

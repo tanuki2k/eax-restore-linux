@@ -1,38 +1,42 @@
-# Library Scanning & the Game Database
+# Library scanning and the game database
 
-During install, the script can scan your Steam and Heroic libraries for titles it recognises, so you can pick a game from a list instead of browsing to its folder.
+When you start an install, the script can scan your Steam and Heroic libraries for games it recognises. You pick one from the list instead of hunting for its folder.
 
-Matches are checked against [`game-database.json`](https://github.com/tanuki2k/eax-restore-linux/blob/HEAD/game-database.json), a community-maintained database in this repo (built from the per-game files in [`data/games/`](https://github.com/tanuki2k/eax-restore-linux/blob/HEAD/data/games/)). It's fetched fresh on every run from the `dev` branch and cached locally as `game-database.v3.json`, so a later offline run still works.
+What it recognises comes from [`game-database.json`](https://github.com/tanuki2k/eax-restore-linux/blob/HEAD/game-database.json), a community-maintained file in this repo, built from one small file per game in [`data/games/`](https://github.com/tanuki2k/eax-restore-linux/blob/HEAD/data/games/). The script fetches it fresh on every run from the `dev` branch, so a fix to a game's entry reaches you straight away. It keeps a local copy as `game-database.v3.json`, which it falls back to when you're offline.
 
-Games in `data/games/untested/` are in the database too but marked untested, so install and library scanning skip them unless `EAX_RESTORE_UNTESTED=1` is set. The profile browser always lists them.
+## What a game's entry gives you
 
-## What the database provides
+If the game is in the database, the install can do a lot more than copy files:
 
-* the install-time "Heads up" notes
-* the "this install would be a no-op" warnings
-* the delisted-storefront notice
-* the OpenAL-vs-DirectSound3D compatibility check ("Audio API Detection") for specific titles
-* the **Game Audio Settings** and **Optional Game Settings** steps
+* show a "heads up" with anything worth knowing about the game before you start
+* warn you when an install wouldn't do anything, for example because the game has no EAX to restore
+* tell you when a game has been delisted from a store
+* skip the guessing about whether the game uses DirectSound3D or OpenAL
+* offer changes to the game's own settings, which is where most of the benefit comes from
 
-For games that ship with EAX (or other things) switched off in their own config files, those two steps show each setting's current and recommended value and apply the ones you accept:
+That last one needs an explanation. Plenty of games ship with EAX turned off in their config files, or load their own copy of an audio library instead of the one the script installs. The entry lists those settings. For each one the script shows the file, the value it has now and the value it would set, and applies the ones you accept. Audio settings go in together, once you agree. Optional ones, like a fix for Quake 4's low-resolution textures, are offered one at a time, and only if you want to look through them.
 
-* **Audio settings** are applied together, once you agree to change them.
-* **Optional settings** (like Quake 4's low image quality fix) are applied one by one, only if you choose to review them.
+## Tested and untested games
 
-## A game that isn't in the database
+Each game's file lives in one of two folders. `data/games/tested/` holds games someone has checked on a real install. `data/games/untested/` holds games that are in the database but nobody has checked yet. The install and the library scan ignore the untested ones, so those games are treated as having no entry. Set `EAX_RESTORE_UNTESTED=1` to include them. The profile browser in the Tools menu always lists them, behind its own filter.
 
-The list is small and hand-verified, so it covers only a fraction of EAX-capable games. The script then falls back in two steps:
+Single settings can be unverified too, even in a tested game. Those are left out unless you set `EAX_RESTORE_UNTESTED_SETTINGS=1`, and then they're marked "(untested)". See [Environment variables](environment-variables.md).
 
-1. **File scan.** The OpenAL-vs-DirectSound3D check scans the game's own `.exe`/`.dll` files for references to the OpenAL or DirectSound libraries and API names. That's a lower-confidence guess, and the script says so.
-2. **Ask you.** If the scan is inconclusive too (or you skip it), the script asks you to pick between DirectSound3D/DSOAL and OpenAL native instead of assuming DirectSound3D.
+## When your game isn't in the database
+
+The list is small and checked by hand, so plenty of EAX games aren't on it. The install still works, and the script falls back in two steps.
+
+First it reads the game's own `.exe` and `.dll` files for references to OpenAL or DirectSound, to guess which one the game uses. This is less reliable than the database, and the script tells you so.
+
+If that doesn't settle it, or you skip it, the script asks you to choose between DirectSound3D with DSOAL and native OpenAL. DirectSound3D is the default. That prompt is the only way to pick OpenAL for a game nothing could identify.
 
 > [!NOTE]
-> DirectSound3D is the default, and that last prompt is the only way to select OpenAL-native mode for a game nothing could identify.
+> The scan only finds games that are in the database. If yours isn't listed, choose the option under the list to type its path yourself.
 
-## Retail/CD copies and other installs
+## Retail and CD copies
 
-Retail/CD copies and other non-Steam, non-Heroic installs (e.g. an original pre-Steam Half-Life disc, run in a Wine prefix you set up yourself) aren't covered by the scanner, since there's no launcher library to scan, but the script still supports them. Point it at the game's `.exe` folder and provide the Wine prefix path manually when prompted.
+The scanner can't see games that aren't in Steam or Heroic, because there's no library to read. A retail copy of Half-Life from a disc, running in a Wine prefix you set up yourself, is an example. The install still handles it. Point the script at the folder with the game's `.exe` and give it the prefix path when it asks.
 
 ## Adding or fixing a game
 
-See [Contributing a game](contributing-games.md).
+[Contributing a game](contributing-games.md) walks through it.

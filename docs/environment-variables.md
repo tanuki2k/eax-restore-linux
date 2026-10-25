@@ -1,20 +1,32 @@
 # Environment variables
 
-For repeat runs or scripting, these can be set to skip prompts. Set them in front of the command:
+These change how the script behaves, mostly to skip prompts on repeat runs or to run it unattended. Put them in front of the command:
 
 ```bash
 EAX_RESTORE_SKIP_PREFLIGHT=1 EAX_RESTORE_SKIP_UPDATE_CHECK=1 ./eax-restore-linux.sh
 ```
 
-| Variable | Effect |
+## For repeat runs
+
+| Variable | What it does |
 | --- | --- |
-| `EAX_RESTORE_SKIP_PREFLIGHT=1` | Skips the pre-flight tool scan, trusting that `curl`, `unzip`, `file`, `grep`, `awk`, `jq`, `protontricks`, `winetricks`, and `wine` are already available. |
-| `EAX_RESTORE_SKIP_UPDATE_CHECK=1` | Skips the start-up check for a newer version of the script (a stable build looks at the latest release, a `-dev` build at the `dev` one). Without it, the script offers to download the newer version and restart with it; the download is checked against the release's `.sha256` first. The check is also skipped when there's no terminal or `EAX_RESTORE_ANSWERS_FILE` is set. |
-| `EAX_RESTORE_DSOAL_PIN=1` | Uses the stable `kcat/dsoal` build (the revision pinned in the script, from kcat's `archive` release) without asking, so only the OpenAL Soft build is chosen. Also selects the DSOAL engine and jumps straight to install, except for a game known to use OpenAL, which still gets OpenAL Soft. |
-| `EAX_RESTORE_VCRUN_ONLY=1` | Skips the full install/uninstall flow and just (re)installs the MS VC++ 2022 Redistributable into a game's prefix. The main menu offers the same under **Tools → [V]C++ install**. |
-| `EAX_RESTORE_SKIP_CACHE_CHECK=1` | Doesn't contact GitHub for DSOAL or OpenAL Soft: the build choice only offers what's already in the local cache. |
-| `EAX_RESTORE_GAME_DATABASE_FILE=/path/to/game-database.json` | Uses a local file (e.g. one you built with `tools/build-game-database.sh`) instead of fetching `game-database.json`. Mainly for testing edits to the database before they're pushed. |
-| `EAX_RESTORE_UNTESTED=1` | Includes the unverified game profiles (the ones built from `data/games/untested/`). Without it they're left out, so those games are treated as having no profile. The profile browser (Tools → Browse game profiles) always lists them, behind its own tested / untested filter. |
-| `EAX_RESTORE_UNTESTED_SETTINGS=1` | Offers the game settings (audio and optional) marked `"tested": false`, and the `alsoft_ini` values when `install.alsoft_tested` is `false`, since they're unverified. Without it they're left out; with it they're tagged "(untested)", and checked ones "(tested)". The profile browser always shows them. |
-| `EAX_RESTORE_ANSWERS_FILE=/path/to/answers.txt` | Answers every prompt from the file (one line per prompt; lines starting with `#` are ignored) instead of the terminal, for unattended runs such as `tools/profiler`. |
-| `EAX_RESTORE_NO_LOG=1` | Turns off the per-run log file (see [Logs & Bug Reports](troubleshooting.md#logs--bug-reports)). |
+| `EAX_RESTORE_SKIP_PREFLIGHT=1` | Skips the check for required tools and trusts that `curl`, `unzip`, `file`, `grep`, `awk`, `jq`, `protontricks`, `winetricks` and `wine` are all installed. |
+| `EAX_RESTORE_SKIP_UPDATE_CHECK=1` | Skips the check for a newer version of the script. Normally a stable build looks at the latest release and a `-dev` build at the `dev` one, then offers to download the newer script and restart with it, after checking it against the release's `.sha256`. The check is also skipped when there's no terminal or `EAX_RESTORE_ANSWERS_FILE` is set. |
+| `EAX_RESTORE_SKIP_CACHE_CHECK=1` | Doesn't contact GitHub for DSOAL or OpenAL Soft. The build choice then offers only what's already in the local cache. |
+| `EAX_RESTORE_DSOAL_PIN=1` | Uses the stable `kcat/dsoal` build without asking (the revision pinned in the script, from kcat's `archive` release), so you only choose an OpenAL Soft build. It also picks the DSOAL engine and goes straight to the install, except for a game known to use OpenAL, which still gets OpenAL Soft. |
+| `EAX_RESTORE_VCRUN_ONLY=1` | Skips the install and uninstall and only installs the VC++ 2022 runtime into a game's prefix. **Tools → [V]C++ install** in the main menu does the same. |
+| `EAX_RESTORE_NO_LOG=1` | Turns off the log file each run normally writes. See [Troubleshooting](troubleshooting.md#logs-and-bug-reports). |
+
+## For game profiles
+
+| Variable | What it does |
+| --- | --- |
+| `EAX_RESTORE_UNTESTED=1` | Includes game profiles nobody has checked on a real install (the ones built from `data/games/untested/`). Without it, those games are treated as having no profile. The profile browser always lists them. |
+| `EAX_RESTORE_UNTESTED_SETTINGS=1` | Offers game settings marked `"tested": false`, and `alsoft_ini` values when `install.alsoft_tested` is `false`. Without it they're left out. With it they're marked "(untested)", and the checked ones "(tested)". The profile browser always shows them. |
+| `EAX_RESTORE_GAME_DATABASE_FILE=/path/to/game-database.json` | Uses a local file instead of fetching `game-database.json`, for example one you built with `tools/build-game-database.sh`. It's for testing database edits before they're pushed. |
+
+## For scripting
+
+| Variable | What it does |
+| --- | --- |
+| `EAX_RESTORE_ANSWERS_FILE=/path/to/answers.txt` | Answers every prompt from a file, one line per prompt, instead of asking you. Lines starting with `#` are ignored. `tools/profiler` uses this for unattended runs. |
