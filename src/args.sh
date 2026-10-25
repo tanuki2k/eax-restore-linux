@@ -41,7 +41,7 @@ prompts is done via environment variables:
   EAX_RESTORE_NO_LOG=1                Don't write a run log (normally saved to
                                       ~/.local/state/eax-restore-linux/logs/)
 
-Full feature list, environment variable details, and README:
+Full feature list, environment variable details, and docs:
 https://github.com/tanuki2k/eax-restore-linux
 
   -h, --help     Show this help text and exit

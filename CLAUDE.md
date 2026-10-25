@@ -17,9 +17,9 @@ drives library scanning, install-time compatibility notes and the Game Settings 
 game is edited as `<id>.json` in `data/games/tested/` (checked against a real install)
 or `data/games/untested/` (not yet) — both shipped — or `data/drafts/` (never shipped),
 defined by `data/schema.json`; `tools/build-game-database.sh` combines the two shipped
-folders. See `README.md` for the full feature list
-and user-facing docs, and its "Contributing to the game database" section for
-the fields.
+folders. See `README.md` and `docs/` for the full feature list
+and user-facing docs, and `docs/contributing-games.md` (workflow) and
+`docs/game-file-reference.md` (the fields).
 
 **Design rule: anything specific to a game or engine lives in the database, never as a
 special case in the script's code** — config edits, the audio API (and so the engine),
@@ -34,7 +34,7 @@ artifact. Its source lives split across `src/*.sh` (one file per functional grou
 file and re-run `./build.sh` to regenerate it — never hand-edit
 `dist/eax-restore-linux.sh` directly. There's no other build tooling and no package
 manifest — the repo is the split source, the JSON database, and their docs and
-metadata (`README.md`, `CONTRIBUTING.md`, `LICENSE`, `.github/`, the `.desktop`
+metadata (`README.md`, `docs/`, `CONTRIBUTING.md`, `LICENSE`, `.github/`, the `.desktop`
 launcher).
 
 End users get the script from a **GitHub Release asset**, not the repo directly —
@@ -43,7 +43,7 @@ End users get the script from a **GitHub Release asset**, not the repo directly 
 a manual step: bump `SCRIPT_VERSION` in `src/globals.sh`, run
 `./build.sh`, generate `dist/eax-restore-linux.sh.sha256` with
 `sha256sum dist/eax-restore-linux.sh > dist/eax-restore-linux.sh.sha256` (lets users
-verify the download — see README's "Verifying the download"), and create a GitHub
+verify the download, see README's "Verifying the download"), and create a GitHub
 release tagged `vX.Y` with `dist/eax-restore-linux.sh`,
 `dist/eax-restore-linux.sh.sha256`, and `eax-restore-linux.desktop` attached as assets
 (matching the existing `v0.28` release) — mark it as the latest release so the
@@ -108,7 +108,7 @@ launcher hardcodes `releases/latest`).
   (one line per prompt; a new phase 1-3 question needs a line in `install_answers`), and
   checks that uninstall restores the tree byte for byte. Add a test with each bug fix.
   Real Proton/launchers, fzf and the tick-list UI are still manual, as is checking
-  `README.md` and the script's own header/inline docs stay in sync with behavior changes.
+  `README.md`, `docs/` and the script's own header/inline docs stay in sync with behavior changes.
 
 ## Architecture
 
@@ -118,7 +118,7 @@ their execution order in the assembled script):
 
 1. **`header.sh`** — shebang + top header comment block: features list and the
    authoritative list of `EAX_RESTORE_*` env vars. Keep this in sync with
-   `README.md`'s Environment Variables table whenever a var is added/changed — every
+   `docs/environment-variables.md` whenever a var is added/changed — every
    existing var should be documented in both places.
 2. **`globals.sh`** — `SCRIPT_VERSION`, colour vars, `BASE_SHARE` and friends
    (`DSOAL_SHARE`, `OPENAL_SHARE`, `GAME_DATABASE_*`), pinned download URLs/SHA256s,
@@ -127,7 +127,7 @@ their execution order in the assembled script):
 3. **`args.sh`** — `-h`/`--help` and `-v`/`--version` command-line flag handling
    (exits before anything else runs). Only needs `globals.sh`'s `SCRIPT_VERSION`/
    `SCRIPT_DATE`/colour vars, not the `ui.sh` helpers. Keep its `--help` env-var
-   summary in sync with `header.sh`/`README.md` the same way those two are kept
+   summary in sync with `header.sh`/`docs/environment-variables.md` the same way those two are kept
    in sync with each other.
 4. **`ui.sh`** — the text/output styling helpers (`print_banner`, `print_step`,
    `print_status`, `print_note`/`print_warning`/`print_error` and their `_arrow`

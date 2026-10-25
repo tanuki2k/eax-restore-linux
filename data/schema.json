@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/tanuki2k/eax-restore-linux/blob/dev/data/schema.json",
   "title": "Game profile",
-  "description": "One game's profile in the game database (data/games/<id>.json). The id is the file name. Optional fields are omitted when empty or at their default. See README.md, 'Contributing to the game database'.",
+  "description": "One game's profile in the game database (data/games/<id>.json). The id is the file name. Optional fields are omitted when empty or at their default. See docs/game-file-reference.md.",
   "type": "object",
   "required": ["name", "stores", "eax"],
   "additionalProperties": false,

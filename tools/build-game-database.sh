@@ -60,7 +60,7 @@ for f in "${game_files[@]}"; do
 done
 built="$(printf '%s' "$entries" | jq -s '{
     schema_version: 3,
-    _readme: "Generated from data/games/tested/*.json and data/games/untested/*.json by tools/build-game-database.sh; do not edit by hand. Games from untested/ carry \"tested\": false. Field reference: data/schema.json and README.md, \"Contributing to the game database\".",
+    _readme: "Generated from data/games/tested/*.json and data/games/untested/*.json by tools/build-game-database.sh; do not edit by hand. Games from untested/ carry \"tested\": false. Field reference: data/schema.json and docs/game-file-reference.md.",
     games: sort_by(.name | ascii_downcase)
 }')"
 

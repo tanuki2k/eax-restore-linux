@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Starts the game profile editor (or just opens it, if it is already running).
-# Usage: tools/profiler/eax-profiler [--port N]    (see README.md for the one-time app-menu entry)
+# Usage: tools/profiler/eax-profiler [--port N]    (see tools/profiler/README.md for the one-time app-menu entry)
 set -u
 repo="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.." && pwd)"
 port=8765

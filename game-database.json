@@ -1,6 +1,6 @@
 {
   "schema_version": 3,
-  "_readme": "Generated from data/games/tested/*.json and data/games/untested/*.json by tools/build-game-database.sh; do not edit by hand. Games from untested/ carry \"tested\": false. Field reference: data/schema.json and README.md, \"Contributing to the game database\".",
+  "_readme": "Generated from data/games/tested/*.json and data/games/untested/*.json by tools/build-game-database.sh; do not edit by hand. Games from untested/ carry \"tested\": false. Field reference: data/schema.json and docs/game-file-reference.md.",
   "games": [
     {
       "id": "aliens-versus-predator-classic-2000",

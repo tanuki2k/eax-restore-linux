@@ -45,8 +45,8 @@ own user-facing strings. Neither is enforceable by a linter, so match the exampl
 below when writing or editing either.
 
 **Database prose fields** (`notes`, `store_details`, `patches`, `eax.problem`,
-`eax.fix`, `description`, and a game setting's `title`, `reason` and `follow_up` — see README's "Contributing
-to the game database" for what belongs in which field):
+`eax.fix`, `description`, and a game setting's `title`, `reason` and `follow_up` — see docs/game-file-reference.md
+for what belongs in which field):
 
 - Keep each field to its one job; don't restate content that belongs in a sibling
   field just because it's related to the same title.
