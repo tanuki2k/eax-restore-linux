@@ -50,6 +50,5 @@
         "tested": true
       }
     ]
-  },
-  "notes": "The game records whether EAX/A3D actually activated to Undying.log, which is handy for confirming it worked (per the Vogons Wiki citation for this title)."
+  }
 }

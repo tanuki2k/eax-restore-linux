@@ -273,6 +273,12 @@
           }
         ]
       },
+      "sources": [
+        {
+          "title": "Arx Libertatis",
+          "url": "https://arx-libertatis.org/"
+        }
+      ],
       "notes": "On Linux, the Arx Libertatis engine reimplementation (arx-libertatis.org) is a strong alternative: it runs natively without Wine or Proton, reuses your Arx Fatalis data files and plays the game's environmental reverb out of the box. Use it or EAX, not both.",
       "tested": false
     },
@@ -398,7 +404,7 @@
         "status": "not_implemented",
         "problem": "This is the Enhanced Edition, not the classic Baldur's Gate II, and it has no EAX."
       },
-      "notes": "If you also own the classic Baldur's Gate II, it's a separate GOG purchase, 'Baldur's Gate 2 Complete', and that one has EAX."
+      "notes": "Boulders Gate II complete, a separate purchase on GOG, is the original 2000 release that still supports EAX."
     },
     {
       "id": "baldurs-gate-enhanced-edition",
@@ -419,7 +425,7 @@
         "status": "not_implemented",
         "problem": "This is the Enhanced Edition, not the classic Baldur's Gate, and it has no EAX."
       },
-      "notes": "If you also own the classic Baldur's Gate, it's a separate GOG purchase, 'Baldur's Gate: The Original Saga', and that one has EAX."
+      "notes": "Baldur's Gate: The Original Saga, a separate purchase on GOG, is the original 1988 release that still supports EAX."
     },
     {
       "id": "baldurs-gate-the-original-saga",
@@ -882,8 +888,7 @@
             "tested": true
           }
         ]
-      },
-      "notes": "The game records whether EAX/A3D actually activated to Undying.log, which is handy for confirming it worked (per the Vogons Wiki citation for this title)."
+      }
     },
     {
       "id": "condemned-criminal-origins",
@@ -1093,9 +1098,13 @@
         {
           "title": "Unreal DirectX11 Renderer",
           "url": "https://www.moddb.com/mods/unreal-directx11-renderer-for-ut-ug-rune-and-dx"
+        },
+        {
+          "title": "Kcat - Dsoal - Deus Ex No reverb",
+          "url": "https://github.com/kcat/dsoal/issues/79"
         }
       ],
-      "notes": "Reverb is used sparingly and is quiet by default — Battery Park, the first mission, is a good place to hear it.  The community ALAudio mod doesn't pass the game's EAX reverb through, so stay on the default Galaxy driver (per kcat/dsoal#79)."
+      "notes": "Reverb is quiet by default however a boost to EAX Reverb will be automaticly appled via OpenALsoft. \n\nThe default Galaxy driver is recommended over the Community ALAudio mod. This is because ALAudio doesn't process the game's EAX reverb."
     },
     {
       "id": "doom-3",

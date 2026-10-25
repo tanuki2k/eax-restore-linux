@@ -23,5 +23,6 @@
       }
     ]
   },
+  "sources": [{ "title": "Arx Libertatis", "url": "https://arx-libertatis.org/" }],
   "notes": "On Linux, the Arx Libertatis engine reimplementation (arx-libertatis.org) is a strong alternative: it runs natively without Wine or Proton, reuses your Arx Fatalis data files and plays the game's environmental reverb out of the box. Use it or EAX, not both."
 }
