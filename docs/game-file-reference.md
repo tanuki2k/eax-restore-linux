@@ -2,6 +2,21 @@
 
 Every field of a game file, in the order of the [example](contributing-games.md#a-game-file). The formal definition is [`data/schema.json`](https://github.com/tanuki2k/eax-restore-linux/blob/HEAD/data/schema.json).
 
+## At a glance
+
+| Section | Fields | What it holds |
+| --- | --- | --- |
+| [Basics](#basics) | `name`, `description`, `released`, `exe` | Who the game is and how to find it |
+| [`stores`](#stores) | `id`, `delisted`, `api`, `store_details`, `patches`, ... | What's specific to the Steam or GOG listing |
+| [`eax`](#eax) | `api`, `versions`, `status`, `problem`, `fix` | How the game does 3D audio |
+| [`install`](#install) | `tweaks`, `alsoft_ini` | What the install does differently |
+| [`game_config`](#game_config) | `files`, `audio_settings`, `optional_settings` | Edits to the game's own config files |
+| [`sources`](#sources) | | Pages backing the entry's claims |
+| [`notes`](#notes) | | Caveats that fit nowhere else |
+
+> [!TIP]
+> Leave a field out when it's empty or at its default. Prose fields can hold line breaks (see [Line breaks in long text](#line-breaks-in-long-text)).
+
 ## Basics
 
 ### `name`
@@ -37,7 +52,10 @@ The scanner picks the folder holding it, which handles layouts its name matching
 
 ## `stores`
 
-An object with a `"steam"` and/or `"gog"` key. **Omit a store key entirely when the game isn't sold there** (a GOG-only game has no `"steam"` key, so "GOG only" needs no prose). Each store block holds the fields below.
+An object with a `"steam"` and/or `"gog"` key. Each store block holds the fields below.
+
+> [!IMPORTANT]
+> **Omit a store key entirely when the game isn't sold there.** A GOG-only game has no `"steam"` key, so "GOG only" needs no prose.
 
 ### `stores.*.id`
 
@@ -124,9 +142,11 @@ Supported EAX version strings. Only set from a verifiable source (the game's man
 
 Omit when EAX works (the default, `"supported"`).
 
-- `"removed_by_patch"`: a software update stripped EAX/A3D from the current build (an alternate build/branch may restore it).
-- `"not_implemented"`: a remaster/rewrite that never had EAX. No build-level fix exists.
-- `"built_in"`: EAX already works in this build without the script (e.g. it ships its own OpenAL32.dll with EAX). The install-time check says so and asks "Install anyway?", defaulting to No.
+| Value | Meaning |
+| --- | --- |
+| `"removed_by_patch"` | A software update stripped EAX/A3D from the current build (an alternate build/branch may restore it). |
+| `"not_implemented"` | A remaster/rewrite that never had EAX. No build-level fix exists. |
+| `"built_in"` | EAX already works in this build without the script (e.g. it ships its own OpenAL32.dll with EAX). The install-time check says so and asks "Install anyway?", defaulting to No. |
 
 ### `eax.problem`
 
@@ -146,21 +166,25 @@ What the install itself does differently for this game.
 
 ### `install.tweaks`
 
-Any of `"eax_unified"`, `"expand_audio_limits"`, `"com_registry_routing"`. Each turns the matching Advanced Compatibility Tweak into a default-yes prompt.
+Any of the values below. Each turns the matching Advanced Compatibility Tweak into a default-yes prompt.
 
-- `"eax_unified"`: for titles that reach EAX through Creative's `eax.dll` "EAX Unified" shim rather than native DirectSound3D. Drives a guarded prompt for the EAX Unified Dummy Files tweak (it checks whether the game ships its own `eax.dll` first).
-- `"expand_audio_limits"`: for a title independently verified to need it, e.g. F.E.A.R.'s audio dropping out during large firefights.
-- `"com_registry_routing"`: for a title independently verified to need it, e.g. Grand Theft Auto: San Andreas.
+| Value | Use it for |
+| --- | --- |
+| `"eax_unified"` | Titles that reach EAX through Creative's `eax.dll` "EAX Unified" shim rather than native DirectSound3D. Drives a guarded prompt for the EAX Unified Dummy Files tweak (it checks whether the game ships its own `eax.dll` first). |
+| `"expand_audio_limits"` | A title independently verified to need it, e.g. F.E.A.R.'s audio dropping out during large firefights. |
+| `"com_registry_routing"` | A title independently verified to need it, e.g. Grand Theft Auto: San Andreas. |
 
 ### `install.alsoft_ini`
 
 OpenAL Soft settings offered for this game in the Game Audio Settings step (phase 3), as section → key → value strings. Only these are allowed:
 
-- `reverb.boost`: decibels added to all reverb; raise it for a game whose reverb is hard to hear.
-- `general.sources`: how many sounds the game can play at once.
-- `general.frequency`: the sample rate sound is mixed at, in Hz.
-- `general.default-reverb`: the reverb preset used where the game doesn't choose one.
-- `general.resampler`: how sounds at another sample rate are converted.
+| Key | What it does |
+| --- | --- |
+| `reverb.boost` | Decibels added to all reverb; raise it for a game whose reverb is hard to hear. |
+| `general.sources` | How many sounds the game can play at once. |
+| `general.frequency` | The sample rate sound is mixed at, in Hz. |
+| `general.default-reverb` | The reverb preset used where the game doesn't choose one. |
+| `general.resampler` | How sounds at another sample rate are converted. |
 
 E.g. `{ "reverb": { "boost": "6" } }` for a game whose reverb is quiet. Test that the value doesn't make the reverb pop.
 
@@ -178,30 +202,38 @@ Each config file, keyed by its file name. A file has the fields below.
 
 #### `format`
 
-- `"ini"`: `[Section]` + `key=value`.
-- `"flat_ini"`: `key=value` lines with no `[Section]` headers, e.g. Thief: Deadly Shadows' `options.ini`.
-- `"idtech_cfg"`: `seta key "value"`, id Tech games.
-- `"dark_cfg"`: NewDark's `key value` lines, where a bare `key` turns a flag on and `;key` turns it off.
-- `"brace_cfg"`: `{key} = {value}` lines, e.g. Fallout Tactics' `bos.cfg`.
-- `"gas_cfg"`: a `[section]` with `key = value;` lines between `{` and `}`, e.g. Dungeon Siege's `prefs.gas`.
-- `"ltx"`: `key value` lines with no sections, e.g. S.T.A.L.K.E.R.'s `user.ltx`.
-- `"gadb"`: Monolith's binary game database, e.g. F.E.A.R.'s `Profile000.gdb`. It can only switch a setting the file already has on or off, so its values are `"0"` or `"1"`.
-- `"wine_reg"`: for a game that keeps its options in the registry, e.g. Descent 3.
-  - The prefix's `system.reg` for `HKEY_LOCAL_MACHINE` or `user.reg` for `HKEY_CURRENT_USER`, keyed `"system.reg"` / `"user.reg"`.
-  - Only number (dword) and text values can be changed, a number written in decimal.
-  - The script waits for Wine to save the registry and exit before changing it, and won't while the game is running.
+| Value | Layout | Example |
+| --- | --- | --- |
+| `"ini"` | `[Section]` + `key=value` | |
+| `"flat_ini"` | `key=value` lines with no `[Section]` headers | Thief: Deadly Shadows' `options.ini` |
+| `"idtech_cfg"` | `seta key "value"` | id Tech games |
+| `"dark_cfg"` | NewDark's `key value` lines, where a bare `key` turns a flag on and `;key` turns it off | |
+| `"brace_cfg"` | `{key} = {value}` lines | Fallout Tactics' `bos.cfg` |
+| `"gas_cfg"` | A `[section]` with `key = value;` lines between `{` and `}` | Dungeon Siege's `prefs.gas` |
+| `"ltx"` | `key value` lines with no sections | S.T.A.L.K.E.R.'s `user.ltx` |
+| `"gadb"` | Monolith's binary game database. It can only switch a setting the file already has on or off, so its values are `"0"` or `"1"`. | F.E.A.R.'s `Profile000.gdb` |
+| `"wine_reg"` | For a game that keeps its options in the registry (see below) | Descent 3 |
+
+For `"wine_reg"`:
+
+- The file is the prefix's `system.reg` for `HKEY_LOCAL_MACHINE` or `user.reg` for `HKEY_CURRENT_USER`, keyed `"system.reg"` / `"user.reg"`.
+- Only number (dword) and text values can be changed, a number written in decimal.
+- The script waits for Wine to save the registry and exit before changing it, and won't while the game is running.
 
 #### `locations`
 
 Where to look, in order, as `"base:path"`; the first that exists is used. Bases:
 
-- `game_exe`: the folder the game's exe runs from.
-- `game_root`: the game's top-level install folder.
-- `prefix_documents`, `prefix_appdata`, `prefix_localappdata`: inside the Wine prefix's user folder.
-- `prefix_public_documents`: the prefix's shared `Public\Documents`, where F.E.A.R. keeps its profiles.
-- `prefix`: for a `wine_reg` file, only as `"prefix:system.reg"` or `"prefix:user.reg"`.
+| Base | Points at |
+| --- | --- |
+| `game_exe` | The folder the game's exe runs from |
+| `game_root` | The game's top-level install folder |
+| `prefix_documents`, `prefix_appdata`, `prefix_localappdata` | Inside the Wine prefix's user folder |
+| `prefix_public_documents` | The prefix's shared `Public\Documents`, where F.E.A.R. keeps its profiles |
+| `prefix` | For a `wine_reg` file, only as `"prefix:system.reg"` or `"prefix:user.reg"` |
 
-No `..`, leading `/` or backslashes.
+> [!WARNING]
+> No `..`, leading `/` or backslashes.
 
 #### `all_locations`
 
@@ -211,9 +243,11 @@ Optional. `true` to change the file in every location that exists, not just the 
 
 What to do when the file doesn't exist.
 
-- Omit it for files the game writes on first launch (the script asks the player to launch the game once, then checks again).
-- `"skip"` for files only some builds have (NewDark's `cam_ext.cfg` isn't in the stock Steam Thief games). Only that file's part of a setting is left out, and the Game Settings step and the closing summary tell the player ("left out: Thief Gold has no cam_ext.cfg").
-- `"create"` to create it (e.g. Quake 4's `autoexec.cfg`).
+| Value | Behavior |
+| --- | --- |
+| Omitted | For files the game writes on first launch: the script asks the player to launch the game once, then checks again. |
+| `"skip"` | For files only some builds have (NewDark's `cam_ext.cfg` isn't in the stock Steam Thief games). Only that file's part of a setting is left out, and the Game Settings step and the closing summary tell the player ("left out: Thief Gold has no cam_ext.cfg"). |
+| `"create"` | Creates it (e.g. Quake 4's `autoexec.cfg`). |
 
 #### `crash_marker`
 
@@ -247,12 +281,14 @@ File → section → key → value for `ini` files, file → key → value for `
 
 Optional conditions: `{ "stores": ["gog"] }` and/or `{ "speakers": ... }` (the Speaker Configuration answer). The speaker values are:
 
-- `"stereo"`: also covers Headphones, unless the game has its own `"headphones"` setting.
-- `"headphones"`: Stereo, then Headphones.
-- `"matrix"`.
-- `"surround"`: any surround layout.
-- One exact layout: `"quad"` / `"surround51"` / `"surround61"` / `"surround71"`.
-- A list such as `["surround51", "surround61"]` matches any of them.
+| Value | Matches |
+| --- | --- |
+| `"stereo"` | Stereo; also covers Headphones, unless the game has its own `"headphones"` setting |
+| `"headphones"` | Stereo, then Headphones |
+| `"matrix"` | Matrix |
+| `"surround"` | Any surround layout |
+| `"quad"`, `"surround51"`, `"surround61"`, `"surround71"` | That exact layout |
+| `["surround51", "surround61"]` | Any layout in the list |
 
 Prefer `if_missing: "skip"` over a store condition when a setting depends on a file only some builds have.
 
