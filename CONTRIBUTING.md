@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for taking an interest in this project! It's a single Bash script maintained as a hobby project, so contributions are welcome but the process is kept lightweight.
+This is a single Bash script maintained as a hobby project. Contributions are welcome, and the process is light.
 
 ## Reporting Bugs
 
@@ -12,13 +12,13 @@ Please [open an issue](../../issues/new) and include:
 
 ## Suggesting Enhancements
 
-Open an issue describing the use case. If it's specific to a particular game or engine build quirk, mention that too — it helps prioritize.
+Open an issue describing the use case. If it's specific to one game or an engine build quirk, say so, since that helps with prioritizing.
 
 ## Pull Requests
 
 1. Fork the repo and create a branch from `main`.
-2. Keep changes focused — one fix or feature per PR is easier to review than a bundle of unrelated changes.
-3. Test your change against a real game install where possible; this script has a lot of environment-dependent branches (Steam vs. Heroic, 32-bit vs. 64-bit, Proton vs. native Wine) that are hard to catch with a syntax check alone.
+2. Keep changes focused. One fix or feature per PR is easier to review than a bundle of unrelated changes.
+3. Test your change against a real game install where you can. The script has many environment-dependent branches (Steam vs. Heroic, 32-bit vs. 64-bit, Proton vs. native Wine) that a syntax check won't catch.
 4. Run `./build.sh && bats -r tests` (install `bats` first); it also covers `bash -n` via CI. Add a test with a bug fix.
 5. Describe what you tested in the PR description.
 
@@ -31,4 +31,4 @@ The easy way to send a profile is the editor's **Submit…** button. With the Gi
 ## Style
 
 * Match the existing script's conventions: `UPPER_CASE` for variables that persist across functions, `snake_case` for function-local variables, and the existing color/echo helpers for output.
-* Avoid adding new external dependencies unless there's no reasonable way around it — the script currently only requires `curl`, `unzip`, `file`, `grep`, and `awk`, plus `protontricks`/`winetricks` depending on launcher.
+* Avoid adding new external dependencies unless there's no reasonable way around it. The script currently only requires `curl`, `unzip`, `file`, `grep`, `awk`, and `jq`, plus `protontricks`/`winetricks` depending on launcher.

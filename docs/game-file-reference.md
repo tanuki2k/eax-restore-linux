@@ -27,7 +27,7 @@ The game's first Windows release, earliest region, as `YYYY-MM-DD` (or `YYYY-MM`
 - Cross-check at least two sources (Wikipedia's infobox is a good start). A console release that came first doesn't count.
 - A bundle, Gold, Complete, GOTY or Classic edition takes its base game's date.
 - An Enhanced Edition, Remaster or Anniversary Edition, which is a separate build, takes its own.
-- Not the date a store started selling it: stores often show the original date anyway, or a re-listing.
+- Don't use the date a store started selling it. Stores often show the original date anyway, or a re-listing.
 
 ### `exe`
 
@@ -105,8 +105,8 @@ Rules:
 
 Prose for **this store's build**, shown under "Suggested community patches:": community patch/mod recommendations (TFix / T2Fix, SilentPatch, Sneaky Upgrade, SCP…).
 
-- It includes ones that, for a delisted game, also happen to be the practical way to get a legitimate full copy (e.g. OldUnreal's patches). Frame a community OpenAL reimplementation as a strong alternative worth using instead of this script's approach, not as an inferior fallback.
-- Not for "go buy it from a different retailer" content. That stays in `notes`.
+- It includes patches that, for a delisted game, are also the practical way to get a legitimate full copy (e.g. OldUnreal's patches). Present a community OpenAL reimplementation as a strong alternative to this script's approach, not as an inferior fallback.
+- Don't use it for "go buy it from a different retailer" content. That stays in `notes`.
 
 ## `eax`
 
@@ -221,7 +221,7 @@ Optional. The name of a file the game keeps next to this config file while it's 
 
 ### `game_config.audio_settings`
 
-Settings that turn on EAX and 3D sound (or make them sound right), so the player doesn't have to; confirmed together with one default-yes prompt.
+Settings that turn on EAX and 3D sound (or make them sound right), so the player doesn't have to. They are confirmed together with one default-yes prompt.
 
 ### `game_config.optional_settings`
 

@@ -1,14 +1,14 @@
 # EAX Restore for Linux (Steam/Proton & Heroic/Wine)
 
-A streamlined Bash script designed to automate the installation of DSOAL and OpenAL Soft for classic Windows games running on Linux.
+A Bash script that installs DSOAL and OpenAL Soft for classic Windows games running on Linux.
 
-**How it works:** Back in the late 90s and early 2000s, PC audio was built differently. Games relied heavily on DirectSound3D and Creative's EAX technology to deliver hardware-accelerated spatial audio and dynamic environmental reverb. If you walked into a cave, the echoes changed; if a guard walked behind a thick wall, their footsteps became muffled. Games like *Thief: The Dark Project*, *F.E.A.R.*, *Max Payne 2*, and *Star Wars: Knights of the Old Republic* used EAX to create incredibly immersive soundscapes that modern software audio often flat-out ignores.
+**How it works:** In the late 90s and early 2000s, PC games used DirectSound3D and Creative's EAX for hardware-accelerated spatial audio and environmental reverb. Walking into a cave changed the echoes, and a thick wall between you and a guard muffled his footsteps. *Thief: The Dark Project*, *F.E.A.R.*, *Max Payne 2* and *Star Wars: Knights of the Old Republic* all used EAX, and modern software audio often ignores it.
 
-Because modern operating systems and Proton/Wine don't natively support this old hardware pipeline, those advanced audio options are usually grayed out. This script fixes that by deploying **[DSOAL](https://github.com/kcat/dsoal)** (DirectSound3D Object Audio Library) alongside **[OpenAL Soft](https://github.com/kcat/openal-soft)** directly into your game folder. Together, they act as a translation layer. They intercept legacy EAX calls and convert them into standard OpenAL, tricking the game into unlocking its hardware-accelerated audio options and processing the 3D sound flawlessly on your modern CPU.
+Modern operating systems and Proton/Wine don't support that old hardware pipeline, so the games' advanced audio options are usually grayed out. The script deploys **[DSOAL](https://github.com/kcat/dsoal)** (DirectSound3D Object Audio Library) and **[OpenAL Soft](https://github.com/kcat/openal-soft)** into your game folder. Together they translate legacy EAX calls into standard OpenAL. The game sees the hardware it expects, unlocks its audio options, and the 3D sound is processed on your CPU.
 
-**Disclaimer:** I've tested this script heavily across various games and launchers, but please use it at your own risk. If you find any bugs, please report them on the issue tracker and I'll do my best to fix them!
+**Disclaimer:** I've tested this script on a range of games and launchers, but use it at your own risk. If you find a bug, please report it on the issue tracker.
 
-**A Personal Note:** While installing DSOAL manually is a known process, it's a tedious, multi-step task involving file hunting and registry edits, inspired by kevinlekiller's project **[reshade-steam-proton](https://github.com/kevinlekiller/reshade-steam-proton)** I wanted a way to streamline the process. Since I'm not a coder, I built this tool with the assistance of Google Gemini, and it's continued to evolve since with the help of Claude.
+**A Personal Note:** Installing DSOAL by hand is a known process, but it takes many steps, including hunting for files and editing the registry. kevinlekiller's project **[reshade-steam-proton](https://github.com/kevinlekiller/reshade-steam-proton)** inspired me to automate it. I'm not a coder, so I built the first version with Google Gemini, and it has kept growing with the help of Claude.
 
 
 ## Features
@@ -41,9 +41,9 @@ The script checks for these and offers to install any that are missing:
 
 > Prefer a manual download? Grab the script and the Steam Deck `.desktop` launcher from the [latest release](https://github.com/tanuki2k/eax-restore-linux/releases/latest) instead of the steps below.
 
-> **Testing the development build?** Every change on the `dev` branch is auto-published as a pre-release. Download it from `https://github.com/tanuki2k/eax-restore-linux/releases/download/dev/eax-restore-linux.sh` — its startup banner shows a `-dev` version plus the build date and commit, so you can always tell it apart from a stable build. It's unstable and unsupported; the `.desktop` launcher always fetches the stable latest release only.
+> **Testing the development build?** Every change on the `dev` branch is auto-published as a pre-release. Download it from `https://github.com/tanuki2k/eax-restore-linux/releases/download/dev/eax-restore-linux.sh`. Its startup banner shows a `-dev` version plus the build date and commit, so you can tell it from a stable build. It's unstable and unsupported, and the `.desktop` launcher only ever fetches the stable release.
 
-> **Just want to check what it does or which version you have?** Run `./eax-restore-linux.sh --help` or `--version` — both print instantly without starting the interactive install/uninstall flow.
+> **Want to check what it does or which version you have?** Run `./eax-restore-linux.sh --help` or `--version`. Both print at once and don't start the install or uninstall flow.
 
 **1. Download the script:**
 Open your terminal and run:
@@ -59,7 +59,7 @@ In the same terminal, run:
 chmod +x eax-restore-linux.sh
 ```
 
-> **Verifying the download (optional):** every release also publishes a `.sha256` checksum file for the script. If you'd like to confirm your download hasn't been corrupted or tampered with:
+> **Verifying the download (optional):** every release also publishes a `.sha256` checksum file for the script. To confirm your download wasn't corrupted or tampered with:
 > ```bash
 > curl -LO https://github.com/tanuki2k/eax-restore-linux/releases/latest/download/eax-restore-linux.sh.sha256
 > sha256sum -c eax-restore-linux.sh.sha256
@@ -80,12 +80,12 @@ As an alternative to the terminal steps above, [`eax-restore-linux.desktop`](eax
 
 1. Switch to **Desktop Mode** and download [`eax-restore-linux.desktop`](https://github.com/tanuki2k/eax-restore-linux/releases/latest/download/eax-restore-linux.desktop) from the [latest release](https://github.com/tanuki2k/eax-restore-linux/releases/latest) (e.g. to your Desktop or Downloads folder).
 2. In Dolphin, right-click it and enable **Allow Executing File as Program** (Properties → Permissions), since Plasma won't run it otherwise.
-3. Double-click it and select **Execute**. It fetches the latest script into your home folder (`~/eax-restore-linux.sh`, overwriting any previous copy) and runs it in a terminal — nothing is installed until you follow the prompts, same as running the script manually. The downloaded copy is left behind afterward, so you can re-run it later (e.g. for uninstalls, or another game) without launching the `.desktop` file again.
+3. Double-click it and select **Execute**. It fetches the latest script into your home folder (`~/eax-restore-linux.sh`, overwriting any previous copy) and runs it in a terminal. As with running the script yourself, nothing is installed until you follow the prompts. The downloaded copy stays in your home folder, so you can run it again later (for an uninstall or another game) without the `.desktop` file.
 
 Since the script itself refuses to run in Gaming Mode, this only works from Desktop Mode.
 
 ### Uninstallation
-Run the script, choose **[U]ninstall the EAX fix**, and provide the game directory. The script will remove the EAX files, restore original backups, remove the DLL override (from the registry or the launcher's settings), optionally remove the VC++ runtime it installed, and offer to put back any game settings it changed (leaving alone anything you've changed yourself since). Like the install, it asks everything first — which files to remove, whether to close a running launcher, the VC++ runtime, which game settings to put back — and changes nothing until you confirm with one final "Proceed?".
+Run the script, choose **[U]ninstall the EAX fix**, and provide the game directory. The script removes the EAX files, restores the original backups, removes the DLL override (from the registry or the launcher's settings), optionally removes the VC++ runtime it installed, and offers to put back any game settings it changed, leaving alone anything you've changed yourself since. Like the install, it asks all its questions first (which files to remove, whether to close a running launcher, whether to remove the VC++ runtime, which game settings to put back) and changes nothing until you confirm with one final "Proceed?".
 
 ## Documentation
 
