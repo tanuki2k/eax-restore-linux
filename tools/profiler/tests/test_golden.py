@@ -153,7 +153,9 @@ class Speakers(unittest.TestCase):
         with tempfile.TemporaryDirectory() as t:
             game, sd = snaps(t, states)
             gc, _ = draft_speakers(game, sd, values)
-        self.assertEqual(speaker_settings({"game_config": gc}), speaker_settings(entry))
+        # Stereo is the game's shipped default, so a capture never produces it; the entry carries it by hand.
+        expected = [r for r in speaker_settings(entry) if r[0] != ["stereo"]]
+        self.assertEqual(speaker_settings({"game_config": gc}), expected)
 
     def test_four_identical_surround_runs_become_surround(self):
         entry = dbio.load("tested", "quake-4")
