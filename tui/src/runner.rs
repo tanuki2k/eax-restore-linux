@@ -1,0 +1,85 @@
+//! Runs the Bash installer for an action, outside the TUI.
+
+use std::io::{self, BufRead, IsTerminal, Write};
+use std::path::{Path, PathBuf};
+use std::process::Command;
+
+const SCRIPT_NAME: &str = "eax-restore-linux.sh";
+
+/// Where to look, best first: the caller's choice, beside this program, and (for
+/// a build from the repo) where `./build.sh` puts it.
+fn candidates() -> Vec<PathBuf> {
+    let mut c = Vec::new();
+    if let Some(p) = std::env::var_os("EAX_RESTORE_SCRIPT") {
+        c.push(PathBuf::from(p));
+    }
+    if let Some(dir) = std::env::current_exe().ok().and_then(|e| e.parent().map(Path::to_path_buf)) {
+        c.push(dir.join(SCRIPT_NAME));
+    }
+    c.push(Path::new(env!("CARGO_MANIFEST_DIR")).join("../dist").join(SCRIPT_NAME));
+    c
+}
+
+pub fn find_script() -> Option<PathBuf> {
+    first_file(&candidates())
+}
+
+fn first_file(paths: &[PathBuf]) -> Option<PathBuf> {
+    paths.iter().find(|p| p.is_file()).cloned()
+}
+
+/// Runs the script with `env` set, on the real terminal, then waits for Enter so
+/// its closing summary can be read. The terminal must already be restored.
+pub fn run(script: &Path, env: &[(&str, String)], database: &Path) {
+    let mut cmd = Command::new("bash");
+    cmd.arg(script).env("EAX_RESTORE_GAME_DATABASE_FILE", database);
+    for (k, v) in env {
+        cmd.env(k, v);
+    }
+    // The alternate screen, like the TUI's own, so quitting leaves the shell's
+    // screen as it was.
+    print!("\x1b[?1049h\x1b[2J\x1b[H");
+    let _ = io::stdout().flush();
+    match cmd.status() {
+        Ok(s) if s.success() => {}
+        Ok(s) => println!("\nThe installer stopped with {s}."),
+        Err(e) => println!("\nCouldn't start the installer: {e}."),
+    }
+    // Without a terminal there is nobody to press Enter.
+    if io::stdin().is_terminal() {
+        print!("\nPress Enter to go back to the game list. ");
+        let _ = io::stdout().flush();
+        let _ = io::stdin().lock().read_line(&mut String::new());
+    }
+    print!("\x1b[?1049l");
+    let _ = io::stdout().flush();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_first_existing_file_wins_and_a_missing_one_is_skipped() {
+        let dir = tempfile::tempdir().unwrap();
+        let (a, b) = (dir.path().join("a.sh"), dir.path().join("b.sh"));
+        std::fs::write(&b, "").unwrap();
+        let missing = dir.path().join("nope.sh");
+        assert_eq!(first_file(&[missing.clone(), a.clone(), b.clone()]), Some(b));
+        assert_eq!(first_file(&[missing, a]), None);
+    }
+
+    #[test]
+    fn the_run_hands_the_environment_to_the_script() {
+        let dir = tempfile::tempdir().unwrap();
+        let script = dir.path().join("s.sh");
+        let out = dir.path().join("out.txt");
+        std::fs::write(&script, format!("echo \"$EAX_RESTORE_ACTION|$EAX_RESTORE_GAME_DIR|$EAX_RESTORE_GAME_DATABASE_FILE\" > '{}'\n", out.display())).unwrap();
+        run(
+            &script,
+            &[("EAX_RESTORE_ACTION", "uninstall".into()), ("EAX_RESTORE_GAME_DIR", "/g".into())],
+            Path::new("/db.json"),
+        );
+        assert_eq!(std::fs::read_to_string(out).unwrap().trim(), "uninstall|/g|/db.json");
+    }
+}

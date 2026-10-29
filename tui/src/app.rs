@@ -1,5 +1,6 @@
 //! Screen state and key handling. No drawing here, so it can be tested.
 
+use crate::actions::{self, Action};
 use crate::games::{Entry, Status};
 use nucleo_matcher::pattern::{CaseMatching, Normalization, Pattern};
 use nucleo_matcher::{Matcher, Utf32Str};
@@ -39,8 +40,24 @@ impl Filter {
     }
 }
 
+/// The popup of actions for the selected game.
+pub struct Menu {
+    pub actions: Vec<Action>,
+    pub selected: usize,
+}
+
+/// An action chosen in the menu, for `main` to run outside the TUI.
+pub struct Launch {
+    pub game: usize,
+    pub action: Action,
+}
+
 pub struct App {
     pub games: Vec<Entry>,
+    pub menu: Option<Menu>,
+    pub launch: Option<Launch>,
+    /// Shown on the key bar's row until the next key.
+    pub message: String,
     pub filter: Filter,
     pub query: String,
     /// Indices into `games` that match the query, best match first.
@@ -55,6 +72,9 @@ impl App {
         games.sort_by_key(|g| g.name.to_lowercase());
         let mut app = App {
             games,
+            menu: None,
+            launch: None,
+            message: String::new(),
             filter: Filter::All,
             query: String::new(),
             visible: Vec::new(),
@@ -64,6 +84,21 @@ impl App {
         };
         app.refilter();
         app
+    }
+
+    /// Puts a fresh scan in place after an action ran, keeping the query, the
+    /// filter and, when it is still listed, the selected game.
+    pub fn replace_games(&mut self, mut games: Vec<Entry>) {
+        let keep = self.current().map(|e| (e.name.clone(), e.path.clone()));
+        games.sort_by_key(|g| g.name.to_lowercase());
+        self.games = games;
+        self.refilter();
+        if let Some((name, path)) = keep {
+            let same = |e: &Entry| e.name == name && e.path == path;
+            if let Some(pos) = self.visible.iter().position(|&i| same(&self.games[i])) {
+                self.selected = pos;
+            }
+        }
     }
 
     pub fn current(&self) -> Option<&Entry> {
@@ -99,11 +134,38 @@ impl App {
         self.selected = (self.selected as isize + delta).clamp(0, last) as usize;
     }
 
+    fn handle_menu_key(&mut self, key: KeyEvent) {
+        let Some(menu) = self.menu.as_mut() else { return };
+        let last = menu.actions.len().saturating_sub(1);
+        match key.code {
+            KeyCode::Esc => self.menu = None,
+            KeyCode::Up => menu.selected = menu.selected.saturating_sub(1),
+            KeyCode::Down => menu.selected = (menu.selected + 1).min(last),
+            KeyCode::Enter => {
+                let action = menu.actions[menu.selected];
+                self.menu = None;
+                if let Some(&game) = self.visible.get(self.selected) {
+                    self.launch = Some(Launch { game, action });
+                }
+            }
+            _ => {}
+        }
+    }
+
     pub fn handle_key(&mut self, key: KeyEvent) {
+        self.message.clear();
+        if self.menu.is_some() {
+            return self.handle_menu_key(key);
+        }
         let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
         match key.code {
             KeyCode::Esc => self.quit = true,
             KeyCode::Char('c') if ctrl => self.quit = true,
+            KeyCode::Enter => {
+                if let Some(e) = self.current() {
+                    self.menu = Some(Menu { actions: actions::available(e), selected: 0 });
+                }
+            }
             KeyCode::Tab => {
                 self.filter = self.filter.next();
                 self.refilter();
@@ -211,5 +273,52 @@ mod tests {
         assert_eq!(a.visible, [2]);
         a.handle_key(key(KeyCode::Tab));
         assert_eq!(a.visible.len(), 3);
+    }
+
+    #[test]
+    fn enter_opens_the_menu_and_choosing_an_action_queues_it() {
+        let mut a = app();
+        a.handle_key(key(KeyCode::Enter));
+        assert_eq!(a.menu.as_ref().unwrap().actions, [Action::Install]);
+        a.handle_key(key(KeyCode::Enter));
+        assert!(a.menu.is_none());
+        let l = a.launch.take().unwrap();
+        assert_eq!((a.games[l.game].name.as_str(), l.action), ("Alpha Centauri", Action::Install));
+    }
+
+    #[test]
+    fn escape_closes_the_menu_and_does_not_quit() {
+        let mut a = app();
+        a.handle_key(key(KeyCode::Enter));
+        a.handle_key(key(KeyCode::Esc));
+        assert!(a.menu.is_none() && !a.quit && a.launch.is_none());
+    }
+
+    #[test]
+    fn typing_while_the_menu_is_open_does_not_change_the_filter() {
+        let mut a = app();
+        a.handle_key(key(KeyCode::Enter));
+        a.handle_key(key(KeyCode::Char('z')));
+        assert!(a.query.is_empty());
+    }
+
+    #[test]
+    fn enter_with_nothing_listed_opens_nothing() {
+        let mut a = app();
+        type_str(&mut a, "zzzz");
+        a.handle_key(key(KeyCode::Enter));
+        assert!(a.menu.is_none());
+    }
+
+    #[test]
+    fn a_fresh_scan_keeps_the_query_and_the_selected_game() {
+        let mut a = app();
+        type_str(&mut a, "alpha");
+        a.handle_key(key(KeyCode::Down));
+        let mut fresh: Vec<Entry> = a.games.clone();
+        fresh[0].status = Status::Installed;
+        a.replace_games(fresh);
+        assert_eq!(a.query, "alpha");
+        assert_eq!(a.current().unwrap().name, "Alpha Protocol");
     }
 }

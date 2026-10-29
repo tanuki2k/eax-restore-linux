@@ -1,7 +1,9 @@
+mod actions;
 mod app;
 mod db;
 mod games;
 mod library;
+mod runner;
 mod ui;
 
 use anyhow::{Context, Result};
@@ -19,7 +21,10 @@ fn database_path() -> PathBuf {
 }
 
 fn main() -> Result<()> {
-    let db = db::Database::load(&database_path())?;
+    let db_path = database_path();
+    let db = db::Database::load(&db_path)?;
+    // The script runs from another folder, so it needs the full path.
+    let db_path = std::fs::canonicalize(&db_path).unwrap_or(db_path);
     let home = PathBuf::from(std::env::var_os("HOME").context("HOME is not set")?);
     let entries = games::build(&db, &home);
 
@@ -38,17 +43,36 @@ fn main() -> Result<()> {
 
     // init() also installs a panic hook that puts the terminal back.
     let mut terminal = ratatui::init();
-    let result = (|| -> Result<()> {
-        while !app.quit {
-            terminal.draw(|f| ui::draw(f, &app))?;
-            if let Event::Key(key) = event::read()? {
-                if key.kind == KeyEventKind::Press {
-                    app.handle_key(key);
-                }
-            }
-        }
-        Ok(())
-    })();
+    let result = run(&mut terminal, &mut app, &db, &home, &db_path);
     ratatui::restore();
     result
+}
+
+fn run(
+    terminal: &mut ratatui::DefaultTerminal,
+    app: &mut app::App,
+    db: &db::Database,
+    home: &std::path::Path,
+    db_path: &std::path::Path,
+) -> Result<()> {
+    while !app.quit {
+        terminal.draw(|f| ui::draw(f, app))?;
+        if let Event::Key(key) = event::read()? {
+            if key.kind == KeyEventKind::Press {
+                app.handle_key(key);
+            }
+        }
+        let Some(launch) = app.launch.take() else { continue };
+        let Some(script) = runner::find_script() else {
+            app.message = "Can't find eax-restore-linux.sh. Put it next to this program, or set EAX_RESTORE_SCRIPT to its path.".into();
+            continue;
+        };
+        let env = actions::script_env(&app.games[launch.game], launch.action);
+        ratatui::restore();
+        runner::run(&script, &env, db_path);
+        *terminal = ratatui::init();
+        // The action may have installed or removed a game.
+        app.replace_games(games::build(db, home));
+    }
+    Ok(())
 }

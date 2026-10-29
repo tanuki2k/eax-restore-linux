@@ -6,7 +6,8 @@ use crate::library::StoreKind;
 use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::style::{Color, Modifier, Style, Stylize};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, BorderType, List, ListItem, ListState, Paragraph, Wrap};
+use ratatui::layout::Rect;
+use ratatui::widgets::{Block, BorderType, Clear, List, ListItem, ListState, Paragraph, Wrap};
 use ratatui::Frame;
 
 pub fn draw(f: &mut Frame, app: &App) {
@@ -57,10 +58,32 @@ pub fn draw(f: &mut Frame, app: &App) {
     .block(Block::bordered().border_type(BorderType::Rounded).title(" Profile "));
     f.render_widget(detail, panes[1]);
 
-    f.render_widget(
-        Paragraph::new("Type to filter · Tab: all/on this PC/installed · ↑/↓ PgUp/PgDn move · Esc quit").dim(),
-        rows[2],
-    );
+    let bar = if !app.message.is_empty() {
+        Paragraph::new(app.message.as_str()).yellow().bold()
+    } else if app.menu.is_some() {
+        Paragraph::new("↑/↓ choose · Enter run · Esc back").dim()
+    } else {
+        Paragraph::new("Type to filter · Enter actions · Tab: all/on this PC/installed · ↑/↓ move · Esc quit").dim()
+    };
+    f.render_widget(bar, rows[2]);
+
+    if let (Some(menu), Some(e)) = (&app.menu, app.current()) {
+        draw_menu(f, menu, &e.name);
+    }
+}
+
+fn draw_menu(f: &mut Frame, menu: &crate::app::Menu, title: &str) {
+    let area = f.area();
+    let widest = menu.actions.iter().map(|a| a.label().chars().count()).max().unwrap_or(0);
+    let w = ((widest + 6).max(title.chars().count() + 4) as u16).min(area.width);
+    let h = (menu.actions.len() as u16 + 2).min(area.height);
+    let popup = Rect::new(area.x + (area.width - w) / 2, area.y + (area.height - h) / 2, w, h);
+    let items: Vec<ListItem> = menu.actions.iter().map(|a| ListItem::new(a.label())).collect();
+    let list = List::new(items)
+        .block(Block::bordered().border_type(BorderType::Rounded).title(format!(" {title} ")))
+        .highlight_style(Style::new().add_modifier(Modifier::REVERSED));
+    f.render_widget(Clear, popup);
+    f.render_stateful_widget(list, popup, &mut ListState::default().with_selected(Some(menu.selected)));
 }
 
 /// Plain ASCII so the column lines up in every terminal; the profile pane spells
@@ -192,5 +215,28 @@ mod tests {
     #[test]
     fn a_tiny_terminal_does_not_panic() {
         screen(&App::new(entries(r#"{"games":[{"id":"a","name":"Alpha"}]}"#)), 10, 3);
+    }
+
+    #[test]
+    fn the_action_menu_lists_what_applies_to_the_game() {
+        let mut games = entries(r#"{"games":[{"id":"a","name":"Alpha"}]}"#);
+        games[0].status = Status::Installed;
+        games[0].path = Some(PathBuf::from("/g/Alpha"));
+        let mut app = App::new(games);
+        app.handle_key(ratatui::crossterm::event::KeyEvent::from(
+            ratatui::crossterm::event::KeyCode::Enter,
+        ));
+        let s = screen(&app, 100, 20);
+        println!("{s}");
+        assert!(s.contains("Install again"));
+        assert!(s.contains("Uninstall the EAX fix"));
+        assert!(s.contains("Esc back"));
+    }
+
+    #[test]
+    fn a_message_replaces_the_key_bar() {
+        let mut app = App::new(entries(r#"{"games":[{"id":"a","name":"Alpha"}]}"#));
+        app.message = "Can't find the installer script.".into();
+        assert!(screen(&app, 80, 10).contains("Can't find the installer script."));
     }
 }
