@@ -22,7 +22,7 @@ impl Action {
             Action::Reinstall => "Install again",
             Action::OptionalSettings => "Change optional settings",
             Action::Speakers => "Change speaker configuration",
-            Action::DsoalLog => "Turn DSOAL logging on or off",
+            Action::DsoalLog => "Turn logging for the EAX fix on or off",
             Action::Vcrun => "Install the VC++ runtime",
             Action::Uninstall => "Uninstall the EAX fix",
         }

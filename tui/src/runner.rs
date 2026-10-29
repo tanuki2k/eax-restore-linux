@@ -28,6 +28,12 @@ fn first_file(paths: &[PathBuf]) -> Option<PathBuf> {
     paths.iter().find(|p| p.is_file()).cloned()
 }
 
+/// An I/O error without Rust's "(os error N)" tail.
+fn plain_error(e: &io::Error) -> String {
+    let text = e.to_string();
+    text.split(" (os error").next().unwrap_or(&text).to_string()
+}
+
 /// Runs the script with `env` set, on the real terminal, then waits for Enter so
 /// its closing summary can be read. The terminal must already be restored.
 pub fn run(script: &Path, env: &[(&str, String)], database: &Path) {
@@ -42,8 +48,11 @@ pub fn run(script: &Path, env: &[(&str, String)], database: &Path) {
     let _ = io::stdout().flush();
     match cmd.status() {
         Ok(s) if s.success() => {}
-        Ok(s) => println!("\nThe installer stopped with {s}."),
-        Err(e) => println!("\nCouldn't start the installer: {e}."),
+        Ok(s) => match s.code() {
+            Some(code) => println!("\nThe installer stopped with exit status {code}."),
+            None => println!("\nThe installer was stopped before it finished."),
+        },
+        Err(e) => println!("\nCouldn't start the installer ({}).", plain_error(&e)),
     }
     // Without a terminal there is nobody to press Enter.
     if io::stdin().is_terminal() {
@@ -67,6 +76,12 @@ mod tests {
         let missing = dir.path().join("nope.sh");
         assert_eq!(first_file(&[missing.clone(), a.clone(), b.clone()]), Some(b));
         assert_eq!(first_file(&[missing, a]), None);
+    }
+
+    #[test]
+    fn an_io_error_loses_its_os_error_number() {
+        let e = std::fs::read("/definitely/not/here").unwrap_err();
+        assert_eq!(plain_error(&e), "No such file or directory");
     }
 
     #[test]

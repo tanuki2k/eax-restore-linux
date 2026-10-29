@@ -3,6 +3,7 @@ mod app;
 mod db;
 mod games;
 mod library;
+mod picker;
 mod runner;
 mod ui;
 
@@ -40,6 +41,7 @@ fn main() -> Result<()> {
     }
 
     let mut app = app::App::new(entries);
+    app.set_home(home.clone());
 
     // init() also installs a panic hook that puts the terminal back.
     let mut terminal = ratatui::init();
@@ -67,7 +69,7 @@ fn run(
             app.message = "Can't find eax-restore-linux.sh. Put it next to this program, or set EAX_RESTORE_SCRIPT to its path.".into();
             continue;
         };
-        let env = actions::script_env(&app.games[launch.game], launch.action);
+        let env = launch.env;
         ratatui::restore();
         runner::run(&script, &env, db_path);
         *terminal = ratatui::init();

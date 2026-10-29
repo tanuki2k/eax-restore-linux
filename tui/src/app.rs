@@ -2,6 +2,8 @@
 
 use crate::actions::{self, Action};
 use crate::games::{Entry, Status};
+use crate::picker::{self, Picker};
+use std::path::PathBuf;
 use nucleo_matcher::pattern::{CaseMatching, Normalization, Pattern};
 use nucleo_matcher::{Matcher, Utf32Str};
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
@@ -46,15 +48,17 @@ pub struct Menu {
     pub selected: usize,
 }
 
-/// An action chosen in the menu, for `main` to run outside the TUI.
+/// What `main` runs outside the TUI: the environment for the Bash installer.
 pub struct Launch {
-    pub game: usize,
-    pub action: Action,
+    pub env: Vec<(&'static str, String)>,
 }
 
 pub struct App {
     pub games: Vec<Entry>,
     pub menu: Option<Menu>,
+    /// The "Add a game" folder picker, while it is open.
+    pub picker: Option<Picker>,
+    home: PathBuf,
     pub launch: Option<Launch>,
     /// Shown on the key bar's row until the next key.
     pub message: String,
@@ -73,6 +77,8 @@ impl App {
         let mut app = App {
             games,
             menu: None,
+            picker: None,
+            home: PathBuf::from("/"),
             launch: None,
             message: String::new(),
             filter: Filter::All,
@@ -84,6 +90,10 @@ impl App {
         };
         app.refilter();
         app
+    }
+
+    pub fn set_home(&mut self, home: PathBuf) {
+        self.home = home;
     }
 
     /// Puts a fresh scan in place after an action ran, keeping the query, the
@@ -145,8 +155,32 @@ impl App {
                 let action = menu.actions[menu.selected];
                 self.menu = None;
                 if let Some(&game) = self.visible.get(self.selected) {
-                    self.launch = Some(Launch { game, action });
+                    self.launch = Some(Launch { env: actions::script_env(&self.games[game], action) });
                 }
+            }
+            _ => {}
+        }
+    }
+
+    fn handle_picker_key(&mut self, key: KeyEvent) {
+        let Some(p) = self.picker.as_mut() else { return };
+        match key.code {
+            KeyCode::Esc => self.picker = None,
+            KeyCode::Up => p.move_by(-1),
+            KeyCode::Down => p.move_by(1),
+            KeyCode::PageUp => p.move_by(-10),
+            KeyCode::PageDown => p.move_by(10),
+            KeyCode::Enter | KeyCode::Right => p.open(),
+            KeyCode::Left | KeyCode::Backspace => p.up(),
+            KeyCode::Char('.') => p.toggle_hidden(),
+            KeyCode::Char('~') => p.go_home(),
+            KeyCode::Char(' ') => {
+                let env = vec![
+                    ("EAX_RESTORE_ACTION", "install".to_string()),
+                    ("EAX_RESTORE_GAME_DIR", p.dir.display().to_string()),
+                ];
+                self.picker = None;
+                self.launch = Some(Launch { env });
             }
             _ => {}
         }
@@ -154,6 +188,9 @@ impl App {
 
     pub fn handle_key(&mut self, key: KeyEvent) {
         self.message.clear();
+        if self.picker.is_some() {
+            return self.handle_picker_key(key);
+        }
         if self.menu.is_some() {
             return self.handle_menu_key(key);
         }
@@ -161,6 +198,10 @@ impl App {
         match key.code {
             KeyCode::Esc => self.quit = true,
             KeyCode::Char('c') if ctrl => self.quit = true,
+            KeyCode::Char('a') if ctrl => {
+                let start = picker::start_dir(&self.home);
+                self.picker = Some(Picker::new(start, self.home.clone()));
+            }
             KeyCode::Enter => {
                 if let Some(e) = self.current() {
                     self.menu = Some(Menu { actions: actions::available(e), selected: 0 });
@@ -283,7 +324,7 @@ mod tests {
         a.handle_key(key(KeyCode::Enter));
         assert!(a.menu.is_none());
         let l = a.launch.take().unwrap();
-        assert_eq!((a.games[l.game].name.as_str(), l.action), ("Alpha Centauri", Action::Install));
+        assert!(l.env.contains(&("EAX_RESTORE_ACTION", "install".to_string())));
     }
 
     #[test]
@@ -320,5 +361,53 @@ mod tests {
         a.replace_games(fresh);
         assert_eq!(a.query, "alpha");
         assert_eq!(a.current().unwrap().name, "Alpha Protocol");
+    }
+
+    fn ctrl(c: char) -> KeyEvent {
+        KeyEvent::new(KeyCode::Char(c), KeyModifiers::CONTROL)
+    }
+
+    fn app_with_folders() -> (tempfile::TempDir, App) {
+        let home = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(home.path().join("Games/Heroic/My Game")).unwrap();
+        let mut a = app();
+        a.set_home(home.path().to_path_buf());
+        (home, a)
+    }
+
+    #[test]
+    fn ctrl_a_opens_the_picker_in_the_games_folder() {
+        let (h, mut a) = app_with_folders();
+        a.handle_key(ctrl('a'));
+        assert_eq!(a.picker.as_ref().unwrap().dir, h.path().join("Games/Heroic"));
+    }
+
+    #[test]
+    fn space_in_the_picker_starts_an_install_of_that_folder() {
+        let (h, mut a) = app_with_folders();
+        a.handle_key(ctrl('a'));
+        a.handle_key(key(KeyCode::Enter)); // into "My Game"
+        a.handle_key(key(KeyCode::Char(' ')));
+        assert!(a.picker.is_none());
+        let l = a.launch.take().unwrap();
+        let dir = h.path().join("Games/Heroic/My Game").display().to_string();
+        assert!(l.env.contains(&("EAX_RESTORE_ACTION", "install".to_string())));
+        assert!(l.env.contains(&("EAX_RESTORE_GAME_DIR", dir)));
+    }
+
+    #[test]
+    fn escape_cancels_the_picker_without_quitting_or_launching() {
+        let (_h, mut a) = app_with_folders();
+        a.handle_key(ctrl('a'));
+        a.handle_key(key(KeyCode::Esc));
+        assert!(a.picker.is_none() && !a.quit && a.launch.is_none());
+    }
+
+    #[test]
+    fn typing_in_the_picker_does_not_reach_the_game_filter() {
+        let (_h, mut a) = app_with_folders();
+        a.handle_key(ctrl('a'));
+        type_str(&mut a, "abc");
+        assert!(a.query.is_empty());
     }
 }
