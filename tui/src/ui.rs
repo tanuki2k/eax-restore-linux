@@ -1,9 +1,10 @@
 //! Drawing. Reads `App`, never changes it.
 
-use crate::app::{App, Filter};
+use crate::app::{App, Filter, Pane};
 use crate::filters::Filters;
 use crate::games::{Entry, Status};
 use crate::library::StoreKind;
+use crate::settings;
 use ratatui::layout::Rect;
 use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::style::{Color, Modifier, Style, Stylize};
@@ -67,20 +68,42 @@ pub fn draw(f: &mut Frame, app: &App) {
     let mut state = ListState::default().with_selected(app.current().map(|_| app.selected));
     f.render_stateful_widget(list, panes[0], &mut state);
 
-    let detail = Paragraph::new(match app.current() {
-        Some(e) => profile(e),
-        None => vec![
-            Line::from("No game matches.").dim(),
-            Line::from("Press Ctrl-A to add a game by its folder.").dim(),
-        ],
-    })
-    .wrap(Wrap { trim: false })
-    .block(
-        Block::bordered()
-            .border_type(BorderType::Rounded)
-            .title(" Profile "),
-    );
-    f.render_widget(detail, panes[1]);
+    let pane_block = Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(pane_title(app.pane));
+    match (app.pane, app.current()) {
+        (Pane::Settings, Some(e)) => {
+            let inner = pane_block.inner(panes[1]);
+            let lines = match &e.game {
+                Some(g) => settings::lines(g, inner.width as usize),
+                None => vec![Line::from(format!(
+                    "The game database has no profile for {}.",
+                    e.name
+                ))],
+            };
+            let max = lines.len().saturating_sub(inner.height as usize);
+            let max = u16::try_from(max).unwrap_or(u16::MAX);
+            app.pane_max.set(max);
+            let detail = Paragraph::new(lines)
+                .scroll((app.pane_scroll.min(max), 0))
+                .block(pane_block);
+            f.render_widget(detail, panes[1]);
+        }
+        (_, current) => {
+            app.pane_max.set(0);
+            let lines = match current {
+                Some(e) => profile(e),
+                None => vec![
+                    Line::from("No game matches.").dim(),
+                    Line::from("Press Ctrl-A to add a game by its folder.").dim(),
+                ],
+            };
+            let detail = Paragraph::new(lines)
+                .wrap(Wrap { trim: false })
+                .block(pane_block);
+            f.render_widget(detail, panes[1]);
+        }
+    }
 
     let bar = if !app.message.is_empty() {
         Paragraph::new(app.message.as_str()).yellow().bold()
@@ -88,8 +111,16 @@ pub fn draw(f: &mut Frame, app: &App) {
         Paragraph::new("↑/↓ move · Enter open · ←/Backspace up · Space use this folder · . show hidden folders · ~ home · Esc cancel").dim()
     } else if app.menu.is_some() {
         Paragraph::new("↑/↓ choose · Enter run · Esc back").dim()
+    } else if app.pane == Pane::Settings {
+        Paragraph::new(
+            "Type to filter · Shift-↑/↓ scroll · ←/→ Profile/Settings · Enter actions · Esc quit",
+        )
+        .dim()
     } else {
-        Paragraph::new("Type to filter · Enter actions · Ctrl-A add game · Esc quit").dim()
+        Paragraph::new(
+            "Type to filter · Enter actions · ←/→ Profile/Settings · Ctrl-A add game · Esc quit",
+        )
+        .dim()
     };
     f.render_widget(bar, rows[3]);
 
@@ -192,6 +223,24 @@ fn draw_menu(f: &mut Frame, menu: &crate::app::Menu, title: &str) {
         popup,
         &mut ListState::default().with_selected(Some(menu.selected)),
     );
+}
+
+/// The pane's title: both views named, the one showing lit.
+fn pane_title(active: Pane) -> Line<'static> {
+    let name = |text: &'static str, on: bool| {
+        if on {
+            Span::raw(text).bold().cyan()
+        } else {
+            Span::raw(text).dim()
+        }
+    };
+    Line::from(vec![
+        Span::raw(" "),
+        name("Profile", active == Pane::Profile),
+        Span::raw(" | ").dim(),
+        name("Settings", active == Pane::Settings),
+        Span::raw(" "),
+    ])
 }
 
 /// Each filter with its key and value; one that narrows the list is lit.
@@ -447,5 +496,69 @@ mod tests {
         let s = screen(&app, 70, 14);
         assert!(s.contains("Ctrl-T Tested: Any"));
         assert!(s.contains("Alpha"));
+    }
+
+    const WITH_SETTINGS: &str = r#"{"games":[{"id":"q","name":"Quake 4",
+      "game_config":{
+        "files":{"q.cfg":{"format":"idtech_cfg","locations":["game_exe:q4base/q.cfg"]}},
+        "audio_settings":[{"title":"Enable EAX effects","tested":true,"reason":"It ships with EAX off.",
+          "changes":{"q.cfg":{"s_useOpenAL":"1"}}}]}}]}"#;
+
+    fn press(app: &mut App, code: ratatui::crossterm::event::KeyCode) {
+        app.handle_key(ratatui::crossterm::event::KeyEvent::from(code));
+    }
+
+    #[test]
+    fn the_right_arrow_shows_the_settings_and_the_title_names_both_views() {
+        let mut app = App::new(entries(WITH_SETTINGS));
+        let before = screen(&app, 100, 20);
+        assert!(before.contains("Profile | Settings"));
+        assert!(!before.contains("Enable EAX effects"));
+        press(&mut app, ratatui::crossterm::event::KeyCode::Right);
+        let s = screen(&app, 100, 20);
+        println!("{s}");
+        assert!(s.contains("Audio settings for Quake 4:"));
+        assert!(s.contains("Enable EAX effects (tested)"));
+        assert!(s.contains("s_useOpenAL  → 1"));
+        assert!(s.contains("Shift-↑/↓ scroll"));
+    }
+
+    #[test]
+    fn a_long_settings_list_scrolls_and_stops_at_its_end() {
+        let many: String = (0..30)
+            .map(|i| format!(r#"{{"title":"Setting {i}","tested":true,"reason":"r","changes":{{"q.cfg":{{"k{i}":"1"}}}}}}"#))
+            .collect::<Vec<_>>()
+            .join(",");
+        let json = format!(
+            r#"{{"games":[{{"id":"q","name":"Quake 4","game_config":{{"files":{{"q.cfg":{{"format":"idtech_cfg"}}}},"audio_settings":[{many}]}}}}]}}"#
+        );
+        let mut app = App::new(entries(&json));
+        press(&mut app, ratatui::crossterm::event::KeyCode::Right);
+        assert!(screen(&app, 100, 20).contains("Setting 0"));
+        assert!(app.pane_max.get() > 0);
+        for _ in 0..500 {
+            app.handle_key(ratatui::crossterm::event::KeyEvent::new(
+                ratatui::crossterm::event::KeyCode::Down,
+                ratatui::crossterm::event::KeyModifiers::SHIFT,
+            ));
+        }
+        let end = screen(&app, 100, 20);
+        assert!(end.contains("Setting 29"));
+        assert!(!end.contains("Setting 0 "));
+        assert_eq!(app.pane_scroll, app.pane_max.get());
+    }
+
+    #[test]
+    fn a_game_the_database_lacks_has_no_settings_to_show() {
+        let manual = Entry {
+            name: "Obscure".into(),
+            status: Status::Manual,
+            game: None,
+            store: None,
+            path: None,
+        };
+        let mut app = App::new(vec![manual]);
+        press(&mut app, ratatui::crossterm::event::KeyCode::Right);
+        assert!(screen(&app, 100, 14).contains("The game database has no profile for Obscure."));
     }
 }

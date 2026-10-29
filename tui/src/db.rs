@@ -1,8 +1,11 @@
-//! Loads `game-database.json`. Only reads the fields the list and profile pane
-//! need; unknown fields are ignored so a newer database still loads.
+//! Loads `game-database.json`. Only reads the fields the list, the profile pane
+//! and the settings view need; unknown fields are ignored so a newer database
+//! still loads.
 
 use anyhow::{Context, Result};
 use serde::Deserialize;
+use serde_json::{Map, Value};
+use std::collections::BTreeMap;
 use std::path::Path;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -26,6 +29,10 @@ pub struct Game {
     /// Absent means checked on a real install; only `false` is untested.
     #[serde(default = "yes")]
     pub tested: bool,
+    #[serde(default)]
+    pub install: Install,
+    #[serde(default)]
+    pub game_config: GameConfig,
 }
 
 fn yes() -> bool {
@@ -53,6 +60,73 @@ pub struct Eax {
     pub api: String,
     #[serde(default)]
     pub versions: Vec<String>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct Install {
+    /// section -> key -> value, in the database's order.
+    pub alsoft_ini: Option<Map<String, Value>>,
+    pub alsoft_tested: Option<bool>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct GameConfig {
+    #[serde(default)]
+    pub files: BTreeMap<String, ConfigFile>,
+    #[serde(default)]
+    pub audio_settings: Vec<Setting>,
+    #[serde(default)]
+    pub optional_settings: Vec<Setting>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct ConfigFile {
+    #[serde(default)]
+    pub format: String,
+    /// `game_exe:q4base/Quake4Config.cfg`: where it is, then the path there.
+    #[serde(default)]
+    pub locations: Vec<String>,
+    /// Every listed location is changed, not just the first that exists.
+    #[serde(default)]
+    pub all_locations: bool,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct Setting {
+    pub title: String,
+    #[serde(default)]
+    pub reason: String,
+    pub only_if: Option<OnlyIf>,
+    /// file -> what to set there. The shape under a file depends on its
+    /// format (section -> key -> value for ini-like files, else key -> value).
+    #[serde(default)]
+    pub changes: Map<String, Value>,
+    pub follow_up: Option<String>,
+    /// Only `true` counts as checked; a setting without the flag is untested.
+    #[serde(default)]
+    pub tested: bool,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct OnlyIf {
+    /// A list of store names.
+    pub stores: Option<Value>,
+    /// One speaker layout or a list of them.
+    pub speakers: Option<Value>,
+}
+
+impl OnlyIf {
+    /// A string or a list of strings, as a list.
+    pub fn list(v: &Option<Value>) -> Vec<String> {
+        match v {
+            Some(Value::String(s)) => vec![s.clone()],
+            Some(Value::Array(a)) => a
+                .iter()
+                .filter_map(|x| x.as_str().map(str::to_string))
+                .collect(),
+            _ => Vec::new(),
+        }
+    }
 }
 
 impl Database {

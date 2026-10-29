@@ -7,18 +7,29 @@ mod games;
 mod library;
 mod picker;
 mod runner;
+mod settings;
 mod ui;
 
 use anyhow::{Context, Result};
 use ratatui::crossterm::event::{self, Event, KeyEventKind};
+use std::io::Write;
 use std::path::PathBuf;
 
 /// A database named on the command line or by the same variable the Bash
 /// script uses for a local edit.
 fn chosen_database() -> Option<PathBuf> {
-    std::env::args_os()
-        .skip(1)
-        .find(|a| !a.to_string_lossy().starts_with("--"))
+    // The first argument that is neither a flag nor a flag's value.
+    let mut args = std::env::args_os().skip(1);
+    let mut positional = None;
+    while let Some(a) = args.next() {
+        if a == "--settings" {
+            args.next();
+        } else if !a.to_string_lossy().starts_with("--") {
+            positional = Some(a);
+            break;
+        }
+    }
+    positional
         .map(PathBuf::from)
         .or_else(|| std::env::var_os("EAX_RESTORE_GAME_DATABASE_FILE").map(PathBuf::from))
 }
@@ -47,7 +58,28 @@ fn main() -> Result<()> {
                 .path
                 .as_ref()
                 .map_or_else(String::new, |p| p.display().to_string());
-            println!("{:<10} {}\t{}", format!("{:?}", e.status), e.name, path);
+            let row = format!("{:<10} {}\t{}", format!("{:?}", e.status), e.name, path);
+            if writeln!(std::io::stdout(), "{row}").is_err() {
+                break;
+            }
+        }
+        return Ok(());
+    }
+
+    // `--settings NAME` prints that game's settings view and exits.
+    if let Some(name) = std::env::args().skip_while(|a| a != "--settings").nth(1) {
+        let game = db
+            .games
+            .iter()
+            .find(|g| g.name.eq_ignore_ascii_case(&name))
+            .with_context(|| format!("No game called {name:?} in the database."))?;
+        let mut out = std::io::stdout().lock();
+        for line in settings::lines(game, 76) {
+            let text: String = line.spans.iter().map(|s| s.content.as_ref()).collect();
+            // A closed pipe (`| head`) just ends the output.
+            if writeln!(out, "{text}").is_err() {
+                break;
+            }
         }
         return Ok(());
     }

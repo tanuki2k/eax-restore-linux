@@ -105,7 +105,10 @@ launcher hardcodes `releases/latest`).
   `EAX_RESTORE_GAME`; the script stays the engine until the Rust port replaces
   it. Checks, as `.github/workflows/tui.yml` runs them: `cd tui && cargo fmt --check
   && cargo clippy --locked --all-targets -- -D warnings && cargo test --locked`.
-  Run it with `cargo run -- ../game-database.json` after `./build.sh`. It finds the
+  Run it with `cargo run -- ../game-database.json` after `./build.sh`. The right pane switches between
+  Profile and Settings with ←/→ (Shift-↑/↓ scrolls it); `--list` and `--settings NAME`
+  print the game list or one game's settings view without the TUI, which is how the
+  Rust view is compared with the Bash browser's `print_game_settings_details`. It finds the
   script via `EAX_RESTORE_SCRIPT`, beside itself, its cache (`~/.local/share/
   eax-restore-linux/tui/<channel>/`) or `dist/`, skipping any that lacks
   `EAX_RESTORE_ACTION`; if none, it downloads its channel's release script and

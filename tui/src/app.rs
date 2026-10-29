@@ -43,6 +43,13 @@ impl Filter {
     }
 }
 
+/// What the right-hand pane shows for the selected game.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Pane {
+    Profile,
+    Settings,
+}
+
 /// The popup of actions for the selected game.
 pub struct Menu {
     pub actions: Vec<Action>,
@@ -65,6 +72,11 @@ pub struct App {
     pub message: String,
     pub filter: Filter,
     pub filters: Filters,
+    pub pane: Pane,
+    /// Lines the settings view is scrolled down.
+    pub pane_scroll: u16,
+    /// How far it can scroll; known only once it is drawn, so `draw` sets it.
+    pub pane_max: std::cell::Cell<u16>,
     pub query: String,
     /// Indices into `games` that match the query, best match first.
     pub visible: Vec<usize>,
@@ -85,6 +97,9 @@ impl App {
             message: String::new(),
             filter: Filter::All,
             filters: Filters::default(),
+            pane: Pane::Profile,
+            pane_scroll: 0,
+            pane_max: std::cell::Cell::new(0),
             query: String::new(),
             visible: Vec::new(),
             selected: 0,
@@ -200,7 +215,26 @@ impl App {
         }
     }
 
+    fn scroll_pane(&mut self, delta: i32) {
+        let max = i32::from(self.pane_max.get());
+        self.pane_scroll = (i32::from(self.pane_scroll) + delta).clamp(0, max) as u16;
+    }
+
+    fn show_pane(&mut self, pane: Pane) {
+        self.pane = pane;
+        self.pane_scroll = 0;
+    }
+
+    /// Moving to another game starts its pane at the top.
     pub fn handle_key(&mut self, key: KeyEvent) {
+        let before = self.visible.get(self.selected).copied();
+        self.handle_key_inner(key);
+        if self.visible.get(self.selected).copied() != before {
+            self.pane_scroll = 0;
+        }
+    }
+
+    fn handle_key_inner(&mut self, key: KeyEvent) {
         self.message.clear();
         if self.picker.is_some() {
             return self.handle_picker_key(key);
@@ -209,6 +243,7 @@ impl App {
             return self.handle_menu_key(key);
         }
         let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+        let shift = key.modifiers.contains(KeyModifiers::SHIFT);
         match key.code {
             KeyCode::Esc => self.quit = true,
             KeyCode::Char('c') if ctrl => self.quit = true,
@@ -240,6 +275,12 @@ impl App {
                 self.filter = self.filter.next();
                 self.refilter();
             }
+            KeyCode::Up if shift => self.scroll_pane(-1),
+            KeyCode::Down if shift => self.scroll_pane(1),
+            KeyCode::PageUp if shift => self.scroll_pane(-10),
+            KeyCode::PageDown if shift => self.scroll_pane(10),
+            KeyCode::Right => self.show_pane(Pane::Settings),
+            KeyCode::Left => self.show_pane(Pane::Profile),
             KeyCode::Up => self.move_by(-1),
             KeyCode::Down => self.move_by(1),
             KeyCode::PageUp => self.move_by(-10),
@@ -471,5 +512,63 @@ mod tests {
         assert_eq!(a.visible.len(), 1);
         a.handle_key(ctrl('e')); // OpenAL
         assert!(a.visible.is_empty());
+    }
+
+    fn shift(code: KeyCode) -> KeyEvent {
+        KeyEvent::new(code, KeyModifiers::SHIFT)
+    }
+
+    #[test]
+    fn right_shows_the_settings_and_left_the_profile() {
+        let mut a = app();
+        assert_eq!(a.pane, Pane::Profile);
+        a.handle_key(key(KeyCode::Right));
+        assert_eq!(a.pane, Pane::Settings);
+        a.handle_key(key(KeyCode::Left));
+        assert_eq!(a.pane, Pane::Profile);
+    }
+
+    #[test]
+    fn shift_arrows_scroll_the_pane_but_never_past_its_ends() {
+        let mut a = app();
+        a.pane_max.set(5);
+        for _ in 0..9 {
+            a.handle_key(shift(KeyCode::Down));
+        }
+        assert_eq!(a.pane_scroll, 5);
+        // No hidden overshoot: one step up moves it at once.
+        a.handle_key(shift(KeyCode::Up));
+        assert_eq!(a.pane_scroll, 4);
+        a.handle_key(shift(KeyCode::PageUp));
+        assert_eq!(a.pane_scroll, 0);
+        a.handle_key(shift(KeyCode::Up));
+        assert_eq!(a.pane_scroll, 0);
+    }
+
+    #[test]
+    fn plain_arrows_still_move_the_selection_and_only_shift_scrolls() {
+        let mut a = app();
+        a.pane_max.set(5);
+        a.handle_key(key(KeyCode::Down));
+        assert_eq!((a.selected, a.pane_scroll), (1, 0));
+    }
+
+    #[test]
+    fn another_game_starts_at_the_top_of_the_pane() {
+        let mut a = app();
+        a.pane_max.set(5);
+        a.handle_key(shift(KeyCode::Down));
+        assert_eq!(a.pane_scroll, 1);
+        a.handle_key(key(KeyCode::Down));
+        assert_eq!(a.pane_scroll, 0);
+    }
+
+    #[test]
+    fn switching_panes_starts_at_the_top() {
+        let mut a = app();
+        a.pane_max.set(5);
+        a.handle_key(shift(KeyCode::Down));
+        a.handle_key(key(KeyCode::Right));
+        assert_eq!(a.pane_scroll, 0);
     }
 }
