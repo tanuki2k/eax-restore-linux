@@ -1,0 +1,19 @@
+[package]
+name = "eax-restore"
+version = "0.1.0"
+edition = "2021"
+description = "TUI for restoring EAX/DirectSound3D audio in classic Windows games on Linux"
+license = "MIT"
+publish = false
+
+[dependencies]
+anyhow = "1"
+nucleo-matcher = "0.3"
+ratatui = "0.29"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
