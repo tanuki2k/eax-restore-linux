@@ -80,3 +80,59 @@ jobs:
           latest=$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" -q .tag_name)
           echo "Latest release is: $latest"
           [ "$latest" != "dev" ] || { echo "::error::dev became the Latest release"; exit 1; }
+
+  # The TUI binary goes on the same rolling prerelease once the script is
+  # published. It is its own job so a problem with the Rust build can't hold
+  # back the script, which is what the dev update channel installs.
+  dev-tui:
+    needs: dev-release
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/dev'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add x86_64-unknown-linux-musl
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            tui/target
+          key: tui-dev-${{ runner.os }}-${{ hashFiles('tui/Cargo.lock') }}
+          restore-keys: tui-dev-${{ runner.os }}-
+
+      - name: Tests
+        working-directory: tui
+        run: cargo test --locked
+
+      # A static (musl) build, so one file runs on SteamOS, Debian and Fedora
+      # whatever their glibc.
+      - name: Build
+        working-directory: tui
+        run: cargo build --release --locked --target x86_64-unknown-linux-musl
+
+      - name: Check it is static and runs
+        run: |
+          bin=tui/target/x86_64-unknown-linux-musl/release/eax-restore
+          if ldd "$bin" 2>&1 | grep -q '=>'; then
+            echo "::error::The TUI binary is not statically linked"; exit 1
+          fi
+          # With no libraries or installs on this machine the list is empty.
+          HOME="$(mktemp -d)" "$bin" game-database.json --list
+
+      - name: Name and checksum
+        run: |
+          mkdir -p dist
+          cp tui/target/x86_64-unknown-linux-musl/release/eax-restore dist/eax-restore-linux-tui-x86_64
+          (cd dist && sha256sum eax-restore-linux-tui-x86_64 > eax-restore-linux-tui-x86_64.sha256)
+
+      - name: Add to the dev prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload dev dist/eax-restore-linux-tui-x86_64 dist/eax-restore-linux-tui-x86_64.sha256 --clobber
