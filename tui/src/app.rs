@@ -43,6 +43,18 @@ impl Filter {
     }
 }
 
+/// Where the right-hand pane sits.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Layout {
+    /// Beside the list.
+    Side,
+    /// Under the list, for a narrow window.
+    Stacked,
+}
+
+/// Narrower than this and a pane beside the list leaves both too cramped.
+pub const STACK_BELOW: u16 = 104;
+
 /// What the right-hand pane shows for the selected game.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Pane {
@@ -80,6 +92,9 @@ pub struct App {
     pub filter: Filter,
     pub filters: Filters,
     pub pane: Pane,
+    pub layout: Layout,
+    /// The layout this window width calls for; Ctrl-L swaps away from it.
+    natural: Layout,
     /// Lines the settings view is scrolled down.
     pub pane_scroll: u16,
     /// How far it can scroll; known only once it is drawn, so `draw` sets it.
@@ -109,6 +124,8 @@ impl App {
             filter: Filter::All,
             filters: Filters::default(),
             pane: Pane::Profile,
+            layout: Layout::Side,
+            natural: Layout::Side,
             pane_scroll: 0,
             pane_max: std::cell::Cell::new(0),
             query: String::new(),
@@ -226,6 +243,32 @@ impl App {
         }
     }
 
+    /// The window is now `width` columns wide. Crossing the narrow/wide line
+    /// switches the layout by itself, even over a Ctrl-L; otherwise a choice stays.
+    pub fn resize(&mut self, width: u16) {
+        let natural = if width < STACK_BELOW {
+            Layout::Stacked
+        } else {
+            Layout::Side
+        };
+        if natural != self.natural {
+            self.natural = natural;
+            self.layout = natural;
+        }
+    }
+
+    /// Ctrl-L: away from the layout the window calls for, or back to it.
+    fn swap_layout(&mut self) {
+        self.layout = if self.layout == self.natural {
+            match self.natural {
+                Layout::Side => Layout::Stacked,
+                Layout::Stacked => Layout::Side,
+            }
+        } else {
+            self.natural
+        };
+    }
+
     fn scroll_pane(&mut self, delta: i32) {
         let max = i32::from(self.pane_max.get());
         self.pane_scroll = (i32::from(self.pane_scroll) + delta).clamp(0, max) as u16;
@@ -337,6 +380,7 @@ impl App {
             }
             KeyCode::Enter => self.open_menu(),
             KeyCode::F(1) => self.open_help(),
+            KeyCode::Char('l') if ctrl => self.swap_layout(),
             KeyCode::Char('f') if ctrl => self.zoom = self.current().is_some(),
             KeyCode::Tab => {
                 self.filter = self.filter.next();
@@ -714,5 +758,69 @@ mod tests {
         type_str(&mut a, "zzzz");
         a.handle_key(ctrl('f'));
         assert!(!a.zoom);
+    }
+
+    #[test]
+    fn a_narrow_window_stacks_the_pane_under_the_list_and_a_wide_one_puts_it_beside() {
+        let mut a = app();
+        assert_eq!(a.layout, Layout::Side);
+        a.resize(103);
+        assert_eq!(a.layout, Layout::Stacked);
+        a.resize(104);
+        assert_eq!(a.layout, Layout::Side);
+    }
+
+    #[test]
+    fn ctrl_l_swaps_away_from_the_natural_layout_and_back() {
+        let mut a = app();
+        a.resize(120);
+        a.handle_key(ctrl('l'));
+        assert_eq!(a.layout, Layout::Stacked);
+        a.handle_key(ctrl('l'));
+        assert_eq!(a.layout, Layout::Side);
+        a.resize(80);
+        a.handle_key(ctrl('l'));
+        assert_eq!(
+            a.layout,
+            Layout::Side,
+            "a narrow window can still be put beside"
+        );
+        a.handle_key(ctrl('l'));
+        assert_eq!(a.layout, Layout::Stacked);
+    }
+
+    #[test]
+    fn a_choice_stays_through_resizes_on_the_same_side_of_the_line() {
+        let mut a = app();
+        a.resize(120);
+        a.handle_key(ctrl('l'));
+        a.resize(150);
+        a.resize(110);
+        assert_eq!(a.layout, Layout::Stacked);
+    }
+
+    #[test]
+    fn crossing_the_line_overrides_a_choice() {
+        let mut a = app();
+        a.resize(120);
+        a.handle_key(ctrl('l')); // stacked, though wide
+        a.resize(90); // narrow: stacked is now what the window calls for
+        assert_eq!(a.layout, Layout::Stacked);
+        a.handle_key(ctrl('l')); // beside, though narrow
+        a.resize(130); // wide again
+        assert_eq!(a.layout, Layout::Side);
+    }
+
+    #[test]
+    fn ctrl_l_is_ignored_in_full_screen_and_help() {
+        let mut a = app();
+        a.resize(120);
+        a.handle_key(ctrl('f'));
+        a.handle_key(ctrl('l'));
+        assert_eq!(a.layout, Layout::Side);
+        a.handle_key(key(KeyCode::Esc));
+        a.handle_key(key(KeyCode::F(1)));
+        a.handle_key(ctrl('l'));
+        assert_eq!(a.layout, Layout::Side);
     }
 }

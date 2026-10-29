@@ -1,6 +1,6 @@
 //! Drawing. Reads `App`, never changes it.
 
-use crate::app::{App, Filter, Pane};
+use crate::app::{App, Filter, Layout as PaneLayout, Pane};
 use crate::filters::Filters;
 use crate::games::{Entry, Status};
 use crate::help;
@@ -18,21 +18,30 @@ pub fn draw(f: &mut Frame, app: &App) {
         // The pane alone, with the key bar under it.
         let rows = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Min(3), Constraint::Length(1)])
+            .constraints([
+                Constraint::Min(3),
+                Constraint::Length(bar_rows(app, f.area().width)),
+            ])
             .split(f.area());
         draw_pane(f, app, rows[0], true);
         draw_bar(f, app, rows[1]);
     } else {
         draw_main(f, app);
     }
+    // Popups leave the key bar showing, however many rows it needs.
+    let screen = f.area();
+    let above_bar = Rect {
+        height: screen.height.saturating_sub(bar_rows(app, screen.width)),
+        ..screen
+    };
     if let (Some(menu), Some(e)) = (&app.menu, app.current()) {
-        draw_menu(f, menu, &e.name);
+        draw_menu(f, menu, &e.name, above_bar);
     }
     if let Some(p) = &app.picker {
-        draw_picker(f, p);
+        draw_picker(f, p, above_bar);
     }
     if app.help {
-        draw_help(f, app);
+        draw_help(f, app, above_bar);
     }
 }
 
@@ -45,7 +54,7 @@ fn draw_main(f: &mut Frame, app: &App) {
             Constraint::Length(3),
             Constraint::Length(filter_rows),
             Constraint::Min(3),
-            Constraint::Length(1),
+            Constraint::Length(bar_rows(app, f.area().width)),
         ])
         .split(f.area());
 
@@ -64,9 +73,14 @@ fn draw_main(f: &mut Frame, app: &App) {
         rows[1],
     );
 
+    // Beside the list, or under it on a narrow window (or after Ctrl-L).
+    let (direction, split) = match app.layout {
+        PaneLayout::Side => (Direction::Horizontal, [40, 60]),
+        PaneLayout::Stacked => (Direction::Vertical, [45, 55]),
+    };
     let panes = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(40), Constraint::Percentage(60)])
+        .direction(direction)
+        .constraints(split.map(Constraint::Percentage))
         .split(rows[2]);
 
     let items: Vec<ListItem> = app
@@ -141,10 +155,10 @@ fn draw_pane(f: &mut Frame, app: &App, area: Rect, zoomed: bool) {
     }
 }
 
-fn draw_bar(f: &mut Frame, app: &App, area: Rect) {
-    let text = if !app.message.is_empty() {
-        f.render_widget(Paragraph::new(app.message.as_str()).yellow().bold(), area);
-        return;
+/// What the bottom bar says for what is on screen.
+fn bar_text(app: &App) -> &str {
+    if !app.message.is_empty() {
+        app.message.as_str()
     } else if app.help {
         "↑/↓ scroll · Esc or F1 close"
     } else if app.picker.is_some() {
@@ -157,13 +171,32 @@ fn draw_bar(f: &mut Frame, app: &App, area: Rect) {
         "Shift-↑/↓ scroll · Ctrl-F full screen · ←/→ Profile/Settings · Enter actions · F1 help · Esc quit"
     } else {
         "Type to filter · Enter actions · ←/→ Profile/Settings · Ctrl-A add game · F1 help · Esc quit"
-    };
-    f.render_widget(Paragraph::new(text).dim(), area);
+    }
+}
+
+/// Rows the bar needs at this width: one, or two when the text would be cut off.
+fn bar_rows(app: &App, width: u16) -> u16 {
+    if bar_text(app).chars().count() > usize::from(width) {
+        2
+    } else {
+        1
+    }
+}
+
+fn draw_bar(f: &mut Frame, app: &App, area: Rect) {
+    let text = Paragraph::new(bar_text(app)).wrap(Wrap { trim: true });
+    f.render_widget(
+        if app.message.is_empty() {
+            text.dim()
+        } else {
+            text.yellow().bold()
+        },
+        area,
+    );
 }
 
 /// The F1 key list, over whatever is on screen.
-fn draw_help(f: &mut Frame, app: &App) {
-    let area = f.area();
+fn draw_help(f: &mut Frame, app: &App, area: Rect) {
     let w = area.width.min(90);
     let h = area.height.saturating_sub(2).max(3).min(area.height);
     let popup = Rect::new(
@@ -188,8 +221,7 @@ fn draw_help(f: &mut Frame, app: &App) {
     );
 }
 
-fn draw_picker(f: &mut Frame, p: &crate::picker::Picker) {
-    let area = f.area();
+fn draw_picker(f: &mut Frame, p: &crate::picker::Picker, area: Rect) {
     let w = area.width.min(90);
     let h = area.height.saturating_sub(2).max(3).min(area.height);
     let popup = Rect::new(
@@ -245,8 +277,7 @@ fn draw_picker(f: &mut Frame, p: &crate::picker::Picker) {
     );
 }
 
-fn draw_menu(f: &mut Frame, menu: &crate::app::Menu, title: &str) {
-    let area = f.area();
+fn draw_menu(f: &mut Frame, menu: &crate::app::Menu, title: &str, area: Rect) {
     let widest = menu
         .actions
         .iter()
@@ -633,7 +664,7 @@ mod tests {
     fn f1_shows_the_key_list_over_the_screen_and_the_bar_says_how_to_close_it() {
         let mut app = App::new(entries(WITH_SETTINGS));
         press(&mut app, ratatui::crossterm::event::KeyCode::F(1));
-        let s = screen(&app, 100, 30);
+        let s = screen(&app, 100, 40);
         println!("{s}");
         assert!(s.contains(" Keys "));
         assert!(s.contains("The basics"));
@@ -687,5 +718,77 @@ mod tests {
         let s = screen(&app, 100, 30);
         assert!(!s.contains(" Keys "));
         assert!(s.contains("Quake 4: Profile | Settings"));
+    }
+
+    fn row_of(screen: &str, needle: &str) -> usize {
+        screen.lines().position(|l| l.contains(needle)).unwrap()
+    }
+
+    #[test]
+    fn the_pane_is_beside_the_list_on_a_wide_window_and_under_it_on_a_narrow_one() {
+        let mut app = App::new(entries(WITH_SETTINGS));
+        app.resize(120);
+        let wide = screen(&app, 120, 24);
+        assert_eq!(
+            row_of(&wide, " Games "),
+            row_of(&wide, "Profile | Settings")
+        );
+        app.resize(90);
+        let narrow = screen(&app, 90, 24);
+        println!("{narrow}");
+        assert!(row_of(&narrow, " Games ") < row_of(&narrow, "Profile | Settings"));
+        // Both still show their text.
+        assert!(narrow.contains("Quake 4"));
+        assert!(narrow.contains("Status:"));
+    }
+
+    #[test]
+    fn ctrl_l_moves_the_pane_under_the_list_on_a_wide_window() {
+        let mut app = App::new(entries(WITH_SETTINGS));
+        app.resize(120);
+        ctrl_key(&mut app, 'l');
+        let s = screen(&app, 120, 24);
+        assert!(row_of(&s, " Games ") < row_of(&s, "Profile | Settings"));
+    }
+
+    #[test]
+    fn a_stacked_layout_on_a_tiny_terminal_does_not_panic() {
+        let mut app = App::new(entries(WITH_SETTINGS));
+        app.resize(20);
+        screen(&app, 20, 6);
+    }
+
+    #[test]
+    fn the_key_bar_wraps_instead_of_being_cut_off_on_a_narrow_window() {
+        let app = App::new(entries(WITH_SETTINGS));
+        let narrow = screen(&app, 60, 20);
+        println!("{narrow}");
+        assert!(narrow.contains("Esc quit"), "the end of the bar is lost");
+        assert!(narrow.contains("Type to filter"));
+        // On a wide window it needs only the last row.
+        let wide = screen(&app, 130, 20);
+        assert!(wide.lines().last().unwrap().contains("Esc quit"));
+    }
+
+    #[test]
+    fn a_long_message_wraps_too() {
+        let mut app = App::new(entries(WITH_SETTINGS));
+        app.message =
+            "Couldn't download the installer script. Check your internet connection and try again."
+                .into();
+        assert!(screen(&app, 50, 14).contains("try again."));
+    }
+
+    #[test]
+    fn popups_leave_a_wrapped_key_bar_showing() {
+        let home = tempfile::tempdir().unwrap();
+        let mut app = App::new(entries(WITH_SETTINGS));
+        app.set_home(home.path().to_path_buf());
+        ctrl_key(&mut app, 'a');
+        // The picker's bar needs two rows at this width; the popup must not cover them.
+        let s = screen(&app, 70, 16);
+        println!("{s}");
+        assert!(s.contains("Esc cancel"));
+        assert!(s.contains("Space use this folder"));
     }
 }

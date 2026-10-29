@@ -107,7 +107,8 @@ launcher hardcodes `releases/latest`).
   && cargo clippy --locked --all-targets -- -D warnings && cargo test --locked`.
   Run it with `cargo run -- ../game-database.json` after `./build.sh`. The right pane switches between
   Profile and Settings with ←/→ (Shift-↑/↓ scrolls it); F1 lists every key (`tui/src/help.rs`: keep it in step
-  with `app.rs`), and Ctrl-F gives the pane the whole screen; `--list` and `--settings NAME`
+  with `app.rs`), Ctrl-F gives the pane the whole screen, and Ctrl-L puts it under the list instead of
+  beside it (it does that by itself below 104 columns); `--list` and `--settings NAME`
   print the game list or one game's settings view without the TUI, which is how the
   Rust view is compared with the Bash browser's `print_game_settings_details`. It finds the
   script via `EAX_RESTORE_SCRIPT`, beside itself, its cache (`~/.local/share/

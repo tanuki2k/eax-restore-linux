@@ -87,6 +87,9 @@ fn main() -> Result<()> {
 
     let mut app = app::App::new(entries);
     app.set_home(home.clone());
+    if let Ok((width, _)) = ratatui::crossterm::terminal::size() {
+        app.resize(width);
+    }
 
     // init() also installs a panic hook that puts the terminal back.
     let mut terminal = ratatui::init();
@@ -112,10 +115,10 @@ fn run(
 ) -> Result<()> {
     while !app.quit {
         terminal.draw(|f| ui::draw(f, app))?;
-        if let Event::Key(key) = event::read()? {
-            if key.kind == KeyEventKind::Press {
-                app.handle_key(key);
-            }
+        match event::read()? {
+            Event::Key(key) if key.kind == KeyEventKind::Press => app.handle_key(key),
+            Event::Resize(width, _) => app.resize(width),
+            _ => {}
         }
         let Some(launch) = app.launch.take() else {
             continue;
@@ -140,6 +143,10 @@ fn run(
         ratatui::restore();
         runner::run(&script, &env, chosen_db);
         *terminal = ratatui::init();
+        // The window may have been resized while the installer ran.
+        if let Ok((width, _)) = ratatui::crossterm::terminal::size() {
+            app.resize(width);
+        }
         // The action may have installed or removed a game.
         app.replace_games(games::build(db, home, state_file));
     }
