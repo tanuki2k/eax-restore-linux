@@ -8,13 +8,14 @@
     "steam": {
       "id": 238210,
       "delisted": true,
-      "store_details": "The classic 1999 build was delisted in October 2025.",
+      "api": "openal",
+      "store_details": "The classic 1999 build was delisted in October 2025. It comes with the NewDark engine patch pre-installed.",
       "patches": "The System Shock 2 Community Patch (SCP) fixes bugs and polishes the game, and is worth installing alongside EAX."
     },
     "gog": {
       "id": 1207659172,
       "delisted": true,
-      "store_details": "The classic 1999 build was delisted in October 2025.",
+      "store_details": "The classic 1999 build was delisted in October 2025. The original build, without the NewDark engine patch.",
       "patches": "The System Shock 2 Community Patch (SCP) fixes bugs and polishes the game, and is worth installing alongside EAX."
     }
   },

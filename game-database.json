@@ -3,33 +3,6 @@
   "_readme": "Generated from data/games/tested/*.json and data/games/untested/*.json by tools/build-game-database.sh; do not edit by hand. Games from untested/ carry \"tested\": false. Field reference: data/schema.json and docs/game-file-reference.md.",
   "games": [
     {
-      "id": "aliens-versus-predator-classic-2000",
-      "name": "Aliens versus Predator Classic 2000",
-      "description": "Aliens versus Predator Classic 2000 is a singleplayer and multiplayer first-person shooter and survival horror game in the Alien vs. Predator series.",
-      "released": "1999-05-13",
-      "exe": "AvP_Classic.exe",
-      "stores": {
-        "steam": {
-          "id": 3730,
-          "extra_exe_folders": [
-            "game_root:bin",
-            "game_root:bin_Crossplay"
-          ],
-          "store_details": "The game's launcher offers two builds: the standard Steam one and a crossplay build for multiplayer with GOG players."
-        },
-        "gog": {
-          "id": 1207665883
-        }
-      },
-      "eax": {
-        "api": "directsound3d",
-        "versions": [
-          "1.0"
-        ]
-      },
-      "notes": "Both stores label this 'Classic 2000' to set it apart from 2010's Aliens vs. Predator, a different game."
-    },
-    {
       "id": "alpha-centauri",
       "name": "Alpha Centauri",
       "description": "Alpha Centauri is a singleplayer and multiplayer turn-based 4X strategy game.",
@@ -3471,13 +3444,14 @@
         "steam": {
           "id": 238210,
           "delisted": true,
-          "store_details": "The classic 1999 build was delisted in October 2025.",
+          "api": "openal",
+          "store_details": "The classic 1999 build was delisted in October 2025. It comes with the NewDark engine patch pre-installed.",
           "patches": "The System Shock 2 Community Patch (SCP) fixes bugs and polishes the game, and is worth installing alongside EAX."
         },
         "gog": {
           "id": 1207659172,
           "delisted": true,
-          "store_details": "The classic 1999 build was delisted in October 2025.",
+          "store_details": "The classic 1999 build was delisted in October 2025. The original build, without the NewDark engine patch.",
           "patches": "The System Shock 2 Community Patch (SCP) fixes bugs and polishes the game, and is worth installing alongside EAX."
         }
       },
