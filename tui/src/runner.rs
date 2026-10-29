@@ -4,10 +4,11 @@ use std::io::{self, BufRead, IsTerminal, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-const SCRIPT_NAME: &str = "eax-restore-linux.sh";
+use crate::fetch::{self, NAME as SCRIPT_NAME};
 
-/// Where to look, best first: the caller's choice, beside this program, and (for
-/// a build from the repo) where `./build.sh` puts it.
+/// Where to look, best first: the caller's choice, beside this program, the
+/// copy fetched for this channel, and (for a build from the repo) where
+/// `./build.sh` puts it.
 fn candidates() -> Vec<PathBuf> {
     let mut c = Vec::new();
     if let Some(p) = std::env::var_os("EAX_RESTORE_SCRIPT") {
@@ -19,6 +20,9 @@ fn candidates() -> Vec<PathBuf> {
     {
         c.push(dir.join(SCRIPT_NAME));
     }
+    if let Some(home) = fetch::data_home() {
+        c.push(fetch::cache_path(&home, fetch::CHANNEL));
+    }
     c.push(
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../dist")
@@ -28,11 +32,16 @@ fn candidates() -> Vec<PathBuf> {
 }
 
 pub fn find_script() -> Option<PathBuf> {
-    first_file(&candidates())
+    first_usable(&candidates())
 }
 
-fn first_file(paths: &[PathBuf]) -> Option<PathBuf> {
-    paths.iter().find(|p| p.is_file()).cloned()
+/// The first that exists and can be driven; an older script that lacks the
+/// action variable is passed over, so the right one gets fetched.
+fn first_usable(paths: &[PathBuf]) -> Option<PathBuf> {
+    paths
+        .iter()
+        .find(|p| p.is_file() && fetch::supports_actions(p))
+        .cloned()
 }
 
 /// An I/O error without Rust's "(os error N)" tail.
@@ -77,16 +86,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_first_existing_file_wins_and_a_missing_one_is_skipped() {
+    fn the_first_usable_file_wins_and_missing_or_old_ones_are_skipped() {
         let dir = tempfile::tempdir().unwrap();
-        let (a, b) = (dir.path().join("a.sh"), dir.path().join("b.sh"));
-        std::fs::write(&b, "").unwrap();
+        let (old, new) = (dir.path().join("old.sh"), dir.path().join("new.sh"));
+        std::fs::write(&old, "echo old\n").unwrap();
+        std::fs::write(&new, "# EAX_RESTORE_ACTION\n").unwrap();
         let missing = dir.path().join("nope.sh");
         assert_eq!(
-            first_file(&[missing.clone(), a.clone(), b.clone()]),
-            Some(b)
+            first_usable(&[missing.clone(), old.clone(), new.clone()]),
+            Some(new)
         );
-        assert_eq!(first_file(&[missing, a]), None);
+        assert_eq!(first_usable(&[missing, old]), None);
     }
 
     #[test]

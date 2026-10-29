@@ -1,6 +1,7 @@
 mod actions;
 mod app;
 mod db;
+mod fetch;
 mod filters;
 mod games;
 mod library;
@@ -74,9 +75,21 @@ fn run(
         let Some(launch) = app.launch.take() else {
             continue;
         };
-        let Some(script) = runner::find_script() else {
-            app.message = "Can't find eax-restore-linux.sh. Put it next to this program, or set EAX_RESTORE_SCRIPT to its path.".into();
-            continue;
+        let script = match runner::find_script() {
+            Some(s) => s,
+            None => {
+                // Not beside this program or cached: fetch it, on the normal screen.
+                ratatui::restore();
+                let fetched = fetch::ensure_script();
+                *terminal = ratatui::init();
+                match fetched {
+                    Ok(path) => path,
+                    Err(e) => {
+                        app.message = e.to_string();
+                        continue;
+                    }
+                }
+            }
         };
         let env = launch.env;
         ratatui::restore();

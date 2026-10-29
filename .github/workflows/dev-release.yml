@@ -112,8 +112,11 @@ jobs:
 
       # A static (musl) build, so one file runs on SteamOS, Debian and Fedora
       # whatever their glibc.
+      # The dev channel makes the binary fetch the dev script, not the stable one.
       - name: Build
         working-directory: tui
+        env:
+          EAX_RESTORE_CHANNEL: dev
         run: cargo build --release --locked --target x86_64-unknown-linux-musl
 
       - name: Check it is static and runs
