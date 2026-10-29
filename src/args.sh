@@ -38,6 +38,12 @@ prompts is done via environment variables:
   EAX_RESTORE_UNTESTED_SETTINGS=1     Offer unverified game and alsoft.ini settings
                                       (left out otherwise)
   EAX_RESTORE_ANSWERS_FILE=PATH       Read the answers to every prompt from a file
+  EAX_RESTORE_ACTION=NAME             Run one action without the main menu: install,
+                                      uninstall, optional-settings, speakers, vcrun
+                                      or dsoal-log
+  EAX_RESTORE_GAME_DIR=PATH           The game's .exe folder, instead of asking for it
+  EAX_RESTORE_GAME=STORE:ID           For an install, pick this game from the library
+                                      scan (steam:2210, gog:1207658936)
   EAX_RESTORE_NO_LOG=1                Don't write a run log (normally saved to
                                       ~/.local/state/eax-restore-linux/logs/)
 

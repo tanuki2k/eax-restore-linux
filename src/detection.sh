@@ -44,6 +44,13 @@ prompt_manual_game_dir() {
     # callers do their own directory-exists / .exe-count validation
     # afterwards. "back" adds "(or press Enter to go back)" to the question,
     # for a caller that treats a blank line that way.
+    # EAX_RESTORE_GAME_DIR answers this once; a retry asks as usual.
+    if [ -n "${EAX_RESTORE_GAME_DIR:-}" ]; then
+        GAME_DIR="$(clean_typed_path "$EAX_RESTORE_GAME_DIR")"
+        EAX_RESTORE_GAME_DIR=""
+        [[ "$GAME_DIR" == /* ]] || GAME_DIR="$PWD/$GAME_DIR"
+        return 0
+    fi
     if [ "${1:-}" == "back" ]; then
         prompt "Enter the full path to the game's .exe folder (or press Enter to go back):"
     else
@@ -104,7 +111,8 @@ get_game_directory() {
     BUILT_IN_CONFIRMED=""
     OPENAL_NATIVE_MODE=""
 
-    if wants_installed_list && prompt_installed_game; then
+    # A game given up front (EAX_RESTORE_GAME_DIR) skips the installed-games list.
+    if [ -z "$EAX_RESTORE_GAME_DIR" ] && wants_installed_list && prompt_installed_game; then
         echo -e "\n${GREEN}Using: $(tilde_path "$GAME_DIR")${NC}"
         note_game_used "$GAME_DIR"
         return
@@ -210,8 +218,10 @@ get_game_directory() {
             scan)
                 print_note "the game database is a work in progress. If your game isn't listed, it may" \
                     "still have EAX — choose [M] under the list to type its path yourself."
-                # No goes back to the locate menu.
-                if ! confirm "Scan your libraries, knowing the game database is a work in progress?"; then
+                # No goes back to the locate menu. EAX_RESTORE_GAME already
+                # named the game, so there is nothing to scan blindly.
+                if [ -z "$EAX_RESTORE_GAME" ] \
+                    && ! confirm "Scan your libraries, knowing the game database is a work in progress?"; then
                     continue
                 fi
                 if scan_game_libraries; then
@@ -255,7 +265,7 @@ get_game_directory() {
                 # Before typing or browsing for a path (not before the menu or
                 # a scan). A typed path that doesn't work is asked for again;
                 # a blank answer goes back.
-                _show_common_locations
+                [ -n "$EAX_RESTORE_GAME_DIR" ] || _show_common_locations
                 prompt_manual_game_dir back && retype=1
                 ;;
         esac

@@ -108,6 +108,13 @@
 #   file (one line per prompt, lines starting with # ignored) instead of the
 #   terminal, so a run can go unattended. Used by tools/profiler.
 #
+# * EAX_RESTORE_ACTION=install|uninstall|optional-settings|speakers|vcrun|dsoal-log
+#   Runs that one action without showing the main menu, for a program with its
+#   own menu (the TUI). The script ends where it would have gone back to a menu.
+#   EAX_RESTORE_GAME_DIR=/path/to/game/exe/folder answers the "where is the game"
+#   step, and for an install EAX_RESTORE_GAME=steam:ID or gog:ID picks that game
+#   from the library scan.
+#
 # * EAX_RESTORE_NO_LOG=1  Turns off the per-run log file. Normally every run
 #   is logged to ~/.local/state/eax-restore-linux/logs/ (newest 10 kept,
 #   latest.log points at the most recent) for attaching to bug reports.

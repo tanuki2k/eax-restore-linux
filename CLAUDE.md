@@ -99,6 +99,18 @@ launcher hardcodes `releases/latest`).
   `EAX_RESTORE_GAME_DATABASE_FILE=/path/to/file.json` (point at a local JSON edit before
   it's pushed) are useful when iterating — see the script's own
   `--- Environment Variables ---` header comment for the full list.
+- **Rust TUI (`tui/`):** a full-screen front end that lists database, library and
+  manually installed games and hands install, uninstall and the Tools to this
+  script through `EAX_RESTORE_ACTION`, `EAX_RESTORE_GAME_DIR` and
+  `EAX_RESTORE_GAME`; the script stays the engine until the Rust port replaces
+  it. Checks, as `.github/workflows/tui.yml` runs them: `cd tui && cargo fmt --check
+  && cargo clippy --locked --all-targets -- -D warnings && cargo test --locked`.
+  Run it with `cargo run -- ../game-database.json` after `./build.sh`. It finds the
+  script via `EAX_RESTORE_SCRIPT`, beside itself, its cache (`~/.local/share/
+  eax-restore-linux/tui/<channel>/`) or `dist/`, skipping any that lacks
+  `EAX_RESTORE_ACTION`; if none, it downloads its channel's release script and
+  checks it against the `.sha256` (`EAX_RESTORE_CHANNEL=dev` at build time picks
+  the dev channel).
 - **Tests:** `./build.sh && bats tests/unit tests/integration` (needs `bats`;
   `.github/workflows/test.yml` runs them plus `bash -n`, `shellcheck --severity=error`
   over `dist/`, `build.sh` and `tools/`, and the profiler's Python tests,
