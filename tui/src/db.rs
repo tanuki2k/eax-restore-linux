@@ -24,8 +24,13 @@ pub struct Game {
     pub stores: Stores,
     #[serde(default)]
     pub eax: Eax,
-    #[serde(default)]
+    /// Absent means checked on a real install; only `false` is untested.
+    #[serde(default = "yes")]
     pub tested: bool,
+}
+
+fn yes() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -37,6 +42,10 @@ pub struct Stores {
 #[derive(Debug, Clone, Deserialize)]
 pub struct Store {
     pub id: u64,
+    #[serde(default)]
+    pub delisted: bool,
+    /// This store's own audio API, when it differs from the game's.
+    pub api: Option<String>,
     #[serde(default)]
     pub store_details: String,
 }
@@ -74,6 +83,8 @@ mod tests {
         .unwrap();
         assert_eq!(db.games[0].stores.steam.as_ref().unwrap().id, 5);
         assert!(db.games[0].stores.gog.is_none());
+        assert!(db.games[0].tested, "a missing flag means tested");
+        let db = Database::parse(r#"{"games":[{"id":"a","name":"A","tested":false}]}"#).unwrap();
         assert!(!db.games[0].tested);
     }
 

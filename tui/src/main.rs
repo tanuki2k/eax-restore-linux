@@ -1,6 +1,7 @@
 mod actions;
 mod app;
 mod db;
+mod filters;
 mod games;
 mod library;
 mod picker;

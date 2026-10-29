@@ -1,6 +1,7 @@
 //! Screen state and key handling. No drawing here, so it can be tested.
 
 use crate::actions::{self, Action};
+use crate::filters::Filters;
 use crate::games::{Entry, Status};
 use crate::picker::{self, Picker};
 use std::path::PathBuf;
@@ -63,6 +64,7 @@ pub struct App {
     /// Shown on the key bar's row until the next key.
     pub message: String,
     pub filter: Filter,
+    pub filters: Filters,
     pub query: String,
     /// Indices into `games` that match the query, best match first.
     pub visible: Vec<usize>,
@@ -82,6 +84,7 @@ impl App {
             launch: None,
             message: String::new(),
             filter: Filter::All,
+            filters: Filters::default(),
             query: String::new(),
             visible: Vec::new(),
             selected: 0,
@@ -117,7 +120,7 @@ impl App {
 
     fn refilter(&mut self) {
         let allowed: Vec<usize> = (0..self.games.len())
-            .filter(|&i| self.filter.allows(self.games[i].status))
+            .filter(|&i| self.filter.allows(self.games[i].status) && self.filters.passes(&self.games[i]))
             .collect();
         if self.query.trim().is_empty() {
             self.visible = allowed;
@@ -198,6 +201,18 @@ impl App {
         match key.code {
             KeyCode::Esc => self.quit = true,
             KeyCode::Char('c') if ctrl => self.quit = true,
+            KeyCode::Char('s') if ctrl => {
+                self.filters.next_store();
+                self.refilter();
+            }
+            KeyCode::Char('e') if ctrl => {
+                self.filters.next_audio();
+                self.refilter();
+            }
+            KeyCode::Char('t') if ctrl => {
+                self.filters.next_tested();
+                self.refilter();
+            }
             KeyCode::Char('a') if ctrl => {
                 let start = picker::start_dir(&self.home);
                 self.picker = Some(Picker::new(start, self.home.clone()));
@@ -409,5 +424,27 @@ mod tests {
         a.handle_key(ctrl('a'));
         type_str(&mut a, "abc");
         assert!(a.query.is_empty());
+    }
+
+    #[test]
+    fn ctrl_s_ctrl_e_and_ctrl_t_narrow_the_list() {
+        let db = Database::parse(
+            r#"{"games":[
+            {"id":"a","name":"Alpha","stores":{"steam":{"id":1}},"eax":{"api":"openal","versions":["2.0"]}},
+            {"id":"b","name":"Beta","tested":false,"stores":{"gog":{"id":2,"delisted":true}}}]}"#,
+        )
+        .unwrap();
+        let mut a = App::new(db.games.into_iter().map(Entry::database_only).collect());
+        a.handle_key(ctrl('s')); // Steam
+        assert_eq!(a.visible.len(), 1);
+        a.handle_key(ctrl('s')); // GOG
+        a.handle_key(ctrl('t')); // Tested
+        assert!(a.visible.is_empty());
+        a.handle_key(ctrl('t')); // Not yet tested
+        assert_eq!(a.current().unwrap().name, "Beta");
+        a.handle_key(ctrl('e')); // DirectSound3D
+        assert_eq!(a.visible.len(), 1);
+        a.handle_key(ctrl('e')); // OpenAL
+        assert!(a.visible.is_empty());
     }
 }

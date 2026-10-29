@@ -1,6 +1,7 @@
 //! Drawing. Reads `App`, never changes it.
 
-use crate::app::App;
+use crate::app::{App, Filter};
+use crate::filters::Filters;
 use crate::games::{Entry, Status};
 use crate::library::StoreKind;
 use ratatui::layout::{Constraint, Direction, Layout};
@@ -11,25 +12,30 @@ use ratatui::widgets::{Block, BorderType, Clear, List, ListItem, ListState, Para
 use ratatui::Frame;
 
 pub fn draw(f: &mut Frame, app: &App) {
+    // The filters wrap onto a second line on a narrow terminal.
+    let filter_rows = if f.area().width < 100 { 2 } else { 1 };
     let rows = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(3), Constraint::Min(3), Constraint::Length(1)])
+        .constraints([
+            Constraint::Length(3),
+            Constraint::Length(filter_rows),
+            Constraint::Min(3),
+            Constraint::Length(1),
+        ])
         .split(f.area());
 
     let input = Paragraph::new(format!("> {}", app.query)).block(
-        Block::bordered().border_type(BorderType::Rounded).title(format!(
-            " Find a game ({}/{}) · {} ",
-            app.visible.len(),
-            app.games.len(),
-            app.filter.label()
-        )),
+        Block::bordered()
+            .border_type(BorderType::Rounded)
+            .title(format!(" Find a game ({}/{}) ", app.visible.len(), app.games.len())),
     );
     f.render_widget(input, rows[0]);
+    f.render_widget(Paragraph::new(filter_line(app)).wrap(Wrap { trim: true }), rows[1]);
 
     let panes = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(40), Constraint::Percentage(60)])
-        .split(rows[1]);
+        .split(rows[2]);
 
     let items: Vec<ListItem> = app
         .visible
@@ -68,9 +74,9 @@ pub fn draw(f: &mut Frame, app: &App) {
     } else if app.menu.is_some() {
         Paragraph::new("↑/↓ choose · Enter run · Esc back").dim()
     } else {
-        Paragraph::new("Type to filter · Enter actions · Ctrl-A add game · Tab: all/on this PC/installed · Esc quit").dim()
+        Paragraph::new("Type to filter · Enter actions · Ctrl-A add game · Esc quit").dim()
     };
-    f.render_widget(bar, rows[2]);
+    f.render_widget(bar, rows[3]);
 
     if let (Some(menu), Some(e)) = (&app.menu, app.current()) {
         draw_menu(f, menu, &e.name);
@@ -129,6 +135,28 @@ fn draw_menu(f: &mut Frame, menu: &crate::app::Menu, title: &str) {
         .highlight_style(Style::new().add_modifier(Modifier::REVERSED));
     f.render_widget(Clear, popup);
     f.render_stateful_widget(list, popup, &mut ListState::default().with_selected(Some(menu.selected)));
+}
+
+/// Each filter with its key and value; one that narrows the list is lit.
+fn filter_line(app: &App) -> Line<'static> {
+    let d = Filters::default();
+    let cells = [
+        ("Tab", "Show", app.filter.label().to_string(), app.filter != Filter::All),
+        ("Ctrl-S", "Store", app.filters.store.label().to_string(), app.filters.store != d.store),
+        ("Ctrl-E", "Audio", app.filters.audio.label(), app.filters.audio != d.audio),
+        ("Ctrl-T", "Tested", app.filters.tested.label().to_string(), app.filters.tested != d.tested),
+    ];
+    let mut spans = Vec::new();
+    for (i, (key, name, value, lit)) in cells.into_iter().enumerate() {
+        if i > 0 {
+            spans.push(Span::raw("  ").dim());
+        }
+        spans.push(Span::raw(format!("{key} ")).dim());
+        spans.push(Span::raw(format!("{name}: ")));
+        let v = Span::raw(value);
+        spans.push(if lit { v.cyan().bold() } else { v });
+    }
+    Line::from(spans)
 }
 
 /// Plain ASCII so the column lines up in every terminal; the profile pane spells
@@ -228,7 +256,9 @@ mod tests {
         games[0].path = Some(PathBuf::from("/lib/Alpha"));
         let s = screen(&App::new(games), 100, 14);
         println!("{s}");
-        assert!(s.contains("Find a game (1/1) · All games"));
+        assert!(s.contains("Find a game (1/1)"));
+        assert!(s.contains("Show: All games"));
+        assert!(s.contains("Ctrl-E Audio: Any audio"));
         assert!(s.contains("+ Alpha Centauri"));
         assert!(s.contains("Status: Installed"));
         assert!(s.contains("Folder: /lib/Alpha (Steam)"));
@@ -303,5 +333,25 @@ mod tests {
         assert!(s.contains("1 .exe file in this folder."));
         assert!(s.contains("Some Game/"));
         assert!(s.contains("Space use this folder"));
+    }
+
+    #[test]
+    fn a_filter_that_narrows_the_list_is_named_on_screen() {
+        let mut app = App::new(entries(r#"{"games":[{"id":"a","name":"Alpha","stores":{"gog":{"id":1}}}]}"#));
+        app.handle_key(ratatui::crossterm::event::KeyEvent::new(
+            ratatui::crossterm::event::KeyCode::Char('s'),
+            ratatui::crossterm::event::KeyModifiers::CONTROL,
+        ));
+        let s = screen(&app, 110, 12);
+        assert!(s.contains("Store: Steam"));
+        assert!(s.contains("No game matches."));
+    }
+
+    #[test]
+    fn the_filters_wrap_on_a_narrow_terminal_without_losing_the_list() {
+        let app = App::new(entries(r#"{"games":[{"id":"a","name":"Alpha"}]}"#));
+        let s = screen(&app, 70, 14);
+        assert!(s.contains("Ctrl-T Tested: Any"));
+        assert!(s.contains("Alpha"));
     }
 }
