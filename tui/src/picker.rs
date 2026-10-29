@@ -34,7 +34,14 @@ pub fn start_dir(home: &Path) -> PathBuf {
 
 impl Picker {
     pub fn new(start: PathBuf, home: PathBuf) -> Self {
-        let mut p = Picker { dir: start, dirs: Vec::new(), selected: 0, show_hidden: false, exes: 0, home };
+        let mut p = Picker {
+            dir: start,
+            dirs: Vec::new(),
+            selected: 0,
+            show_hidden: false,
+            exes: 0,
+            home,
+        };
         p.reload();
         p
     }
@@ -72,8 +79,13 @@ impl Picker {
 
     /// Goes to the parent folder, with the one just left highlighted.
     pub fn up(&mut self) {
-        let Some(parent) = self.dir.parent().map(Path::to_path_buf) else { return };
-        let came_from = self.dir.file_name().map(|n| n.to_string_lossy().into_owned());
+        let Some(parent) = self.dir.parent().map(Path::to_path_buf) else {
+            return;
+        };
+        let came_from = self
+            .dir
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned());
         self.dir = parent;
         self.reload();
         if let Some(i) = came_from.and_then(|n| self.dirs.iter().position(|d| *d == n)) {
@@ -111,7 +123,12 @@ mod tests {
 
     fn world() -> (tempfile::TempDir, Picker) {
         let home = tempfile::tempdir().unwrap();
-        for d in ["Games/zeta", "Games/Alpha", "Games/.hidden", "Games/Alpha/bin"] {
+        for d in [
+            "Games/zeta",
+            "Games/Alpha",
+            "Games/.hidden",
+            "Games/Alpha/bin",
+        ] {
             fs::create_dir_all(home.path().join(d)).unwrap();
         }
         fs::write(home.path().join("Games/Alpha/game.EXE"), "").unwrap();
@@ -140,7 +157,10 @@ mod tests {
         let (_h, mut p) = world();
         p.open();
         assert!(p.dir.ends_with("Games/Alpha"));
-        assert_eq!((p.exes, p.dirs.as_slice()), (1, ["bin".to_string()].as_slice()));
+        assert_eq!(
+            (p.exes, p.dirs.as_slice()),
+            (1, ["bin".to_string()].as_slice())
+        );
         p.up();
         assert_eq!(p.dirs[p.selected], "Alpha");
     }

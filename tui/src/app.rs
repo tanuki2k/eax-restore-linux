@@ -4,10 +4,10 @@ use crate::actions::{self, Action};
 use crate::filters::Filters;
 use crate::games::{Entry, Status};
 use crate::picker::{self, Picker};
-use std::path::PathBuf;
 use nucleo_matcher::pattern::{CaseMatching, Normalization, Pattern};
 use nucleo_matcher::{Matcher, Utf32Str};
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use std::path::PathBuf;
 
 /// What the Tab key cycles the list through.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -120,7 +120,9 @@ impl App {
 
     fn refilter(&mut self) {
         let allowed: Vec<usize> = (0..self.games.len())
-            .filter(|&i| self.filter.allows(self.games[i].status) && self.filters.passes(&self.games[i]))
+            .filter(|&i| {
+                self.filter.allows(self.games[i].status) && self.filters.passes(&self.games[i])
+            })
             .collect();
         if self.query.trim().is_empty() {
             self.visible = allowed;
@@ -131,7 +133,10 @@ impl App {
                 .into_iter()
                 .filter_map(|i| {
                     pattern
-                        .score(Utf32Str::new(&self.games[i].name, &mut buf), &mut self.matcher)
+                        .score(
+                            Utf32Str::new(&self.games[i].name, &mut buf),
+                            &mut self.matcher,
+                        )
                         .map(|s| (i, s))
                 })
                 .collect();
@@ -148,7 +153,9 @@ impl App {
     }
 
     fn handle_menu_key(&mut self, key: KeyEvent) {
-        let Some(menu) = self.menu.as_mut() else { return };
+        let Some(menu) = self.menu.as_mut() else {
+            return;
+        };
         let last = menu.actions.len().saturating_sub(1);
         match key.code {
             KeyCode::Esc => self.menu = None,
@@ -158,7 +165,9 @@ impl App {
                 let action = menu.actions[menu.selected];
                 self.menu = None;
                 if let Some(&game) = self.visible.get(self.selected) {
-                    self.launch = Some(Launch { env: actions::script_env(&self.games[game], action) });
+                    self.launch = Some(Launch {
+                        env: actions::script_env(&self.games[game], action),
+                    });
                 }
             }
             _ => {}
@@ -166,7 +175,9 @@ impl App {
     }
 
     fn handle_picker_key(&mut self, key: KeyEvent) {
-        let Some(p) = self.picker.as_mut() else { return };
+        let Some(p) = self.picker.as_mut() else {
+            return;
+        };
         match key.code {
             KeyCode::Esc => self.picker = None,
             KeyCode::Up => p.move_by(-1),
@@ -219,7 +230,10 @@ impl App {
             }
             KeyCode::Enter => {
                 if let Some(e) = self.current() {
-                    self.menu = Some(Menu { actions: actions::available(e), selected: 0 });
+                    self.menu = Some(Menu {
+                        actions: actions::available(e),
+                        selected: 0,
+                    });
                 }
             }
             KeyCode::Tab => {
@@ -276,7 +290,11 @@ mod tests {
     #[test]
     fn starts_sorted_by_name() {
         let a = app();
-        let names: Vec<_> = a.visible.iter().map(|&i| a.games[i].name.as_str()).collect();
+        let names: Vec<_> = a
+            .visible
+            .iter()
+            .map(|&i| a.games[i].name.as_str())
+            .collect();
         assert_eq!(names, ["Alpha Centauri", "Alpha Protocol", "Beta Quest"]);
     }
 
@@ -339,7 +357,9 @@ mod tests {
         a.handle_key(key(KeyCode::Enter));
         assert!(a.menu.is_none());
         let l = a.launch.take().unwrap();
-        assert!(l.env.contains(&("EAX_RESTORE_ACTION", "install".to_string())));
+        assert!(l
+            .env
+            .contains(&("EAX_RESTORE_ACTION", "install".to_string())));
     }
 
     #[test]
@@ -394,7 +414,10 @@ mod tests {
     fn ctrl_a_opens_the_picker_in_the_games_folder() {
         let (h, mut a) = app_with_folders();
         a.handle_key(ctrl('a'));
-        assert_eq!(a.picker.as_ref().unwrap().dir, h.path().join("Games/Heroic"));
+        assert_eq!(
+            a.picker.as_ref().unwrap().dir,
+            h.path().join("Games/Heroic")
+        );
     }
 
     #[test]
@@ -406,7 +429,9 @@ mod tests {
         assert!(a.picker.is_none());
         let l = a.launch.take().unwrap();
         let dir = h.path().join("Games/Heroic/My Game").display().to_string();
-        assert!(l.env.contains(&("EAX_RESTORE_ACTION", "install".to_string())));
+        assert!(l
+            .env
+            .contains(&("EAX_RESTORE_ACTION", "install".to_string())));
         assert!(l.env.contains(&("EAX_RESTORE_GAME_DIR", dir)));
     }
 

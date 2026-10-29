@@ -51,7 +51,12 @@ pub fn available(e: &Entry) -> Vec<Action> {
             if e.game.is_some() {
                 v.push(Action::OptionalSettings);
             }
-            v.extend([Action::Speakers, Action::DsoalLog, Action::Vcrun, Action::Uninstall]);
+            v.extend([
+                Action::Speakers,
+                Action::DsoalLog,
+                Action::Vcrun,
+                Action::Uninstall,
+            ]);
             v
         }
     }
@@ -104,13 +109,23 @@ mod tests {
 
     #[test]
     fn a_game_that_is_not_installed_can_only_be_installed() {
-        assert_eq!(available(&entry(Status::NotOnThisPc, None, None)), [Action::Install]);
-        assert_eq!(available(&entry(Status::OnThisPc, Some(StoreKind::Steam), Some("/g"))), [Action::Install]);
+        assert_eq!(
+            available(&entry(Status::NotOnThisPc, None, None)),
+            [Action::Install]
+        );
+        assert_eq!(
+            available(&entry(Status::OnThisPc, Some(StoreKind::Steam), Some("/g"))),
+            [Action::Install]
+        );
     }
 
     #[test]
     fn an_installed_game_gets_every_tool_and_uninstall_last() {
-        let a = available(&entry(Status::Installed, Some(StoreKind::Steam), Some("/g")));
+        let a = available(&entry(
+            Status::Installed,
+            Some(StoreKind::Steam),
+            Some("/g"),
+        ));
         assert_eq!(a.first(), Some(&Action::Reinstall));
         assert_eq!(a.last(), Some(&Action::Uninstall));
         assert!(a.contains(&Action::OptionalSettings));
@@ -133,7 +148,10 @@ mod tests {
         assert_eq!(get(&env, "EAX_RESTORE_GAME"), Some("steam:10"));
         assert_eq!(get(&env, "EAX_RESTORE_GAME_DIR"), None);
         let gog = entry(Status::OnThisPc, Some(StoreKind::Gog), Some("/lib/Alpha"));
-        assert_eq!(get(&script_env(&gog, Action::Install), "EAX_RESTORE_GAME"), Some("gog:77"));
+        assert_eq!(
+            get(&script_env(&gog, Action::Install), "EAX_RESTORE_GAME"),
+            Some("gog:77")
+        );
     }
 
     #[test]
@@ -144,7 +162,11 @@ mod tests {
 
     #[test]
     fn tools_and_uninstall_use_the_installs_folder() {
-        let e = entry(Status::Installed, Some(StoreKind::Steam), Some("/lib/Alpha/bin"));
+        let e = entry(
+            Status::Installed,
+            Some(StoreKind::Steam),
+            Some("/lib/Alpha/bin"),
+        );
         for (a, name) in [
             (Action::Uninstall, "uninstall"),
             (Action::Speakers, "speakers"),

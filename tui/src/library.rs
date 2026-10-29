@@ -96,7 +96,9 @@ pub fn steam_library_dirs(home: &Path) -> Vec<PathBuf> {
 pub fn scan_steam(home: &Path, ids: &HashSet<u64>) -> Vec<Found> {
     let mut out = Vec::new();
     for lib in steam_library_dirs(home) {
-        let Ok(dir) = fs::read_dir(&lib) else { continue };
+        let Ok(dir) = fs::read_dir(&lib) else {
+            continue;
+        };
         for entry in dir.flatten() {
             let file = entry.file_name().to_string_lossy().into_owned();
             let Some(id) = file
@@ -109,13 +111,19 @@ pub fn scan_steam(home: &Path, ids: &HashSet<u64>) -> Vec<Found> {
             if !ids.contains(&id) {
                 continue;
             }
-            let Ok(text) = fs::read_to_string(entry.path()) else { continue };
+            let Ok(text) = fs::read_to_string(entry.path()) else {
+                continue;
+            };
             let Some(installdir) = vdf_values(&text, "installdir").into_iter().next() else {
                 continue;
             };
             let path = lib.join("common").join(installdir);
             if path.is_dir() {
-                out.push(Found { store: StoreKind::Steam, id: id.to_string(), path });
+                out.push(Found {
+                    store: StoreKind::Steam,
+                    id: id.to_string(),
+                    path,
+                });
             }
         }
     }
@@ -138,7 +146,9 @@ fn heroic_roots(home: &Path) -> Vec<PathBuf> {
 /// own files are depth 1). Symlinks are not followed, like `find`.
 fn find_files(root: &Path, name: &str, max_depth: usize) -> Vec<PathBuf> {
     fn walk(dir: &Path, name: &str, depth: usize, max: usize, out: &mut Vec<PathBuf>) {
-        let Ok(entries) = fs::read_dir(dir) else { return };
+        let Ok(entries) = fs::read_dir(dir) else {
+            return;
+        };
         for e in entries.flatten() {
             let Ok(t) = e.file_type() else { continue };
             if t.is_file() && e.file_name() == name {
@@ -184,7 +194,11 @@ pub fn scan_heroic(home: &Path, gog_ids: &HashSet<String>) -> Vec<Found> {
             install_records(&v, &mut records);
             for (path, app) in records {
                 if gog_ids.contains(&app) && path.is_dir() {
-                    out.push(Found { store: StoreKind::Gog, id: app, path });
+                    out.push(Found {
+                        store: StoreKind::Gog,
+                        id: app,
+                        path,
+                    });
                 }
             }
         }
@@ -201,12 +215,20 @@ fn heroic_game_folders(home: &Path) -> BTreeSet<PathBuf> {
     let strings = |v: &Value, key: &str| v.get(key).and_then(Value::as_str).map(PathBuf::from);
     for root in heroic_roots(home) {
         if let Some(v) = read_json(&root.join("config.json")) {
-            if let Some(p) = v.pointer("/defaultSettings/defaultInstallPath").and_then(Value::as_str) {
+            if let Some(p) = v
+                .pointer("/defaultSettings/defaultInstallPath")
+                .and_then(Value::as_str)
+            {
                 out.insert(PathBuf::from(p));
             }
         }
         if let Some(v) = read_json(&root.join("gog_store/installed.json")) {
-            for g in v.get("installed").and_then(Value::as_array).into_iter().flatten() {
+            for g in v
+                .get("installed")
+                .and_then(Value::as_array)
+                .into_iter()
+                .flatten()
+            {
                 out.extend(strings(g, "install_path"));
             }
         }
@@ -219,7 +241,12 @@ fn heroic_game_folders(home: &Path) -> BTreeSet<PathBuf> {
             out.extend(games.into_iter().filter_map(|g| strings(g, "install_path")));
         }
         if let Some(v) = read_json(&root.join("sideload_apps/library.json")) {
-            for g in v.get("games").and_then(Value::as_array).into_iter().flatten() {
+            for g in v
+                .get("games")
+                .and_then(Value::as_array)
+                .into_iter()
+                .flatten()
+            {
                 out.extend(strings(g, "folder_name"));
             }
         }
@@ -274,10 +301,13 @@ pub mod tests {
         pub fn new() -> Self {
             let home = tempfile::tempdir().unwrap();
             let w = World { home };
-            w.write(".local/share/Steam/steamapps/libraryfolders.vdf", &format!(
-                "\"libraryfolders\"\n{{\n\t\"0\"\n\t{{\n\t\t\"path\"\t\t\"{}\"\n\t}}\n}}\n",
-                w.p("games2").display()
-            ));
+            w.write(
+                ".local/share/Steam/steamapps/libraryfolders.vdf",
+                &format!(
+                    "\"libraryfolders\"\n{{\n\t\"0\"\n\t{{\n\t\t\"path\"\t\t\"{}\"\n\t}}\n}}\n",
+                    w.p("games2").display()
+                ),
+            );
             w
         }
 
@@ -319,7 +349,10 @@ pub mod tests {
         w.steam_game("games2", 99, "NotInDatabase");
         let ids: HashSet<u64> = [10, 20].into();
         let found = scan_steam(w.home.path(), &ids);
-        assert_eq!(found.iter().map(|f| f.id.as_str()).collect::<Vec<_>>(), ["10", "20"]);
+        assert_eq!(
+            found.iter().map(|f| f.id.as_str()).collect::<Vec<_>>(),
+            ["10", "20"]
+        );
         assert!(found[1].path.ends_with("games2/steamapps/common/Beta"));
     }
 
@@ -338,10 +371,20 @@ pub mod tests {
         fs::create_dir_all(&game).unwrap();
         w.write(
             ".config/heroic/gog_store/installed.json",
-            &format!(r#"{{"installed":[{{"appName":"555","installPath":"{}"}}]}}"#, game.display()),
+            &format!(
+                r#"{{"installed":[{{"appName":"555","installPath":"{}"}}]}}"#,
+                game.display()
+            ),
         );
         let found = scan_heroic(w.home.path(), &["555".to_string()].into());
-        assert_eq!(found, [Found { store: StoreKind::Gog, id: "555".into(), path: game }]);
+        assert_eq!(
+            found,
+            [Found {
+                store: StoreKind::Gog,
+                id: "555".into(),
+                path: game
+            }]
+        );
         assert!(scan_heroic(w.home.path(), &["556".to_string()].into()).is_empty());
     }
 
@@ -367,10 +410,16 @@ pub mod tests {
     fn live_manifests_are_found_in_heroic_folders() {
         let w = World::new();
         let game = w.p("Games/Heroic/Gamma");
-        w.write("Games/Heroic/Gamma/.eax-restore-manifest.txt", "/x/dsound.dll\n");
+        w.write(
+            "Games/Heroic/Gamma/.eax-restore-manifest.txt",
+            "/x/dsound.dll\n",
+        );
         w.write(
             ".config/heroic/config.json",
-            &format!(r#"{{"defaultSettings":{{"defaultInstallPath":"{}"}}}}"#, w.p("Games/Heroic").display()),
+            &format!(
+                r#"{{"defaultSettings":{{"defaultInstallPath":"{}"}}}}"#,
+                w.p("Games/Heroic").display()
+            ),
         );
         assert_eq!(live_manifest_dirs(w.home.path()), BTreeSet::from([game]));
     }

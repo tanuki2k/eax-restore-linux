@@ -34,8 +34,14 @@ fn main() -> Result<()> {
     if std::env::args().any(|a| a == "--list") {
         let mut entries = entries;
         entries.sort_by_key(|e| e.name.to_lowercase());
-        for e in entries.iter().filter(|e| e.status != games::Status::NotOnThisPc) {
-            let path = e.path.as_ref().map_or_else(String::new, |p| p.display().to_string());
+        for e in entries
+            .iter()
+            .filter(|e| e.status != games::Status::NotOnThisPc)
+        {
+            let path = e
+                .path
+                .as_ref()
+                .map_or_else(String::new, |p| p.display().to_string());
             println!("{:<10} {}\t{}", format!("{:?}", e.status), e.name, path);
         }
         return Ok(());
@@ -65,7 +71,9 @@ fn run(
                 app.handle_key(key);
             }
         }
-        let Some(launch) = app.launch.take() else { continue };
+        let Some(launch) = app.launch.take() else {
+            continue;
+        };
         let Some(script) = runner::find_script() else {
             app.message = "Can't find eax-restore-linux.sh. Put it next to this program, or set EAX_RESTORE_SCRIPT to its path.".into();
             continue;

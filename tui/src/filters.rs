@@ -139,27 +139,36 @@ impl Filters {
 
     pub fn passes(&self, e: &Entry) -> bool {
         // A game the database doesn't list has no store, API or tested flag.
-        let Some(g) = &e.game else { return *self == Filters::default() };
+        let Some(g) = &e.game else {
+            return *self == Filters::default();
+        };
         match self.tested {
             TestedFilter::All => {}
             TestedFilter::Tested if !g.tested => return false,
             TestedFilter::Untested if g.tested => return false,
             _ => {}
         }
-        let game_api = if g.eax.api.is_empty() { "directsound3d" } else { g.eax.api.as_str() };
+        let game_api = if g.eax.api.is_empty() {
+            "directsound3d"
+        } else {
+            g.eax.api.as_str()
+        };
         let mut candidates: Vec<(Option<StoreKind>, bool, &str)> = [
             (StoreKind::Steam, &g.stores.steam),
             (StoreKind::Gog, &g.stores.gog),
         ]
         .into_iter()
-        .filter_map(|(k, s)| s.as_ref().map(|s| (Some(k), s.delisted, s.api.as_deref().unwrap_or(game_api))))
+        .filter_map(|(k, s)| {
+            s.as_ref()
+                .map(|s| (Some(k), s.delisted, s.api.as_deref().unwrap_or(game_api)))
+        })
         .collect();
         if candidates.is_empty() {
             candidates.push((None, false, game_api));
         }
-        candidates
-            .iter()
-            .any(|&(k, delisted, api)| self.store.allows(k, delisted) && self.audio.allows(api, &g.eax.versions))
+        candidates.iter().any(|&(k, delisted, api)| {
+            self.store.allows(k, delisted) && self.audio.allows(api, &g.eax.versions)
+        })
     }
 }
 
@@ -212,7 +221,7 @@ mod tests {
         let e = entry(BOTH);
         assert!(with(|f| f.audio = AudioFilter::OpenAl).passes(&e)); // via GOG
         assert!(with(|f| f.audio = AudioFilter::DirectSound3d).passes(&e)); // via Steam
-        // Together they must hold for one store: Steam is not OpenAL.
+                                                                            // Together they must hold for one store: Steam is not OpenAL.
         let both = with(|f| {
             f.store = StoreFilter::Steam;
             f.audio = AudioFilter::OpenAl;

@@ -4,10 +4,10 @@ use crate::app::{App, Filter};
 use crate::filters::Filters;
 use crate::games::{Entry, Status};
 use crate::library::StoreKind;
+use ratatui::layout::Rect;
 use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::style::{Color, Modifier, Style, Stylize};
 use ratatui::text::{Line, Span};
-use ratatui::layout::Rect;
 use ratatui::widgets::{Block, BorderType, Clear, List, ListItem, ListState, Paragraph, Wrap};
 use ratatui::Frame;
 
@@ -27,10 +27,17 @@ pub fn draw(f: &mut Frame, app: &App) {
     let input = Paragraph::new(format!("> {}", app.query)).block(
         Block::bordered()
             .border_type(BorderType::Rounded)
-            .title(format!(" Find a game ({}/{}) ", app.visible.len(), app.games.len())),
+            .title(format!(
+                " Find a game ({}/{}) ",
+                app.visible.len(),
+                app.games.len()
+            )),
     );
     f.render_widget(input, rows[0]);
-    f.render_widget(Paragraph::new(filter_line(app)).wrap(Wrap { trim: true }), rows[1]);
+    f.render_widget(
+        Paragraph::new(filter_line(app)).wrap(Wrap { trim: true }),
+        rows[1],
+    );
 
     let panes = Layout::default()
         .direction(Direction::Horizontal)
@@ -51,7 +58,11 @@ pub fn draw(f: &mut Frame, app: &App) {
         })
         .collect();
     let list = List::new(items)
-        .block(Block::bordered().border_type(BorderType::Rounded).title(" Games "))
+        .block(
+            Block::bordered()
+                .border_type(BorderType::Rounded)
+                .title(" Games "),
+        )
         .highlight_style(Style::new().add_modifier(Modifier::REVERSED));
     let mut state = ListState::default().with_selected(app.current().map(|_| app.selected));
     f.render_stateful_widget(list, panes[0], &mut state);
@@ -64,7 +75,11 @@ pub fn draw(f: &mut Frame, app: &App) {
         ],
     })
     .wrap(Wrap { trim: false })
-    .block(Block::bordered().border_type(BorderType::Rounded).title(" Profile "));
+    .block(
+        Block::bordered()
+            .border_type(BorderType::Rounded)
+            .title(" Profile "),
+    );
     f.render_widget(detail, panes[1]);
 
     let bar = if !app.message.is_empty() {
@@ -90,7 +105,12 @@ fn draw_picker(f: &mut Frame, p: &crate::picker::Picker) {
     let area = f.area();
     let w = area.width.min(90);
     let h = area.height.saturating_sub(2).max(3).min(area.height);
-    let popup = Rect::new(area.x + (area.width - w) / 2, area.y + (area.height - h) / 2, w, h);
+    let popup = Rect::new(
+        area.x + (area.width - w) / 2,
+        area.y + (area.height - h) / 2,
+        w,
+        h,
+    );
     f.render_widget(Clear, popup);
     let block = Block::bordered()
         .border_type(BorderType::Rounded)
@@ -109,42 +129,99 @@ fn draw_picker(f: &mut Frame, p: &crate::picker::Picker) {
     };
     let head = Paragraph::new(vec![
         Line::from(p.shown_dir()).bold().cyan(),
-        if p.exes == 0 { Line::from(exes).yellow() } else { Line::from(exes).green() },
+        if p.exes == 0 {
+            Line::from(exes).yellow()
+        } else {
+            Line::from(exes).green()
+        },
     ]);
     f.render_widget(head, parts[0]);
 
     let items: Vec<ListItem> = if p.dirs.is_empty() {
         vec![ListItem::new("(no folders here)").dim()]
     } else {
-        p.dirs.iter().map(|d| ListItem::new(format!("{d}/"))).collect()
+        p.dirs
+            .iter()
+            .map(|d| ListItem::new(format!("{d}/")))
+            .collect()
     };
     let list = List::new(items).highlight_style(Style::new().add_modifier(Modifier::REVERSED));
-    let selected = if p.dirs.is_empty() { None } else { Some(p.selected) };
-    f.render_stateful_widget(list, parts[1], &mut ListState::default().with_selected(selected));
+    let selected = if p.dirs.is_empty() {
+        None
+    } else {
+        Some(p.selected)
+    };
+    f.render_stateful_widget(
+        list,
+        parts[1],
+        &mut ListState::default().with_selected(selected),
+    );
 }
 
 fn draw_menu(f: &mut Frame, menu: &crate::app::Menu, title: &str) {
     let area = f.area();
-    let widest = menu.actions.iter().map(|a| a.label().chars().count()).max().unwrap_or(0);
+    let widest = menu
+        .actions
+        .iter()
+        .map(|a| a.label().chars().count())
+        .max()
+        .unwrap_or(0);
     let w = ((widest + 6).max(title.chars().count() + 4) as u16).min(area.width);
     let h = (menu.actions.len() as u16 + 2).min(area.height);
-    let popup = Rect::new(area.x + (area.width - w) / 2, area.y + (area.height - h) / 2, w, h);
-    let items: Vec<ListItem> = menu.actions.iter().map(|a| ListItem::new(a.label())).collect();
+    let popup = Rect::new(
+        area.x + (area.width - w) / 2,
+        area.y + (area.height - h) / 2,
+        w,
+        h,
+    );
+    let items: Vec<ListItem> = menu
+        .actions
+        .iter()
+        .map(|a| ListItem::new(a.label()))
+        .collect();
     let list = List::new(items)
-        .block(Block::bordered().border_type(BorderType::Rounded).title(format!(" {title} ")))
+        .block(
+            Block::bordered()
+                .border_type(BorderType::Rounded)
+                .title(format!(" {title} ")),
+        )
         .highlight_style(Style::new().add_modifier(Modifier::REVERSED));
     f.render_widget(Clear, popup);
-    f.render_stateful_widget(list, popup, &mut ListState::default().with_selected(Some(menu.selected)));
+    f.render_stateful_widget(
+        list,
+        popup,
+        &mut ListState::default().with_selected(Some(menu.selected)),
+    );
 }
 
 /// Each filter with its key and value; one that narrows the list is lit.
 fn filter_line(app: &App) -> Line<'static> {
     let d = Filters::default();
     let cells = [
-        ("Tab", "Show", app.filter.label().to_string(), app.filter != Filter::All),
-        ("Ctrl-S", "Store", app.filters.store.label().to_string(), app.filters.store != d.store),
-        ("Ctrl-E", "Audio", app.filters.audio.label(), app.filters.audio != d.audio),
-        ("Ctrl-T", "Tested", app.filters.tested.label().to_string(), app.filters.tested != d.tested),
+        (
+            "Tab",
+            "Show",
+            app.filter.label().to_string(),
+            app.filter != Filter::All,
+        ),
+        (
+            "Ctrl-S",
+            "Store",
+            app.filters.store.label().to_string(),
+            app.filters.store != d.store,
+        ),
+        (
+            "Ctrl-E",
+            "Audio",
+            app.filters.audio.label(),
+            app.filters.audio != d.audio,
+        ),
+        (
+            "Ctrl-T",
+            "Tested",
+            app.filters.tested.label().to_string(),
+            app.filters.tested != d.tested,
+        ),
     ];
     let mut spans = Vec::new();
     for (i, (key, name, value, lit)) in cells.into_iter().enumerate() {
@@ -171,7 +248,10 @@ fn marker(s: Status) -> (&'static str, Color) {
 }
 
 fn field(label: &str, value: impl Into<String>) -> Line<'static> {
-    Line::from(vec![Span::raw(format!("{label}: ")).bold(), Span::raw(value.into())])
+    Line::from(vec![
+        Span::raw(format!("{label}: ")).bold(),
+        Span::raw(value.into()),
+    ])
 }
 
 fn profile(e: &Entry) -> Vec<Line<'static>> {
@@ -191,7 +271,10 @@ fn profile(e: &Entry) -> Vec<Line<'static>> {
     }
     let Some(g) = &e.game else {
         lines.push(Line::raw(""));
-        lines.push(Line::raw(format!("The game database has no profile for {}.", e.name)));
+        lines.push(Line::raw(format!(
+            "The game database has no profile for {}.",
+            e.name
+        )));
         return lines;
     };
     if !g.released.is_empty() {
@@ -242,7 +325,12 @@ mod tests {
     }
 
     fn entries(json: &str) -> Vec<Entry> {
-        Database::parse(json).unwrap().games.into_iter().map(Entry::database_only).collect()
+        Database::parse(json)
+            .unwrap()
+            .games
+            .into_iter()
+            .map(Entry::database_only)
+            .collect()
     }
 
     #[test]
@@ -289,7 +377,11 @@ mod tests {
 
     #[test]
     fn a_tiny_terminal_does_not_panic() {
-        screen(&App::new(entries(r#"{"games":[{"id":"a","name":"Alpha"}]}"#)), 10, 3);
+        screen(
+            &App::new(entries(r#"{"games":[{"id":"a","name":"Alpha"}]}"#)),
+            10,
+            3,
+        );
     }
 
     #[test]
@@ -337,7 +429,9 @@ mod tests {
 
     #[test]
     fn a_filter_that_narrows_the_list_is_named_on_screen() {
-        let mut app = App::new(entries(r#"{"games":[{"id":"a","name":"Alpha","stores":{"gog":{"id":1}}}]}"#));
+        let mut app = App::new(entries(
+            r#"{"games":[{"id":"a","name":"Alpha","stores":{"gog":{"id":1}}}]}"#,
+        ));
         app.handle_key(ratatui::crossterm::event::KeyEvent::new(
             ratatui::crossterm::event::KeyCode::Char('s'),
             ratatui::crossterm::event::KeyModifiers::CONTROL,

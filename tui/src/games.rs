@@ -54,8 +54,16 @@ impl Entry {
 
 fn is_match(g: &Game, f: &Found) -> bool {
     match f.store {
-        StoreKind::Steam => g.stores.steam.as_ref().is_some_and(|s| s.id.to_string() == f.id),
-        StoreKind::Gog => g.stores.gog.as_ref().is_some_and(|s| s.id.to_string() == f.id),
+        StoreKind::Steam => g
+            .stores
+            .steam
+            .as_ref()
+            .is_some_and(|s| s.id.to_string() == f.id),
+        StoreKind::Gog => g
+            .stores
+            .gog
+            .as_ref()
+            .is_some_and(|s| s.id.to_string() == f.id),
     }
 }
 
@@ -69,12 +77,17 @@ fn dir_has_file(dir: &Path, name: &str) -> bool {
 }
 
 /// Folders a game's exe usually sits in, not its name.
-const EXE_FOLDERS: [&str; 8] = ["bin", "system", "binaries", "win32", "win64", "x64", "x86", "release"];
+const EXE_FOLDERS: [&str; 8] = [
+    "bin", "system", "binaries", "win32", "win64", "x64", "x86", "release",
+];
 
 /// A name for a game the database doesn't know: the Steam folder it sits in, or
 /// else its own folder's name (its parent's when that is only the exe folder).
 fn folder_name(dir: &Path) -> String {
-    let parts: Vec<_> = dir.components().map(|c| c.as_os_str().to_string_lossy()).collect();
+    let parts: Vec<_> = dir
+        .components()
+        .map(|c| c.as_os_str().to_string_lossy())
+        .collect();
     for w in parts.windows(3) {
         if w[0] == "steamapps" && w[1] == "common" {
             return w[2].to_string();
@@ -91,8 +104,16 @@ fn folder_name(dir: &Path) -> String {
 }
 
 pub fn build(db: &Database, home: &Path) -> Vec<Entry> {
-    let steam_ids: HashSet<u64> = db.games.iter().filter_map(|g| g.stores.steam.as_ref().map(|s| s.id)).collect();
-    let gog_ids: HashSet<String> = db.games.iter().filter_map(|g| g.stores.gog.as_ref().map(|s| s.id.to_string())).collect();
+    let steam_ids: HashSet<u64> = db
+        .games
+        .iter()
+        .filter_map(|g| g.stores.steam.as_ref().map(|s| s.id))
+        .collect();
+    let gog_ids: HashSet<String> = db
+        .games
+        .iter()
+        .filter_map(|g| g.stores.gog.as_ref().map(|s| s.id.to_string()))
+        .collect();
     // Steam first, so a game owned on both stores shows its Steam copy.
     let mut found = library::scan_steam(home, &steam_ids);
     found.extend(library::scan_heroic(home, &gog_ids));
@@ -104,7 +125,9 @@ pub fn build(db: &Database, home: &Path) -> Vec<Entry> {
         .iter()
         .map(|g| {
             let mut e = Entry::database_only(g.clone());
-            let Some(f) = found.iter().find(|f| is_match(g, f)) else { return e };
+            let Some(f) = found.iter().find(|f| is_match(g, f)) else {
+                return e;
+            };
             e.store = Some(f.store);
             e.path = Some(f.path.clone());
             e.status = Status::OnThisPc;
@@ -192,10 +215,16 @@ mod tests {
     #[test]
     fn a_live_install_nobody_claims_is_manual() {
         let w = World::new();
-        w.write("Games/Obscure Game/.eax-restore-manifest.txt", "/x/dsound.dll\n");
+        w.write(
+            "Games/Obscure Game/.eax-restore-manifest.txt",
+            "/x/dsound.dll\n",
+        );
         w.write(
             ".config/heroic/config.json",
-            &format!(r#"{{"defaultSettings":{{"defaultInstallPath":"{}"}}}}"#, w.p("Games").display()),
+            &format!(
+                r#"{{"defaultSettings":{{"defaultInstallPath":"{}"}}}}"#,
+                w.p("Games").display()
+            ),
         );
         let entries = build(&Database::parse(DB).unwrap(), w.home.path());
         let m = by_name(&entries, "Obscure Game");
@@ -208,10 +237,16 @@ mod tests {
     fn a_hand_installed_database_game_is_recognised_by_its_exe() {
         let w = World::new();
         w.write("Games/Whatever/delta.exe", "");
-        w.write("Games/Whatever/.eax-restore-manifest.txt", "/x/dsound.dll\n");
+        w.write(
+            "Games/Whatever/.eax-restore-manifest.txt",
+            "/x/dsound.dll\n",
+        );
         w.write(
             ".config/heroic/config.json",
-            &format!(r#"{{"defaultSettings":{{"defaultInstallPath":"{}"}}}}"#, w.p("Games").display()),
+            &format!(
+                r#"{{"defaultSettings":{{"defaultInstallPath":"{}"}}}}"#,
+                w.p("Games").display()
+            ),
         );
         let entries = build(&Database::parse(DB).unwrap(), w.home.path());
         assert_eq!(by_name(&entries, "Delta").status, Status::Installed);
@@ -233,25 +268,39 @@ mod tests {
 
     #[test]
     fn manual_games_inside_a_steam_library_are_named_for_their_folder() {
-        assert_eq!(folder_name(Path::new("/h/steamapps/common/Cool Game/bin")), "Cool Game");
+        assert_eq!(
+            folder_name(Path::new("/h/steamapps/common/Cool Game/bin")),
+            "Cool Game"
+        );
         assert_eq!(folder_name(Path::new("/h/Games/Other")), "Other");
-        assert_eq!(folder_name(Path::new("/h/Games/STALKER Clear Sky/bin")), "STALKER Clear Sky");
+        assert_eq!(
+            folder_name(Path::new("/h/Games/STALKER Clear Sky/bin")),
+            "STALKER Clear Sky"
+        );
     }
 
     #[test]
     fn a_second_install_of_a_listed_game_gets_its_own_row() {
         let w = World::new();
         w.steam_game(".local/share/Steam", 10, "Alpha");
-        w.write(".local/share/Steam/steamapps/common/Alpha/.eax-restore-manifest.txt", "/x\n");
+        w.write(
+            ".local/share/Steam/steamapps/common/Alpha/.eax-restore-manifest.txt",
+            "/x\n",
+        );
         w.write("Games/Alpha copy/alpha.exe", "");
         w.write("Games/Alpha copy/.eax-restore-manifest.txt", "/x\n");
         w.write(
             ".config/heroic/config.json",
-            &format!(r#"{{"defaultSettings":{{"defaultInstallPath":"{}"}}}}"#, w.p("Games").display()),
+            &format!(
+                r#"{{"defaultSettings":{{"defaultInstallPath":"{}"}}}}"#,
+                w.p("Games").display()
+            ),
         );
         let entries = build(&Database::parse(DB).unwrap(), w.home.path());
         let alphas: Vec<_> = entries.iter().filter(|e| e.name == "Alpha").collect();
         assert_eq!(alphas.len(), 2);
-        assert!(alphas.iter().all(|e| e.status == Status::Installed && e.game.is_some()));
+        assert!(alphas
+            .iter()
+            .all(|e| e.status == Status::Installed && e.game.is_some()));
     }
 }

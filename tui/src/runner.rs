@@ -13,10 +13,17 @@ fn candidates() -> Vec<PathBuf> {
     if let Some(p) = std::env::var_os("EAX_RESTORE_SCRIPT") {
         c.push(PathBuf::from(p));
     }
-    if let Some(dir) = std::env::current_exe().ok().and_then(|e| e.parent().map(Path::to_path_buf)) {
+    if let Some(dir) = std::env::current_exe()
+        .ok()
+        .and_then(|e| e.parent().map(Path::to_path_buf))
+    {
         c.push(dir.join(SCRIPT_NAME));
     }
-    c.push(Path::new(env!("CARGO_MANIFEST_DIR")).join("../dist").join(SCRIPT_NAME));
+    c.push(
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../dist")
+            .join(SCRIPT_NAME),
+    );
     c
 }
 
@@ -38,7 +45,8 @@ fn plain_error(e: &io::Error) -> String {
 /// its closing summary can be read. The terminal must already be restored.
 pub fn run(script: &Path, env: &[(&str, String)], database: &Path) {
     let mut cmd = Command::new("bash");
-    cmd.arg(script).env("EAX_RESTORE_GAME_DATABASE_FILE", database);
+    cmd.arg(script)
+        .env("EAX_RESTORE_GAME_DATABASE_FILE", database);
     for (k, v) in env {
         cmd.env(k, v);
     }
@@ -74,7 +82,10 @@ mod tests {
         let (a, b) = (dir.path().join("a.sh"), dir.path().join("b.sh"));
         std::fs::write(&b, "").unwrap();
         let missing = dir.path().join("nope.sh");
-        assert_eq!(first_file(&[missing.clone(), a.clone(), b.clone()]), Some(b));
+        assert_eq!(
+            first_file(&[missing.clone(), a.clone(), b.clone()]),
+            Some(b)
+        );
         assert_eq!(first_file(&[missing, a]), None);
     }
 
@@ -92,9 +103,15 @@ mod tests {
         std::fs::write(&script, format!("echo \"$EAX_RESTORE_ACTION|$EAX_RESTORE_GAME_DIR|$EAX_RESTORE_GAME_DATABASE_FILE\" > '{}'\n", out.display())).unwrap();
         run(
             &script,
-            &[("EAX_RESTORE_ACTION", "uninstall".into()), ("EAX_RESTORE_GAME_DIR", "/g".into())],
+            &[
+                ("EAX_RESTORE_ACTION", "uninstall".into()),
+                ("EAX_RESTORE_GAME_DIR", "/g".into()),
+            ],
             Path::new("/db.json"),
         );
-        assert_eq!(std::fs::read_to_string(out).unwrap().trim(), "uninstall|/g|/db.json");
+        assert_eq!(
+            std::fs::read_to_string(out).unwrap().trim(),
+            "uninstall|/g|/db.json"
+        );
     }
 }

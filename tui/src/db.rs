@@ -12,7 +12,6 @@ pub struct Database {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Game {
-    pub id: String,
     pub name: String,
     #[serde(default)]
     pub description: String,
@@ -46,8 +45,6 @@ pub struct Store {
     pub delisted: bool,
     /// This store's own audio API, when it differs from the game's.
     pub api: Option<String>,
-    #[serde(default)]
-    pub store_details: String,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -60,8 +57,8 @@ pub struct Eax {
 
 impl Database {
     pub fn load(path: &Path) -> Result<Self> {
-        let text = std::fs::read_to_string(path)
-            .with_context(|| format!("reading {}", path.display()))?;
+        let text =
+            std::fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
         Self::parse(&text).with_context(|| format!("parsing {}", path.display()))
     }
 
