@@ -30,3 +30,6 @@ EAX_RESTORE_SKIP_PREFLIGHT=1 EAX_RESTORE_SKIP_UPDATE_CHECK=1 ./eax-restore-linux
 | Variable | What it does |
 | --- | --- |
 | `EAX_RESTORE_ANSWERS_FILE=/path/to/answers.txt` | Answers every prompt from a file, one line per prompt, instead of asking you. Lines starting with `#` are ignored. `tools/profiler` uses this for unattended runs. |
+| `EAX_RESTORE_ACTION=install` | Runs one action without showing the main menu: `install`, `uninstall`, `optional-settings`, `speakers`, `vcrun` or `dsoal-log`. It's for a program that has its own menu, like the TUI. Where the script would go back to a menu, it ends instead. |
+| `EAX_RESTORE_GAME_DIR=/path/to/game` | The game's `.exe` folder. The script uses it in place of asking where the game is, and skips the list of installed games. |
+| `EAX_RESTORE_GAME=steam:2210` | For an install, picks that game (`steam:` or `gog:` and its id) from the library scan, so the list is skipped. If the game isn't in your libraries, the list comes up as usual. |

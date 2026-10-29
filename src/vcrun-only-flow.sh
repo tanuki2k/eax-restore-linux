@@ -6,6 +6,14 @@ EAX_RESTORE_VCRUN_ONLY="${EAX_RESTORE_VCRUN_ONLY:-}"
 # Guarded here (the earliest point it's read) so cache.sh and config-flow.sh
 # downstream can test it freely.
 EAX_RESTORE_DSOAL_PIN="${EAX_RESTORE_DSOAL_PIN:-}"
+# Set by a program that has its own menu (the TUI): it picks what to run and,
+# optionally, the game, so none of the script's menus or "where is the game"
+# prompts come up. EAX_RESTORE_GAME_DIR and EAX_RESTORE_GAME are read where the
+# game is located (detection.sh, game-database.sh).
+EAX_RESTORE_ACTION="${EAX_RESTORE_ACTION:-}"
+EAX_RESTORE_GAME_DIR="${EAX_RESTORE_GAME_DIR:-}"
+EAX_RESTORE_GAME="${EAX_RESTORE_GAME:-}"
+ACTION_FROM_ENV_DONE=""
 
 # ==============================================================================
 # MAIN MENU (SELECT OPERATION)
@@ -92,6 +100,9 @@ browse_game_database_tool() {
 check_for_script_update
 
 while true; do
+# A flow that went back to its menu a second time: with EAX_RESTORE_ACTION the
+# caller is that menu, so end the run and hand control back.
+[ -n "$ACTION_FROM_ENV_DONE" ] && exit 0
 VCRUN_ONLY_MODE=""
 DSOAL_LOG_MODE=""
 SETTINGS_TOOL_MODE=""
@@ -100,8 +111,32 @@ RESTART_REQUESTED=""
 if is_truthy "$EAX_RESTORE_VCRUN_ONLY"; then
     VCRUN_ONLY_MODE="env"
 else
-    [ -n "$OPEN_TOOLS_MENU" ] || print_banner "SELECT OPERATION"
-    if is_truthy "$EAX_RESTORE_DSOAL_PIN"; then
+    [ -n "$OPEN_TOOLS_MENU" ] || [ -n "$EAX_RESTORE_ACTION" ] || print_banner "SELECT OPERATION"
+    if [ -n "$EAX_RESTORE_ACTION" ]; then
+        SCRIPT_ACTION=""
+        case "$EAX_RESTORE_ACTION" in
+            install) SCRIPT_ACTION="i" ;;
+            uninstall) SCRIPT_ACTION="u" ;;
+            optional-settings) SETTINGS_TOOL_MODE="optional" ;;
+            speakers) SETTINGS_TOOL_MODE="speakers" ;;
+            vcrun) VCRUN_ONLY_MODE="menu" ;;
+            dsoal-log) DSOAL_LOG_MODE=1 ;;
+            *)
+                print_error "EAX_RESTORE_ACTION is set to '$EAX_RESTORE_ACTION', which isn't one of install," \
+                    "uninstall, optional-settings, speakers, vcrun or dsoal-log."
+                exit 1
+                ;;
+        esac
+        # A folder or a store game given up front answers "where is the game".
+        if [ -n "$EAX_RESTORE_GAME" ] && [ "$SCRIPT_ACTION" == "i" ]; then
+            LOCATE_METHOD="scan"
+        elif [ -n "$EAX_RESTORE_GAME_DIR" ]; then
+            LOCATE_METHOD="manual"
+        elif [ "$SCRIPT_ACTION" == "i" ]; then
+            LOCATE_METHOD="manual"
+        fi
+        ACTION_FROM_ENV_DONE=1
+    elif is_truthy "$EAX_RESTORE_DSOAL_PIN"; then
         SCRIPT_ACTION="i"
         print_result "EAX_RESTORE_DSOAL_PIN is set, so proceeding straight to install." "$GREEN"
     else

@@ -610,7 +610,24 @@ scan_game_libraries() {
     done
     local -a extra=("m|[M]anually type the game path")
     [ -n "$MAIN_MENU_SHOWN" ] && extra+=("|" "r|[R]eturn to the $(return_menu_label)")
-    paged_select "Games with a profile in your libraries" "${extra[@]}" || exit 0
+    # EAX_RESTORE_GAME ("steam:2210") names the pick up front, so no list.
+    local preset_choice=""
+    if [ -n "$EAX_RESTORE_GAME" ]; then
+        for i in "${!stores[@]}"; do
+            [ "${stores[$i]}:${ids[$i]}" == "$EAX_RESTORE_GAME" ] && { preset_choice=$((i + 1)); break; }
+        done
+        if [ -z "$preset_choice" ]; then
+            local missing_name
+            missing_name=$(gdb_field "${EAX_RESTORE_GAME#*:}" "${EAX_RESTORE_GAME%%:*}" '.name // empty')
+            print_note "${missing_name:-That game} isn't in your Steam or Heroic libraries, so here are the games that are."
+        fi
+        EAX_RESTORE_GAME=""
+    fi
+    if [ -n "$preset_choice" ]; then
+        PAGED_CHOICE="$preset_choice"
+    else
+        paged_select "Games with a profile in your libraries" "${extra[@]}" || exit 0
+    fi
     case "$PAGED_CHOICE" in
         m) SCAN_NEXT="manual"; return 1 ;;
         r) SCAN_NEXT="return"; return 1 ;;
