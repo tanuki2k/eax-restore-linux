@@ -1,9 +1,10 @@
 //! Drawing. Reads `App`, never changes it.
 
 use crate::app::App;
-use crate::db::Game;
+use crate::games::{Entry, Status};
+use crate::library::StoreKind;
 use ratatui::layout::{Constraint, Direction, Layout};
-use ratatui::style::{Modifier, Style, Stylize};
+use ratatui::style::{Color, Modifier, Style, Stylize};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, BorderType, List, ListItem, ListState, Paragraph, Wrap};
 use ratatui::Frame;
@@ -15,9 +16,12 @@ pub fn draw(f: &mut Frame, app: &App) {
         .split(f.area());
 
     let input = Paragraph::new(format!("> {}", app.query)).block(
-        Block::bordered()
-            .border_type(BorderType::Rounded)
-            .title(format!(" Find a game ({}/{}) ", app.visible.len(), app.games.len())),
+        Block::bordered().border_type(BorderType::Rounded).title(format!(
+            " Find a game ({}/{}) · {} ",
+            app.visible.len(),
+            app.games.len(),
+            app.filter.label()
+        )),
     );
     f.render_widget(input, rows[0]);
 
@@ -29,7 +33,15 @@ pub fn draw(f: &mut Frame, app: &App) {
     let items: Vec<ListItem> = app
         .visible
         .iter()
-        .map(|&i| ListItem::new(app.games[i].name.as_str()))
+        .map(|&i| {
+            let e = &app.games[i];
+            let (mark, colour) = marker(e.status);
+            ListItem::new(Line::from(vec![
+                Span::styled(mark, Style::new().fg(colour)),
+                Span::raw(" "),
+                Span::raw(e.name.as_str()),
+            ]))
+        })
         .collect();
     let list = List::new(items)
         .block(Block::bordered().border_type(BorderType::Rounded).title(" Games "))
@@ -38,7 +50,7 @@ pub fn draw(f: &mut Frame, app: &App) {
     f.render_stateful_widget(list, panes[0], &mut state);
 
     let detail = Paragraph::new(match app.current() {
-        Some(game) => profile(game),
+        Some(e) => profile(e),
         None => vec![Line::from("No game matches.").dim()],
     })
     .wrap(Wrap { trim: false })
@@ -46,20 +58,46 @@ pub fn draw(f: &mut Frame, app: &App) {
     f.render_widget(detail, panes[1]);
 
     f.render_widget(
-        Paragraph::new("Type to filter · ↑/↓ PgUp/PgDn move · Ctrl-U clear · Esc quit").dim(),
+        Paragraph::new("Type to filter · Tab: all/on this PC/installed · ↑/↓ PgUp/PgDn move · Esc quit").dim(),
         rows[2],
     );
 }
 
-fn field(label: &str, value: impl Into<String>) -> Line<'static> {
-    Line::from(vec![
-        Span::raw(format!("{label}: ")).bold(),
-        Span::raw(value.into()),
-    ])
+/// Plain ASCII so the column lines up in every terminal; the profile pane spells
+/// the status out.
+fn marker(s: Status) -> (&'static str, Color) {
+    match s {
+        Status::Installed => ("+", Color::Green),
+        Status::OnThisPc => ("o", Color::Cyan),
+        Status::NotOnThisPc => (" ", Color::Reset),
+        Status::Manual => ("*", Color::Magenta),
+    }
 }
 
-fn profile(g: &Game) -> Vec<Line<'static>> {
-    let mut lines = vec![Line::from(g.name.clone()).bold().cyan(), Line::raw("")];
+fn field(label: &str, value: impl Into<String>) -> Line<'static> {
+    Line::from(vec![Span::raw(format!("{label}: ")).bold(), Span::raw(value.into())])
+}
+
+fn profile(e: &Entry) -> Vec<Line<'static>> {
+    let mut lines = vec![Line::from(e.name.clone()).bold().cyan(), Line::raw("")];
+    let (_, colour) = marker(e.status);
+    lines.push(Line::from(vec![
+        Span::raw("Status: ").bold(),
+        Span::styled(e.status.label(), Style::new().fg(colour)),
+    ]));
+    if let Some(p) = &e.path {
+        let store = match e.store {
+            Some(StoreKind::Steam) => " (Steam)",
+            Some(StoreKind::Gog) => " (GOG)",
+            None => "",
+        };
+        lines.push(field("Folder", format!("{}{store}", p.display())));
+    }
+    let Some(g) = &e.game else {
+        lines.push(Line::raw(""));
+        lines.push(Line::raw("The game database has no profile for this game."));
+        return lines;
+    };
     if !g.released.is_empty() {
         lines.push(field("Released", g.released.clone()));
     }
@@ -95,6 +133,7 @@ mod tests {
     use crate::db::Database;
     use ratatui::backend::TestBackend;
     use ratatui::Terminal;
+    use std::path::PathBuf;
 
     fn screen(app: &App, w: u16, h: u16) -> String {
         let mut t = Terminal::new(TestBackend::new(w, h)).unwrap();
@@ -106,25 +145,45 @@ mod tests {
             .join("\n")
     }
 
+    fn entries(json: &str) -> Vec<Entry> {
+        Database::parse(json).unwrap().games.into_iter().map(Entry::database_only).collect()
+    }
+
     #[test]
     fn shows_the_list_and_the_selected_games_profile() {
-        let db = Database::parse(
+        let mut games = entries(
             r#"{"games":[{"id":"a","name":"Alpha Centauri","released":"1999-02-09",
             "stores":{"steam":{"id":2204130}},"eax":{"api":"directsound3d","versions":["1.0"]}}]}"#,
-        )
-        .unwrap();
-        let s = screen(&App::new(db.games), 100, 14);
+        );
+        games[0].status = Status::Installed;
+        games[0].store = Some(StoreKind::Steam);
+        games[0].path = Some(PathBuf::from("/lib/Alpha"));
+        let s = screen(&App::new(games), 100, 14);
         println!("{s}");
-        assert!(s.contains("Find a game (1/1)"));
-        assert!(s.contains("Alpha Centauri"));
-        assert!(s.contains("Steam 2204130"));
+        assert!(s.contains("Find a game (1/1) · All games"));
+        assert!(s.contains("+ Alpha Centauri"));
+        assert!(s.contains("Status: Installed"));
+        assert!(s.contains("Folder: /lib/Alpha (Steam)"));
         assert!(s.contains("directsound3d (EAX 1.0)"));
     }
 
     #[test]
+    fn a_manual_game_says_the_database_has_no_profile() {
+        let manual = Entry {
+            name: "Obscure".into(),
+            status: Status::Manual,
+            game: None,
+            store: None,
+            path: Some(PathBuf::from("/g/Obscure")),
+        };
+        let s = screen(&App::new(vec![manual]), 100, 14);
+        assert!(s.contains("* Obscure"));
+        assert!(s.contains("no profile for this game"));
+    }
+
+    #[test]
     fn an_empty_result_says_so_and_does_not_panic() {
-        let db = Database::parse(r#"{"games":[{"id":"a","name":"Alpha"}]}"#).unwrap();
-        let mut app = App::new(db.games);
+        let mut app = App::new(entries(r#"{"games":[{"id":"a","name":"Alpha"}]}"#));
         app.query = "zzz".into();
         app.visible.clear();
         assert!(screen(&app, 60, 10).contains("No game matches."));
@@ -132,7 +191,6 @@ mod tests {
 
     #[test]
     fn a_tiny_terminal_does_not_panic() {
-        let db = Database::parse(r#"{"games":[{"id":"a","name":"Alpha"}]}"#).unwrap();
-        screen(&App::new(db.games), 10, 3);
+        screen(&App::new(entries(r#"{"games":[{"id":"a","name":"Alpha"}]}"#)), 10, 3);
     }
 }

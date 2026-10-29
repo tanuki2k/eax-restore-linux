@@ -1,12 +1,47 @@
 //! Screen state and key handling. No drawing here, so it can be tested.
 
-use crate::db::Game;
+use crate::games::{Entry, Status};
 use nucleo_matcher::pattern::{CaseMatching, Normalization, Pattern};
 use nucleo_matcher::{Matcher, Utf32Str};
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
+/// What the Tab key cycles the list through.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum Filter {
+    All,
+    OnThisPc,
+    Installed,
+}
+
+impl Filter {
+    pub fn label(self) -> &'static str {
+        match self {
+            Filter::All => "All games",
+            Filter::OnThisPc => "On this PC",
+            Filter::Installed => "Installed",
+        }
+    }
+
+    fn next(self) -> Self {
+        match self {
+            Filter::All => Filter::OnThisPc,
+            Filter::OnThisPc => Filter::Installed,
+            Filter::Installed => Filter::All,
+        }
+    }
+
+    fn allows(self, s: Status) -> bool {
+        match self {
+            Filter::All => true,
+            Filter::OnThisPc => s != Status::NotOnThisPc,
+            Filter::Installed => matches!(s, Status::Installed | Status::Manual),
+        }
+    }
+}
+
 pub struct App {
-    pub games: Vec<Game>,
+    pub games: Vec<Entry>,
+    pub filter: Filter,
     pub query: String,
     /// Indices into `games` that match the query, best match first.
     pub visible: Vec<usize>,
@@ -16,10 +51,11 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(mut games: Vec<Game>) -> Self {
+    pub fn new(mut games: Vec<Entry>) -> Self {
         games.sort_by_key(|g| g.name.to_lowercase());
         let mut app = App {
             games,
+            filter: Filter::All,
             query: String::new(),
             visible: Vec::new(),
             selected: 0,
@@ -30,23 +66,24 @@ impl App {
         app
     }
 
-    pub fn current(&self) -> Option<&Game> {
+    pub fn current(&self) -> Option<&Entry> {
         self.visible.get(self.selected).map(|&i| &self.games[i])
     }
 
     fn refilter(&mut self) {
+        let allowed: Vec<usize> = (0..self.games.len())
+            .filter(|&i| self.filter.allows(self.games[i].status))
+            .collect();
         if self.query.trim().is_empty() {
-            self.visible = (0..self.games.len()).collect();
+            self.visible = allowed;
         } else {
             let pattern = Pattern::parse(&self.query, CaseMatching::Smart, Normalization::Smart);
             let mut buf = Vec::new();
-            let mut scored: Vec<(usize, u32)> = self
-                .games
-                .iter()
-                .enumerate()
-                .filter_map(|(i, g)| {
+            let mut scored: Vec<(usize, u32)> = allowed
+                .into_iter()
+                .filter_map(|i| {
                     pattern
-                        .score(Utf32Str::new(&g.name, &mut buf), &mut self.matcher)
+                        .score(Utf32Str::new(&self.games[i].name, &mut buf), &mut self.matcher)
                         .map(|s| (i, s))
                 })
                 .collect();
@@ -67,6 +104,10 @@ impl App {
         match key.code {
             KeyCode::Esc => self.quit = true,
             KeyCode::Char('c') if ctrl => self.quit = true,
+            KeyCode::Tab => {
+                self.filter = self.filter.next();
+                self.refilter();
+            }
             KeyCode::Up => self.move_by(-1),
             KeyCode::Down => self.move_by(1),
             KeyCode::PageUp => self.move_by(-10),
@@ -101,7 +142,7 @@ mod tests {
             {"id":"c","name":"Alpha Protocol"}]}"#,
         )
         .unwrap();
-        App::new(db.games)
+        App::new(db.games.into_iter().map(Entry::database_only).collect())
     }
 
     fn key(c: KeyCode) -> KeyEvent {
@@ -125,7 +166,7 @@ mod tests {
     fn typing_filters_and_backspace_restores() {
         let mut a = app();
         type_str(&mut a, "beta");
-        assert_eq!(a.current().unwrap().id, "b");
+        assert_eq!(a.current().unwrap().name, "Beta Quest");
         for _ in 0..4 {
             a.handle_key(key(KeyCode::Backspace));
         }
@@ -157,5 +198,18 @@ mod tests {
         let mut a = app();
         a.handle_key(key(KeyCode::Esc));
         assert!(a.quit);
+    }
+
+    #[test]
+    fn tab_cycles_the_status_filter() {
+        let mut a = app();
+        a.games[1].status = Status::OnThisPc;
+        a.games[2].status = Status::Installed;
+        a.handle_key(key(KeyCode::Tab));
+        assert_eq!(a.visible.len(), 2);
+        a.handle_key(key(KeyCode::Tab));
+        assert_eq!(a.visible, [2]);
+        a.handle_key(key(KeyCode::Tab));
+        assert_eq!(a.visible.len(), 3);
     }
 }
