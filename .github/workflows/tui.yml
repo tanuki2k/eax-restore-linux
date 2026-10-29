@@ -1,0 +1,52 @@
+name: TUI
+
+on:
+  push:
+    paths:
+      - "tui/**"
+      - "game-database.json"
+      - ".github/workflows/tui.yml"
+  pull_request:
+    paths:
+      - "tui/**"
+      - "game-database.json"
+      - ".github/workflows/tui.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  tui:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tui
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        run: |
+          rustup toolchain install stable --profile minimal --component clippy --component rustfmt
+          rustup default stable
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            tui/target
+          key: tui-${{ runner.os }}-${{ hashFiles('tui/Cargo.lock') }}
+          restore-keys: tui-${{ runner.os }}-
+
+      - name: Format
+        run: cargo fmt --check
+
+      - name: Clippy
+        run: cargo clippy --locked --all-targets -- -D warnings
+
+      - name: Tests
+        run: cargo test --locked
+
+      # The release profile uses LTO, which a debug build doesn't exercise.
+      - name: Release build
+        run: cargo build --release --locked
