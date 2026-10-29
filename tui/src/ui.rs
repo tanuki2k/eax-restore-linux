@@ -7,7 +7,7 @@ use crate::app::{App, Filter, Layout as PaneLayout, Pane};
 use crate::filters::Filters;
 use crate::games::{Entry, Status};
 use crate::help;
-use crate::library::StoreKind;
+use crate::profile;
 use crate::settings::{self, wrap};
 use crate::theme;
 use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
@@ -349,7 +349,7 @@ fn draw_pane(f: &mut Frame, app: &App, area: Rect, zoomed: bool) {
             .collect(),
         }),
         View::Profile => lines.extend(match current {
-            Some(e) => profile(e, width),
+            Some(e) => profile::lines(e, width),
             None => vec![
                 Line::from("No game matches.").dim(),
                 Line::from("Press Ctrl-A to add a game by its folder.").dim(),
@@ -593,7 +593,7 @@ fn draw_menu(f: &mut Frame, menu: &crate::app::Menu, title: &str, area: Rect) {
 
 /// Plain ASCII so the column lines up in every terminal; the profile pane spells
 /// the status out.
-fn marker(s: Status) -> (&'static str, Color) {
+pub(crate) fn marker(s: Status) -> (&'static str, Color) {
     match s {
         Status::Installed => ("+", Color::Green),
         Status::OnThisPc => ("o", Color::Cyan),
@@ -602,88 +602,11 @@ fn marker(s: Status) -> (&'static str, Color) {
     }
 }
 
-/// `Label: value`, wrapped to `width`, the label in bold.
-fn field(label: &str, value: impl Into<String>, width: usize) -> Vec<Line<'static>> {
-    let prefix = format!("{label}: ");
-    let wrapped = wrap(&format!("{prefix}{}", value.into()), width, "");
-    wrapped
-        .into_iter()
-        .enumerate()
-        .map(|(i, text)| match text.strip_prefix(&prefix) {
-            Some(rest) if i == 0 => Line::from(vec![
-                Span::styled(prefix.clone(), theme::label()),
-                Span::raw(rest.to_string()),
-            ]),
-            _ => Line::from(text),
-        })
-        .collect()
-}
-
-fn profile(e: &Entry, width: usize) -> Vec<Line<'static>> {
-    let mut lines = vec![Line::from(e.name.clone()).bold().cyan(), Line::raw("")];
-    let (_, colour) = marker(e.status);
-    lines.push(Line::from(vec![
-        Span::styled("Status: ", theme::label()),
-        Span::styled(e.status.label(), Style::new().fg(colour)),
-    ]));
-    if let Some(p) = &e.path {
-        let store = match e.store {
-            Some(StoreKind::Steam) => " (Steam)",
-            Some(StoreKind::Gog) => " (GOG)",
-            None => "",
-        };
-        lines.extend(field("Folder", format!("{}{store}", p.display()), width));
-    }
-    let Some(g) = &e.game else {
-        lines.push(Line::raw(""));
-        lines.extend(
-            wrap(
-                &format!("The game database has no profile for {}.", e.name),
-                width,
-                "",
-            )
-            .into_iter()
-            .map(Line::from),
-        );
-        return lines;
-    };
-    if !g.released.is_empty() {
-        lines.extend(field("Released", g.released.clone(), width));
-    }
-    let mut stores = Vec::new();
-    if let Some(s) = &g.stores.steam {
-        stores.push(format!("Steam {}", s.id));
-    }
-    if let Some(s) = &g.stores.gog {
-        stores.push(format!("GOG {}", s.id));
-    }
-    if !stores.is_empty() {
-        lines.extend(field("Stores", stores.join(", "), width));
-    }
-    if !g.eax.api.is_empty() {
-        let versions = if g.eax.versions.is_empty() {
-            String::new()
-        } else {
-            format!(" (EAX {})", g.eax.versions.join(", "))
-        };
-        lines.extend(field("Audio", format!("{}{}", g.eax.api, versions), width));
-    }
-    lines.extend(field(
-        "Tested",
-        if g.tested { "yes" } else { "not yet" },
-        width,
-    ));
-    if !g.description.is_empty() {
-        lines.push(Line::raw(""));
-        lines.extend(wrap(&g.description, width, "").into_iter().map(Line::from));
-    }
-    lines
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::db::Database;
+    use crate::library::StoreKind;
     use ratatui::backend::TestBackend;
     use ratatui::Terminal;
     use std::path::PathBuf;
@@ -716,16 +639,19 @@ mod tests {
         games[0].status = Status::Installed;
         games[0].store = Some(StoreKind::Steam);
         games[0].path = Some(PathBuf::from("/lib/Alpha"));
-        let s = screen(&App::new(games), 100, 14);
+        let s = screen(&App::new(games), 100, 30);
         println!("{s}");
         assert!(s.contains(" Search "));
         assert!(s.contains("1/1"));
         assert!(s.contains("Show: All games"));
         assert!(s.contains("Ctrl-E Audio: Any audio"));
         assert!(s.contains("+ Alpha Centauri"));
-        assert!(s.contains("Status: Installed"));
-        assert!(s.contains("Folder: /lib/Alpha (Steam)"));
-        assert!(s.contains("directsound3d (EAX 1.0)"));
+        assert!(s.contains("System details:"));
+        assert!(s.contains("Status:") && s.contains("Installed"));
+        assert!(s.contains("Platform:") && s.contains("Steam"));
+        assert!(s.contains("Location:") && s.contains("/lib/Alpha"));
+        assert!(s.contains("EAX Support:") && s.contains("1.0"));
+        assert!(s.contains("Audio API:") && s.contains("DirectSound3D"));
     }
 
     #[test]
@@ -981,7 +907,7 @@ mod tests {
         assert!(row_of(&narrow, " Games ") < row_of(&narrow, "Game profile"));
         // Both still show their text.
         assert!(narrow.contains("Quake 4"));
-        assert!(narrow.contains("Status:"));
+        assert!(narrow.contains("Game details:"));
     }
 
     #[test]

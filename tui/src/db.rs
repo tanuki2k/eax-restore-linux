@@ -30,6 +30,10 @@ pub struct Game {
     #[serde(default = "yes")]
     pub tested: bool,
     #[serde(default)]
+    pub notes: String,
+    #[serde(default)]
+    pub sources: Vec<Source>,
+    #[serde(default)]
     pub install: Install,
     #[serde(default)]
     pub game_config: GameConfig,
@@ -50,6 +54,12 @@ pub struct Store {
     pub id: u64,
     #[serde(default)]
     pub delisted: bool,
+    /// Where the id came from, e.g. `steamdb_historical` for one not checked on an install.
+    pub id_source: Option<String>,
+    #[serde(default)]
+    pub store_details: String,
+    #[serde(default)]
+    pub patches: String,
     /// This store's own audio API, when it differs from the game's.
     pub api: Option<String>,
 }
@@ -60,6 +70,23 @@ pub struct Eax {
     pub api: String,
     #[serde(default)]
     pub versions: Vec<String>,
+    /// `supported` (when absent), `built_in`, `not_implemented` or `removed_by_patch`.
+    #[serde(default)]
+    pub status: String,
+    /// Why the game has no EAX, or a known limitation.
+    #[serde(default)]
+    pub problem: String,
+    /// Extra steps the player takes to get EAX back.
+    #[serde(default)]
+    pub fix: String,
+}
+
+/// A page behind the entry's claims: a bare address, or a titled one.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+pub enum Source {
+    Url(String),
+    Page { title: String, url: String },
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -67,6 +94,9 @@ pub struct Install {
     /// section -> key -> value, in the database's order.
     pub alsoft_ini: Option<Map<String, Value>>,
     pub alsoft_tested: Option<bool>,
+    /// Named fixes, such as `eax_unified`.
+    #[serde(default)]
+    pub tweaks: Vec<String>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]

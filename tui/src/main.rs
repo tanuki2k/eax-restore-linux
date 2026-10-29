@@ -7,6 +7,7 @@ mod games;
 mod help;
 mod library;
 mod picker;
+mod profile;
 mod runner;
 mod settings;
 mod theme;
@@ -24,7 +25,7 @@ fn chosen_database() -> Option<PathBuf> {
     let mut args = std::env::args_os().skip(1);
     let mut positional = None;
     while let Some(a) = args.next() {
-        if a == "--settings" {
+        if a == "--settings" || a == "--profile" {
             args.next();
         } else if !a.to_string_lossy().starts_with("--") {
             positional = Some(a);
@@ -34,6 +35,17 @@ fn chosen_database() -> Option<PathBuf> {
     positional
         .map(PathBuf::from)
         .or_else(|| std::env::var_os("EAX_RESTORE_GAME_DATABASE_FILE").map(PathBuf::from))
+}
+
+/// Prints styled lines as plain text. A closed pipe (`| head`) just ends the output.
+fn print_lines(lines: Vec<ratatui::text::Line<'static>>) {
+    let mut out = std::io::stdout().lock();
+    for line in lines {
+        let text: String = line.spans.iter().map(|s| s.content.as_ref()).collect();
+        if writeln!(out, "{text}").is_err() {
+            break;
+        }
+    }
 }
 
 fn main() -> Result<()> {
@@ -68,6 +80,17 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
+    // `--profile NAME` prints that game's profile from the database and exits.
+    if let Some(name) = std::env::args().skip_while(|a| a != "--profile").nth(1) {
+        let game = db
+            .games
+            .iter()
+            .find(|g| g.name.eq_ignore_ascii_case(&name))
+            .with_context(|| format!("No game called {name:?} in the database."))?;
+        print_lines(profile::database_lines(game, 76));
+        return Ok(());
+    }
+
     // `--settings NAME` prints that game's settings view and exits.
     if let Some(name) = std::env::args().skip_while(|a| a != "--settings").nth(1) {
         let game = db
@@ -75,14 +98,7 @@ fn main() -> Result<()> {
             .iter()
             .find(|g| g.name.eq_ignore_ascii_case(&name))
             .with_context(|| format!("No game called {name:?} in the database."))?;
-        let mut out = std::io::stdout().lock();
-        for line in settings::lines(game, 76) {
-            let text: String = line.spans.iter().map(|s| s.content.as_ref()).collect();
-            // A closed pipe (`| head`) just ends the output.
-            if writeln!(out, "{text}").is_err() {
-                break;
-            }
-        }
+        print_lines(settings::lines(game, 76));
         return Ok(());
     }
 

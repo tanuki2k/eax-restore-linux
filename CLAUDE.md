@@ -110,9 +110,10 @@ launcher hardcodes `releases/latest`).
   taken from fzf's palette and the script's `GREEN`/`YELLOW`/`WHITE`). The right pane switches between
   Profile and Settings with ←/→ (Shift-↑/↓ scrolls it); F1 lists every key (`tui/src/help.rs`: keep it in step
   with `app.rs`), Ctrl-F gives the pane the whole screen, and Ctrl-L puts it under the list instead of
-  beside it (it does that by itself below 104 columns); `--list` and `--settings NAME`
-  print the game list or one game's settings view without the TUI, which is how the
-  Rust view is compared with the Bash browser's `print_game_settings_details`. It finds the
+  beside it (it does that by itself below 104 columns); `--list`, `--settings NAME` and `--profile NAME`
+  print the game list, one game's settings view or its profile without the TUI, which is
+  how the Rust views are compared with the Bash browser's `print_game_settings_details`
+  and `print_game_profile_stores` (word for word, for every game). It finds the
   script via `EAX_RESTORE_SCRIPT`, beside itself, its cache (`~/.local/share/
   eax-restore-linux/tui/<channel>/`) or `dist/`, skipping any that lacks
   `EAX_RESTORE_ACTION`; if none, it downloads its channel's release script and
