@@ -103,7 +103,7 @@ fn folder_name(dir: &Path) -> String {
     }
 }
 
-pub fn build(db: &Database, home: &Path) -> Vec<Entry> {
+pub fn build(db: &Database, home: &Path, state_file: &Path) -> Vec<Entry> {
     let steam_ids: HashSet<u64> = db
         .games
         .iter()
@@ -117,7 +117,7 @@ pub fn build(db: &Database, home: &Path) -> Vec<Entry> {
     // Steam first, so a game owned on both stores shows its Steam copy.
     let mut found = library::scan_steam(home, &steam_ids);
     found.extend(library::scan_heroic(home, &gog_ids));
-    let live = library::live_manifest_dirs(home);
+    let live = library::live_manifest_dirs(home, state_file);
 
     let mut claimed: HashSet<&PathBuf> = HashSet::new();
     let mut entries: Vec<Entry> = db
@@ -203,7 +203,11 @@ mod tests {
             ".local/share/Steam/steamapps/common/Alpha/bin/.eax-restore-manifest.txt",
             "/x/dsound.dll\n",
         );
-        let entries = build(&Database::parse(DB).unwrap(), w.home.path());
+        let entries = build(
+            &Database::parse(DB).unwrap(),
+            w.home.path(),
+            &w.state_file(),
+        );
         let alpha = by_name(&entries, "Alpha");
         assert_eq!(alpha.status, Status::Installed);
         assert!(alpha.path.as_ref().unwrap().ends_with("Alpha/bin"));
@@ -226,7 +230,11 @@ mod tests {
                 w.p("Games").display()
             ),
         );
-        let entries = build(&Database::parse(DB).unwrap(), w.home.path());
+        let entries = build(
+            &Database::parse(DB).unwrap(),
+            w.home.path(),
+            &w.state_file(),
+        );
         let m = by_name(&entries, "Obscure Game");
         assert_eq!(m.status, Status::Manual);
         assert!(m.game.is_none());
@@ -248,7 +256,11 @@ mod tests {
                 w.p("Games").display()
             ),
         );
-        let entries = build(&Database::parse(DB).unwrap(), w.home.path());
+        let entries = build(
+            &Database::parse(DB).unwrap(),
+            w.home.path(),
+            &w.state_file(),
+        );
         assert_eq!(by_name(&entries, "Delta").status, Status::Installed);
         assert_eq!(entries.len(), 4);
     }
@@ -261,7 +273,11 @@ mod tests {
             ".local/share/Steam/steamapps/common/Alpha/.eax-restore-manifest.txt",
             "# EAX Restore: uninstalled 2026-01-01\n",
         );
-        let entries = build(&Database::parse(DB).unwrap(), w.home.path());
+        let entries = build(
+            &Database::parse(DB).unwrap(),
+            w.home.path(),
+            &w.state_file(),
+        );
         assert_eq!(by_name(&entries, "Alpha").status, Status::OnThisPc);
         fs::remove_dir_all(w.p(".local")).unwrap();
     }
@@ -296,11 +312,31 @@ mod tests {
                 w.p("Games").display()
             ),
         );
-        let entries = build(&Database::parse(DB).unwrap(), w.home.path());
+        let entries = build(
+            &Database::parse(DB).unwrap(),
+            w.home.path(),
+            &w.state_file(),
+        );
         let alphas: Vec<_> = entries.iter().filter(|e| e.name == "Alpha").collect();
         assert_eq!(alphas.len(), 2);
         assert!(alphas
             .iter()
             .all(|e| e.status == Status::Installed && e.game.is_some()));
+    }
+
+    #[test]
+    fn a_game_installed_outside_every_library_still_gets_a_row() {
+        let w = World::new();
+        w.write("mnt/games/Obscure/.eax-restore-manifest.txt", "/x\n");
+        w.write(
+            ".local/state/eax-restore-linux/installed-games.txt",
+            &format!("{}\n", w.p("mnt/games/Obscure").display()),
+        );
+        let entries = build(
+            &Database::parse(DB).unwrap(),
+            w.home.path(),
+            &w.state_file(),
+        );
+        assert_eq!(by_name(&entries, "Obscure").status, Status::Manual);
     }
 }

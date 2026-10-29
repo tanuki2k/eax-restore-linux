@@ -489,6 +489,9 @@ scan_game_libraries() {
     # was found or picked, so get_game_directory falls through to its
     # normal manual/GUI-picker flow.
     SCAN_NEXT=""
+    # EAX_RESTORE_GAME is used once, however this scan ends.
+    local preset_game="$EAX_RESTORE_GAME"
+    EAX_RESTORE_GAME=""
     GAME_DIR=""
     GAME_NAME=""
     GAME_INSTALL_ROOT=""
@@ -612,16 +615,15 @@ scan_game_libraries() {
     [ -n "$MAIN_MENU_SHOWN" ] && extra+=("|" "r|[R]eturn to the $(return_menu_label)")
     # EAX_RESTORE_GAME ("steam:2210") names the pick up front, so no list.
     local preset_choice=""
-    if [ -n "$EAX_RESTORE_GAME" ]; then
+    if [ -n "$preset_game" ]; then
         for i in "${!stores[@]}"; do
-            [ "${stores[$i]}:${ids[$i]}" == "$EAX_RESTORE_GAME" ] && { preset_choice=$((i + 1)); break; }
+            [ "${stores[$i]}:${ids[$i]}" == "$preset_game" ] && { preset_choice=$((i + 1)); break; }
         done
         if [ -z "$preset_choice" ]; then
             local missing_name
-            missing_name=$(gdb_field "${EAX_RESTORE_GAME#*:}" "${EAX_RESTORE_GAME%%:*}" '.name // empty')
+            missing_name=$(gdb_field "${preset_game#*:}" "${preset_game%%:*}" '.name // empty')
             print_note "${missing_name:-That game} isn't in your Steam or Heroic libraries, so here are the games that are."
         fi
-        EAX_RESTORE_GAME=""
     fi
     if [ -n "$preset_choice" ]; then
         PAGED_CHOICE="$preset_choice"

@@ -52,10 +52,14 @@ fn plain_error(e: &io::Error) -> String {
 
 /// Runs the script with `env` set, on the real terminal, then waits for Enter so
 /// its closing summary can be read. The terminal must already be restored.
-pub fn run(script: &Path, env: &[(&str, String)], database: &Path) {
+pub fn run(script: &Path, env: &[(&str, String)], database: Option<&Path>) {
     let mut cmd = Command::new("bash");
-    cmd.arg(script)
-        .env("EAX_RESTORE_GAME_DATABASE_FILE", database);
+    cmd.arg(script);
+    // Only a database the caller chose is handed on; otherwise the script
+    // fetches and caches its own, as it always does.
+    if let Some(db) = database {
+        cmd.env("EAX_RESTORE_GAME_DATABASE_FILE", db);
+    }
     for (k, v) in env {
         cmd.env(k, v);
     }
@@ -117,7 +121,7 @@ mod tests {
                 ("EAX_RESTORE_ACTION", "uninstall".into()),
                 ("EAX_RESTORE_GAME_DIR", "/g".into()),
             ],
-            Path::new("/db.json"),
+            Some(Path::new("/db.json")),
         );
         assert_eq!(
             std::fs::read_to_string(out).unwrap().trim(),

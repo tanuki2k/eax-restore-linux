@@ -88,3 +88,15 @@ uninstall_rest() { uninstall_answers "$BATS_TEST_TMPDIR/full"; tail -n +3 "$BATS
     plain | grep -q "That game isn't in your Steam or Heroic libraries"
     plain | grep -q "Games with a profile in your libraries"
 }
+
+@test "a GAME that finds nothing doesn't skip the scan's question the next time" {
+    DB_FILE="$BATS_TEST_TMPDIR/db.json"
+    echo '{"schema_version":3,"games":[{"id":"other","name":"Other Game","stores":{"steam":{"id":5}}}]}' > "$DB_FILE"
+    export EAX_RESTORE_UNTESTED=1
+    # The first scan finds no game from the database and goes back to the
+    # locate menu (the first answer is the Press Enter gate); choosing [S]can
+    # again has to ask its question this time.
+    answers "$BATS_TEST_TMPDIR/in" "" s n
+    EAX_RESTORE_ACTION=install EAX_RESTORE_GAME="steam:5" run_script "$BATS_TEST_TMPDIR/in"
+    plain | grep -q "Scan your libraries, knowing" || { tail -20 "$OUT"; false; }
+}

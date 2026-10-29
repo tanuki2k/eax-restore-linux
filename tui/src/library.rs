@@ -265,7 +265,7 @@ pub fn manifest_is_live(dir: &Path) -> bool {
 
 /// Every folder holding a live install, found on disk under the Steam libraries
 /// and Heroic's game folders.
-pub fn live_manifest_dirs(home: &Path) -> BTreeSet<PathBuf> {
+fn manifest_dirs_on_disk(home: &Path) -> BTreeSet<PathBuf> {
     let mut manifests = Vec::new();
     for lib in steam_library_dirs(home) {
         let common = lib.join("common");
@@ -286,6 +286,32 @@ pub fn live_manifest_dirs(home: &Path) -> BTreeSet<PathBuf> {
         .filter_map(|m| m.parent().map(Path::to_path_buf))
         .filter(|d| manifest_is_live(d))
         .collect()
+}
+
+/// Where the script remembers the folders it was used on: `installed-games.txt`
+/// in its state folder.
+pub fn installed_games_file(home: &Path) -> PathBuf {
+    std::env::var_os("XDG_STATE_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| home.join(".local/state"))
+        .join("eax-restore-linux/installed-games.txt")
+}
+
+/// Every folder holding a live install: the ones found under the Steam
+/// libraries and Heroic's game folders, plus the folders recorded in
+/// `state_file` (a game typed or browsed to anywhere else on disk).
+pub fn live_manifest_dirs(home: &Path, state_file: &Path) -> BTreeSet<PathBuf> {
+    let mut dirs = manifest_dirs_on_disk(home);
+    if let Ok(text) = fs::read_to_string(state_file) {
+        dirs.extend(
+            text.lines()
+                .map(str::trim)
+                .filter(|l| !l.is_empty())
+                .map(PathBuf::from)
+                .filter(|d| d.is_dir() && manifest_is_live(d)),
+        );
+    }
+    dirs
 }
 
 #[cfg(test)]
@@ -309,6 +335,10 @@ pub mod tests {
                 ),
             );
             w
+        }
+
+        pub fn state_file(&self) -> PathBuf {
+            self.p(".local/state/eax-restore-linux/installed-games.txt")
         }
 
         pub fn p(&self, rel: &str) -> PathBuf {
@@ -401,7 +431,7 @@ pub mod tests {
             ".local/share/Steam/steamapps/common/Beta/.eax-restore-manifest.txt",
             "# EAX Restore: uninstalled 2026-01-01\n",
         );
-        let live = live_manifest_dirs(w.home.path());
+        let live = live_manifest_dirs(w.home.path(), &w.state_file());
         assert_eq!(live.len(), 1);
         assert!(live.iter().next().unwrap().ends_with("common/Alpha/bin"));
     }
@@ -421,13 +451,57 @@ pub mod tests {
                 w.p("Games/Heroic").display()
             ),
         );
-        assert_eq!(live_manifest_dirs(w.home.path()), BTreeSet::from([game]));
+        assert_eq!(
+            live_manifest_dirs(w.home.path(), &w.state_file()),
+            BTreeSet::from([game])
+        );
     }
 
     #[test]
     fn no_launchers_means_nothing_found() {
         let home = tempfile::tempdir().unwrap();
         assert!(steam_library_dirs(home.path()).is_empty());
-        assert!(live_manifest_dirs(home.path()).is_empty());
+        assert!(live_manifest_dirs(home.path(), &home.path().join("none.txt")).is_empty());
+    }
+
+    #[test]
+    fn a_game_recorded_in_the_state_file_is_found_wherever_it_is() {
+        let w = World::new();
+        w.write("mnt/games/Foo/.eax-restore-manifest.txt", "/x/dsound.dll\n");
+        w.write(
+            "mnt/games/Gone/.eax-restore-manifest.txt",
+            "# EAX Restore: uninstalled on 2026-01-01\n",
+        );
+        let foo = w.p("mnt/games/Foo");
+        w.write(
+            ".local/state/eax-restore-linux/installed-games.txt",
+            &format!(
+                "{}\n{}\n\n{}\n",
+                foo.display(),
+                w.p("mnt/games/Gone").display(),
+                w.p("mnt/nowhere").display()
+            ),
+        );
+        // Not in a Steam library or a Heroic folder: only the record leads to it.
+        assert_eq!(
+            live_manifest_dirs(w.home.path(), &w.state_file()),
+            BTreeSet::from([foo])
+        );
+    }
+
+    #[test]
+    fn a_folder_is_listed_once_when_the_scan_and_the_record_both_find_it() {
+        let w = World::new();
+        w.steam_game(".local/share/Steam", 10, "Alpha");
+        w.write(
+            ".local/share/Steam/steamapps/common/Alpha/.eax-restore-manifest.txt",
+            "/x\n",
+        );
+        let alpha = w.p(".local/share/Steam/steamapps/common/Alpha");
+        w.write(
+            ".local/state/eax-restore-linux/installed-games.txt",
+            &format!("{}\n", alpha.display()),
+        );
+        assert_eq!(live_manifest_dirs(w.home.path(), &w.state_file()).len(), 1);
     }
 }
