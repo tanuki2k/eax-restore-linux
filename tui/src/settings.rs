@@ -4,12 +4,10 @@
 //! which only an install has.
 
 use crate::db::{ConfigFile, Game, OnlyIf, Setting};
-use ratatui::style::{Color, Style, Stylize};
+use crate::theme;
+use ratatui::style::Stylize;
 use ratatui::text::{Line, Span};
 use serde_json::Value;
-
-/// Same blue the Bash script's `Note:` uses.
-const NOTE: Color = Color::LightBlue;
 
 /// Splits `text` into lines of at most `width` characters, each starting with
 /// `indent`. A line break the writer meant is kept, and a blank line stays one.
@@ -102,9 +100,9 @@ fn speaker_name(s: &str) -> &str {
 
 fn tag(tested: bool) -> Span<'static> {
     if tested {
-        Span::styled("(tested)", Style::new().fg(Color::Green))
+        Span::styled("(tested)", theme::green())
     } else {
-        Span::styled("(untested)", Style::new().fg(NOTE))
+        Span::styled("(untested)", theme::note())
     }
 }
 
@@ -187,7 +185,7 @@ fn push_setting(out: &mut Vec<Line<'static>>, s: &Setting, game: &Game, width: u
         };
         out.push(Line::from(vec![
             Span::raw(format!("{indent}{:<key_len$}  → ", r.key)),
-            Span::styled(r.value.clone(), Style::new().fg(Color::Green)),
+            Span::styled(r.value.clone(), theme::green()),
         ]));
         prev_file = Some(&r.file);
         prev_section = Some(&r.section);
@@ -236,7 +234,7 @@ fn alsoft_help(section: &str, key: &str) -> Option<&'static str> {
 pub fn lines(game: &Game, width: usize) -> Vec<Line<'static>> {
     let mut out = Vec::new();
     let cfg = &game.game_config;
-    let heading = |text: String| Line::from(text).bold();
+    let heading = |text: String| Line::from(Span::styled(text, theme::white()));
 
     if cfg.audio_settings.is_empty() && cfg.optional_settings.is_empty() {
         out.extend(

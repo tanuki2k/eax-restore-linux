@@ -2,7 +2,7 @@
 //! changed in `app`, change it here too; a test checks the main ones appear.
 
 use crate::settings::wrap;
-use ratatui::style::{Color, Style, Stylize};
+use crate::theme;
 use ratatui::text::{Line, Span};
 
 /// (key, what it does). An empty key starts a heading.
@@ -39,29 +39,24 @@ const ROWS: &[(&str, &str)] = &[
     ("(blank)", "The game isn't on this PC."),
 ];
 
-/// Width of the key column, with a space after it.
-const KEY_COLUMN: usize = 11;
+/// The key column, as the old browser's `browse_help` set it: a space, the key
+/// padded to 13, a space, then the text.
+const KEY_COLUMN: usize = 13;
 
 pub fn lines(width: usize) -> Vec<Line<'static>> {
-    let text_width = width.saturating_sub(KEY_COLUMN + 1);
+    let text_width = width.saturating_sub(KEY_COLUMN + 2);
     let mut out = Vec::new();
     for (key, text) in ROWS {
         if key.is_empty() {
-            if !out.is_empty() {
-                out.push(Line::raw(""));
-            }
-            out.push(Line::from(*text).bold());
+            out.push(Line::raw(""));
+            out.push(Line::from(Span::styled(format!("{text}:"), theme::white())));
             continue;
         }
-        let wrapped = wrap(text, text_width, "");
-        for (i, part) in wrapped.into_iter().enumerate() {
+        for (i, part) in wrap(text, text_width, "").into_iter().enumerate() {
             let lead = if i == 0 {
-                Span::styled(
-                    format!("{key:<KEY_COLUMN$} "),
-                    Style::new().fg(Color::Cyan).bold(),
-                )
+                Span::styled(format!(" {key:<KEY_COLUMN$} "), theme::key())
             } else {
-                Span::raw(" ".repeat(KEY_COLUMN + 1))
+                Span::raw(" ".repeat(KEY_COLUMN + 2))
             };
             out.push(Line::from(vec![lead, Span::raw(part)]));
         }
@@ -111,10 +106,12 @@ mod tests {
     #[test]
     fn the_list_marks_are_explained() {
         let t = text(&lines(80));
-        assert!(t.contains("+           The fix is installed."));
-        assert!(t.contains(
-            "*           The fix is installed, but the game isn't in the game database."
-        ));
+        let row = |key: &str, text: &str| format!(" {key:<13} {text}");
+        assert!(t.contains(&row("+", "The fix is installed.")));
+        assert!(t.contains(&row(
+            "*",
+            "The fix is installed, but the game isn't in the game database."
+        )));
     }
 
     #[test]
@@ -133,7 +130,8 @@ mod tests {
     #[test]
     fn headings_are_separated_by_a_blank_line() {
         let t = text(&lines(80));
-        assert!(t.starts_with("The basics\n"));
-        assert!(t.contains("\n\nFilters\n"));
+        // Each heading has a blank line before it, even the first, as in the old help.
+        assert!(t.starts_with("\nThe basics:\n"));
+        assert!(t.contains("\n\nFilters:\n"));
     }
 }

@@ -9,6 +9,7 @@ mod library;
 mod picker;
 mod runner;
 mod settings;
+mod theme;
 mod ui;
 
 use anyhow::{Context, Result};

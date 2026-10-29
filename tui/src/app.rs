@@ -157,6 +157,20 @@ impl App {
         }
     }
 
+    /// Which characters of `name` the search matched, for the list to light up.
+    pub fn match_indices(&self, name: &str) -> Vec<u32> {
+        if self.query.trim().is_empty() {
+            return Vec::new();
+        }
+        let pattern = Pattern::parse(&self.query, CaseMatching::Smart, Normalization::Smart);
+        let (mut buf, mut found) = (Vec::new(), Vec::new());
+        let mut matcher = Matcher::default();
+        pattern.indices(Utf32Str::new(name, &mut buf), &mut matcher, &mut found);
+        found.sort_unstable();
+        found.dedup();
+        found
+    }
+
     pub fn current(&self) -> Option<&Entry> {
         self.visible.get(self.selected).map(|&i| &self.games[i])
     }
