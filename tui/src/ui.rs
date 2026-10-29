@@ -3,6 +3,7 @@
 use crate::app::{App, Filter, Pane};
 use crate::filters::Filters;
 use crate::games::{Entry, Status};
+use crate::help;
 use crate::library::StoreKind;
 use crate::settings;
 use ratatui::layout::Rect;
@@ -13,6 +14,29 @@ use ratatui::widgets::{Block, BorderType, Clear, List, ListItem, ListState, Para
 use ratatui::Frame;
 
 pub fn draw(f: &mut Frame, app: &App) {
+    if app.zoom {
+        // The pane alone, with the key bar under it.
+        let rows = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(3), Constraint::Length(1)])
+            .split(f.area());
+        draw_pane(f, app, rows[0], true);
+        draw_bar(f, app, rows[1]);
+    } else {
+        draw_main(f, app);
+    }
+    if let (Some(menu), Some(e)) = (&app.menu, app.current()) {
+        draw_menu(f, menu, &e.name);
+    }
+    if let Some(p) = &app.picker {
+        draw_picker(f, p);
+    }
+    if app.help {
+        draw_help(f, app);
+    }
+}
+
+fn draw_main(f: &mut Frame, app: &App) {
     // The filters wrap onto a second line on a narrow terminal.
     let filter_rows = if f.area().width < 100 { 2 } else { 1 };
     let rows = Layout::default()
@@ -68,12 +92,23 @@ pub fn draw(f: &mut Frame, app: &App) {
     let mut state = ListState::default().with_selected(app.current().map(|_| app.selected));
     f.render_stateful_widget(list, panes[0], &mut state);
 
+    draw_pane(f, app, panes[1], false);
+
+    draw_bar(f, app, rows[3]);
+}
+
+/// The right-hand pane: the profile or the settings. `zoomed` is the full-screen
+/// view, where the game's name goes in the title because the list is hidden.
+fn draw_pane(f: &mut Frame, app: &App, area: Rect, zoomed: bool) {
     let pane_block = Block::bordered()
         .border_type(BorderType::Rounded)
-        .title(pane_title(app.pane));
+        .title(pane_title(
+            app.pane,
+            app.current().filter(|_| zoomed).map(|e| e.name.as_str()),
+        ));
     match (app.pane, app.current()) {
         (Pane::Settings, Some(e)) => {
-            let inner = pane_block.inner(panes[1]);
+            let inner = pane_block.inner(area);
             let lines = match &e.game {
                 Some(g) => settings::lines(g, inner.width as usize),
                 None => vec![Line::from(format!(
@@ -87,7 +122,7 @@ pub fn draw(f: &mut Frame, app: &App) {
             let detail = Paragraph::new(lines)
                 .scroll((app.pane_scroll.min(max), 0))
                 .block(pane_block);
-            f.render_widget(detail, panes[1]);
+            f.render_widget(detail, area);
         }
         (_, current) => {
             app.pane_max.set(0);
@@ -101,35 +136,56 @@ pub fn draw(f: &mut Frame, app: &App) {
             let detail = Paragraph::new(lines)
                 .wrap(Wrap { trim: false })
                 .block(pane_block);
-            f.render_widget(detail, panes[1]);
+            f.render_widget(detail, area);
         }
     }
+}
 
-    let bar = if !app.message.is_empty() {
-        Paragraph::new(app.message.as_str()).yellow().bold()
+fn draw_bar(f: &mut Frame, app: &App, area: Rect) {
+    let text = if !app.message.is_empty() {
+        f.render_widget(Paragraph::new(app.message.as_str()).yellow().bold(), area);
+        return;
+    } else if app.help {
+        "↑/↓ scroll · Esc or F1 close"
     } else if app.picker.is_some() {
-        Paragraph::new("↑/↓ move · Enter open · ←/Backspace up · Space use this folder · . show hidden folders · ~ home · Esc cancel").dim()
+        "↑/↓ move · Enter open · ←/Backspace up · Space use this folder · . show hidden folders · ~ home · Esc cancel"
     } else if app.menu.is_some() {
-        Paragraph::new("↑/↓ choose · Enter run · Esc back").dim()
+        "↑/↓ choose · Enter run · Esc back"
+    } else if app.zoom {
+        "↑/↓ scroll · ←/→ Profile/Settings · Enter actions · F1 help · Esc back"
     } else if app.pane == Pane::Settings {
-        Paragraph::new(
-            "Type to filter · Shift-↑/↓ scroll · ←/→ Profile/Settings · Enter actions · Esc quit",
-        )
-        .dim()
+        "Shift-↑/↓ scroll · Ctrl-F full screen · ←/→ Profile/Settings · Enter actions · F1 help · Esc quit"
     } else {
-        Paragraph::new(
-            "Type to filter · Enter actions · ←/→ Profile/Settings · Ctrl-A add game · Esc quit",
-        )
-        .dim()
+        "Type to filter · Enter actions · ←/→ Profile/Settings · Ctrl-A add game · F1 help · Esc quit"
     };
-    f.render_widget(bar, rows[3]);
+    f.render_widget(Paragraph::new(text).dim(), area);
+}
 
-    if let (Some(menu), Some(e)) = (&app.menu, app.current()) {
-        draw_menu(f, menu, &e.name);
-    }
-    if let Some(p) = &app.picker {
-        draw_picker(f, p);
-    }
+/// The F1 key list, over whatever is on screen.
+fn draw_help(f: &mut Frame, app: &App) {
+    let area = f.area();
+    let w = area.width.min(90);
+    let h = area.height.saturating_sub(2).max(3).min(area.height);
+    let popup = Rect::new(
+        area.x + (area.width - w) / 2,
+        area.y + (area.height - h) / 2,
+        w,
+        h,
+    );
+    f.render_widget(Clear, popup);
+    let block = Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" Keys ");
+    let inner = block.inner(popup);
+    let lines = help::lines(inner.width as usize);
+    let max = u16::try_from(lines.len().saturating_sub(inner.height as usize)).unwrap_or(u16::MAX);
+    app.help_max.set(max);
+    f.render_widget(
+        Paragraph::new(lines)
+            .scroll((app.help_scroll.min(max), 0))
+            .block(block),
+        popup,
+    );
 }
 
 fn draw_picker(f: &mut Frame, p: &crate::picker::Picker) {
@@ -226,7 +282,7 @@ fn draw_menu(f: &mut Frame, menu: &crate::app::Menu, title: &str) {
 }
 
 /// The pane's title: both views named, the one showing lit.
-fn pane_title(active: Pane) -> Line<'static> {
+fn pane_title(active: Pane, game: Option<&str>) -> Line<'static> {
     let name = |text: &'static str, on: bool| {
         if on {
             Span::raw(text).bold().cyan()
@@ -234,13 +290,17 @@ fn pane_title(active: Pane) -> Line<'static> {
             Span::raw(text).dim()
         }
     };
-    Line::from(vec![
-        Span::raw(" "),
+    let mut spans = vec![Span::raw(" ")];
+    if let Some(game) = game {
+        spans.push(Span::raw(format!("{game}: ")).bold());
+    }
+    spans.extend([
         name("Profile", active == Pane::Profile),
         Span::raw(" | ").dim(),
         name("Settings", active == Pane::Settings),
         Span::raw(" "),
-    ])
+    ]);
+    Line::from(spans)
 }
 
 /// Each filter with its key and value; one that narrows the list is lit.
@@ -560,5 +620,72 @@ mod tests {
         let mut app = App::new(vec![manual]);
         press(&mut app, ratatui::crossterm::event::KeyCode::Right);
         assert!(screen(&app, 100, 14).contains("The game database has no profile for Obscure."));
+    }
+
+    fn ctrl_key(app: &mut App, c: char) {
+        app.handle_key(ratatui::crossterm::event::KeyEvent::new(
+            ratatui::crossterm::event::KeyCode::Char(c),
+            ratatui::crossterm::event::KeyModifiers::CONTROL,
+        ));
+    }
+
+    #[test]
+    fn f1_shows_the_key_list_over_the_screen_and_the_bar_says_how_to_close_it() {
+        let mut app = App::new(entries(WITH_SETTINGS));
+        press(&mut app, ratatui::crossterm::event::KeyCode::F(1));
+        let s = screen(&app, 100, 30);
+        println!("{s}");
+        assert!(s.contains(" Keys "));
+        assert!(s.contains("The basics"));
+        assert!(s.contains("Ctrl-F"));
+        assert!(s.contains("The marks in the list"));
+        assert!(s.contains("Esc or F1 close"));
+    }
+
+    #[test]
+    fn on_a_short_terminal_the_help_scrolls_to_its_last_line() {
+        let mut app = App::new(entries(WITH_SETTINGS));
+        press(&mut app, ratatui::crossterm::event::KeyCode::F(1));
+        assert!(!screen(&app, 100, 14).contains("The game isn't on this PC."));
+        assert!(app.help_max.get() > 0);
+        press(&mut app, ratatui::crossterm::event::KeyCode::End);
+        assert!(screen(&app, 100, 14).contains("The game isn't on this PC."));
+    }
+
+    #[test]
+    fn full_screen_hides_the_list_and_names_the_game_in_the_title() {
+        let mut app = App::new(entries(WITH_SETTINGS));
+        let normal = screen(&app, 100, 20);
+        assert!(normal.contains(" Games "));
+        assert!(normal.contains("Find a game"));
+        ctrl_key(&mut app, 'f');
+        let s = screen(&app, 100, 20);
+        println!("{s}");
+        assert!(!s.contains(" Games "));
+        assert!(!s.contains("Find a game"));
+        assert!(s.contains("Quake 4: Profile | Settings"));
+        assert!(s.contains("Esc back"));
+    }
+
+    #[test]
+    fn full_screen_settings_use_the_whole_width() {
+        let mut app = App::new(entries(WITH_SETTINGS));
+        press(&mut app, ratatui::crossterm::event::KeyCode::Right);
+        ctrl_key(&mut app, 'f');
+        let wide = screen(&app, 120, 20);
+        // The folder label fits on one line only because the pane is wide now.
+        assert!(wide.contains("q.cfg (folder with the game's .exe: q4base/q.cfg)"));
+    }
+
+    #[test]
+    fn the_help_also_opens_from_full_screen_and_returns_there() {
+        let mut app = App::new(entries(WITH_SETTINGS));
+        ctrl_key(&mut app, 'f');
+        press(&mut app, ratatui::crossterm::event::KeyCode::F(1));
+        assert!(screen(&app, 100, 30).contains(" Keys "));
+        press(&mut app, ratatui::crossterm::event::KeyCode::Esc);
+        let s = screen(&app, 100, 30);
+        assert!(!s.contains(" Keys "));
+        assert!(s.contains("Quake 4: Profile | Settings"));
     }
 }

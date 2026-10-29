@@ -64,6 +64,13 @@ pub struct Launch {
 pub struct App {
     pub games: Vec<Entry>,
     pub menu: Option<Menu>,
+    /// The right pane takes the whole screen (Ctrl-F).
+    pub zoom: bool,
+    /// The F1 key list is open.
+    pub help: bool,
+    pub help_scroll: u16,
+    /// Like `pane_max`: set by `draw`, since it depends on the terminal's size.
+    pub help_max: std::cell::Cell<u16>,
     /// The "Add a game" folder picker, while it is open.
     pub picker: Option<Picker>,
     home: PathBuf,
@@ -91,6 +98,10 @@ impl App {
         let mut app = App {
             games,
             menu: None,
+            zoom: false,
+            help: false,
+            help_scroll: 0,
+            help_max: std::cell::Cell::new(0),
             picker: None,
             home: PathBuf::from("/"),
             launch: None,
@@ -234,6 +245,61 @@ impl App {
         }
     }
 
+    fn open_menu(&mut self) {
+        if let Some(e) = self.current() {
+            self.menu = Some(Menu {
+                actions: actions::available(e),
+                selected: 0,
+            });
+        }
+    }
+
+    fn open_help(&mut self) {
+        self.help = true;
+        self.help_scroll = 0;
+    }
+
+    fn scroll_help(&mut self, delta: i32) {
+        let max = i32::from(self.help_max.get());
+        self.help_scroll = (i32::from(self.help_scroll) + delta).clamp(0, max) as u16;
+    }
+
+    fn handle_help_key(&mut self, key: KeyEvent) {
+        match key.code {
+            KeyCode::Esc | KeyCode::F(1) | KeyCode::Char('q') => self.help = false,
+            KeyCode::Up => self.scroll_help(-1),
+            KeyCode::Down => self.scroll_help(1),
+            KeyCode::PageUp => self.scroll_help(-10),
+            KeyCode::PageDown => self.scroll_help(10),
+            KeyCode::Home => self.help_scroll = 0,
+            KeyCode::End => self.help_scroll = self.help_max.get(),
+            _ => {}
+        }
+    }
+
+    /// With the right pane full screen there is no list to move through, so
+    /// the arrows scroll it, and typing does nothing rather than change a
+    /// search nobody can see.
+    fn handle_zoom_key(&mut self, key: KeyEvent) {
+        let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+        match key.code {
+            KeyCode::Esc => self.zoom = false,
+            KeyCode::Char('f') if ctrl => self.zoom = false,
+            KeyCode::Char('c') if ctrl => self.quit = true,
+            KeyCode::F(1) => self.open_help(),
+            KeyCode::Up => self.scroll_pane(-1),
+            KeyCode::Down => self.scroll_pane(1),
+            KeyCode::PageUp => self.scroll_pane(-10),
+            KeyCode::PageDown => self.scroll_pane(10),
+            KeyCode::Home => self.pane_scroll = 0,
+            KeyCode::End => self.pane_scroll = self.pane_max.get(),
+            KeyCode::Left => self.show_pane(Pane::Profile),
+            KeyCode::Right => self.show_pane(Pane::Settings),
+            KeyCode::Enter => self.open_menu(),
+            _ => {}
+        }
+    }
+
     fn handle_key_inner(&mut self, key: KeyEvent) {
         self.message.clear();
         if self.picker.is_some() {
@@ -241,6 +307,12 @@ impl App {
         }
         if self.menu.is_some() {
             return self.handle_menu_key(key);
+        }
+        if self.help {
+            return self.handle_help_key(key);
+        }
+        if self.zoom {
+            return self.handle_zoom_key(key);
         }
         let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
         let shift = key.modifiers.contains(KeyModifiers::SHIFT);
@@ -263,14 +335,9 @@ impl App {
                 let start = picker::start_dir(&self.home);
                 self.picker = Some(Picker::new(start, self.home.clone()));
             }
-            KeyCode::Enter => {
-                if let Some(e) = self.current() {
-                    self.menu = Some(Menu {
-                        actions: actions::available(e),
-                        selected: 0,
-                    });
-                }
-            }
+            KeyCode::Enter => self.open_menu(),
+            KeyCode::F(1) => self.open_help(),
+            KeyCode::Char('f') if ctrl => self.zoom = self.current().is_some(),
             KeyCode::Tab => {
                 self.filter = self.filter.next();
                 self.refilter();
@@ -570,5 +637,82 @@ mod tests {
         a.handle_key(shift(KeyCode::Down));
         a.handle_key(key(KeyCode::Right));
         assert_eq!(a.pane_scroll, 0);
+    }
+
+    #[test]
+    fn f1_opens_the_help_and_escape_closes_it_without_quitting() {
+        let mut a = app();
+        a.handle_key(key(KeyCode::F(1)));
+        assert!(a.help);
+        a.handle_key(key(KeyCode::Esc));
+        assert!(!a.help && !a.quit);
+        a.handle_key(key(KeyCode::F(1)));
+        a.handle_key(key(KeyCode::F(1)));
+        assert!(!a.help, "F1 again closes it");
+    }
+
+    #[test]
+    fn the_help_scrolls_within_its_length_and_typing_does_not_reach_the_search() {
+        let mut a = app();
+        a.handle_key(key(KeyCode::F(1)));
+        a.help_max.set(4);
+        for _ in 0..9 {
+            a.handle_key(key(KeyCode::Down));
+        }
+        assert_eq!(a.help_scroll, 4);
+        a.handle_key(key(KeyCode::Up));
+        assert_eq!(a.help_scroll, 3);
+        a.handle_key(key(KeyCode::Home));
+        assert_eq!(a.help_scroll, 0);
+        type_str(&mut a, "zz");
+        assert!(a.query.is_empty());
+    }
+
+    #[test]
+    fn ctrl_f_takes_the_pane_full_screen_and_escape_gives_the_list_back() {
+        let mut a = app();
+        a.handle_key(ctrl('f'));
+        assert!(a.zoom);
+        a.handle_key(key(KeyCode::Esc));
+        assert!(!a.zoom && !a.quit);
+        a.handle_key(ctrl('f'));
+        a.handle_key(ctrl('f'));
+        assert!(!a.zoom, "Ctrl-F again returns");
+    }
+
+    #[test]
+    fn full_screen_arrows_scroll_the_pane_not_the_selection() {
+        let mut a = app();
+        a.handle_key(ctrl('f'));
+        a.pane_max.set(6);
+        a.handle_key(key(KeyCode::Down));
+        a.handle_key(key(KeyCode::Down));
+        assert_eq!((a.pane_scroll, a.selected), (2, 0));
+        a.handle_key(key(KeyCode::End));
+        assert_eq!(a.pane_scroll, 6);
+        type_str(&mut a, "zz");
+        assert!(a.query.is_empty());
+    }
+
+    #[test]
+    fn full_screen_still_switches_panes_opens_actions_and_help() {
+        let mut a = app();
+        a.handle_key(ctrl('f'));
+        a.handle_key(key(KeyCode::Right));
+        assert_eq!(a.pane, Pane::Settings);
+        a.handle_key(key(KeyCode::Enter));
+        assert!(a.menu.is_some());
+        a.handle_key(key(KeyCode::Esc));
+        assert!(a.zoom, "Esc closed only the menu");
+        a.handle_key(key(KeyCode::F(1)));
+        assert!(a.help);
+    }
+
+    #[test]
+    fn there_is_nothing_to_show_full_screen_when_nothing_is_listed() {
+        let mut a = app();
+        type_str(&mut a, "zzzz");
+        a.handle_key(ctrl('f'));
+        assert!(!a.zoom);
     }
 }

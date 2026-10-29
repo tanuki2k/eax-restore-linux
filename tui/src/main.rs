@@ -4,6 +4,7 @@ mod db;
 mod fetch;
 mod filters;
 mod games;
+mod help;
 mod library;
 mod picker;
 mod runner;
