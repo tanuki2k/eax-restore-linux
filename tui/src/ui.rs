@@ -700,10 +700,22 @@ fn draw_picker(f: &mut Frame, p: &crate::picker::Picker, area: Rect) {
     } else {
         Some(p.selected)
     };
+    // The window stays put while the highlight moves about inside it, as in the
+    // Games list.
+    let offset = window_offset(
+        p.selected,
+        p.offset.get(),
+        usize::from(parts[1].height),
+        p.dirs.len(),
+        SCROLL_OFF,
+    );
+    p.offset.set(offset);
     f.render_stateful_widget(
         list,
         parts[1],
-        &mut ListState::default().with_selected(selected),
+        &mut ListState::default()
+            .with_offset(offset)
+            .with_selected(selected),
     );
 }
 
@@ -1525,5 +1537,92 @@ mod tests {
         assert_eq!(list_view(&app), (name(0), rows - 3, rows));
         press(&mut app, Down);
         assert_eq!(list_view(&app), (name(1), rows - 3, rows));
+    }
+
+    /// A picker over 40 sub-folders, d00 to d39, opened on a screen.
+    fn picker_with_many_folders() -> (tempfile::TempDir, App) {
+        let home = tempfile::tempdir().unwrap();
+        for i in 0..40 {
+            std::fs::create_dir_all(home.path().join(format!("Games/Heroic/d{i:02}"))).unwrap();
+        }
+        let mut app = App::new(entries(WITH_SETTINGS));
+        app.set_home(home.path().to_path_buf());
+        ctrl_key(&mut app, 'a');
+        (home, app)
+    }
+
+    /// The first folder showing, the highlighted row (1-based) and the rows in the
+    /// picker's list.
+    fn picker_view(app: &App) -> (String, usize, usize) {
+        let (w, h) = (100, 24);
+        let buf = drawn(app, w, h);
+        let g = grid(app, w, h);
+        let top = row_of(&screen(app, w, h), "Choose the folder");
+        // The popup's left border is column 5; below its three header rows the list
+        // runs to the bottom border.
+        let bottom = (top + 1..usize::from(h)).find(|y| g[*y][5] == '╰').unwrap();
+        let rows = top + 4..bottom;
+        let first = row_text(&g[rows.start][8..20])
+            .split('/')
+            .next()
+            .unwrap()
+            .to_string();
+        let lit = rows
+            .clone()
+            .position(|y| buf[(12, u16::try_from(y).unwrap())].bg == Color::Indexed(236))
+            .map(|p| p + 1)
+            .unwrap();
+        (first, lit, rows.len())
+    }
+
+    #[test]
+    fn the_folder_picker_scrolls_like_the_games_list() {
+        use ratatui::crossterm::event::KeyCode::{Down, PageDown, Up};
+        let (_home, mut app) = picker_with_many_folders();
+        let name = |i: usize| format!("d{i:02}");
+        let (first, row, rows) = picker_view(&app);
+        assert_eq!((first.as_str(), row), ("d00", 1));
+        assert!((8..40).contains(&rows), "a list that scrolls: {rows}");
+        // Down from the top: the highlight runs to three clear of the bottom, then
+        // the list scrolls and the highlight holds.
+        for _ in 0..rows - 4 {
+            press(&mut app, Down);
+        }
+        assert_eq!(picker_view(&app), (name(0), rows - 3, rows));
+        press(&mut app, Down);
+        assert_eq!(picker_view(&app), (name(1), rows - 3, rows));
+        // To the bottom: the last folder on the last row.
+        for _ in 0..5 {
+            press(&mut app, PageDown);
+        }
+        assert_eq!(picker_view(&app), (name(40 - rows), rows, rows));
+        // Up from the bottom: the highlight climbs to row 4 with the list still, then
+        // the list scrolls under it.
+        for _ in 0..rows - 4 {
+            press(&mut app, Up);
+        }
+        assert_eq!(picker_view(&app), (name(40 - rows), 4, rows));
+        press(&mut app, Up);
+        assert_eq!(picker_view(&app), (name(40 - rows - 1), 4, rows));
+    }
+
+    #[test]
+    fn a_folder_entered_starts_at_the_top_of_its_list() {
+        use ratatui::crossterm::event::KeyCode::{Enter, PageDown};
+        let (home, mut app) = picker_with_many_folders();
+        for i in 0..40 {
+            std::fs::create_dir_all(home.path().join(format!("Games/Heroic/d39/s{i:02}"))).unwrap();
+        }
+        for _ in 0..5 {
+            press(&mut app, PageDown);
+        }
+        // Into d39 (the highlighted, last folder), whose own list is long too.
+        press(&mut app, Enter);
+        let (first, row, _) = picker_view(&app);
+        assert_eq!(
+            (first.as_str(), row),
+            ("s00", 1),
+            "not left scrolled from the parent"
+        );
     }
 }

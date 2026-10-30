@@ -13,6 +13,9 @@ pub struct Picker {
     pub show_hidden: bool,
     /// How many .exe files sit directly in `dir`.
     pub exes: usize,
+    /// The first folder showing in the list, kept between redraws so the window
+    /// only moves when the highlight nears its edge. Set by `draw`.
+    pub offset: std::cell::Cell<usize>,
     home: PathBuf,
 }
 
@@ -40,6 +43,7 @@ impl Picker {
             selected: 0,
             show_hidden: false,
             exes: 0,
+            offset: std::cell::Cell::new(0),
             home,
         };
         p.reload();
@@ -62,6 +66,7 @@ impl Picker {
         self.dirs = dirs;
         self.exes = exes;
         self.selected = 0;
+        self.offset.set(0);
     }
 
     pub fn move_by(&mut self, delta: isize) {
