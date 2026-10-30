@@ -9,7 +9,7 @@ use crate::games::Entry;
 use crate::library::StoreKind;
 use crate::settings::wrap;
 use crate::theme;
-use ratatui::style::{Color, Modifier, Style};
+use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 
 fn label_of(k: StoreKind) -> &'static str {
@@ -414,8 +414,7 @@ fn game_lines(
     } else {
         g.eax.versions.join(", ")
     };
-    let strong_green = Style::new().fg(Color::Green).add_modifier(Modifier::BOLD);
-    let strong_yellow = Style::new().fg(Color::Yellow).add_modifier(Modifier::BOLD);
+    let (strong_green, strong_yellow) = (theme::strong_green(), theme::label());
     items.push(row(
         "EAX Support",
         match status {

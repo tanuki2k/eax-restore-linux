@@ -22,19 +22,35 @@ pub const SELECT_MATCH: Color = Color::Indexed(151);
 /// Matched letters in the other rows.
 pub const MATCH: Color = Color::Indexed(108);
 
+// The script prints these as bold + a plain colour (`\033[1;33m`), which a
+// terminal draws in the bright shade of that colour. ratatui's `Color::Yellow`
+// is written as the dark entry (38;5;3), so the bold ones use the Light* names,
+// which are the bright entries (38;5;11).
+
 /// `WHITE` in the script: bold, for headings and values.
 pub fn white() -> Style {
-    Style::new().fg(Color::Gray).add_modifier(Modifier::BOLD)
+    Style::new().fg(Color::White).add_modifier(Modifier::BOLD)
 }
 
 /// `YELLOW`: the labels in front of a value.
 pub fn label() -> Style {
-    Style::new().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+    Style::new()
+        .fg(Color::LightYellow)
+        .add_modifier(Modifier::BOLD)
 }
 
 /// A key name: bold cyan.
 pub fn key() -> Style {
-    Style::new().fg(Color::Cyan).add_modifier(Modifier::BOLD)
+    Style::new()
+        .fg(Color::LightCyan)
+        .add_modifier(Modifier::BOLD)
+}
+
+/// `GREEN` + `BOLD`: the EAX versions a game supports.
+pub fn strong_green() -> Style {
+    Style::new()
+        .fg(Color::LightGreen)
+        .add_modifier(Modifier::BOLD)
 }
 
 /// `GREEN`: good news, and values being set.

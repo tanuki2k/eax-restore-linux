@@ -37,17 +37,25 @@ pub fn draw(f: &mut Frame, app: &App) {
     if let Some(p) = &app.picker {
         draw_picker(f, p, body);
     }
+    if app.help {
+        draw_help(f, app, body);
+    }
 }
 
 /// A rounded box in the old browser's colours, its title centred in the top edge.
 fn boxed(title: &str) -> Block<'static> {
+    boxed_line(Line::from(Span::styled(
+        format!(" {title} "),
+        Style::new().fg(theme::LABEL),
+    )))
+}
+
+/// The same box with a title made of several styled parts.
+fn boxed_line(title: Line<'static>) -> Block<'static> {
     Block::bordered()
         .border_type(BorderType::Rounded)
         .border_style(Style::new().fg(theme::BORDER))
-        .title(Span::styled(
-            format!(" {title} "),
-            Style::new().fg(theme::LABEL),
-        ))
+        .title(title)
         .title_alignment(Alignment::Center)
 }
 
@@ -297,44 +305,20 @@ fn game_line(app: &App, e: &Entry, selected: bool) -> Line<'static> {
     Line::from(spans)
 }
 
-/// What the right-hand pane is showing.
-#[derive(Clone, Copy, PartialEq)]
-enum View {
-    Help,
-    Settings,
-    Profile,
-}
-
-/// The right-hand pane: help, the settings or the profile. `zoomed` is the
-/// full-screen view, where the game's name goes in the title because the list is
-/// hidden.
+/// The right-hand pane: the settings or the profile. `zoomed` is the full-screen
+/// view, where the game's name goes in the title because the list is hidden.
 fn draw_pane(f: &mut Frame, app: &App, area: Rect, zoomed: bool) {
     let current = app.current();
-    let view = if app.help {
-        View::Help
-    } else if app.pane == Pane::Settings && current.is_some() {
-        View::Settings
-    } else {
-        View::Profile
-    };
-    let name = match view {
-        View::Help => "Help",
-        View::Settings => "Game settings",
-        View::Profile => "Game profile",
-    };
-    let title = match current.filter(|_| zoomed && view != View::Help) {
-        Some(e) => format!("{}: {name}", e.name),
-        None => name.to_string(),
-    };
-    let block = boxed(&title);
-    let inner = block.inner(area);
-    let width = usize::from(inner.width);
+    let settings = app.pane == Pane::Settings && current.is_some();
+    let title = pane_title(
+        settings,
+        current.filter(|_| zoomed).map(|e| e.name.as_str()),
+    );
+    let block = boxed_line(title);
+    let width = usize::from(block.inner(area).width);
 
-    // The first row is kept free for the scroll position, as in the old browser.
-    let mut lines = vec![Line::raw("")];
-    match view {
-        View::Help => lines.extend(help::lines(width)),
-        View::Settings => lines.extend(match current.and_then(|e| e.game.as_ref()) {
+    let lines = if settings {
+        match current.and_then(|e| e.game.as_ref()) {
             Some(g) => settings::lines(g, width),
             None => wrap(
                 &format!(
@@ -347,23 +331,69 @@ fn draw_pane(f: &mut Frame, app: &App, area: Rect, zoomed: bool) {
             .into_iter()
             .map(Line::from)
             .collect(),
-        }),
-        View::Profile => lines.extend(match current {
+        }
+    } else {
+        match current {
             Some(e) => profile::lines(e, width),
             None => vec![
                 Line::from("No game matches.").dim(),
                 Line::from("Press Ctrl-A to add a game by its folder.").dim(),
             ],
-        }),
-    }
+        }
+    };
+    scrolling(f, area, block, lines, app.pane_scroll, &app.pane_max);
+}
 
+/// The pane's title: both views named, the one showing lit.
+fn pane_title(settings: bool, game: Option<&str>) -> Line<'static> {
+    let name = |text: &'static str, on: bool| {
+        Span::styled(
+            text,
+            if on {
+                theme::key()
+            } else {
+                Style::new().fg(theme::LABEL)
+            },
+        )
+    };
+    let mut spans = vec![Span::raw(" ")];
+    if let Some(game) = game {
+        spans.push(Span::styled(
+            format!("{game}: "),
+            Style::new().fg(theme::LABEL),
+        ));
+    }
+    spans.extend([
+        name("Game profile", !settings),
+        Span::styled(" | ", Style::new().fg(theme::BORDER)),
+        name("Game settings", settings),
+        Span::raw(" "),
+    ]);
+    Line::from(spans)
+}
+
+fn is_blank(line: &Line) -> bool {
+    line.spans.iter().all(|s| s.content.trim().is_empty())
+}
+
+/// Text in a box that scrolls, with the scroll position in the box's corner as in
+/// the old browser. The first row is blank so the position has somewhere to sit:
+/// text that does not start with a blank line gets one, text that does is left.
+/// `max_cell` is told how far the text can scroll.
+fn scrolling(
+    f: &mut Frame,
+    area: Rect,
+    block: Block<'static>,
+    mut lines: Vec<Line<'static>>,
+    scroll: u16,
+    max_cell: &std::cell::Cell<u16>,
+) {
+    let inner = block.inner(area);
+    if !lines.first().is_some_and(is_blank) {
+        lines.insert(0, Line::raw(""));
+    }
     let total = lines.len();
     let max = u16::try_from(total.saturating_sub(usize::from(inner.height))).unwrap_or(u16::MAX);
-    let (scroll, max_cell) = if view == View::Help {
-        (app.help_scroll, &app.help_max)
-    } else {
-        (app.pane_scroll, &app.pane_max)
-    };
     max_cell.set(max);
     let top = scroll.min(max);
     f.render_widget(Paragraph::new(lines).scroll((top, 0)).block(block), area);
@@ -381,6 +411,22 @@ fn draw_pane(f: &mut Frame, app: &App, area: Rect, zoomed: bool) {
             Rect::new(inner.x, inner.y, inner.width, 1),
         );
     }
+}
+
+/// The F1 key list, over whatever is on screen.
+fn draw_help(f: &mut Frame, app: &App, area: Rect) {
+    let w = area.width.min(90);
+    let h = area.height.saturating_sub(2).max(3).min(area.height);
+    let popup = Rect::new(
+        area.x + (area.width - w) / 2,
+        area.y + (area.height - h) / 2,
+        w,
+        h,
+    );
+    f.render_widget(Clear, popup);
+    let block = boxed("Help");
+    let lines = help::lines(usize::from(block.inner(popup).width));
+    scrolling(f, popup, block, lines, app.help_scroll, &app.help_max);
 }
 
 /// The key bar: each key in cyan, what it does after it.
@@ -463,7 +509,7 @@ fn draw_bar(f: &mut Frame, app: &App, area: Rect) {
     if !app.message.is_empty() {
         f.render_widget(
             Paragraph::new(app.message.as_str())
-                .style(Style::new().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+                .style(theme::label())
                 .alignment(Alignment::Center)
                 .wrap(Wrap { trim: true }),
             area,
@@ -520,7 +566,7 @@ fn draw_picker(f: &mut Frame, p: &crate::picker::Picker, area: Rect) {
         n => format!("{n} .exe files in this folder."),
     };
     let head = Paragraph::new(vec![
-        Line::from(p.shown_dir()).bold().cyan(),
+        Line::from(Span::styled(p.shown_dir(), theme::key())),
         if p.exes == 0 {
             Line::from(exes).yellow()
         } else {
@@ -958,5 +1004,91 @@ mod tests {
         println!("{s}");
         assert!(s.contains("Esc cancel"));
         assert!(s.contains("Space use this folder"));
+    }
+
+    /// The style of the first cell of `needle` as drawn.
+    fn style_of(app: &App, w: u16, h: u16, needle: &str) -> Style {
+        let mut t = Terminal::new(TestBackend::new(w, h)).unwrap();
+        t.draw(|f| draw(f, app)).unwrap();
+        let buf = t.backend().buffer().clone();
+        for y in 0..h {
+            let row: String = (0..w).map(|x| buf[(x, y)].symbol()).collect();
+            if let Some(at) = row.find(needle) {
+                let col = u16::try_from(row[..at].chars().count()).unwrap();
+                return buf[(col, y)].style();
+            }
+        }
+        panic!("{needle:?} is not on screen");
+    }
+
+    #[test]
+    fn f1_is_a_popup_over_the_screen_not_a_replacement_for_the_pane() {
+        let mut app = App::new(entries(WITH_SETTINGS));
+        press(&mut app, ratatui::crossterm::event::KeyCode::F(1));
+        let s = screen(&app, 120, 40);
+        println!("{s}");
+        // The Search box is still the first row; the popup's own box starts below it.
+        assert!(row_of(&s, " Search ") == 0);
+        assert!(row_of(&s, " Help ") > 0);
+        assert!(s.contains("The basics:"));
+        // The pane's own title, on the top row above the popup, is untouched.
+        assert!(s
+            .lines()
+            .next()
+            .unwrap()
+            .contains("Game profile | Game settings"));
+    }
+
+    #[test]
+    fn the_pane_title_names_both_views_and_lights_the_one_showing() {
+        let mut app = App::new(entries(WITH_SETTINGS));
+        let lit = Some(Color::LightCyan);
+        let plain = Some(Color::Indexed(145));
+        assert!(screen(&app, 120, 24).contains("Game profile | Game settings"));
+        assert_eq!(style_of(&app, 120, 24, "Game profile").fg, lit);
+        assert_eq!(style_of(&app, 120, 24, "Game settings").fg, plain);
+        press(&mut app, ratatui::crossterm::event::KeyCode::Right);
+        assert!(screen(&app, 120, 24).contains("Game profile | Game settings"));
+        assert_eq!(style_of(&app, 120, 24, "Game profile").fg, plain);
+        assert_eq!(style_of(&app, 120, 24, "Game settings").fg, lit);
+    }
+
+    #[test]
+    fn there_is_one_blank_row_above_the_text_in_both_views() {
+        // Full screen, so the pane is the whole width and its rows are easy to read.
+        let mut app = App::new(entries(WITH_SETTINGS));
+        ctrl_key(&mut app, 'f');
+        let rows = |app: &App| -> Vec<String> {
+            screen(app, 100, 24).lines().map(str::to_string).collect()
+        };
+        let profile = rows(&app);
+        assert!(profile[1].contains("1/"), "the scroll position is on row 1");
+        assert!(profile[2].contains("Game details:"), "{:?}", profile[2]);
+        press(&mut app, ratatui::crossterm::event::KeyCode::Right);
+        let settings = rows(&app);
+        assert!(settings[1].contains("1/"));
+        assert!(
+            settings[2].contains("Audio settings for Quake 4:"),
+            "{:?}",
+            settings[2]
+        );
+    }
+
+    #[test]
+    fn bold_colours_are_the_bright_ones_as_the_old_script_gets_from_bold() {
+        let app = App::new(entries(WITH_SETTINGS));
+        let bold = |fg: Color| (Some(fg), true);
+        let seen = |needle: &str| {
+            let st = style_of(&app, 100, 40, needle);
+            (st.fg, st.add_modifier.contains(Modifier::BOLD))
+        };
+        // ` -> Name:` was `\033[1;33m`: bold yellow, drawn bright.
+        assert_eq!(seen("Name:"), bold(Color::LightYellow));
+        // `Game details:` was `\033[1;37m`: bold white.
+        assert_eq!(seen("Game details:"), bold(Color::White));
+        // The EAX versions were bold green.
+        assert_eq!(seen("Unknown"), bold(Color::LightGreen));
+        // A key in the bar was bold cyan.
+        assert_eq!(seen("Enter"), bold(Color::LightCyan));
     }
 }

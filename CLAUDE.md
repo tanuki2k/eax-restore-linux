@@ -107,7 +107,9 @@ launcher hardcodes `releases/latest`).
   && cargo clippy --locked --all-targets -- -D warnings && cargo test --locked`.
   Run it with `cargo run -- ../game-database.json` after `./build.sh`. Its look copies the old fzf browser's (boxed Search,
   Filters and Games beside a full-height pane; the colours are in `tui/src/theme.rs`,
-  taken from fzf's palette and the script's `GREEN`/`YELLOW`/`WHITE`). The right pane switches between
+  taken from fzf's palette and the script's `GREEN`/`YELLOW`/`WHITE`; the script's bold
+  colours use ratatui's `Light*` names because crossterm writes the plain ones as the dark palette
+  entry, where a terminal draws `\033[1;33m` bright). The right pane switches between
   Profile and Settings with ←/→ (Shift-↑/↓ scrolls it); F1 lists every key (`tui/src/help.rs`: keep it in step
   with `app.rs`), Ctrl-F gives the pane the whole screen, and Ctrl-L puts it under the list instead of
   beside it (it does that by itself below 104 columns); `--list`, `--settings NAME` and `--profile NAME`
