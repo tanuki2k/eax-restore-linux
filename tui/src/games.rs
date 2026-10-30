@@ -132,21 +132,28 @@ pub fn build(db: &Database, home: &Path, state_file: &Path) -> Vec<Entry> {
         .iter()
         .filter_map(|g| g.stores.gog.as_ref().map(|s| s.id.to_string()))
         .collect();
-    // Steam first, so a game owned on both stores shows its Steam copy.
+    // Steam's copies first, so they are listed before a GOG copy of the same game.
     let mut found = library::scan_steam(home, &steam_ids);
     found.extend(library::scan_heroic(home, &gog_ids));
     let live = library::live_manifest_dirs(home, state_file);
     let heroic = library::heroic_game_folders(home);
 
     let mut claimed: HashSet<&PathBuf> = HashSet::new();
-    let mut entries: Vec<Entry> = db
-        .games
-        .iter()
-        .map(|g| {
+    let mut entries: Vec<Entry> = Vec::new();
+    // Where each database game's first entry is; a game has more than one when
+    // it is found in more than one store.
+    let mut first_entry: Vec<usize> = Vec::with_capacity(db.games.len());
+    for g in &db.games {
+        first_entry.push(entries.len());
+        let copies: Vec<&Found> = found.iter().filter(|f| is_match(g, f)).collect();
+        if copies.is_empty() {
+            entries.push(Entry::database_only(g.clone()));
+            continue;
+        }
+        // One row per copy, each with its own store and folder: a game installed
+        // from both Steam and GOG is two installs, and each may have the fix.
+        for f in copies {
             let mut e = Entry::database_only(g.clone());
-            let Some(f) = found.iter().find(|f| is_match(g, f)) else {
-                return e;
-            };
             e.store = Some(f.store);
             e.path = Some(f.path.clone());
             e.status = Status::OnThisPc;
@@ -157,9 +164,9 @@ pub fn build(db: &Database, home: &Path, state_file: &Path) -> Vec<Entry> {
                 }
                 claimed.insert(d);
             }
-            e
-        })
-        .collect();
+            entries.push(e);
+        }
+    }
 
     for dir in live.iter().filter(|d| !claimed.contains(d)) {
         // A game installed by hand outside any library: recognise it by its exe,
@@ -171,13 +178,14 @@ pub fn build(db: &Database, home: &Path, state_file: &Path) -> Vec<Entry> {
             .filter(|(_, g)| dir_has_file(dir, &g.exe))
             .map(|(i, _)| i)
             .collect();
-        let found_before = |i: usize| entries[i].status == Status::NotOnThisPc;
+        // A game with no copy found has one entry, a database-only one.
+        let found_before = |i: usize| entries[first_entry[i]].status == Status::NotOnThisPc;
         match owners[..] {
-            // The database order is the order of `entries`' first part.
             [i] if found_before(i) => {
-                entries[i].status = Status::Installed;
-                entries[i].path = Some(dir.clone());
-                entries[i].store = store_of_copy(&db.games[i], dir, &heroic);
+                let entry = &mut entries[first_entry[i]];
+                entry.status = Status::Installed;
+                entry.path = Some(dir.clone());
+                entry.store = store_of_copy(&db.games[i], dir, &heroic);
             }
             // Another install of a game already listed: its own row.
             [i] => {
@@ -465,5 +473,106 @@ mod tests {
         assert_eq!((steam.len(), gog.len()), (1, 1));
         assert!(steam[0].contains("steamapps/common"));
         assert!(gog[0].contains("Heroic"));
+    }
+
+    /// Two games share the exe name, as the STALKER ones do; the first is sold on
+    /// both stores.
+    const SHARED_EXE_DB: &str = r#"{"games":[
+        {"name":"Pripyat","exe":"xrEngine.exe","stores":{"steam":{"id":80},"gog":{"id":81}}},
+        {"name":"Clear Sky","exe":"xrEngine.exe","stores":{"steam":{"id":82},"gog":{"id":83}}}]}"#;
+
+    /// Pripyat installed from both stores: Steam through an appmanifest, GOG through
+    /// Heroic's record. The exe sits in `bin/`, where the fix goes.
+    fn pripyat_world(steam_fix: bool, gog_fix: bool) -> World {
+        let w = World::new();
+        w.steam_game(".local/share/Steam", 80, "Pripyat");
+        w.write(
+            ".local/share/Steam/steamapps/common/Pripyat/bin/xrEngine.exe",
+            "",
+        );
+        w.write("Games/Heroic/Pripyat/bin/xrEngine.exe", "");
+        w.write(
+            ".config/heroic/gog_store/installed.json",
+            &format!(
+                r#"{{"installed":[{{"appName":"81","install_path":"{}"}}]}}"#,
+                w.p("Games/Heroic/Pripyat").display()
+            ),
+        );
+        if steam_fix {
+            w.write(
+                ".local/share/Steam/steamapps/common/Pripyat/bin/.eax-restore-manifest.txt",
+                "/x\n",
+            );
+        }
+        if gog_fix {
+            w.write("Games/Heroic/Pripyat/bin/.eax-restore-manifest.txt", "/x\n");
+        }
+        w
+    }
+
+    fn pripyat_rows(w: &World) -> Vec<Entry> {
+        let db = Database::parse(SHARED_EXE_DB).unwrap();
+        build(&db, w.home.path(), &w.state_file())
+    }
+
+    #[test]
+    fn a_game_installed_from_both_stores_is_two_rows_each_with_its_own_store() {
+        let w = pripyat_world(true, true);
+        let entries = pripyat_rows(&w);
+        let both = copies(&entries, "Pripyat");
+        assert_eq!(both.len(), 2);
+        assert!(both.iter().all(|e| e.status == Status::Installed));
+        let gog = both
+            .iter()
+            .find(|e| e.store == Some(StoreKind::Gog))
+            .unwrap();
+        assert!(gog.path.as_ref().unwrap().ends_with("Heroic/Pripyat/bin"));
+        assert!(both.iter().any(|e| e.store == Some(StoreKind::Steam)));
+        // The shared exe name no longer matters: nothing is left to guess at.
+        assert!(entries.iter().all(|e| e.status != Status::Manual));
+        assert_eq!(entries.len(), 3, "Pripyat twice and Clear Sky once");
+    }
+
+    #[test]
+    fn only_the_copy_with_the_fix_is_installed() {
+        let entries = pripyat_rows(&pripyat_world(true, false));
+        let both = copies(&entries, "Pripyat");
+        assert_eq!(both.len(), 2);
+        let status_of = |k| both.iter().find(|e| e.store == Some(k)).unwrap().status;
+        assert_eq!(status_of(StoreKind::Steam), Status::Installed);
+        assert_eq!(status_of(StoreKind::Gog), Status::OnThisPc);
+    }
+
+    #[test]
+    fn two_copies_without_the_fix_are_two_rows_on_this_pc() {
+        let entries = pripyat_rows(&pripyat_world(false, false));
+        let both = copies(&entries, "Pripyat");
+        assert_eq!(both.len(), 2);
+        assert!(both.iter().all(|e| e.status == Status::OnThisPc));
+    }
+
+    #[test]
+    fn a_hand_install_is_still_found_by_its_exe_after_games_with_two_rows() {
+        // A game with two rows ahead of it in the list must not shift the lookup
+        // of a later game that is matched by its exe.
+        let w = pripyat_world(true, true);
+        w.write("mnt/games/Later/later.exe", "");
+        w.write("mnt/games/Later/.eax-restore-manifest.txt", "/x\n");
+        w.write(
+            ".local/state/eax-restore-linux/installed-games.txt",
+            &format!("{}\n", w.p("mnt/games/Later").display()),
+        );
+        let db = Database::parse(
+            r#"{"games":[
+            {"name":"Pripyat","exe":"xrEngine.exe","stores":{"steam":{"id":80},"gog":{"id":81}}},
+            {"name":"Later","exe":"later.exe","stores":{"steam":{"id":99}}}]}"#,
+        )
+        .unwrap();
+        let entries = build(&db, w.home.path(), &w.state_file());
+        let later = copies(&entries, "Later");
+        assert_eq!(later.len(), 1);
+        assert_eq!(later[0].status, Status::Installed);
+        assert!(later[0].path.as_ref().unwrap().ends_with("mnt/games/Later"));
+        assert!(entries.iter().all(|e| e.status != Status::Manual));
     }
 }
