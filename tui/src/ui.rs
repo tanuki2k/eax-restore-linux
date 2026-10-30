@@ -416,7 +416,16 @@ fn scrolling(
 /// The F1 key list, over whatever is on screen.
 fn draw_help(f: &mut Frame, app: &App, area: Rect) {
     let w = area.width.min(90);
-    let h = area.height.saturating_sub(2).max(3).min(area.height);
+    let lines = help::lines(usize::from(w.saturating_sub(2)));
+    // As tall as the text (and the blank row `scrolling` adds when the text has
+    // none), or as tall as the screen allows with a row to spare above and below;
+    // a shorter screen scrolls.
+    let blank_first = usize::from(!lines.first().is_some_and(is_blank));
+    let rows = u16::try_from(lines.len() + blank_first).unwrap_or(u16::MAX);
+    let h = rows
+        .saturating_add(2)
+        .min(area.height.saturating_sub(2).max(3))
+        .min(area.height);
     let popup = Rect::new(
         area.x + (area.width - w) / 2,
         area.y + (area.height - h) / 2,
@@ -424,9 +433,14 @@ fn draw_help(f: &mut Frame, app: &App, area: Rect) {
         h,
     );
     f.render_widget(Clear, popup);
-    let block = boxed("Help");
-    let lines = help::lines(usize::from(block.inner(popup).width));
-    scrolling(f, popup, block, lines, app.help_scroll, &app.help_max);
+    scrolling(
+        f,
+        popup,
+        boxed("Help"),
+        lines,
+        app.help_scroll,
+        &app.help_max,
+    );
 }
 
 /// The key bar: each key in cyan, what it does after it.
@@ -1090,5 +1104,28 @@ mod tests {
         assert_eq!(seen("Unknown"), bold(Color::LightGreen));
         // A key in the bar was bold cyan.
         assert_eq!(seen("Enter"), bold(Color::LightCyan));
+    }
+
+    #[test]
+    fn the_help_popup_is_as_tall_as_its_text_not_the_screen() {
+        let mut app = App::new(entries(WITH_SETTINGS));
+        press(&mut app, ratatui::crossterm::event::KeyCode::F(1));
+        // Far taller than the text needs.
+        let s = screen(&app, 120, 80);
+        let rows: Vec<&str> = s.lines().collect();
+        let top = row_of(&s, " Help ");
+        let text = help::lines(88).len();
+        // The last line of the help is directly above the popup's bottom edge,
+        // and the screen below the popup is not part of it.
+        assert!(
+            rows[top + text].contains("The game isn't on this PC."),
+            "{:?}",
+            rows[top + text]
+        );
+        assert!(rows[top + text + 1].contains('╰'));
+        assert!(top + text + 1 < 70, "popup reaches row {}", top + text + 1);
+        // It is centred in the space above the key bar.
+        assert!(top > 1);
+        assert_eq!(app.help_max.get(), 0, "nothing left to scroll");
     }
 }
