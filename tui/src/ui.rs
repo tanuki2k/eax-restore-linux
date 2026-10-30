@@ -14,7 +14,7 @@ use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style, Stylize};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{
-    Block, BorderType, Clear, HighlightSpacing, List, ListItem, ListState, Paragraph, Wrap,
+    Block, BorderType, Clear, HighlightSpacing, List, ListItem, ListState, Padding, Paragraph, Wrap,
 };
 use ratatui::Frame;
 use std::collections::HashSet;
@@ -260,9 +260,13 @@ fn draw_games(f: &mut Frame, app: &App, area: Rect) {
         .enumerate()
         .map(|(row, &i)| ListItem::new(game_line(app, &app.games[i], row == app.selected)))
         .collect();
-    let list = selection(List::new(items).block(boxed("Games")));
+    // A column on the right keeps a long name from running under the scroll bar.
+    let block = boxed("Games").padding(Padding::new(0, 1, 0, 0));
+    let rows = usize::from(block.inner(area).height);
+    let list = selection(List::new(items).block(block));
     let mut state = ListState::default().with_selected(app.current().map(|_| app.selected));
     f.render_stateful_widget(list, area, &mut state);
+    scroll_bar(f, area, rows, app.visible.len(), state.offset());
 }
 
 /// A row: its mark, then the name with the letters the search matched lit.
@@ -314,7 +318,7 @@ fn draw_pane(f: &mut Frame, app: &App, area: Rect, zoomed: bool) {
         settings,
         current.filter(|_| zoomed).map(|e| e.name.as_str()),
     );
-    let block = boxed_line(title);
+    let block = boxed_line(title).padding(MARGIN);
     let width = usize::from(block.inner(area).width);
 
     let lines = if settings {
@@ -376,10 +380,50 @@ fn is_blank(line: &Line) -> bool {
     line.spans.iter().all(|s| s.content.trim().is_empty())
 }
 
-/// Text in a box that scrolls, with the scroll position in the box's corner as in
-/// the old browser. The first row is blank so the position has somewhere to sit:
-/// text that does not start with a blank line gets one, text that does is left.
-/// `max_cell` is told how far the text can scroll.
+/// The space inside a scrolling box's border: a row above and below the text and
+/// two columns either side (a row is about twice as tall as a column is wide).
+const MARGIN: Padding = Padding::new(2, 2, 1, 1);
+
+/// Where the scroll bar's thumb is on a track `track` rows tall, as (first row,
+/// length), or None when everything is in view. `viewport` rows of `total` are
+/// showing, from line `top`.
+fn thumb(track: usize, viewport: usize, total: usize, top: usize) -> Option<(usize, usize)> {
+    if total <= viewport || track == 0 {
+        return None;
+    }
+    let len = ((track * viewport + total / 2) / total).clamp(1, track);
+    let max = total - viewport;
+    let start = ((track - len) * top.min(max) + max / 2) / max;
+    Some((start, len))
+}
+
+/// The old browser's scroll bar: a `│` in the border's grey in the column just
+/// inside the right border, on the rows where the thumb is and nowhere else (no
+/// track). Drawn only when there is something to scroll.
+fn scroll_bar(f: &mut Frame, area: Rect, viewport: usize, total: usize, top: usize) {
+    let inside = Block::bordered().inner(area);
+    let Some((start, len)) = thumb(usize::from(inside.height), viewport, total, top) else {
+        return;
+    };
+    if inside.width == 0 {
+        return;
+    }
+    let x = inside.x + inside.width - 1;
+    for row in start..start + len {
+        let y = inside.y + u16::try_from(row).unwrap_or(0);
+        f.render_widget(
+            Paragraph::new(Span::styled("│", Style::new().fg(theme::BORDER))),
+            Rect::new(x, y, 1, 1),
+        );
+    }
+}
+
+/// Text in a box that scrolls. The block carries the margin, so it stays when the
+/// text is scrolled; the text's own leading blank lines (the profile and the help
+/// start with one) are dropped so the margin is not doubled. When there is more
+/// text than fits, the scroll position (`3/36`) sits in the top margin row and the
+/// scroll bar in the right one, as in the old browser. `max_cell` is told how far
+/// the text can scroll.
 fn scrolling(
     f: &mut Frame,
     area: Rect,
@@ -389,41 +433,45 @@ fn scrolling(
     max_cell: &std::cell::Cell<u16>,
 ) {
     let inner = block.inner(area);
-    if !lines.first().is_some_and(is_blank) {
-        lines.insert(0, Line::raw(""));
-    }
+    let blank = lines.iter().take_while(|l| is_blank(l)).count();
+    lines.drain(..blank);
     let total = lines.len();
-    let max = u16::try_from(total.saturating_sub(usize::from(inner.height))).unwrap_or(u16::MAX);
+    let viewport = usize::from(inner.height);
+    let max = u16::try_from(total.saturating_sub(viewport)).unwrap_or(u16::MAX);
     max_cell.set(max);
     let top = scroll.min(max);
     f.render_widget(Paragraph::new(lines).scroll((top, 0)).block(block), area);
+    if max == 0 {
+        return;
+    }
 
-    if inner.height > 0 {
-        let position = format!("{}/{total}", usize::from(top) + 1);
+    let inside = Block::bordered().inner(area);
+    if inside.height > 0 && inside.width > 4 {
+        // Two columns in from the border, level with the text's edge.
         f.render_widget(
             Paragraph::new(Span::styled(
-                position,
+                format!("{}/{total}", usize::from(top) + 1),
                 Style::new()
                     .fg(theme::COUNT)
                     .add_modifier(Modifier::REVERSED),
             ))
             .alignment(Alignment::Right),
-            Rect::new(inner.x, inner.y, inner.width, 1),
+            Rect::new(inside.x + 2, inside.y, inside.width - 4, 1),
         );
     }
+    scroll_bar(f, area, viewport, total, usize::from(top));
 }
 
 /// The F1 key list, over whatever is on screen.
 fn draw_help(f: &mut Frame, app: &App, area: Rect) {
     let w = area.width.min(90);
-    let lines = help::lines(usize::from(w.saturating_sub(2)));
-    // As tall as the text (and the blank row `scrolling` adds when the text has
-    // none), or as tall as the screen allows with a row to spare above and below;
-    // a shorter screen scrolls.
-    let blank_first = usize::from(!lines.first().is_some_and(is_blank));
-    let rows = u16::try_from(lines.len() + blank_first).unwrap_or(u16::MAX);
-    let h = rows
-        .saturating_add(2)
+    // Inside the border and the margin.
+    let lines = help::lines(usize::from(w.saturating_sub(6)));
+    // As tall as the text plus the margin and border, or as tall as the screen
+    // allows with a row to spare above and below; a shorter screen scrolls.
+    let text_rows = lines.iter().skip_while(|l| is_blank(l)).count();
+    let h = u16::try_from(text_rows + 4)
+        .unwrap_or(u16::MAX)
         .min(area.height.saturating_sub(2).max(3))
         .min(area.height);
     let popup = Rect::new(
@@ -436,7 +484,7 @@ fn draw_help(f: &mut Frame, app: &App, area: Rect) {
     scrolling(
         f,
         popup,
-        boxed("Help"),
+        boxed("Help").padding(MARGIN),
         lines,
         app.help_scroll,
         &app.help_max,
@@ -723,7 +771,7 @@ mod tests {
             store: None,
             path: Some(PathBuf::from("/g/Obscure")),
         };
-        let s = screen(&App::new(vec![manual]), 100, 14);
+        let s = screen(&App::new(vec![manual]), 120, 14);
         assert!(s.contains("* Obscure"));
         assert!(s.contains("no profile for Obscure."));
     }
@@ -871,7 +919,7 @@ mod tests {
         };
         let mut app = App::new(vec![manual]);
         press(&mut app, ratatui::crossterm::event::KeyCode::Right);
-        assert!(screen(&app, 100, 14).contains("The game database has no profile for Obscure."));
+        assert!(screen(&app, 120, 14).contains("The game database has no profile for Obscure."));
     }
 
     fn ctrl_key(app: &mut App, c: char) {
@@ -1072,20 +1120,17 @@ mod tests {
         // Full screen, so the pane is the whole width and its rows are easy to read.
         let mut app = App::new(entries(WITH_SETTINGS));
         ctrl_key(&mut app, 'f');
-        let rows = |app: &App| -> Vec<String> {
-            screen(app, 100, 24).lines().map(str::to_string).collect()
-        };
-        let profile = rows(&app);
-        assert!(profile[1].contains("1/"), "the scroll position is on row 1");
-        assert!(profile[2].contains("Game details:"), "{:?}", profile[2]);
-        press(&mut app, ratatui::crossterm::event::KeyCode::Right);
-        let settings = rows(&app);
-        assert!(settings[1].contains("1/"));
+        let profile = grid(&app, 100, 24);
+        assert!(inside_is_blank(&profile[1]), "the margin row");
         assert!(
-            settings[2].contains("Audio settings for Quake 4:"),
+            row_text(&profile[2]).contains("Game details:"),
             "{:?}",
-            settings[2]
+            row_text(&profile[2])
         );
+        press(&mut app, ratatui::crossterm::event::KeyCode::Right);
+        let settings = grid(&app, 100, 24);
+        assert!(inside_is_blank(&settings[1]));
+        assert!(row_text(&settings[2]).contains("Audio settings for Quake 4:"));
     }
 
     #[test]
@@ -1114,18 +1159,199 @@ mod tests {
         let s = screen(&app, 120, 80);
         let rows: Vec<&str> = s.lines().collect();
         let top = row_of(&s, " Help ");
-        let text = help::lines(88).len();
-        // The last line of the help is directly above the popup's bottom edge,
-        // and the screen below the popup is not part of it.
+        // 90 wide, less the border and the 2-column margins.
+        let text = help::lines(84).iter().skip_while(|l| is_blank(l)).count();
+        // Border, a margin row, the text, a margin row, border.
         assert!(
-            rows[top + text].contains("The game isn't on this PC."),
+            rows[top + 1 + text].contains("The game isn't on this PC."),
             "{:?}",
-            rows[top + text]
+            rows[top + 1 + text]
         );
-        assert!(rows[top + text + 1].contains('╰'));
-        assert!(top + text + 1 < 70, "popup reaches row {}", top + text + 1);
+        assert!(rows[top + text + 3].contains('╰'));
+        assert!(top + text + 3 < 70, "popup reaches row {}", top + text + 3);
         // It is centred in the space above the key bar.
         assert!(top > 1);
         assert_eq!(app.help_max.get(), 0, "nothing left to scroll");
+    }
+
+    /// The characters of each screen row.
+    fn grid(app: &App, w: u16, h: u16) -> Vec<Vec<char>> {
+        screen(app, w, h)
+            .lines()
+            .map(|l| l.chars().collect())
+            .collect()
+    }
+
+    fn row_text(row: &[char]) -> String {
+        row.iter().collect()
+    }
+
+    /// True when a box row holds nothing between its two borders.
+    fn inside_is_blank(row: &[char]) -> bool {
+        row[1..row.len() - 1].iter().all(|c| *c == ' ')
+    }
+
+    /// The screen as cells, for their styles.
+    fn drawn(app: &App, w: u16, h: u16) -> ratatui::buffer::Buffer {
+        let mut t = Terminal::new(TestBackend::new(w, h)).unwrap();
+        t.draw(|f| draw(f, app)).unwrap();
+        t.backend().buffer().clone()
+    }
+
+    /// A settings list far longer than any box.
+    fn long_settings_app() -> App {
+        let many: String = (0..40)
+            .map(|i| format!(r#"{{"title":"Setting {i}","tested":true,"reason":"r","changes":{{"q.cfg":{{"k{i}":"1"}}}}}}"#))
+            .collect::<Vec<_>>()
+            .join(",");
+        let json = format!(
+            r#"{{"games":[{{"id":"q","name":"Quake 4","game_config":{{"files":{{"q.cfg":{{"format":"idtech_cfg"}}}},"audio_settings":[{many}]}}}}]}}"#
+        );
+        let mut app = App::new(entries(&json));
+        press(&mut app, ratatui::crossterm::event::KeyCode::Right);
+        app
+    }
+
+    #[test]
+    fn the_pane_has_a_margin_on_every_side() {
+        let mut app = App::new(entries(WITH_SETTINGS));
+        ctrl_key(&mut app, 'f');
+        for view in 0..2 {
+            let g = grid(&app, 100, 24);
+            // Border row 0, a blank margin row, the text, a blank margin row, border row 22.
+            assert!(inside_is_blank(&g[1]), "top margin");
+            assert!(inside_is_blank(&g[21]), "bottom margin");
+            assert_eq!(g[22][0], '╰');
+            // The text starts after the border and two columns of margin.
+            let first = g[2].iter().position(|c| *c != ' ' && *c != '│').unwrap();
+            assert_eq!(first, 3, "left margin, view {view}: {:?}", row_text(&g[2]));
+            // Nothing in the two columns before the right border.
+            for (y, row) in g.iter().enumerate().take(22).skip(1) {
+                assert_eq!((row[97], row[98]), (' ', ' '), "right margin on row {y}");
+            }
+            press(&mut app, ratatui::crossterm::event::KeyCode::Right);
+        }
+    }
+
+    #[test]
+    fn the_scroll_position_shows_only_when_the_text_scrolls() {
+        // Fits: no position, the margin row is empty.
+        let mut app = App::new(entries(WITH_SETTINGS));
+        ctrl_key(&mut app, 'f');
+        assert!(inside_is_blank(&grid(&app, 100, 24)[1]));
+        // Does not fit: the position is in the top margin row, and stays there
+        // while the text moves under it.
+        let mut app = long_settings_app();
+        ctrl_key(&mut app, 'f');
+        let first = row_text(&grid(&app, 100, 24)[1]);
+        assert!(first.contains("1/"), "{first:?}");
+        for _ in 0..5 {
+            press(&mut app, ratatui::crossterm::event::KeyCode::Down);
+        }
+        let g = grid(&app, 100, 24);
+        let row = row_text(&g[1]);
+        assert!(row.contains("6/"), "{row:?}");
+        assert!(
+            !row.contains("Setting"),
+            "the margin row never holds text: {row:?}"
+        );
+    }
+
+    #[test]
+    fn the_thumb_fits_its_track() {
+        assert_eq!(thumb(10, 10, 10, 0), None);
+        assert_eq!(thumb(10, 10, 5, 0), None);
+        assert_eq!(thumb(0, 5, 10, 0), None);
+        // A little over: nearly the whole track, sliding down by a row.
+        assert_eq!(thumb(10, 10, 11, 0), Some((0, 9)));
+        assert_eq!(thumb(10, 10, 11, 1), Some((1, 9)));
+        // Far over: one row, from the top to the bottom of the track.
+        assert_eq!(thumb(10, 10, 1000, 0), Some((0, 1)));
+        assert_eq!(thumb(10, 10, 1000, 990), Some((9, 1)));
+        // Never empty, never past the track; a top beyond the end counts as the end.
+        for top in 0..=200 {
+            let (start, len) = thumb(12, 12, 212, top).unwrap();
+            assert!(len >= 1 && start + len <= 12, "top {top}: {start}+{len}");
+        }
+        assert_eq!(thumb(10, 10, 1000, 5000), thumb(10, 10, 1000, 990));
+    }
+
+    /// The rows of the screen that hold a thumb in column `col`.
+    fn thumb_rows(app: &App, w: u16, h: u16, col: u16) -> Vec<u16> {
+        let buf = drawn(app, w, h);
+        (0..h)
+            .filter(|y| {
+                let cell = &buf[(col, *y)];
+                cell.symbol() == "│" && cell.style().fg == Some(Color::Indexed(59))
+            })
+            .collect()
+    }
+
+    #[test]
+    fn a_long_text_has_a_scroll_bar_inside_its_right_border_that_moves_with_it() {
+        let mut app = long_settings_app();
+        ctrl_key(&mut app, 'f');
+        // Border at column 99; the bar is the column inside it. Rows 1..=21 are inside the box.
+        let top = thumb_rows(&app, 100, 24, 98);
+        assert!(!top.is_empty(), "no scroll bar");
+        assert_eq!(top[0], 1, "starts at the top of the box");
+        assert!(top.windows(2).all(|w| w[1] == w[0] + 1), "one run: {top:?}");
+        press(&mut app, ratatui::crossterm::event::KeyCode::End);
+        let end = thumb_rows(&app, 100, 24, 98);
+        assert_eq!(*end.last().unwrap(), 21, "ends at the bottom of the box");
+        assert_eq!(end.len(), top.len(), "the same size at both ends");
+        // The border itself is in the next column and is not mistaken for the bar.
+        assert!(thumb_rows(&app, 100, 24, 99).len() >= 21);
+    }
+
+    #[test]
+    fn text_that_fits_has_no_scroll_bar() {
+        let mut app = App::new(entries(WITH_SETTINGS));
+        ctrl_key(&mut app, 'f');
+        assert!(thumb_rows(&app, 100, 24, 98).is_empty());
+        // The F1 popup is fitted to its text, so it has none either.
+        let mut app = App::new(entries(WITH_SETTINGS));
+        press(&mut app, ratatui::crossterm::event::KeyCode::F(1));
+        let g = grid(&app, 120, 80);
+        let top = row_of(&screen(&app, 120, 80), " Help ");
+        // The popup is columns 15 to 104; its top margin row holds no scroll position.
+        assert!(
+            g[top + 1][16..104].iter().all(|c| *c == ' '),
+            "{:?}",
+            row_text(&g[top + 1])
+        );
+    }
+
+    #[test]
+    fn the_games_list_has_a_scroll_bar_when_there_are_more_games_than_rows() {
+        let games: String = (0..60)
+            .map(|i| format!(r#"{{"id":"g{i}","name":"Game {i:02}"}}"#))
+            .collect::<Vec<_>>()
+            .join(",");
+        let mut app = App::new(entries(&format!(r#"{{"games":[{games}]}}"#)));
+        // The Games box is the left half; its right border is column 49, the bar column 48.
+        let first = thumb_rows(&app, 100, 24, 48);
+        assert!(!first.is_empty(), "no scroll bar on the list");
+        let games_top = u16::try_from(row_of(&screen(&app, 100, 24), " Games ")).unwrap();
+        assert_eq!(first[0], games_top + 1, "starts at the top of the list");
+        press(&mut app, ratatui::crossterm::event::KeyCode::End);
+        let last = thumb_rows(&app, 100, 24, 48);
+        assert_eq!(*last.last().unwrap(), 21, "the bottom of the list");
+        // A short list needs none.
+        let few = App::new(entries(WITH_SETTINGS));
+        assert!(thumb_rows(&few, 100, 24, 48).is_empty());
+    }
+
+    #[test]
+    fn a_long_name_stops_before_the_scroll_bar() {
+        let name = "A".repeat(80);
+        let mut games: Vec<String> = (0..40)
+            .map(|i| format!(r#"{{"id":"g{i}","name":"G{i:02}"}}"#))
+            .collect();
+        games.push(format!(r#"{{"id":"long","name":"{name}"}}"#));
+        let app = App::new(entries(&format!(r#"{{"games":[{}]}}"#, games.join(","))));
+        let g = grid(&app, 100, 24);
+        // Column 48 holds the bar or nothing, never a letter of a name.
+        assert!(g.iter().all(|row| row[48] != 'A'));
     }
 }
