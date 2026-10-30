@@ -43,6 +43,25 @@ impl Filter {
     }
 }
 
+/// Where the right-hand pane sits.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Layout {
+    /// Beside the list.
+    Side,
+    /// Under the list, for a narrow window.
+    Stacked,
+}
+
+/// Narrower than this and a pane beside the list leaves both too cramped.
+pub const STACK_BELOW: u16 = 104;
+
+/// What the right-hand pane shows for the selected game.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Pane {
+    Profile,
+    Settings,
+}
+
 /// The popup of actions for the selected game.
 pub struct Menu {
     pub actions: Vec<Action>,
@@ -57,6 +76,13 @@ pub struct Launch {
 pub struct App {
     pub games: Vec<Entry>,
     pub menu: Option<Menu>,
+    /// The right pane takes the whole screen (Ctrl-F).
+    pub zoom: bool,
+    /// The F1 key list is open.
+    pub help: bool,
+    pub help_scroll: u16,
+    /// Like `pane_max`: set by `draw`, since it depends on the terminal's size.
+    pub help_max: std::cell::Cell<u16>,
     /// The "Add a game" folder picker, while it is open.
     pub picker: Option<Picker>,
     home: PathBuf,
@@ -65,6 +91,14 @@ pub struct App {
     pub message: String,
     pub filter: Filter,
     pub filters: Filters,
+    pub pane: Pane,
+    pub layout: Layout,
+    /// The layout this window width calls for; Ctrl-L swaps away from it.
+    natural: Layout,
+    /// Lines the settings view is scrolled down.
+    pub pane_scroll: u16,
+    /// How far it can scroll; known only once it is drawn, so `draw` sets it.
+    pub pane_max: std::cell::Cell<u16>,
     pub query: String,
     /// Indices into `games` that match the query, best match first.
     pub visible: Vec<usize>,
@@ -79,12 +113,21 @@ impl App {
         let mut app = App {
             games,
             menu: None,
+            zoom: false,
+            help: false,
+            help_scroll: 0,
+            help_max: std::cell::Cell::new(0),
             picker: None,
             home: PathBuf::from("/"),
             launch: None,
             message: String::new(),
             filter: Filter::All,
             filters: Filters::default(),
+            pane: Pane::Profile,
+            layout: Layout::Side,
+            natural: Layout::Side,
+            pane_scroll: 0,
+            pane_max: std::cell::Cell::new(0),
             query: String::new(),
             visible: Vec::new(),
             selected: 0,
@@ -112,6 +155,20 @@ impl App {
                 self.selected = pos;
             }
         }
+    }
+
+    /// Which characters of `name` the search matched, for the list to light up.
+    pub fn match_indices(&self, name: &str) -> Vec<u32> {
+        if self.query.trim().is_empty() {
+            return Vec::new();
+        }
+        let pattern = Pattern::parse(&self.query, CaseMatching::Smart, Normalization::Smart);
+        let (mut buf, mut found) = (Vec::new(), Vec::new());
+        let mut matcher = Matcher::default();
+        pattern.indices(Utf32Str::new(name, &mut buf), &mut matcher, &mut found);
+        found.sort_unstable();
+        found.dedup();
+        found
     }
 
     pub fn current(&self) -> Option<&Entry> {
@@ -200,7 +257,107 @@ impl App {
         }
     }
 
+    /// The window is now `width` columns wide. Crossing the narrow/wide line
+    /// switches the layout by itself, even over a Ctrl-L; otherwise a choice stays.
+    pub fn resize(&mut self, width: u16) {
+        let natural = if width < STACK_BELOW {
+            Layout::Stacked
+        } else {
+            Layout::Side
+        };
+        if natural != self.natural {
+            self.natural = natural;
+            self.layout = natural;
+        }
+    }
+
+    /// Ctrl-L: away from the layout the window calls for, or back to it.
+    fn swap_layout(&mut self) {
+        self.layout = if self.layout == self.natural {
+            match self.natural {
+                Layout::Side => Layout::Stacked,
+                Layout::Stacked => Layout::Side,
+            }
+        } else {
+            self.natural
+        };
+    }
+
+    fn scroll_pane(&mut self, delta: i32) {
+        let max = i32::from(self.pane_max.get());
+        self.pane_scroll = (i32::from(self.pane_scroll) + delta).clamp(0, max) as u16;
+    }
+
+    fn show_pane(&mut self, pane: Pane) {
+        self.pane = pane;
+        self.pane_scroll = 0;
+    }
+
+    /// Moving to another game starts its pane at the top.
     pub fn handle_key(&mut self, key: KeyEvent) {
+        let before = self.visible.get(self.selected).copied();
+        self.handle_key_inner(key);
+        if self.visible.get(self.selected).copied() != before {
+            self.pane_scroll = 0;
+        }
+    }
+
+    fn open_menu(&mut self) {
+        if let Some(e) = self.current() {
+            self.menu = Some(Menu {
+                actions: actions::available(e),
+                selected: 0,
+            });
+        }
+    }
+
+    fn open_help(&mut self) {
+        self.help = true;
+        self.help_scroll = 0;
+    }
+
+    fn scroll_help(&mut self, delta: i32) {
+        let max = i32::from(self.help_max.get());
+        self.help_scroll = (i32::from(self.help_scroll) + delta).clamp(0, max) as u16;
+    }
+
+    fn handle_help_key(&mut self, key: KeyEvent) {
+        match key.code {
+            KeyCode::Esc | KeyCode::F(1) | KeyCode::Char('q') => self.help = false,
+            KeyCode::Up => self.scroll_help(-1),
+            KeyCode::Down => self.scroll_help(1),
+            KeyCode::PageUp => self.scroll_help(-10),
+            KeyCode::PageDown => self.scroll_help(10),
+            KeyCode::Home => self.help_scroll = 0,
+            KeyCode::End => self.help_scroll = self.help_max.get(),
+            _ => {}
+        }
+    }
+
+    /// With the right pane full screen there is no list to move through, so
+    /// the arrows scroll it, and typing does nothing rather than change a
+    /// search nobody can see.
+    fn handle_zoom_key(&mut self, key: KeyEvent) {
+        let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+        match key.code {
+            KeyCode::Esc => self.zoom = false,
+            KeyCode::Char('f') if ctrl => self.zoom = false,
+            KeyCode::Char('c') if ctrl => self.quit = true,
+            KeyCode::F(1) => self.open_help(),
+            KeyCode::Up => self.scroll_pane(-1),
+            KeyCode::Down => self.scroll_pane(1),
+            KeyCode::PageUp => self.scroll_pane(-10),
+            KeyCode::PageDown => self.scroll_pane(10),
+            KeyCode::Home => self.pane_scroll = 0,
+            KeyCode::End => self.pane_scroll = self.pane_max.get(),
+            KeyCode::Left => self.show_pane(Pane::Profile),
+            KeyCode::Right => self.show_pane(Pane::Settings),
+            KeyCode::Enter => self.open_menu(),
+            _ => {}
+        }
+    }
+
+    fn handle_key_inner(&mut self, key: KeyEvent) {
         self.message.clear();
         if self.picker.is_some() {
             return self.handle_picker_key(key);
@@ -208,7 +365,14 @@ impl App {
         if self.menu.is_some() {
             return self.handle_menu_key(key);
         }
+        if self.help {
+            return self.handle_help_key(key);
+        }
+        if self.zoom {
+            return self.handle_zoom_key(key);
+        }
         let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+        let shift = key.modifiers.contains(KeyModifiers::SHIFT);
         match key.code {
             KeyCode::Esc => self.quit = true,
             KeyCode::Char('c') if ctrl => self.quit = true,
@@ -228,18 +392,20 @@ impl App {
                 let start = picker::start_dir(&self.home);
                 self.picker = Some(Picker::new(start, self.home.clone()));
             }
-            KeyCode::Enter => {
-                if let Some(e) = self.current() {
-                    self.menu = Some(Menu {
-                        actions: actions::available(e),
-                        selected: 0,
-                    });
-                }
-            }
+            KeyCode::Enter => self.open_menu(),
+            KeyCode::F(1) => self.open_help(),
+            KeyCode::Char('l') if ctrl => self.swap_layout(),
+            KeyCode::Char('f') if ctrl => self.zoom = self.current().is_some(),
             KeyCode::Tab => {
                 self.filter = self.filter.next();
                 self.refilter();
             }
+            KeyCode::Up if shift => self.scroll_pane(-1),
+            KeyCode::Down if shift => self.scroll_pane(1),
+            KeyCode::PageUp if shift => self.scroll_pane(-10),
+            KeyCode::PageDown if shift => self.scroll_pane(10),
+            KeyCode::Right => self.show_pane(Pane::Settings),
+            KeyCode::Left => self.show_pane(Pane::Profile),
             KeyCode::Up => self.move_by(-1),
             KeyCode::Down => self.move_by(1),
             KeyCode::PageUp => self.move_by(-10),
@@ -471,5 +637,204 @@ mod tests {
         assert_eq!(a.visible.len(), 1);
         a.handle_key(ctrl('e')); // OpenAL
         assert!(a.visible.is_empty());
+    }
+
+    fn shift(code: KeyCode) -> KeyEvent {
+        KeyEvent::new(code, KeyModifiers::SHIFT)
+    }
+
+    #[test]
+    fn right_shows_the_settings_and_left_the_profile() {
+        let mut a = app();
+        assert_eq!(a.pane, Pane::Profile);
+        a.handle_key(key(KeyCode::Right));
+        assert_eq!(a.pane, Pane::Settings);
+        a.handle_key(key(KeyCode::Left));
+        assert_eq!(a.pane, Pane::Profile);
+    }
+
+    #[test]
+    fn shift_arrows_scroll_the_pane_but_never_past_its_ends() {
+        let mut a = app();
+        a.pane_max.set(5);
+        for _ in 0..9 {
+            a.handle_key(shift(KeyCode::Down));
+        }
+        assert_eq!(a.pane_scroll, 5);
+        // No hidden overshoot: one step up moves it at once.
+        a.handle_key(shift(KeyCode::Up));
+        assert_eq!(a.pane_scroll, 4);
+        a.handle_key(shift(KeyCode::PageUp));
+        assert_eq!(a.pane_scroll, 0);
+        a.handle_key(shift(KeyCode::Up));
+        assert_eq!(a.pane_scroll, 0);
+    }
+
+    #[test]
+    fn plain_arrows_still_move_the_selection_and_only_shift_scrolls() {
+        let mut a = app();
+        a.pane_max.set(5);
+        a.handle_key(key(KeyCode::Down));
+        assert_eq!((a.selected, a.pane_scroll), (1, 0));
+    }
+
+    #[test]
+    fn another_game_starts_at_the_top_of_the_pane() {
+        let mut a = app();
+        a.pane_max.set(5);
+        a.handle_key(shift(KeyCode::Down));
+        assert_eq!(a.pane_scroll, 1);
+        a.handle_key(key(KeyCode::Down));
+        assert_eq!(a.pane_scroll, 0);
+    }
+
+    #[test]
+    fn switching_panes_starts_at_the_top() {
+        let mut a = app();
+        a.pane_max.set(5);
+        a.handle_key(shift(KeyCode::Down));
+        a.handle_key(key(KeyCode::Right));
+        assert_eq!(a.pane_scroll, 0);
+    }
+
+    #[test]
+    fn f1_opens_the_help_and_escape_closes_it_without_quitting() {
+        let mut a = app();
+        a.handle_key(key(KeyCode::F(1)));
+        assert!(a.help);
+        a.handle_key(key(KeyCode::Esc));
+        assert!(!a.help && !a.quit);
+        a.handle_key(key(KeyCode::F(1)));
+        a.handle_key(key(KeyCode::F(1)));
+        assert!(!a.help, "F1 again closes it");
+    }
+
+    #[test]
+    fn the_help_scrolls_within_its_length_and_typing_does_not_reach_the_search() {
+        let mut a = app();
+        a.handle_key(key(KeyCode::F(1)));
+        a.help_max.set(4);
+        for _ in 0..9 {
+            a.handle_key(key(KeyCode::Down));
+        }
+        assert_eq!(a.help_scroll, 4);
+        a.handle_key(key(KeyCode::Up));
+        assert_eq!(a.help_scroll, 3);
+        a.handle_key(key(KeyCode::Home));
+        assert_eq!(a.help_scroll, 0);
+        type_str(&mut a, "zz");
+        assert!(a.query.is_empty());
+    }
+
+    #[test]
+    fn ctrl_f_takes_the_pane_full_screen_and_escape_gives_the_list_back() {
+        let mut a = app();
+        a.handle_key(ctrl('f'));
+        assert!(a.zoom);
+        a.handle_key(key(KeyCode::Esc));
+        assert!(!a.zoom && !a.quit);
+        a.handle_key(ctrl('f'));
+        a.handle_key(ctrl('f'));
+        assert!(!a.zoom, "Ctrl-F again returns");
+    }
+
+    #[test]
+    fn full_screen_arrows_scroll_the_pane_not_the_selection() {
+        let mut a = app();
+        a.handle_key(ctrl('f'));
+        a.pane_max.set(6);
+        a.handle_key(key(KeyCode::Down));
+        a.handle_key(key(KeyCode::Down));
+        assert_eq!((a.pane_scroll, a.selected), (2, 0));
+        a.handle_key(key(KeyCode::End));
+        assert_eq!(a.pane_scroll, 6);
+        type_str(&mut a, "zz");
+        assert!(a.query.is_empty());
+    }
+
+    #[test]
+    fn full_screen_still_switches_panes_opens_actions_and_help() {
+        let mut a = app();
+        a.handle_key(ctrl('f'));
+        a.handle_key(key(KeyCode::Right));
+        assert_eq!(a.pane, Pane::Settings);
+        a.handle_key(key(KeyCode::Enter));
+        assert!(a.menu.is_some());
+        a.handle_key(key(KeyCode::Esc));
+        assert!(a.zoom, "Esc closed only the menu");
+        a.handle_key(key(KeyCode::F(1)));
+        assert!(a.help);
+    }
+
+    #[test]
+    fn there_is_nothing_to_show_full_screen_when_nothing_is_listed() {
+        let mut a = app();
+        type_str(&mut a, "zzzz");
+        a.handle_key(ctrl('f'));
+        assert!(!a.zoom);
+    }
+
+    #[test]
+    fn a_narrow_window_stacks_the_pane_under_the_list_and_a_wide_one_puts_it_beside() {
+        let mut a = app();
+        assert_eq!(a.layout, Layout::Side);
+        a.resize(103);
+        assert_eq!(a.layout, Layout::Stacked);
+        a.resize(104);
+        assert_eq!(a.layout, Layout::Side);
+    }
+
+    #[test]
+    fn ctrl_l_swaps_away_from_the_natural_layout_and_back() {
+        let mut a = app();
+        a.resize(120);
+        a.handle_key(ctrl('l'));
+        assert_eq!(a.layout, Layout::Stacked);
+        a.handle_key(ctrl('l'));
+        assert_eq!(a.layout, Layout::Side);
+        a.resize(80);
+        a.handle_key(ctrl('l'));
+        assert_eq!(
+            a.layout,
+            Layout::Side,
+            "a narrow window can still be put beside"
+        );
+        a.handle_key(ctrl('l'));
+        assert_eq!(a.layout, Layout::Stacked);
+    }
+
+    #[test]
+    fn a_choice_stays_through_resizes_on_the_same_side_of_the_line() {
+        let mut a = app();
+        a.resize(120);
+        a.handle_key(ctrl('l'));
+        a.resize(150);
+        a.resize(110);
+        assert_eq!(a.layout, Layout::Stacked);
+    }
+
+    #[test]
+    fn crossing_the_line_overrides_a_choice() {
+        let mut a = app();
+        a.resize(120);
+        a.handle_key(ctrl('l')); // stacked, though wide
+        a.resize(90); // narrow: stacked is now what the window calls for
+        assert_eq!(a.layout, Layout::Stacked);
+        a.handle_key(ctrl('l')); // beside, though narrow
+        a.resize(130); // wide again
+        assert_eq!(a.layout, Layout::Side);
+    }
+
+    #[test]
+    fn ctrl_l_is_ignored_in_full_screen_and_help() {
+        let mut a = app();
+        a.resize(120);
+        a.handle_key(ctrl('f'));
+        a.handle_key(ctrl('l'));
+        assert_eq!(a.layout, Layout::Side);
+        a.handle_key(key(KeyCode::Esc));
+        a.handle_key(key(KeyCode::F(1)));
+        a.handle_key(ctrl('l'));
+        assert_eq!(a.layout, Layout::Side);
     }
 }

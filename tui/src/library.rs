@@ -210,7 +210,7 @@ pub fn scan_heroic(home: &Path, gog_ids: &HashSet<String>) -> Vec<Found> {
 
 /// Where Heroic keeps games: its default install folder plus the GOG, Epic and
 /// sideloaded installs it records.
-fn heroic_game_folders(home: &Path) -> BTreeSet<PathBuf> {
+pub fn heroic_game_folders(home: &Path) -> BTreeSet<PathBuf> {
     let mut out = BTreeSet::new();
     let strings = |v: &Value, key: &str| v.get(key).and_then(Value::as_str).map(PathBuf::from);
     for root in heroic_roots(home) {

@@ -153,18 +153,21 @@ impl Filters {
         } else {
             g.eax.api.as_str()
         };
+        // A copy whose store is known is that store's alone, even when the game is
+        // sold on both; a game not on this PC is every store that sells it.
         let mut candidates: Vec<(Option<StoreKind>, bool, &str)> = [
             (StoreKind::Steam, &g.stores.steam),
             (StoreKind::Gog, &g.stores.gog),
         ]
         .into_iter()
+        .filter(|(k, _)| e.store.is_none() || e.store == Some(*k))
         .filter_map(|(k, s)| {
             s.as_ref()
                 .map(|s| (Some(k), s.delisted, s.api.as_deref().unwrap_or(game_api)))
         })
         .collect();
         if candidates.is_empty() {
-            candidates.push((None, false, game_api));
+            candidates.push((e.store, false, game_api));
         }
         candidates.iter().any(|&(k, delisted, api)| {
             self.store.allows(k, delisted) && self.audio.allows(api, &g.eax.versions)
@@ -259,5 +262,44 @@ mod tests {
         }
         assert_eq!(f, Filters::default());
         assert_eq!(AudioFilter::Eax(5).next(), AudioFilter::All);
+    }
+
+    fn copy(store: Option<StoreKind>) -> Entry {
+        let mut e = entry(BOTH);
+        e.store = store;
+        e
+    }
+
+    #[test]
+    fn an_installed_copy_belongs_to_the_store_it_came_from() {
+        let (steam, gog) = (copy(Some(StoreKind::Steam)), copy(Some(StoreKind::Gog)));
+        let on_steam = with(|f| f.store = StoreFilter::Steam);
+        let on_gog = with(|f| f.store = StoreFilter::Gog);
+        assert!(on_steam.passes(&steam) && !on_steam.passes(&gog));
+        assert!(on_gog.passes(&gog) && !on_gog.passes(&steam));
+    }
+
+    #[test]
+    fn a_copy_of_unknown_origin_and_a_game_not_here_match_every_store_that_sells_them() {
+        let unknown = copy(None);
+        assert!(with(|f| f.store = StoreFilter::Steam).passes(&unknown));
+        assert!(with(|f| f.store = StoreFilter::Gog).passes(&unknown));
+    }
+
+    #[test]
+    fn every_copy_is_listed_when_no_store_is_chosen() {
+        for store in [None, Some(StoreKind::Steam), Some(StoreKind::Gog)] {
+            assert!(Filters::default().passes(&copy(store)));
+        }
+    }
+
+    #[test]
+    fn a_copys_own_store_decides_delisted_and_the_audio_api() {
+        // BOTH: Steam is delisted; GOG has its own OpenAL api.
+        let (steam, gog) = (copy(Some(StoreKind::Steam)), copy(Some(StoreKind::Gog)));
+        let delisted = with(|f| f.store = StoreFilter::Delisted);
+        assert!(delisted.passes(&steam) && !delisted.passes(&gog));
+        let openal = with(|f| f.audio = AudioFilter::OpenAl);
+        assert!(openal.passes(&gog) && !openal.passes(&steam));
     }
 }

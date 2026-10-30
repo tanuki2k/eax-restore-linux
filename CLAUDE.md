@@ -105,7 +105,15 @@ launcher hardcodes `releases/latest`).
   `EAX_RESTORE_GAME`; the script stays the engine until the Rust port replaces
   it. Checks, as `.github/workflows/tui.yml` runs them: `cd tui && cargo fmt --check
   && cargo clippy --locked --all-targets -- -D warnings && cargo test --locked`.
-  Run it with `cargo run -- ../game-database.json` after `./build.sh`. It finds the
+  Run it with `cargo run -- ../game-database.json` after `./build.sh`. Its look copies the old fzf browser's (boxed Search,
+  Filters and Games beside a full-height pane; the colours are in `tui/src/theme.rs`,
+  taken from fzf's palette and the script's `GREEN`/`YELLOW`/`WHITE`). The right pane switches between
+  Profile and Settings with ←/→ (Shift-↑/↓ scrolls it); F1 lists every key (`tui/src/help.rs`: keep it in step
+  with `app.rs`), Ctrl-F gives the pane the whole screen, and Ctrl-L puts it under the list instead of
+  beside it (it does that by itself below 104 columns); `--list`, `--settings NAME` and `--profile NAME`
+  print the game list, one game's settings view or its profile without the TUI, which is
+  how the Rust views are compared with the Bash browser's `print_game_settings_details`
+  and `print_game_profile_stores` (word for word, for every game). It finds the
   script via `EAX_RESTORE_SCRIPT`, beside itself, its cache (`~/.local/share/
   eax-restore-linux/tui/<channel>/`) or `dist/`, skipping any that lacks
   `EAX_RESTORE_ACTION`; if none, it downloads its channel's release script and

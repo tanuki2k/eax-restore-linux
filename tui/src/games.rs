@@ -3,7 +3,7 @@
 
 use crate::db::{Database, Game};
 use crate::library::{self, Found, StoreKind};
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -103,6 +103,24 @@ fn folder_name(dir: &Path) -> String {
     }
 }
 
+/// The store a copy found by its exe came from, as far as its folder says:
+/// inside a Steam library's `steamapps/common` it is Steam's, inside one of
+/// Heroic's game folders it is GOG's. Only a store the database lists for the
+/// game counts, and a copy anywhere else stays unknown.
+fn store_of_copy(g: &Game, dir: &Path, heroic: &BTreeSet<PathBuf>) -> Option<StoreKind> {
+    let parts: Vec<_> = dir.components().map(|c| c.as_os_str()).collect();
+    let in_steam = parts
+        .windows(2)
+        .any(|w| w[0] == "steamapps" && w[1] == "common");
+    if in_steam && g.stores.steam.is_some() {
+        Some(StoreKind::Steam)
+    } else if heroic.iter().any(|h| dir.starts_with(h)) && g.stores.gog.is_some() {
+        Some(StoreKind::Gog)
+    } else {
+        None
+    }
+}
+
 pub fn build(db: &Database, home: &Path, state_file: &Path) -> Vec<Entry> {
     let steam_ids: HashSet<u64> = db
         .games
@@ -118,6 +136,7 @@ pub fn build(db: &Database, home: &Path, state_file: &Path) -> Vec<Entry> {
     let mut found = library::scan_steam(home, &steam_ids);
     found.extend(library::scan_heroic(home, &gog_ids));
     let live = library::live_manifest_dirs(home, state_file);
+    let heroic = library::heroic_game_folders(home);
 
     let mut claimed: HashSet<&PathBuf> = HashSet::new();
     let mut entries: Vec<Entry> = db
@@ -158,12 +177,14 @@ pub fn build(db: &Database, home: &Path, state_file: &Path) -> Vec<Entry> {
             [i] if found_before(i) => {
                 entries[i].status = Status::Installed;
                 entries[i].path = Some(dir.clone());
+                entries[i].store = store_of_copy(&db.games[i], dir, &heroic);
             }
             // Another install of a game already listed: its own row.
             [i] => {
                 let mut e = Entry::database_only(db.games[i].clone());
                 e.status = Status::Installed;
                 e.path = Some(dir.clone());
+                e.store = store_of_copy(&db.games[i], dir, &heroic);
                 entries.push(e);
             }
             _ => entries.push(Entry {
@@ -338,5 +359,111 @@ mod tests {
             &w.state_file(),
         );
         assert_eq!(by_name(&entries, "Obscure").status, Status::Manual);
+    }
+
+    const BOTH_DB: &str = r#"{"games":[
+        {"id":"both","name":"Both","exe":"both.exe","stores":{"steam":{"id":70},"gog":{"id":71}}},
+        {"id":"steamonly","name":"Steam Only","exe":"so.exe","stores":{"steam":{"id":72}}}]}"#;
+
+    fn heroic_config(w: &World) {
+        w.write(
+            ".config/heroic/config.json",
+            &format!(
+                r#"{{"defaultSettings":{{"defaultInstallPath":"{}"}}}}"#,
+                w.p("Games/Heroic").display()
+            ),
+        );
+    }
+
+    fn copies<'a>(entries: &'a [Entry], name: &str) -> Vec<&'a Entry> {
+        entries.iter().filter(|e| e.name == name).collect()
+    }
+
+    #[test]
+    fn copies_found_by_their_exe_get_the_store_their_folder_says() {
+        let w = World::new();
+        // Neither has an appmanifest or a Heroic record, so only the exe finds them.
+        w.write(".local/share/Steam/steamapps/common/Both/both.exe", "");
+        w.write(
+            ".local/share/Steam/steamapps/common/Both/.eax-restore-manifest.txt",
+            "/x\n",
+        );
+        w.write("Games/Heroic/Both GOTY/both.exe", "");
+        w.write("Games/Heroic/Both GOTY/.eax-restore-manifest.txt", "/x\n");
+        heroic_config(&w);
+        let entries = build(
+            &Database::parse(BOTH_DB).unwrap(),
+            w.home.path(),
+            &w.state_file(),
+        );
+        let both = copies(&entries, "Both");
+        assert_eq!(both.len(), 2);
+        let store_at = |part: &str| {
+            both.iter()
+                .find(|e| {
+                    e.path
+                        .as_ref()
+                        .is_some_and(|p| p.to_string_lossy().contains(part))
+                })
+                .and_then(|e| e.store)
+        };
+        assert_eq!(store_at("steamapps/common"), Some(StoreKind::Steam));
+        assert_eq!(store_at("Heroic/Both GOTY"), Some(StoreKind::Gog));
+    }
+
+    #[test]
+    fn a_copy_elsewhere_or_in_a_store_that_does_not_sell_the_game_stays_unknown() {
+        let w = World::new();
+        w.write("mnt/games/Both/both.exe", "");
+        w.write("mnt/games/Both/.eax-restore-manifest.txt", "/x\n");
+        // In Heroic's folder, but this game is not sold on GOG.
+        w.write("Games/Heroic/So/so.exe", "");
+        w.write("Games/Heroic/So/.eax-restore-manifest.txt", "/x\n");
+        heroic_config(&w);
+        w.write(
+            ".local/state/eax-restore-linux/installed-games.txt",
+            &format!("{}\n", w.p("mnt/games/Both").display()),
+        );
+        let entries = build(
+            &Database::parse(BOTH_DB).unwrap(),
+            w.home.path(),
+            &w.state_file(),
+        );
+        assert_eq!(copies(&entries, "Both")[0].store, None);
+        assert_eq!(copies(&entries, "Steam Only")[0].store, None);
+    }
+
+    #[test]
+    fn the_store_filter_follows_the_copy_not_the_game() {
+        use crate::filters::{Filters, StoreFilter};
+        let w = World::new();
+        w.write(".local/share/Steam/steamapps/common/Both/both.exe", "");
+        w.write(
+            ".local/share/Steam/steamapps/common/Both/.eax-restore-manifest.txt",
+            "/x\n",
+        );
+        w.write("Games/Heroic/Both GOTY/both.exe", "");
+        w.write("Games/Heroic/Both GOTY/.eax-restore-manifest.txt", "/x\n");
+        heroic_config(&w);
+        let entries = build(
+            &Database::parse(BOTH_DB).unwrap(),
+            w.home.path(),
+            &w.state_file(),
+        );
+        let shown = |f: StoreFilter| -> Vec<String> {
+            let filters = Filters {
+                store: f,
+                ..Filters::default()
+            };
+            copies(&entries, "Both")
+                .into_iter()
+                .filter(|e| filters.passes(e))
+                .map(|e| e.path.as_ref().unwrap().display().to_string())
+                .collect()
+        };
+        let (steam, gog) = (shown(StoreFilter::Steam), shown(StoreFilter::Gog));
+        assert_eq!((steam.len(), gog.len()), (1, 1));
+        assert!(steam[0].contains("steamapps/common"));
+        assert!(gog[0].contains("Heroic"));
     }
 }
