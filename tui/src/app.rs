@@ -92,6 +92,9 @@ pub struct App {
     pub filter: Filter,
     pub filters: Filters,
     pub pane: Pane,
+    /// The first row of the games list that is showing, kept between redraws so the
+    /// window only moves when the highlight gets near its edge. Set by `draw`.
+    pub list_offset: std::cell::Cell<usize>,
     pub layout: Layout,
     /// The layout this window width calls for; Ctrl-L swaps away from it.
     natural: Layout,
@@ -124,6 +127,7 @@ impl App {
             filter: Filter::All,
             filters: Filters::default(),
             pane: Pane::Profile,
+            list_offset: std::cell::Cell::new(0),
             layout: Layout::Side,
             natural: Layout::Side,
             pane_scroll: 0,

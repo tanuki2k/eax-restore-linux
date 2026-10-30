@@ -115,7 +115,8 @@ launcher hardcodes `releases/latest`).
   beside it (it does that by itself below 104 columns); `--list`, `--settings NAME` and `--profile NAME`
   print the game list, one game's settings view or its profile without the TUI, which is
   how the Rust views are compared with the Bash browser's `print_game_settings_details`
-  and `print_game_profile_stores` (word for word, for every game). It finds the
+  and `print_game_profile_stores` (word for word, for every game). The Games list keeps its window between redraws (`App::list_offset`) and moves it only
+  when the highlight is within 3 rows of an edge, like fzf's `--scroll-off`. It finds the
   script via `EAX_RESTORE_SCRIPT`, beside itself, its cache (`~/.local/share/
   eax-restore-linux/tui/<channel>/`) or `dist/`, skipping any that lacks
   `EAX_RESTORE_ACTION`; if none, it downloads its channel's release script and

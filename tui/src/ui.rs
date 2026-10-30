@@ -263,10 +263,53 @@ fn draw_games(f: &mut Frame, app: &App, area: Rect) {
     // A column on the right keeps a long name from running under the scroll bar.
     let block = boxed("Games").padding(Padding::new(0, 1, 0, 0));
     let rows = usize::from(block.inner(area).height);
+    let offset = window_offset(
+        app.selected,
+        app.list_offset.get(),
+        rows,
+        app.visible.len(),
+        SCROLL_OFF,
+    );
+    app.list_offset.set(offset);
     let list = selection(List::new(items).block(block));
-    let mut state = ListState::default().with_selected(app.current().map(|_| app.selected));
+    let mut state = ListState::default()
+        .with_offset(offset)
+        .with_selected(app.current().map(|_| app.selected));
     f.render_stateful_widget(list, area, &mut state);
-    scroll_bar(f, area, rows, app.visible.len(), state.offset());
+    scroll_bar(f, area, rows, app.visible.len(), offset);
+}
+
+/// Rows kept between the highlight and the edge of the list while it scrolls: the
+/// old browser's (fzf's `--scroll-off`).
+const SCROLL_OFF: usize = 3;
+
+/// The first row of a list window. The window stays where it was (`offset`) while
+/// the highlight moves about inside it, and only moves when the highlight gets
+/// within `margin` rows of an edge, so going up from the bottom the highlight
+/// climbs to near the top before the list starts to scroll, as in the old browser.
+/// At the ends of the list the highlight can reach the edge.
+fn window_offset(
+    selected: usize,
+    offset: usize,
+    rows: usize,
+    total: usize,
+    margin: usize,
+) -> usize {
+    if total <= rows {
+        return 0;
+    }
+    // A window too small for the margin on both sides keeps the highlight centred.
+    let margin = margin.min(rows.saturating_sub(1) / 2);
+    let furthest = total - rows;
+    let offset = offset.min(furthest);
+    let moved = if selected < offset + margin {
+        selected.saturating_sub(margin)
+    } else if selected + margin >= offset + rows {
+        selected + margin + 1 - rows
+    } else {
+        offset
+    };
+    moved.min(furthest)
 }
 
 /// A row: its mark, then the name with the letters the search matched lit.
@@ -1353,5 +1396,134 @@ mod tests {
         let g = grid(&app, 100, 24);
         // Column 48 holds the bar or nothing, never a letter of a name.
         assert!(g.iter().all(|row| row[48] != 'A'));
+    }
+
+    #[test]
+    fn the_window_only_moves_when_the_highlight_nears_its_edge() {
+        // The old browser, measured: 24 rows of 111, three kept clear at each edge.
+        let (rows, total) = (24, 111);
+        // Going down from the top the highlight (row = selected - offset + 1) runs to
+        // row 21 with the window still, then holds there while the list scrolls.
+        let mut offset = 0;
+        for (selected, row) in [
+            (0, 1),
+            (5, 6),
+            (19, 20),
+            (20, 21),
+            (21, 21),
+            (22, 21),
+            (29, 21),
+        ] {
+            offset = window_offset(selected, offset, rows, total, 3);
+            assert_eq!(selected - offset + 1, row, "going down to {selected}");
+        }
+        // Going up from the bottom it climbs from row 24 to row 4 with the window
+        // still, and only then does the list scroll under it.
+        let mut offset = total - rows;
+        for (selected, row, first) in [
+            (110, 24, 87),
+            (105, 19, 87),
+            (91, 5, 87),
+            (90, 4, 87),
+            (89, 4, 86),
+            (88, 4, 85),
+        ] {
+            offset = window_offset(selected, offset, rows, total, 3);
+            assert_eq!(
+                (selected - offset + 1, offset),
+                (row, first),
+                "going up to {selected}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_window_stays_inside_the_list_and_copes_with_small_ones() {
+        // Everything fits: always from the top.
+        assert_eq!(window_offset(3, 5, 10, 8, 3), 0);
+        // A stale offset past the end is pulled back to the last window, and the highlight
+        // on that window's top row is inside the margin, so the window moves up three more.
+        assert_eq!(window_offset(50, 500, 10, 60, 3), 47);
+        assert_eq!(window_offset(55, 500, 10, 60, 3), 50);
+        // The last games can be reached at the very bottom.
+        assert_eq!(window_offset(59, 40, 10, 60, 3), 50);
+        // A window too small for the margin keeps the highlight in the middle.
+        assert_eq!(window_offset(10, 0, 3, 40, 3), 9);
+        assert_eq!(window_offset(0, 0, 1, 5, 3), 0);
+        assert_eq!(window_offset(4, 0, 1, 5, 3), 4);
+        // Never past the furthest window, never a negative one.
+        for total in 1..30 {
+            for selected in 0..total {
+                for offset in [0, 3, 40] {
+                    let o = window_offset(selected, offset, 7, total, 3);
+                    assert!(
+                        o <= total.saturating_sub(7),
+                        "{selected}/{total} from {offset}: {o}"
+                    );
+                    assert!(
+                        selected >= o && selected < o + 7.min(total),
+                        "highlight out of view"
+                    );
+                }
+            }
+        }
+    }
+
+    /// The first game showing, the highlighted row (1-based) and the number of rows
+    /// in the Games list.
+    fn list_view(app: &App) -> (String, usize, usize) {
+        let (w, h) = (100, 24);
+        let buf = drawn(app, w, h);
+        let g = grid(app, w, h);
+        let games_top = row_of(&screen(app, w, h), " Games ");
+        // Inside the box: after its top border, before the bottom one.
+        let inside = games_top + 1..usize::from(h) - 2;
+        let first = row_text(&g[inside.start][3..48]).trim().to_string();
+        let lit = inside
+            .clone()
+            .position(|y| buf[(10, u16::try_from(y).unwrap())].bg == Color::Indexed(236))
+            .map(|p| p + 1)
+            .unwrap();
+        (first, lit, inside.len())
+    }
+
+    fn sixty_games() -> App {
+        let games: String = (0..60)
+            .map(|i| format!(r#"{{"id":"g{i}","name":"Game {i:02}"}}"#))
+            .collect::<Vec<_>>()
+            .join(",");
+        App::new(entries(&format!(r#"{{"games":[{games}]}}"#)))
+    }
+
+    #[test]
+    fn going_up_from_the_bottom_the_highlight_climbs_before_the_list_scrolls() {
+        use ratatui::crossterm::event::KeyCode::{Down, End, Up};
+        let name = |i: usize| format!("Game {i:02}");
+        let mut app = sixty_games();
+        press(&mut app, End);
+        let (first, row, rows) = list_view(&app);
+        assert!(rows >= 8, "a list tall enough to show the margin: {rows}");
+        // The last game sits on the last row.
+        assert_eq!((first, row), (name(60 - rows), rows));
+        // Up until the highlight is on row 4 (three clear of the top): the list has
+        // not moved, only the highlight has.
+        for _ in 0..rows - 4 {
+            press(&mut app, Up);
+        }
+        assert_eq!(list_view(&app), (name(60 - rows), 4, rows));
+        // Now the list scrolls under it and the highlight holds at row 4.
+        press(&mut app, Up);
+        assert_eq!(list_view(&app), (name(60 - rows - 1), 4, rows));
+        press(&mut app, Up);
+        assert_eq!(list_view(&app), (name(60 - rows - 2), 4, rows));
+        // Going down from the top is the mirror image: the highlight runs to three
+        // clear of the bottom (row rows - 3), then the list scrolls.
+        let mut app = sixty_games();
+        for _ in 0..rows - 4 {
+            press(&mut app, Down);
+        }
+        assert_eq!(list_view(&app), (name(0), rows - 3, rows));
+        press(&mut app, Down);
+        assert_eq!(list_view(&app), (name(1), rows - 3, rows));
     }
 }
