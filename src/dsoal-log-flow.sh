@@ -1,10 +1,12 @@
 # ==============================================================================
 # DSOAL LOGGING (Tools → [D]SOAL logging)
 # ==============================================================================
-# Turns DSOAL's own log on or off for one game by setting DSOAL_LOGLEVEL and
-# DSOAL_LOGFILE in its Steam launch options or Heroic environment variables —
-# what you'd otherwise type in by hand to see what a game asks DSOAL to do.
-# DSOAL_LOGLEVEL is one less than DSOAL's internal level: 3 traces startup
+# Turns the sound logs on or off for one game by setting variables in its Steam
+# launch options or Heroic environment variables — what you'd otherwise type in
+# by hand to see what a game asks the audio fix to do. OpenAL Soft's log
+# (ALSOFT_LOGLEVEL 3 and ALSOFT_LOGFILE, openal.log) is always set; DSOAL's
+# (DSOAL_LOGLEVEL and DSOAL_LOGFILE, dsoal.log) too when DSOAL is installed in
+# the game folder. DSOAL_LOGLEVEL is one less than DSOAL's internal level: 3 traces startup
 # and the API calls, 4 (Debug) adds every EAX property call, which is what
 # shows which EAX version a game actually uses. Changes nothing else, and
 # isn't recorded in the install manifest: running this again turns it off,
@@ -12,8 +14,8 @@
 # set through the launcher (it has no launcher record otherwise).
 if [ -n "$DSOAL_LOG_MODE" ]; then
     print_banner "DSOAL LOGGING"
-    tool_gate "This turns DSOAL's own log on or off for one game. It records what the game asks" \
-        "DSOAL to do, which helps when EAX doesn't sound right or for a bug report." \
+    tool_gate "This turns the sound log on or off for one game. It records what the game asks" \
+        "the audio fix to do, which helps when EAX doesn't sound right or when you're writing a bug report." \
         || { OPEN_TOOLS_MENU=1; continue; }
 
     SCRIPT_ACTION="i"
@@ -36,11 +38,16 @@ if [ -n "$DSOAL_LOG_MODE" ]; then
         break
     done
 
-    print_step 3 "DSOAL Logging"
-    print_paragraph "This step turns DSOAL's log file on or off, which shows whether" \
+    print_step 3 "Sound Logging"
+    print_paragraph "This step turns the log files on or off. They show whether" \
         "${GAME_NAME:-the game} is loading the audio fix."
     LAUNCHER_CHANGE="dsoal_log"
     dsoal_log_wine="$(dsoal_log_path_for_wine "$GAME_DIR")"
+    alsoft_log_wine="$(alsoft_log_path_for_wine "$GAME_DIR")"
+    # DSOAL only writes its log when it's the game's dsound.dll; a game running
+    # OpenAL Soft alone has just OpenAL Soft's.
+    dsoal_log_has_dsoal=""
+    [ -e "$GAME_DIR/dsoal-aldrv.dll" ] && dsoal_log_has_dsoal=1
 
     # The launcher has to have saved settings for the game to add to.
     launcher_override_target
@@ -53,42 +60,63 @@ if [ -n "$DSOAL_LOG_MODE" ]; then
         launcher_override_target
     done
     if [ -z "$OVERRIDE_FILE" ]; then
-        print_result "To turn on DSOAL logging yourself, set these environment variables for ${GAME_NAME}"
+        print_result "To turn on logging yourself, set these environment variables for ${GAME_NAME}"
         echo -e "${WHITE}(in Steam, put them in front of %command% in its launch options):${NC}"
-        echo -e "  ${CYAN}DSOAL_LOGLEVEL=4${NC}"
-        echo -e "  ${CYAN}DSOAL_LOGFILE=\"${dsoal_log_wine}\"${NC}"
-        print_result "Use 3 instead of 4 for a smaller log without every EAX call."
+        if [ -n "$dsoal_log_has_dsoal" ]; then
+            echo -e "  ${CYAN}DSOAL_LOGLEVEL=4${NC}"
+            echo -e "  ${CYAN}DSOAL_LOGFILE=\"${dsoal_log_wine}\"${NC}"
+        fi
+        echo -e "  ${CYAN}ALSOFT_LOGLEVEL=3${NC}"
+        echo -e "  ${CYAN}ALSOFT_LOGFILE=\"${alsoft_log_wine}\"${NC}"
+        [ -n "$dsoal_log_has_dsoal" ] && print_result "Use 3 instead of 4 for a smaller log that leaves out the EAX calls."
         exit 0
     fi
 
     # What's set now.
-    dsoal_log_level=""; dsoal_log_file=""
+    dsoal_log_level=""; dsoal_log_file=""; alsoft_log_level=""; alsoft_log_file=""
     if [ "$OVERRIDE_LAUNCHER" == "steam" ]; then
         dsoal_log_opts="$(launcher_override_get)"
         [ "$dsoal_log_opts" == "__ABSENT__" ] && dsoal_log_opts=""
-        dsoal_log_re='(^|[[:space:]])DSOAL_LOGLEVEL=("([^"]*)"|'"'"'([^'"'"']*)'"'"'|([^[:space:]]*))'
-        [[ "$dsoal_log_opts" =~ $dsoal_log_re ]] && dsoal_log_level="${BASH_REMATCH[3]}${BASH_REMATCH[4]}${BASH_REMATCH[5]}"
-        dsoal_log_re='(^|[[:space:]])DSOAL_LOGFILE=("([^"]*)"|'"'"'([^'"'"']*)'"'"'|([^[:space:]]*))'
-        [[ "$dsoal_log_opts" =~ $dsoal_log_re ]] && dsoal_log_file="${BASH_REMATCH[3]}${BASH_REMATCH[4]}${BASH_REMATCH[5]}"
+        dsoal_log_level="$(launch_options_log_value "$dsoal_log_opts" DSOAL LEVEL)"
+        dsoal_log_file="$(launch_options_log_value "$dsoal_log_opts" DSOAL FILE)"
+        alsoft_log_level="$(launch_options_log_value "$dsoal_log_opts" ALSOFT LEVEL)"
+        alsoft_log_file="$(launch_options_log_value "$dsoal_log_opts" ALSOFT FILE)"
     else
         dsoal_log_level="$(heroic_get_env "$OVERRIDE_FILE" "$OVERRIDE_ID" DSOAL_LOGLEVEL)"
         dsoal_log_file="$(heroic_get_env "$OVERRIDE_FILE" "$OVERRIDE_ID" DSOAL_LOGFILE)"
+        alsoft_log_level="$(heroic_get_env "$OVERRIDE_FILE" "$OVERRIDE_ID" ALSOFT_LOGLEVEL)"
+        alsoft_log_file="$(heroic_get_env "$OVERRIDE_FILE" "$OVERRIDE_ID" ALSOFT_LOGFILE)"
         [[ "$dsoal_log_level" == __*__ ]] && dsoal_log_level=""
         [[ "$dsoal_log_file" == __*__ ]] && dsoal_log_file=""
+        [[ "$alsoft_log_level" == __*__ ]] && alsoft_log_level=""
+        [[ "$alsoft_log_file" == __*__ ]] && alsoft_log_file=""
     fi
 
-    if [ -n "$dsoal_log_level" ]; then
+    if [ -n "$dsoal_log_level$alsoft_log_level" ]; then
         dsoal_log_action="remove"
         dsoal_log_linux="$(dsoal_log_path_for_linux "${dsoal_log_file:-dsoal.log}")"
-        print_status "DSOAL logging is on for ${GAME_NAME} (level ${dsoal_log_level}), writing to $(tilde_path "$dsoal_log_linux")."
-        if ! confirm "Turn DSOAL logging off for ${GAME_NAME}?" Y; then
+        alsoft_log_linux="$(dsoal_log_path_for_linux "${alsoft_log_file:-openal.log}")"
+        if [ -n "$dsoal_log_level" ]; then
+            if [ "$dsoal_log_level" == "3" ]; then dsoal_log_word="Basic"; else dsoal_log_word="Full"; fi
+            print_status "${dsoal_log_word} DSOAL logging is on for ${GAME_NAME}, writing to $(tilde_path "$dsoal_log_linux")."
+        fi
+        if [ -n "$alsoft_log_level" ]; then
+            print_status "OpenAL Soft logging is on for ${GAME_NAME}, writing to $(tilde_path "$alsoft_log_linux")."
+        fi
+        if ! confirm "Turn logging off for ${GAME_NAME}?" Y; then
             print_result "No changes were made." "$YELLOW"
             exit 0
         fi
     else
         dsoal_log_action="add"
         dsoal_log_linux="$GAME_DIR/dsoal.log"
-        echo -e "\n${WHITE}How much should DSOAL log?${NC}\n"
+        alsoft_log_linux="$GAME_DIR/openal.log"
+        alsoft_log_level=3
+        if [ -n "$dsoal_log_has_dsoal" ]; then
+            echo -e "\n${WHITE}How much should the audio fix log?${NC}\n"
+        else
+            echo -e "\n${WHITE}How much should be logged?${NC}\n"
+        fi
         print_option 1 "Full — every EAX call the game makes" "(default; the log grows fast and the game may stutter)"
         print_option 2 "Basic — startup, and which EAX versions the game asks for"
         while true; do
@@ -114,7 +142,7 @@ if [ -n "$DSOAL_LOG_MODE" ]; then
         dsoal_log_opts="$(launcher_override_get)"
         [ "$dsoal_log_opts" == "__ABSENT__" ] && dsoal_log_opts=""
         if [ "$dsoal_log_action" == "add" ]; then
-            dsoal_log_new="$(launch_options_with_dsoal_log "$dsoal_log_opts" "$dsoal_log_level" "$dsoal_log_wine")"
+            dsoal_log_new="$(launch_options_with_sound_log "$dsoal_log_opts" "${dsoal_log_has_dsoal:+$dsoal_log_level}" "$dsoal_log_wine" "$alsoft_log_level" "$alsoft_log_wine")"
         else
             dsoal_log_new="$(launch_options_without_dsoal_log "$dsoal_log_opts")"
         fi
@@ -132,12 +160,15 @@ if [ -n "$DSOAL_LOG_MODE" ]; then
         log_cmd "dsoal logging: $OVERRIDE_FILE [$OVERRIDE_ID] '$dsoal_log_opts' -> '$dsoal_log_new'"
     else
         if [ "$dsoal_log_action" == "add" ]; then
-            heroic_set_env "$OVERRIDE_FILE" "$OVERRIDE_ID" DSOAL_LOGLEVEL "$dsoal_log_level" \
-                && heroic_set_env "$OVERRIDE_FILE" "$OVERRIDE_ID" DSOAL_LOGFILE "$dsoal_log_wine" \
-                && [ "$(heroic_get_env "$OVERRIDE_FILE" "$OVERRIDE_ID" DSOAL_LOGLEVEL)" == "$dsoal_log_level" ] \
+            { [ -z "$dsoal_log_has_dsoal" ] \
+                || { heroic_set_env "$OVERRIDE_FILE" "$OVERRIDE_ID" DSOAL_LOGLEVEL "$dsoal_log_level" \
+                    && heroic_set_env "$OVERRIDE_FILE" "$OVERRIDE_ID" DSOAL_LOGFILE "$dsoal_log_wine"; }; } \
+                && heroic_set_env "$OVERRIDE_FILE" "$OVERRIDE_ID" ALSOFT_LOGLEVEL "$alsoft_log_level" \
+                && heroic_set_env "$OVERRIDE_FILE" "$OVERRIDE_ID" ALSOFT_LOGFILE "$alsoft_log_wine" \
+                && [ "$(heroic_get_env "$OVERRIDE_FILE" "$OVERRIDE_ID" ALSOFT_LOGLEVEL)" == "$alsoft_log_level" ] \
                 || dsoal_log_ok=0
         else
-            for dsoal_log_var in DSOAL_LOGLEVEL DSOAL_LOGFILE; do
+            for dsoal_log_var in DSOAL_LOGLEVEL DSOAL_LOGFILE ALSOFT_LOGLEVEL ALSOFT_LOGFILE; do
                 case "$(heroic_get_env "$OVERRIDE_FILE" "$OVERRIDE_ID" "$dsoal_log_var")" in
                     __ABSENT__|__NOAPP__) ;;
                     *) heroic_set_env "$OVERRIDE_FILE" "$OVERRIDE_ID" "$dsoal_log_var" __DELETE__ || dsoal_log_ok=0 ;;
@@ -155,41 +186,52 @@ if [ -n "$DSOAL_LOG_MODE" ]; then
     fi
 
     if [ "$dsoal_log_action" == "add" ]; then
-        # The box doesn't reflow, so the path is split at its slashes: a cut
+        dsoal_log_paths=()
+        [ -n "$dsoal_log_has_dsoal" ] && dsoal_log_paths+=("$dsoal_log_linux")
+        dsoal_log_paths+=("$alsoft_log_linux")
+        # The box doesn't reflow, so each path is split at its slashes: a cut
         # in the middle of a folder name would look like a different folder.
-        dsoal_log_chunk="" dsoal_log_first=1
-        mapfile -t dsoal_log_box < <(fold -s -w 54 <<< "Start ${GAME_NAME} to make the log. It goes in:" | sed 's/ *$//')
+        if [ ${#dsoal_log_paths[@]} -gt 1 ]; then
+            dsoal_log_intro="Start ${GAME_NAME} to make the logs. They go in:"
+        else
+            dsoal_log_intro="Start ${GAME_NAME} to make the log. It goes in:"
+        fi
+        mapfile -t dsoal_log_box < <(fold -s -w 54 <<< "$dsoal_log_intro" | sed 's/ *$//')
         dsoal_log_box+=("")
-        IFS='/' read -ra dsoal_log_parts <<< "$(tilde_path "$dsoal_log_linux")"
-        for dsoal_log_part in "${dsoal_log_parts[@]}"; do
-            if [ "$dsoal_log_first" -eq 1 ]; then
-                dsoal_log_chunk="$dsoal_log_part"; dsoal_log_first=0
-            # 53 leaves room for the slash that ends a broken line.
-            elif [ $(( ${#dsoal_log_chunk} + ${#dsoal_log_part} + 1 )) -gt 53 ]; then
-                dsoal_log_box+=("${dsoal_log_chunk}/"); dsoal_log_chunk="$dsoal_log_part"
-            else
-                dsoal_log_chunk+="/$dsoal_log_part"
-            fi
-            while [ ${#dsoal_log_chunk} -gt 54 ]; do
-                dsoal_log_box+=("${dsoal_log_chunk:0:54}"); dsoal_log_chunk="${dsoal_log_chunk:54}"
+        for dsoal_log_path in "${dsoal_log_paths[@]}"; do
+            dsoal_log_chunk="" dsoal_log_first=1
+            IFS='/' read -ra dsoal_log_parts <<< "$(tilde_path "$dsoal_log_path")"
+            for dsoal_log_part in "${dsoal_log_parts[@]}"; do
+                if [ "$dsoal_log_first" -eq 1 ]; then
+                    dsoal_log_chunk="$dsoal_log_part"; dsoal_log_first=0
+                # 53 leaves room for the slash that ends a broken line.
+                elif [ $(( ${#dsoal_log_chunk} + ${#dsoal_log_part} + 1 )) -gt 53 ]; then
+                    dsoal_log_box+=("${dsoal_log_chunk}/"); dsoal_log_chunk="$dsoal_log_part"
+                else
+                    dsoal_log_chunk+="/$dsoal_log_part"
+                fi
+                while [ ${#dsoal_log_chunk} -gt 54 ]; do
+                    dsoal_log_box+=("${dsoal_log_chunk:0:54}"); dsoal_log_chunk="${dsoal_log_chunk:54}"
+                done
             done
+            [ -n "$dsoal_log_chunk" ] && dsoal_log_box+=("$dsoal_log_chunk")
+            dsoal_log_box+=("")
         done
-        [ -n "$dsoal_log_chunk" ] && dsoal_log_box+=("$dsoal_log_chunk")
-        dsoal_log_box+=("")
         mapfile -t -O "${#dsoal_log_box[@]}" dsoal_log_box < <(fold -s -w 54 \
             <<< "Each time the game starts, it replaces the log. To turn logging off, choose Tools → DSOAL logging again." | sed 's/ *$//')
         echo ""
-        TITLED_BOX_CENTRE=1 print_titled_box "$YELLOW" "DSOAL logging turned on" "${dsoal_log_box[@]}"
+        TITLED_BOX_CENTRE=1 print_titled_box "$YELLOW" "Sound logging turned on" "${dsoal_log_box[@]}"
     else
-        print_banner "DSOAL LOGGING TURNED OFF"
-        if [ -f "$dsoal_log_linux" ]; then
-            print_status "The last log is still at $(tilde_path "$dsoal_log_linux")."
+        print_banner "SOUND LOGGING TURNED OFF"
+        for dsoal_log_path in "$dsoal_log_linux" "$alsoft_log_linux"; do
+            [ -f "$dsoal_log_path" ] || continue
+            print_status "The last log is still at $(tilde_path "$dsoal_log_path")."
             # Only a log inside the game folder is offered for deletion: the
             # path comes from launcher settings the player may have edited.
-            if [[ "$dsoal_log_linux" == "$GAME_DIR"/* && "$dsoal_log_linux" != *"/../"* ]] && confirm "Delete it?" N; then
-                rm -f "$dsoal_log_linux" && print_status "Deleted." "$GREEN"
+            if [[ "$dsoal_log_path" == "$GAME_DIR"/* && "$dsoal_log_path" != *"/../"* ]] && confirm "Delete it?" N; then
+                rm -f "$dsoal_log_path" && print_status "Deleted." "$GREEN"
             fi
-        fi
+        done
     fi
     exit 0
 fi

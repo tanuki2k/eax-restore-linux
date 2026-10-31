@@ -60,13 +60,15 @@ install_heroic() {
     EAX_RESTORE_DSOAL_LOG=1 install_heroic
     [ "$(jq -r --arg a "$HEROIC_ID" '.[$a].enviromentOptions[] | select(.key=="DSOAL_LOGLEVEL") | .value' "$CONF")" == "4" ]
     [ "$(jq -r --arg a "$HEROIC_ID" '.[$a].enviromentOptions[] | select(.key=="DSOAL_LOGFILE") | .value' "$CONF")" == "Z:$GAME/dsoal.log" ]
-    grep -q "DSOAL logging is on (level 4)" "$OUT"
+    [ "$(jq -r --arg a "$HEROIC_ID" '.[$a].enviromentOptions[] | select(.key=="ALSOFT_LOGLEVEL") | .value' "$CONF")" == "3" ]
+    [ "$(jq -r --arg a "$HEROIC_ID" '.[$a].enviromentOptions[] | select(.key=="ALSOFT_LOGFILE") | .value' "$CONF")" == "Z:$GAME/openal.log" ]
+    grep -q "Full DSOAL logging is on" "$OUT"
     heroic_uninstall_answers "$BATS_TEST_TMPDIR/un"
     run_script "$BATS_TEST_TMPDIR/un"
-    [ "$(jq -r --arg a "$HEROIC_ID" '[.[$a].enviromentOptions[] | select(.key|startswith("DSOAL_LOG"))] | length' "$CONF")" == "0" ]
+    [ "$(jq -r --arg a "$HEROIC_ID" '[.[$a].enviromentOptions[] | select(.key|test("^(DSOAL|ALSOFT)_LOG"))] | length' "$CONF")" == "0" ]
 }
 
 @test "without EAX_RESTORE_DSOAL_LOG nothing about DSOAL logging is set" {
     install_heroic
-    [ "$(jq -r --arg a "$HEROIC_ID" '[.[$a].enviromentOptions[] | select(.key|startswith("DSOAL_LOG"))] | length' "$CONF")" == "0" ]
+    [ "$(jq -r --arg a "$HEROIC_ID" '[.[$a].enviromentOptions[] | select(.key|test("^(DSOAL|ALSOFT)_LOG"))] | length' "$CONF")" == "0" ]
 }

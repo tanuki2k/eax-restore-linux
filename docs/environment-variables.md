@@ -29,7 +29,7 @@ EAX_RESTORE_SKIP_PREFLIGHT=1 EAX_RESTORE_SKIP_UPDATE_CHECK=1 ./eax-restore-linux
 
 | Variable | What it does |
 | --- | --- |
-| `EAX_RESTORE_DSOAL_LOG=1` | Turns DSOAL's own log on at its fullest level (4, every EAX call) as part of an install, so you don't have to run **Tools → DSOAL logging** afterwards. It adds `DSOAL_LOGLEVEL` and `DSOAL_LOGFILE` to the game's Steam launch options or Heroic environment variables, whichever way the DLL override was set, and the log goes to `dsoal.log` in the game folder. The game needs launcher settings to add them to. Uninstalling removes them along with the DLL override if it was set through the launcher. |
+| `EAX_RESTORE_DSOAL_LOG=1` | Turns DSOAL's own log on at its fullest level (4, every EAX call) as part of an install, so you don't have to run **Tools → DSOAL logging** afterwards. It adds `DSOAL_LOGLEVEL` and `DSOAL_LOGFILE` (and, for OpenAL Soft's own log at level 3, `ALSOFT_LOGLEVEL` and `ALSOFT_LOGFILE`) to the game's Steam launch options or Heroic environment variables, whichever way the DLL override was set, and the logs go to `dsoal.log` and `openal.log` in the game folder. A game installed with OpenAL Soft alone only gets the OpenAL Soft pair. The game needs launcher settings to add them to. Uninstalling removes them along with the DLL override if it was set through the launcher. |
 
 ## For scripting
 

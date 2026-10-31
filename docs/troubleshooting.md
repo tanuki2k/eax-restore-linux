@@ -12,12 +12,16 @@ If you'd rather not keep logs, set `EAX_RESTORE_NO_LOG=1`.
 
 When the install worked but the game doesn't sound right, DSOAL's own log tells you more. **Tools → [D]SOAL logging** adds `DSOAL_LOGLEVEL` and `DSOAL_LOGFILE` to the game's Steam launch options or Heroic environment variables. From then on DSOAL writes `dsoal.log` to the game folder every time the game starts.
 
+It also adds `ALSOFT_LOGLEVEL=3` and `ALSOFT_LOGFILE`, so OpenAL Soft writes `openal.log` beside it. A game installed with OpenAL Soft alone has no DSOAL, so it only gets the OpenAL Soft pair and `openal.log`. That log shows the device OpenAL Soft opened, the extensions it found and any errors.
+
 You choose how much it records:
 
 | Level | What it logs | Downside |
 | --- | --- | --- |
 | Full (level 4) | Every EAX call the game makes, which shows which EAX version it really uses | The log grows fast and the game may stutter |
 | Basic (level 3) | Start-up, and which EAX versions the game asks for | Less detail |
+
+The level only applies to DSOAL's log. OpenAL Soft's is always level 3 (information, warnings and errors).
 
 To turn it on at level 4 during an install instead, run the install with `EAX_RESTORE_DSOAL_LOG=1`.
 

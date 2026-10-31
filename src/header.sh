@@ -66,7 +66,9 @@
 #
 # * DSOAL Logging: Tools → [D]SOAL logging turns DSOAL's own log on or off
 #   for a game (DSOAL_LOGLEVEL/DSOAL_LOGFILE in its Steam launch options or
-#   Heroic environment variables), writing dsoal.log to the game folder.
+#   Heroic environment variables), writing dsoal.log to the game folder, plus
+#   OpenAL Soft's own log (ALSOFT_LOGLEVEL/ALSOFT_LOGFILE, openal.log); a game
+#   with OpenAL Soft alone gets only the latter.
 #
 # * Hybrid Dependencies: Falls back to a direct Microsoft download for the
 #   VC++ 2022 Redistributable when winetricks/protontricks fails, verifying
@@ -122,7 +124,8 @@
 # * EAX_RESTORE_DSOAL_LOG=1  Turns DSOAL's own log on at its fullest level (4,
 #   every EAX call) as part of an install, the way Tools → DSOAL logging does
 #   (DSOAL_LOGLEVEL/DSOAL_LOGFILE in the game's Steam launch options or Heroic
-#   environment variables), writing dsoal.log to the game folder. For debugging.
+#   environment variables), writing dsoal.log to the game folder, plus
+#   ALSOFT_LOGLEVEL=3/ALSOFT_LOGFILE for openal.log. For debugging.
 #
 # * EAX_RESTORE_GAME_DATABASE_FILE=/path/to/file.json  Uses a local file instead
 #   of fetching game-database.json from GitHub. For testing schema/data

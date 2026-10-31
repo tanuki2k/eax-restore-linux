@@ -80,10 +80,30 @@ setup() {
     [ "$(launch_options_without_dsoal_log "$(launch_options_with_dsoal_log "$orig" 3 'Z:/g/dsoal.log')")" == "$orig" ]
 }
 
+@test "sound log: DSOAL and OpenAL Soft variables are added together and removed together" {
+    local orig='WINEDLLOVERRIDES="dsound=n,b" %command% -x' with
+    with="$(launch_options_with_sound_log "$orig" 4 'Z:/g/dsoal.log' 3 'Z:/g/openal.log')"
+    [ "$with" == 'WINEDLLOVERRIDES="dsound=n,b" DSOAL_LOGLEVEL=4 DSOAL_LOGFILE="Z:/g/dsoal.log" ALSOFT_LOGLEVEL=3 ALSOFT_LOGFILE="Z:/g/openal.log" %command% -x' ]
+    [ "$(launch_options_without_dsoal_log "$with")" == "$orig" ]
+}
+
+@test "sound log: a blank DSOAL level leaves DSOAL's variables out" {
+    [ "$(launch_options_with_sound_log '' '' 'Z:/x' 3 'Z:/g/openal.log')" == 'ALSOFT_LOGLEVEL=3 ALSOFT_LOGFILE="Z:/g/openal.log" %command%' ]
+}
+
+@test "sound log: values are read back per engine" {
+    local o='DSOAL_LOGLEVEL=4 ALSOFT_LOGLEVEL=3 ALSOFT_LOGFILE="Z:/a b/openal.log" %command%'
+    [ "$(launch_options_log_value "$o" DSOAL LEVEL)" == "4" ]
+    [ "$(launch_options_log_value "$o" ALSOFT LEVEL)" == "3" ]
+    [ "$(launch_options_log_value "$o" ALSOFT FILE)" == "Z:/a b/openal.log" ]
+    [ -z "$(launch_options_log_value "$o" DSOAL FILE)" ]
+}
+
 @test "dsoal log paths: Z: maps back to /, bare names sit in the game folder" {
     GAME_DIR=/games/x
     [ "$(dsoal_log_path_for_wine /games/x)" == "Z:/games/x/dsoal.log" ]
     [ "$(dsoal_log_path_for_linux 'Z:\games\x\dsoal.log')" == "/games/x/dsoal.log" ]
+    [ "$(alsoft_log_path_for_wine /games/x)" == "Z:/games/x/openal.log" ]
     [ "$(dsoal_log_path_for_linux dsoal.log)" == "/games/x/dsoal.log" ]
 }
 

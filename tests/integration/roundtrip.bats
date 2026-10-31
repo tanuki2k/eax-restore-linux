@@ -176,13 +176,15 @@ make_side_by_side_world() {
     EAX_RESTORE_DSOAL_LOG=1 run_script "$BATS_TEST_TMPDIR/in"
     grep -q "INSTALLATION COMPLETE" "$OUT" || { tail -30 "$OUT"; false; }
     grep -q 'DSOAL_LOGLEVEL=4' "$VDF" || { tail -30 "$OUT"; false; }
+    grep -q 'ALSOFT_LOGLEVEL=3' "$VDF"
     grep -q 'WINEDLLOVERRIDES=\\"dsound=n,b\\"' "$VDF"
     # the manifest holds the override alone, so uninstall can still match it
-    ! grep -q 'DSOAL_LOG' "$GAME/.eax-restore-manifest.txt"
+    ! grep -q '_LOG' "$GAME/.eax-restore-manifest.txt"
     install_answers "$BATS_TEST_TMPDIR/in2"
     EAX_RESTORE_DSOAL_LOG=1 run_script "$BATS_TEST_TMPDIR/in2"
     grep -q "INSTALLATION COMPLETE" "$OUT" || { tail -30 "$OUT"; false; }
     [ "$(grep -o 'DSOAL_LOGLEVEL' "$VDF" | wc -l)" -eq 1 ]
+    [ "$(grep -o 'ALSOFT_LOGLEVEL' "$VDF" | wc -l)" -eq 1 ]
     uninstall_answers "$BATS_TEST_TMPDIR/un"; run_script "$BATS_TEST_TMPDIR/un"
     ! grep -q 'LaunchOptions' "$VDF"
 }
@@ -194,5 +196,5 @@ make_side_by_side_world() {
     grep -q "INSTALLATION COMPLETE" "$OUT" || { tail -30 "$OUT"; false; }
     grep -q 'DSOAL_LOGLEVEL=4' "$VDF"
     ! grep -q 'WINEDLLOVERRIDES' "$VDF"
-    grep -q "Turning on DSOAL logging" "$OUT"
+    grep -q "Turning on sound logging" "$OUT"
 }

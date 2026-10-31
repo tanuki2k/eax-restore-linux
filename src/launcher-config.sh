@@ -143,7 +143,7 @@ LAUNCHER_CHANGE=""
 launcher_change_text() {
     if [ "$LAUNCHER_CHANGE" == "dsoal_log" ]; then
         local onoff="on"; [ "$1" == "remove" ] && onoff="off"
-        if [ "$2" == "where" ]; then echo "turn ${onoff} DSOAL logging in"; else echo "turn DSOAL logging ${onoff}"; fi
+        if [ "$2" == "where" ]; then echo "turn ${onoff} sound logging in"; else echo "turn sound logging ${onoff}"; fi
     elif [ "$2" == "where" ]; then
         if [ "$1" == "remove" ]; then echo "remove the DLL override from"; else echo "add the DLL override to"; fi
     else
@@ -258,25 +258,26 @@ launch_options_with_override() {
 }
 
 # Usage: launch_options_without_dsoal_log <Steam launch options>
-# The launch options with any DSOAL_LOGLEVEL=… / DSOAL_LOGFILE=… removed
-# (bare, "…" or '…' values), everything else left as it was.
+# The launch options with any DSOAL_LOGLEVEL=… / DSOAL_LOGFILE=… and
+# ALSOFT_LOGLEVEL=… / ALSOFT_LOGFILE=… removed (bare, "…" or '…' values),
+# everything else left as it was. The two engines' logging variables are
+# always set and removed together.
 launch_options_without_dsoal_log() {
     local opts="$1" re
-    re='(^|[[:space:]]+)DSOAL_LOG(LEVEL|FILE)=("[^"]*"|'"'"'[^'"'"']*'"'"'|[^[:space:]]*)'
+    re='(^|[[:space:]]+)(DSOAL|ALSOFT)_LOG(LEVEL|FILE)=("[^"]*"|'"'"'[^'"'"']*'"'"'|[^[:space:]]*)'
     while [[ "$opts" =~ $re ]]; do
         opts="${opts/"${BASH_REMATCH[0]}"/}"
     done
     echo "${opts#"${opts%%[![:space:]]*}"}"
 }
 
-# Usage: launch_options_with_dsoal_log <Steam launch options> <level> <log file>
-# Returns the launch options with DSOAL's logging variables placed right
+# Usage: launch_options_with_log_vars <Steam launch options> <VAR=value ...>
+# Returns the launch options with the given logging variables placed right
 # before %command% (replacing any already there), adding %command% the same
 # way launch_options_with_override does when it's missing.
-launch_options_with_dsoal_log() {
-    local opts vars
+launch_options_with_log_vars() {
+    local opts vars="$2"
     opts="$(launch_options_without_dsoal_log "$1")"
-    vars="DSOAL_LOGLEVEL=$2 DSOAL_LOGFILE=\"$3\""
     if [[ "$opts" == *%command%* ]]; then
         local before="${opts%%'%command%'*}" after="${opts#*'%command%'}"
         echo "${before}${vars} %command%${after}"
@@ -287,14 +288,32 @@ launch_options_with_dsoal_log() {
     fi
 }
 
-# Usage: launch_options_dsoal_log_value <Steam launch options> <LEVEL|FILE>
-# The value of DSOAL_LOGLEVEL or DSOAL_LOGFILE in the launch options, or
+# Usage: launch_options_with_dsoal_log <Steam launch options> <level> <log file>
+# DSOAL's logging variables only; the other engine's are dropped.
+launch_options_with_dsoal_log() {
+    launch_options_with_log_vars "$1" "DSOAL_LOGLEVEL=$2 DSOAL_LOGFILE=\"$3\""
+}
+
+# Usage: launch_options_with_sound_log <Steam launch options> <DSOAL level> <DSOAL log file> <OpenAL Soft level> <OpenAL Soft log file>
+# DSOAL's and OpenAL Soft's logging variables together. A DSOAL level of ""
+# leaves DSOAL's out, for a game that uses OpenAL Soft alone.
+launch_options_with_sound_log() {
+    local vars=""
+    [ -n "$2" ] && vars="DSOAL_LOGLEVEL=$2 DSOAL_LOGFILE=\"$3\" "
+    launch_options_with_log_vars "$1" "${vars}ALSOFT_LOGLEVEL=$4 ALSOFT_LOGFILE=\"$5\""
+}
+
+# Usage: launch_options_log_value <Steam launch options> <DSOAL|ALSOFT> <LEVEL|FILE>
+# The value of DSOAL_LOGLEVEL, ALSOFT_LOGFILE, etc. in the launch options, or
 # nothing when it isn't there.
-launch_options_dsoal_log_value() {
-    local re='(^|[[:space:]])DSOAL_LOG'"$2"'=("([^"]*)"|'"'"'([^'"'"']*)'"'"'|([^[:space:]]*))'
+launch_options_log_value() {
+    local re='(^|[[:space:]])'"$2"'_LOG'"$3"'=("([^"]*)"|'"'"'([^'"'"']*)'"'"'|([^[:space:]]*))'
     [[ "$1" =~ $re ]] && echo "${BASH_REMATCH[3]}${BASH_REMATCH[4]}${BASH_REMATCH[5]}"
     return 0
 }
+
+# Usage: launch_options_dsoal_log_value <Steam launch options> <LEVEL|FILE>
+launch_options_dsoal_log_value() { launch_options_log_value "$1" DSOAL "$2"; }
 
 # Usage: dsoal_log_path_for_wine <folder>
 # The Windows path DSOAL_LOGFILE needs for dsoal.log in <folder>: Wine maps
@@ -302,8 +321,12 @@ launch_options_dsoal_log_value() {
 # folder whichever directory the launcher starts the game in.
 dsoal_log_path_for_wine() { echo "Z:$1/dsoal.log"; }
 
-# Usage: dsoal_log_path_for_linux <DSOAL_LOGFILE value>
-# Where a DSOAL_LOGFILE value points on this machine: a Z: path maps back to
+# Usage: alsoft_log_path_for_wine <folder>
+# The same for ALSOFT_LOGFILE: openal.log in <folder>.
+alsoft_log_path_for_wine() { echo "Z:$1/openal.log"; }
+
+# Usage: dsoal_log_path_for_linux <DSOAL_LOGFILE or ALSOFT_LOGFILE value>
+# Where a log file value points on this machine: a Z: path maps back to
 # /, and a bare name (as typed by hand) sits in the game folder, the folder
 # Steam starts the game in.
 dsoal_log_path_for_linux() {
@@ -574,45 +597,56 @@ _apply_launcher_override() {
 }
 
 # Usage: _apply_dsoal_log_env <1 when this step's header was already shown>
-# EAX_RESTORE_DSOAL_LOG=1: turns DSOAL's log on at its fullest level (4) for
-# the game, the way Tools → DSOAL logging does. Not recorded in the manifest:
+# EAX_RESTORE_DSOAL_LOG=1: turns the sound logs on at their fullest level for
+# the game (DSOAL's, level 4, when it's installed, and OpenAL Soft's, level 3),
+# the way Tools → DSOAL logging does. Not recorded in the manifest:
 # uninstall drops the variables with the DLL override, and Tools turns them off.
 _apply_dsoal_log_env() {
-    local opts new level file wine_log
+    local opts new wine_log al_log dsoal_level=4
+    # OpenAL Soft alone has no DSOAL log to turn on.
+    [ "${ENGINE_CHOICE:-1}" == "2" ] && dsoal_level=""
     LAUNCHER_CHANGE="dsoal_log"
-    [ -n "$1" ] || print_phase_task "Turning on DSOAL logging for ${GAME_NAME}"
+    [ -n "$1" ] || print_phase_task "Turning on sound logging for ${GAME_NAME}"
     if ! launcher_override_target; then
-        print_warning_arrow "DSOAL logging wasn't turned on: there are no launcher settings for ${GAME_NAME} to add it to."
+        print_warning_arrow "Sound logging wasn't turned on, because there are no launcher settings for ${GAME_NAME} to add it to."
         LAUNCHER_CHANGE=""; return 0
     fi
     wine_log="$(dsoal_log_path_for_wine "$GAME_DIR")"
-    if ! wait_for_launcher_closed "$OVERRIDE_LAUNCHER" add "type 's' to skip DSOAL logging"; then
-        print_status "Skipped — DSOAL logging wasn't turned on." "$YELLOW"
+    al_log="$(alsoft_log_path_for_wine "$GAME_DIR")"
+    if ! wait_for_launcher_closed "$OVERRIDE_LAUNCHER" add "type 's' to skip sound logging"; then
+        print_status "Skipped — sound logging wasn't turned on." "$YELLOW"
         LAUNCHER_CHANGE=""; return 0
     fi
     if [ "$OVERRIDE_LAUNCHER" == "steam" ]; then
         opts="$(launcher_override_get)"
         [ "$opts" == "__ABSENT__" ] && opts=""
-        new="$(launch_options_with_dsoal_log "$opts" 4 "$wine_log")"
+        new="$(launch_options_with_sound_log "$opts" "$dsoal_level" "$wine_log" 3 "$al_log")"
         if [ "$new" != "$opts" ]; then
             [ -e "$OVERRIDE_FILE.eax-restore.bak" ] || cp -p "$OVERRIDE_FILE" "$OVERRIDE_FILE.eax-restore.bak" 2>/dev/null
             if ! launcher_override_set "$new" || [ "$(launcher_override_get)" != "$new" ]; then
-                print_error_arrow "Couldn't save DSOAL logging to $(launcher_override_where)." "The run log has the details."
+                print_error_arrow "Couldn't save the logging change to $(launcher_override_where)." "The run log has the details."
                 LAUNCHER_CHANGE=""; return 0
             fi
         fi
         log_cmd "dsoal logging: $OVERRIDE_FILE [$OVERRIDE_ID] '$opts' -> '$new'"
     else
         [ -e "$OVERRIDE_FILE.eax-restore.bak" ] || cp -p "$OVERRIDE_FILE" "$OVERRIDE_FILE.eax-restore.bak" 2>/dev/null
-        if ! { heroic_set_env "$OVERRIDE_FILE" "$OVERRIDE_ID" DSOAL_LOGLEVEL 4 \
-            && heroic_set_env "$OVERRIDE_FILE" "$OVERRIDE_ID" DSOAL_LOGFILE "$wine_log" \
-            && [ "$(heroic_get_env "$OVERRIDE_FILE" "$OVERRIDE_ID" DSOAL_LOGLEVEL)" == "4" ]; }; then
+        if ! { { [ -z "$dsoal_level" ] \
+                || { heroic_set_env "$OVERRIDE_FILE" "$OVERRIDE_ID" DSOAL_LOGLEVEL "$dsoal_level" \
+                    && heroic_set_env "$OVERRIDE_FILE" "$OVERRIDE_ID" DSOAL_LOGFILE "$wine_log"; }; } \
+            && heroic_set_env "$OVERRIDE_FILE" "$OVERRIDE_ID" ALSOFT_LOGLEVEL 3 \
+            && heroic_set_env "$OVERRIDE_FILE" "$OVERRIDE_ID" ALSOFT_LOGFILE "$al_log" \
+            && [ "$(heroic_get_env "$OVERRIDE_FILE" "$OVERRIDE_ID" ALSOFT_LOGLEVEL)" == "3" ]; }; then
             print_error_arrow "Couldn't save DSOAL logging to $(launcher_override_where)." "The run log has the details."
             LAUNCHER_CHANGE=""; return 0
         fi
-        log_cmd "dsoal logging: $OVERRIDE_FILE [$OVERRIDE_ID] on, level=4"
+        log_cmd "dsoal logging: $OVERRIDE_FILE [$OVERRIDE_ID] on, dsoal level=${dsoal_level:-none}, openal soft level=3"
     fi
-    print_status "DSOAL logging is on (level 4). The game writes $(tilde_path "$GAME_DIR/dsoal.log") when it starts."
+    if [ -n "$dsoal_level" ]; then
+        print_status "Full DSOAL logging is on. The game writes $(tilde_path "$GAME_DIR/dsoal.log") and $(tilde_path "$GAME_DIR/openal.log") when it starts."
+    else
+        print_status "OpenAL Soft logging is on. The game writes $(tilde_path "$GAME_DIR/openal.log") when it starts."
+    fi
     LAUNCHER_CHANGE=""
 }
 
@@ -627,14 +661,16 @@ _write_launcher_override() {
         print_warning_arrow "$(launcher_label "$OVERRIDE_LAUNCHER") no longer has settings for this game, so the override wasn't added to $(launcher_override_where)."
         return 1
     fi
-    # DSOAL's logging variables aren't part of what the manifest records
+    # The logging variables (DSOAL's and OpenAL Soft's) aren't part of what the manifest records
     # (uninstall drops them itself), so they're set aside while the override
     # is merged and put back when it's written.
-    local log_level="" log_file="" written
+    local log_level="" log_file="" al_level="" al_file="" written
     if [ "$OVERRIDE_LAUNCHER" == "steam" ]; then
-        log_level="$(launch_options_dsoal_log_value "$old" LEVEL)"
-        log_file="$(launch_options_dsoal_log_value "$old" FILE)"
-        [ -n "$log_level" ] && old="$(launch_options_without_dsoal_log "$old")"
+        log_level="$(launch_options_log_value "$old" DSOAL LEVEL)"
+        log_file="$(launch_options_log_value "$old" DSOAL FILE)"
+        al_level="$(launch_options_log_value "$old" ALSOFT LEVEL)"
+        al_file="$(launch_options_log_value "$old" ALSOFT FILE)"
+        [ -n "$log_level$al_level" ] && old="$(launch_options_without_dsoal_log "$old")"
         new="$(launch_options_with_override "$( [ "$old" == "__ABSENT__" ] || echo "$old")" "$PRIMARY_DLL_NAME")"
         [ -e "$OVERRIDE_FILE.eax-restore.bak" ] || cp -p "$OVERRIDE_FILE" "$OVERRIDE_FILE.eax-restore.bak" 2>/dev/null
     else
@@ -668,7 +704,7 @@ _write_launcher_override() {
         return 0
     fi
     written="$new"
-    [ -n "$log_level" ] && written="$(launch_options_with_dsoal_log "$new" "$log_level" "$log_file")"
+    [ -n "$log_level$al_level" ] && written="$(launch_options_with_sound_log "$new" "$log_level" "$log_file" "${al_level:-3}" "${al_file:-$(alsoft_log_path_for_wine "$GAME_DIR")}")"
     if ! launcher_override_set "$written" || [ "$(launcher_override_get)" != "$written" ]; then
         print_error_arrow "Couldn't save the override to $(launcher_override_where), so it isn't set." \
             "The run log has the details."
@@ -713,7 +749,7 @@ revert_launcher_overrides() {
         fi
         if [ "$OVERRIDE_LAUNCHER" == "heroic" ]; then
             local var
-            for var in DSOAL_LOGLEVEL DSOAL_LOGFILE; do
+            for var in DSOAL_LOGLEVEL DSOAL_LOGFILE ALSOFT_LOGLEVEL ALSOFT_LOGFILE; do
                 case "$(heroic_get_env "$OVERRIDE_FILE" "$OVERRIDE_ID" "$var")" in
                     __ABSENT__|__NOAPP__) ;;
                     *) heroic_set_env "$OVERRIDE_FILE" "$OVERRIDE_ID" "$var" __DELETE__ ;;
