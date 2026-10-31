@@ -3064,11 +3064,35 @@
                 "snd_dll": "al"
               }
             },
-            "tested": false
+            "tested": true
           }
         ]
       },
-      "notes": "Only single-player has EAX — multiplayer (SoF2MP.exe) has none.",
+      "notes": "Only single-player has EAX — multiplayer (SoF2MP.exe) has none."
+    },
+    {
+      "id": "soldier-of-fortune-platinum-edition",
+      "name": "Soldier of Fortune: Platinum Edition",
+      "description": "Soldier of Fortune: Platinum Edition is a singleplayer and multiplayer first-person shooter, an edition of the first game in the Soldier of Fortune series.",
+      "released": "2000-03-27",
+      "exe": "SoF.exe",
+      "stores": {
+        "gog": {
+          "id": 1828104558
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified"
+        ]
+      },
       "tested": false
     },
     {

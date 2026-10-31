@@ -74,3 +74,11 @@ scan()         { detect_api_from_binary "$GAME" | tr '\037' '|'; }
     resolve_exe_folder "$GAME" "" "" > "$BATS_TEST_TMPDIR/out"
     [ "$GAME_DIR" == "$GAME" ]
 }
+
+@test "Aureal's a3dapi.dll and A3Dsnd.dll are another API, not DirectSound3D evidence, even though they name DirectSound" {
+    printf 'MZ DirectSound dsound.dll\n' > "$GAME/a3dapi.dll"
+    printf 'MZ DirectSound dsound.dll\n' > "$GAME/A3Dsnd.dll"
+    [ -z "$(scan)" ]
+    printf 'MZ dsound.dll\n' > "$GAME/Game.exe"
+    [ "$(scan)" == "directsound3d|Game.exe|" ]
+}

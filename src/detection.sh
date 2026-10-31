@@ -1197,6 +1197,13 @@ detect_api_from_binary() {
                 case "$(basename "$f")" in
                     dsound.dll|dsoal-aldrv.dll) continue ;;
                 esac
+                # Aureal's a3dapi.dll and a3dsnd.dll belong to a third API,
+                # A3D, not DirectSound3D: they only name DirectSound because
+                # A3D sits on top of it, so reading them as evidence made A3D
+                # games look like DirectSound3D ones.
+                case "$(basename "$f" | tr '[:upper:]' '[:lower:]')" in
+                    a3dapi.dll|a3dsnd.dll) continue ;;
+                esac
                 # An OpenAL32.dll is read for what it is, not for what it names:
                 # OpenAL Soft is this script's own (or the player's) and says
                 # nothing about the game, while Creative's router (or its
