@@ -16,7 +16,7 @@
     "files": { "cfg.ini": { "format": "ini", "locations": ["game_exe:cfg.ini"] } },
     "audio_settings": [
       {
-        "title": "Enable EAX reverb",
+        "title": "Enable EAX",
         "reason": "Arx Fatalis ships with EAX off.",
         "changes": { "cfg.ini": { "AUDIO": { "EAX": "1" } } },
         "tested": false

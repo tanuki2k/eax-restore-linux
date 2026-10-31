@@ -12,7 +12,7 @@
     "files": { "System.ini": { "format": "ini", "locations": ["game_exe:System.ini"] } },
     "audio_settings": [
       {
-        "title": "Enable EAX reverb",
+        "title": "Enable EAX",
         "reason": "Clive Barker's Undying only plays EAX reverb when its hardware 3D sound and spatial sound options are on.",
         "changes": {
           "System.ini": {

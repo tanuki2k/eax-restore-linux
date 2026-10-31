@@ -17,7 +17,7 @@
     "files": { "DeusEx.ini": { "format": "ini", "locations": ["game_exe:DeusEx.ini"] } },
     "audio_settings": [
       {
-        "title": "Enable EAX reverb",
+        "title": "Enable EAX",
         "reason": "Deus Ex ships with its hardware sound option off, and it only plays EAX reverb with it on.",
         "changes": {
           "DeusEx.ini": {

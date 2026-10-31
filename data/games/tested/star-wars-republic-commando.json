@@ -19,7 +19,7 @@
     },
     "audio_settings": [
       {
-        "title": "Enable EAX reverb",
+        "title": "Enable EAX",
         "reason": "Republic Commando turns EAX and 3D sound off on its first launch and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs.",
         "changes": {
           "System.ini": {

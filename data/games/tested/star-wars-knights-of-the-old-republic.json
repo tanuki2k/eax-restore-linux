@@ -8,12 +8,12 @@
     "steam": { "id": 32370 },
     "gog": { "id": 1207666283 }
   },
-  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0", "3.0"] },
+  "eax": { "api": "directsound3d", "sound_system": "miles", "versions": ["1.0", "2.0", "3.0"] },
   "game_config": {
     "files": { "swkotor.ini": { "format": "ini", "locations": ["game_exe:swkotor.ini"] } },
     "audio_settings": [
       {
-        "title": "Enable EAX reverb",
+        "title": "Enable EAX",
         "reason": "KOTOR ships with EAX off.",
         "changes": { "swkotor.ini": { "Sound Options": { "EAX": "3" } } },
         "tested": true

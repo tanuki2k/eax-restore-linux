@@ -1,0 +1,79 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Tom Clancy's Splinter Cell",
+  "description": "Tom Clancy's Splinter Cell is a singleplayer third-person stealth action game and the first in the Tom Clancy's Splinter Cell series.",
+  "released": "2003-02-18",
+  "exe": "splintercell.exe",
+  "stores": {
+    "steam": {
+      "id": 13560,
+      "patches": "The community patched Enhanced Splinter Cell fixes bugs and provides additional game improvements."
+    },
+    "gog": {
+      "id": 1207659034,
+      "patches": "The community patched Enhanced Splinter Cell fixes bugs and provides additional game improvements."
+    }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0", "3.0"] },
+  "install": {
+    "tweaks": ["eax_unified"]
+  },
+  "game_config": {
+    "files": {
+      "SplinterCellUser.ini": { "format": "ini", "locations": ["game_exe:SplinterCellUser.ini"] },
+      "SplinterCell.ini": { "format": "ini", "locations": ["game_exe:SplinterCell.ini"] }
+    },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Splinter Cell ships with EAX and hardware 3D sound off.",
+        "changes": {
+          "SplinterCellUser.ini": {
+            "Engine.EPCGameOptions": { "EAX": "True", "Sound3DAcc": "True", "EAX_Capable": "True" }
+          }
+        },
+        "tested": true
+      }
+    ],
+    "optional_settings": [
+      {
+        "title": "Enable volumetric lighting, 32-bit and detail textures",
+        "reason": "These three graphics options are set to True in the config files.",
+        "changes": {
+          "SplinterCell.ini": { "D3DDrv.D3DRenderDevice": { "VolumetricLighting": "True" } },
+          "SplinterCellUser.ini": {
+            "D3DDrv.D3DRenderDevice": { "Use32BitTextures": "True", "DetailTextures": "True" }
+          }
+        }
+      },
+      {
+        "title": "Raise shadow, light map and texture quality to max",
+        "reason": "The game sets shadow, light map and texture detail below the maximum by default. This entry sets all three to level 3 in SplinterCellUser.ini.",
+        "changes": {
+          "SplinterCellUser.ini": {
+            "Engine.EPCGameOptions": {
+              "ShadowLevel": "3",
+              "LightMapsLevel": "3",
+              "TextureLevel": "3"
+            }
+          }
+        }
+      },
+      {
+        "title": "Enable anti-aliasing",
+        "reason": "The change sets AntiAliasing to 2 in SplinterCellUser.ini under Engine.EPCGameOptions. The game is likely to start with anti-aliasing off or lower, so edges look jagged.",
+        "changes": { "SplinterCellUser.ini": { "Engine.EPCGameOptions": { "AntiAliasing": "2" } } }
+      },
+      {
+        "title": "Fix character models by turning off HardwareSkinning",
+        "reason": "Out of the box, the game may use the GPU to animate character models through the D3D renderer. This setting turns that off, so the CPU does it.",
+        "changes": {
+          "SplinterCell.ini": { "D3DDrv.D3DRenderDevice": { "HardwareSkinning": "False" } }
+        }
+      }
+    ]
+  },
+  "sources": [
+    { "title": "EnhancedSC", "url": "https://github.com/Joshhhuaaa/EnhancedSC/tree/main" }
+  ]
+}

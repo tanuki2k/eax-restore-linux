@@ -3,16 +3,17 @@
   "name": "Fallout Tactics: Brotherhood of Steel",
   "description": "Fallout Tactics: Brotherhood of Steel is a singleplayer and multiplayer isometric tactical role-playing game and a spin-off in the Fallout series.",
   "released": "2001-03-15",
+  "exe": "BOS.exe",
   "stores": {
     "steam": { "id": 38420 },
     "gog": { "id": 1440152063 }
   },
-  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0"] },
+  "eax": { "api": "directsound3d", "sound_system": "miles", "versions": ["1.0", "2.0"] },
   "game_config": {
     "files": { "bos.cfg": { "format": "brace_cfg", "locations": ["game_exe:core/bos.cfg"] } },
     "audio_settings": [
       {
-        "title": "Enable EAX reverb",
+        "title": "Enable EAX",
         "reason": "Fallout Tactics starts on Miles' 2D positional audio, so there's no 3D sound and no reverb.",
         "changes": { "bos.cfg": { "sound.provider": "Creative Labs EAX 2 (TM)" } },
         "tested": true

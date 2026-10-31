@@ -12,7 +12,7 @@
     "files": { "sof2sp.cfg": { "format": "idtech_cfg", "locations": ["game_exe:base/sof2sp.cfg"] } },
     "audio_settings": [
       {
-        "title": "Enable EAX reverb",
+        "title": "Enable EAX",
         "reason": "Soldier of Fortune II plays its sound through snd_dsx86.dll out of the box, which has no EAX — only snd_alx86.dll does.",
         "changes": { "sof2sp.cfg": { "snd_dll": "al" } },
         "tested": false

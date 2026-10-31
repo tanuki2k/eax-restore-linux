@@ -11,12 +11,12 @@
       "store_details": "This is the original 2002 Neverwinter Nights with both expansions and the premium modules. GOG stopped selling it on its own in October 2018 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
     }
   },
-  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0", "3.0"] },
+  "eax": { "api": "directsound3d", "sound_system": "miles", "versions": ["1.0", "2.0", "3.0"] },
   "game_config": {
     "files": { "nwn.ini": { "format": "ini", "locations": ["game_exe:nwn.ini"] } },
     "audio_settings": [
       {
-        "title": "Enable EAX reverb",
+        "title": "Enable EAX",
         "reason": "Neverwinter Nights ships with EAX off and its 'DirectSound3D Hardware Support' sound provider, which has no EAX.",
         "changes": {
           "nwn.ini": {

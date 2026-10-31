@@ -1,0 +1,36 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Shogo: Mobile Armor Division",
+  "description": "Shogo: Mobile Armor Division is a singleplayer and multiplayer first-person shooter game.",
+  "released": "1998-10-15",
+  "exe": "Client.exe",
+  "stores": {
+    "gog": { "id": 1207658659 }
+  },
+  "eax": { "api": "directsound3d", "sound_system": "miles", "versions": ["1.0"] },
+  "game_config": {
+    "files": {
+      "system.reg": { "format": "wine_reg", "locations": ["prefix:system.reg"] },
+      "autoexec.cfg": { "format": "quoted_cfg", "locations": ["game_exe:autoexec.cfg"] }
+    },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "to-do",
+        "changes": {
+          "autoexec.cfg": {
+            "3dsoundprovider": "2",
+            "3dsoundprovidername": "Microsoft DirectSound3D with Creative Labs EAX(TM)"
+          },
+          "system.reg": {
+            "Software\\Wow6432Node\\Monolith Productions\\Shogo\\1.0": {
+              "Sound Provider": "2",
+              "Sound Provider Name": "Microsoft DirectSound3D with Creative Labs EAX(TM)",
+              "Sound Reverb": "150"
+            }
+          }
+        }
+      }
+    ]
+  }
+}

@@ -233,7 +233,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "Arx Fatalis ships with EAX off.",
             "changes": {
               "cfg.ini": {
@@ -338,7 +338,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "Baldur's Gate II ships with 'Environmental Audio' unset and only turns it on by itself the first time it starts with EAX available.",
             "changes": {
               "baldur.ini": {
@@ -430,7 +430,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "Baldur's Gate ships with 'Environmental Audio' unset and only turns it on by itself the first time it starts with EAX available.",
             "changes": {
               "Baldur.ini": {
@@ -500,7 +500,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "BioShock ships with 'Use Creative EAX Audio' off, which keeps it on DirectSound with no EAX instead of the OpenAL32.dll this script installs.",
             "changes": {
               "Bioshock.ini": {
@@ -638,7 +638,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "Earned in Blood ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs.",
             "changes": {
               "EiB.ini": {
@@ -719,7 +719,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "Brothers in Arms ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs.",
             "changes": {
               "bia.ini": {
@@ -794,7 +794,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "Clive Barker's Undying only plays EAX reverb when its hardware 3D sound and spatial sound options are on.",
             "changes": {
               "System.ini": {
@@ -921,7 +921,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "Descent 3's launcher sets the sound mixer to DirectSound instead of 'Creative EAX', so the game plays without reverb.",
             "changes": {
               "system.reg": {
@@ -992,7 +992,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "Deus Ex ships with its hardware sound option off, and it only plays EAX reverb with it on.",
             "changes": {
               "DeusEx.ini": {
@@ -1123,7 +1123,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "DOOM 3 ships with its EAX sound options off, so there's no reverb.",
             "changes": {
               "DoomConfig.cfg": {
@@ -1134,7 +1134,7 @@
             "tested": true
           },
           {
-            "title": "Enable EAX reverb in Resurrection of Evil",
+            "title": "Enable EAX in Resurrection of Evil",
             "reason": "Resurrection of Evil ships with its EAX sound options off, so there's no reverb.",
             "changes": {
               "d3xp DoomConfig.cfg": {
@@ -1212,6 +1212,7 @@
       "name": "Dreamfall: The Longest Journey",
       "description": "Dreamfall: The Longest Journey is a singleplayer third-person adventure game and the second in The Longest Journey series.",
       "released": "2006-04-17",
+      "exe": "dreamfall.exe",
       "stores": {
         "steam": {
           "id": 6300
@@ -1219,12 +1220,33 @@
       },
       "eax": {
         "api": "directsound3d",
+        "sound_system": "miles",
         "versions": [
           "3.0",
           "4.0"
         ]
       },
-      "tested": false
+      "game_config": {
+        "files": {
+          "prefs.dat": {
+            "format": "ltx",
+            "locations": [
+              "game_exe:prefs.dat"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Dreamfall plays its sound without 3D or EAX until EAX 4 is chosen in its sound options.",
+            "changes": {
+              "prefs.dat": {
+                "audio_channel_config": "224"
+              }
+            }
+          }
+        ]
+      }
     },
     {
       "id": "dungeon-keeper-ii",
@@ -1264,6 +1286,7 @@
       },
       "eax": {
         "api": "directsound3d",
+        "sound_system": "miles",
         "versions": [
           "1.0"
         ]
@@ -1279,7 +1302,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "Dungeon Siege ships with 'Environmental Audio' off.",
             "changes": {
               "prefs.gas": {
@@ -1310,6 +1333,7 @@
       },
       "eax": {
         "api": "directsound3d",
+        "sound_system": "miles",
         "versions": [
           "1.0",
           "2.0",
@@ -1328,7 +1352,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "Dungeon Siege ships with 'Environmental Audio' off.",
             "changes": {
               "prefs.gas": {
@@ -1647,6 +1671,7 @@
       },
       "eax": {
         "api": "directsound3d",
+        "sound_system": "miles",
         "versions": [
           "1.0",
           "2.0"
@@ -1663,7 +1688,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "Fallout Tactics starts on Miles' 2D positional audio, so there's no 3D sound and no reverb.",
             "changes": {
               "bos.cfg": {
@@ -1680,6 +1705,7 @@
       "name": "Fallout Tactics: Brotherhood of Steel",
       "description": "Fallout Tactics: Brotherhood of Steel is a singleplayer and multiplayer isometric tactical role-playing game and a spin-off in the Fallout series.",
       "released": "2001-03-15",
+      "exe": "BOS.exe",
       "stores": {
         "steam": {
           "id": 38420
@@ -1690,6 +1716,7 @@
       },
       "eax": {
         "api": "directsound3d",
+        "sound_system": "miles",
         "versions": [
           "1.0",
           "2.0"
@@ -1706,7 +1733,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "Fallout Tactics starts on Miles' 2D positional audio, so there's no 3D sound and no reverb.",
             "changes": {
               "bos.cfg": {
@@ -1723,6 +1750,7 @@
       "name": "Far Cry 2",
       "description": "Far Cry 2 is a singleplayer and multiplayer open-world first-person shooter game and the second in the Far Cry series.",
       "released": "2008-10-21",
+      "exe": "FarCry2.exe",
       "stores": {
         "steam": {
           "id": 19900
@@ -1737,21 +1765,22 @@
         "versions": [
           "1.0",
           "2.0",
-          "3.0"
+          "3.0",
+          "4.0"
         ]
       },
       "install": {
         "tweaks": [
           "eax_unified"
         ]
-      },
-      "tested": false
+      }
     },
     {
       "id": "freedom-fighters",
       "name": "Freedom Fighters",
       "description": "Freedom Fighters is a singleplayer and multiplayer third-person squad shooter game.",
       "released": "2003-09-25",
+      "exe": "Freedom.Exe",
       "stores": {
         "steam": {
           "id": 1347780
@@ -1772,8 +1801,7 @@
         "tweaks": [
           "eax_unified"
         ]
-      },
-      "tested": false
+      }
     },
     {
       "id": "half-life",
@@ -1888,7 +1916,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "Icewind Dale turns on 'Environmental Audio' by itself the first time it starts.",
             "changes": {
               "icewind.ini": {
@@ -1937,7 +1965,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "Icewind Dale II ships with 'Environmental Audio' off.",
             "changes": {
               "icewind2.ini": {
@@ -2047,6 +2075,7 @@
       "name": "Messiah",
       "description": "Messiah is a singleplayer third-person action-adventure game.",
       "released": "2000-03-29",
+      "exe": "MessiahGlide3x.exe",
       "stores": {
         "gog": {
           "id": 7
@@ -2058,7 +2087,28 @@
           "2.0"
         ]
       },
-      "tested": false
+      "game_config": {
+        "files": {
+          "Messiah.cfg": {
+            "format": "byte_cfg",
+            "locations": [
+              "game_exe:Messiah.cfg"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Messiah only uses EAX when its sound menu is set to \"EAX / DS3D\", not \"DS Software 3D\" or \"A3D\".",
+            "changes": {
+              "Messiah.cfg": {
+                "0x160": "3",
+                "0x1b2": "1"
+              }
+            }
+          }
+        ]
+      }
     },
     {
       "id": "neverwinter-nights-2",
@@ -2074,6 +2124,7 @@
       },
       "eax": {
         "api": "directsound3d",
+        "sound_system": "miles",
         "versions": [
           "1.0",
           "2.0",
@@ -2091,7 +2142,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "Neverwinter Nights 2 ships with its environment effects off and a software sound provider that has no EAX.",
             "changes": {
               "nwn2.ini": {
@@ -2234,6 +2285,7 @@
       },
       "eax": {
         "api": "directsound3d",
+        "sound_system": "miles",
         "versions": [
           "1.0",
           "2.0",
@@ -2251,7 +2303,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "Neverwinter Nights ships with EAX off and its 'DirectSound3D Hardware Support' sound provider, which has no EAX.",
             "changes": {
               "nwn.ini": {
@@ -2450,7 +2502,8 @@
           "1.0"
         ]
       },
-      "notes": "Project Eden's profile currently lacks Game settings to automatically enable EAX and or hardware sound."
+      "notes": "Project Eden's profile currently lacks Game settings to automatically enable EAX and or hardware sound.",
+      "tested": false
     },
     {
       "id": "psychonauts",
@@ -2485,7 +2538,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "Psychonauts ships with EAX off and has no in-game option to turn it on.",
             "changes": {
               "AudioSettings.ini": {
@@ -2927,6 +2980,7 @@
       "name": "Shogo: Mobile Armor Division",
       "description": "Shogo: Mobile Armor Division is a singleplayer and multiplayer first-person shooter game.",
       "released": "1998-10-15",
+      "exe": "Client.exe",
       "stores": {
         "gog": {
           "id": 1207658659
@@ -2934,11 +2988,46 @@
       },
       "eax": {
         "api": "directsound3d",
+        "sound_system": "miles",
         "versions": [
           "1.0"
         ]
       },
-      "tested": false
+      "game_config": {
+        "files": {
+          "system.reg": {
+            "format": "wine_reg",
+            "locations": [
+              "prefix:system.reg"
+            ]
+          },
+          "autoexec.cfg": {
+            "format": "quoted_cfg",
+            "locations": [
+              "game_exe:autoexec.cfg"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "to-do",
+            "changes": {
+              "autoexec.cfg": {
+                "3dsoundprovider": "2",
+                "3dsoundprovidername": "Microsoft DirectSound3D with Creative Labs EAX(TM)"
+              },
+              "system.reg": {
+                "Software\\Wow6432Node\\Monolith Productions\\Shogo\\1.0": {
+                  "Sound Provider": "2",
+                  "Sound Provider Name": "Microsoft DirectSound3D with Creative Labs EAX(TM)",
+                  "Sound Reverb": "150"
+                }
+              }
+            }
+          }
+        ]
+      }
     },
     {
       "id": "soldier-of-fortune-ii-double-helix",
@@ -2969,7 +3058,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "Soldier of Fortune II plays its sound through snd_dsx86.dll out of the box, which has no EAX — only snd_alx86.dll does.",
             "changes": {
               "sof2sp.cfg": {
@@ -2996,6 +3085,7 @@
       },
       "eax": {
         "api": "directsound3d",
+        "sound_system": "miles",
         "versions": [
           "1.0",
           "2.0",
@@ -3140,7 +3230,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "Jedi Outcast only plays EAX reverb through its OpenAL sound option, which ships off in both single-player and multiplayer.",
             "changes": {
               "jk2config.cfg": {
@@ -3197,7 +3287,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "Jedi Academy only plays EAX reverb through its OpenAL sound option, which ships off in both single-player and multiplayer.",
             "changes": {
               "jaconfig.cfg": {
@@ -3230,6 +3320,7 @@
       },
       "eax": {
         "api": "directsound3d",
+        "sound_system": "miles",
         "versions": [
           "1.0",
           "2.0",
@@ -3247,7 +3338,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "KOTOR ships with EAX off.",
             "changes": {
               "swkotor.ini": {
@@ -3295,6 +3386,7 @@
       },
       "eax": {
         "api": "directsound3d",
+        "sound_system": "miles",
         "versions": [
           "1.0",
           "2.0",
@@ -3347,7 +3439,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "Republic Commando turns EAX and 3D sound off on its first launch and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs.",
             "changes": {
               "System.ini": {
@@ -3417,7 +3509,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "SWAT 4 ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs.",
             "changes": {
               "Swat4.ini": {
@@ -3554,7 +3646,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "The Wheel of Time only plays its 3D sound through hardware when its hardware 3D sound and spatial sound options are on.",
             "changes": {
               "WoT.ini": {
@@ -3642,11 +3734,11 @@
       },
       "eax": {
         "api": "directsound3d",
+        "sound_system": "miles",
         "versions": [
           "4.0"
         ]
       },
-      "notes": "If audio isn't right, the game's readme.rtf ('Known Issues') lists EAX caveats.",
       "tested": false
     },
     {
@@ -3838,7 +3930,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "Thief: Deadly Shadows ships with 'Audio Hardware Mixing', 'EAX ADVANCED HD' and 'EAX Multiple Environments' off.",
             "changes": {
               "options.ini": {
@@ -3895,6 +3987,7 @@
       },
       "eax": {
         "api": "directsound3d",
+        "sound_system": "miles",
         "versions": [
           "1.0",
           "2.0",
@@ -3933,6 +4026,7 @@
       "name": "Tom Clancy's Rainbow Six: Vegas",
       "description": "Tom Clancy's Rainbow Six: Vegas is a singleplayer and multiplayer first-person tactical shooter game and the first in the Tom Clancy's Rainbow Six: Vegas series.",
       "released": "2006-12-12",
+      "exe": "R6Vegas_Game.exe",
       "stores": {
         "steam": {
           "id": 13540
@@ -3950,8 +4044,7 @@
         "tweaks": [
           "eax_unified"
         ]
-      },
-      "tested": false
+      }
     },
     {
       "id": "tom-clancys-rainbow-six-vegas-2",
@@ -3987,10 +4080,12 @@
       "exe": "splintercell.exe",
       "stores": {
         "steam": {
-          "id": 13560
+          "id": 13560,
+          "patches": "The community patched Enhanced Splinter Cell fixes bugs and provides additional game improvements."
         },
         "gog": {
-          "id": 1207659034
+          "id": 1207659034,
+          "patches": "The community patched Enhanced Splinter Cell fixes bugs and provides additional game improvements."
         }
       },
       "eax": {
@@ -4013,25 +4108,91 @@
             "locations": [
               "game_exe:SplinterCellUser.ini"
             ]
+          },
+          "SplinterCell.ini": {
+            "format": "ini",
+            "locations": [
+              "game_exe:SplinterCell.ini"
+            ]
           }
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "Splinter Cell ships with EAX and hardware 3D sound off.",
             "changes": {
               "SplinterCellUser.ini": {
                 "Engine.EPCGameOptions": {
                   "EAX": "True",
-                  "Sound3DAcc": "True"
+                  "Sound3DAcc": "True",
+                  "EAX_Capable": "True"
                 }
               }
             },
-            "tested": false
+            "tested": true
+          }
+        ],
+        "optional_settings": [
+          {
+            "title": "Enable volumetric lighting, 32-bit and detail textures",
+            "reason": "These three graphics options are set to True in the config files.",
+            "changes": {
+              "SplinterCell.ini": {
+                "D3DDrv.D3DRenderDevice": {
+                  "VolumetricLighting": "True"
+                }
+              },
+              "SplinterCellUser.ini": {
+                "D3DDrv.D3DRenderDevice": {
+                  "Use32BitTextures": "True",
+                  "DetailTextures": "True"
+                }
+              }
+            }
+          },
+          {
+            "title": "Raise shadow, light map and texture quality to max",
+            "reason": "The game sets shadow, light map and texture detail below the maximum by default. This entry sets all three to level 3 in SplinterCellUser.ini.",
+            "changes": {
+              "SplinterCellUser.ini": {
+                "Engine.EPCGameOptions": {
+                  "ShadowLevel": "3",
+                  "LightMapsLevel": "3",
+                  "TextureLevel": "3"
+                }
+              }
+            }
+          },
+          {
+            "title": "Enable anti-aliasing",
+            "reason": "The change sets AntiAliasing to 2 in SplinterCellUser.ini under Engine.EPCGameOptions. The game is likely to start with anti-aliasing off or lower, so edges look jagged.",
+            "changes": {
+              "SplinterCellUser.ini": {
+                "Engine.EPCGameOptions": {
+                  "AntiAliasing": "2"
+                }
+              }
+            }
+          },
+          {
+            "title": "Fix character models by turning off HardwareSkinning",
+            "reason": "Out of the box, the game may use the GPU to animate character models through the D3D renderer. This setting turns that off, so the CPU does it.",
+            "changes": {
+              "SplinterCell.ini": {
+                "D3DDrv.D3DRenderDevice": {
+                  "HardwareSkinning": "False"
+                }
+              }
+            }
           }
         ]
       },
-      "tested": false
+      "sources": [
+        {
+          "title": "EnhancedSC",
+          "url": "https://github.com/Joshhhuaaa/EnhancedSC/tree/main"
+        }
+      ]
     },
     {
       "id": "tom-clancys-splinter-cell-chaos-theory",
@@ -4057,8 +4218,7 @@
           "eax_unified",
           "com_registry_routing"
         ]
-      },
-      "tested": false
+      }
     },
     {
       "id": "tom-clancys-splinter-cell-double-agent",
@@ -4149,7 +4309,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "TRON 2.0 only plays EAX reverb with the EAX option in its player profile turned on.",
             "changes": {
               "Player.txt": {
@@ -4161,8 +4321,7 @@
             "tested": false
           }
         ]
-      },
-      "tested": false
+      }
     },
     {
       "id": "unreal-gold",
@@ -4207,7 +4366,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "Unreal only plays EAX reverb when its hardware 3D sound, reverb and spatial sound options are all on.",
             "changes": {
               "Unreal.ini": {
@@ -4346,7 +4505,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "Unreal II ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs. In the game's options, only the EAX part is shown, as 'EAX 3.0 (Audigy only)'.",
             "changes": {
               "Unreal2.ini": {
@@ -4406,7 +4565,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "UT2004 ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs. In the game's options, this is Audio Mode 'H/W 3D + EAX' with System Driver ticked.",
             "changes": {
               "UT2004.ini": {
@@ -4460,7 +4619,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "Unreal Tournament 3 asks for the 'Generic Software' device of its bundled OpenAL32.dll, so it has no sound with the OpenAL32.dll this script installs. In the game's options, this is 'Hardware OpenAL' ticked.",
             "changes": {
               "UTEngine.ini": {
@@ -4534,7 +4693,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "Unreal Tournament ships with its hardware sound option off, and it only plays EAX reverb with it on.",
             "changes": {
               "UnrealTournament.ini": {
@@ -4669,7 +4828,7 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX reverb",
+            "title": "Enable EAX",
             "reason": "X-COM: Enforcer only plays EAX reverb when its hardware 3D sound and spatial sound options are on.",
             "changes": {
               "XCom.ini": {

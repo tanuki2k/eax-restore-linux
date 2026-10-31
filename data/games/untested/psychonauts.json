@@ -18,7 +18,7 @@
     },
     "audio_settings": [
       {
-        "title": "Enable EAX reverb",
+        "title": "Enable EAX",
         "reason": "Psychonauts ships with EAX off and has no in-game option to turn it on.",
         "changes": { "AudioSettings.ini": { "AudioSettings": { "UseEAX": "true" } } },
         "tested": false

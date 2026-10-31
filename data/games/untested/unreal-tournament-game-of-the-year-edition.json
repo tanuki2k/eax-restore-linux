@@ -26,7 +26,7 @@
     },
     "audio_settings": [
       {
-        "title": "Enable EAX reverb",
+        "title": "Enable EAX",
         "reason": "Unreal Tournament ships with its hardware sound option off, and it only plays EAX reverb with it on.",
         "changes": {
           "UnrealTournament.ini": {

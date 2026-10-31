@@ -12,7 +12,7 @@
     "files": { "WoT.ini": { "format": "ini", "locations": ["game_exe:WoT.ini"] } },
     "audio_settings": [
       {
-        "title": "Enable EAX reverb",
+        "title": "Enable EAX",
         "reason": "The Wheel of Time only plays its 3D sound through hardware when its hardware 3D sound and spatial sound options are on.",
         "changes": {
           "WoT.ini": {

@@ -1,0 +1,21 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Messiah",
+  "description": "Messiah is a singleplayer third-person action-adventure game.",
+  "released": "2000-03-29",
+  "exe": "MessiahGlide3x.exe",
+  "stores": {
+    "gog": { "id": 7 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["2.0"] },
+  "game_config": {
+    "files": { "Messiah.cfg": { "format": "byte_cfg", "locations": ["game_exe:Messiah.cfg"] } },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Messiah only uses EAX when its sound menu is set to \"EAX / DS3D\", not \"DS Software 3D\" or \"A3D\".",
+        "changes": { "Messiah.cfg": { "0x160": "3", "0x1b2": "1" } }
+      }
+    ]
+  }
+}

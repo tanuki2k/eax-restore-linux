@@ -11,7 +11,7 @@
       "store_details": "GOG sells this only in the 'Dungeon Siege Collection', together with Dungeon Siege II and Dungeon Siege III."
     }
   },
-  "eax": { "api": "directsound3d", "versions": ["1.0"] },
+  "eax": { "api": "directsound3d", "sound_system": "miles", "versions": ["1.0"] },
   "game_config": {
     "files": {
       "prefs.gas": {
@@ -21,7 +21,7 @@
     },
     "audio_settings": [
       {
-        "title": "Enable EAX reverb",
+        "title": "Enable EAX",
         "reason": "Dungeon Siege ships with 'Environmental Audio' off.",
         "changes": { "prefs.gas": { "prefs": { "eax_enabled": "true" } } },
         "tested": true

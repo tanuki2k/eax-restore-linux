@@ -1,0 +1,21 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Dreamfall: The Longest Journey",
+  "description": "Dreamfall: The Longest Journey is a singleplayer third-person adventure game and the second in The Longest Journey series.",
+  "released": "2006-04-17",
+  "exe": "dreamfall.exe",
+  "stores": {
+    "steam": { "id": 6300 }
+  },
+  "eax": { "api": "directsound3d", "sound_system": "miles", "versions": ["3.0", "4.0"] },
+  "game_config": {
+    "files": { "prefs.dat": { "format": "ltx", "locations": ["game_exe:prefs.dat"] } },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Dreamfall plays its sound without 3D or EAX until EAX 4 is chosen in its sound options.",
+        "changes": { "prefs.dat": { "audio_channel_config": "224" } }
+      }
+    ]
+  }
+}

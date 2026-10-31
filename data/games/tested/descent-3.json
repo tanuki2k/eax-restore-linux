@@ -13,7 +13,7 @@
     "files": { "system.reg": { "format": "wine_reg", "locations": ["prefix:system.reg"] } },
     "audio_settings": [
       {
-        "title": "Enable EAX reverb",
+        "title": "Enable EAX",
         "reason": "Descent 3's launcher sets the sound mixer to DirectSound instead of 'Creative EAX', so the game plays without reverb.",
         "changes": {
           "system.reg": {
