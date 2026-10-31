@@ -1,6 +1,6 @@
 {
   "$schema": "../../schema.json",
-  "name": "The Witcher",
+  "name": "The Witcher Enhanced Edition",
   "description": "The Witcher is a singleplayer third-person action role-playing game and the first in The Witcher series.",
   "released": "2007-10-26",
   "exe": "witcher.exe",
