@@ -99,6 +99,21 @@ sel() { parse_selection "$1" "$2"; local i out=""; for ((i = 1; i <= $1; i++)); 
     [ "$RESTART_REQUESTED" == "1" ]
 }
 
+@test "prompt_installed_game: says it is looking, and the list still comes back" {
+    installed_game_dirs() { printf '%s\n' /g/one; }
+    identify_game_dir() { GAME_ID_NAME="Game one"; GAME_ID_STORE=steam; }
+    gui_picker_available() { return 1; }
+    MAIN_MENU_SHOWN=1
+    run prompt_installed_game <<< "1"
+    [[ "$output" == *"Looking for games installed with this script"* && "$output" == *"Game one"* ]]
+}
+
+@test "scan_with_spinner: keeps what the command printed, arguments intact" {
+    scan() { printf '%s\n' "$1" "$2"; }
+    scan_with_spinner "Looking" scan "a b" c
+    [ "$SCAN_RESULT" == $'a b\nc' ]
+}
+
 @test "prompt_installed_game: Optional settings and Speaker don't offer Browse or Manually" {
     installed_game_dirs() { printf '%s\n' /g/one; }
     identify_game_dir() { GAME_ID_NAME="Game one"; GAME_ID_STORE=steam; }

@@ -646,6 +646,7 @@ _apply_dsoal_log_env() {
         print_status "Full DSOAL logging is on. The game writes $(tilde_path "$GAME_DIR/dsoal.log") and $(tilde_path "$GAME_DIR/openal.log") when it starts."
     else
         print_status "OpenAL Soft logging is on. The game writes $(tilde_path "$GAME_DIR/openal.log") when it starts."
+        print_note_arrow "openal.log lists the sound device and any errors, but not which EAX version ${GAME_NAME} uses."
     fi
     LAUNCHER_CHANGE=""
 }

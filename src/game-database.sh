@@ -271,6 +271,22 @@ installed_game_dirs() {
     return 0
 }
 
+# Usage: scan_with_spinner "label" command [args...]
+# Runs a disk scan that prints its results to stdout (installed_game_dirs,
+# games_sharing_prefix) behind run_with_spinner, which sends the command's
+# output to a file, and leaves what it printed in SCAN_RESULT. Not run inside
+# $(...), where the spinner's drawing would be swallowed with the results.
+SCAN_RESULT=""
+scan_with_spinner() {
+    local label="$1" tmp
+    shift
+    SCAN_RESULT=""
+    if ! tmp=$(mktemp 2>/dev/null); then SCAN_RESULT="$("$@")"; return 0; fi
+    run_with_spinner "$label" "$tmp" "$@"
+    SCAN_RESULT="$(cat "$tmp")"
+    rm -f "$tmp"
+}
+
 prompt_installed_game() {
     # Usage: prompt_installed_game
     # Uninstall's and Tools' game list: the games this script is installed in
@@ -285,7 +301,9 @@ prompt_installed_game() {
     GAME_DIR=""
     local -a paths=()
     local p
-    while IFS= read -r p; do [ -n "$p" ] && paths+=("$p"); done < <(installed_game_dirs)
+    print_task "Looking for games installed with this script"
+    scan_with_spinner "Checking your Steam and Heroic game folders" installed_game_dirs
+    while IFS= read -r p; do [ -n "$p" ] && paths+=("$p"); done <<< "$SCAN_RESULT"
     [ ${#paths[@]} -eq 0 ] && return 1
 
     # One line per game, its name and storefront like the library scan's
