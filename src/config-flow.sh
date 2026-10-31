@@ -2,15 +2,15 @@
 # ACTION: INSTALL (PHASE 1: CONFIGURATION)
 # ==============================================================================
 
-# Usage: show_tweak_blurb <limits|com|dummy>
+# Usage: show_tweak_blurb <eaxunified|limits|com>
 # The heading and two-line description shown above an advanced tweak's
 # question, the same wherever that tweak is offered.
 show_tweak_blurb() {
     case "$1" in
-        dummy)
-            print_result "${BOLD}EAX Unified Dummy Files" "$CYAN"
-            echo -e "${WHITE}Tricks certain games (like KOTOR, Max Payne, and early Unreal Engine titles)"
-            echo -e "into unlocking the EAX menu option by creating harmless, empty eax.dll and eaxunified.dll files.${NC}"
+        eaxunified)
+            print_result "${BOLD}EAX Unified" "$CYAN"
+            echo -e "${WHITE}Installs Creative's EAX Unified into the game's prefix, for games that ask Windows for it"
+            echo -e "instead of using DirectSound3D directly (like Tomb Raider: The Angel of Darkness).${NC}"
             ;;
         limits)
             print_result "${BOLD}Expand Audio Limits" "$CYAN"
@@ -82,7 +82,7 @@ print_choices_summary() {
     [ -n "$list" ] && _choice sound "alsoft.ini" "$list"
 
     list=""
-    [ "$ADVANCED_DUMMY" == "y" ] && list+="${list:+$'\n'}EAX Unified dummy files"
+    [ "$INSTALL_EAX_UNIFIED" == "y" ] && list+="${list:+$'\n'}Install EAX Unified"
     [ "$ADVANCED_LIMITS" == "y" ] && list+="${list:+$'\n'}Expand audio limits"
     [ "$ADVANCED_COM" == "y" ] && list+="${list:+$'\n'}COM registry routing"
     _choice sound "Advanced tweaks" "${list:-None}"
@@ -342,27 +342,26 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     print_paragraph "This step offers workarounds for the few games that don't play EAX sound even with the" \
         "fix in place."
 
-    ADVANCED_DUMMY="n"
+    INSTALL_EAX_UNIFIED="n"
     ADVANCED_LIMITS="n"
     ADVANCED_COM="n"
 
-    # EAX Unified Dummy Files and COM Registry Routing both target
-    # DirectSound3D specifically and have nothing to attach to on a direct
-    # OpenAL32.dll swap — so engine 2 only ever offers Expand Audio Limits.
-    EAX_UNIFIED_DUMMY_APPLICABLE=1
+    # EAX Unified and COM Registry Routing both target DirectSound3D
+    # specifically and have nothing to attach to on a direct OpenAL32.dll
+    # swap — so engine 2 only ever offers Expand Audio Limits.
+    EAX_UNIFIED_APPLICABLE=1
     COM_ROUTING_APPLICABLE=1
     if [ "$ENGINE_CHOICE" == "2" ]; then
-        EAX_UNIFIED_DUMMY_APPLICABLE=0
+        EAX_UNIFIED_APPLICABLE=0
         COM_ROUTING_APPLICABLE=0
     fi
 
     # the game profile's install.tweaks array (see
-    # resolve_recommended_tweaks in game-database.sh) may flag any combination of
-    # the three tweaks below for this game. Each flagged, applicable tweak is
-    # decided here — before the generic opt-in gate further down — with a
-    # default-Y prompt instead of the generic default-N one, since the
-    # database recommends it specifically for this title.
-    EAX_UNIFIED_DUMMY_HANDLED=0
+    # resolve_recommended_tweaks in game-database.sh) may flag the tweaks below
+    # for this game. Each flagged, applicable tweak is decided here — before
+    # the generic opt-in gate further down — with a default-Y prompt instead
+    # of the generic default-N one, since the database recommends it
+    # specifically for this title.
     AUDIO_LIMITS_HANDLED=0
     COM_ROUTING_HANDLED=0
     if [ -z "$RECOMMENDED_TWEAKS_RESOLVED" ]; then
@@ -373,27 +372,23 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         fi
     fi
 
-    # A game flagged EAX Unified reaches EAX through Creative's eax.dll shim.
-    # This tweak creates empty eax.dll/eaxunified.dll to satisfy a title that
-    # only checks for the file's presence to unlock its EAX menu — but one
-    # that ships and loads a real eax.dll (GTA: San Andreas, Far Cry 2) would
-    # get it shadowed and can fail to boot. So for a flagged game, decide it
-    # here with a guarded check instead of the generic prompt.
-    if [ -n "$EAX_UNIFIED" ] && [ "$EAX_UNIFIED_DUMMY_APPLICABLE" -eq 1 ]; then
-        print_result "$GAME_NAME is one of those exceptions — it reaches EAX through an eax.dll shim (EAX Unified),"
-        echo -e "${WHITE}so it's worth checking whether it already ships its own eax.dll before deciding${NC}"
-        echo -e "${WHITE}whether to create dummy eax.dll files to unlock the game's EAX menu.${NC}"
-        if confirm "Check whether it ships its own eax.dll?" Y; then
-            if is_genuine_dll "$GAME_DIR/eax.dll" || is_genuine_dll "$GAME_DIR/eaxunified.dll"; then
-                print_note "$GAME_NAME already ships its own eax.dll — the EAX Unified dummy-file tweak" \
-                    "isn't needed here and could stop the game booting, so it's being skipped."
-                ADVANCED_DUMMY="n"
-            elif confirm "Inject EAX Unified dummy files? $GAME_NAME is flagged EAX Unified and has no eax.dll of its own." Y; then
-                ADVANCED_DUMMY="y"
+    # A game flagged EAX Unified creates Creative's EAX Unified object (eax.dll
+    # in the system folder), and the install adds the real one to the prefix.
+    # A game that ships an eax.dll of its own loads that one instead, so for a
+    # flagged game this checks first and only then offers the install, rather
+    # than using the generic prompt.
+    EAX_UNIFIED_HANDLED=0
+    if [ -n "$EAX_UNIFIED" ] && [ "$EAX_UNIFIED_APPLICABLE" -eq 1 ]; then
+        print_result "$GAME_NAME is one of those exceptions — it needs Creative's EAX Unified to reach EAX,"
+        echo -e "${WHITE}and it may already ship its own eax.dll.${NC}"
+        if confirm "Look in ${GAME_NAME}'s folder for its own eax.dll?" Y; then
+            if game_ships_eax_dll; then
+                print_note "$GAME_NAME already ships its own eax.dll, so EAX Unified isn't needed here."
             else
-                ADVANCED_DUMMY="n"
+                print_paragraph "$GAME_NAME has no eax.dll of its own."
+                confirm "Install Creative's EAX Unified?" Y && INSTALL_EAX_UNIFIED="y"
             fi
-            EAX_UNIFIED_DUMMY_HANDLED=1
+            EAX_UNIFIED_HANDLED=1
         fi
     fi
 
@@ -412,8 +407,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     fi
 
     # Same idea for COM Registry Routing (e.g. GTA: San Andreas, which needs
-    # it in addition to EAX Unified Dummy Files for EAX to work under
-    # Wine/Proton).
+    # it in addition to EAX Unified for EAX to work under Wine/Proton).
     if [ -n "$RECOMMENDED_COM_ROUTING" ] && [ "$COM_ROUTING_APPLICABLE" -eq 1 ]; then
         show_tweak_blurb com
         if confirm "Inject COM registry routing? $GAME_NAME is flagged in its profile as needing this." Y; then
@@ -424,12 +418,12 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         COM_ROUTING_HANDLED=1
     fi
 
-    if [ "$EAX_UNIFIED_DUMMY_APPLICABLE" -eq 0 ] && [ "$COM_ROUTING_APPLICABLE" -eq 0 ]; then
+    if [ "$COM_ROUTING_APPLICABLE" -eq 0 ]; then
         # Engine 2: only Expand Audio Limits could possibly apply, and it's
         # already been decided above if the database recommended it.
         if [ "$AUDIO_LIMITS_HANDLED" -eq 0 ]; then
-            print_paragraph "EAX Unified Dummy Files and COM Registry Routing both target DirectSound3D" \
-                "specifically, which doesn't apply to a direct OpenAL32.dll swap — only Expand Audio Limits applies here."
+            print_paragraph "COM Registry Routing targets DirectSound3D specifically, which doesn't apply to a" \
+                "direct OpenAL32.dll swap — only Expand Audio Limits applies here."
 
             if confirm "Would you like to view and opt-in to this advanced tweak?" N; then
                 show_tweak_blurb limits
@@ -440,12 +434,12 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
         fi
     else
         ANY_TWEAK_HANDLED=0
-        [ "$EAX_UNIFIED_DUMMY_HANDLED" -eq 1 ] && ANY_TWEAK_HANDLED=1
+        [ "$EAX_UNIFIED_HANDLED" -eq 1 ] && ANY_TWEAK_HANDLED=1
         [ "$AUDIO_LIMITS_HANDLED" -eq 1 ] && ANY_TWEAK_HANDLED=1
         [ "$COM_ROUTING_HANDLED" -eq 1 ] && ANY_TWEAK_HANDLED=1
 
         ALL_HANDLED=1
-        [ "$EAX_UNIFIED_DUMMY_APPLICABLE" -eq 1 ] && [ "$EAX_UNIFIED_DUMMY_HANDLED" -eq 0 ] && ALL_HANDLED=0
+        [ "$EAX_UNIFIED_APPLICABLE" -eq 1 ] && [ "$EAX_UNIFIED_HANDLED" -eq 0 ] && ALL_HANDLED=0
         [ "$AUDIO_LIMITS_HANDLED" -eq 0 ] && ALL_HANDLED=0
         [ "$COM_ROUTING_APPLICABLE" -eq 1 ] && [ "$COM_ROUTING_HANDLED" -eq 0 ] && ALL_HANDLED=0
 
@@ -457,10 +451,10 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
             fi
 
             if confirm "$GATE_PROMPT" N; then
-                if [ "$EAX_UNIFIED_DUMMY_APPLICABLE" -eq 1 ] && [ "$EAX_UNIFIED_DUMMY_HANDLED" -eq 0 ]; then
-                    show_tweak_blurb dummy
-                    if confirm "Inject EAX Unified dummy files?" N; then
-                        ADVANCED_DUMMY="y"
+                if [ "$EAX_UNIFIED_APPLICABLE" -eq 1 ] && [ "$EAX_UNIFIED_HANDLED" -eq 0 ]; then
+                    show_tweak_blurb eaxunified
+                    if confirm "Install Creative's EAX Unified?" N; then
+                        INSTALL_EAX_UNIFIED="y"
                     fi
                 fi
 

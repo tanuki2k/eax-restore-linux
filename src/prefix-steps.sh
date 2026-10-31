@@ -140,6 +140,127 @@ install_openal_runtime() {
     fi
 }
 
+# Usage: eax_unified_dll
+# Prints the eax.dll that Creative's EAX Unified installer left in the current
+# prefix's system folder (the 32-bit one is in syswow64 on a 64-bit prefix), or
+# returns 1. Wine's own placeholder doesn't count.
+eax_unified_dll() {
+    local dir file
+    for dir in syswow64 system32; do
+        file="$PREFIX_PATH/drive_c/windows/$dir/eax.dll"
+        if is_genuine_dll "$file" && grep -qa "EAX Unified" "$file"; then echo "$file"; return 0; fi
+    done
+    return 1
+}
+
+# Usage: game_ships_eax_dll
+# True when the game's own folder already has a real eax.dll or eaxunified.dll,
+# so it loads its own and EAX Unified isn't needed (an empty file from the old
+# dummy tweak doesn't count).
+game_ships_eax_dll() {
+    local name
+    for name in eax.dll eaxunified.dll; do
+        is_genuine_dll "$(find_existing_variant "$GAME_DIR/$name")" && return 0
+    done
+    return 1
+}
+
+# Usage: ensure_eax_unified_installer
+# Puts the installer in EAX_UNIFIED_SHARE: reused when its checksum still
+# matches, otherwise unpacked from the checksum-verified zip. Nothing is kept on
+# a failed download.
+ensure_eax_unified_installer() {
+    local exe="$EAX_UNIFIED_SHARE/$EAX_UNIFIED_EXE" zip="$EAX_UNIFIED_SHARE/installer.zip"
+    mkdir -p "$EAX_UNIFIED_SHARE"
+    if [ -s "$exe" ] && [ "$(sha256sum "$exe" 2>/dev/null | awk '{print $1}')" == "$EAX_UNIFIED_EXE_SHA256" ]; then
+        print_status "Using the cached EAX Unified installer."
+        return 0
+    fi
+    print_status "Downloading the EAX Unified installer..."
+    if fetch_with_progress "$EAX_UNIFIED_ZIP_URL" "$zip" \
+        && verify_checksum "$zip" "$EAX_UNIFIED_ZIP_SHA256" \
+        && unzip -p "$zip" "$EAX_UNIFIED_EXE" > "$exe.part" \
+        && verify_checksum "$exe.part" "$EAX_UNIFIED_EXE_SHA256"; then
+        mv -f "$exe.part" "$exe"
+        rm -f "$zip"
+        return 0
+    fi
+    rm -f "$zip" "$exe.part" "$exe"
+    return 1
+}
+
+# Usage: run_in_prefix <what> <log> <wine args...>
+# Runs a Windows program in the current prefix (protontricks for Steam, the
+# game's Wine for Heroic) under a spinner, output to <log>.
+run_in_prefix() {
+    local what="$1" log="$2" arg cmd=""
+    shift 2
+    if [ "$LAUNCHER_TYPE" == "1" ]; then
+        for arg in "$@"; do cmd+=" \"$arg\""; done
+        run_with_spinner "$what" "$log" protontricks -c "wine$cmd" "$APPID"
+    elif [ -n "$WINE_CMD" ] && [ -n "$PREFIX_PATH" ]; then
+        run_with_spinner "$what" "$log" env WINEPREFIX="$PREFIX_PATH" "$WINE_CMD" "$@"
+    else
+        return 1
+    fi
+}
+
+# Usage: install_eax_unified
+# Runs Creative's EAX Unified installer silently in the current prefix. It puts
+# eax.dll in the system folder and registers its COM object, which is what a
+# game flagged "eax_unified" asks Windows for. Returns 0 when installed, 2 when
+# the prefix already had it (so the manifest doesn't claim it), 1 when it failed.
+install_eax_unified() {
+    print_phase_task "Installing Creative's EAX Unified into the prefix"
+    if eax_unified_dll > /dev/null; then
+        print_status "EAX Unified is already in ${GAME_NAME}'s prefix."
+        return 2
+    fi
+    local log="$EAX_UNIFIED_SHARE/install.log" i
+    mkdir -p "$EAX_UNIFIED_SHARE"
+    if ! ensure_eax_unified_installer; then
+        print_warning_arrow "Couldn't get the EAX Unified installer, so $GAME_NAME won't play EAX sound."
+        return 1
+    fi
+    : > "$log"
+    run_in_prefix "Running the installer in the prefix..." "$log" "$EAX_UNIFIED_SHARE/$EAX_UNIFIED_EXE" /s /v/qn
+    # The installer can return before the prefix's registry has been written out.
+    for i in 1 2 3 4 5 6 7 8 9 10; do
+        eax_unified_dll > /dev/null && break
+        sleep 1
+    done
+    if eax_unified_dll > /dev/null; then
+        print_status "EAX Unified was installed successfully." "$GREEN"
+        return 0
+    fi
+    print_warning_arrow "The EAX Unified installer finished, but eax.dll isn't in the prefix, so $GAME_NAME won't play EAX sound." \
+        "The installer's full output is saved in $log"
+    return 1
+}
+
+# Usage: uninstall_eax_unified
+# Removes what install_eax_unified added, through Windows Installer so the file
+# and its COM registration go together.
+uninstall_eax_unified() {
+    if [ -z "$PREFIX_PATH" ] || ! eax_unified_dll > /dev/null; then
+        print_status "EAX Unified is already gone from the prefix."
+        return 0
+    fi
+    local log="$EAX_UNIFIED_SHARE/uninstall.log" i
+    mkdir -p "$EAX_UNIFIED_SHARE"
+    : > "$log"
+    run_in_prefix "Removing EAX Unified through Windows Installer..." "$log" msiexec /x "$EAX_UNIFIED_PRODUCT_CODE" /qn
+    for i in 1 2 3 4 5 6 7 8 9 10; do
+        eax_unified_dll > /dev/null || break
+        sleep 1
+    done
+    if eax_unified_dll > /dev/null; then
+        print_warning_arrow "EAX Unified is still in the prefix. The uninstaller's output is saved in $log"
+        return 1
+    fi
+    print_status "EAX Unified was removed." "$GREEN"
+}
+
 # Usage: deploy_prefix_dlls
 # Copies DEPLOY_SRC/DEPLOY_DEST_NAME into the current prefix's system folder,
 # backing up any file already there (handle_conflict), the same as the

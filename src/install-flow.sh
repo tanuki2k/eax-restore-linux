@@ -64,6 +64,7 @@
     [ ${#GAME_SETTINGS_PLAN[@]} -gt 0 ] && phase_total=$(( phase_total + 1 ))
     { [[ "$INSTALL_VCRUN" =~ $YES_RE ]] || [ -n "${APPLY_VCRUN_OVERRIDES_NEEDED:-}" ]; } && phase_total=$(( phase_total + 1 ))
     [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows" ] && phase_total=$(( phase_total + 1 ))
+    [ "$INSTALL_EAX_UNIFIED" == "y" ] && phase_total=$(( phase_total + 1 ))
     # Each companion app's prefix setup, plus its VC++ install when it gets one.
     for i in "${!COMPANION_IDS[@]}"; do
         phase_total=$(( phase_total + 1 ))
@@ -86,6 +87,13 @@
         print_phase_task "Setting up the VC++ runtime that's already in the prefix"
         apply_vcrun_dll_overrides
         VCRUN_INSTALLED_THIS_RUN="2"
+    fi
+
+    # EAX Unified goes into the prefix like the VC++ runtime does, and is
+    # recorded the same way. 2 means the prefix already had it.
+    EAX_UNIFIED_INSTALLED_THIS_RUN="0"
+    if [ "$INSTALL_EAX_UNIFIED" == "y" ]; then
+        install_eax_unified && EAX_UNIFIED_INSTALLED_THIS_RUN="1"
     fi
 
     # Manifest of everything THIS run actually deploys, so uninstall only ever
@@ -118,7 +126,7 @@
     if [ -s "$INSTALL_MANIFEST" ]; then
         while IFS= read -r line; do
             [[ "$line" == /* ]] && { PREV_MANIFEST_FILES["$line"]=1; PREV_FILE_LINES+=("$line"); }
-            [[ "$line" == REGISTRY:* || "$line" == VCRUN || "$line" == VCRUN:* || "$line" == VCRUN$'\t'* ]] && PREV_STATE_LINES+=("$line")
+            [[ "$line" == REGISTRY:* || "$line" == VCRUN || "$line" == VCRUN:* || "$line" == VCRUN$'\t'* || "$line" == EAXUNIFIED ]] && PREV_STATE_LINES+=("$line")
             [[ "$line" == CONFIG:* ]] && PREV_CONFIG_LINES+=("$line")
             [[ "$line" == LAUNCHER:* ]] && PREV_LAUNCHER_LINES+=("$line")
         done < "$INSTALL_MANIFEST"
@@ -132,6 +140,7 @@
     # there already, so uninstall doesn't say this script installed it.
     [ "$VCRUN_INSTALLED_THIS_RUN" == "1" ] && echo "VCRUN" >> "$INSTALL_MANIFEST"
     [ "$VCRUN_INSTALLED_THIS_RUN" == "2" ] && echo "VCRUN:OVERRIDES" >> "$INSTALL_MANIFEST"
+    [ "$EAX_UNIFIED_INSTALLED_THIS_RUN" == "1" ] && echo "EAXUNIFIED" >> "$INSTALL_MANIFEST"
 
     print_phase_task "Deploying files to local game folder"
 
@@ -170,23 +179,6 @@
     fi
 
     print_phase_task "Applying configurations and tweaks"
-
-    if [[ "$ADVANCED_DUMMY" =~ $YES_RE ]]; then
-        # The dummy only helps a game that checks for the file's presence to
-        # unlock its EAX menu. If a genuine eax.dll/eaxunified.dll is already
-        # there the game ships and loads its own — shadowing it with a
-        # zero-byte file can stop it booting — so leave a real one alone.
-        for deploy_dir in "${GAME_DIRS[@]}"; do
-            for dummy in eax.dll eaxunified.dll; do
-                if is_genuine_dll "$(find_existing_variant "$deploy_dir/$dummy")"; then
-                    print_status "Kept: existing $dummy in $(basename "$deploy_dir") (game ships its own — dummy skipped)"
-                elif handle_conflict "$deploy_dir/$dummy"; then
-                    if touch "$deploy_dir/$dummy"; then echo "$deploy_dir/$dummy" >> "$INSTALL_MANIFEST"; print_status "Created: $dummy dummy in $(basename "$deploy_dir")"
-                    else record_deploy_failure "$deploy_dir/$dummy"; fi
-                fi
-            done
-        done
-    fi
 
     if handle_conflict "$GAME_DIR/alsoft.ini"; then
         speaker_alsoft_values

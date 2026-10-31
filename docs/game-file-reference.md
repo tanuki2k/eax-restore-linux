@@ -175,7 +175,7 @@ A list drawn from the values below. Each one turns the matching Advanced Compati
 
 | Value | Use it for |
 | --- | --- |
-| `"eax_unified"` | Games that reach EAX through Creative's `eax.dll` "EAX Unified" shim instead of native DirectSound3D. It offers the EAX Unified dummy files, after checking whether the game ships its own `eax.dll`. |
+| `"eax_unified"` | Games that reach EAX through Creative's `eax.dll` "EAX Unified" shim instead of native DirectSound3D. The install runs Creative's EAX Unified installer in the game's prefix, unless the game's folder already has its own `eax.dll` or `eaxunified.dll`. Uninstall removes it again. |
 | `"expand_audio_limits"` | A game independently verified to need it, like F.E.A.R., whose audio drops out in large firefights. |
 | `"com_registry_routing"` | A game independently verified to need it, like Grand Theft Auto: San Andreas. |
 

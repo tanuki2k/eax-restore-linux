@@ -47,6 +47,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     REG_OVERRIDE_DLL=""
     VCRUN_INSTALLED="n"
     VCRUN_OVERRIDES_ONLY="n"
+    EAX_UNIFIED_INSTALLED="n"
     CONFIG_LINES=()
     LAUNCHER_LINES=()
     # Companion apps' prefix changes (lines tagged with their AppID, see
@@ -89,6 +90,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
                 "REGISTRY:OVERRIDE:openal32") REG_HAS_OVERRIDE="y"; REG_OVERRIDE_DLL="openal32"; continue ;;
                 "VCRUN") VCRUN_INSTALLED="y"; continue ;;
                 "VCRUN:OVERRIDES") VCRUN_OVERRIDES_ONLY="y"; continue ;;
+                "EAXUNIFIED") EAX_UNIFIED_INSTALLED="y"; continue ;;
                 # Game settings changed in the game's own config files —
                 # reverted in step 7, never removed as files.
                 CONFIG:*) CONFIG_LINES+=("$manifest_entry"); continue ;;
@@ -158,7 +160,8 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     # uninstalled.
     PREFIX_SHARED=0
     if [ -n "$PREFIX_PATH" ] && { [ ${#FILES_TO_REMOVE[@]} -gt 0 ] || [ "$REG_HAS_COM" == "y" ] || [ "$REG_HAS_OVERRIDE" == "y" ]; }; then
-        shared_games="$(games_sharing_prefix "$PREFIX_PATH" "$GAME_DIR")"
+        scan_with_spinner "Checking whether other games share ${GAME_NAME:-this game}'s prefix" games_sharing_prefix "$PREFIX_PATH" "$GAME_DIR"
+        shared_games="$SCAN_RESULT"
         if [ -n "$shared_games" ]; then
             PREFIX_SHARED=1
             shared_names="$(while IFS= read -r d; do basename "$d"; done <<< "$shared_games" | paste -sd, | sed 's/,/, /g')"
@@ -196,13 +199,14 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     elif [ "$VCRUN_PRESENT" == "y" ]; then
         print_status "VC++ runtime: found in the prefix" ""
     fi
+    [ "$EAX_UNIFIED_INSTALLED" == "y" ] && print_status "EAX Unified: installed by this script" ""
     [ ${#UNINSTALL_COMPANION_IDS[@]} -gt 0 ] && resolve_uninstall_companions
     if [ ${#CONFIG_LINES[@]} -gt 0 ]; then
         settings_count="$(for line in "${CONFIG_LINES[@]}"; do cut -f1,2 <<< "${line#CONFIG:}"; done | sort -u | wc -l)"
         print_status "Game settings: ${settings_count} changed during install" ""
     fi
 
-    if [ ${#FILES_TO_REMOVE[@]} -eq 0 ] && [ "$REG_HAS_COM" == "n" ] && [ "$REG_HAS_OVERRIDE" == "n" ] && [ "$VCRUN_PRESENT" == "n" ] && [ ${#CONFIG_LINES[@]} -eq 0 ] && [ ${#LAUNCHER_LINES[@]} -eq 0 ] \
+    if [ ${#FILES_TO_REMOVE[@]} -eq 0 ] && [ "$REG_HAS_COM" == "n" ] && [ "$REG_HAS_OVERRIDE" == "n" ] && [ "$VCRUN_PRESENT" == "n" ] && [ "$EAX_UNIFIED_INSTALLED" == "n" ] && [ ${#CONFIG_LINES[@]} -eq 0 ] && [ ${#LAUNCHER_LINES[@]} -eq 0 ] \
         && [ ${#COMPANION_IDS[@]} -eq 0 ]; then
         print_status "Nothing from this script was found in the game folder or prefix, so there's nothing to remove." ""
         exit 0
@@ -355,9 +359,9 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
             && print_status "Registry: will be cleaned up in $(companion_name_for_id "$id")'s prefix too" ""
     done
 
-    print_step 6 "VC++ Runtime"
-    print_paragraph "This step checks whether the install added the VC++ 2022 Redistributable to" \
-        "${GAME_NAME:-the game}'s prefix."
+    print_step 6 "Runtimes in the Prefix"
+    print_paragraph "This step checks whether the install added the VC++ 2022 Redistributable or" \
+        "Creative's EAX Unified to ${GAME_NAME:-the game}'s prefix."
 
     UNINSTALL_VCRUN="n"
     print_task "Checking for the VC++ runtime"
@@ -367,6 +371,13 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         confirm "Also remove the VC++ 2022 Redistributable from this prefix?" N && UNINSTALL_VCRUN="y"
     else
         print_status "Not installed in this prefix, so nothing to do." ""
+    fi
+    # Added by this script for one game, so it goes with that game's install.
+    UNINSTALL_EAX_UNIFIED="n"
+    if [ "$EAX_UNIFIED_INSTALLED" == "y" ]; then
+        print_task "Checking for EAX Unified"
+        print_status "The install added EAX Unified to ${GAME_NAME:-the game}'s prefix, so it's removed too." ""
+        UNINSTALL_EAX_UNIFIED="y"
     fi
     COMPANION_WORK=0
     for i in "${!COMPANION_IDS[@]}"; do
@@ -385,7 +396,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     choose_game_settings_to_revert 7
 
     if [ ${#FINAL_REMOVE[@]} -eq 0 ] && [ "$LAUNCHER_WORK" -eq 0 ] && [[ ! "$REMOVE_REG" =~ $YES_RE ]] \
-        && [ "$UNINSTALL_VCRUN" == "n" ] && [ ${#GAME_SETTINGS_REVERT_GROUPS[@]} -eq 0 ] && [ "$COMPANION_WORK" -eq 0 ]; then
+        && [ "$UNINSTALL_VCRUN" == "n" ] && [ "$UNINSTALL_EAX_UNIFIED" == "n" ] && [ ${#GAME_SETTINGS_REVERT_GROUPS[@]} -eq 0 ] && [ "$COMPANION_WORK" -eq 0 ]; then
         print_result "Nothing to change, so the uninstall is finished."
         exit 0
     fi
@@ -405,6 +416,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     [ "$LAUNCHER_WORK" -eq 1 ] && phase_total=$(( phase_total + 1 ))
     [[ "$REMOVE_REG" =~ $YES_RE ]] && phase_total=$(( phase_total + 1 ))
     [ "$UNINSTALL_VCRUN" == "y" ] && phase_total=$(( phase_total + 1 ))
+    [ "$UNINSTALL_EAX_UNIFIED" == "y" ] && phase_total=$(( phase_total + 1 ))
     [ ${#GAME_SETTINGS_REVERT_GROUPS[@]} -gt 0 ] && phase_total=$(( phase_total + 1 ))
     phase_total=$(( phase_total + COMPANION_WORK ))
     start_phase_progress "$phase_total"
@@ -471,6 +483,11 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         uninstall_vcrun_dependencies
     fi
 
+    if [ "$UNINSTALL_EAX_UNIFIED" == "y" ]; then
+        print_phase_task "Removing Creative's EAX Unified"
+        uninstall_eax_unified && EAX_UNIFIED_REMOVED="y"
+    fi
+
     # Companion apps' own prefixes (DOOM 3's Resurrection of Evil).
     for i in "${!COMPANION_IDS[@]}"; do
         id="${COMPANION_IDS[$i]}"
@@ -505,6 +522,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
                 REGISTRY:*$'\t'*|VCRUN$'\t'*|VCRUN:OVERRIDES$'\t'*) extra_left+=("$line") ;;
                 REGISTRY:*) [ "$REG_CLEANED" == "y" ] || core_left+=("$line") ;;
                 VCRUN|VCRUN:OVERRIDES) [ "$UNINSTALL_VCRUN" == "y" ] || extra_left+=("$line") ;;
+                EAXUNIFIED) [ "${EAX_UNIFIED_REMOVED:-n}" == "y" ] || core_left+=("$line") ;;
                 *) core_left+=("$line") ;;
             esac
         done < "$INSTALL_MANIFEST"

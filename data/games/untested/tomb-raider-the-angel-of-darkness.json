@@ -3,12 +3,23 @@
   "name": "Tomb Raider: The Angel of Darkness",
   "description": "Tomb Raider: The Angel of Darkness is a singleplayer third-person action-adventure game and the sixth in the Tomb Raider series.",
   "released": "2003-07-01",
+  "exe": "TRAOD.exe",
   "stores": {
     "steam": { "id": 225020 },
     "gog": { "id": 1207659089 }
   },
-  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0", "3.0", "4.0"] },
+  "eax": {
+    "api": "directsound3d",
+    "versions": ["1.0", "2.0", "3.0", "4.0"],
+    "problem": "Tomb Raider: The Angel of Darkness needs Creative's EAX Unified to play EAX sound."
+  },
   "install": {
     "tweaks": ["eax_unified"]
-  }
+  },
+  "sources": [
+    {
+      "title": "EAX Unified",
+      "url": "https://community.pcgamingwiki.com/files/file/367-eax-unified/"
+    }
+  ]
 }

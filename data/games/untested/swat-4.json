@@ -5,17 +5,34 @@
   "released": "2005-04-05",
   "exe": "Swat4.exe",
   "stores": {
-    "gog": { "id": 1409964317, "store_details": "Sold as 'SWAT 4: Gold Edition'." }
+    "gog": {
+      "id": 1409964317,
+      "extra_exe_folders": ["game_root:ContentExpansion/System"],
+      "store_details": "Sold as 'SWAT 4: Gold Edition'."
+    }
   },
   "eax": { "api": "openal", "versions": ["1.0", "2.0", "3.0"] },
   "game_config": {
-    "files": { "Swat4.ini": { "format": "ini", "locations": ["game_exe:Swat4.ini"] } },
+    "files": {
+      "Swat4.ini": { "format": "ini", "locations": ["game_exe:Swat4.ini"] },
+      "Swat4X.ini": {
+        "format": "ini",
+        "locations": ["game_root:ContentExpansion/System/Swat4X.ini"]
+      }
+    },
     "audio_settings": [
       {
         "title": "Enable EAX",
         "reason": "SWAT 4 ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs.",
         "changes": {
           "Swat4.ini": {
+            "ALAudio.ALAudioSubsystem": {
+              "UseDefaultDriver": "False",
+              "UseEAX": "True",
+              "Use3DSound": "True"
+            }
+          },
+          "Swat4X.ini": {
             "ALAudio.ALAudioSubsystem": {
               "UseDefaultDriver": "False",
               "UseEAX": "True",

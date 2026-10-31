@@ -53,8 +53,11 @@
 #   offers to auto-install anything missing via your distro's package
 #   manager (skipped in favour of Discover on SteamOS, per Safety Guards).
 #
-# * Advanced Tweaks: Optional EAX Unified dummies, COM registry routing,
-#   expanded audio limits, and HRTF headphone output.
+# * EAX Unified: Installs Creative's EAX Unified into the prefix for games that
+#   need it (unless the game ships its own eax.dll).
+#
+# * Advanced Tweaks: Optional COM registry routing, expanded audio limits, and
+#   HRTF headphone output.
 #
 # * Auto-Overrides: Sets WINEDLLOVERRIDES in the game's Steam launch options or
 #   Heroic environment variables (merged with what's already there), or in the

@@ -48,6 +48,18 @@ OPENAL_SHARE="$BASE_SHARE/openal-soft"
 OPENAL_OFFICIAL="$OPENAL_SHARE/official"
 OPENAL_PRERELEASE="$OPENAL_SHARE/prerelease"
 
+# Creative's EAX Unified redistributable, for games flagged "eax_unified" that
+# create its COM object (eax.dll in the prefix's system folder). It's kept in
+# this repo as assets/EAX4Unified_redist_4001.zip because Creative's own link is
+# gone, and pinned twice: the zip when it's downloaded, the exe when it's
+# reused from the cache. The product code is what msiexec /x removes it by.
+EAX_UNIFIED_SHARE="$BASE_SHARE/eax-unified"
+EAX_UNIFIED_EXE="EAX4Unified_redist_4001.exe"
+EAX_UNIFIED_ZIP_URL="https://raw.githubusercontent.com/tanuki2k/eax-restore-linux/dev/assets/EAX4Unified_redist_4001.zip"
+EAX_UNIFIED_ZIP_SHA256="2502b6ffebb360549a049baf345048323ee3ddef9983ac2e9f91f9eef5d660d9"
+EAX_UNIFIED_EXE_SHA256="c10e904a6f9869009307f5ca6484c9a0cebb90698e6cc404d7901353f25ff484"
+EAX_UNIFIED_PRODUCT_CODE="{89661B04-C646-4412-B6D3-5E19F02F1F37}"
+
 # Matches exactly what winetricks' own vcrun2022 verb overrides — Wine prefers
 # its own (partial, ~80%-complete) builtin implementations of these DLLs over
 # native ones by default, even when the real file is sitting right there on
