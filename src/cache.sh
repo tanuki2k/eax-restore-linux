@@ -523,7 +523,7 @@ deploy_copy() {
     # DEPLOY_FAILURES so the install can't report success when it isn't.
     if cp -f "$1" "$2"; then
         echo "$2" >> "$INSTALL_MANIFEST"
-        print_status "$3: $(basename "$2") to $(basename "$(dirname "$2")")"
+        print_status "$3: $(basename "$2") to $(basename "$(dirname "$2")")" ""
         return 0
     fi
     record_deploy_failure "$2"
@@ -576,6 +576,6 @@ handle_conflict() {
         DEPLOY_FAILURES=$(( ${DEPLOY_FAILURES:-0} + 1 ))
         return 1
     fi
-    print_status "Backed up the original $(basename "$existing") to $(basename "$target_file").bak.${TIMESTAMP}"
+    print_status "Backed up the original $(basename "$existing") to $(basename "$target_file").bak.${TIMESTAMP}" "$NOTE"
     return 0
 }

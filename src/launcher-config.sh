@@ -186,7 +186,7 @@ offer_close_launcher() {
     if run_with_spinner "Waiting for ${label} to close..." "$EAX_LOG_FILE" _close_launcher_and_wait "$1" 30; then
         log_cmd "closed $1 ($(launcher_kind "$1")); will reopen with: ${cmd//$'\x1f'/ }"
         LAUNCHERS_TO_REOPEN+=("${label}"$'\x1f'"${cmd}")
-        print_status "Closed ${label}."
+        print_status "Closed ${label}." ""
         return 0
     fi
     print_warning_arrow "${label} didn't close in time."
@@ -643,9 +643,11 @@ _apply_dsoal_log_env() {
         log_cmd "dsoal logging: $OVERRIDE_FILE [$OVERRIDE_ID] on, dsoal level=${dsoal_level:-none}, openal soft level=3"
     fi
     if [ -n "$dsoal_level" ]; then
-        print_status "Full DSOAL logging is on. The game writes $(tilde_path "$GAME_DIR/dsoal.log") and $(tilde_path "$GAME_DIR/openal.log") when it starts."
+        print_status "Full DSOAL logging is on. When ${GAME_NAME} starts, it writes:" ""
+        echo -e "      $(tilde_path "$GAME_DIR/dsoal.log")\n      $(tilde_path "$GAME_DIR/openal.log")"
     else
-        print_status "OpenAL Soft logging is on. The game writes $(tilde_path "$GAME_DIR/openal.log") when it starts."
+        print_status "OpenAL Soft logging is on. When ${GAME_NAME} starts, it writes:" ""
+        echo -e "      $(tilde_path "$GAME_DIR/openal.log")"
         print_note_arrow "openal.log lists the sound device and any errors, but not which EAX version ${GAME_NAME} uses."
     fi
     LAUNCHER_CHANGE=""
@@ -701,7 +703,7 @@ _write_launcher_override() {
                 break
             fi
         done
-        print_status "Already set: $(launcher_override_where)"
+        print_status "Already set: $(launcher_override_where)" ""
         return 0
     fi
     written="$new"

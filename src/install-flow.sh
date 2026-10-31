@@ -359,8 +359,8 @@ EOF
 
         if [ -s "$GAME_DIR/alsoft.ini" ]; then
             echo "$GAME_DIR/alsoft.ini" >> "$INSTALL_MANIFEST"
-            if [[ "$ADVANCED_LIMITS" =~ $YES_RE ]]; then print_status "Generated: Advanced alsoft.ini with expanded channel limits"
-            else print_status "Generated: Linux-optimised alsoft.ini"; fi
+            if [[ "$ADVANCED_LIMITS" =~ $YES_RE ]]; then print_status "Generated: Advanced alsoft.ini with expanded channel limits" ""
+            else print_status "Generated: Linux-optimised alsoft.ini" ""; fi
             apply_alsoft_overrides
             # Copied after the overrides so every exe gets the same settings.
             for deploy_dir in "${EXTRA_GAME_DIRS[@]}"; do

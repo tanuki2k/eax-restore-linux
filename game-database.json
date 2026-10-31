@@ -3539,6 +3539,13 @@
           }
         ]
       },
+      "sources": [
+        {
+          "title": "Missing radio chatter, issue 1333",
+          "url": "https://github.com/kcat/openal-soft/issues/1333"
+        }
+      ],
+      "notes": "With EAX on, SWAT 4's radio chatter at the start of an instant action mission is silent. Setting UseDefaultDriver to True in Swat4.ini brings it back, but turns EAX off.",
       "tested": false
     },
     {
@@ -4243,7 +4250,10 @@
       "exe": "SplinterCell4.exe",
       "stores": {
         "steam": {
-          "id": 13580
+          "id": 13580,
+          "extra_exe_folders": [
+            "game_root:SCDA-Online/System"
+          ]
         }
       },
       "eax": {
@@ -4297,8 +4307,7 @@
           "title": "EAX Unified",
           "url": "https://community.pcgamingwiki.com/files/file/367-eax-unified/"
         }
-      ],
-      "tested": false
+      ]
     },
     {
       "id": "tron-20",

@@ -43,5 +43,12 @@
         "tested": false
       }
     ]
-  }
+  },
+  "sources": [
+    {
+      "title": "Missing radio chatter, issue 1333",
+      "url": "https://github.com/kcat/openal-soft/issues/1333"
+    }
+  ],
+  "notes": "With EAX on, SWAT 4's radio chatter at the start of an instant action mission is silent. Setting UseDefaultDriver to True in Swat4.ini brings it back, but turns EAX off."
 }

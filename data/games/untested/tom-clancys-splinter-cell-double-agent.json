@@ -5,7 +5,7 @@
   "released": "2006-11-07",
   "exe": "SplinterCell4.exe",
   "stores": {
-    "steam": { "id": 13580 }
+    "steam": { "id": 13580, "extra_exe_folders": ["game_root:SCDA-Online/System"] }
   },
   "eax": { "api": "directsound3d", "versions": ["1.0", "2.0", "3.0", "4.0"] },
   "install": {

@@ -28,7 +28,7 @@ verify_vcrun_files() {
     local extra_files=("vcomp140.dll" "concrt140.dll")
     [ "$ARCH" == "64" ] && extra_files+=("vcruntime140_1.dll")
 
-    print_status "Verifying VC++ runtime files in $(basename "$target_dir"):"
+    print_status "Verifying VC++ runtime files in $(basename "$target_dir"):" ""
 
     local core_ok=1
     local f
