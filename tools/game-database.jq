@@ -25,7 +25,7 @@ def normalize_eax:
     drop_empty
     | if .status == "supported" then del(.status) else . end
     | if .fix_in_place == false then del(.fix_in_place) else . end
-    | order_keys(["api", "versions", "status", "problem", "fix", "fix_in_place"]);
+    | order_keys(["api", "sound_system", "versions", "status", "problem", "fix", "fix_in_place"]);
 
 def normalize_install:
     drop_empty

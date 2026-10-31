@@ -46,6 +46,8 @@ prompts is done via environment variables:
                                       scan (steam:2210, gog:1207658936)
   EAX_RESTORE_NO_LOG=1                Don't write a run log (normally saved to
                                       ~/.local/state/eax-restore-linux/logs/)
+  EAX_RESTORE_DSOAL_LOG=1             Turn DSOAL's log on at its fullest level when
+                                      installing, for debugging
 
 Full feature list, environment variable details, and docs:
 https://github.com/tanuki2k/eax-restore-linux

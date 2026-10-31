@@ -218,6 +218,8 @@ def guess_format(path, text):
         return "idtech_cfg"
     if re.search(r"^\s*\{[^}]+\}\s*=\s*\{", text, re.M):
         return "brace_cfg"
+    if re.search(r'^\s*"[^"]+"\s+"[^"]*"\s*$', text, re.M):
+        return "quoted_cfg"  # Monolith's autoexec.cfg: "key" "value"
     if low.endswith(".gas") or re.search(r"^\s*\[[^\]]+\]\s*\n\s*\{", text, re.M):
         return "gas_cfg"  # Siege Engine: [section], "{", then "key = value;" lines
     if re.search(r"^\s*\[[^\]]+\]\s*$", text, re.M):
@@ -270,6 +272,9 @@ def parse_values(fmt, text):
     elif fmt == "brace_cfg":
         for m in re.finditer(r"^\s*\{([^}]*)\}\s*=\s*\{([^}]*)\}", text, re.M):
             out[("", m.group(1).strip())] = m.group(2).strip()
+    elif fmt == "quoted_cfg":
+        for m in re.finditer(r'^\s*"([^"]+)"\s+"([^"]*)"\s*$', text, re.M):
+            out[("", m.group(1))] = m.group(2)
     elif fmt == "ltx":
         for ln in text.splitlines():
             m = re.match(r"^\s*([A-Za-z_][\w.]*)(?:\s+(.*?))?\s*$", ln)

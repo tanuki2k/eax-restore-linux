@@ -45,6 +45,10 @@
       "additionalProperties": false,
       "properties": {
         "api": { "$ref": "#/$defs/api" },
+        "sound_system": {
+          "description": "The audio middleware the game is built on, when you can check it (for example from its mss32.dll, or its manual). Leave it out when unknown.\nmiles: the Miles Sound System.",
+          "enum": ["miles"]
+        },
         "versions": {
           "description": "The EAX versions the game supports, from a source you can check.",
           "type": "array",
@@ -242,7 +246,7 @@
     },
     "config_file_name": {
       "type": "string",
-      "pattern": "^[A-Za-z0-9._ -]+\\.([iI][nN][iI]|[cC][fF][gG]|[gG][dD][bB]|[rR][eE][gG]|[tT][xX][tT]|[lL][tT][xX]|[gG][aA][sS])(?!\\n)$"
+      "pattern": "^[A-Za-z0-9._ -]+\\.([iI][nN][iI]|[cC][fF][gG]|[gG][dD][bB]|[dD][aA][tT]|[rR][eE][gG]|[tT][xX][tT]|[lL][tT][xX]|[gG][aA][sS])(?!\\n)$"
     },
     "config_file": {
       "type": "object",
@@ -250,8 +254,8 @@
       "additionalProperties": false,
       "properties": {
         "format": {
-          "description": "How the file is laid out:\nini: [Section] then key=value.\nflat_ini: key=value lines with no sections.\nidtech_cfg: seta key \"value\".\ndark_cfg: NewDark \"key value\" lines. A bare key is a flag that's on, and ;key turns it off.\nbrace_cfg: {key} = {value} lines (Fallout Tactics' bos.cfg).\ngas_cfg: [section], then key = value; lines between { and } (Dungeon Siege's prefs.gas).\nltx: key value lines with no sections (S.T.A.L.K.E.R.'s user.ltx).\ngadb: Monolith's binary profile (F.E.A.R.'s Profile000.gdb). It can only switch an existing on/off setting, so values are \"0\" or \"1\".\nwine_reg: the prefix's system.reg or user.reg, for a game that keeps its options in the registry. Only numbers and text can be changed, a number as a decimal.",
-          "enum": ["ini", "flat_ini", "idtech_cfg", "dark_cfg", "brace_cfg", "gas_cfg", "ltx", "gadb", "wine_reg"]
+          "description": "How the file is laid out:\nini: [Section] then key=value.\nflat_ini: key=value lines with no sections.\nidtech_cfg: seta key \"value\".\ndark_cfg: NewDark \"key value\" lines. A bare key is a flag that's on, and ;key turns it off.\nbrace_cfg: {key} = {value} lines (Fallout Tactics' bos.cfg).\ngas_cfg: [section], then key = value; lines between { and } (Dungeon Siege's prefs.gas).\nltx: key value lines with no sections (S.T.A.L.K.E.R.'s user.ltx, Dreamfall's prefs.dat).\nquoted_cfg: \"key\" \"value\" lines (Shogo's autoexec.cfg).\nbyte_cfg: a binary file with no key names. A key is a byte position counted from 0 (decimal or 0x hex) and the value is that byte as a number from 0 to 255. It can only change a byte the file already has.\ngadb: Monolith's binary profile (F.E.A.R.'s Profile000.gdb). It can only switch an existing on/off setting, so values are \"0\" or \"1\".\nwine_reg: the prefix's system.reg or user.reg, for a game that keeps its options in the registry. Only numbers and text can be changed, a number as a decimal.",
+          "enum": ["ini", "flat_ini", "idtech_cfg", "dark_cfg", "brace_cfg", "gas_cfg", "ltx", "quoted_cfg", "byte_cfg", "gadb", "wine_reg"]
         },
         "locations": {
           "description": "Where to look for the file, in order, written as \"base:path\". The first one that exists is used. The base is one of:\ngame_exe: the folder the game's .exe runs from.\ngame_root: the game's top-level install folder.\nprefix_documents, prefix_appdata, prefix_localappdata: the matching user folder inside the game's Wine prefix.\nprefix_public_documents: the Public Documents folder inside the Wine prefix.\nprefix: only for a registry file, as prefix:system.reg or prefix:user.reg.",
@@ -260,7 +264,7 @@
           "items": {
             "type": "string",
             "anyOf": [
-              { "pattern": "^(game_exe|game_root|prefix_documents|prefix_appdata|prefix_localappdata|prefix_public_documents):(?!/)(?!.*\\.\\.)[^\\\\]+\\.([iI][nN][iI]|[cC][fF][gG]|[gG][dD][bB]|[tT][xX][tT]|[lL][tT][xX]|[gG][aA][sS])(?!\\n)$" },
+              { "pattern": "^(game_exe|game_root|prefix_documents|prefix_appdata|prefix_localappdata|prefix_public_documents):(?!/)(?!.*\\.\\.)[^\\\\]+\\.([iI][nN][iI]|[cC][fF][gG]|[gG][dD][bB]|[dD][aA][tT]|[tT][xX][tT]|[lL][tT][xX]|[gG][aA][sS])(?!\\n)$" },
               { "pattern": "^prefix:(system|user)\\.reg(?!\\n)$" }
             ]
           }
@@ -291,7 +295,7 @@
       "additionalProperties": false,
       "properties": {
         "title": {
-          "description": "Starts with Enable, Fix, Remove or Raise, then the result, for example \"Enable EAX reverb\".",
+          "description": "Starts with Enable, Fix, Remove or Raise, then the result, for example \"Enable EAX\".",
           "type": "string",
           "minLength": 1,
           "maxLength": 60

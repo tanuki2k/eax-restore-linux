@@ -19,6 +19,8 @@ You choose how much it records:
 | Full (level 4) | Every EAX call the game makes, which shows which EAX version it really uses | The log grows fast and the game may stutter |
 | Basic (level 3) | Start-up, and which EAX versions the game asks for | Less detail |
 
+To turn it on at level 4 during an install instead, run the install with `EAX_RESTORE_DSOAL_LOG=1`.
+
 Run the same menu item again to turn it off. Uninstalling turns it off too if you set the DLL override through the launcher. If you used the registry or set it by hand, turn logging off here first.
 
 ## Reporting a bug

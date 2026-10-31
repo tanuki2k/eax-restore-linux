@@ -57,6 +57,8 @@ pub enum AudioFilter {
     All,
     DirectSound3d,
     OpenAl,
+    /// A game built on the Miles Sound System.
+    Miles,
     /// A game whose profile lists this EAX version (1 to 5).
     Eax(u8),
 }
@@ -67,6 +69,7 @@ impl AudioFilter {
             AudioFilter::All => "Any audio".into(),
             AudioFilter::DirectSound3d => "DirectSound3D".into(),
             AudioFilter::OpenAl => "OpenAL".into(),
+            AudioFilter::Miles => "Miles".into(),
             AudioFilter::Eax(n) => format!("EAX {n}.0"),
         }
     }
@@ -75,17 +78,19 @@ impl AudioFilter {
         match self {
             AudioFilter::All => AudioFilter::DirectSound3d,
             AudioFilter::DirectSound3d => AudioFilter::OpenAl,
-            AudioFilter::OpenAl => AudioFilter::Eax(1),
+            AudioFilter::OpenAl => AudioFilter::Miles,
+            AudioFilter::Miles => AudioFilter::Eax(1),
             AudioFilter::Eax(5) => AudioFilter::All,
             AudioFilter::Eax(n) => AudioFilter::Eax(n + 1),
         }
     }
 
-    fn allows(self, api: &str, versions: &[String]) -> bool {
+    fn allows(self, api: &str, versions: &[String], sound_system: Option<&str>) -> bool {
         match self {
             AudioFilter::All => true,
             AudioFilter::DirectSound3d => api == "directsound3d",
             AudioFilter::OpenAl => api == "openal",
+            AudioFilter::Miles => sound_system == Some("miles"),
             AudioFilter::Eax(n) => versions.iter().any(|v| *v == format!("{n}.0")),
         }
     }
@@ -170,7 +175,10 @@ impl Filters {
             candidates.push((e.store, false, game_api));
         }
         candidates.iter().any(|&(k, delisted, api)| {
-            self.store.allows(k, delisted) && self.audio.allows(api, &g.eax.versions)
+            self.store.allows(k, delisted)
+                && self
+                    .audio
+                    .allows(api, &g.eax.versions, g.eax.sound_system.as_deref())
         })
     }
 }
@@ -240,6 +248,17 @@ mod tests {
     }
 
     #[test]
+    fn miles_comes_from_the_games_sound_system() {
+        let e = entry(BOTH);
+        assert!(!with(|f| f.audio = AudioFilter::Miles).passes(&e));
+        let mut g = e.game.clone().unwrap();
+        g.eax.sound_system = Some("miles".into());
+        let mut miles = e.clone();
+        miles.game = Some(g);
+        assert!(with(|f| f.audio = AudioFilter::Miles).passes(&miles));
+    }
+
+    #[test]
     fn a_game_the_database_lacks_only_shows_with_no_filters_set() {
         let mut e = entry(BOTH);
         e.game = None;
@@ -254,7 +273,7 @@ mod tests {
         for _ in 0..6 {
             f.next_store();
         }
-        for _ in 0..8 {
+        for _ in 0..9 {
             f.next_audio();
         }
         for _ in 0..3 {

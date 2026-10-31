@@ -287,6 +287,15 @@ launch_options_with_dsoal_log() {
     fi
 }
 
+# Usage: launch_options_dsoal_log_value <Steam launch options> <LEVEL|FILE>
+# The value of DSOAL_LOGLEVEL or DSOAL_LOGFILE in the launch options, or
+# nothing when it isn't there.
+launch_options_dsoal_log_value() {
+    local re='(^|[[:space:]])DSOAL_LOG'"$2"'=("([^"]*)"|'"'"'([^'"'"']*)'"'"'|([^[:space:]]*))'
+    [[ "$1" =~ $re ]] && echo "${BASH_REMATCH[3]}${BASH_REMATCH[4]}${BASH_REMATCH[5]}"
+    return 0
+}
+
 # Usage: dsoal_log_path_for_wine <folder>
 # The Windows path DSOAL_LOGFILE needs for dsoal.log in <folder>: Wine maps
 # Z: to /, and accepts forward slashes. Absolute, so the log lands in that
@@ -542,8 +551,11 @@ wait_for_launcher_closed() {
 # instructions are shown; a failed write also counts as a deploy failure.
 # A launcher the script closed for this is reopened whichever way it ends.
 apply_launcher_override() {
-    [ "$OVERRIDE_METHOD" == "launcher" ] || return 0
-    _apply_launcher_override
+    local announced=""
+    if [ "$OVERRIDE_METHOD" == "launcher" ]; then announced=1; _apply_launcher_override; fi
+    # EAX_RESTORE_DSOAL_LOG is a debugging aid, so it runs whichever way the
+    # override was set, on top of whatever the launcher already holds.
+    if is_truthy "${EAX_RESTORE_DSOAL_LOG:-}"; then _apply_dsoal_log_env "$announced"; fi
     reopen_launchers
 }
 _apply_launcher_override() {
@@ -561,6 +573,49 @@ _apply_launcher_override() {
     apply_companion_launcher_overrides
 }
 
+# Usage: _apply_dsoal_log_env <1 when this step's header was already shown>
+# EAX_RESTORE_DSOAL_LOG=1: turns DSOAL's log on at its fullest level (4) for
+# the game, the way Tools → DSOAL logging does. Not recorded in the manifest:
+# uninstall drops the variables with the DLL override, and Tools turns them off.
+_apply_dsoal_log_env() {
+    local opts new level file wine_log
+    LAUNCHER_CHANGE="dsoal_log"
+    [ -n "$1" ] || print_phase_task "Turning on DSOAL logging for ${GAME_NAME}"
+    if ! launcher_override_target; then
+        print_warning_arrow "DSOAL logging wasn't turned on: there are no launcher settings for ${GAME_NAME} to add it to."
+        LAUNCHER_CHANGE=""; return 0
+    fi
+    wine_log="$(dsoal_log_path_for_wine "$GAME_DIR")"
+    if ! wait_for_launcher_closed "$OVERRIDE_LAUNCHER" add "type 's' to skip DSOAL logging"; then
+        print_status "Skipped — DSOAL logging wasn't turned on." "$YELLOW"
+        LAUNCHER_CHANGE=""; return 0
+    fi
+    if [ "$OVERRIDE_LAUNCHER" == "steam" ]; then
+        opts="$(launcher_override_get)"
+        [ "$opts" == "__ABSENT__" ] && opts=""
+        new="$(launch_options_with_dsoal_log "$opts" 4 "$wine_log")"
+        if [ "$new" != "$opts" ]; then
+            [ -e "$OVERRIDE_FILE.eax-restore.bak" ] || cp -p "$OVERRIDE_FILE" "$OVERRIDE_FILE.eax-restore.bak" 2>/dev/null
+            if ! launcher_override_set "$new" || [ "$(launcher_override_get)" != "$new" ]; then
+                print_error_arrow "Couldn't save DSOAL logging to $(launcher_override_where)." "The run log has the details."
+                LAUNCHER_CHANGE=""; return 0
+            fi
+        fi
+        log_cmd "dsoal logging: $OVERRIDE_FILE [$OVERRIDE_ID] '$opts' -> '$new'"
+    else
+        [ -e "$OVERRIDE_FILE.eax-restore.bak" ] || cp -p "$OVERRIDE_FILE" "$OVERRIDE_FILE.eax-restore.bak" 2>/dev/null
+        if ! { heroic_set_env "$OVERRIDE_FILE" "$OVERRIDE_ID" DSOAL_LOGLEVEL 4 \
+            && heroic_set_env "$OVERRIDE_FILE" "$OVERRIDE_ID" DSOAL_LOGFILE "$wine_log" \
+            && [ "$(heroic_get_env "$OVERRIDE_FILE" "$OVERRIDE_ID" DSOAL_LOGLEVEL)" == "4" ]; }; then
+            print_error_arrow "Couldn't save DSOAL logging to $(launcher_override_where)." "The run log has the details."
+            LAUNCHER_CHANGE=""; return 0
+        fi
+        log_cmd "dsoal logging: $OVERRIDE_FILE [$OVERRIDE_ID] on, level=4"
+    fi
+    print_status "DSOAL logging is on (level 4). The game writes $(tilde_path "$GAME_DIR/dsoal.log") when it starts."
+    LAUNCHER_CHANGE=""
+}
+
 # Usage: _write_launcher_override
 # Writes the override into the current target (OVERRIDE_LAUNCHER / _FILE /
 # _ID), reads it back and records it in the manifest. Returns 1 when it
@@ -572,7 +627,14 @@ _write_launcher_override() {
         print_warning_arrow "$(launcher_label "$OVERRIDE_LAUNCHER") no longer has settings for this game, so the override wasn't added to $(launcher_override_where)."
         return 1
     fi
+    # DSOAL's logging variables aren't part of what the manifest records
+    # (uninstall drops them itself), so they're set aside while the override
+    # is merged and put back when it's written.
+    local log_level="" log_file="" written
     if [ "$OVERRIDE_LAUNCHER" == "steam" ]; then
+        log_level="$(launch_options_dsoal_log_value "$old" LEVEL)"
+        log_file="$(launch_options_dsoal_log_value "$old" FILE)"
+        [ -n "$log_level" ] && old="$(launch_options_without_dsoal_log "$old")"
         new="$(launch_options_with_override "$( [ "$old" == "__ABSENT__" ] || echo "$old")" "$PRIMARY_DLL_NAME")"
         [ -e "$OVERRIDE_FILE.eax-restore.bak" ] || cp -p "$OVERRIDE_FILE" "$OVERRIDE_FILE.eax-restore.bak" 2>/dev/null
     else
@@ -605,7 +667,9 @@ _write_launcher_override() {
         print_status "Already set: $(launcher_override_where)"
         return 0
     fi
-    if ! launcher_override_set "$new" || [ "$(launcher_override_get)" != "$new" ]; then
+    written="$new"
+    [ -n "$log_level" ] && written="$(launch_options_with_dsoal_log "$new" "$log_level" "$log_file")"
+    if ! launcher_override_set "$written" || [ "$(launcher_override_get)" != "$written" ]; then
         print_error_arrow "Couldn't save the override to $(launcher_override_where), so it isn't set." \
             "The run log has the details."
         DEPLOY_FAILURES=$(( ${DEPLOY_FAILURES:-0} + 1 ))

@@ -70,6 +70,8 @@ pub struct Eax {
     pub api: String,
     #[serde(default)]
     pub versions: Vec<String>,
+    /// The audio middleware the game is built on: `miles`, or absent.
+    pub sound_system: Option<String>,
     /// `supported` (when absent), `built_in`, `not_implemented` or `removed_by_patch`.
     #[serde(default)]
     pub status: String,

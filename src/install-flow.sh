@@ -59,6 +59,8 @@
     # already there), the prefix copy and game settings when those run.
     phase_total=3
     [ "$OVERRIDE_METHOD" == "launcher" ] && phase_total=$(( phase_total + 1 ))
+    # EAX_RESTORE_DSOAL_LOG's step has its own header unless the launcher one covers it.
+    is_truthy "${EAX_RESTORE_DSOAL_LOG:-}" && [ "$OVERRIDE_METHOD" != "launcher" ] && phase_total=$(( phase_total + 1 ))
     [ ${#GAME_SETTINGS_PLAN[@]} -gt 0 ] && phase_total=$(( phase_total + 1 ))
     { [[ "$INSTALL_VCRUN" =~ $YES_RE ]] || [ -n "${APPLY_VCRUN_OVERRIDES_NEEDED:-}" ]; } && phase_total=$(( phase_total + 1 ))
     [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows" ] && phase_total=$(( phase_total + 1 ))

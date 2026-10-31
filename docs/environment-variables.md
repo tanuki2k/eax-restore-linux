@@ -25,6 +25,12 @@ EAX_RESTORE_SKIP_PREFLIGHT=1 EAX_RESTORE_SKIP_UPDATE_CHECK=1 ./eax-restore-linux
 | `EAX_RESTORE_UNTESTED_SETTINGS=1` | Offers game settings marked `"tested": false`, and `alsoft_ini` values when `install.alsoft_tested` is `false`. Without it they're left out. With it they're marked "(untested)", and the checked ones "(tested)". The profile browser always shows them. |
 | `EAX_RESTORE_GAME_DATABASE_FILE=/path/to/game-database.json` | Uses a local file instead of fetching `game-database.json`, for example one you built with `tools/build-game-database.sh`. It's for testing database edits before they're pushed. |
 
+## For debugging
+
+| Variable | What it does |
+| --- | --- |
+| `EAX_RESTORE_DSOAL_LOG=1` | Turns DSOAL's own log on at its fullest level (4, every EAX call) as part of an install, so you don't have to run **Tools → DSOAL logging** afterwards. It adds `DSOAL_LOGLEVEL` and `DSOAL_LOGFILE` to the game's Steam launch options or Heroic environment variables, whichever way the DLL override was set, and the log goes to `dsoal.log` in the game folder. The game needs launcher settings to add them to. Uninstalling removes them along with the DLL override if it was set through the launcher. |
+
 ## For scripting
 
 | Variable | What it does |

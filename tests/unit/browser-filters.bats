@@ -99,3 +99,14 @@ listed() { browse_game_stores "$STATE" | cut -f1 | paste -sd,; }
     EAX_RESTORE_UNTESTED=1 ensure_game_database 2>/dev/null
     [ "$(jq -r '[.games[].id]|join(",")' "$GAME_DATABASE_FILE")" == "alpha,beta,gamma" ]
 }
+
+@test "the Miles filter lists the games built on the Miles Sound System, and Ctrl-A steps through it" {
+    jq '.games[1].eax.sound_system = "miles"' "$GAME_DATABASE_FILE" > "$BATS_TEST_TMPDIR/m.json" && mv "$BATS_TEST_TMPDIR/m.json" "$GAME_DATABASE_FILE"
+    echo "all miles profile 0 match side side all" > "$STATE"
+    [ "$(listed)" == "beta" ]
+    echo "all openal profile 0 match side side all" > "$STATE"
+    browse_state_next "$STATE" audio
+    [ "$(cut -d' ' -f2 "$STATE")" == "miles" ]
+    browse_state_next "$STATE" audio
+    [ "$(cut -d' ' -f2 "$STATE")" == "eax1.0" ]
+}

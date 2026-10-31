@@ -119,6 +119,11 @@
 #   is logged to ~/.local/state/eax-restore-linux/logs/ (newest 10 kept,
 #   latest.log points at the most recent) for attaching to bug reports.
 #
+# * EAX_RESTORE_DSOAL_LOG=1  Turns DSOAL's own log on at its fullest level (4,
+#   every EAX call) as part of an install, the way Tools → DSOAL logging does
+#   (DSOAL_LOGLEVEL/DSOAL_LOGFILE in the game's Steam launch options or Heroic
+#   environment variables), writing dsoal.log to the game folder. For debugging.
+#
 # * EAX_RESTORE_GAME_DATABASE_FILE=/path/to/file.json  Uses a local file instead
 #   of fetching game-database.json from GitHub. For testing schema/data
 #   edits to the database before they've been pushed to the branch it's

@@ -24,7 +24,7 @@ and user-facing docs, and `docs/contributing-games.md` (workflow) and
 **Design rule: anything specific to a game or engine lives in the database, never as a
 special case in the script's code** — config edits, the audio API (and so the engine),
 alsoft.ini values, recommended tweaks. The script only knows how to read and edit the
-nine config formats (`ini`, `flat_ini`, `idtech_cfg`, `dark_cfg`, `brace_cfg`, `gas_cfg`, `ltx`, the binary `gadb`,
+eleven config formats (`ini`, `flat_ini`, `idtech_cfg`, `dark_cfg`, `brace_cfg`, `gas_cfg`, `ltx`, `quoted_cfg`, `byte_cfg` (single bytes at fixed offsets), the binary `gadb`,
 and `wine_reg`, the prefix's registry files), not which game needs what.
 
 `eax-restore-linux.sh` is **not committed to the repo** — it's a generated build
@@ -237,7 +237,7 @@ their execution order in the assembled script):
    line and the filters in four `--header-lines` (`BROWSE_HEADER_LINES`)),
    `confirm_continue_if_eax_impossible`, etc.
 9. **`game-config.sh`** — the Game Settings feature: `config_get_key` /
-   `config_set_key` (awk readers/writers for the seven text config formats, keeping CRLF,
+   `config_set_key` (awk readers/writers for the eight text config formats, keeping CRLF,
    key spelling and spacing, plus `_gadb_find`/`_gadb_set`, which switch an on/off
    setting in place in Monolith's binary `gadb` profile, and `_wine_reg_read`/
    `_wine_reg_set`, which edit a dword or string value in the prefix's

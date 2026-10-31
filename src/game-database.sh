@@ -275,7 +275,8 @@ prompt_installed_game() {
     # Usage: prompt_installed_game
     # Uninstall's and Tools' game list: the games this script is installed in
     # (installed_game_dirs), most recently used first, plus the options to
-    # browse for or type another folder.
+    # browse for or type another folder (not in Optional settings and Speaker
+    # configuration, which only work on a game with a manifest).
     # Sets GAME_DIR and returns 0 if the user picked an entry;
     # returns 1 with RESTART_REQUESTED set for [R]eturn;
     # returns 1 with LOCATE_METHOD set (gui or manual) for [B]rowse or
@@ -287,7 +288,6 @@ prompt_installed_game() {
     while IFS= read -r p; do [ -n "$p" ] && paths+=("$p"); done < <(installed_game_dirs)
     [ ${#paths[@]} -eq 0 ] && return 1
 
-    print_result "Games with something installed via this script:"
     # One line per game, its name and storefront like the library scan's
     # list; a folder is added only under entries that would otherwise read
     # the same, and shown on its own for a folder that can't be placed.
@@ -304,44 +304,31 @@ prompt_installed_game() {
         seen["${labels[i]}${details[i]}"]=$(( ${seen["${labels[i]}${details[i]}"]:-0} + 1 ))
     done
     for i in "${!paths[@]}"; do
-        print_option "$((i + 1))" "${labels[i]}" "${details[i]}"
         if [ -n "${details[i]}" ] && [ "${seen["${labels[i]}${details[i]}"]}" -gt 1 ]; then
-            echo -e "    ${DIM}$(tilde_path "${paths[$i]}")${NC}"
+            details[i]+=" ${paths[$i]}"
         fi
     done
     # Another game: the same ways step 1's own menu offers, chosen here so
-    # get_game_directory goes straight to it (LOCATE_METHOD).
-    local -a keys=()
-    echo ""
-    if gui_picker_available; then
-        print_key_option "[B]rowse for the game folder"; keys+=(b)
+    # get_game_directory goes straight to it (LOCATE_METHOD). A long list goes
+    # in pages (paged_select), so it never scrolls its top off the screen.
+    local -a extra=()
+    # Optional settings and Speaker configuration need a manifest, which every
+    # game in the list has, so a folder typed or browsed to only dead-ends there.
+    if [ -z "${SETTINGS_TOOL_MODE:-}" ]; then
+        gui_picker_available && extra+=("b|[B]rowse for the game folder")
+        extra+=("m|[M]anually type the game path")
     fi
-    print_key_option "[M]anually type the game path"; keys+=(m)
     # The way back to the main menu, as step 1's own menu offers it (see
     # MAIN_MENU_SHOWN); get_game_directory unwinds on RESTART_REQUESTED.
-    if [ -n "$MAIN_MENU_SHOWN" ]; then
-        echo ""
-        print_key_option "[R]eturn to the $(return_menu_label)"; keys+=(r)
-    fi
+    [ -n "$MAIN_MENU_SHOWN" ] && extra+=("|" "r|[R]eturn to the $(return_menu_label)")
 
-    local choice
-    while true; do
-        local nums="1-${#paths[@]}"
-        [ ${#paths[@]} -eq 1 ] && nums="1"
-        prompt "Selection [${nums}/$(IFS=/; echo "${keys[*]}")]: "
-        read_answer choice || return 1
-        choice="${choice,,}"
-        if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#paths[@]} ]; then
-            GAME_DIR="${paths[$((10#$choice - 1))]}"
-            return 0
-        fi
-        [[ " ${keys[*]} " == *" $choice "* ]] && break
-        print_result "That's not a valid option — please type $( [ ${#paths[@]} -eq 1 ] && echo "1" || echo "a number from 1-${#paths[@]}"), $(join_choices "${keys[@]}")." "$YELLOW"
-    done
-    case "$choice" in
+    PAGED_LABELS=("${labels[@]}"); PAGED_DETAILS=("${details[@]}")
+    paged_select "Games with something installed via this script" "${extra[@]}" || return 1
+    case "$PAGED_CHOICE" in
         b) LOCATE_METHOD="gui" ;;
         m) LOCATE_METHOD="manual" ;;
         r) RESTART_REQUESTED=1 ;;
+        *) GAME_DIR="${paths[$((PAGED_CHOICE - 1))]}"; return 0 ;;
     esac
     return 1
 }
@@ -825,13 +812,13 @@ print_game_profile_stores() {
     # Game-level fields: the same for every store entry, so read from the
     # first.
     local name eax_versions eax_status eax_status_details restore_details eax_unified notes
-    local released description untested
+    local released description untested sound_system
     IFS=$'\x1f' read -r name released description eax_versions eax_status eax_status_details \
-        restore_details eax_unified notes untested < <(gdb_fields "$id" "$store" \
+        restore_details eax_unified notes untested sound_system < <(gdb_fields "$id" "$store" \
         '.name // ""' '.released // ""' '.description // ""' '.eax.versions // [] | join(", ")' \
         '.eax.status // "supported"' '.eax.problem // ""' '.eax.fix // ""' \
         '.install.tweaks // [] | index("eax_unified") != null' '.notes // ""' \
-        '(if .tested == false then "1" else "" end)')
+        '(if .tested == false then "1" else "" end)' '.eax.sound_system // ""')
     [ -z "$eax_status" ] && eax_status="supported"
 
     # Store-level fields, one per entry.
@@ -908,6 +895,7 @@ print_game_profile_stores() {
         done
         detail_row "Audio API" "$value"
     fi
+    [ "$sound_system" == "miles" ] && detail_row "Sound system" "${WHITE}Miles Sound System${NC}"
     [ "$eax_unified" == "true" ] && detail_row "EAX Unified" "${WHITE}Yes${NC}"
     # Always shown, even at 0, so the label column keeps one width from game
     # to game. Settings limited to one store (only_if.stores) can make the
@@ -1269,8 +1257,8 @@ browse_key_bar() {
 # <tested>":
 # store all, steam, gog, or delisted / steam-delisted / gog-delisted (the
 # entries with the store's own delisted flag, from any store or that one);
-# audio all, directsound3d, openal or eax1.0 to eax5.0 (games whose
-# eax.versions lists it); then what the right pane shows, the list's order,
+# audio all, directsound3d, openal, miles (games whose eax.sound_system is
+# miles) or eax1.0 to eax5.0 (games whose eax.versions lists it); then what the right pane shows, the list's order,
 # where the right pane is and where the terminal's width last put it;
 # tested is tested (games checked on a real install), all, or untested (the
 # ones marked "tested": false in the database).
@@ -1290,6 +1278,7 @@ browse_game_stores() {
             and (($delisted | not) or (.delisted // false))
             and ($audio == "all"
                 or (.api // $g.eax.api // "directsound3d") == $audio
+                or ($audio == "miles" and $g.eax.sound_system == "miles")
                 or (($audio | startswith("eax")) and (($g.eax.versions // []) | index($audio[3:])) != null)))
         | "\($g.id)\t\($g.name)\t\($key)\t\(.id)"' "$GAME_DATABASE_FILE" 2>/dev/null
 }
@@ -1320,7 +1309,7 @@ browse_filter_header() {
     read -r store audio _ _ order layout _ tested < "$1"
     local -A label=([steam]="Steam" [gog]="GOG" [delisted]="Delisted"
         [steam-delisted]="Steam delisted" [gog-delisted]="GOG delisted"
-        [directsound3d]="DirectSound3D" [openal]="OpenAL" [match]="Best match" [az]="A–Z" [tested]="Tested" [untested]="Untested")
+        [directsound3d]="DirectSound3D" [openal]="OpenAL" [miles]="Miles" [match]="Best match" [az]="A–Z" [tested]="Tested" [untested]="Untested")
     local -a keys=("Ctrl-S" "Ctrl-A" "Ctrl-R" "Ctrl-T") alls=("All stores" "All APIs" "" "All games") values=()
     local v i=0 cell=0
     for v in "$store" "$audio" "$order" "${tested:-tested}"; do
@@ -1408,7 +1397,7 @@ browse_help() {
         "Mouse" "Select text to copy it, and Ctrl+click a link to open it. Your terminal's block selection (often Ctrl+Alt+drag) picks text from one pane only."
         "Esc" "Close the browser (Ctrl-C, Ctrl-G and Ctrl-Q too, and Ctrl-D when the search is empty)."
         "" "Filters"
-        "Ctrl-A" "Audio: All APIs → DirectSound3D → OpenAL → EAX 1.0 … 5.0."
+        "Ctrl-A" "Audio: All APIs → DirectSound3D → OpenAL → Miles → EAX 1.0 … 5.0."
         "Ctrl-S" "Store: All stores → Steam → GOG → Delisted → Steam delisted → GOG delisted. Delisted games are no longer sold on that store."
         "Ctrl-T" "Verified: Tested → All games → Untested. It opens on Tested."
         "Ctrl-R" "Order: best match first, or A–Z."
@@ -1461,7 +1450,7 @@ browse_state_next() {
             esac ;;
         audio)
             case "$audio" in
-                all) audio=directsound3d ;; directsound3d) audio=openal ;; openal) audio=eax1.0 ;;
+                all) audio=directsound3d ;; directsound3d) audio=openal ;; openal) audio=miles ;; miles) audio=eax1.0 ;;
                 eax1.0) audio=eax2.0 ;; eax2.0) audio=eax3.0 ;; eax3.0) audio=eax4.0 ;; eax4.0) audio=eax5.0 ;;
                 *) audio=all ;;
             esac ;;

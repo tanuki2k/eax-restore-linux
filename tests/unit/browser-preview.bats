@@ -66,3 +66,14 @@ in_fresh_shell() {
         [ "$(wc -l <<< "$help")" -gt 20 ]
     done
 }
+
+@test "a game built on Miles shows its Sound system, and one without it has no such row" {
+    run in_fresh_shell print_game_profile_stores "" steam:424242
+    ! grep -q "Sound system" <<< "$(sed 's/\x1b\[[0-9;]*m//g' <<< "$output")"
+    GAME_DATABASE_FILE="$BATS_TEST_TMPDIR/db.json"
+    jq '.games[0].eax.sound_system = "miles"' "$REPO_ROOT/tests/fixtures/game-database.json" > "$GAME_DATABASE_FILE"
+    { declare -p GREEN YELLOW CYAN WHITE BOLD DIM NOTE NC GAME_DATABASE_FILE SCRIPT_VERSION; declare -f; } > "$DUMP"
+    run in_fresh_shell print_game_profile_stores "" steam:424242
+    plain="$(sed 's/\x1b\[[0-9;]*m//g' <<< "$output")"
+    grep -Eq "Sound system: +Miles Sound System" <<< "$plain"
+}

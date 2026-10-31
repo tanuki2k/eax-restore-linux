@@ -3,7 +3,7 @@
 
 load ../helpers
 
-setup() { load_script_functions; source "$REPO_ROOT/src/detection.sh"; }
+setup() { load_script_functions; source "$REPO_ROOT/src/detection.sh"; source "$REPO_ROOT/src/game-database.sh"; }
 
 sel() { parse_selection "$1" "$2"; local i out=""; for ((i = 1; i <= $1; i++)); do out+="${SELECTED[$i]}"; done; echo "$out"; }
 
@@ -81,4 +81,33 @@ sel() { parse_selection "$1" "$2"; local i out=""; for ((i = 1; i <= $1; i++)); 
     [[ "$output" == *"not a valid option"* ]]
     paged_select "Games" <<< $'\n2' >/dev/null
     [ "$PAGED_CHOICE" == "2" ]
+}
+
+@test "prompt_installed_game: a number picks the game, M and R set the way out" {
+    installed_game_dirs() { printf '%s\n' /g/one /g/two; }
+    identify_game_dir() { GAME_ID_NAME="Game ${1##*/}"; GAME_ID_STORE=steam; }
+    gui_picker_available() { return 1; }
+    MAIN_MENU_SHOWN=1
+    prompt_installed_game <<< "2" >/dev/null
+    [ "$GAME_DIR" == "/g/two" ]
+    run prompt_installed_game <<< "m"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"Game one"* && "$output" == *"[R]eturn"* ]]
+    prompt_installed_game <<< "m" >/dev/null || true
+    [ "$LOCATE_METHOD" == "manual" ]
+    prompt_installed_game <<< "r" >/dev/null || true
+    [ "$RESTART_REQUESTED" == "1" ]
+}
+
+@test "prompt_installed_game: Optional settings and Speaker don't offer Browse or Manually" {
+    installed_game_dirs() { printf '%s\n' /g/one; }
+    identify_game_dir() { GAME_ID_NAME="Game one"; GAME_ID_STORE=steam; }
+    gui_picker_available() { return 0; }
+    MAIN_MENU_SHOWN=1
+    SETTINGS_TOOL_MODE=speakers
+    run prompt_installed_game <<< "1"
+    [[ "$output" != *"[M]anually"* && "$output" != *"[B]rowse"* && "$output" == *"[R]eturn"* ]]
+    SETTINGS_TOOL_MODE=""
+    run prompt_installed_game <<< "1"
+    [[ "$output" == *"[M]anually"* && "$output" == *"[B]rowse"* ]]
 }

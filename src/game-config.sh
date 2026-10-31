@@ -162,7 +162,47 @@ _wine_reg_set() {
     swap_in "$tmp" "$file"
 }
 
-# Usage: config_get_key <file> <ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gas_cfg|ltx|gadb|wine_reg> <section> <key>
+# Usage: _byte_offset <key>
+# byte_cfg keys are byte positions in the file, counted from 0, written in
+# decimal or as 0x hex. Prints the decimal position, or fails for anything else.
+_byte_offset() {
+    if [[ "$1" =~ ^0[xX][0-9a-fA-F]{1,8}$ ]]; then echo "$((16#${1:2}))"
+    elif [[ "$1" =~ ^[0-9]{1,9}$ ]]; then echo "$((10#$1))"
+    else return 1; fi
+}
+
+# Usage: _byte_get <file> <key>
+# Prints the byte at the key's position as a decimal 0-255, or __ABSENT__
+# when the file is shorter than that.
+_byte_get() {
+    local off value
+    off="$(_byte_offset "$2")" || { echo "__ABSENT__"; return; }
+    [ "$off" -lt "$(stat -c %s "$1" 2>/dev/null || echo 0)" ] || { echo "__ABSENT__"; return; }
+    value="$(od -An -v -tu1 -j "$off" -N1 "$1" 2>/dev/null | tr -d ' ')"
+    echo "${value:-__ABSENT__}"
+}
+
+# Usage: _byte_set <file> <key> <0-255>
+# config_set_key for byte_cfg: overwrites the one byte in place (Messiah's
+# Messiah.cfg keeps its sound driver in a byte or two). Never grows the file,
+# so a position past its end or a value outside 0-255 returns 1. Writes a
+# copy in the same folder, checks the byte reads back, then swaps it in.
+_byte_set() {
+    local file="$1" key="$2" value="$3" off tmp
+    [[ "$value" =~ ^[0-9]{1,3}$ ]] && [ "$((10#$value))" -le 255 ] || return 1
+    off="$(_byte_offset "$key")" || return 1
+    [ "$(_byte_get "$file" "$key")" != "__ABSENT__" ] || return 1
+    tmp="$(mktemp "$(dirname "$file")/.eax-restore-cfg.XXXXXX" 2>/dev/null)" || return 1
+    if cp -f "$file" "$tmp" 2>/dev/null \
+        && printf "$(printf '\\%03o' "$((10#$value))")" | dd of="$tmp" bs=1 seek="$off" conv=notrunc status=none 2>/dev/null \
+        && [ "$(_byte_get "$tmp" "$key")" == "$((10#$value))" ]; then
+        swap_in "$tmp" "$file" && return 0
+    fi
+    rm -f "$tmp"
+    return 1
+}
+
+# Usage: config_get_key <file> <ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gas_cfg|ltx|quoted_cfg|byte_cfg|gadb|wine_reg> <section> <key>
 # Prints the key's current value, __ABSENT__ if it isn't set, or (dark_cfg
 # only) __TRUE__ for an active bare flag and __FALSE__ for a flag that's only
 # present commented out. Section and key names match case-insensitively, like
@@ -176,6 +216,7 @@ config_get_key() {
         found="$(_wine_reg_read "$file" "$sec" "$key")"; echo "${found#*$'\t'}"
         return
     fi
+    if [ "$fmt" == "byte_cfg" ]; then _byte_get "$file" "$key"; return; fi
     if [ "$fmt" == "gadb" ]; then
         found="$(_gadb_find "$file" "$key")"
         if [ -n "$found" ]; then echo "${found#* }"; else echo "__ABSENT__"; fi
@@ -222,6 +263,14 @@ config_get_key() {
             v = substr(line, length(a[1]) + 1); gsub(/^[ \t]+|[ \t]+$/, "", v)
             print v; found = 1; exit
         }
+        fmt == "quoted_cfg" {
+            if (!match($0, /^[ \t]*"[^"]*"[ \t]*/)) next
+            k = substr($0, 1, RLENGTH); v = substr($0, RLENGTH + 1)
+            sub(/^[ \t]*"/, "", k); sub(/"[ \t]*$/, "", k)
+            if (tolower(k) != lkey) next
+            sub(/[ \t]+$/, "", v); gsub(/^"|"$/, "", v)
+            print v; found = 1; exit
+        }
         fmt == "brace_cfg" {
             if (!match($0, /^[ \t]*\{[^}]*\}[ \t]*=[ \t]*\{/)) next
             k = substr($0, 1, RLENGTH); sub(/^[ \t]*\{[ \t]*/, "", k); sub(/[ \t]*\}.*$/, "", k)
@@ -263,26 +312,28 @@ _gadb_set() {
     return 1
 }
 
-# Usage: config_set_key <file> <ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gas_cfg|ltx|gadb|wine_reg> <section> <key> <value>
+# Usage: config_set_key <file> <ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gas_cfg|ltx|quoted_cfg|byte_cfg|gadb|wine_reg> <section> <key> <value>
 # Sets (or with __DELETE__ removes) one key, keeping everything else in the
 # file as it was — including CRLF line endings, the original spelling of an
 # existing key, and "key = value" spacing. A missing ini key goes at the end
 # of its section (or a new section at the end of the file); a missing flat_ini
 # or cfg key is appended. ltx is
-# the X-Ray engine's user.ltx (S.T.A.L.K.E.R.): "key value" lines, no sections, no flags. An existing brace_cfg key only has the text between
+# the X-Ray engine's user.ltx (S.T.A.L.K.E.R.): "key value" lines, no sections, no flags.
+# quoted_cfg is Monolith's autoexec.cfg (Shogo): "key" "value" lines, both quoted. An existing brace_cfg key only has the text between
 # its value's braces replaced. flat_ini is ini without [sections] — the whole file
 # is one section, so its rows carry no section name. For dark_cfg, a commented-out example line is left in place and
 # the active line is added right after it. gadb only switches an existing
-# on/off setting (see _gadb_set). Writes through a temp file in the
+# on/off setting (see _gadb_set), and byte_cfg one byte at a position (_byte_set). Writes through a temp file in the
 # same folder and swaps it in, so a failure never leaves a half-written file.
 # Returns 1 if the file couldn't be written.
 config_set_key() {
     local file="$1" fmt="$2" sec="$3" key="$4" value="$5"
     local crlf=0 current tmp
+    [ "$fmt" == "byte_cfg" ] && { _byte_set "$file" "$key" "$value"; return; }
     [ "$fmt" == "gadb" ] && { _gadb_set "$file" "$key" "$value"; return; }
     [ "$fmt" == "wine_reg" ] && { _wine_reg_set "$file" "$sec" "$key" "$value"; return; }
     # Anything else would match no rule below and write out an empty file.
-    [[ "$fmt" =~ ^(ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gas_cfg|ltx)$ ]] || return 1
+    [[ "$fmt" =~ ^(ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gas_cfg|ltx|quoted_cfg)$ ]] || return 1
     # Judged by the first line for lines this adds to an empty or new file; every
     # existing line keeps its own ending.
     [ -f "$file" ] && head -n 1 "$file" 2>/dev/null | LC_ALL=C grep -q $'\r' && crlf=1
@@ -405,6 +456,14 @@ config_set_key() {
             if (!done && tolower(a[1]) == lkey) { done = 1; if (!del) out(a[1] " " val); next }
             out(line); next
         }
+        fmt == "quoted_cfg" {
+            if (!done && match($0, /^[ \t]*"[^"]*"[ \t]*/)) {
+                head = substr($0, 1, RLENGTH); k = head
+                sub(/^[ \t]*"/, "", k); sub(/"[ \t]*$/, "", k)
+                if (tolower(k) == lkey) { done = 1; if (!del) out(head "\"" val "\""); next }
+            }
+            out($0); next
+        }
         fmt == "brace_cfg" {
             if (!done && match($0, /^[ \t]*\{[^}]*\}[ \t]*=[ \t]*\{/)) {
                 head = substr($0, 1, RLENGTH); k = head
@@ -429,6 +488,7 @@ config_set_key() {
                 if (fmt == "idtech_cfg") out("seta " key " \"" val "\"")
                 else if (fmt == "brace_cfg") out("{" key "} = {" val "}")
                 else if (fmt == "ltx") out(key " " val)
+                else if (fmt == "quoted_cfg") out("\"" key "\" \"" val "\"")
                 else out(val == "__TRUE__" ? key : key " " val)
             }
         }
@@ -445,7 +505,7 @@ config_set_key() {
 config_values_equal() {
     # Removing a key and the key not being there are the same state.
     if { [ "$2" == "__ABSENT__" ] && [ "$3" == "__DELETE__" ]; } || { [ "$2" == "__DELETE__" ] && [ "$3" == "__ABSENT__" ]; }; then return 0
-    elif [ "$1" == "wine_reg" ] && [[ "$2" =~ ^[0-9]{1,10}$ && "$3" =~ ^[0-9]{1,10}$ ]]; then
+    elif { [ "$1" == "wine_reg" ] || [ "$1" == "byte_cfg" ]; } && [[ "$2" =~ ^[0-9]{1,10}$ && "$3" =~ ^[0-9]{1,10}$ ]]; then
         [ "$((10#$2))" -eq "$((10#$3))" ]
     elif [ "$1" == "ini" ] || [ "$1" == "gas_cfg" ] || [ "$1" == "wine_reg" ]; then [ "${2,,}" == "${3,,}" ]
     else [ "$2" == "$3" ]; fi
@@ -659,7 +719,7 @@ config_row_is_safe() {
     local -a locs
     local name_re='^[A-Za-z0-9._ -]+$' value_re='^[A-Za-z0-9._ ()-]*$'
     local reg_key_re='^[A-Za-z0-9._ ()-]+(\\[A-Za-z0-9._ ()-]+)*$'
-    [[ "$fmt" =~ ^(ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gas_cfg|ltx|gadb|wine_reg)$ ]] || return 1
+    [[ "$fmt" =~ ^(ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gas_cfg|ltx|quoted_cfg|byte_cfg|gadb|wine_reg)$ ]] || return 1
     [ -n "$locations" ] || return 1
     IFS='|' read -ra locs <<< "$locations"
     for loc in "${locs[@]}"; do
@@ -673,6 +733,9 @@ config_row_is_safe() {
     [[ "$key" =~ $name_re ]] || return 1
     if [ "$fmt" == "ini" ] || [ "$fmt" == "gas_cfg" ]; then [[ "$sec" =~ $name_re ]] || return 1; fi
     if [ "$fmt" == "wine_reg" ]; then [[ "$sec" =~ $reg_key_re ]] && [[ "$sec" != *..* ]] || return 1; fi
+    if [ "$fmt" == "byte_cfg" ]; then
+        _byte_offset "$key" >/dev/null && [[ "$value" =~ ^[0-9]{1,3}$ ]] && [ "$((10#$value))" -le 255 ] || return 1
+    fi
     # A gadb setting can only be switched on or off in place.
     if [ "$fmt" == "gadb" ]; then [[ "$value" =~ ^[01]$ ]] || return 1; fi
     case "$value" in

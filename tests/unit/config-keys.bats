@@ -172,6 +172,43 @@ setup() {
     [ "$(cat "$F")" == $'{Sound} = {off}\n{Other} = {1}' ]
 }
 
+# ---- quoted_cfg ------------------------------------------------------------
+
+@test "quoted_cfg: reads and replaces a quoted value, keeping the other lines" {
+    write_file "$F" '"MusicVolume" "50.000000"\n"3dsoundprovider" "0"\n"Renderer" "Primary Display Driver"\n'
+    [ "$(config_get_key "$F" quoted_cfg "" 3DSoundProvider)" == "0" ]
+    [ "$(config_get_key "$F" quoted_cfg "" Renderer)" == "Primary Display Driver" ]
+    config_set_key "$F" quoted_cfg "" 3dsoundprovider 2
+    [ "$(cat "$F")" == $'"MusicVolume" "50.000000"\n"3dsoundprovider" "2"\n"Renderer" "Primary Display Driver"' ]
+}
+
+@test "quoted_cfg: a missing key is appended quoted, and __DELETE__ removes the line" {
+    write_file "$F" '"a" "1"\r\n"b" "2"\r\n'
+    config_set_key "$F" quoted_cfg "" 3dsoundprovidername "Microsoft DirectSound3D with Creative Labs EAX(TM)"
+    [ "$(config_get_key "$F" quoted_cfg "" 3dsoundprovidername)" == "Microsoft DirectSound3D with Creative Labs EAX(TM)" ]
+    config_set_key "$F" quoted_cfg "" a __DELETE__
+    [ "$(config_get_key "$F" quoted_cfg "" a)" == "__ABSENT__" ]
+    [ "$(config_get_key "$F" quoted_cfg "" b)" == "2" ]
+}
+
+# ---- byte_cfg --------------------------------------------------------------
+
+@test "byte_cfg: reads and replaces one byte by decimal or hex position, leaving the rest" {
+    printf '\x15\x00\x03\x00\xff' > "$F"
+    [ "$(config_get_key "$F" byte_cfg "" 0x2)" == "3" ]
+    [ "$(config_get_key "$F" byte_cfg "" 4)" == "255" ]
+    config_set_key "$F" byte_cfg "" 0x2 2
+    [ "$(od -An -v -tx1 "$F" | tr -d ' \n')" == "15000200ff" ]
+}
+
+@test "byte_cfg: a position past the end is absent and is never written" {
+    printf '\x01\x02' > "$F"
+    [ "$(config_get_key "$F" byte_cfg "" 0x10)" == "__ABSENT__" ]
+    ! config_set_key "$F" byte_cfg "" 0x10 1
+    ! config_set_key "$F" byte_cfg "" 0 256
+    [ "$(stat -c %s "$F")" == "2" ]
+}
+
 # ---- gas_cfg ---------------------------------------------------------------
 
 @test "gas_cfg: reads a value without its semicolon and keeps tabs, spacing and the semicolon on a change" {
@@ -202,7 +239,7 @@ setup() {
 
 @test "a set then get round-trips for every text format" {
     local fmt
-    for fmt in ini flat_ini idtech_cfg dark_cfg ltx brace_cfg gas_cfg; do
+    for fmt in ini flat_ini idtech_cfg dark_cfg ltx brace_cfg gas_cfg quoted_cfg; do
         rm -f "$F"
         write_file "$F" ''
         config_set_key "$F" "$fmt" sec key 7

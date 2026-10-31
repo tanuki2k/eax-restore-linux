@@ -105,7 +105,7 @@ and its current → new value, read live from their own install.
 - A fixed verb + the result: **Enable** for a feature that's off, **Fix** for a bug,
   **Remove** for something unwanted, **Raise** for a quality level. Sentence case, no
   full stop, about 5 words at most.
-- Name the result the player gets, not the setting (`Enable EAX reverb`, not
+- Name the result the player gets, not the setting (`Enable EAX`, not
   `Set UseEAX to True`), even when the setting changes several keys — the rows list
   them.
 - Reuse the same title for the same result across games.
@@ -132,7 +132,7 @@ and its current → new value, read live from their own install.
   `sources`.
 
 Examples:
-- `Enable EAX reverb` — "Brothers in Arms ships with EAX and 3D sound off and loads its
+- `Enable EAX` — "Brothers in Arms ships with EAX and 3D sound off and loads its
   bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs."
 - `Enable EAX effects` — "Quake 4 ships with its EAX sound options off, so there's no
   reverb and no muffling of sounds through walls."

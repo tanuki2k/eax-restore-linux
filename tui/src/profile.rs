@@ -447,6 +447,9 @@ fn game_lines(
                 .collect(),
         )
     });
+    if g.eax.sound_system.as_deref() == Some("miles") {
+        items.push(row("Sound system", vec![white("Miles Sound System")]));
+    }
     if g.install.tweaks.iter().any(|t| t == "eax_unified") {
         items.push(row("EAX Unified", vec![white("Yes")]));
     }
@@ -724,6 +727,20 @@ mod tests {
         assert!(t.contains(" -> GOG ID:            1836059896\n"));
         assert!(t.contains(" -> EAX Support:       4.0, 5.0\n"));
         assert!(t.contains(" -> Audio API:         OpenAL\n"));
+    }
+
+    #[test]
+    fn a_miles_game_shows_its_sound_system_under_the_audio_api() {
+        let miles = QUAKE.replace(
+            r#""api":"openal","#,
+            r#""api":"openal","sound_system":"miles","#,
+        );
+        let t = text(&game_lines(&game(&miles), None, Vec::new(), 70));
+        assert!(t.contains(
+            " -> Audio API:         OpenAL\n -> Sound system:      Miles Sound System\n"
+        ));
+        let t = text(&game_lines(&game(QUAKE), None, Vec::new(), 70));
+        assert!(!t.contains("Sound system"));
     }
 
     #[test]

@@ -55,3 +55,18 @@ install_heroic() {
     run_script "$BATS_TEST_TMPDIR/un"
     [ "$(jq -r --arg a "$HEROIC_ID" '[.[$a].enviromentOptions[].key] | join(",")' "$CONF")" == "FOO" ]
 }
+
+@test "EAX_RESTORE_DSOAL_LOG turns DSOAL logging on at level 4 in Heroic's settings, and uninstall takes it out" {
+    EAX_RESTORE_DSOAL_LOG=1 install_heroic
+    [ "$(jq -r --arg a "$HEROIC_ID" '.[$a].enviromentOptions[] | select(.key=="DSOAL_LOGLEVEL") | .value' "$CONF")" == "4" ]
+    [ "$(jq -r --arg a "$HEROIC_ID" '.[$a].enviromentOptions[] | select(.key=="DSOAL_LOGFILE") | .value' "$CONF")" == "Z:$GAME/dsoal.log" ]
+    grep -q "DSOAL logging is on (level 4)" "$OUT"
+    heroic_uninstall_answers "$BATS_TEST_TMPDIR/un"
+    run_script "$BATS_TEST_TMPDIR/un"
+    [ "$(jq -r --arg a "$HEROIC_ID" '[.[$a].enviromentOptions[] | select(.key|startswith("DSOAL_LOG"))] | length' "$CONF")" == "0" ]
+}
+
+@test "without EAX_RESTORE_DSOAL_LOG nothing about DSOAL logging is set" {
+    install_heroic
+    [ "$(jq -r --arg a "$HEROIC_ID" '[.[$a].enviromentOptions[] | select(.key|startswith("DSOAL_LOG"))] | length' "$CONF")" == "0" ]
+}

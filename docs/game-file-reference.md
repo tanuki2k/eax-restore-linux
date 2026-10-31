@@ -10,7 +10,7 @@ Only three things are required: `name`, `stores` (each store with an `id`) and `
 | --- | --- | --- |
 | [Basics](#basics) | `name`, `description`, `released`, `exe` | Who the game is and how to find it |
 | [`stores`](#stores) | `id`, `delisted`, `api`, `store_details`, `patches`, ... | What's specific to the Steam or GOG listing |
-| [`eax`](#eax) | `api`, `versions`, `status`, `problem`, `fix` | How the game does 3D audio |
+| [`eax`](#eax) | `api`, `sound_system`, `versions`, `status`, `problem`, `fix` | How the game does 3D audio |
 | [`install`](#install) | `tweaks`, `alsoft_ini` | What the install does differently |
 | [`game_config`](#game_config) | `files`, `audio_settings`, `optional_settings` | Edits to the game's own config files |
 | [`sources`](#sources) | | Pages that back up the entry's claims |
@@ -135,6 +135,10 @@ How the game does 3D audio, and whether EAX works in the current build.
 
 Required: `"directsound3d"` or `"openal"`. This is the game-level audio API. It applies to any store without its own `api` override and to installs outside a store, and it decides which engine the script installs.
 
+### `eax.sound_system`
+
+Optional: the audio middleware the game is built on. `"miles"` is the Miles Sound System. A game that uses it ships `mss32.dll`, usually with `msseax.flt` and `mssds3d.flt`. Only set it when you can check it, from the game's folder or a source listed in `sources`. Leave it out when you don't know. It is shown on the game's profile as "Sound system" and nothing else depends on it.
+
 ### `eax.versions`
 
 The EAX versions the game supports, as strings. Only fill it in from a source you can point to: the game's manual or readme, its in-game audio menu, or a maintained compatibility database. Cite the source in `sources` or in your PR description. Leave it out for a `"not_implemented"` game.
@@ -211,7 +215,9 @@ The config files, each keyed by file name. A file has the fields below.
 | `"dark_cfg"` | NewDark's `key value` lines, where a bare `key` turns a flag on and `;key` turns it off | |
 | `"brace_cfg"` | `{key} = {value}` lines | Fallout Tactics' `bos.cfg` |
 | `"gas_cfg"` | A `[section]` with `key = value;` lines between `{` and `}` | Dungeon Siege's `prefs.gas` |
-| `"ltx"` | `key value` lines with no sections | S.T.A.L.K.E.R.'s `user.ltx` |
+| `"ltx"` | `key value` lines with no sections | S.T.A.L.K.E.R.'s `user.ltx`, Dreamfall's `prefs.dat` |
+| `"quoted_cfg"` | `"key" "value"` lines, both in quotes | Shogo's `autoexec.cfg` |
+| `"byte_cfg"` | A binary file with no key names. The key is a byte position counted from 0 (decimal, or hex like `0x1b2`) and the value is that byte as a number from 0 to 255. The script only changes a byte the file already has. | Messiah's `Messiah.cfg` |
 | `"gadb"` | Monolith's binary game database. The script can only switch a setting the file already has on or off, so the values are `"0"` or `"1"`. | F.E.A.R.'s `Profile000.gdb` |
 | `"wine_reg"` | For a game that keeps its options in the registry | Descent 3 |
 
@@ -234,7 +240,7 @@ Where to look, in order, written as `"base:path"`. The first one that exists is 
 | `prefix` | For a `wine_reg` file only, as `"prefix:system.reg"` or `"prefix:user.reg"` |
 
 > [!WARNING]
-> Paths can't contain `..`, a leading `/` or backslashes. A file name under `files` must end in `.ini`, `.cfg`, `.gdb`, `.reg`, `.txt`, `.ltx` or `.gas`. A location must end in `.ini`, `.cfg`, `.gdb`, `.txt`, `.ltx` or `.gas`, except that a `wine_reg` file takes only `prefix:` locations.
+> Paths can't contain `..`, a leading `/` or backslashes. A file name under `files` must end in `.ini`, `.cfg`, `.gdb`, `.reg`, `.txt`, `.ltx`, `.gas` or `.dat`. A location must end in `.ini`, `.cfg`, `.gdb`, `.txt`, `.ltx`, `.gas` or `.dat`, except that a `wine_reg` file takes only `prefix:` locations.
 
 #### `all_locations`
 
@@ -268,7 +274,7 @@ Each entry in `audio_settings` and `optional_settings` has the fields below.
 
 #### `title` and `reason`
 
-The `title` starts with Enable, Fix, Remove or Raise, followed by the result the player gets, like `"Enable EAX reverb"`. Reuse the same title for the same result across games. It can be at most 60 characters.
+The `title` starts with Enable, Fix, Remove or Raise, followed by the result the player gets, like `"Enable EAX"`. Reuse the same title for the same result across games. It can be at most 60 characters.
 
 The `reason` is one or two short sentences. It starts with the game's name and says what the game does out of the box. It doesn't repeat the settings that the rows beneath it already show.
 
@@ -277,7 +283,7 @@ The `reason` is one or two short sentences. It starts with the game's name and s
 The shape depends on the file's format:
 
 * `ini` and `gas_cfg` files: file, then section, then key, then value.
-* `flat_ini`, `idtech_cfg`, `dark_cfg`, `brace_cfg`, `ltx` and `gadb` files: file, then key, then value.
+* `flat_ini`, `idtech_cfg`, `dark_cfg`, `brace_cfg`, `ltx`, `quoted_cfg`, `byte_cfg` and `gadb` files: file, then key, then value.
 * `wine_reg` files: file, then registry key, then value name, then value.
 
 For `wine_reg`, give the key path as the `.reg` file shows it below its hive: `{ "system.reg": { "Software\\Wow6432Node\\Outrage\\Descent3": { "Name": "3" } } }`. The script also finds it without `Wow6432Node\` in a 32-bit prefix.

@@ -60,7 +60,7 @@ The main menu has a Tools submenu for after the install.
 
 | Key | What it does |
 | --- | --- |
-| Ctrl-A | Narrow by audio: DirectSound3D, OpenAL or an EAX version |
+| Ctrl-A | Narrow by audio: DirectSound3D, OpenAL, Miles Sound System or an EAX version |
 | Ctrl-S | Narrow by store: Steam, GOG, or games delisted from either or one of them |
 | Ctrl-T | Switch between games checked on a real install (the default), all games, and the ones nobody has checked yet |
 | Ctrl-R | Switch between best match first and A to Z |
