@@ -218,6 +218,7 @@ The config files, each keyed by file name. A file has the fields below.
 | `"ltx"` | `key value` lines with no sections | S.T.A.L.K.E.R.'s `user.ltx`, Dreamfall's `prefs.dat` |
 | `"quoted_cfg"` | `"key" "value"` lines, both in quotes | Shogo's `autoexec.cfg` |
 | `"byte_cfg"` | A binary file with no key names. The key is a byte position counted from 0 (decimal, or hex like `0x1b2`) and the value is that byte as a number from 0 to 255. The script only changes a byte the file already has. | Messiah's `Messiah.cfg` |
+| `"lenstr_cfg"` | A binary file that stores text as a 4-byte length followed by the characters. The key is the hex bytes just before that length, like `0000803f`, and the value is the new text, up to 64 characters of letters, digits, spaces and `. _ ( ) -`. The text can change length, and the script fixes the length in front of it. It uses the first match with a length of 1 to 64 and printable text after it, and only changes text the file already has. A key like `0000803f+46` is instead the single byte that many bytes past the end of that text, with a value from 0 to 255, for settings stored after a text that can change length. Pick bytes that don't change with the player's other options. | Freedom Force's `options.dat` |
 | `"gadb"` | Monolith's binary game database. The script can only switch a setting the file already has on or off, so the values are `"0"` or `"1"`. | F.E.A.R.'s `Profile000.gdb` |
 | `"wine_reg"` | For a game that keeps its options in the registry | Descent 3 |
 

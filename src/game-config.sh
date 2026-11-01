@@ -202,7 +202,102 @@ _byte_set() {
     return 1
 }
 
-# Usage: config_get_key <file> <ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gas_cfg|ltx|quoted_cfg|byte_cfg|gadb|wine_reg> <section> <key>
+# Usage: _lenstr_find <file> <anchor>
+# lenstr_cfg keys are an even-length hex string, the bytes that sit right
+# before a 4-byte little-endian length and then that many characters of text
+# (Freedom Force's options.dat keeps its sound driver's name that way). Prints
+# "<position of the length> <length> <text>" for the first match whose length
+# is 1-64 and whose text is all printable ASCII, so a stray copy of the anchor
+# bytes inside other data is skipped. Fails when there's no such match.
+_lenstr_find() {
+    local file="$1" anchor="${2,,}" hex
+    [[ "$anchor" =~ ^([0-9a-f]{2}){1,16}$ ]] || return 1
+    [ -f "$file" ] || return 1
+    hex="$(od -An -v -tx1 "$file" 2>/dev/null | tr -d ' \n')"
+    [ -n "$hex" ] || return 1
+    LC_ALL=C awk -v hex="$hex" -v anchor="$anchor" '
+        function byte(i) { return 16 * index(digits, substr(hex, 2 * i + 1, 1)) - 16 + index(digits, substr(hex, 2 * i + 2, 1)) - 1 }
+        BEGIN {
+            digits = "0123456789abcdef"
+            size = length(hex) / 2; alen = length(anchor) / 2; from = 1
+            while ((at = index(substr(hex, from), anchor)) > 0) {
+                at += from - 1; from = at + 1
+                if ((at - 1) % 2) continue
+                pos = (at - 1) / 2 + alen
+                if (pos + 4 > size) continue
+                n = byte(pos) + 256 * byte(pos + 1) + 65536 * byte(pos + 2) + 16777216 * byte(pos + 3)
+                if (n < 1 || n > 64 || pos + 4 + n > size) continue
+                text = ""; ok = 1
+                for (i = 0; i < n; i++) {
+                    c = byte(pos + 4 + i)
+                    if (c < 32 || c > 126) { ok = 0; break }
+                    text = text sprintf("%c", c)
+                }
+                if (ok) { print pos, n, text; exit 0 }
+            }
+            exit 1
+        }'
+}
+
+# Usage: _lenstr_get <file> <key>
+# Prints the text, or __ABSENT__ when the anchor isn't in the file. A key written
+# <anchor>+<N> names the single byte N bytes past the end of that text instead
+# (Freedom Force keeps its speaker layout there), as a decimal 0-255. That
+# distance holds when the text changes length, which a position from the
+# start of the file doesn't.
+_lenstr_get() {
+    local file="$1" key="$2" found pos len off value
+    found="$(_lenstr_find "$file" "${key%%+*}")" || { echo "__ABSENT__"; return; }
+    if [[ "$key" == *+* ]]; then
+        [[ "${key#*+}" =~ ^[0-9]{1,5}$ ]] || { echo "__ABSENT__"; return; }
+        pos="${found%% *}"; len="${found#* }"; len="${len%% *}"
+        off=$((pos + 4 + len + 10#${key#*+}))
+        [ "$off" -lt "$(stat -c %s "$file" 2>/dev/null || echo 0)" ] || { echo "__ABSENT__"; return; }
+        value="$(od -An -v -tu1 -j "$off" -N1 "$file" 2>/dev/null | tr -d ' ')"
+        echo "${value:-__ABSENT__}"
+        return
+    fi
+    echo "${found#* * }"
+}
+
+# Usage: _lenstr_set <file> <key> <value>
+# config_set_key for lenstr_cfg. For a plain anchor it swaps the text for a new
+# one of any length (1-64 characters), writing its new length in front. For
+# <anchor>+<N> it overwrites that one byte with a number 0-255. Every other
+# byte stays as it was, and a file that doesn't have the text or the byte is
+# never grown. Writes a copy in the same folder, checks the new value reads
+# back, then swaps it in.
+_lenstr_set() {
+    local file="$1" key="$2" value="$3" found pos len tmp n
+    found="$(_lenstr_find "$file" "${key%%+*}")" || return 1
+    pos="${found%% *}"; len="${found#* }"; len="${len%% *}"
+    tmp="$(mktemp "$(dirname "$file")/.eax-restore-cfg.XXXXXX" 2>/dev/null)" || return 1
+    if [[ "$key" == *+* ]]; then
+        [[ "${key#*+}" =~ ^[0-9]{1,5}$ ]] && [[ "$value" =~ ^[0-9]{1,3}$ ]] && [ "$((10#$value))" -le 255 ] || { rm -f "$tmp"; return 1; }
+        [ "$(_lenstr_get "$file" "$key")" != "__ABSENT__" ] || { rm -f "$tmp"; return 1; }
+        if cp -f "$file" "$tmp" 2>/dev/null \
+            && printf "$(printf '\\%03o' "$((10#$value))")" | dd of="$tmp" bs=1 seek="$((pos + 4 + len + 10#${key#*+}))" conv=notrunc status=none 2>/dev/null \
+            && [ "$(_lenstr_get "$tmp" "$key")" == "$((10#$value))" ]; then
+            swap_in "$tmp" "$file" && return 0
+        fi
+        rm -f "$tmp"
+        return 1
+    fi
+    n="${#value}"
+    if [[ "$value" =~ ^[A-Za-z0-9._\ ()-]{1,64}$ ]] \
+        && { head -c "$pos" "$file"
+             printf "$(printf '\\%03o\\000\\000\\000' "$n")"
+             printf '%s' "$value"
+             tail -c +"$((pos + 4 + len + 1))" "$file"
+           } > "$tmp" 2>/dev/null \
+        && [ "$(_lenstr_get "$tmp" "$key")" == "$value" ]; then
+        swap_in "$tmp" "$file" && return 0
+    fi
+    rm -f "$tmp"
+    return 1
+}
+
+# Usage: config_get_key <file> <ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gas_cfg|ltx|quoted_cfg|byte_cfg|lenstr_cfg|gadb|wine_reg> <section> <key>
 # Prints the key's current value, __ABSENT__ if it isn't set, or (dark_cfg
 # only) __TRUE__ for an active bare flag and __FALSE__ for a flag that's only
 # present commented out. Section and key names match case-insensitively, like
@@ -217,6 +312,7 @@ config_get_key() {
         return
     fi
     if [ "$fmt" == "byte_cfg" ]; then _byte_get "$file" "$key"; return; fi
+    if [ "$fmt" == "lenstr_cfg" ]; then _lenstr_get "$file" "$key"; return; fi
     if [ "$fmt" == "gadb" ]; then
         found="$(_gadb_find "$file" "$key")"
         if [ -n "$found" ]; then echo "${found#* }"; else echo "__ABSENT__"; fi
@@ -312,7 +408,7 @@ _gadb_set() {
     return 1
 }
 
-# Usage: config_set_key <file> <ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gas_cfg|ltx|quoted_cfg|byte_cfg|gadb|wine_reg> <section> <key> <value>
+# Usage: config_set_key <file> <ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gas_cfg|ltx|quoted_cfg|byte_cfg|lenstr_cfg|gadb|wine_reg> <section> <key> <value>
 # Sets (or with __DELETE__ removes) one key, keeping everything else in the
 # file as it was — including CRLF line endings, the original spelling of an
 # existing key, and "key = value" spacing. A missing ini key goes at the end
@@ -323,13 +419,14 @@ _gadb_set() {
 # its value's braces replaced. flat_ini is ini without [sections] — the whole file
 # is one section, so its rows carry no section name. For dark_cfg, a commented-out example line is left in place and
 # the active line is added right after it. gadb only switches an existing
-# on/off setting (see _gadb_set), and byte_cfg one byte at a position (_byte_set). Writes through a temp file in the
+# on/off setting (see _gadb_set), byte_cfg one byte at a position (_byte_set), and lenstr_cfg a length-prefixed text found by the bytes before it (_lenstr_set). Writes through a temp file in the
 # same folder and swaps it in, so a failure never leaves a half-written file.
 # Returns 1 if the file couldn't be written.
 config_set_key() {
     local file="$1" fmt="$2" sec="$3" key="$4" value="$5"
     local crlf=0 current tmp
     [ "$fmt" == "byte_cfg" ] && { _byte_set "$file" "$key" "$value"; return; }
+    [ "$fmt" == "lenstr_cfg" ] && { _lenstr_set "$file" "$key" "$value"; return; }
     [ "$fmt" == "gadb" ] && { _gadb_set "$file" "$key" "$value"; return; }
     [ "$fmt" == "wine_reg" ] && { _wine_reg_set "$file" "$sec" "$key" "$value"; return; }
     # Anything else would match no rule below and write out an empty file.
@@ -505,7 +602,7 @@ config_set_key() {
 config_values_equal() {
     # Removing a key and the key not being there are the same state.
     if { [ "$2" == "__ABSENT__" ] && [ "$3" == "__DELETE__" ]; } || { [ "$2" == "__DELETE__" ] && [ "$3" == "__ABSENT__" ]; }; then return 0
-    elif { [ "$1" == "wine_reg" ] || [ "$1" == "byte_cfg" ]; } && [[ "$2" =~ ^[0-9]{1,10}$ && "$3" =~ ^[0-9]{1,10}$ ]]; then
+    elif { [ "$1" == "wine_reg" ] || [ "$1" == "byte_cfg" ] || [ "$1" == "lenstr_cfg" ]; } && [[ "$2" =~ ^[0-9]{1,10}$ && "$3" =~ ^[0-9]{1,10}$ ]]; then
         [ "$((10#$2))" -eq "$((10#$3))" ]
     elif [ "$1" == "ini" ] || [ "$1" == "gas_cfg" ] || [ "$1" == "wine_reg" ]; then [ "${2,,}" == "${3,,}" ]
     else [ "$2" == "$3" ]; fi
@@ -719,7 +816,7 @@ config_row_is_safe() {
     local -a locs
     local name_re='^[A-Za-z0-9._ -]+$' value_re='^[A-Za-z0-9._ ()-]*$'
     local reg_key_re='^[A-Za-z0-9._ ()-]+(\\[A-Za-z0-9._ ()-]+)*$'
-    [[ "$fmt" =~ ^(ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gas_cfg|ltx|quoted_cfg|byte_cfg|gadb|wine_reg)$ ]] || return 1
+    [[ "$fmt" =~ ^(ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gas_cfg|ltx|quoted_cfg|byte_cfg|lenstr_cfg|gadb|wine_reg)$ ]] || return 1
     [ -n "$locations" ] || return 1
     IFS='|' read -ra locs <<< "$locations"
     for loc in "${locs[@]}"; do
@@ -730,11 +827,20 @@ config_row_is_safe() {
         [[ "$loc" =~ ^(game_exe|game_root|game|install|prefix_documents|prefix_appdata|prefix_localappdata|prefix_public_documents):[^/\\] ]] || return 1
         [[ "$loc" == *..* || "$loc" == *\\* ]] && return 1
     done
-    [[ "$key" =~ $name_re ]] || return 1
+    if [ "$fmt" == "lenstr_cfg" ]; then [[ "${key/+/}" =~ $name_re ]] || return 1; else [[ "$key" =~ $name_re ]] || return 1; fi
     if [ "$fmt" == "ini" ] || [ "$fmt" == "gas_cfg" ]; then [[ "$sec" =~ $name_re ]] || return 1; fi
     if [ "$fmt" == "wine_reg" ]; then [[ "$sec" =~ $reg_key_re ]] && [[ "$sec" != *..* ]] || return 1; fi
     if [ "$fmt" == "byte_cfg" ]; then
         _byte_offset "$key" >/dev/null && [[ "$value" =~ ^[0-9]{1,3}$ ]] && [ "$((10#$value))" -le 255 ] || return 1
+    fi
+    # A lenstr_cfg key is the hex bytes in front of the text, plus +N for a byte
+    # N past its end, which takes a number 0-255.
+    if [ "$fmt" == "lenstr_cfg" ]; then
+        if [[ "$key" == *+* ]]; then
+            [[ "$key" =~ ^([0-9A-Fa-f]{2}){1,16}\+[0-9]{1,5}$ ]] && [[ "$value" =~ ^[0-9]{1,3}$ ]] && [ "$((10#$value))" -le 255 ] || return 1
+        else
+            [[ "$key" =~ ^([0-9A-Fa-f]{2}){1,16}$ ]] && [ -n "$value" ] && [ "${#value}" -le 64 ] || return 1
+        fi
     fi
     # A gadb setting can only be switched on or off in place.
     if [ "$fmt" == "gadb" ]; then [[ "$value" =~ ^[01]$ ]] || return 1; fi

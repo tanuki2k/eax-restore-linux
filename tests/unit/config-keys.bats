@@ -209,6 +209,94 @@ setup() {
     [ "$(stat -c %s "$F")" == "2" ]
 }
 
+# ---- lenstr_cfg ------------------------------------------------------------
+
+# A stand-in for Freedom Force's options.dat: a binary file with a 4-byte
+# little-endian length and then text, found by the bytes just before the length.
+lenstr_file() {  # <driver text> <name text before it>
+    { printf 'HDR4\x01\x00\x00\x00\x0a\x00\x00\x00%s' "$2"
+      printf '\x02\x00\x00\x00\x00\x00\x80\x3f'
+      printf "$(printf '\\x%02x\\x00\\x00\\x00' "${#1}")"; printf '%s' "$1"
+      printf '\x00\x00\x80\x3f\x00\x00\x40\x3fplayer 1\x04\x00\x00\x00'
+    } > "$F"
+}
+
+config_find_text_end() {  # <file> -> byte position just past the anchored text
+    local found pos len
+    found="$(_lenstr_find "$1" 0000803f)"; pos="${found%% *}"; len="${found#* }"; len="${len%% *}"
+    echo "$((pos + 4 + len))"
+}
+
+@test "lenstr_cfg: reads the text after the anchor and writes a longer one, fixing its length and keeping the rest" {
+    lenstr_file "any" "minute_man"
+    [ "$(config_get_key "$F" lenstr_cfg "" 0000803f)" == "any" ]
+    config_set_key "$F" lenstr_cfg "" 0000803f "Creative Labs EAX 2 (TM)"
+    [ "$(config_get_key "$F" lenstr_cfg "" 0000803f)" == "Creative Labs EAX 2 (TM)" ]
+    lenstr_file "Creative Labs EAX 2 (TM)" "minute_man"
+    cp "$F" "$F.expected"
+    lenstr_file "any" "minute_man"
+    config_set_key "$F" lenstr_cfg "" 0000803f "Creative Labs EAX 2 (TM)"
+    cmp "$F" "$F.expected"
+}
+
+@test "lenstr_cfg: setting the old text back restores the original bytes" {
+    lenstr_file "any" "minute_man"
+    cp "$F" "$F.orig"
+    config_set_key "$F" lenstr_cfg "" 0000803f "Creative Labs EAX 2 (TM)"
+    config_set_key "$F" lenstr_cfg "" 0000803f "any"
+    cmp "$F" "$F.orig"
+}
+
+@test "lenstr_cfg: skips an anchor that isn't followed by a sane length and printable text" {
+    printf '\x00\x00\x80\x3f\x02\x00\x00\x00\x00\x40' > "$F"
+    printf '\x00\x00\x80\x3f\x03\x00\x00\x00any' >> "$F"
+    [ "$(config_get_key "$F" lenstr_cfg "" 0000803f)" == "any" ]
+}
+
+@test "lenstr_cfg: an anchor that isn't there is absent and is never written" {
+    printf 'HDR4\x01\x02\x03\x04' > "$F"
+    [ "$(config_get_key "$F" lenstr_cfg "" 0000803f)" == "__ABSENT__" ]
+    ! config_set_key "$F" lenstr_cfg "" 0000803f "any"
+    ! config_set_key "$F" lenstr_cfg "" nothex "any"
+    [ "$(cat "$F")" == $'HDR4\x01\x02\x03\x04' ]
+}
+
+@test "lenstr_cfg: a row needs a hex anchor and plain text" {
+    config_row_is_safe lenstr_cfg "game_exe:Data/options.dat" "" 0000803f "Creative Labs EAX 2 (TM)"
+    ! config_row_is_safe lenstr_cfg "game_exe:Data/options.dat" "" 803 "any"
+    ! config_row_is_safe lenstr_cfg "game_exe:Data/options.dat" "" 0000803f ""
+}
+
+@test "lenstr_cfg: a key with +N reads and sets the byte N past the end of the text, wherever the text ends" {
+    lenstr_file "any" "minute_man"
+    printf '\x00\x00\x00\x00\x07' >> "$F"
+    local at=$(( $(stat -c %s "$F") - 1 ))
+    # The byte is 7 now; its distance from the text's end is what the key names.
+    local d=$(( at - ( $(config_find_text_end "$F") ) ))
+    [ "$(config_get_key "$F" lenstr_cfg "" "0000803f+$d")" == "7" ]
+    config_set_key "$F" lenstr_cfg "" "0000803f+$d" 2
+    [ "$(config_get_key "$F" lenstr_cfg "" "0000803f+$d")" == "2" ]
+    # A longer driver name moves the byte; the same key still finds it.
+    config_set_key "$F" lenstr_cfg "" 0000803f "Creative Labs EAX 2 (TM)"
+    [ "$(config_get_key "$F" lenstr_cfg "" "0000803f+$d")" == "2" ]
+    [ "$(stat -c %s "$F")" == "$(( at + 1 + 21 ))" ]
+}
+
+@test "lenstr_cfg: a +N byte past the end of the file is absent and never written; its value must be 0-255" {
+    lenstr_file "any" "minute_man"
+    [ "$(config_get_key "$F" lenstr_cfg "" 0000803f+9999)" == "__ABSENT__" ]
+    ! config_set_key "$F" lenstr_cfg "" 0000803f+9999 1
+    ! config_set_key "$F" lenstr_cfg "" 0000803f+2 256
+    ! config_set_key "$F" lenstr_cfg "" 0000803f+2 x
+}
+
+@test "lenstr_cfg: a row with a +N key needs a number from 0 to 255" {
+    config_row_is_safe lenstr_cfg "game_exe:Data/options.dat" "" 0000803f+46 1
+    ! config_row_is_safe lenstr_cfg "game_exe:Data/options.dat" "" 0000803f+46 300
+    ! config_row_is_safe lenstr_cfg "game_exe:Data/options.dat" "" 0000803f+46 ""
+    ! config_row_is_safe lenstr_cfg "game_exe:Data/options.dat" "" 0000803f+x 1
+}
+
 # ---- gas_cfg ---------------------------------------------------------------
 
 @test "gas_cfg: reads a value without its semicolon and keeps tabs, spacing and the semicolon on a change" {
