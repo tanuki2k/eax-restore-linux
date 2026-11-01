@@ -1935,12 +1935,24 @@ select_architecture() {
                 # status 1, so that would count a first 64-bit exe as 32-bit too.
                 if [[ $(file "$exe") == *"PE32+"* ]]; then A64=$((A64 + 1)); else A32=$((A32 + 1)); fi
             done < <(find "$GAME_DIR" -maxdepth 2 -type f -iname "*.exe" -print0)
-            if [ "$A64" -gt 0 ] && [ "$A32" -eq 0 ]; then
+            # A mix is common (an uninstaller or patcher of the other bitness
+            # beside the game), so the majority decides; only a tie or no
+            # exes at all leaves the player to choose.
+            if [ "$A64" -gt "$A32" ]; then
                 DETECTED="64"
-            elif [ "$A32" -gt 0 ] && [ "$A64" -eq 0 ]; then
+            elif [ "$A32" -gt "$A64" ]; then
                 DETECTED="32"
             else
                 DETECTED="UNKNOWN"
+            fi
+            if [ "$A32" -gt 0 ] && [ "$A64" -gt 0 ]; then
+                if [ "$DETECTED" != "UNKNOWN" ]; then
+                    print_note "Most of the .exe files in the game folder are ${DETECTED}-bit ($(( DETECTED == 64 ? A64 : A32 )) of $((A32 + A64))), so the game is probably ${DETECTED}-bit."
+                else
+                    print_note "The game folder has $A32 32-bit and $A64 64-bit .exe files in equal number, so the script can't tell which is the game."
+                fi
+            elif [ "$DETECTED" == "UNKNOWN" ]; then
+                print_note "There are no .exe files in the game folder, so the script can't tell whether the game is 32-bit or 64-bit."
             fi
             if [ "$DETECTED" != "UNKNOWN" ]; then
                 print_detected "Detected Architecture" "${DETECTED}-bit"

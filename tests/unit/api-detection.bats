@@ -82,3 +82,23 @@ scan()         { detect_api_from_binary "$GAME" | tr '\037' '|'; }
     printf 'MZ dsound.dll\n' > "$GAME/Game.exe"
     [ "$(scan)" == "directsound3d|Game.exe|" ]
 }
+
+@test "select_architecture: a lone 64-bit uninstaller doesn't override the 32-bit majority" {
+    cp "$REPO_ROOT/tests/fixtures/pe32.exe" "$GAME/game.exe"
+    cp "$REPO_ROOT/tests/fixtures/pe32.exe" "$GAME/setup.exe"
+    cp "$REPO_ROOT/tests/fixtures/pe64.exe" "$GAME/unins000.exe"
+    GAME_DIR="$GAME"
+    out=$(printf 'y\ny\n' | select_architecture 5 2>&1)
+    [[ "$out" == *"(2 of 3), so the game is probably 32-bit"* ]]
+    [[ "$out" == *"Detected Architecture"* ]]
+    [[ "$out" != *"Architecture (32/64)"* ]]
+}
+
+@test "select_architecture: an even mix says so before asking" {
+    cp "$REPO_ROOT/tests/fixtures/pe32.exe" "$GAME/game.exe"
+    cp "$REPO_ROOT/tests/fixtures/pe64.exe" "$GAME/game64.exe"
+    GAME_DIR="$GAME"
+    out=$(printf 'y\n64\n' | select_architecture 5 2>&1)
+    [[ "$out" == *"1 32-bit and 1 64-bit .exe files in equal number, so the script can't tell"* ]]
+    [[ "$out" == *"Architecture (32/64)"* ]]
+}
