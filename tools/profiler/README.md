@@ -83,7 +83,7 @@ Each snapshot first waits for Wine to write its registry changes to disk. Wine d
 
 What each snapshot is compared with is fixed. The options snapshot is compared with the baseline. Sessions captured before the two were merged also have a separate *other options* snapshot, which is compared the old way and drafted into the same table. Speaker layouts are compared with the audio snapshot. Redoing an unrelated step doesn't change any of that.
 
-Layouts that change the same values are merged into one setting. 5.1 and 6.1 go together if the game has no 6.1, and all four surround layouts together become "surround". Each merged setting gets `only_if.speakers`, the way BioShock and Neverwinter Nights do. Skip layouts the game doesn't have.
+Layouts that change the same values are merged into one setting. 5.1 and 6.1 go together if the game has no 6.1, and all four surround layouts together become "surround". Each merged setting gets `only_if.speakers`, the way BioShock and Neverwinter Nights do. Skip layouts the game doesn't have. Their titles are the fixed ones ("Enable stereo sound", "Enable headphones", "Enable Pro Logic surround sound", "Enable 4.0 surround sound" and so on), and each reason is "Sets <Game>'s mixer to <layout>." A Pro Logic setting also needs the `follow_up` "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic."
 
 The diffs become a `game_config` draft, which is merged into the entry for you to review. The merge never overwrites what's already there:
 

@@ -132,14 +132,43 @@ and its current → new value, read live from their own install.
   `sources`.
 
 Examples:
-- `Enable EAX` — "Brothers in Arms ships with EAX and 3D sound off and loads its
-  bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs."
-- `Enable EAX effects` — "Quake 4 ships with its EAX sound options off, so there's no
-  reverb and no muffling of sounds through walls."
+- `Enable EAX` — "Automatically enables EAX in Brothers in Arms' configuration." (fixed
+  wording, see below)
 - `Fix low-res textures` — "Quake 4 can't detect how much memory modern graphics cards
   have, so it loads its lowest-resolution textures."
 - `Enable underwater reverb` — "Some System Shock 2 maps don't mark their underwater
   areas, so they play the wrong reverb there."
+
+**Speaker and EAX settings use fixed wording**, not the free-form `title` and
+`reason` rules above. The reason never describes what the game was set to
+before; it says what the setting sets.
+
+| Setting | `title` | `reason` |
+| --- | --- | --- |
+| Stereo | Enable stereo sound | Sets <Game>'s mixer to stereo sound. |
+| Headphones | Enable headphones | Sets <Game>'s mixer to headphones. |
+| Pro Logic (`matrix`) | Enable Pro Logic surround sound | Sets <Game>'s mixer to Pro Logic surround sound. |
+| 4.0 (`quad`) | Enable 4.0 surround sound | Sets <Game>'s mixer to 4.0 surround sound. |
+| 5.1 | Enable 5.1 surround sound | Sets <Game>'s mixer to 5.1 surround sound. |
+| 7.1 | Enable 7.1 surround sound | Sets <Game>'s mixer to 7.1 surround sound. |
+| Switching EAX on | Enable EAX | Automatically enables EAX in <Game>'s configuration. |
+
+- "mixer" is the default word; use the game's own word for the control where it
+  has one (Alpha Prime's "speakers"). A name ending in "s" takes a bare
+  apostrophe: "Neverwinter Nights' mixer".
+- Every Pro Logic setting gets the `follow_up` "Don't forget to set your AV
+  receiver or Soundbar to Dolby Pro Logic." The reason doesn't mention the
+  receiver.
+- The EAX title is always "Enable EAX", never "Enable EAX effects" or "Enable
+  EAX 3 sound". An expansion with its own setting inside another game's entry
+  keeps its name ("Enable EAX in Resurrection of Evil", reason "…in Resurrection
+  of Evil's configuration.").
+- An EAX reason may add one more sentence for something the player would
+  otherwise be surprised by: no sound without the change, another thing the
+  setting changes (a sample rate), no in-game option for it, or the matching
+  in-game menu wording. Never the prior state.
+- Fixes that aren't EAX switches ("Enable underwater reverb", "Fix low-res
+  textures") still follow the free-form rules above.
 
 **Script user-facing strings** (banners, `Note:`/`Warning:`/`Error:` messages,
 prompts — see CLAUDE.md's "Text/output style conventions" for which helper/color to use):
@@ -293,7 +322,15 @@ something similar, copy the shape of the "after".
 - Before: `Delisted from Steam in December 2022, along with the rest of the Unreal series.`
 - After: `Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.`
 
-**The user's preferred `reason` style: name the files**
+**Speaker and EAX settings: say what the setting sets, never the prior state**
+- Before: `BioShock ships set to stereo, so the rear speakers of a 4.0 setup get no sound.`
+- After: `Sets BioShock's mixer to 4.0 surround sound.`
+- Before: `Quake 4 ships with its EAX sound options off, so there's no reverb and no muffling of sounds through walls.` (`Enable EAX effects`)
+- After: `Automatically enables EAX in Quake 4's configuration.` (`Enable EAX`)
+- Before: `Enable headphone sound` / `Sets Freedom Force's mixer to headphone sound.`
+- After: `Enable headphones` / `Sets Freedom Force's mixer to headphones.`
+
+**The user's preferred `reason` style: name the files** (for fixes and other settings, not the fixed EAX and speaker wording)
 - `Brothers in Arms ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs.`
   Concrete file names are wanted. Don't swap them for a vague plain-language
   version ("uses its own audio library").

@@ -279,6 +279,18 @@ The `title` starts with Enable, Fix, Remove or Raise, followed by the result the
 
 The `reason` is one or two short sentences. It starts with the game's name and says what the game does out of the box. It doesn't repeat the settings that the rows beneath it already show.
 
+Two kinds of setting have fixed wording instead, and the reason never says what the game was set to before:
+
+| Setting | `title` | `reason` |
+| --- | --- | --- |
+| Switches EAX on | `"Enable EAX"` | `"Automatically enables EAX in Quake 4's configuration."` |
+| Stereo | `"Enable stereo sound"` | `"Sets Quake 4's mixer to stereo sound."` |
+| Headphones | `"Enable headphones"` | `"Sets Quake 4's mixer to headphones."` |
+| Pro Logic (`"matrix"`) | `"Enable Pro Logic surround sound"` | `"Sets Quake 4's mixer to Pro Logic surround sound."` |
+| 4.0, 5.1, 7.1 | `"Enable 4.0 surround sound"`, `"Enable 5.1 surround sound"`, `"Enable 7.1 surround sound"` | `"Sets Quake 4's mixer to 5.1 surround sound."` |
+
+Use the game's own word instead of "mixer" where it has one, and a bare apostrophe after a name ending in "s" ("Neverwinter Nights' mixer"). A Pro Logic setting also needs the `follow_up` `"Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic."`. An EAX reason may add one more sentence for something the player would be surprised by, like the game having no sound without the change. An expansion with its own setting inside another game's entry keeps its name in the title: `"Enable EAX in Resurrection of Evil"`.
+
 #### `changes`
 
 The shape depends on the file's format:

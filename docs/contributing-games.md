@@ -71,8 +71,8 @@ Here is a trimmed example. `data/games/tested/` has plenty more, and the [game f
     },
     "audio_settings": [
       {
-        "title": "Enable EAX effects",
-        "reason": "Quake 4 ships with its EAX sound options off, so there's no reverb and no muffling of sounds through walls.",
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in Quake 4's configuration.",
         "changes": { "Quake4Config.cfg": { "s_useOpenAL": "1", "s_useEAXReverb": "1", "s_useEAXOcclusion": "1" } }
       }
     ]

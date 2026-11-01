@@ -96,11 +96,11 @@ def draft_game_config(diffs_audio, diffs_optional, existing=None):
 
 
 # Speaker layouts, in the order a list of them is written, and the title each gets. The titles are
-# the ones the existing speaker settings use (BioShock, Neverwinter Nights).
+# the fixed wording every speaker setting uses (see the player-text skill).
 SPEAKER_ORDER = ["stereo", "headphones", "matrix", "surround", "quad", "surround51", "surround61", "surround71"]
 SURROUND = ["quad", "surround51", "surround61", "surround71"]
 SPEAKER_TITLES = {
-    "stereo": "Enable stereo sound", "headphones": "Enable headphone sound", "matrix": "Enable Pro Logic surround",
+    "stereo": "Enable stereo sound", "headphones": "Enable headphones", "matrix": "Enable Pro Logic surround sound",
     "surround": "Enable surround sound", "quad": "Enable 4.0 surround sound", "surround51": "Enable 5.1 surround sound",
     "surround61": "Enable 6.1 surround sound", "surround71": "Enable 7.1 surround sound",
 }

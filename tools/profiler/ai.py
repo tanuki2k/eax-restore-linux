@@ -19,7 +19,12 @@ TASKS = {
                 '"eax_versions": ["4.0"], "api": "directsound3d|openal", "uncertain": ["fields you are not sure of"]}. '
                 "Do not return store IDs.",
     "setting": 'Given config file diffs, return {"title": "<=60 chars, Enable/Fix/Remove/Raise + result", '
-               '"reason": "what the game does out of the box, one or two short sentences"}.',
+               '"reason": "one or two short sentences, starting with the game name"}. '
+               'A setting that switches EAX on has the title "Enable EAX" and the reason "Automatically enables EAX in <Game>\'s configuration." '
+               'A speaker layout has the title "Enable stereo sound", "Enable headphones", "Enable Pro Logic surround sound", '
+               '"Enable 4.0 surround sound", "Enable 5.1 surround sound" or "Enable 7.1 surround sound" and the reason '
+               '"Sets <Game>\'s mixer to <layout>." (e.g. "Sets <Game>\'s mixer to 5.1 surround sound.", or "to headphones."). '
+               'Never describe what the game was set to before.',
     "classify": 'Given changed config keys captured while the player switched sound options, return '
                 '{"changes": [{"i": <index given>, "keep": true|false, "reason": "<=12 words, why it is noise if keep is false"}]}. '
                 "keep=false only for the game's own bookkeeping: timestamps, window positions, run counters, last-used values.",
