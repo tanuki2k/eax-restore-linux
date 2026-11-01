@@ -19,7 +19,7 @@
     "audio_settings": [
       {
         "title": "Enable EAX",
-        "reason": "Psychonauts ships with EAX off and has no in-game option to turn it on.",
+        "reason": "Automatically enables EAX in Psychonauts' configuration. The game has no in-game option for this.",
         "changes": { "AudioSettings.ini": { "AudioSettings": { "UseEAX": "true" } } },
         "tested": false
       }

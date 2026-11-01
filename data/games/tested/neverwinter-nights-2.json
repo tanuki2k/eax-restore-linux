@@ -21,7 +21,7 @@
     "audio_settings": [
       {
         "title": "Enable EAX",
-        "reason": "Neverwinter Nights 2 ships with its environment effects off and a software sound provider that has no EAX.",
+        "reason": "Automatically enables EAX in Neverwinter Nights 2's configuration.",
         "changes": {
           "nwn2.ini": {
             "Sound Options": {
@@ -34,42 +34,43 @@
       },
       {
         "title": "Enable stereo sound",
-        "reason": "Enables stereo sound in the in-game settings.",
+        "reason": "Sets Neverwinter Nights 2's mixer to stereo sound.",
         "only_if": { "speakers": "stereo" },
         "changes": { "nwn2.ini": { "Sound Options": { "Speaker Type": "3" } } },
         "tested": true
       },
       {
         "title": "Enable 4.0 surround sound",
-        "reason": "Neverwinter Nights 2 plays in stereo and has no in-game speaker option, so the rear speakers of a 4.0 setup get no sound.",
+        "reason": "Sets Neverwinter Nights 2's mixer to 4.0 surround sound.",
         "only_if": { "speakers": "quad" },
         "changes": { "nwn2.ini": { "Sound Options": { "Speaker Type": "3" } } },
         "tested": true
       },
       {
         "title": "Enable 5.1 surround sound",
-        "reason": "Neverwinter Nights 2 plays in stereo and has no in-game speaker option, so the rest of a 5.1 speaker setup gets no sound.",
+        "reason": "Sets Neverwinter Nights 2's mixer to 5.1 surround sound.",
         "only_if": { "speakers": ["surround51", "surround61"] },
         "changes": { "nwn2.ini": { "Sound Options": { "Speaker Type": "4" } } },
         "tested": true
       },
       {
         "title": "Enable 7.1 surround sound",
-        "reason": "Neverwinter Nights 2 plays in stereo and has no in-game speaker option, so the rest of a 7.1 speaker setup gets no sound.",
+        "reason": "Sets Neverwinter Nights 2's mixer to 7.1 surround sound.",
         "only_if": { "speakers": "surround71" },
         "changes": { "nwn2.ini": { "Sound Options": { "Speaker Type": "5" } } },
         "tested": true
       },
       {
-        "title": "Enable Pro Logic surround",
-        "reason": "Neverwinter Nights 2 plays in stereo and has no in-game speaker option, so a Pro Logic receiver has no surround information to decode.",
+        "title": "Enable Pro Logic surround sound",
+        "reason": "Sets Neverwinter Nights 2's mixer to Pro Logic surround sound.",
         "only_if": { "speakers": "matrix" },
         "changes": { "nwn2.ini": { "Sound Options": { "Speaker Type": "2" } } },
+        "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
         "tested": true
       },
       {
-        "title": "Enable headphone sound",
-        "reason": "Neverwinter Nights 2 plays in stereo and has no in-game speaker option, so its sound isn't mixed for headphones.",
+        "title": "Enable headphones",
+        "reason": "Sets Neverwinter Nights 2's mixer to headphones.",
         "only_if": { "speakers": "headphones" },
         "changes": { "nwn2.ini": { "Sound Options": { "Speaker Type": "1" } } },
         "tested": true

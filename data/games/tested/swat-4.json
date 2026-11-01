@@ -23,7 +23,7 @@
     "audio_settings": [
       {
         "title": "Enable EAX",
-        "reason": "SWAT 4 ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs.",
+        "reason": "Automatically enables EAX in SWAT 4's configuration.",
         "changes": {
           "Swat4.ini": {
             "ALAudio.ALAudioSubsystem": {

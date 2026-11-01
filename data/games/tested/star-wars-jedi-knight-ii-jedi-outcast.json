@@ -21,7 +21,7 @@
     "audio_settings": [
       {
         "title": "Enable EAX",
-        "reason": "Jedi Outcast only plays EAX reverb through its OpenAL sound option, which ships off in both single-player and multiplayer.",
+        "reason": "Automatically enables EAX in Jedi Outcast's configuration.",
         "changes": {
           "jk2config.cfg": { "s_UseOpenAL": "1" },
           "jk2mpconfig.cfg": { "s_UseOpenAL": "1" }

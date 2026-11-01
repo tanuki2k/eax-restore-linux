@@ -27,7 +27,7 @@
     "audio_settings": [
       {
         "title": "Enable EAX",
-        "reason": "Unreal only plays EAX reverb when its hardware 3D sound, reverb and spatial sound options are all on.",
+        "reason": "Automatically enables EAX in Unreal's configuration.",
         "changes": {
           "Unreal.ini": {
             "Galaxy.GalaxyAudioSubsystem": {
@@ -40,8 +40,8 @@
         "tested": true
       },
       {
-        "title": "Enable Dolby Pro Logic ",
-        "reason": "Turns on Dolby Pro Logic, A compatible AV receiver or Soundbar is required for Surround sound. Dolby Pro Logic is an analog matrix surround-sound codec technology.",
+        "title": "Enable Pro Logic surround sound",
+        "reason": "Sets Unreal's mixer to Pro Logic surround sound.",
         "only_if": { "speakers": "matrix" },
         "changes": { "Unreal.ini": { "GalaxyAudioSubsystem": { "UseSurround": true } } },
         "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",

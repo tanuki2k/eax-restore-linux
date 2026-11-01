@@ -22,14 +22,14 @@
     "audio_settings": [
       {
         "title": "Enable EAX",
-        "reason": "BioShock ships with 'Use Creative EAX Audio' off, which keeps it on DirectSound with no EAX instead of the OpenAL32.dll this script installs.",
+        "reason": "Automatically enables EAX in BioShock's configuration.",
         "changes": { "Bioshock.ini": { "ShockGame.ShockUserSettings": { "bEAXEnabled": "True" } } },
         "follow_up": "If BioShock starts with EAX turned off, make sure you quit the game from its main menu, otherwise it assumes the game crashed and resets Bioshock.ini to its previous state. If this happens, manually turn on 'Use Creative EAX Audio' in the game's audio settings.",
         "tested": true
       },
       {
         "title": "Enable 4.0 surround sound",
-        "reason": "BioShock ships set to stereo, so the rear speakers of a 4.0 setup get no sound.",
+        "reason": "Sets BioShock's mixer to 4.0 surround sound.",
         "only_if": { "speakers": "quad" },
         "changes": {
           "Bioshock.ini": { "ShockGame.ShockUserSettings": { "SpeakerMode": "SM_Quad" } }
@@ -38,7 +38,7 @@
       },
       {
         "title": "Enable 5.1 surround sound",
-        "reason": "BioShock ships set to stereo, so the rest of a 5.1 speaker setup gets no sound.",
+        "reason": "Sets BioShock's mixer to 5.1 surround sound.",
         "only_if": { "speakers": ["surround51", "surround61"] },
         "changes": {
           "Bioshock.ini": { "ShockGame.ShockUserSettings": { "SpeakerMode": "SM_5_1" } }
@@ -47,7 +47,7 @@
       },
       {
         "title": "Enable 7.1 surround sound",
-        "reason": "BioShock ships set to stereo, so the rest of a 7.1 speaker setup gets no sound.",
+        "reason": "Sets BioShock's mixer to 7.1 surround sound.",
         "only_if": { "speakers": "surround71" },
         "changes": {
           "Bioshock.ini": { "ShockGame.ShockUserSettings": { "SpeakerMode": "SM_7_1" } }
@@ -55,12 +55,13 @@
         "tested": true
       },
       {
-        "title": "Enable Pro Logic surround",
-        "reason": "BioShock ships set to plain stereo, so a Pro Logic receiver has no surround information to decode.",
+        "title": "Enable Pro Logic surround sound",
+        "reason": "Sets BioShock's mixer to Pro Logic surround sound.",
         "only_if": { "speakers": "matrix" },
         "changes": {
           "Bioshock.ini": { "ShockGame.ShockUserSettings": { "SpeakerMode": "SM_ProLogic" } }
         },
+        "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
         "tested": true
       }
     ],

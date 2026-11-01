@@ -26,7 +26,7 @@
     "audio_settings": [
       {
         "title": "Enable EAX",
-        "reason": "Dungeon Siege ships with 'Environmental Audio' off.",
+        "reason": "Automatically enables EAX in Dungeon Siege II's configuration.",
         "changes": { "prefs.gas": { "prefs": { "eax_enabled": "true" } } },
         "tested": true
       }

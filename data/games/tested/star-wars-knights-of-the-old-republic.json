@@ -14,7 +14,7 @@
     "audio_settings": [
       {
         "title": "Enable EAX",
-        "reason": "KOTOR ships with EAX off.",
+        "reason": "Automatically enables EAX in KOTOR's configuration.",
         "changes": { "swkotor.ini": { "Sound Options": { "EAX": "3" } } },
         "tested": true
       }

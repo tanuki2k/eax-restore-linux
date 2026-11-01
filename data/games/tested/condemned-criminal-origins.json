@@ -26,8 +26,8 @@
     },
     "audio_settings": [
       {
-        "title": "Enable EAX effects",
-        "reason": "Condemned ships with its hardware sound and EAX options off, so it plays with no EAX reverb.",
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in Condemned's configuration.",
         "changes": { "Profile000.gdb": { "UseHWSound": "1", "UseEAX": "1", "UseEAX4": "1" } }
       }
     ]

@@ -13,7 +13,7 @@
     "audio_settings": [
       {
         "title": "Enable EAX",
-        "reason": "Messiah only uses EAX when its sound menu is set to \"EAX / DS3D\", not \"DS Software 3D\" or \"A3D\".",
+        "reason": "Automatically enables EAX in Messiah's configuration.",
         "changes": { "Messiah.cfg": { "0x160": "3", "0x1b2": "1" } }
       }
     ]

@@ -13,7 +13,7 @@
     "audio_settings": [
       {
         "title": "Enable EAX",
-        "reason": "Requiem only uses EAX when its sound options are set to \"EAX\" instead of \"standard\".",
+        "reason": "Automatically enables EAX in Requiem's configuration.",
         "changes": { "latest.cfg": { "0x17": "1" } },
         "tested": true
       }

@@ -16,7 +16,7 @@
     "audio_settings": [
       {
         "title": "Enable EAX",
-        "reason": "to-do",
+        "reason": "Automatically enables EAX in Shogo's configuration.",
         "changes": {
           "autoexec.cfg": {
             "3dsoundprovider": "2",

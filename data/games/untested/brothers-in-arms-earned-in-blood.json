@@ -14,7 +14,7 @@
     "audio_settings": [
       {
         "title": "Enable EAX",
-        "reason": "Earned in Blood ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs.",
+        "reason": "Automatically enables EAX in Earned in Blood's configuration.",
         "changes": {
           "EiB.ini": {
             "ALAudio.ALAudioSubsystem": {

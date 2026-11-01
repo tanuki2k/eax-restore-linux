@@ -13,7 +13,7 @@
     "audio_settings": [
       {
         "title": "Enable EAX",
-        "reason": "Project Eden only uses EAX reverb and 3D hardware sound when its Reverb and hardware mixing options are on.",
+        "reason": "Automatically enables EAX in Project Eden's configuration.",
         "changes": {
           "user.reg": {
             "Software\\Core Design\\Project Eden\\1.0\\SfxHardware\\Direct Sound\\Primary Sound Driver": {

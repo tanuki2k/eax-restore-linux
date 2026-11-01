@@ -36,7 +36,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Alpha Centauri plays 3D sound and EAX effects only when both are switched on in Alpha Centauri.Ini.",
+            "reason": "Automatically enables EAX in Alpha Centauri's configuration.",
             "changes": {
               "Alpha Centauri.Ini": {
                 "Alpha Centauri": {
@@ -83,8 +83,8 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX and sound occlusion",
-            "reason": "Out of the box, Alpha Prime has EAX and sound occlusion turned on.",
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Alpha Prime's configuration.",
             "changes": {
               "settings.cfg": {
                 "EnableEAX": "1",
@@ -94,8 +94,8 @@
             "tested": false
           },
           {
-            "title": "Enable Stereo output",
-            "reason": "The game has a Speakers setting in settings.cfg. This sets it to 2, which is stereo output.",
+            "title": "Enable stereo sound",
+            "reason": "Sets Alpha Prime's speakers to stereo sound.",
             "only_if": {
               "speakers": "stereo"
             },
@@ -107,8 +107,8 @@
             "tested": false
           },
           {
-            "title": "Enable headphone output",
-            "reason": "Alpha Prime's sound output defaults to a speaker layout, so headphones get a mix made for speakers. Setting Speakers to 4 in settings.cfg switches it to the headphone output.",
+            "title": "Enable headphones",
+            "reason": "Sets Alpha Prime's speakers to headphones.",
             "only_if": {
               "speakers": "headphones"
             },
@@ -120,8 +120,8 @@
             "tested": false
           },
           {
-            "title": "Enable Surround Sound output",
-            "reason": "The game sets its speaker output to stereo by default. Setting Speakers to 5 selects 5.1 surround, which suits a matrix-encoded surround setup.",
+            "title": "Enable Pro Logic surround sound",
+            "reason": "Sets Alpha Prime's speakers to Pro Logic surround sound.",
             "only_if": {
               "speakers": "matrix"
             },
@@ -130,11 +130,12 @@
                 "Speakers": "5"
               }
             },
+            "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
             "tested": false
           },
           {
-            "title": "Enable 4.0 surround output",
-            "reason": "With quad speakers, the game's sound setting is not set to the quad mode. The rear speakers can stay silent or play the wrong channels.",
+            "title": "Enable 4.0 surround sound",
+            "reason": "Sets Alpha Prime's speakers to 4.0 surround sound.",
             "only_if": {
               "speakers": "quad"
             },
@@ -146,8 +147,8 @@
             "tested": false
           },
           {
-            "title": "Enable 5.1 surround output",
-            "reason": "The game's Speakers setting is not set to 6 by default, so it does not use all six channels of a 5.1 setup. Setting it to 6 makes the game send surround sound to a 5.1 speaker system.",
+            "title": "Enable 5.1 surround sound",
+            "reason": "Sets Alpha Prime's speakers to 5.1 surround sound.",
             "only_if": {
               "speakers": [
                 "surround51",
@@ -162,8 +163,8 @@
             "tested": false
           },
           {
-            "title": "Enable 7.1 surround output",
-            "reason": "The game's Speakers option defaults to a lower channel count. Setting it to 7 makes the game send 7.1 sound to OpenAL Soft.",
+            "title": "Enable 7.1 surround sound",
+            "reason": "Sets Alpha Prime's speakers to 7.1 surround sound.",
             "only_if": {
               "speakers": "surround71"
             },
@@ -258,7 +259,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Arx Fatalis ships with EAX off.",
+            "reason": "Automatically enables EAX in Arx Fatalis' configuration.",
             "changes": {
               "cfg.ini": {
                 "AUDIO": {
@@ -363,7 +364,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Baldur's Gate II ships with 'Environmental Audio' unset and only turns it on by itself the first time it starts with EAX available.",
+            "reason": "Automatically enables EAX in Baldur's Gate II's configuration.",
             "changes": {
               "baldur.ini": {
                 "Game Options": {
@@ -455,7 +456,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Baldur's Gate ships with 'Environmental Audio' unset and only turns it on by itself the first time it starts with EAX available.",
+            "reason": "Automatically enables EAX in Baldur's Gate's configuration.",
             "changes": {
               "Baldur.ini": {
                 "Game Options": {
@@ -525,7 +526,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "BioShock ships with 'Use Creative EAX Audio' off, which keeps it on DirectSound with no EAX instead of the OpenAL32.dll this script installs.",
+            "reason": "Automatically enables EAX in BioShock's configuration.",
             "changes": {
               "Bioshock.ini": {
                 "ShockGame.ShockUserSettings": {
@@ -538,7 +539,7 @@
           },
           {
             "title": "Enable 4.0 surround sound",
-            "reason": "BioShock ships set to stereo, so the rear speakers of a 4.0 setup get no sound.",
+            "reason": "Sets BioShock's mixer to 4.0 surround sound.",
             "only_if": {
               "speakers": "quad"
             },
@@ -553,7 +554,7 @@
           },
           {
             "title": "Enable 5.1 surround sound",
-            "reason": "BioShock ships set to stereo, so the rest of a 5.1 speaker setup gets no sound.",
+            "reason": "Sets BioShock's mixer to 5.1 surround sound.",
             "only_if": {
               "speakers": [
                 "surround51",
@@ -571,7 +572,7 @@
           },
           {
             "title": "Enable 7.1 surround sound",
-            "reason": "BioShock ships set to stereo, so the rest of a 7.1 speaker setup gets no sound.",
+            "reason": "Sets BioShock's mixer to 7.1 surround sound.",
             "only_if": {
               "speakers": "surround71"
             },
@@ -585,8 +586,8 @@
             "tested": true
           },
           {
-            "title": "Enable Pro Logic surround",
-            "reason": "BioShock ships set to plain stereo, so a Pro Logic receiver has no surround information to decode.",
+            "title": "Enable Pro Logic surround sound",
+            "reason": "Sets BioShock's mixer to Pro Logic surround sound.",
             "only_if": {
               "speakers": "matrix"
             },
@@ -597,6 +598,7 @@
                 }
               }
             },
+            "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
             "tested": true
           }
         ],
@@ -663,7 +665,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Earned in Blood ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs.",
+            "reason": "Automatically enables EAX in Earned in Blood's configuration.",
             "changes": {
               "EiB.ini": {
                 "ALAudio.ALAudioSubsystem": {
@@ -744,7 +746,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Brothers in Arms ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs.",
+            "reason": "Automatically enables EAX in Brothers in Arms' configuration.",
             "changes": {
               "bia.ini": {
                 "ALAudio.ALAudioSubsystem": {
@@ -844,7 +846,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Clive Barker's Undying only plays EAX reverb when its hardware 3D sound and spatial sound options are on.",
+            "reason": "Automatically enables EAX in Clive Barker's Undying's configuration.",
             "changes": {
               "System.ini": {
                 "Galaxy.GalaxyAudioSubsystem": {
@@ -856,8 +858,8 @@
             "tested": true
           },
           {
-            "title": "Enable Dolby Pro Logic",
-            "reason": "Turns on Dolby Pro Logic, A compatible AV receiver or Soundbar is required for Surround sound. Dolby Pro Logic is an analog matrix surround-sound codec technology.",
+            "title": "Enable Pro Logic surround sound",
+            "reason": "Sets Clive Barker's Undying's mixer to Pro Logic surround sound.",
             "only_if": {
               "speakers": "matrix"
             },
@@ -949,8 +951,8 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX effects",
-            "reason": "Condemned ships with its hardware sound and EAX options off, so it plays with no EAX reverb.",
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Condemned's configuration.",
             "changes": {
               "Profile000.gdb": {
                 "UseHWSound": "1",
@@ -994,7 +996,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Descent 3's launcher sets the sound mixer to DirectSound instead of 'Creative EAX', so the game plays without reverb.",
+            "reason": "Automatically enables EAX in Descent 3's configuration.",
             "changes": {
               "system.reg": {
                 "Software\\Wow6432Node\\Outrage\\Descent3": {
@@ -1065,7 +1067,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Deus Ex ships with its hardware sound option off, and it only plays EAX reverb with it on.",
+            "reason": "Automatically enables EAX in Deus Ex's configuration.",
             "changes": {
               "DeusEx.ini": {
                 "Engine.Engine": {
@@ -1080,8 +1082,8 @@
             "tested": true
           },
           {
-            "title": "Enable Dolby Pro Logic ",
-            "reason": "Turns on Dolby Pro Logic, A compatible AV receiver or Soundbar is required for Surround sound. Dolby Pro Logic is an analog matrix surround-sound codec technology.",
+            "title": "Enable Pro Logic surround sound",
+            "reason": "Sets Deus Ex's mixer to Pro Logic surround sound.",
             "only_if": {
               "speakers": "matrix"
             },
@@ -1196,7 +1198,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "DOOM 3 ships with its EAX sound options off, so there's no reverb.",
+            "reason": "Automatically enables EAX in DOOM 3's configuration.",
             "changes": {
               "DoomConfig.cfg": {
                 "s_useOpenAL": "1",
@@ -1207,7 +1209,7 @@
           },
           {
             "title": "Enable EAX in Resurrection of Evil",
-            "reason": "Resurrection of Evil ships with its EAX sound options off, so there's no reverb.",
+            "reason": "Automatically enables EAX in Resurrection of Evil's configuration.",
             "changes": {
               "d3xp DoomConfig.cfg": {
                 "s_useOpenAL": "1",
@@ -1310,7 +1312,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Dreamfall plays its sound without 3D or EAX until EAX 4 is chosen in its sound options.",
+            "reason": "Automatically enables EAX in Dreamfall's configuration.",
             "changes": {
               "prefs.dat": {
                 "audio_channel_config": "224"
@@ -1375,7 +1377,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Dungeon Siege ships with 'Environmental Audio' off.",
+            "reason": "Automatically enables EAX in Dungeon Siege's configuration.",
             "changes": {
               "prefs.gas": {
                 "prefs": {
@@ -1425,7 +1427,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Dungeon Siege ships with 'Environmental Audio' off.",
+            "reason": "Automatically enables EAX in Dungeon Siege II's configuration.",
             "changes": {
               "prefs.gas": {
                 "prefs": {
@@ -1492,8 +1494,8 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX effects",
-            "reason": "F.E.A.R. ships with its hardware sound and EAX options off, so it plays with no EAX reverb.",
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in F.E.A.R.'s configuration.",
             "changes": {
               "Profile000.gdb": {
                 "UseHWSound": "1",
@@ -1548,8 +1550,8 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX effects",
-            "reason": "F.E.A.R. Extraction Point ships with its hardware sound and EAX options off, so it plays with no EAX reverb.",
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in F.E.A.R. Extraction Point's configuration.",
             "changes": {
               "Profile000.gdb": {
                 "UseHWSound": "1",
@@ -1607,8 +1609,8 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX effects",
-            "reason": "F.E.A.R. Perseus Mandate ships with its hardware sound and EAX options off, so it plays with no EAX reverb.",
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in F.E.A.R. Perseus Mandate's configuration.",
             "changes": {
               "Profile000.gdb": {
                 "UseHWSound": "1",
@@ -1681,8 +1683,8 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX effects",
-            "reason": "F.E.A.R. ships with its hardware sound and EAX options off, so it plays with no EAX reverb.",
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in F.E.A.R.'s configuration.",
             "changes": {
               "Profile000.gdb": {
                 "UseHWSound": "1",
@@ -1693,8 +1695,8 @@
             "tested": true
           },
           {
-            "title": "Enable EAX effects in Extraction Point",
-            "reason": "F.E.A.R. Extraction Point ships with its hardware sound and EAX options off, so it plays with no EAX reverb.",
+            "title": "Enable EAX in Extraction Point",
+            "reason": "Automatically enables EAX in F.E.A.R. Extraction Point's configuration.",
             "changes": {
               "FEARXP Profile000.gdb": {
                 "UseHWSound": "1",
@@ -1705,8 +1707,8 @@
             "tested": true
           },
           {
-            "title": "Enable EAX effects in Perseus Mandate",
-            "reason": "F.E.A.R. Perseus Mandate ships with its hardware sound and EAX options off, so it plays with no EAX reverb.",
+            "title": "Enable EAX in Perseus Mandate",
+            "reason": "Automatically enables EAX in F.E.A.R. Perseus Mandate's configuration.",
             "changes": {
               "FEARXP2 Profile000.gdb": {
                 "UseHWSound": "1",
@@ -1761,7 +1763,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Fallout Tactics starts on Miles' 2D positional audio, so there's no 3D sound and no reverb.",
+            "reason": "Automatically enables EAX in Fallout Tactics' configuration.",
             "changes": {
               "bos.cfg": {
                 "sound.provider": "Creative Labs EAX 2 (TM)"
@@ -1806,7 +1808,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Fallout Tactics starts on Miles' 2D positional audio, so there's no 3D sound and no reverb.",
+            "reason": "Automatically enables EAX in Fallout Tactics' configuration.",
             "changes": {
               "bos.cfg": {
                 "sound.provider": "Creative Labs EAX 2 (TM)"
@@ -1909,7 +1911,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Freedom Force starts with its sound driver set to \"any\" instead of \"Creative Labs EAX 2 (TM)\".",
+            "reason": "Automatically enables EAX in Freedom Force's configuration.",
             "changes": {
               "options.dat": {
                 "0000803f": "Creative Labs EAX 2 (TM)"
@@ -1919,7 +1921,7 @@
           },
           {
             "title": "Enable stereo sound",
-            "reason": "Freedom Force mixes its sound for the speaker layout chosen in its Audio Options, which starts on stereo.",
+            "reason": "Sets Freedom Force's mixer to stereo sound.",
             "only_if": {
               "speakers": "stereo"
             },
@@ -1931,8 +1933,8 @@
             "tested": true
           },
           {
-            "title": "Enable headphone sound",
-            "reason": "Freedom Force starts on stereo, so its sound isn't mixed for headphones.",
+            "title": "Enable headphones",
+            "reason": "Sets Freedom Force's mixer to headphones.",
             "only_if": {
               "speakers": "headphones"
             },
@@ -1944,8 +1946,8 @@
             "tested": true
           },
           {
-            "title": "Enable Pro Logic surround",
-            "reason": "Freedom Force starts on stereo, so its sound isn't mixed for surround sound.",
+            "title": "Enable Pro Logic surround sound",
+            "reason": "Sets Freedom Force's mixer to Pro Logic surround sound.",
             "only_if": {
               "speakers": "matrix"
             },
@@ -1954,11 +1956,12 @@
                 "0000803f+46": "2"
               }
             },
+            "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
             "tested": true
           },
           {
             "title": "Enable 4.0 surround sound",
-            "reason": "Freedom Force starts on stereo, so it doesn't send sound to four speakers.",
+            "reason": "Sets Freedom Force's mixer to 4.0 surround sound.",
             "only_if": {
               "speakers": "quad"
             },
@@ -2212,7 +2215,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Icewind Dale turns on 'Environmental Audio' by itself the first time it starts.",
+            "reason": "Automatically enables EAX in Icewind Dale's configuration.",
             "changes": {
               "icewind.ini": {
                 "Game Options": {
@@ -2261,7 +2264,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Icewind Dale II ships with 'Environmental Audio' off.",
+            "reason": "Automatically enables EAX in Icewind Dale II's configuration.",
             "changes": {
               "icewind2.ini": {
                 "Game Options": {
@@ -2393,7 +2396,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Messiah only uses EAX when its sound menu is set to \"EAX / DS3D\", not \"DS Software 3D\" or \"A3D\".",
+            "reason": "Automatically enables EAX in Messiah's configuration.",
             "changes": {
               "Messiah.cfg": {
                 "0x160": "3",
@@ -2437,7 +2440,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Neverwinter Nights 2 ships with its environment effects off and a software sound provider that has no EAX.",
+            "reason": "Automatically enables EAX in Neverwinter Nights 2's configuration.",
             "changes": {
               "nwn2.ini": {
                 "Sound Options": {
@@ -2450,7 +2453,7 @@
           },
           {
             "title": "Enable stereo sound",
-            "reason": "Enables stereo sound in the in-game settings.",
+            "reason": "Sets Neverwinter Nights 2's mixer to stereo sound.",
             "only_if": {
               "speakers": "stereo"
             },
@@ -2465,7 +2468,7 @@
           },
           {
             "title": "Enable 4.0 surround sound",
-            "reason": "Neverwinter Nights 2 plays in stereo and has no in-game speaker option, so the rear speakers of a 4.0 setup get no sound.",
+            "reason": "Sets Neverwinter Nights 2's mixer to 4.0 surround sound.",
             "only_if": {
               "speakers": "quad"
             },
@@ -2480,7 +2483,7 @@
           },
           {
             "title": "Enable 5.1 surround sound",
-            "reason": "Neverwinter Nights 2 plays in stereo and has no in-game speaker option, so the rest of a 5.1 speaker setup gets no sound.",
+            "reason": "Sets Neverwinter Nights 2's mixer to 5.1 surround sound.",
             "only_if": {
               "speakers": [
                 "surround51",
@@ -2498,7 +2501,7 @@
           },
           {
             "title": "Enable 7.1 surround sound",
-            "reason": "Neverwinter Nights 2 plays in stereo and has no in-game speaker option, so the rest of a 7.1 speaker setup gets no sound.",
+            "reason": "Sets Neverwinter Nights 2's mixer to 7.1 surround sound.",
             "only_if": {
               "speakers": "surround71"
             },
@@ -2512,8 +2515,8 @@
             "tested": true
           },
           {
-            "title": "Enable Pro Logic surround",
-            "reason": "Neverwinter Nights 2 plays in stereo and has no in-game speaker option, so a Pro Logic receiver has no surround information to decode.",
+            "title": "Enable Pro Logic surround sound",
+            "reason": "Sets Neverwinter Nights 2's mixer to Pro Logic surround sound.",
             "only_if": {
               "speakers": "matrix"
             },
@@ -2524,11 +2527,12 @@
                 }
               }
             },
+            "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
             "tested": true
           },
           {
-            "title": "Enable headphone sound",
-            "reason": "Neverwinter Nights 2 plays in stereo and has no in-game speaker option, so its sound isn't mixed for headphones.",
+            "title": "Enable headphones",
+            "reason": "Sets Neverwinter Nights 2's mixer to headphones.",
             "only_if": {
               "speakers": "headphones"
             },
@@ -2598,7 +2602,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Neverwinter Nights ships with EAX off and its 'DirectSound3D Hardware Support' sound provider, which has no EAX.",
+            "reason": "Automatically enables EAX in Neverwinter Nights' configuration.",
             "changes": {
               "nwn.ini": {
                 "Sound Options": {
@@ -2611,7 +2615,7 @@
           },
           {
             "title": "Enable stereo sound",
-            "reason": "Sets the in-game settings to stereo sound.",
+            "reason": "Sets Neverwinter Nights' mixer to stereo sound.",
             "only_if": {
               "speakers": "stereo"
             },
@@ -2626,7 +2630,7 @@
           },
           {
             "title": "Enable 4.0 surround sound",
-            "reason": "Neverwinter Nights ships set to 2 speakers, so the rear speakers of a 4.0 setup get no sound.",
+            "reason": "Sets Neverwinter Nights' mixer to 4.0 surround sound.",
             "only_if": {
               "speakers": "quad"
             },
@@ -2641,7 +2645,7 @@
           },
           {
             "title": "Enable 5.1 surround sound",
-            "reason": "Neverwinter Nights ships set to 2 speakers, so the rest of a 5.1 speaker setup gets no sound.",
+            "reason": "Sets Neverwinter Nights' mixer to 5.1 surround sound.",
             "only_if": {
               "speakers": [
                 "surround51",
@@ -2659,7 +2663,7 @@
           },
           {
             "title": "Enable 7.1 surround sound",
-            "reason": "Neverwinter Nights ships set to 2 speakers, so the rest of a 7.1 speaker setup gets no sound.",
+            "reason": "Sets Neverwinter Nights' mixer to 7.1 surround sound.",
             "only_if": {
               "speakers": "surround71"
             },
@@ -2673,8 +2677,8 @@
             "tested": true
           },
           {
-            "title": "Enable Pro Logic surround",
-            "reason": "Neverwinter Nights ships set to 2 speakers, so a Pro Logic receiver has no surround information to decode.",
+            "title": "Enable Pro Logic surround sound",
+            "reason": "Sets Neverwinter Nights' mixer to Pro Logic surround sound.",
             "only_if": {
               "speakers": "matrix"
             },
@@ -2685,11 +2689,12 @@
                 }
               }
             },
+            "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
             "tested": true
           },
           {
-            "title": "Enable headphone sound",
-            "reason": "Neverwinter Nights ships set to 2 speakers, so its sound isn't mixed for headphones.",
+            "title": "Enable headphones",
+            "reason": "Sets Neverwinter Nights' mixer to headphones.",
             "only_if": {
               "speakers": "headphones"
             },
@@ -2802,7 +2807,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Planescape: Torment only uses EAX reverb while 'Environmental Audio' is on in its Torment.ini.",
+            "reason": "Automatically enables EAX in Planescape: Torment's configuration.",
             "changes": {
               "Torment.ini": {
                 "Game Options": {
@@ -2871,7 +2876,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Project Eden only uses EAX reverb and 3D hardware sound when its Reverb and hardware mixing options are on.",
+            "reason": "Automatically enables EAX in Project Eden's configuration.",
             "changes": {
               "user.reg": {
                 "Software\\Core Design\\Project Eden\\1.0\\SfxHardware\\Direct Sound\\Primary Sound Driver": {
@@ -2932,7 +2937,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Psychonauts ships with EAX off and has no in-game option to turn it on.",
+            "reason": "Automatically enables EAX in Psychonauts' configuration. The game has no in-game option for this.",
             "changes": {
               "AudioSettings.ini": {
                 "AudioSettings": {
@@ -2991,8 +2996,8 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX effects",
-            "reason": "Quake 4 ships with its EAX sound options off, so there's no reverb and no muffling of sounds through walls.",
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Quake 4's configuration.",
             "changes": {
               "Quake4Config.cfg": {
                 "s_useOpenAL": "1",
@@ -3004,7 +3009,7 @@
           },
           {
             "title": "Enable 5.1 surround sound",
-            "reason": "Quake 4 mixes its sound for two speakers by default.",
+            "reason": "Sets Quake 4's mixer to 5.1 surround sound.",
             "only_if": {
               "speakers": "surround"
             },
@@ -3124,7 +3129,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Requiem only uses EAX when its sound options are set to \"EAX\" instead of \"standard\".",
+            "reason": "Automatically enables EAX in Requiem's configuration.",
             "changes": {
               "latest.cfg": {
                 "0x17": "1"
@@ -3203,8 +3208,8 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX sound effects",
-            "reason": "The game ships with EAX (environmental audio effects) off, so room reverb and similar effects are not used. Turning it on lets OpenAL Soft apply them.",
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in S.T.A.L.K.E.R.: Call of Pripyat's configuration.",
             "changes": {
               "user.ltx": {
                 "snd_device": "OpenAL Soft",
@@ -3277,8 +3282,8 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX sound effects",
-            "reason": "EAX",
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in S.T.A.L.K.E.R.: Clear Sky's configuration.",
             "only_if": {
               "stores": [
                 "gog"
@@ -3427,7 +3432,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "to-do",
+            "reason": "Automatically enables EAX in Shogo's configuration.",
             "changes": {
               "autoexec.cfg": {
                 "3dsoundprovider": "2",
@@ -3475,7 +3480,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Soldier of Fortune II plays its sound through snd_dsx86.dll out of the box, which has no EAX — only snd_alx86.dll does.",
+            "reason": "Automatically enables EAX in Soldier of Fortune II's configuration.",
             "changes": {
               "sof2sp.cfg": {
                 "snd_dll": "al"
@@ -3522,7 +3527,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Soldier of Fortune plays its sound through defsnd.dll out of the box, which has no EAX — only EAXSnd.dll does.",
+            "reason": "Automatically enables EAX in Soldier of Fortune's configuration.",
             "changes": {
               "config.cfg": {
                 "snd_dll": "eaxsnd.dll"
@@ -3564,8 +3569,8 @@
         },
         "audio_settings": [
           {
-            "title": "Enable EAX 3 sound",
-            "reason": "The game's sound driver is not set to EAX out of the box. This sets the Miles driver to EAX 3 and the sample rate to 44 kHz.",
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Star Trek: Elite Force II's configuration. It also sets the sample rate to 44 kHz.",
             "changes": {
               "steamuser.cfg": {
                 "s_khz": "44",
@@ -3575,8 +3580,8 @@
             "tested": true
           },
           {
-            "title": "Enable Stereo speaker mode",
-            "reason": "Sets the in-game setting to stereo sound.",
+            "title": "Enable stereo sound",
+            "reason": "Sets Star Trek: Elite Force II's mixer to stereo sound.",
             "only_if": {
               "speakers": "stereo"
             },
@@ -3588,8 +3593,8 @@
             "tested": true
           },
           {
-            "title": "Enable headphone speaker mode",
-            "reason": "Sets the in-game settings to headphones.",
+            "title": "Enable headphones",
+            "reason": "Sets Star Trek: Elite Force II's mixer to headphones.",
             "only_if": {
               "speakers": "headphones"
             },
@@ -3601,8 +3606,8 @@
             "tested": true
           },
           {
-            "title": "Enable Pro Logic surround",
-            "reason": "Sets the in-game settings to surround sound.",
+            "title": "Enable Pro Logic surround sound",
+            "reason": "Sets Star Trek: Elite Force II's mixer to Pro Logic surround sound.",
             "only_if": {
               "speakers": "matrix"
             },
@@ -3610,11 +3615,12 @@
               "steamuser.cfg": {
                 "s_speaker_type": "2"
               }
-            }
+            },
+            "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic."
           },
           {
             "title": "Enable 4.0 surround sound",
-            "reason": "Sets the in-game settings to Quadrophonic.",
+            "reason": "Sets Star Trek: Elite Force II's mixer to 4.0 surround sound.",
             "only_if": {
               "speakers": "quad"
             },
@@ -3626,7 +3632,7 @@
           },
           {
             "title": "Enable 5.1 surround sound",
-            "reason": "Sets the in-game settings to 5.1 surround sound.",
+            "reason": "Sets Star Trek: Elite Force II's mixer to 5.1 surround sound.",
             "only_if": {
               "speakers": "surround51"
             },
@@ -3638,7 +3644,7 @@
           },
           {
             "title": "Enable 7.1 surround sound",
-            "reason": "Sets the in-game settings to 7.1 surround sound.",
+            "reason": "Sets Star Trek: Elite Force II's mixer to 7.1 surround sound.",
             "only_if": {
               "speakers": "surround71"
             },
@@ -3692,7 +3698,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Jedi Outcast only plays EAX reverb through its OpenAL sound option, which ships off in both single-player and multiplayer.",
+            "reason": "Automatically enables EAX in Jedi Outcast's configuration.",
             "changes": {
               "jk2config.cfg": {
                 "s_UseOpenAL": "1"
@@ -3749,7 +3755,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Jedi Academy only plays EAX reverb through its OpenAL sound option, which ships off in both single-player and multiplayer.",
+            "reason": "Automatically enables EAX in Jedi Academy's configuration.",
             "changes": {
               "jaconfig.cfg": {
                 "s_UseOpenAL": "1"
@@ -3800,7 +3806,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "KOTOR ships with EAX off.",
+            "reason": "Automatically enables EAX in KOTOR's configuration.",
             "changes": {
               "swkotor.ini": {
                 "Sound Options": {
@@ -3901,7 +3907,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Republic Commando turns EAX and 3D sound off on its first launch and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs.",
+            "reason": "Automatically enables EAX in Republic Commando's configuration.",
             "changes": {
               "System.ini": {
                 "ALAudio.ALAudioSubsystem": {
@@ -3980,7 +3986,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "SWAT 4 ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs.",
+            "reason": "Automatically enables EAX in SWAT 4's configuration.",
             "changes": {
               "Swat4.ini": {
                 "ALAudio.ALAudioSubsystem": {
@@ -4130,7 +4136,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "The Wheel of Time only plays its 3D sound through hardware when its hardware 3D sound and spatial sound options are on.",
+            "reason": "Automatically enables EAX in The Wheel of Time's configuration.",
             "changes": {
               "WoT.ini": {
                 "Galaxy.GalaxyAudioSubsystem": {
@@ -4414,7 +4420,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Thief: Deadly Shadows ships with 'Audio Hardware Mixing', 'EAX ADVANCED HD' and 'EAX Multiple Environments' off.",
+            "reason": "Automatically enables EAX in Thief: Deadly Shadows' configuration.",
             "changes": {
               "options.ini": {
                 "UseHWMixing": "1",
@@ -4627,7 +4633,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Splinter Cell ships with EAX and hardware 3D sound off.",
+            "reason": "Automatically enables EAX in Splinter Cell's configuration.",
             "changes": {
               "SplinterCellUser.ini": {
                 "Engine.EPCGameOptions": {
@@ -4828,7 +4834,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "TRON 2.0 only plays EAX reverb with the EAX option in its player profile turned on.",
+            "reason": "Automatically enables EAX in TRON 2.0's configuration.",
             "changes": {
               "Player.txt": {
                 "Sound": {
@@ -4885,7 +4891,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Unreal only plays EAX reverb when its hardware 3D sound, reverb and spatial sound options are all on.",
+            "reason": "Automatically enables EAX in Unreal's configuration.",
             "changes": {
               "Unreal.ini": {
                 "Galaxy.GalaxyAudioSubsystem": {
@@ -4898,8 +4904,8 @@
             "tested": true
           },
           {
-            "title": "Enable Dolby Pro Logic ",
-            "reason": "Turns on Dolby Pro Logic, A compatible AV receiver or Soundbar is required for Surround sound. Dolby Pro Logic is an analog matrix surround-sound codec technology.",
+            "title": "Enable Pro Logic surround sound",
+            "reason": "Sets Unreal's mixer to Pro Logic surround sound.",
             "only_if": {
               "speakers": "matrix"
             },
@@ -5024,7 +5030,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Unreal II ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs. In the game's options, only the EAX part is shown, as 'EAX 3.0 (Audigy only)'.",
+            "reason": "Automatically enables EAX in Unreal II's configuration. In the game's options, only the EAX part is shown, as 'EAX 3.0 (Audigy only)'.",
             "changes": {
               "Unreal2.ini": {
                 "ALAudio.ALAudioSubsystem": {
@@ -5084,7 +5090,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "UT2004 ships with EAX and 3D sound off and loads its bundled DefOpenAL32.dll instead of the OpenAL32.dll this script installs. In the game's options, this is Audio Mode 'H/W 3D + EAX' with System Driver ticked.",
+            "reason": "Automatically enables EAX in UT2004's configuration. In the game's options, this is Audio Mode 'H/W 3D + EAX' with System Driver ticked.",
             "changes": {
               "UT2004.ini": {
                 "ALAudio.ALAudioSubsystem": {
@@ -5138,7 +5144,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Unreal Tournament 3 asks for the 'Generic Software' device of its bundled OpenAL32.dll, so it has no sound with the OpenAL32.dll this script installs. In the game's options, this is 'Hardware OpenAL' ticked.",
+            "reason": "Automatically enables EAX in Unreal Tournament 3's configuration. In the game's options this is 'Hardware OpenAL' ticked, and without it the game has no sound.",
             "changes": {
               "UTEngine.ini": {
                 "ALAudio.ALAudioDevice": {
@@ -5149,8 +5155,8 @@
             "tested": true
           },
           {
-            "title": "Enable Dolby Pro Logic ",
-            "reason": "Turns on Dolby Pro Logic, A compatible AV receiver or Soundbar is required for Surround sound. Dolby Pro Logic is an analog matrix surround-sound codec technology.",
+            "title": "Enable Pro Logic surround sound",
+            "reason": "Sets Unreal Tournament 3's mixer to Pro Logic surround sound.",
             "only_if": {
               "speakers": "matrix"
             },
@@ -5212,7 +5218,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "Unreal Tournament ships with its hardware sound option off, and it only plays EAX reverb with it on.",
+            "reason": "Automatically enables EAX in Unreal Tournament's configuration.",
             "changes": {
               "UnrealTournament.ini": {
                 "Engine.Engine": {
@@ -5227,8 +5233,8 @@
             "tested": false
           },
           {
-            "title": "Enable Dolby Pro Logic ",
-            "reason": "Turns on Dolby Pro Logic, A compatible AV receiver or Soundbar is required for Surround sound. Dolby Pro Logic is an analog matrix surround-sound codec technology.",
+            "title": "Enable Pro Logic surround sound",
+            "reason": "Sets Unreal Tournament's mixer to Pro Logic surround sound.",
             "only_if": {
               "speakers": "matrix"
             },
@@ -5347,7 +5353,7 @@
         "audio_settings": [
           {
             "title": "Enable EAX",
-            "reason": "X-COM: Enforcer only plays EAX reverb when its hardware 3D sound and spatial sound options are on.",
+            "reason": "Automatically enables EAX in X-COM: Enforcer's configuration.",
             "changes": {
               "XCom.ini": {
                 "Galaxy.GalaxyAudioSubsystem": {
@@ -5359,8 +5365,8 @@
             "tested": true
           },
           {
-            "title": "Enable Dolby Pro Logic ",
-            "reason": "Turns on Dolby Pro Logic, A compatible AV receiver or Soundbar is required for Surround sound. Dolby Pro Logic is an analog matrix surround-sound codec technology.",
+            "title": "Enable Pro Logic surround sound",
+            "reason": "Sets X-COM: Enforcer's mixer to Pro Logic surround sound.",
             "only_if": {
               "speakers": "matrix"
             },

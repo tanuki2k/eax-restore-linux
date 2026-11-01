@@ -14,46 +14,47 @@
     },
     "audio_settings": [
       {
-        "title": "Enable EAX 3 sound",
-        "reason": "The game's sound driver is not set to EAX out of the box. This sets the Miles driver to EAX 3 and the sample rate to 44 kHz.",
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in Star Trek: Elite Force II's configuration. It also sets the sample rate to 44 kHz.",
         "changes": { "steamuser.cfg": { "s_khz": "44", "s_milesdriver": "eax3" } },
         "tested": true
       },
       {
-        "title": "Enable Stereo speaker mode",
-        "reason": "Sets the in-game setting to stereo sound.",
+        "title": "Enable stereo sound",
+        "reason": "Sets Star Trek: Elite Force II's mixer to stereo sound.",
         "only_if": { "speakers": "stereo" },
         "changes": { "steamuser.cfg": { "s_speaker_type": "0" } },
         "tested": true
       },
       {
-        "title": "Enable headphone speaker mode",
-        "reason": "Sets the in-game settings to headphones.",
+        "title": "Enable headphones",
+        "reason": "Sets Star Trek: Elite Force II's mixer to headphones.",
         "only_if": { "speakers": "headphones" },
         "changes": { "steamuser.cfg": { "s_speaker_type": "1" } },
         "tested": true
       },
       {
-        "title": "Enable Pro Logic surround",
-        "reason": "Sets the in-game settings to surround sound.",
+        "title": "Enable Pro Logic surround sound",
+        "reason": "Sets Star Trek: Elite Force II's mixer to Pro Logic surround sound.",
         "only_if": { "speakers": "matrix" },
-        "changes": { "steamuser.cfg": { "s_speaker_type": "2" } }
+        "changes": { "steamuser.cfg": { "s_speaker_type": "2" } },
+        "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic."
       },
       {
         "title": "Enable 4.0 surround sound",
-        "reason": "Sets the in-game settings to Quadrophonic.",
+        "reason": "Sets Star Trek: Elite Force II's mixer to 4.0 surround sound.",
         "only_if": { "speakers": "quad" },
         "changes": { "steamuser.cfg": { "s_speaker_type": "3" } }
       },
       {
         "title": "Enable 5.1 surround sound",
-        "reason": "Sets the in-game settings to 5.1 surround sound.",
+        "reason": "Sets Star Trek: Elite Force II's mixer to 5.1 surround sound.",
         "only_if": { "speakers": "surround51" },
         "changes": { "steamuser.cfg": { "s_speaker_type": "4" } }
       },
       {
         "title": "Enable 7.1 surround sound",
-        "reason": "Sets the in-game settings to 7.1 surround sound.",
+        "reason": "Sets Star Trek: Elite Force II's mixer to 7.1 surround sound.",
         "only_if": { "speakers": "surround71" },
         "changes": { "steamuser.cfg": { "s_speaker_type": "5" } }
       }

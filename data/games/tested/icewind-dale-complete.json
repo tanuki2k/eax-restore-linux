@@ -17,7 +17,7 @@
     "audio_settings": [
       {
         "title": "Enable EAX",
-        "reason": "Icewind Dale turns on 'Environmental Audio' by itself the first time it starts.",
+        "reason": "Automatically enables EAX in Icewind Dale's configuration.",
         "changes": { "icewind.ini": { "Game Options": { "Environmental Audio": "1" } } },
         "tested": true
       }

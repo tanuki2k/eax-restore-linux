@@ -26,7 +26,7 @@
     "audio_settings": [
       {
         "title": "Enable EAX",
-        "reason": "Splinter Cell ships with EAX and hardware 3D sound off.",
+        "reason": "Automatically enables EAX in Splinter Cell's configuration.",
         "changes": {
           "SplinterCellUser.ini": {
             "Engine.EPCGameOptions": { "EAX": "True", "Sound3DAcc": "True", "EAX_Capable": "True" }

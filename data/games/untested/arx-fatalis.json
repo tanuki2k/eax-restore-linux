@@ -17,7 +17,7 @@
     "audio_settings": [
       {
         "title": "Enable EAX",
-        "reason": "Arx Fatalis ships with EAX off.",
+        "reason": "Automatically enables EAX in Arx Fatalis' configuration.",
         "changes": { "cfg.ini": { "AUDIO": { "EAX": "1" } } },
         "tested": false
       }

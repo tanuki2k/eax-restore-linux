@@ -14,7 +14,7 @@
     "audio_settings": [
       {
         "title": "Enable EAX",
-        "reason": "TRON 2.0 only plays EAX reverb with the EAX option in its player profile turned on.",
+        "reason": "Automatically enables EAX in TRON 2.0's configuration.",
         "changes": { "Player.txt": { "Sound": { "eaxenabled": "1" } } },
         "tested": false
       }

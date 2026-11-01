@@ -14,7 +14,7 @@
     "audio_settings": [
       {
         "title": "Enable EAX",
-        "reason": "Fallout Tactics starts on Miles' 2D positional audio, so there's no 3D sound and no reverb.",
+        "reason": "Automatically enables EAX in Fallout Tactics' configuration.",
         "changes": { "bos.cfg": { "sound.provider": "Creative Labs EAX 2 (TM)" } },
         "tested": true
       }

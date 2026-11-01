@@ -23,8 +23,8 @@
     },
     "audio_settings": [
       {
-        "title": "Enable EAX effects",
-        "reason": "Quake 4 ships with its EAX sound options off, so there's no reverb and no muffling of sounds through walls.",
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in Quake 4's configuration.",
         "changes": {
           "Quake4Config.cfg": {
             "s_useOpenAL": "1",
@@ -36,7 +36,7 @@
       },
       {
         "title": "Enable 5.1 surround sound",
-        "reason": "Quake 4 mixes its sound for two speakers by default.",
+        "reason": "Sets Quake 4's mixer to 5.1 surround sound.",
         "only_if": { "speakers": "surround" },
         "changes": { "Quake4Config.cfg": { "s_numberOfSpeakers": "6" } },
         "tested": true

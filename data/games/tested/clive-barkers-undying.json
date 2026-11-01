@@ -13,7 +13,7 @@
     "audio_settings": [
       {
         "title": "Enable EAX",
-        "reason": "Clive Barker's Undying only plays EAX reverb when its hardware 3D sound and spatial sound options are on.",
+        "reason": "Automatically enables EAX in Clive Barker's Undying's configuration.",
         "changes": {
           "System.ini": {
             "Galaxy.GalaxyAudioSubsystem": { "Use3dHardware": "True", "UseSpatial": "True" }
@@ -22,8 +22,8 @@
         "tested": true
       },
       {
-        "title": "Enable Dolby Pro Logic",
-        "reason": "Turns on Dolby Pro Logic, A compatible AV receiver or Soundbar is required for Surround sound. Dolby Pro Logic is an analog matrix surround-sound codec technology.",
+        "title": "Enable Pro Logic surround sound",
+        "reason": "Sets Clive Barker's Undying's mixer to Pro Logic surround sound.",
         "only_if": { "speakers": "matrix" },
         "changes": { "System.ini": { "Galaxy.GalaxyAudioSubsystem": { "UseSurround": true } } },
         "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",

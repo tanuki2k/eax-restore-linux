@@ -31,7 +31,7 @@
     "audio_settings": [
       {
         "title": "Enable EAX",
-        "reason": "Thief: Deadly Shadows ships with 'Audio Hardware Mixing', 'EAX ADVANCED HD' and 'EAX Multiple Environments' off.",
+        "reason": "Automatically enables EAX in Thief: Deadly Shadows' configuration.",
         "changes": {
           "options.ini": { "UseHWMixing": "1", "UseEAX": "1", "EAXMultipleEnvironments": "1" }
         },

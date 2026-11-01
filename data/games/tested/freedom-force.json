@@ -16,34 +16,35 @@
     "audio_settings": [
       {
         "title": "Enable EAX",
-        "reason": "Freedom Force starts with its sound driver set to \"any\" instead of \"Creative Labs EAX 2 (TM)\".",
+        "reason": "Automatically enables EAX in Freedom Force's configuration.",
         "changes": { "options.dat": { "0000803f": "Creative Labs EAX 2 (TM)" } },
         "tested": true
       },
       {
         "title": "Enable stereo sound",
-        "reason": "Freedom Force mixes its sound for the speaker layout chosen in its Audio Options, which starts on stereo.",
+        "reason": "Sets Freedom Force's mixer to stereo sound.",
         "only_if": { "speakers": "stereo" },
         "changes": { "options.dat": { "0000803f+46": "0" } },
         "tested": true
       },
       {
-        "title": "Enable headphone sound",
-        "reason": "Freedom Force starts on stereo, so its sound isn't mixed for headphones.",
+        "title": "Enable headphones",
+        "reason": "Sets Freedom Force's mixer to headphones.",
         "only_if": { "speakers": "headphones" },
         "changes": { "options.dat": { "0000803f+46": "1" } },
         "tested": true
       },
       {
-        "title": "Enable Pro Logic surround",
-        "reason": "Freedom Force starts on stereo, so its sound isn't mixed for surround sound.",
+        "title": "Enable Pro Logic surround sound",
+        "reason": "Sets Freedom Force's mixer to Pro Logic surround sound.",
         "only_if": { "speakers": "matrix" },
         "changes": { "options.dat": { "0000803f+46": "2" } },
+        "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
         "tested": true
       },
       {
         "title": "Enable 4.0 surround sound",
-        "reason": "Freedom Force starts on stereo, so it doesn't send sound to four speakers.",
+        "reason": "Sets Freedom Force's mixer to 4.0 surround sound.",
         "only_if": { "speakers": "quad" },
         "changes": { "options.dat": { "0000803f+46": "3" } },
         "tested": true

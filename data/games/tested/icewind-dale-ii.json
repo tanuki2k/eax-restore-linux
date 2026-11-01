@@ -13,7 +13,7 @@
     "audio_settings": [
       {
         "title": "Enable EAX",
-        "reason": "Icewind Dale II ships with 'Environmental Audio' off.",
+        "reason": "Automatically enables EAX in Icewind Dale II's configuration.",
         "changes": { "icewind2.ini": { "Game Options": { "Environmental Audio": "1" } } },
         "tested": true
       }

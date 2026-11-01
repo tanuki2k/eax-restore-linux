@@ -14,7 +14,7 @@
     "audio_settings": [
       {
         "title": "Enable EAX",
-        "reason": "Descent 3's launcher sets the sound mixer to DirectSound instead of 'Creative EAX', so the game plays without reverb.",
+        "reason": "Automatically enables EAX in Descent 3's configuration.",
         "changes": {
           "system.reg": {
             "Software\\Wow6432Node\\Outrage\\Descent3": {

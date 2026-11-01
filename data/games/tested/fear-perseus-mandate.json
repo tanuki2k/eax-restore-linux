@@ -20,8 +20,8 @@
     },
     "audio_settings": [
       {
-        "title": "Enable EAX effects",
-        "reason": "F.E.A.R. Perseus Mandate ships with its hardware sound and EAX options off, so it plays with no EAX reverb.",
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in F.E.A.R. Perseus Mandate's configuration.",
         "changes": { "Profile000.gdb": { "UseHWSound": "1", "UseEAX": "1", "UseEAX4": "1" } },
         "tested": true
       }

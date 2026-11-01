@@ -22,7 +22,7 @@
     "audio_settings": [
       {
         "title": "Enable EAX",
-        "reason": "Alpha Centauri plays 3D sound and EAX effects only when both are switched on in Alpha Centauri.Ini.",
+        "reason": "Automatically enables EAX in Alpha Centauri's configuration.",
         "changes": { "Alpha Centauri.Ini": { "Alpha Centauri": { "ds3d": "1", "eax": "1" } } },
         "tested": true
       }

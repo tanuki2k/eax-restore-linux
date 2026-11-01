@@ -27,7 +27,7 @@
     "audio_settings": [
       {
         "title": "Enable EAX",
-        "reason": "Unreal Tournament ships with its hardware sound option off, and it only plays EAX reverb with it on.",
+        "reason": "Automatically enables EAX in Unreal Tournament's configuration.",
         "changes": {
           "UnrealTournament.ini": {
             "Engine.Engine": { "AudioDevice": "Galaxy.GalaxyAudioSubsystem" },
@@ -37,8 +37,8 @@
         "tested": false
       },
       {
-        "title": "Enable Dolby Pro Logic ",
-        "reason": "Turns on Dolby Pro Logic, A compatible AV receiver or Soundbar is required for Surround sound. Dolby Pro Logic is an analog matrix surround-sound codec technology.",
+        "title": "Enable Pro Logic surround sound",
+        "reason": "Sets Unreal Tournament's mixer to Pro Logic surround sound.",
         "only_if": { "speakers": "matrix" },
         "changes": {
           "UnrealTournament.ini": { "Galaxy.GalaxyAudioSubsystem": { "UseSurround": true } }

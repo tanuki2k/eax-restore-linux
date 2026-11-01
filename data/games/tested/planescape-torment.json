@@ -17,7 +17,7 @@
     "audio_settings": [
       {
         "title": "Enable EAX",
-        "reason": "Planescape: Torment only uses EAX reverb while 'Environmental Audio' is on in its Torment.ini.",
+        "reason": "Automatically enables EAX in Planescape: Torment's configuration.",
         "changes": { "Torment.ini": { "Game Options": { "Environmental Audio": "1" } } },
         "tested": true
       }

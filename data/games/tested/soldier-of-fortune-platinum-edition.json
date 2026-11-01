@@ -16,7 +16,7 @@
     "audio_settings": [
       {
         "title": "Enable EAX",
-        "reason": "Soldier of Fortune plays its sound through defsnd.dll out of the box, which has no EAX — only EAXSnd.dll does.",
+        "reason": "Automatically enables EAX in Soldier of Fortune's configuration.",
         "changes": { "config.cfg": { "snd_dll": "eaxsnd.dll" } },
         "tested": true
       }

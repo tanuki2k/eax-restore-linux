@@ -24,8 +24,8 @@
     },
     "audio_settings": [
       {
-        "title": "Enable EAX sound effects",
-        "reason": "The game ships with EAX (environmental audio effects) off, so room reverb and similar effects are not used. Turning it on lets OpenAL Soft apply them.",
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in S.T.A.L.K.E.R.: Call of Pripyat's configuration.",
         "changes": { "user.ltx": { "snd_device": "OpenAL Soft", "snd_efx": "on" } },
         "tested": true
       }

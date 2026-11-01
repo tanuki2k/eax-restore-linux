@@ -13,7 +13,7 @@
     "audio_settings": [
       {
         "title": "Enable EAX",
-        "reason": "The Wheel of Time only plays its 3D sound through hardware when its hardware 3D sound and spatial sound options are on.",
+        "reason": "Automatically enables EAX in The Wheel of Time's configuration.",
         "changes": {
           "WoT.ini": {
             "Galaxy.GalaxyAudioSubsystem": { "Use3dHardware": "True", "UseSpatial": "True" }
