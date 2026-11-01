@@ -3,9 +3,51 @@
   "name": "Freedom Force",
   "description": "Freedom Force is a singleplayer and multiplayer real-time tactics role-playing game and the first in the Freedom Force series.",
   "released": "2002-03-26",
+  "exe": "fforce.exe",
   "stores": {
     "steam": { "id": 8880 },
     "gog": { "id": 1445250806 }
   },
-  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0"] }
+  "eax": { "api": "directsound3d", "sound_system": "miles", "versions": ["1.0", "2.0"] },
+  "game_config": {
+    "files": {
+      "options.dat": { "format": "lenstr_cfg", "locations": ["game_exe:Data/options.dat"] }
+    },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Freedom Force starts with its sound driver set to \"any\" instead of \"Creative Labs EAX 2 (TM)\".",
+        "changes": { "options.dat": { "0000803f": "Creative Labs EAX 2 (TM)" } },
+        "tested": true
+      },
+      {
+        "title": "Enable stereo sound",
+        "reason": "Freedom Force mixes its sound for the speaker layout chosen in its Audio Options, which starts on stereo.",
+        "only_if": { "speakers": "stereo" },
+        "changes": { "options.dat": { "0000803f+46": "0" } },
+        "tested": true
+      },
+      {
+        "title": "Enable headphone sound",
+        "reason": "Freedom Force starts on stereo, so its sound isn't mixed for headphones.",
+        "only_if": { "speakers": "headphones" },
+        "changes": { "options.dat": { "0000803f+46": "1" } },
+        "tested": true
+      },
+      {
+        "title": "Enable Pro Logic surround",
+        "reason": "Freedom Force starts on stereo, so its sound isn't mixed for surround sound.",
+        "only_if": { "speakers": "matrix" },
+        "changes": { "options.dat": { "0000803f+46": "2" } },
+        "tested": true
+      },
+      {
+        "title": "Enable 4.0 surround sound",
+        "reason": "Freedom Force starts on stereo, so it doesn't send sound to four speakers.",
+        "only_if": { "speakers": "quad" },
+        "changes": { "options.dat": { "0000803f+46": "3" } },
+        "tested": true
+      }
+    ]
+  }
 }
