@@ -1,8 +1,8 @@
 # ==============================================================================
-# TOOLS → GAME SETTINGS ([O]ptional settings / [S]peaker configuration)
+# TOOLS → GAME SETTINGS ([G]ame settings / [S]peaker configuration)
 # ==============================================================================
 # Changes a game this script already installed to, without reinstalling:
-# Optional settings turns the game's optional Game Settings on or off, and
+# Game settings turns the game's audio and optional Game Settings on or off, and
 # Speaker configuration switches the speaker setup in its alsoft.ini plus any
 # Game Settings tied to a speaker layout. Both pick the game from the list of
 # installs, ask everything first, then change things after one "Proceed?".
@@ -17,8 +17,8 @@ if [ -n "$SETTINGS_TOOL_MODE" ]; then
             || { OPEN_TOOLS_MENU=1; continue; }
         STEP_TOTAL=3
     else
-        print_banner "OPTIONAL SETTINGS"
-        tool_gate "This turns a game's optional settings on or off after the EAX fix is installed." \
+        print_banner "GAME SETTINGS"
+        tool_gate "This turns a game's own settings on or off after the EAX fix is installed." \
             "Turning one off puts back the value the game had before." \
             || { OPEN_TOOLS_MENU=1; continue; }
         STEP_TOTAL=2
@@ -134,18 +134,18 @@ if [ -n "$SETTINGS_TOOL_MODE" ]; then
     else
         GAME_SETTINGS_RECORDED=()
         for settings_title in "${settings_titles[@]}"; do
-            [ "${settings_cat[$settings_title]}" == "optional" ] && GAME_SETTINGS_RECORDED[$settings_title]="${settings_lines[$settings_title]}"
+            GAME_SETTINGS_RECORDED[$settings_title]="${settings_lines[$settings_title]}"
         done
-        settings_optional=0
+        settings_audio=0; settings_optional=0
         if current_profile; then
-            read -r _ settings_optional <<< "$(count_game_settings "$KG_ID" "$KG_STORE")"
+            read -r settings_audio settings_optional <<< "$(count_game_settings "$KG_ID" "$KG_STORE")"
         fi
-        if [ "${settings_optional:-0}" -eq 0 ]; then
-            print_note "${GAME_NAME} has no optional settings."
+        if [ $(( ${settings_audio:-0} + ${settings_optional:-0} )) -eq 0 ]; then
+            print_note "${GAME_NAME} has no game settings to change."
             OPEN_TOOLS_MENU=1
             continue
         fi
-        GAME_SETTINGS_EDIT_OPTIONAL=1 game_settings_step 2
+        GAME_SETTINGS_EDIT=1 game_settings_step 2
         if [ -n "$GAME_SETTINGS_CANCELLED" ]; then
             print_result "Nothing was changed." "$YELLOW"
             OPEN_TOOLS_MENU=1
@@ -215,7 +215,7 @@ if [ -n "$SETTINGS_TOOL_MODE" ]; then
     if [ "$SETTINGS_TOOL_MODE" == "speakers" ]; then
         print_banner "SPEAKER CONFIGURATION CHANGED"
     else
-        print_banner "OPTIONAL SETTINGS CHANGED"
+        print_banner "GAME SETTINGS CHANGED"
     fi
     print_game_settings_summary
     exit 0

@@ -20,7 +20,7 @@ This phase chooses what gets installed.
 
 **The engine.** For most games this is kcat's DSOAL together with OpenAL Soft. A handful of games use OpenAL themselves and only need OpenAL Soft swapped in. When phase 1 already settled which one the game uses, the script doesn't ask.
 
-**The builds.** You pick Stable, Latest, or each separately. Stable is a DSOAL revision that has been tested with this script, plus OpenAL Soft's newest release. Latest is DSOAL's newest build plus OpenAL Soft's rolling pre-release. Stable is the default. Only the builds you pick are downloaded, and each download is checked against its SHA256, so a corrupt or tampered file is caught. Downloads are cached, so installing to a second game doesn't fetch them again.
+**The builds.** You pick Stable, Latest, or each separately. Stable is a DSOAL revision that has been tested with this script, plus OpenAL Soft's newest release. Latest is DSOAL's newest build plus OpenAL Soft's rolling pre-release. Latest is the default, unless it can't be downloaded and isn't cached. Only the builds you pick are downloaded, and each download is checked against its SHA256, so a corrupt or tampered file is caught. Downloads are cached, so installing to a second game doesn't fetch them again.
 
 **The VC++ runtime.** Older Proton and Wine builds need Microsoft's VC++ 2022 runtime before they can load DSOAL and OpenAL Soft. The script checks whether the prefix has it and offers to install it through winetricks or protontricks. If those fail, it downloads it from Microsoft directly. It checks that the DLLs are really there afterwards, because the exit codes of those tools can't be trusted.
 
@@ -48,11 +48,13 @@ The manifest is what makes the uninstall safe. The script removes only what is l
 
 The main menu has a Tools submenu for after the install.
 
-**Optional settings** turns a game's optional settings on or off again. **Speaker configuration** changes the speaker setup, along with any of the game's own settings that depend on it, like BioShock's speaker mode. Both work on games this script has installed to, and uninstall still restores the original values.
+**Game settings** turns a game's settings on or off again, like the EAX options in its own config files and any optional settings. **Speaker configuration** changes the speaker setup, along with any of the game's own settings that depend on it, like BioShock's speaker mode. Both work on games this script has installed to, and uninstall still restores the original values.
 
 **DSOAL logging** turns DSOAL's own log on or off for a game, so you don't edit launch options by hand. It's mainly for bug reports. See [Troubleshooting](troubleshooting.md#dsoal-logging).
 
 **VC++ install** installs the VC++ runtime into a game's prefix without a full install, which helps if you skipped it the first time.
+
+**EAX Unified install** puts Creative's EAX Unified into a game's prefix without a full install, for a game that looks for Creative's `eax.dll`. Uninstall removes it again.
 
 **Browse game profiles** opens a searchable list of every game in the database. The profile of the selected game appears next to the list, the same screen the install shows when you pick that game. It covers every store the game is sold on and shows where Steam and GOG differ.
 

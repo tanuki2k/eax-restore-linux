@@ -63,8 +63,8 @@
 #   Heroic environment variables (merged with what's already there), or in the
 #   Wine registry — tracked so uninstall can put it back automatically.
 #
-# * Change an installed game: Tools → [O]ptional settings turns its optional
-#   game settings on or off, and [S]peaker configuration switches its speaker
+# * Change an installed game: Tools → [G]ame settings turns its audio and
+#   optional game settings on or off, and [S]peaker configuration switches its speaker
 #   setup and the game settings that go with it, without reinstalling.
 #
 # * DSOAL Logging: Tools → [D]SOAL logging turns DSOAL's own log on or off
@@ -72,6 +72,9 @@
 #   Heroic environment variables), writing dsoal.log to the game folder, plus
 #   OpenAL Soft's own log (ALSOFT_LOGLEVEL/ALSOFT_LOGFILE, openal.log); a game
 #   with OpenAL Soft alone gets only the latter.
+#
+# * EAX Unified: Tools → [E]AX Unified install puts Creative's EAX Unified into a
+#   game's prefix without a full install, recorded so uninstall removes it.
 #
 # * Hybrid Dependencies: Falls back to a direct Microsoft download for the
 #   VC++ 2022 Redistributable when winetricks/protontricks fails, verifying
@@ -113,7 +116,7 @@
 #   file (one line per prompt, lines starting with # ignored) instead of the
 #   terminal, so a run can go unattended. Used by tools/profiler.
 #
-# * EAX_RESTORE_ACTION=install|uninstall|optional-settings|speakers|vcrun|dsoal-log
+# * EAX_RESTORE_ACTION=install|uninstall|game-settings|speakers|vcrun|dsoal-log|eax-unified
 #   Runs that one action without showing the main menu, for a program with its
 #   own menu (the TUI). The script ends where it would have gone back to a menu.
 #   EAX_RESTORE_GAME_DIR=/path/to/game/exe/folder answers the "where is the game"

@@ -10,5 +10,16 @@
   "eax": { "api": "directsound3d", "versions": ["1.0", "2.0"] },
   "install": {
     "tweaks": ["eax_unified"]
+  },
+  "game_config": {
+    "files": { "config.cfg": { "format": "idtech_cfg", "locations": ["game_exe:user/config.cfg"] } },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Soldier of Fortune plays its sound through defsnd.dll out of the box, which has no EAX — only EAXSnd.dll does.",
+        "changes": { "config.cfg": { "snd_dll": "eaxsnd.dll" } },
+        "tested": true
+      }
+    ]
   }
 }

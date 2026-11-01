@@ -174,12 +174,12 @@ GAME_SETTINGS_KEPT=()
 # Uninstall: the game settings chosen in Phase 1 to put back in Phase 2
 # (see choose_game_settings_to_revert), and whether to remove the VC++ runtime.
 GAME_SETTINGS_REVERT_GROUPS=()
-# Tools → Optional settings: each setting this script applied (by title) → its
+# Tools → Game settings: each setting this script applied (by title) → its
 # manifest CONFIG lines, newline-joined. See game_settings_step.
 declare -A GAME_SETTINGS_RECORDED=()
 # Set by game_settings_step once it has printed its step heading.
 GAME_SETTINGS_STEP_SHOWN=""
-# Set by game_settings_step when Esc cancels Tools → Optional settings' tick list.
+# Set by game_settings_step when Esc cancels Tools → Game settings' tick list.
 GAME_SETTINGS_CANCELLED=""
 UNINSTALL_VCRUN="n"
 
@@ -223,11 +223,14 @@ MAIN_MENU_SHOWN=""
 # main-menu loop opens the Tools menu instead of the main menu.
 OPEN_TOOLS_MENU=""
 
+# Set by Tools → [E]AX Unified install (or EAX_RESTORE_ACTION=eax-unified).
+EAX_UNIFIED_MODE=""
+
 # Set by scan_game_libraries when the player picks the list's [M]anually
 # ("manual") or [R]eturn ("return") instead of a game.
 SCAN_NEXT=""
 
-# Which Tools → Game settings item is running: "optional" (Optional settings)
+# Which Tools → Game settings item is running: "optional" (Game settings)
 # or "speakers" (Speaker configuration), empty otherwise. See settings-flow.sh.
 SETTINGS_TOOL_MODE=""
 

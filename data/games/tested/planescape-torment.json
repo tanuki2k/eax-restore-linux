@@ -3,6 +3,7 @@
   "name": "Planescape: Torment",
   "description": "Planescape: Torment is a singleplayer isometric role-playing game.",
   "released": "1999-12-10",
+  "exe": "Torment.exe",
   "stores": {
     "gog": {
       "id": 1207658887,
@@ -11,6 +12,17 @@
     }
   },
   "eax": { "api": "directsound3d", "versions": ["1.0"] },
+  "game_config": {
+    "files": { "Torment.ini": { "format": "ini", "locations": ["game_exe:Torment.ini"] } },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Planescape: Torment only uses EAX reverb while 'Environmental Audio' is on in its Torment.ini.",
+        "changes": { "Torment.ini": { "Game Options": { "Environmental Audio": "1" } } },
+        "tested": true
+      }
+    ]
+  },
   "sources": [
     {
       "title": "GOG forum: Planescape: Torment: Enhanced Edition announcement",

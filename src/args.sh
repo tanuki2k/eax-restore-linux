@@ -39,8 +39,8 @@ prompts is done via environment variables:
                                       (left out otherwise)
   EAX_RESTORE_ANSWERS_FILE=PATH       Read the answers to every prompt from a file
   EAX_RESTORE_ACTION=NAME             Run one action without the main menu: install,
-                                      uninstall, optional-settings, speakers, vcrun
-                                      or dsoal-log
+                                      uninstall, game-settings, speakers, vcrun,
+                                      dsoal-log or eax-unified
   EAX_RESTORE_GAME_DIR=PATH           The game's .exe folder, instead of asking for it
   EAX_RESTORE_GAME=STORE:ID           For an install, pick this game from the library
                                       scan (steam:2210, gog:1207658936)

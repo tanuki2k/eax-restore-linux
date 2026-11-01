@@ -654,10 +654,11 @@ print_key_option() {
 
 # Usage: return_menu_label
 # Where a flow's [R]eturn option goes: "Tools menu" inside a tool (Optional
-# settings, Speaker configuration, VC++ install, DSOAL logging), "main menu"
+# settings, Speaker configuration, VC++ install, DSOAL logging, EAX Unified install), "main menu"
 # otherwise.
 return_menu_label() {
-    if [ -n "${SETTINGS_TOOL_MODE:-}" ] || [ -n "${DSOAL_LOG_MODE:-}" ] || [ "${VCRUN_ONLY_MODE:-}" == "menu" ]; then
+    if [ -n "${SETTINGS_TOOL_MODE:-}" ] || [ -n "${DSOAL_LOG_MODE:-}" ] \
+        || [ -n "${EAX_UNIFIED_MODE:-}" ] || [ "${VCRUN_ONLY_MODE:-}" == "menu" ]; then
         printf 'Tools menu'
     else
         printf 'main menu'
@@ -671,7 +672,7 @@ return_menu_label() {
 # from.
 wants_installed_list() {
     [ "$SCRIPT_ACTION" == "u" ] || [ -n "${SETTINGS_TOOL_MODE:-}" ] \
-        || [ -n "${DSOAL_LOG_MODE:-}" ] || [ "${VCRUN_ONLY_MODE:-}" == "menu" ]
+        || [ -n "${DSOAL_LOG_MODE:-}" ] || [ -n "${EAX_UNIFIED_MODE:-}" ] || [ "${VCRUN_ONLY_MODE:-}" == "menu" ]
 }
 
 # Usage: tool_gate "line" ["line" ...] || { OPEN_TOOLS_MENU=1; continue; }

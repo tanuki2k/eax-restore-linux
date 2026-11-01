@@ -8,10 +8,11 @@ use crate::library::StoreKind;
 pub enum Action {
     Install,
     Reinstall,
-    OptionalSettings,
+    GameSettings,
     Speakers,
     DsoalLog,
     Vcrun,
+    EaxUnified,
     Uninstall,
 }
 
@@ -20,10 +21,11 @@ impl Action {
         match self {
             Action::Install => "Install the EAX fix",
             Action::Reinstall => "Install again",
-            Action::OptionalSettings => "Change optional settings",
+            Action::GameSettings => "Change game settings",
             Action::Speakers => "Change speaker configuration",
             Action::DsoalLog => "Turn logging for the EAX fix on or off",
             Action::Vcrun => "Install the VC++ runtime",
+            Action::EaxUnified => "Install EAX Unified",
             Action::Uninstall => "Uninstall the EAX fix",
         }
     }
@@ -32,10 +34,11 @@ impl Action {
     fn script_name(self) -> &'static str {
         match self {
             Action::Install | Action::Reinstall => "install",
-            Action::OptionalSettings => "optional-settings",
+            Action::GameSettings => "game-settings",
             Action::Speakers => "speakers",
             Action::DsoalLog => "dsoal-log",
             Action::Vcrun => "vcrun",
+            Action::EaxUnified => "eax-unified",
             Action::Uninstall => "uninstall",
         }
     }
@@ -47,14 +50,15 @@ pub fn available(e: &Entry) -> Vec<Action> {
         Status::NotOnThisPc | Status::OnThisPc => vec![Action::Install],
         Status::Installed | Status::Manual => {
             let mut v = vec![Action::Reinstall];
-            // The optional settings come from the game's database profile.
+            // The game settings come from the game's database profile.
             if e.game.is_some() {
-                v.push(Action::OptionalSettings);
+                v.push(Action::GameSettings);
             }
             v.extend([
                 Action::Speakers,
                 Action::DsoalLog,
                 Action::Vcrun,
+                Action::EaxUnified,
                 Action::Uninstall,
             ]);
             v
@@ -128,7 +132,7 @@ mod tests {
         ));
         assert_eq!(a.first(), Some(&Action::Reinstall));
         assert_eq!(a.last(), Some(&Action::Uninstall));
-        assert!(a.contains(&Action::OptionalSettings));
+        assert!(a.contains(&Action::GameSettings));
     }
 
     #[test]
@@ -136,7 +140,7 @@ mod tests {
         let mut e = entry(Status::Manual, None, Some("/g"));
         e.game = None;
         let a = available(&e);
-        assert!(!a.contains(&Action::OptionalSettings));
+        assert!(!a.contains(&Action::GameSettings));
         assert!(a.contains(&Action::Uninstall));
     }
 
@@ -171,9 +175,10 @@ mod tests {
             (Action::Uninstall, "uninstall"),
             (Action::Speakers, "speakers"),
             (Action::Reinstall, "install"),
-            (Action::OptionalSettings, "optional-settings"),
+            (Action::GameSettings, "game-settings"),
             (Action::Vcrun, "vcrun"),
             (Action::DsoalLog, "dsoal-log"),
+            (Action::EaxUnified, "eax-unified"),
         ] {
             let env = script_env(&e, a);
             assert_eq!(get(&env, "EAX_RESTORE_ACTION"), Some(name));

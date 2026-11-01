@@ -868,6 +868,7 @@
       "name": "Condemned: Criminal Origins",
       "description": "Condemned: Criminal Origins is a singleplayer first-person survival horror and action game and the first in the Condemned series.",
       "released": "2006-04-11",
+      "exe": "Condemned.exe",
       "stores": {
         "steam": {
           "id": 4720,
@@ -888,7 +889,29 @@
           "eax_unified"
         ]
       },
-      "tested": false
+      "game_config": {
+        "files": {
+          "Profile000.gdb": {
+            "format": "gadb",
+            "locations": [
+              "prefix_public_documents:Monolith Productions/Condemned/Profiles/Profile000.gdb"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX effects",
+            "reason": "Condemned ships with its hardware sound and EAX options off, so it plays with no EAX reverb.",
+            "changes": {
+              "Profile000.gdb": {
+                "UseHWSound": "1",
+                "UseEAX": "1",
+                "UseEAX4": "1"
+              }
+            }
+          }
+        ]
+      }
     },
     {
       "id": "descent-3",
@@ -1870,6 +1893,7 @@
       "name": "Hidden & Dangerous 2",
       "description": "Hidden & Dangerous 2 is a singleplayer and multiplayer first- and third-person tactical shooter game and the second in the Hidden & Dangerous series.",
       "released": "2003-10-23",
+      "exe": "hd2.exe",
       "stores": {
         "steam": {
           "id": 703320
@@ -1883,8 +1907,7 @@
         "versions": [
           "3.0"
         ]
-      },
-      "tested": false
+      }
     },
     {
       "id": "icewind-dale-complete",
@@ -2437,10 +2460,30 @@
       "notes": "If you also own the classic Neverwinter Nights, it's a separate GOG purchase, 'Neverwinter Nights Diamond', and that one has EAX."
     },
     {
-      "id": "outcast",
-      "name": "Outcast",
-      "description": "Outcast is a singleplayer third-person action-adventure game and the first in the Outcast series.",
-      "released": "1999-06-25",
+      "id": "outcast-second-contact",
+      "name": "Outcast - Second Contact",
+      "description": "Outcast - Second Contact is a singleplayer third-person action-adventure game, a remake of 1999's Outcast.",
+      "released": "2017-11-14",
+      "stores": {
+        "steam": {
+          "id": 618970
+        },
+        "gog": {
+          "id": 2109390794
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "status": "not_implemented",
+        "problem": "This is the 2017 remake, not the original 1999 Outcast, and it has no EAX."
+      },
+      "notes": "The original 1999 Outcast supports EAX."
+    },
+    {
+      "id": "outcast-1-1",
+      "name": "Outcast 1.1",
+      "description": "Outcast 1.1 is a singleplayer third-person action-adventure game, an enhanced edition of 1999's Outcast, recompiled from the original source code and improved to run smoothly on today's computers.",
+      "released": "2014-12-18",
       "stores": {
         "steam": {
           "id": 336610
@@ -2451,18 +2494,17 @@
       },
       "eax": {
         "api": "directsound3d",
-        "versions": [
-          "1.0"
-        ]
+        "status": "not_implemented",
+        "problem": "This is the 2014 Outcast 1.1, not the original 1999 Outcast, and it has no EAX."
       },
-      "notes": "This is the 'Outcast 1.1' listing — a 2014 official update to the classic 1999 game. 2017's 'Outcast: Second Contact' and 2024's 'Outcast: A New Beginning' are separate games.",
-      "tested": false
+      "notes": "The original 1999 Outcast supports EAX, and GOG includes it as a separate download among the extras."
     },
     {
       "id": "planescape-torment",
       "name": "Planescape: Torment",
       "description": "Planescape: Torment is a singleplayer isometric role-playing game.",
       "released": "1999-12-10",
+      "exe": "Torment.exe",
       "stores": {
         "gog": {
           "id": 1207658887,
@@ -2476,13 +2518,56 @@
           "1.0"
         ]
       },
+      "game_config": {
+        "files": {
+          "Torment.ini": {
+            "format": "ini",
+            "locations": [
+              "game_exe:Torment.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Planescape: Torment only uses EAX reverb while 'Environmental Audio' is on in its Torment.ini.",
+            "changes": {
+              "Torment.ini": {
+                "Game Options": {
+                  "Environmental Audio": "1"
+                }
+              }
+            },
+            "tested": true
+          }
+        ]
+      },
       "sources": [
         {
           "title": "GOG forum: Planescape: Torment: Enhanced Edition announcement",
           "url": "https://www.gog.com/forum/planescape_torment/planescape_torment_enhanced_edition_1"
         }
-      ],
-      "tested": false
+      ]
+    },
+    {
+      "id": "planescape-torment-enhanced-edition",
+      "name": "Planescape: Torment: Enhanced Edition",
+      "description": "Planescape: Torment: Enhanced Edition is a singleplayer isometric role-playing game, an enhanced edition of 1999's Planescape: Torment.",
+      "released": "2017-04-11",
+      "stores": {
+        "steam": {
+          "id": 466300
+        },
+        "gog": {
+          "id": 1203613131
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "status": "not_implemented",
+        "problem": "This is the Enhanced Edition, not the original Planescape: Torment, and it has no EAX."
+      },
+      "notes": "If you still own the original 1999 Planescape: Torment, which GOG stopped selling on its own in April 2017, that one still supports EAX."
     },
     {
       "id": "project-eden",
@@ -3093,7 +3178,28 @@
           "eax_unified"
         ]
       },
-      "tested": false
+      "game_config": {
+        "files": {
+          "config.cfg": {
+            "format": "idtech_cfg",
+            "locations": [
+              "game_exe:user/config.cfg"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Soldier of Fortune plays its sound through defsnd.dll out of the box, which has no EAX — only EAXSnd.dll does.",
+            "changes": {
+              "config.cfg": {
+                "snd_dll": "eaxsnd.dll"
+              }
+            },
+            "tested": true
+          }
+        ]
+      }
     },
     {
       "id": "star-trek-elite-force-ii",
@@ -3569,8 +3675,7 @@
           "url": "https://github.com/kcat/openal-soft/issues/1333"
         }
       ],
-      "notes": "With EAX on, SWAT 4's radio chatter at the start of an instant action mission is silent. Setting UseDefaultDriver to True in Swat4.ini brings it back, but turns EAX off.",
-      "tested": false
+      "notes": "With EAX on, the radio chatter at the start of an instant action mission is silent in the Stable build, but the Latest build fixes it."
     },
     {
       "id": "system-shock-2",

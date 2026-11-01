@@ -44,7 +44,7 @@ uninstall_rest() { uninstall_answers "$BATS_TEST_TMPDIR/full"; tail -n +3 "$BATS
         "EAX_RESTORE_GAME_DATABASE_FILE='$BATS_TEST_TMPDIR/none.json' '$REPO_ROOT/dist/eax-restore-linux.sh' < '$BATS_TEST_TMPDIR/in'"
     [ "$status" -eq 1 ]
     [[ "$output" == *"EAX_RESTORE_ACTION is set to 'bogus', which isn't one of install,"* ]]
-    [[ "$output" == *"uninstall, optional-settings, speakers, vcrun or dsoal-log."* ]]
+    [[ "$output" == *"uninstall, game-settings, speakers, vcrun, dsoal-log or eax-unified."* ]]
 }
 
 @test "a tool that is declined ends the run instead of showing the Tools menu" {
@@ -99,4 +99,21 @@ uninstall_rest() { uninstall_answers "$BATS_TEST_TMPDIR/full"; tail -n +3 "$BATS
     answers "$BATS_TEST_TMPDIR/in" "" s n
     EAX_RESTORE_ACTION=install EAX_RESTORE_GAME="steam:5" run_script "$BATS_TEST_TMPDIR/in"
     plain | grep -q "Scan your libraries, knowing" || { tail -20 "$OUT"; false; }
+}
+
+@test "ACTION=eax-unified declined at the gate ends the run without touching the game" {
+    answers "$BATS_TEST_TMPDIR/in" n
+    EAX_RESTORE_ACTION=eax-unified EAX_RESTORE_GAME_DIR="$GAME" run_script "$BATS_TEST_TMPDIR/in"
+    plain | grep -q "EAX UNIFIED"
+    ! plain | grep -q "What would you like to do"
+    [ ! -e "$GAME/.eax-restore-manifest.txt" ]
+}
+
+@test "ACTION=eax-unified with EAX Unified already in the prefix installs nothing and writes no manifest" {
+    printf 'MZ EAX Unified Interface' > "$PREFIX/drive_c/windows/syswow64/eax.dll"
+    answers "$BATS_TEST_TMPDIR/in" "" "" "" "" "" ""
+    EAX_RESTORE_ACTION=eax-unified EAX_RESTORE_GAME_DIR="$GAME" run_script "$BATS_TEST_TMPDIR/in"
+    plain | grep -q "already in .*prefix"
+    ! grep -q "wine" "$STUB_LOG"
+    [ ! -e "$GAME/.eax-restore-manifest.txt" ]
 }

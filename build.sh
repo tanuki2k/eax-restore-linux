@@ -31,6 +31,7 @@ COMPONENTS=(
     preflight.sh
     vcrun-only-flow.sh
     dsoal-log-flow.sh
+    eax-unified-flow.sh
     settings-flow.sh
     uninstall-flow.sh
     config-flow.sh

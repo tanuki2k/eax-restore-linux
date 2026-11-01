@@ -252,7 +252,7 @@ their execution order in the assembled script):
    questions), `speaker_alsoft_values` (answers → alsoft.ini values),
    `speaker_label` and `speaker_config_from_alsoft` (reads them back). The Tools
    items change an installed game through `game_settings_step`'s two modes
-   (`GAME_SETTINGS_SPEAKERS_ONLY`, `GAME_SETTINGS_EDIT_OPTIONAL`) and
+   (`GAME_SETTINGS_SPEAKERS_ONLY`, `GAME_SETTINGS_EDIT`) and
    `update_game_settings_in_manifest`, which puts settings back and rewrites the
    manifest the way a reinstall does.
 10. **`launcher-config.sh`** — Phase 2 step 5's DLL override via the launcher: reads and
@@ -299,7 +299,8 @@ their execution order in the assembled script):
 15. **`preflight.sh`** through **`install-flow.sh`** — top-level script flow:
     pre-flight dependency check, the main menu and the `EAX_RESTORE_VCRUN_ONLY`
     early-exit path (`vcrun-only-flow.sh`), Tools → DSOAL logging
-    (`dsoal-log-flow.sh`, another early exit), Tools → Optional settings /
+    (`dsoal-log-flow.sh`, another early exit), Tools → EAX Unified install
+    (`eax-unified-flow.sh`, the same), Tools → Game settings /
     Speaker configuration (`settings-flow.sh`, which identifies the game from
     its own folder with `identify_game_dir` and the prefix from the manifest,
     so it has no launcher step), `ACTION: UNINSTALL`, `ACTION: INSTALL`. The `ACTION: INSTALL` block itself
@@ -313,7 +314,7 @@ their execution order in the assembled script):
     (`break; done`) at the bottom of `install-flow.sh` lets install step 1 go
     back to the main menu: when the menu was shown (`MAIN_MENU_SHOWN`), a "no"
     while picking a game sets `RESTART_REQUESTED` and the steps 1-2 loop does
-    `continue 2`. Uninstall, VC++ runtime install and DSOAL logging keep step
+    `continue 2`. Uninstall, VC++ runtime install, DSOAL logging and EAX Unified install keep step
     1's own menu, which then offers "[R]eturn to the main menu" the same way.
     The Tools items go back to the Tools menu instead (`OPEN_TOOLS_MENU`, set
     before each way out short of finishing; their [R]eturn label comes from

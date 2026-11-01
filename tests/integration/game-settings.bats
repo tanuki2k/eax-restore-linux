@@ -5,6 +5,8 @@
 
 load env
 
+plain() { sed 's/\x1b\[[0-9;]*m//g' "$OUT"; }
+
 setup() {
     [ -x "$REPO_ROOT/dist/eax-restore-linux.sh" ] || skip "run ./build.sh first"
     make_profile_world
@@ -127,4 +129,28 @@ two_copies_world() {
     install_profile
     [ "$(grep -c "Test Game/settings.ini" "$OUT")" -ge 1 ]
     grep -q "Roaming/Test/settings.ini" "$OUT"
+}
+
+# Tools → Game settings lists the audio and the optional settings in one tick
+# list; the answers are the gate's "Continue?", the numbers to keep on, and the
+# final "Proceed?".
+@test "Tools → Game settings turns the audio setting off and on again" {
+    install_profile
+    answers "$BATS_TEST_TMPDIR/off" y 2 y
+    EAX_RESTORE_ACTION=game-settings EAX_RESTORE_GAME_DIR="$GAME" run_script "$BATS_TEST_TMPDIR/off"
+    plain | grep -q "Enable EAX effects (Active)" || { tail -40 "$OUT"; false; }
+    [ "$(config_get_ini Audio UseEAX)" == "0" ]
+    [ "$(config_get_ini Video SkipIntro)" == "1" ]
+    ! grep -q "^CONFIG:audio" "$GAME/.eax-restore-manifest.txt"
+    answers "$BATS_TEST_TMPDIR/on" y "1 2" y
+    EAX_RESTORE_ACTION=game-settings EAX_RESTORE_GAME_DIR="$GAME" run_script "$BATS_TEST_TMPDIR/on"
+    [ "$(config_get_ini Audio UseEAX)" == "1" ]
+    grep -P "^CONFIG:audio\tEnable EAX effects\t.*\tAudio\tUseEAX\t0\t1$" "$GAME/.eax-restore-manifest.txt"
+}
+
+@test "the old optional-settings action name still opens Game settings" {
+    install_profile
+    answers "$BATS_TEST_TMPDIR/in" n
+    EAX_RESTORE_ACTION=optional-settings EAX_RESTORE_GAME_DIR="$GAME" run_script "$BATS_TEST_TMPDIR/in"
+    plain | grep -q "GAME SETTINGS"
 }

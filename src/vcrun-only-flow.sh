@@ -35,7 +35,7 @@ ACTION_FROM_ENV_DONE=""
 # game database, then the runtime helpers, each group under its own heading.
 # Sets the chosen tool's mode, or shows the SELECT OPERATION banner again for
 # [R]eturn to the main menu.
-# [O]ptional settings is left out when the game database is missing, since
+# [G]ame settings is left out when the game database is missing, since
 # the settings come from the game's profile in it, and so is [B]rowse, which
 # also needs a terminal for fzf. [B]rowse runs right here and comes back to
 # this menu, since it doesn't pick a game.
@@ -46,7 +46,7 @@ tools_menu() {
         tool_keys=()
         print_result "Game settings:"
         if [ -n "$GAME_DATABASE_FILE" ]; then
-            print_key_option "[O]ptional settings"; tool_keys+=(o)
+            print_key_option "[G]ame settings"; tool_keys+=(g)
         fi
         print_key_option "[S]peaker configuration"; tool_keys+=(s)
         if [ -n "$GAME_DATABASE_FILE" ] && interactive_tty; then
@@ -56,19 +56,21 @@ tools_menu() {
         print_result "Runtime:"
         print_key_option "[V]C++ install"
         print_key_option "[D]SOAL logging"
+        print_key_option "[E]AX Unified install"
         echo ""
         print_key_option "[R]eturn to the main menu"
-        tool_keys+=(v d r)
+        tool_keys+=(v d e r)
         prompt "Selection [$(IFS=/; echo "${tool_keys[*]}")]: "
         read_answer menu_choice || exit 0
         menu_choice="${menu_choice,,}"
         [ -z "$menu_choice" ] || [[ " ${tool_keys[*]} " == *" $menu_choice "* ]] || menu_choice="?"
         case "$menu_choice" in
-            o) SETTINGS_TOOL_MODE="optional"; return ;;
+            g) SETTINGS_TOOL_MODE="optional"; return ;;
             s) SETTINGS_TOOL_MODE="speakers"; return ;;
             b) browse_game_database_tool ;;
             v) VCRUN_ONLY_MODE="menu"; return ;;
             d) DSOAL_LOG_MODE=1; return ;;
+            e) EAX_UNIFIED_MODE=1; return ;;
             r|"") print_banner "SELECT OPERATION"; return ;;
             *) print_result "That's not a valid option — please type $(join_choices "${tool_keys[@]}")." "$YELLOW" ;;
         esac
@@ -105,6 +107,7 @@ while true; do
 [ -n "$ACTION_FROM_ENV_DONE" ] && exit 0
 VCRUN_ONLY_MODE=""
 DSOAL_LOG_MODE=""
+EAX_UNIFIED_MODE=""
 SETTINGS_TOOL_MODE=""
 LOCATE_METHOD=""
 RESTART_REQUESTED=""
@@ -117,13 +120,14 @@ else
         case "$EAX_RESTORE_ACTION" in
             install) SCRIPT_ACTION="i" ;;
             uninstall) SCRIPT_ACTION="u" ;;
-            optional-settings) SETTINGS_TOOL_MODE="optional" ;;
+            game-settings|optional-settings) SETTINGS_TOOL_MODE="optional" ;;
             speakers) SETTINGS_TOOL_MODE="speakers" ;;
             vcrun) VCRUN_ONLY_MODE="menu" ;;
             dsoal-log) DSOAL_LOG_MODE=1 ;;
+            eax-unified) EAX_UNIFIED_MODE=1 ;;
             *)
                 print_error "EAX_RESTORE_ACTION is set to '$EAX_RESTORE_ACTION', which isn't one of install," \
-                    "uninstall, optional-settings, speakers, vcrun or dsoal-log."
+                    "uninstall, game-settings, speakers, vcrun, dsoal-log or eax-unified."
                 exit 1
                 ;;
         esac
@@ -143,7 +147,7 @@ else
         SCRIPT_ACTION=""
         MAIN_MENU_SHOWN=1
         while [ -z "$SCRIPT_ACTION" ] && [ -z "$VCRUN_ONLY_MODE" ] && [ -z "$DSOAL_LOG_MODE" ] \
-            && [ -z "$SETTINGS_TOOL_MODE" ]; do
+            && [ -z "$EAX_UNIFIED_MODE" ] && [ -z "$SETTINGS_TOOL_MODE" ]; do
             # A tool left without finishing comes back to the Tools menu.
             if [ -n "$OPEN_TOOLS_MENU" ]; then
                 OPEN_TOOLS_MENU=""

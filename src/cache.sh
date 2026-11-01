@@ -329,14 +329,16 @@ choose_builds() {
     # One component's Stable/Latest question; sets ASKED_BUILD. (Not run in a
     # $(...) capture: read_answer writes the answer to stdout for the run log.)
     _ask_component() {
-        local name="$1" st="$2" lt="$3" note="$4" a
+        local name="$1" st="$2" lt="$3" note="$4" a def="l"
+        # Latest is the default; Stable only when Latest can't be had this run.
+        [ -n "$lt" ] || def="s"
         echo -e "\n${WHITE}${name}${NC}\n"
         print_key_option "[S]table  $(_label "$st")"
         print_key_option "[L]atest  $(_label "$lt")${note}"
         while true; do
-            prompt "Selection [s/l, Default: s]: "
+            prompt "Selection [s/l, Default: ${def}]: "
             read_answer a || exit 0
-            a="${a,,}"; a="${a:-s}"
+            a="${a,,}"; a="${a:-$def}"
             case "$a" in
                 s) [ -n "$st" ] && { ASKED_BUILD="stable"; return; } ;;
                 l) [ -n "$lt" ] && { ASKED_BUILD="latest"; return; } ;;
@@ -354,17 +356,19 @@ choose_builds() {
     elif [ "$needs_dsoal" -eq 0 ]; then
         _ask_component "Which OpenAL Soft build?" "$OAL_STABLE_LABEL" "$OAL_LATEST_LABEL" "$pre"; OAL_BUILD="$ASKED_BUILD"
     else
-        local stable_ok=0 latest_ok=0
+        local stable_ok=0 latest_ok=0 def="l"
         [ -n "$DSOAL_STABLE_LABEL" ] && [ -n "$OAL_STABLE_LABEL" ] && stable_ok=1
         [ -n "$DSOAL_LATEST_LABEL" ] && [ -n "$OAL_LATEST_LABEL" ] && latest_ok=1
+        # Latest is the default; Stable only when Latest can't be had this run.
+        [ "$latest_ok" -eq 1 ] || def="s"
         echo -e "\n${WHITE}Which builds?${NC}\n"
         print_key_option "[S]table  DSOAL $(_label "$DSOAL_STABLE_LABEL") + OpenAL Soft $(_label "$OAL_STABLE_LABEL")"
         print_key_option "[L]atest  DSOAL $(_label "$DSOAL_LATEST_LABEL") + OpenAL Soft $(_label "$OAL_LATEST_LABEL")${pre}"
         print_key_option "[C]hoose each separately"
         while true; do
-            prompt "Selection [s/l/c, Default: s]: "
+            prompt "Selection [s/l/c, Default: ${def}]: "
             read_answer answer || exit 0
-            answer="${answer,,}"; answer="${answer:-s}"
+            answer="${answer,,}"; answer="${answer:-$def}"
             case "$answer" in
                 s) if [ "$stable_ok" -eq 1 ]; then DSOAL_BUILD="stable"; OAL_BUILD="stable"; break; fi ;;
                 l) if [ "$latest_ok" -eq 1 ]; then DSOAL_BUILD="latest"; OAL_BUILD="latest"; break; fi ;;

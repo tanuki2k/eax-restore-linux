@@ -1148,8 +1148,8 @@ apply_alsoft_overrides() {
 # Prints nothing at all for a game with no fixes to offer.
 # Tools → Game settings runs it in one of two modes (see settings-flow.sh):
 # GAME_SETTINGS_SPEAKERS_ONLY=1 offers only the settings tied to a speaker
-# layout; GAME_SETTINGS_EDIT_OPTIONAL=1 offers only the optional settings,
-# with the ones this script already applied (GAME_SETTINGS_RECORDED: title →
+# layout; GAME_SETTINGS_EDIT=1 offers every setting in one tick list (audio
+# first, then optional), with the ones this script already applied (GAME_SETTINGS_RECORDED: title →
 # its manifest CONFIG lines) ticked, and unticking one queues its CONFIG lines
 # in GAME_SETTINGS_REVERT_GROUPS to be put back.
 game_settings_step() {
@@ -1161,7 +1161,7 @@ game_settings_step() {
     current_profile || return
 
     # Two steps: the audio settings (step <step>) and the optional ones (the
-    # next step; in Tools → Optional settings, which shows only those, the
+    # next step; in Tools → Game settings, which shows both in one list, the
     # caller's step). Each heading is printed the first time something needs
     # it: the missing-file prompt below can come before the lists, and a part
     # with nothing to show gets no heading at all.
@@ -1179,10 +1179,13 @@ game_settings_step() {
             audio_heading_shown=1
         else
             [ "$optional_heading_shown" -eq 1 ] && return
-            local n="$step"
-            [ -z "${GAME_SETTINGS_EDIT_OPTIONAL:-}" ] && n=$((step + 1))
-            print_step "$n" "Optional Game Settings"
-            print_paragraph "This step offers changes to ${GAME_NAME:-the game} that aren't needed for EAX."
+            if [ -n "${GAME_SETTINGS_EDIT:-}" ]; then
+                print_step "$step" "Game Settings"
+                print_paragraph "This step turns ${GAME_NAME:-the game}'s own settings on or off."
+            else
+                print_step "$((step + 1))" "Optional Game Settings"
+                print_paragraph "This step offers changes to ${GAME_NAME:-the game} that aren't needed for EAX."
+            fi
             optional_heading_shown=1
         fi
         GAME_SETTINGS_STEP_SHOWN=1
@@ -1193,7 +1196,7 @@ game_settings_step() {
     # heading, not in Speaker Configuration. Only the install asks; both
     # Tools modes leave them alone. Before the rows check below, since a game
     # can have a boost and no config files to change.
-    if [ -z "${GAME_SETTINGS_SPEAKERS_ONLY:-}" ] && [ -z "${GAME_SETTINGS_EDIT_OPTIONAL:-}" ]; then
+    if [ -z "${GAME_SETTINGS_SPEAKERS_ONLY:-}" ] && [ -z "${GAME_SETTINGS_EDIT:-}" ]; then
         offer_alsoft_settings _game_settings_heading audio
     fi
 
@@ -1230,7 +1233,6 @@ game_settings_step() {
             if [ -n "$stores" ] && [[ ",$stores," != *",$KG_STORE,"* ]]; then fix_status[$id]="skip"; fi
             if [ -n "$speakers" ] && ! speakers_match "$speakers" "$has_headphones"; then fix_status[$id]="skip"; fi
             [ -n "${GAME_SETTINGS_SPEAKERS_ONLY:-}" ] && [ -z "$speakers" ] && fix_status[$id]="skip"
-            [ -n "${GAME_SETTINGS_EDIT_OPTIONAL:-}" ] && [ "$cat" != "optional" ] && fix_status[$id]="skip"
         fi
         [[ "${fix_status[$id]}" =~ ^(skip|invalid)$ ]] && continue
         [ "$cat" == "audio" ] && audio_seen=1
@@ -1302,9 +1304,9 @@ game_settings_step() {
         [ "${fix_status[$id]}" == "already" ] && [ -n "${fix_absent_files[$id]:-}" ] \
             && [ -z "${fix_has_file[$id]:-}" ] && fix_status[$id]="absent"
     done
-    # Tools → Optional settings: in place because this script put it there,
+    # Tools → Game settings: in place because this script put it there,
     # so it can be turned off again (put back from the manifest).
-    if [ -n "${GAME_SETTINGS_EDIT_OPTIONAL:-}" ]; then
+    if [ -n "${GAME_SETTINGS_EDIT:-}" ]; then
         for id in "${fix_order[@]}"; do
             [ "${fix_status[$id]}" == "already" ] && [ -n "${GAME_SETTINGS_RECORDED[${fix_title[$id]}]:-}" ] \
                 && fix_status[$id]="applied"
@@ -1333,7 +1335,7 @@ game_settings_step() {
         print_config_rows "${fix_view[$id]}"
         _print_absent_note "$id"
     }
-    # Tools → Optional settings: the body of one this script applied, with
+    # Tools → Game settings: the body of one this script applied, with
     # each key's original value (from the manifest) → the value it has now.
     _applied_fix_body() {
         local id="$1" line display_rows=""
@@ -1379,6 +1381,8 @@ game_settings_step() {
 
     local any_audio=0 audio_offer=0
     for id in "${fix_order[@]}"; do
+        # Tools → Game settings lists the audio settings in the tick list below.
+        [ -n "${GAME_SETTINGS_EDIT:-}" ] && break
         [[ "$id" == audio:* ]] && [[ "${fix_status[$id]}" =~ ^(offer|already|missing|absent)$ ]] && any_audio=1
         [[ "$id" == audio:* ]] && [ "${fix_status[$id]}" == "offer" ] && audio_offer=1
         if [[ "$id" == audio:* ]] && [[ "${fix_status[$id]}" =~ ^(offer|already|missing)$ ]]; then
@@ -1424,7 +1428,8 @@ game_settings_step() {
 
     local -a optional=()
     for id in "${fix_order[@]}"; do
-        [[ "$id" == optional:* ]] && [[ "${fix_status[$id]}" =~ ^(offer|applied|already|missing|absent)$ ]] && optional+=("$id")
+        [[ "$id" == optional:* || ( -n "${GAME_SETTINGS_EDIT:-}" && "$id" == audio:* ) ]] \
+            && [[ "${fix_status[$id]}" =~ ^(offer|applied|already|missing|absent)$ ]] && optional+=("$id")
     done
     if [ ${#optional[@]} -gt 0 ]; then
         # The ones to choose from go in the tick list, each with its reason
@@ -1444,17 +1449,18 @@ game_settings_step() {
         _game_settings_heading optional
         # Not needed for EAX, so each one starts unticked and only the ones
         # the player ticks are applied; looking at them costs nothing, so
-        # Yes is the default here. Tools → Optional settings is the player
+        # Yes is the default here. Tools → Game settings is the player
         # choosing to edit them, so it goes straight to the list.
         local review="Review them?" count="${#offered[@]} optional settings"
         [ ${#offered[@]} -eq 1 ] && { review="Review it?"; count="1 optional setting"; }
-        if [ ${#offered[@]} -gt 0 ] && [ -z "${GAME_SETTINGS_EDIT_OPTIONAL:-}" ] \
+        if [ ${#offered[@]} -gt 0 ] && [ -z "${GAME_SETTINGS_EDIT:-}" ] \
             && ! confirm "${GAME_NAME} has ${count}. ${review}" Y; then
-            print_note "${GAME_NAME}'s optional settings will stay as they are — you can review them later from Tools → Optional settings in this script's main menu."
+            print_note "${GAME_NAME}'s optional settings will stay as they are — you can review them later from Tools → Game settings in this script's main menu."
             for id in "${offered[@]}"; do _decline_fix "$id"; done
             offered=()
         else
-            print_result "Optional settings for ${GAME_NAME}:"
+            if [ -n "${GAME_SETTINGS_EDIT:-}" ]; then print_result "Settings for ${GAME_NAME}:"
+            else print_result "Optional settings for ${GAME_NAME}:"; fi
         fi
         for id in "${unoffered[@]}"; do _print_status_line "$id"; done
         if [ ${#offered[@]} -gt 0 ]; then
@@ -1466,7 +1472,7 @@ game_settings_step() {
             # with the ticks kept. A typed answer (no terminal) is already
             # deliberate, and asking again there could loop on empty input.
             picks=("${initial[@]}")
-            if [ -n "${GAME_SETTINGS_EDIT_OPTIONAL:-}" ]; then
+            if [ -n "${GAME_SETTINGS_EDIT:-}" ]; then
                 # Starts from what's on now; nothing is declined, only changed.
                 while true; do
                     CHECKLIST_INITIAL=("${picks[@]}"); CHECKLIST_DETAILS=("${bodies[@]}")
@@ -1485,7 +1491,7 @@ game_settings_step() {
                     if [ "${fix_status[$id]}" == "offer" ] && [ "${SELECTED[$((i + 1))]}" == "1" ]; then
                         _plan_fix "$id"
                     elif [ "${fix_status[$id]}" == "applied" ] && [ "${SELECTED[$((i + 1))]}" == "0" ]; then
-                        GAME_SETTINGS_REVERT_GROUPS+=("optional"$'\x1f'"${fix_title[$id]}"$'\x1f'"${GAME_SETTINGS_RECORDED[${fix_title[$id]}]}")
+                        GAME_SETTINGS_REVERT_GROUPS+=("${id%%:*}"$'\x1f'"${fix_title[$id]}"$'\x1f'"${GAME_SETTINGS_RECORDED[${fix_title[$id]}]}")
                     fi
                 done
             else
