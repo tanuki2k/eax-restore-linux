@@ -1,0 +1,31 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Alpha Centauri",
+  "description": "Alpha Centauri is a singleplayer and multiplayer turn-based 4X strategy game.",
+  "released": "1999-02-09",
+  "exe": "terran.exe",
+  "stores": {
+    "steam": {
+      "id": 2204130,
+      "store_details": "Sold as the 'Planetary Pack', bundling the Alien Crossfire expansion."
+    },
+    "gog": {
+      "id": 1207658936,
+      "store_details": "Sold as the 'Planetary Pack', bundling the Alien Crossfire expansion."
+    }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0"] },
+  "game_config": {
+    "files": {
+      "Alpha Centauri.Ini": { "format": "ini", "locations": ["game_exe:Alpha Centauri.Ini"] }
+    },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Alpha Centauri plays 3D sound and EAX effects only when both are switched on in Alpha Centauri.Ini.",
+        "changes": { "Alpha Centauri.Ini": { "Alpha Centauri": { "ds3d": "1", "eax": "1" } } },
+        "tested": true
+      }
+    ]
+  }
+}

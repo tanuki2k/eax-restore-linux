@@ -1,5 +1,5 @@
 {
-  "$schema": "../schema.json",
+  "$schema": "../../schema.json",
   "name": "Freedom Force",
   "description": "Freedom Force is a singleplayer and multiplayer real-time tactics role-playing game and the first in the Freedom Force series.",
   "released": "2002-03-26",

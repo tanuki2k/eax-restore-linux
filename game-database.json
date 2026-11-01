@@ -24,7 +24,31 @@
           "1.0"
         ]
       },
-      "tested": false
+      "game_config": {
+        "files": {
+          "Alpha Centauri.Ini": {
+            "format": "ini",
+            "locations": [
+              "game_exe:Alpha Centauri.Ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Alpha Centauri plays 3D sound and EAX effects only when both are switched on in Alpha Centauri.Ini.",
+            "changes": {
+              "Alpha Centauri.Ini": {
+                "Alpha Centauri": {
+                  "ds3d": "1",
+                  "eax": "1"
+                }
+              }
+            },
+            "tested": true
+          }
+        ]
+      }
     },
     {
       "id": "alpha-prime",
@@ -762,6 +786,31 @@
               }
             }
           }
+        ]
+      },
+      "tested": false
+    },
+    {
+      "id": "call-of-juarez",
+      "name": "Call of Juarez",
+      "description": "Call of Juarez is a singleplayer and multiplayer first-person shooter game and the first in the Call of Juarez series.",
+      "released": "2006-09-15",
+      "stores": {
+        "steam": {
+          "id": 3020
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified"
         ]
       },
       "tested": false
@@ -1827,6 +1876,47 @@
       }
     },
     {
+      "id": "freedom-force",
+      "name": "Freedom Force",
+      "description": "Freedom Force is a singleplayer and multiplayer real-time tactics role-playing game and the first in the Freedom Force series.",
+      "released": "2002-03-26",
+      "stores": {
+        "steam": {
+          "id": 8880
+        },
+        "gog": {
+          "id": 1445250806
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0"
+        ]
+      },
+      "tested": false
+    },
+    {
+      "id": "freedom-force-vs-the-third-reich",
+      "name": "Freedom Force vs. the Third Reich",
+      "description": "Freedom Force vs. the Third Reich is a singleplayer and multiplayer real-time tactics role-playing game and the second in the Freedom Force series.",
+      "released": "2005-03-08",
+      "stores": {
+        "steam": {
+          "id": 8890
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0"
+        ]
+      },
+      "tested": false
+    },
+    {
       "id": "half-life",
       "name": "Half-Life",
       "description": "Half-Life is a singleplayer and multiplayer first-person shooter game and the first in the Half-Life series.",
@@ -1908,6 +1998,113 @@
           "3.0"
         ]
       }
+    },
+    {
+      "id": "hitman-2-silent-assassin",
+      "name": "Hitman 2: Silent Assassin",
+      "description": "Hitman 2: Silent Assassin is a singleplayer third-person stealth game and the second in the Hitman series.",
+      "released": "2002-10-01",
+      "exe": "hitman2.exe",
+      "stores": {
+        "steam": {
+          "id": 6850
+        },
+        "gog": {
+          "id": 1207659002
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified"
+        ]
+      },
+      "tested": false
+    },
+    {
+      "id": "hitman-blood-money",
+      "name": "Hitman: Blood Money",
+      "description": "Hitman: Blood Money is a singleplayer third-person stealth game and the fourth in the Hitman series.",
+      "released": "2006-05-26",
+      "exe": "HitmanBloodMoney.exe",
+      "stores": {
+        "steam": {
+          "id": 6860
+        },
+        "gog": {
+          "id": 1942346586
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "2.0",
+          "3.0",
+          "4.0"
+        ]
+      },
+      "tested": false
+    },
+    {
+      "id": "hitman-codename-47",
+      "name": "Hitman: Codename 47",
+      "description": "Hitman: Codename 47 is a singleplayer third-person stealth game and the first in the Hitman series.",
+      "released": "2000-11-19",
+      "exe": "Hitman.Exe",
+      "stores": {
+        "steam": {
+          "id": 6900
+        },
+        "gog": {
+          "id": 1207658996
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified"
+        ]
+      },
+      "tested": false
+    },
+    {
+      "id": "hitman-contracts",
+      "name": "Hitman: Contracts",
+      "description": "Hitman: Contracts is a singleplayer third-person stealth game and the third in the Hitman series.",
+      "released": "2004-04-20",
+      "exe": "HitmanContracts.exe",
+      "stores": {
+        "steam": {
+          "id": 247430
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified"
+        ]
+      },
+      "tested": false
     },
     {
       "id": "icewind-dale-complete",
@@ -2583,11 +2780,48 @@
       "eax": {
         "api": "directsound3d",
         "versions": [
-          "1.0"
+          "1.0",
+          "2.0"
         ]
       },
-      "notes": "Project Eden's profile currently lacks Game settings to automatically enable EAX and or hardware sound.",
-      "tested": false
+      "game_config": {
+        "files": {
+          "user.reg": {
+            "format": "wine_reg",
+            "locations": [
+              "prefix:user.reg"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Project Eden only uses EAX reverb and 3D hardware sound when its Reverb and hardware mixing options are on.",
+            "changes": {
+              "user.reg": {
+                "Software\\Core Design\\Project Eden\\1.0\\SfxHardware\\Direct Sound\\Primary Sound Driver": {
+                  "Reverb": "1",
+                  "UseHardwareMixing": "1"
+                }
+              }
+            },
+            "tested": true
+          }
+        ],
+        "optional_settings": [
+          {
+            "title": "Set sample rate to 44100 Hz",
+            "reason": "Project Eden saves its sound sample rate in the registry, and this sets it to CD quality.",
+            "changes": {
+              "user.reg": {
+                "Software\\Core Design\\Project Eden\\1.0\\SfxHardware\\Direct Sound\\Primary Sound Driver": {
+                  "Samplerate": "44100"
+                }
+              }
+            }
+          }
+        ]
+      }
     },
     {
       "id": "psychonauts",
@@ -4145,6 +4379,31 @@
           "5.0"
         ]
       },
+      "tested": false
+    },
+    {
+      "id": "titan-quest-anniversary-edition",
+      "name": "Titan Quest Anniversary Edition",
+      "description": "Titan Quest Anniversary Edition is a singleplayer and multiplayer isometric action role-playing game, an updated edition of the first in the Titan Quest series that includes its Immortal Throne expansion.",
+      "released": "2016-08-31",
+      "stores": {
+        "steam": {
+          "id": 475150
+        },
+        "gog": {
+          "id": 1196955511
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0",
+          "4.0"
+        ]
+      },
+      "notes": "Both stores now sell only this 2016 Anniversary Edition; no separate classic 2006 listing remains to compare against, and whether its audio path changed from the original hasn't been independently verified here.",
       "tested": false
     },
     {

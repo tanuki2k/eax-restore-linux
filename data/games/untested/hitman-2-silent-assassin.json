@@ -1,5 +1,5 @@
 {
-  "$schema": "../schema.json",
+  "$schema": "../../schema.json",
   "name": "Hitman 2: Silent Assassin",
   "description": "Hitman 2: Silent Assassin is a singleplayer third-person stealth game and the second in the Hitman series.",
   "released": "2002-10-01",

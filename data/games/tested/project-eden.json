@@ -1,0 +1,42 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Project Eden",
+  "description": "Project Eden is a singleplayer and multiplayer third-person squad action-adventure game.",
+  "released": "2001-10-12",
+  "exe": "Eden.exe",
+  "stores": {
+    "gog": { "id": 1207659235 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0"] },
+  "game_config": {
+    "files": { "user.reg": { "format": "wine_reg", "locations": ["prefix:user.reg"] } },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Project Eden only uses EAX reverb and 3D hardware sound when its Reverb and hardware mixing options are on.",
+        "changes": {
+          "user.reg": {
+            "Software\\Core Design\\Project Eden\\1.0\\SfxHardware\\Direct Sound\\Primary Sound Driver": {
+              "Reverb": "1",
+              "UseHardwareMixing": "1"
+            }
+          }
+        },
+        "tested": true
+      }
+    ],
+    "optional_settings": [
+      {
+        "title": "Set sample rate to 44100 Hz",
+        "reason": "Project Eden saves its sound sample rate in the registry, and this sets it to CD quality.",
+        "changes": {
+          "user.reg": {
+            "Software\\Core Design\\Project Eden\\1.0\\SfxHardware\\Direct Sound\\Primary Sound Driver": {
+              "Samplerate": "44100"
+            }
+          }
+        }
+      }
+    ]
+  }
+}

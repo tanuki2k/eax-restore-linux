@@ -1,5 +1,5 @@
 {
-  "$schema": "../schema.json",
+  "$schema": "../../schema.json",
   "name": "Call of Juarez",
   "description": "Call of Juarez is a singleplayer and multiplayer first-person shooter game and the first in the Call of Juarez series.",
   "released": "2006-09-15",

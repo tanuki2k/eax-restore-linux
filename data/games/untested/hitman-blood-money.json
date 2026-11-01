@@ -1,5 +1,5 @@
 {
-  "$schema": "../schema.json",
+  "$schema": "../../schema.json",
   "name": "Hitman: Blood Money",
   "description": "Hitman: Blood Money is a singleplayer third-person stealth game and the fourth in the Hitman series.",
   "released": "2006-05-26",
