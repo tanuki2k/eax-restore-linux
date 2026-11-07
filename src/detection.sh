@@ -1329,6 +1329,211 @@ print_api_row() {
     printf ' -> %b%s:%b%*s %b%s%b\n' "$GREEN" "$1" "$NC" $(( 7 - ${#1} )) "" "${3:-}" "$2" "${3:+$NC}"
 }
 
+# The steps of confirm_continue_if_openal_native below. They share its locals
+# (api, matched, scanned and the other flags) through bash's dynamic scope, so
+# they only run from it. $id is the store ID and $store_arg steam or gog.
+
+# Usage: _api_display_name <directsound3d|openal>
+_api_display_name() {
+    if [ "$1" == "openal" ]; then echo "OpenAL"; else echo "DirectSound3D"; fi
+}
+
+# The profile already shown for this game names the API: cross-check it
+# against a live file scan, or take it as-is when the player declined the gate.
+_api_step_profile() {
+    # Already resolved and displayed in the GAME PROFILE block shown
+    # earlier this run (show_game_details_block sets this alongside
+    # SCANNED_NOTES_SHOWN) -- no need to re-query the database from
+    # scratch. The gate above still governs whether it's cross-checked
+    # against the installed files or simply trusted as-is.
+    api="$PROFILE_API"
+    db_api_raw="$api"
+    matched=1
+    json_checked=1
+
+    local api_display
+    api_display="$(_api_display_name "$api")"
+
+    if [ "$attempt_auto_detect" -eq 0 ]; then
+        print_note "Skipping the file cross-check -- using its profile's documented" \
+            "$api_display API as-is."
+    elif [ -n "$GAME_DIR" ] && [ -d "$GAME_DIR" ]; then
+        print_task "Checking $game_name's files against its profile"
+        local main_exe scan_result scan_ds_file scan_openal_file
+        main_exe=$(gdb_field "$id" "$store" '.exe // empty')
+        IFS=$'\x1f' read -r scan_result scan_ds_file scan_openal_file \
+            < <(detect_api_from_binary "$GAME_DIR" "$main_exe")
+        print_api_row "Profile" "$api_display"
+        print_api_row "Files" "$(scan_evidence "$scan_result" "$scan_ds_file" "$scan_openal_file")"
+        if [ -z "$scan_result" ]; then
+            # Nothing found isn't agreement: a launcher picked as the game
+            # folder (no exe in the entry) scans clean too, and reporting
+            # that as a match once let a wrong API through unnoticed.
+            print_api_row "Check" "– Can't tell from the files" "$DIM"
+        elif [ "$scan_result" == "both" ] || [ "$scan_result" == "$api" ]; then
+            print_api_row "Check" "✓ Matches the profile" "$GREEN"
+        else
+            local scan_display
+            scan_display="$(_api_display_name "$scan_result")"
+            print_api_row "Check" "✗ Doesn't match the profile" "$YELLOW"
+            print_warning "$game_name's files point to $scan_display, but its profile says $api_display."
+            if ! confirm "Use $api_display, as its profile says, instead of $scan_display?"; then
+                api="$scan_result"
+                scanned=1
+            fi
+        fi
+    else
+        print_note "$game_name's folder isn't resolved yet, so the documented API couldn't be" \
+            "cross-checked against its installed files."
+    fi
+}
+
+# No profile on screen: look the game up in the database.
+_api_step_database() {
+    # Availability is already known by this point (the pre-flight
+    # check fetches/memoizes it before the main menu), so
+    # there's nothing further to ask permission for here — the gate
+    # above already covers it.
+    ensure_game_database && json_available=1
+
+    if [ "$json_available" -eq 0 ]; then
+        json_checked=1
+        print_note "game-database.json isn't available this run."
+    elif [ -z "$id" ]; then
+        json_checked=1
+        print_note "$game_name's store ID isn't known, so it can't be looked up in the" \
+            "game database."
+    else
+        json_checked=1
+        echo ""
+        print_status "Checking the game database for $game_name's audio API..."
+
+        match_count=$(gdb_jq "$id" "$store" 'matches | length')
+
+        if [ "${match_count:-0}" -gt 0 ]; then
+            db_api_raw=$(gdb_field "$id" "$store" '(.stores[$store].api // .eax.api // "")')
+            api="${db_api_raw:-directsound3d}"
+            matched=1
+            # Normally done in the prefix step with the profile
+            # (show_profile_if_unseen); a fallback for a match it missed.
+            confirm_game_dir_has_exe "$id" "$store" "$game_name"
+        else
+            print_note "$game_name has no profile in the game database."
+        fi
+    fi
+}
+
+# No profile and no database answer: a lower-confidence guess from the files.
+_api_step_scan() {
+    print_task "Checking which audio API $game_name uses"
+    local found_ds_file found_openal_file
+    IFS=$'\x1f' read -r api found_ds_file found_openal_file \
+        < <(detect_api_from_binary "$GAME_DIR")
+    print_api_row "Files" "$(scan_evidence "$api" "$found_ds_file" "$found_openal_file")"
+    scanned=1
+}
+
+# Asks whether to go ahead with the API found. Returns 0 when the player did
+# (the engine choice is made), 1 to fall through to the manual choice.
+_api_step_confirm() {
+    local api_display
+    api_display="$(_api_display_name "$api")"
+    print_api_row "Using" "$api_display"
+    # Same fallback: the profile is normally shown in the prefix step.
+    [ "$matched" -eq 1 ] && [ -z "$SCANNED_NOTES_SHOWN" ] && show_game_details_block "$id" "$store_arg" "$GAME_DIR"
+
+    if [ "$api" == "openal" ]; then
+        print_note "This game routes EAX through OpenAL rather than DirectSound3D, so kcat's" \
+            "OpenAL Soft will be deployed."
+        if confirm "Continue with OpenAL Soft deployment?"; then
+            OPENAL_NATIVE_MODE=1
+            return 0
+        fi
+    elif confirm "Continue with the DSOAL/DirectSound3D install?"; then
+        # A game profile that resolves to "directsound3d" for this
+        # store, or a single-API binary scan, is a positive identification — the
+        # engine-selection menu can be skipped. A "both" scan result
+        # references both APIs and stays low-confidence, so the menu is
+        # kept as the route into OpenAL-native mode.
+        if { [ "$matched" -eq 1 ] && [ "$db_api_raw" == "directsound3d" ]; } ||
+           { [ "$scanned" -eq 1 ] && [ "$api" == "directsound3d" ]; }; then
+            API_CONFIRMED_DS3D=1
+        fi
+        return 0
+    fi
+    # Declined: the detected/documented API isn't the one the user wants
+    # (e.g. to test a game through the other path), so fall through to
+    # the manual choice below rather than cancelling the whole install.
+    overriding=1
+    print_paragraph "$game_name was detected as $api_display." \
+        "Which audio API would you like to install for instead?"
+return 1
+}
+
+# Says why no API could be confirmed, ahead of the manual choice.
+_api_step_explain() {
+    if [ "$overriding" -eq 1 ]; then
+        :
+    elif [ "$scanned" -eq 1 ]; then
+        print_note_arrow "The scan found no OpenAL or DirectSound3D references in $game_name's" \
+            "files, so its audio API couldn't be confirmed."
+    elif [ "$declined" -eq 1 ]; then
+        print_note_arrow "Auto-detection was skipped, so $game_name's audio API is unconfirmed."
+    elif [ "$json_checked" -eq 0 ]; then
+        print_note_arrow "The game database check was skipped and $game_name's files couldn't be" \
+            "scanned, so its audio API is unconfirmed."
+    elif [ "$json_available" -eq 0 ]; then
+        print_note_arrow "game-database.json isn't available this run and $game_name's files" \
+            "couldn't be scanned, so its audio API is unconfirmed."
+    else
+        print_note_arrow "$game_name has no profile in the game database and its files couldn't be" \
+            "scanned, so its audio API is unconfirmed."
+    fi
+
+    if [ "$overriding" -eq 0 ]; then
+        print_paragraph "Almost every classic EAX title uses DirectSound3D; only a handful route" \
+            "EAX through OpenAL natively. Choose DirectSound3D unless you know this" \
+            "game is one of the exceptions."
+    fi
+}
+
+# The DirectSound3D / OpenAL / cancel choice for an API nothing identified, or
+# one the player declined.
+_api_step_choose() {
+    echo ""
+    print_option 1 "DirectSound3D / DSOAL   [default]"
+    print_option 2 "OpenAL                  (deploy kcat's OpenAL Soft)"
+    echo ""
+    print_option 3 "Cancel the install"
+
+    local api_choice explicit=0
+    while true; do
+        prompt "Selection [1-3] [Default: 1]: "
+        # EOF / empty falls back to 1: DirectSound3D is the safe default for
+        # the overwhelming majority of EAX titles. Only a typed "1" is an
+        # explicit choice — an accepted default doesn't confirm the API, so
+        # the engine-selection menu still appears for it.
+        read_answer api_choice || api_choice=""
+        if [ "$api_choice" == "1" ]; then explicit=1; else explicit=0; fi
+        api_choice="${api_choice:-1}"
+        [[ "$api_choice" =~ ^[123]$ ]] && break
+        print_result "That's not a valid option — please type 1, 2, or 3." "$YELLOW"
+    done
+
+    if [ "$api_choice" == "3" ]; then
+        print_result "Install cancelled."
+        exit 0
+    fi
+
+    if [ "$api_choice" == "2" ]; then
+        print_status "Proceeding with kcat's OpenAL Soft." "$WHITE"
+        OPENAL_NATIVE_MODE=1
+    else
+        [ "$explicit" -eq 1 ] && API_CONFIRMED_DS3D=1
+        print_status "Proceeding with DSOAL / DirectSound3D." "$WHITE"
+    fi
+}
+
 confirm_continue_if_openal_native() {
     # Usage: confirm_continue_if_openal_native <id> <steam|gog> <game_name>
     # A resolved audio API of "openal" means this game's own EAX
@@ -1378,7 +1583,7 @@ confirm_continue_if_openal_native() {
     # needs it. The file scan and the DirectSound3D/OpenAL choice below
     # still apply, and skipping them left the step as a bare header.
 
-    local store="steam"
+    local id="$1" store_arg="$2" store="steam"
     [ "$2" == "gog" ] && store="gog"
     local game_name="${3:-this game}"
 
@@ -1395,191 +1600,23 @@ confirm_continue_if_openal_native() {
     local db_api_raw=""
 
     if [ -n "$PROFILE_API" ]; then
-        # Already resolved and displayed in the GAME PROFILE block shown
-        # earlier this run (show_game_details_block sets this alongside
-        # SCANNED_NOTES_SHOWN) -- no need to re-query the database from
-        # scratch. The gate above still governs whether it's cross-checked
-        # against the installed files or simply trusted as-is.
-        api="$PROFILE_API"
-        db_api_raw="$api"
-        matched=1
-        json_checked=1
-
-        local api_display="DirectSound3D"
-        [ "$api" == "openal" ] && api_display="OpenAL"
-
-        if [ "$attempt_auto_detect" -eq 0 ]; then
-            print_note "Skipping the file cross-check -- using its profile's documented" \
-                "$api_display API as-is."
-        elif [ -n "$GAME_DIR" ] && [ -d "$GAME_DIR" ]; then
-            print_task "Checking $game_name's files against its profile"
-            local main_exe scan_result scan_ds_file scan_openal_file
-            main_exe=$(gdb_field "$1" "$store" '.exe // empty')
-            IFS=$'\x1f' read -r scan_result scan_ds_file scan_openal_file \
-                < <(detect_api_from_binary "$GAME_DIR" "$main_exe")
-            print_api_row "Profile" "$api_display"
-            print_api_row "Files" "$(scan_evidence "$scan_result" "$scan_ds_file" "$scan_openal_file")"
-            if [ -z "$scan_result" ]; then
-                # Nothing found isn't agreement: a launcher picked as the game
-                # folder (no exe in the entry) scans clean too, and reporting
-                # that as a match once let a wrong API through unnoticed.
-                print_api_row "Check" "– Can't tell from the files" "$DIM"
-            elif [ "$scan_result" == "both" ] || [ "$scan_result" == "$api" ]; then
-                print_api_row "Check" "✓ Matches the profile" "$GREEN"
-            else
-                local scan_display="DirectSound3D"
-                [ "$scan_result" == "openal" ] && scan_display="OpenAL"
-                print_api_row "Check" "✗ Doesn't match the profile" "$YELLOW"
-                print_warning "$game_name's files point to $scan_display, but its profile says $api_display."
-                if ! confirm "Use $api_display, as its profile says, instead of $scan_display?"; then
-                    api="$scan_result"
-                    scanned=1
-                fi
-            fi
-        else
-            print_note "$game_name's folder isn't resolved yet, so the documented API couldn't be" \
-                "cross-checked against its installed files."
-        fi
+        _api_step_profile
     elif [ "$attempt_auto_detect" -eq 0 ]; then
         declined=1
     else
-        # Availability is already known by this point (the pre-flight
-        # check fetches/memoizes it before the main menu), so
-        # there's nothing further to ask permission for here — the gate
-        # above already covers it.
-        ensure_game_database && json_available=1
-
-        if [ "$json_available" -eq 0 ]; then
-            json_checked=1
-            print_note "game-database.json isn't available this run."
-        elif [ -z "$1" ]; then
-            json_checked=1
-            print_note "$game_name's store ID isn't known, so it can't be looked up in the" \
-                "game database."
-        else
-            json_checked=1
-            echo ""
-            print_status "Checking the game database for $game_name's audio API..."
-
-            match_count=$(gdb_jq "$1" "$store" 'matches | length')
-
-            if [ "${match_count:-0}" -gt 0 ]; then
-                db_api_raw=$(gdb_field "$1" "$store" '(.stores[$store].api // .eax.api // "")')
-                api="${db_api_raw:-directsound3d}"
-                matched=1
-                # Normally done in the prefix step with the profile
-                # (show_profile_if_unseen); a fallback for a match it missed.
-                confirm_game_dir_has_exe "$1" "$store" "$game_name"
-            else
-                print_note "$game_name has no profile in the game database."
-            fi
-        fi
+        _api_step_database
     fi
 
     if [ "$matched" -eq 0 ] && [ "$attempt_auto_detect" -eq 1 ] && [ -n "$GAME_DIR" ] && [ -d "$GAME_DIR" ]; then
-        print_task "Checking which audio API $game_name uses"
-        local found_ds_file found_openal_file
-        IFS=$'\x1f' read -r api found_ds_file found_openal_file \
-            < <(detect_api_from_binary "$GAME_DIR")
-        print_api_row "Files" "$(scan_evidence "$api" "$found_ds_file" "$found_openal_file")"
-        scanned=1
+        _api_step_scan
     fi
 
     if [ -n "$api" ]; then
-        local api_display="DirectSound3D"
-        [ "$api" == "openal" ] && api_display="OpenAL"
-        print_api_row "Using" "$api_display"
-        # Same fallback: the profile is normally shown in the prefix step.
-        [ "$matched" -eq 1 ] && [ -z "$SCANNED_NOTES_SHOWN" ] && show_game_details_block "$1" "$2" "$GAME_DIR"
-
-        if [ "$api" == "openal" ]; then
-            print_note "This game routes EAX through OpenAL rather than DirectSound3D, so kcat's" \
-                "OpenAL Soft will be deployed."
-            if confirm "Continue with OpenAL Soft deployment?"; then
-                OPENAL_NATIVE_MODE=1
-                return
-            fi
-        elif confirm "Continue with the DSOAL/DirectSound3D install?"; then
-            # A game profile that resolves to "directsound3d" for this
-            # store, or a single-API binary scan, is a positive identification — the
-            # engine-selection menu can be skipped. A "both" scan result
-            # references both APIs and stays low-confidence, so the menu is
-            # kept as the route into OpenAL-native mode.
-            if { [ "$matched" -eq 1 ] && [ "$db_api_raw" == "directsound3d" ]; } ||
-               { [ "$scanned" -eq 1 ] && [ "$api" == "directsound3d" ]; }; then
-                API_CONFIRMED_DS3D=1
-            fi
-            return
-        fi
-        # Declined: the detected/documented API isn't the one the user wants
-        # (e.g. to test a game through the other path), so fall through to
-        # the manual choice below rather than cancelling the whole install.
-        overriding=1
-        print_paragraph "$game_name was detected as $api_display." \
-            "Which audio API would you like to install for instead?"
+        _api_step_confirm && return
     fi
 
-    # Nothing authoritative to go on — no game profile (or the database
-    # wasn't available), and the file scan was either declined or turned up
-    # neither API. Rather than assume DirectSound3D outright, spell
-    # out what couldn't be checked and let the user pick: the "Audio Engine
-    # Selection" step only lists the DSOAL builds, so this prompt is also the
-    # only way into OpenAL-native mode for a title the scan can't identify.
-    if [ "$overriding" -eq 1 ]; then
-        :
-    elif [ "$scanned" -eq 1 ]; then
-        print_note_arrow "The scan found no OpenAL or DirectSound3D references in $game_name's" \
-            "files, so its audio API couldn't be confirmed."
-    elif [ "$declined" -eq 1 ]; then
-        print_note_arrow "Auto-detection was skipped, so $game_name's audio API is unconfirmed."
-    elif [ "$json_checked" -eq 0 ]; then
-        print_note_arrow "The game database check was skipped and $game_name's files couldn't be" \
-            "scanned, so its audio API is unconfirmed."
-    elif [ "$json_available" -eq 0 ]; then
-        print_note_arrow "game-database.json isn't available this run and $game_name's files" \
-            "couldn't be scanned, so its audio API is unconfirmed."
-    else
-        print_note_arrow "$game_name has no profile in the game database and its files couldn't be" \
-            "scanned, so its audio API is unconfirmed."
-    fi
-
-    if [ "$overriding" -eq 0 ]; then
-        print_paragraph "Almost every classic EAX title uses DirectSound3D; only a handful route" \
-            "EAX through OpenAL natively. Choose DirectSound3D unless you know this" \
-            "game is one of the exceptions."
-    fi
-    echo ""
-    print_option 1 "DirectSound3D / DSOAL   [default]"
-    print_option 2 "OpenAL                  (deploy kcat's OpenAL Soft)"
-    echo ""
-    print_option 3 "Cancel the install"
-
-    local api_choice explicit=0
-    while true; do
-        prompt "Selection [1-3] [Default: 1]: "
-        # EOF / empty falls back to 1: DirectSound3D is the safe default for
-        # the overwhelming majority of EAX titles. Only a typed "1" is an
-        # explicit choice — an accepted default doesn't confirm the API, so
-        # the engine-selection menu still appears for it.
-        read_answer api_choice || api_choice=""
-        if [ "$api_choice" == "1" ]; then explicit=1; else explicit=0; fi
-        api_choice="${api_choice:-1}"
-        [[ "$api_choice" =~ ^[123]$ ]] && break
-        print_result "That's not a valid option — please type 1, 2, or 3." "$YELLOW"
-    done
-
-    if [ "$api_choice" == "3" ]; then
-        print_result "Install cancelled."
-        exit 0
-    fi
-
-    if [ "$api_choice" == "2" ]; then
-        print_status "Proceeding with kcat's OpenAL Soft." "$WHITE"
-        OPENAL_NATIVE_MODE=1
-    else
-        [ "$explicit" -eq 1 ] && API_CONFIRMED_DS3D=1
-        print_status "Proceeding with DSOAL / DirectSound3D." "$WHITE"
-    fi
+    _api_step_explain
+    _api_step_choose
 }
 
 detect_game_environment() {
