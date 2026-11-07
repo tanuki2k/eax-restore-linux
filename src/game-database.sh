@@ -803,6 +803,262 @@ print_game_profile() {
     print_game_profile_stores "${3:-}" "$2:$1"
 }
 
+# The sections of print_game_profile_stores below. They read its locals (stores,
+# ids, labels, apis, name, n and the rest) through bash's dynamic scope, so they
+# only run from it. The browser runs the profile in a fresh shell from a dump of
+# every function, so these need no special listing there.
+
+# Usage: _gp_same_for_all <array name>
+# True when every store's value in the array is the same.
+_gp_same_for_all() {
+    local -n _vals="$1"
+    local v
+    for v in "${_vals[@]}"; do [ "$v" == "${_vals[0]}" ] || return 1; done
+}
+
+_gp_api_name() { [ "$1" == "openal" ] && echo "OpenAL" || echo "DirectSound3D"; }
+_gp_solution() { [ "$1" == "openal" ] && echo "OpenAL Soft" || echo "DSOAL + OpenAL Soft"; }
+
+# A setting's title with its tested tag, and which stores offer it when only some do.
+_gp_setting_title() {
+    local only="${title_stores[$1$'\t'$2]}"
+    local tag
+    tag="$(verified_tag "${title_flag[$1$'\t'$2]}")"
+    if [ "$n" -gt 1 ] && [ "$(grep -o ' and ' <<< "$only" | wc -l)" -lt $(( n - 1 )) ]; then
+        echo "$2 ($only only) $tag"
+    else
+        echo "$2 $tag"
+    fi
+}
+
+# The "Game details" rows: what the database has on file, then what was found here.
+_gp_detail_rows() {
+    # --- Field lines: what the database has on file, then what was found here ---
+    # Everything under "Game details" comes from game-database.json, not
+    # from the install, so it's kept apart from the two facts the library
+    # scan found on this system. The lines are collected first and printed
+    # together (print_detail_rows), so every value lines up after the longest
+    # label shown. A value with one line per store continues under the first.
+    local value sep
+    detail_heading "Game details"
+    detail_row "Name" "${BOLD}${name}${NC}"
+    if [ -n "$untested" ]; then
+        detail_row "Profile" "${NOTE}Untested${NC}"
+    else
+        detail_row "Profile" "${GREEN}Tested${NC}"
+    fi
+    [ -n "$released" ] && detail_row "Released" "${WHITE}$(format_release_date "$released")${NC}"
+    # The browser names each store's ID; the install shows its one store
+    # under System details instead.
+    if [ -z "$location" ]; then
+        for i in "${!stores[@]}"; do
+            detail_row "${labels[i]} ID" "${WHITE}${ids[i]}${NC}"
+        done
+    fi
+    # One row naming every store it's delisted from.
+    value=""
+    for i in "${!stores[@]}"; do
+        [ "${listings[i]}" == "delisted" ] && value+="${value:+ and }${labels[i]}"
+    done
+    [ -n "$value" ] && detail_row "Availability" "${WHITE}Delisted from $value ${DIM}(existing owners keep access)${NC}"
+    for i in "${!stores[@]}"; do
+        if [ "${id_sources[i]}" == "steamdb_historical" ]; then
+            detail_row "ID source" "${WHITE}SteamDB records ${DIM}(not verified against a local install)${NC}"
+        fi
+    done
+    # eax_versions sits in the same slot for every game — the qualifier for a
+    # patch-removed build comes after the list, not in place of it.
+    local ver_display="${eax_versions:-Unknown}"
+    if [ "$eax_status" == "supported" ]; then
+        detail_row "EAX Support" "${GREEN}${BOLD}${ver_display}${NC}"
+    elif [ "$eax_status" == "removed_by_patch" ]; then
+        detail_row "EAX Support" "${YELLOW}${BOLD}${ver_display}${NC} ${DIM}(originally supported)${NC}"
+    elif [ "$eax_status" == "built_in" ]; then
+        detail_row "EAX Support" "${GREEN}${BOLD}${ver_display}${NC} ${DIM}(already built in)${NC}"
+    else
+        detail_row "EAX Support" "${YELLOW}${BOLD}None${NC}"
+    fi
+    if _gp_same_for_all apis; then
+        detail_row "Audio API" "${WHITE}$(_gp_api_name "${apis[0]}")${NC}"
+    else
+        value="" sep=""
+        for i in "${!stores[@]}"; do
+            value+="${sep}${WHITE}$(_gp_api_name "${apis[i]}")${NC} on ${labels[i]}"; sep=$'\n'
+        done
+        detail_row "Audio API" "$value"
+    fi
+    [ "$sound_system" == "miles" ] && detail_row "Sound system" "${WHITE}Miles Sound System${NC}"
+    [ "$eax_unified" == "true" ] && detail_row "EAX Unified" "${WHITE}Yes${NC}"
+    # Always shown, even at 0, so the label column keeps one width from game
+    # to game. Settings limited to one store (only_if.stores) can make the
+    # counts differ; each count is then shown with its store.
+    local col label_text
+    local -a nums fields
+    for col in 0 1; do
+        [ "$col" -eq 0 ] && label_text="Audio settings" || label_text="Optional settings"
+        nums=()
+        for i in "${!stores[@]}"; do
+            read -ra fields <<< "${counts[i]:-0 0}"
+            nums[i]="${fields[col]:-0}"
+        done
+        if _gp_same_for_all nums; then
+            detail_row "$label_text" "${WHITE}${nums[0]}${NC}"
+        else
+            value="" sep=""
+            for i in "${!stores[@]}"; do value+="${sep}${WHITE}${nums[i]}${NC} on ${labels[i]}"; sep=$'\n'; done
+            detail_row "$label_text" "$value"
+        fi
+    done
+
+    if [ -n "$location" ]; then
+        detail_heading "System details"
+        detail_row "Platform" "${GREEN}${labels[0]}${NC}"
+        detail_row "Location" "${DIM}$(tilde_path "$location")${NC}"
+    fi
+}
+
+# Status, and the stores' own details texts.
+_gp_status_sections() {
+    # --- Blocks: status -> problem -> solution ---
+    # A supported game shows it too when its entry has a problem text: a
+    # known limitation worth knowing before installing.
+    if [ "$eax_status" != "supported" ] || [ -n "$eax_status_details" ]; then
+        # The entry's own problem text says why; the generic lead-in is only
+        # for an entry without one.
+        local state_line="" after_line=""
+        [ -z "$eax_status_details" ] && state_line="Never implemented in this edition."
+        [ "$eax_status" == "removed_by_patch" ] && state_line="Removed by a later patch."
+        if [ "$eax_status" == "built_in" ]; then
+            state_line=""
+            after_line=" Installing is optional: it swaps in a newer OpenAL Soft and adds speaker and headphone settings."
+        fi
+        print_subheading "Status"
+        local status_text="${state_line}${eax_status_details:+ $eax_status_details}${after_line}"
+        WRAP_COLOUR="$prose_colour" print_wrapped "${status_text# }"
+    fi
+    # Store texts the stores share are shown once, under both their names.
+    if [ "$n" -gt 1 ] && [ -n "${details[0]}" ] && _gp_same_for_all details; then
+        print_subheading "$(printf '%s and ' "${labels[@]:0:n-1}")${labels[n-1]} details"
+        WRAP_COLOUR="$prose_colour" print_wrapped "${details[0]}"
+    else
+        for i in "${!stores[@]}"; do
+            [ -n "${details[i]}" ] || continue
+            print_subheading "${labels[i]} details"
+            WRAP_COLOUR="$prose_colour" print_wrapped "${details[i]}"
+        done
+    fi
+}
+
+# "Restoring EAX with" and the settings' titles, in database order.
+_gp_settings_sections() {
+    if [ "$eax_status" == "supported" ]; then
+        print_subheading "Restoring EAX with"
+        if _gp_same_for_all apis; then
+            print_wrapped "$(_gp_solution "${apis[0]}")"
+        else
+            for i in "${!stores[@]}"; do print_wrapped "${labels[i]}: $(_gp_solution "${apis[i]}")"; done
+        fi
+    fi
+    # Every store's titles, in database order; one only some stores offer
+    # says which.
+    local cat title flag
+    local -a eax_titles=() extra_titles=() openal_titles=()
+    local -A title_stores=() title_flag=()
+    for i in "${!stores[@]}"; do
+        while IFS=$'\t' read -r cat title flag; do
+            if [ -z "${title_stores[$cat$'\t'$title]+x}" ]; then
+                case "$cat" in
+                    audio) eax_titles+=("$title") ;;
+                    openal) openal_titles+=("$title") ;;
+                    *) extra_titles+=("$title") ;;
+                esac
+                title_stores[$cat$'\t'$title]="${labels[i]}"
+                title_flag[$cat$'\t'$title]="$flag"
+            else
+                title_stores[$cat$'\t'$title]+=" and ${labels[i]}"
+            fi
+        done < <(game_setting_titles "${ids[i]}" "${stores[i]}")
+    done
+    if [ ${#eax_titles[@]} -gt 0 ]; then
+        print_subheading "Audio settings"
+        for title in "${eax_titles[@]}"; do print_wrapped "$(_gp_setting_title audio "$title")"; done
+    fi
+    if [ ${#extra_titles[@]} -gt 0 ]; then
+        print_subheading "Optional settings"
+        for title in "${extra_titles[@]}"; do print_wrapped "$(_gp_setting_title optional "$title")"; done
+    fi
+    if [ ${#openal_titles[@]} -gt 0 ]; then
+        print_subheading "OpenAL settings"
+        for title in "${openal_titles[@]}"; do print_wrapped "$(_gp_setting_title openal "$title")"; done
+    fi
+}
+
+# The browser's "Before you play" section: each setting's follow-up.
+_gp_follow_ups() {
+    # What the player does after installing, for the browser; the install
+    # shows these in its "Before you play" box at the end. A setting that
+    # more than one store offers is shown once.
+    if [ -z "$location" ]; then
+        local follow_up shown_follow_ups=0
+        local -A follow_up_seen=()
+        for i in "${!stores[@]}"; do
+            while IFS=$'\t' read -r title follow_up; do
+                [ -n "$title" ] && [ -z "${follow_up_seen[$title]+x}" ] || continue
+                follow_up_seen[$title]=1
+                if [ "$shown_follow_ups" -eq 0 ]; then
+                    print_subheading "Before you play"
+                    shown_follow_ups=1
+                else
+                    echo ""
+                fi
+                # Not print_wrapped: it prints colour codes as text.
+                printf '  %b%s%b\n' "${WHITE}${BOLD}" "$title" "$NC"
+                WRAP_COLOUR="$prose_colour" print_wrapped "$follow_up"
+            done < <(game_setting_follow_ups "${ids[i]}" "${stores[i]}")
+        done
+    fi
+}
+
+# Additional steps, notes and suggested community patches.
+_gp_closing_sections() {
+    if [ -n "$restore_details" ]; then
+        print_subheading "Additional steps"
+        WRAP_COLOUR="$prose_colour" print_wrapped "$restore_details"
+    fi
+    if [ -n "$notes" ]; then
+        print_subheading "Notes"
+        WRAP_COLOUR="$prose_colour" print_wrapped "$notes"
+    fi
+    if [ "$n" -eq 1 ] || { [ -n "${patches[0]}" ] && _gp_same_for_all patches; }; then
+        if [ -n "${patches[0]}" ]; then
+            print_subheading "Suggested community patches"
+            WRAP_COLOUR="$prose_colour" print_wrapped "${patches[0]}"
+        fi
+    else
+        for i in "${!stores[@]}"; do
+            [ -n "${patches[i]}" ] || continue
+            print_subheading "Suggested community patches for ${labels[i]}"
+            WRAP_COLOUR="$prose_colour" print_wrapped "${patches[i]}"
+        done
+    fi
+}
+
+# The pages behind the entry's claims, each name a link with its address under it.
+_gp_sources() {
+    # Always the last section: the pages behind the entry's claims, each name
+    # a link with its address under it. A bare URL has no name, just the address.
+    local src_title src_url shown_sources=0
+    while IFS=$'\x1f' read -r src_title src_url; do
+        [ -n "$src_url" ] || continue
+        [ "$shown_sources" -eq 0 ] && print_subheading "Sources"
+        print_link "$src_title" "$src_url"
+        shown_sources=1
+    done < <(gdb_jq "$id" "$store" '
+        entry0 | .sources // [] | .[]
+        | if type == "string" then ["", .] else [.title, .url] end
+        | join("\u001f")')
+}
+
 print_game_profile_stores() {
     # Usage: print_game_profile_stores <location> <store>:<id> [<store>:<id> ...]
     # The GAME PROFILE screen's body, read straight from GAME_DATABASE_FILE;
@@ -850,97 +1106,7 @@ print_game_profile_stores() {
         counts[i]="$(count_game_settings "${ids[i]}" "${stores[i]}")"
     done
 
-    # Usage: _same_for_all <array name>
-    # True when every store's value in the array is the same.
-    _same_for_all() {
-        local -n _vals="$1"
-        local v
-        for v in "${_vals[@]}"; do [ "$v" == "${_vals[0]}" ] || return 1; done
-    }
-
-    # --- Field lines: what the database has on file, then what was found here ---
-    # Everything under "Game details" comes from game-database.json, not
-    # from the install, so it's kept apart from the two facts the library
-    # scan found on this system. The lines are collected first and printed
-    # together (print_detail_rows), so every value lines up after the longest
-    # label shown. A value with one line per store continues under the first.
-    local value sep
-    detail_heading "Game details"
-    detail_row "Name" "${BOLD}${name}${NC}"
-    if [ -n "$untested" ]; then
-        detail_row "Profile" "${NOTE}Untested${NC}"
-    else
-        detail_row "Profile" "${GREEN}Tested${NC}"
-    fi
-    [ -n "$released" ] && detail_row "Released" "${WHITE}$(format_release_date "$released")${NC}"
-    # The browser names each store's ID; the install shows its one store
-    # under System details instead.
-    if [ -z "$location" ]; then
-        for i in "${!stores[@]}"; do
-            detail_row "${labels[i]} ID" "${WHITE}${ids[i]}${NC}"
-        done
-    fi
-    # One row naming every store it's delisted from.
-    value=""
-    for i in "${!stores[@]}"; do
-        [ "${listings[i]}" == "delisted" ] && value+="${value:+ and }${labels[i]}"
-    done
-    [ -n "$value" ] && detail_row "Availability" "${WHITE}Delisted from $value ${DIM}(existing owners keep access)${NC}"
-    for i in "${!stores[@]}"; do
-        if [ "${id_sources[i]}" == "steamdb_historical" ]; then
-            detail_row "ID source" "${WHITE}SteamDB records ${DIM}(not verified against a local install)${NC}"
-        fi
-    done
-    # eax_versions sits in the same slot for every game — the qualifier for a
-    # patch-removed build comes after the list, not in place of it.
-    local ver_display="${eax_versions:-Unknown}"
-    if [ "$eax_status" == "supported" ]; then
-        detail_row "EAX Support" "${GREEN}${BOLD}${ver_display}${NC}"
-    elif [ "$eax_status" == "removed_by_patch" ]; then
-        detail_row "EAX Support" "${YELLOW}${BOLD}${ver_display}${NC} ${DIM}(originally supported)${NC}"
-    elif [ "$eax_status" == "built_in" ]; then
-        detail_row "EAX Support" "${GREEN}${BOLD}${ver_display}${NC} ${DIM}(already built in)${NC}"
-    else
-        detail_row "EAX Support" "${YELLOW}${BOLD}None${NC}"
-    fi
-    _api_name() { [ "$1" == "openal" ] && echo "OpenAL" || echo "DirectSound3D"; }
-    if _same_for_all apis; then
-        detail_row "Audio API" "${WHITE}$(_api_name "${apis[0]}")${NC}"
-    else
-        value="" sep=""
-        for i in "${!stores[@]}"; do
-            value+="${sep}${WHITE}$(_api_name "${apis[i]}")${NC} on ${labels[i]}"; sep=$'\n'
-        done
-        detail_row "Audio API" "$value"
-    fi
-    [ "$sound_system" == "miles" ] && detail_row "Sound system" "${WHITE}Miles Sound System${NC}"
-    [ "$eax_unified" == "true" ] && detail_row "EAX Unified" "${WHITE}Yes${NC}"
-    # Always shown, even at 0, so the label column keeps one width from game
-    # to game. Settings limited to one store (only_if.stores) can make the
-    # counts differ; each count is then shown with its store.
-    local col label_text
-    local -a nums fields
-    for col in 0 1; do
-        [ "$col" -eq 0 ] && label_text="Audio settings" || label_text="Optional settings"
-        nums=()
-        for i in "${!stores[@]}"; do
-            read -ra fields <<< "${counts[i]:-0 0}"
-            nums[i]="${fields[col]:-0}"
-        done
-        if _same_for_all nums; then
-            detail_row "$label_text" "${WHITE}${nums[0]}${NC}"
-        else
-            value="" sep=""
-            for i in "${!stores[@]}"; do value+="${sep}${WHITE}${nums[i]}${NC} on ${labels[i]}"; sep=$'\n'; done
-            detail_row "$label_text" "$value"
-        fi
-    done
-
-    if [ -n "$location" ]; then
-        detail_heading "System details"
-        detail_row "Platform" "${GREEN}${labels[0]}${NC}"
-        detail_row "Location" "${DIM}$(tilde_path "$location")${NC}"
-    fi
+    _gp_detail_rows
     print_detail_rows
     # The browser's paragraphs are in normal weight, so a long one reads
     # easily; the install keeps print_wrapped's bold white.
@@ -952,142 +1118,11 @@ print_game_profile_stores() {
         WRAP_COLOUR="$prose_colour" print_wrapped "$description"
     fi
 
-    # --- Blocks: status -> problem -> solution ---
-    # A supported game shows it too when its entry has a problem text: a
-    # known limitation worth knowing before installing.
-    if [ "$eax_status" != "supported" ] || [ -n "$eax_status_details" ]; then
-        # The entry's own problem text says why; the generic lead-in is only
-        # for an entry without one.
-        local state_line="" after_line=""
-        [ -z "$eax_status_details" ] && state_line="Never implemented in this edition."
-        [ "$eax_status" == "removed_by_patch" ] && state_line="Removed by a later patch."
-        if [ "$eax_status" == "built_in" ]; then
-            state_line=""
-            after_line=" Installing is optional: it swaps in a newer OpenAL Soft and adds speaker and headphone settings."
-        fi
-        print_subheading "Status"
-        local status_text="${state_line}${eax_status_details:+ $eax_status_details}${after_line}"
-        WRAP_COLOUR="$prose_colour" print_wrapped "${status_text# }"
-    fi
-    # Store texts the stores share are shown once, under both their names.
-    if [ "$n" -gt 1 ] && [ -n "${details[0]}" ] && _same_for_all details; then
-        print_subheading "$(printf '%s and ' "${labels[@]:0:n-1}")${labels[n-1]} details"
-        WRAP_COLOUR="$prose_colour" print_wrapped "${details[0]}"
-    else
-        for i in "${!stores[@]}"; do
-            [ -n "${details[i]}" ] || continue
-            print_subheading "${labels[i]} details"
-            WRAP_COLOUR="$prose_colour" print_wrapped "${details[i]}"
-        done
-    fi
-    if [ "$eax_status" == "supported" ]; then
-        _solution() { [ "$1" == "openal" ] && echo "OpenAL Soft" || echo "DSOAL + OpenAL Soft"; }
-        print_subheading "Restoring EAX with"
-        if _same_for_all apis; then
-            print_wrapped "$(_solution "${apis[0]}")"
-        else
-            for i in "${!stores[@]}"; do print_wrapped "${labels[i]}: $(_solution "${apis[i]}")"; done
-        fi
-        unset -f _solution
-    fi
-    # Every store's titles, in database order; one only some stores offer
-    # says which.
-    local cat title flag
-    local -a eax_titles=() extra_titles=() openal_titles=()
-    local -A title_stores=() title_flag=()
-    for i in "${!stores[@]}"; do
-        while IFS=$'\t' read -r cat title flag; do
-            if [ -z "${title_stores[$cat$'\t'$title]+x}" ]; then
-                case "$cat" in
-                    audio) eax_titles+=("$title") ;;
-                    openal) openal_titles+=("$title") ;;
-                    *) extra_titles+=("$title") ;;
-                esac
-                title_stores[$cat$'\t'$title]="${labels[i]}"
-                title_flag[$cat$'\t'$title]="$flag"
-            else
-                title_stores[$cat$'\t'$title]+=" and ${labels[i]}"
-            fi
-        done < <(game_setting_titles "${ids[i]}" "${stores[i]}")
-    done
-    _setting_title() {
-        local only="${title_stores[$1$'\t'$2]}"
-        local tag
-        tag="$(verified_tag "${title_flag[$1$'\t'$2]}")"
-        if [ "$n" -gt 1 ] && [ "$(grep -o ' and ' <<< "$only" | wc -l)" -lt $(( n - 1 )) ]; then
-            echo "$2 ($only only) $tag"
-        else
-            echo "$2 $tag"
-        fi
-    }
-    if [ ${#eax_titles[@]} -gt 0 ]; then
-        print_subheading "Audio settings"
-        for title in "${eax_titles[@]}"; do print_wrapped "$(_setting_title audio "$title")"; done
-    fi
-    if [ ${#extra_titles[@]} -gt 0 ]; then
-        print_subheading "Optional settings"
-        for title in "${extra_titles[@]}"; do print_wrapped "$(_setting_title optional "$title")"; done
-    fi
-    if [ ${#openal_titles[@]} -gt 0 ]; then
-        print_subheading "OpenAL settings"
-        for title in "${openal_titles[@]}"; do print_wrapped "$(_setting_title openal "$title")"; done
-    fi
-    unset -f _setting_title
-    # What the player does after installing, for the browser; the install
-    # shows these in its "Before you play" box at the end. A setting that
-    # more than one store offers is shown once.
-    if [ -z "$location" ]; then
-        local follow_up shown_follow_ups=0
-        local -A follow_up_seen=()
-        for i in "${!stores[@]}"; do
-            while IFS=$'\t' read -r title follow_up; do
-                [ -n "$title" ] && [ -z "${follow_up_seen[$title]+x}" ] || continue
-                follow_up_seen[$title]=1
-                if [ "$shown_follow_ups" -eq 0 ]; then
-                    print_subheading "Before you play"
-                    shown_follow_ups=1
-                else
-                    echo ""
-                fi
-                # Not print_wrapped: it prints colour codes as text.
-                printf '  %b%s%b\n' "${WHITE}${BOLD}" "$title" "$NC"
-                WRAP_COLOUR="$prose_colour" print_wrapped "$follow_up"
-            done < <(game_setting_follow_ups "${ids[i]}" "${stores[i]}")
-        done
-    fi
-    if [ -n "$restore_details" ]; then
-        print_subheading "Additional steps"
-        WRAP_COLOUR="$prose_colour" print_wrapped "$restore_details"
-    fi
-    if [ -n "$notes" ]; then
-        print_subheading "Notes"
-        WRAP_COLOUR="$prose_colour" print_wrapped "$notes"
-    fi
-    if [ "$n" -eq 1 ] || { [ -n "${patches[0]}" ] && _same_for_all patches; }; then
-        if [ -n "${patches[0]}" ]; then
-            print_subheading "Suggested community patches"
-            WRAP_COLOUR="$prose_colour" print_wrapped "${patches[0]}"
-        fi
-    else
-        for i in "${!stores[@]}"; do
-            [ -n "${patches[i]}" ] || continue
-            print_subheading "Suggested community patches for ${labels[i]}"
-            WRAP_COLOUR="$prose_colour" print_wrapped "${patches[i]}"
-        done
-    fi
-    unset -f _same_for_all _api_name
-    # Always the last section: the pages behind the entry's claims, each name
-    # a link with its address under it. A bare URL has no name, just the address.
-    local src_title src_url shown_sources=0
-    while IFS=$'\x1f' read -r src_title src_url; do
-        [ -n "$src_url" ] || continue
-        [ "$shown_sources" -eq 0 ] && print_subheading "Sources"
-        print_link "$src_title" "$src_url"
-        shown_sources=1
-    done < <(gdb_jq "$id" "$store" '
-        entry0 | .sources // [] | .[]
-        | if type == "string" then ["", .] else [.title, .url] end
-        | join("\u001f")')
+    _gp_status_sections
+    _gp_settings_sections
+    _gp_follow_ups
+    _gp_closing_sections
+    _gp_sources
     echo ""
 }
 
