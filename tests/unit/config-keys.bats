@@ -477,8 +477,20 @@ config_find_text_end() {  # <file> -> byte position just past the anchored text
     line="CONFIG:audio"$'\t'"t"$'\t'"$f"$'\t'"future_format"$'\t'"S"$'\t'"k"$'\t'"1"$'\t'"2"
     GAME_SETTINGS_REVERT_GROUPS=("audio"$'\x1f'"t"$'\x1f'"$line")
     GAME_SETTINGS_KEPT=()
-    revert_game_settings || true
+    run revert_game_settings
+    [[ "$output" == *"Kept k in a.ini — a newer version of this script changed it, so this version can't put it back."* ]]
+    revert_game_settings >/dev/null || true
     [ "${#GAME_SETTINGS_KEPT[@]}" -eq 1 ]
     [ "${GAME_SETTINGS_KEPT[0]}" == "$line" ]
+    [ "$(config_get_key "$f" ini S k)" == "2" ]
+}
+
+@test "revert_game_settings skips a damaged record with no format, quietly" {
+    local f="$BATS_TEST_TMPDIR/a.ini"
+    printf '[S]\nk=2\n' > "$f"
+    GAME_SETTINGS_REVERT_GROUPS=("audio"$'\x1f'"t"$'\x1f'"CONFIG:audio"$'\t'"t"$'\t'"$f")
+    GAME_SETTINGS_KEPT=()
+    run revert_game_settings
+    [[ "$output" != *"unknown format"* && "$output" != *"changed since install"* ]]
     [ "$(config_get_key "$f" ini S k)" == "2" ]
 }

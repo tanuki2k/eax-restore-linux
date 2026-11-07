@@ -2047,8 +2047,14 @@ revert_game_settings() {
         while IFS= read -r line; do
             [ -n "$line" ] || continue
             mapfile -t -d $'\t' f < <(printf '%s' "${line#CONFIG:}")
-            # Can't be read or put back by this script: leave it recorded.
-            if config_format_unreadable "${f[3]}"; then GAME_SETTINGS_KEPT+=("$line"); continue; fi
+            # A damaged line (no format at all) has nothing to put back.
+            [ -n "${f[3]}" ] || continue
+            # A format from a newer build: leave it recorded, and say so, since
+            # the game's file still has the changed value.
+            if config_format_unreadable "${f[3]}"; then
+                print_warning_arrow "Kept ${f[5]} in $(basename "${f[2]}") — a newer version of this script changed it, so this version can't put it back."
+                GAME_SETTINGS_KEPT+=("$line"); continue
+            fi
             [ -f "${f[2]}" ] || continue
             if [ "${f[3]}" == "registry" ]; then
                 [ -n "$reg_state" ] || { wine_registry_quiet && reg_state="ok" || reg_state="busy"; }

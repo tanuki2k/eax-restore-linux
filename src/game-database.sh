@@ -1154,7 +1154,8 @@ browse_game_database() {
     # in the list's first lines (older fzf) rather than fzf's header.
     local BROWSE_HEADER_LINES=$(( 1 - boxed ))
     { declare -p GREEN YELLOW CYAN WHITE BOLD DIM NOTE NC GAME_DATABASE_FILE SCRIPT_VERSION \
-        BROWSE_SIDE_PERCENT BROWSE_STACK_COLUMNS BROWSE_HEADER_LINES; declare -f; } > "$defs"
+        BROWSE_SIDE_PERCENT BROWSE_STACK_COLUMNS BROWSE_HEADER_LINES \
+        CONFIG_FORMATS_RE CONFIG_TEXT_FORMATS_RE; declare -f; } > "$defs"
     echo "all all profile 0 match $layout $layout tested" > "$state"
     # The key bar's own small script: it's redrawn on every move through
     # the list, too often to load all of the above each time.
