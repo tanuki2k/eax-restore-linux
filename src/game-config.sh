@@ -297,37 +297,45 @@ _lenstr_set() {
     return 1
 }
 
-# Usage: upgrade_config_line <manifest line>
-# Sets UPGRADED_LINE to the line with an old format name in a CONFIG: line's
-# format field (the fourth) replaced by its current name. Dev builds from
-# before the formats were renamed wrote the old names into the manifest, and
-# uninstall and Tools read them back. Any other line is kept as it is. Every
-# reader of CONFIG lines goes through this, and so does the matching of a
-# reverted line against the manifest, so both sides are in the new spelling.
-# Sets a variable instead of printing so the callers don't fork a subshell
-# per line. Delete this once no dev install from before 0.29 is expected to
+# Usage: upgrade_format_name <format>
+# Sets UPGRADED_FORMAT to the format's current name: dev builds from before
+# the formats were renamed wrote the old names into the manifest. A current
+# or unknown name is kept as it is. config_get_key and config_set_key apply
+# this themselves, so a reader that forgets to upgrade a manifest line still
+# works. Delete this once no dev install from before 0.29 is expected to
 # still be around.
+UPGRADED_FORMAT=""
+upgrade_format_name() {
+    case "$1" in
+        flat_ini) UPGRADED_FORMAT="ini" ;;
+        gas_cfg) UPGRADED_FORMAT="ini_braces" ;;
+        idtech_cfg) UPGRADED_FORMAT="set_commands" ;;
+        dark_cfg|ltx) UPGRADED_FORMAT="key_value" ;;
+        brace_cfg) UPGRADED_FORMAT="braced_pairs" ;;
+        quoted_cfg) UPGRADED_FORMAT="quoted_pairs" ;;
+        byte_cfg) UPGRADED_FORMAT="binary_offset" ;;
+        lenstr_cfg) UPGRADED_FORMAT="binary_text" ;;
+        gadb) UPGRADED_FORMAT="binary_switches" ;;
+        wine_reg) UPGRADED_FORMAT="registry" ;;
+        *) UPGRADED_FORMAT="$1" ;;
+    esac
+}
+
+# Usage: upgrade_config_line <manifest line>
+# Sets UPGRADED_LINE to the line with its format field (the fourth of a
+# CONFIG: line) in the current spelling; any other line is kept as it is.
+# The manifest lines kept and dropped by a revert are compared as text, so
+# both sides go through this. Sets a variable instead of printing so the
+# callers don't fork a subshell per line.
 UPGRADED_LINE=""
 upgrade_config_line() {
-    local line="$1" rest old new
+    local line="$1" rest old
     UPGRADED_LINE="$line"
     [[ "$line" == CONFIG:*$'\t'*$'\t'*$'\t'* ]] || return 0
     rest="${line#*$'\t'*$'\t'*$'\t'}"
     old="${rest%%$'\t'*}"
-    case "$old" in
-        flat_ini) new="ini" ;;
-        gas_cfg) new="ini_braces" ;;
-        idtech_cfg) new="set_commands" ;;
-        dark_cfg|ltx) new="key_value" ;;
-        brace_cfg) new="braced_pairs" ;;
-        quoted_cfg) new="quoted_pairs" ;;
-        byte_cfg) new="binary_offset" ;;
-        lenstr_cfg) new="binary_text" ;;
-        gadb) new="binary_switches" ;;
-        wine_reg) new="registry" ;;
-        *) return 0 ;;
-    esac
-    UPGRADED_LINE="${line%"$rest"}${new}${rest#"$old"}"
+    upgrade_format_name "$old"
+    UPGRADED_LINE="${line%"$rest"}${UPGRADED_FORMAT}${rest#"$old"}"
 }
 
 # Usage: config_get_key <file> <ini|set_commands|key_value|braced_pairs|ini_braces|quoted_pairs|binary_offset|binary_text|binary_switches|registry> <section> <key>
@@ -338,7 +346,8 @@ upgrade_config_line() {
 # lines. ini_braces is a "[section]" line, "{" on its own
 # line, then "key = value;" lines up to "}". A binary_switches key is one on/off setting, 0 or 1.
 config_get_key() {
-    local file="$1" fmt="$2" sec="$3" key="$4" found
+    local file="$1" fmt sec="$3" key="$4" found
+    upgrade_format_name "$2"; fmt="$UPGRADED_FORMAT"
     [ -f "$file" ] || { echo "__ABSENT__"; return; }
     if [ "$fmt" == "registry" ]; then
         found="$(_wine_reg_read "$file" "$sec" "$key")"; echo "${found#*$'\t'}"
@@ -449,8 +458,9 @@ _gadb_set() {
 # same folder and swaps it in, so a failure never leaves a half-written file.
 # Returns 1 if the file couldn't be written.
 config_set_key() {
-    local file="$1" fmt="$2" sec="$3" key="$4" value="$5"
+    local file="$1" fmt sec="$3" key="$4" value="$5"
     local crlf=0 current tmp
+    upgrade_format_name "$2"; fmt="$UPGRADED_FORMAT"
     [ "$fmt" == "binary_offset" ] && { _byte_set "$file" "$key" "$value"; return; }
     [ "$fmt" == "binary_text" ] && { _lenstr_set "$file" "$key" "$value"; return; }
     [ "$fmt" == "binary_switches" ] && { _gadb_set "$file" "$key" "$value"; return; }

@@ -82,10 +82,7 @@ def draft_game_config(diffs_audio, diffs_optional, existing=None):
                 if d["format"] in ("ini_braces", "registry") and not c["section"]:
                     skipped.append(f"{d['file']} {c['key']}: {d['format']} needs a section and none was found - write it by hand")
                     continue
-                tgt = group.setdefault(d["file"], {})
-                if d["format"] in ("ini", "ini_braces", "registry") and (c["section"] or d["format"] != "ini"):
-                    tgt = tgt.setdefault(c["section"], {})
-                tgt[c["key"]] = c["new"]
+                put_change(group, d["file"], d["format"], c["section"], c["key"], c["new"])
         if group:
             gc[kind].append({"title": "TODO title", "reason": "TODO reason", "changes": group})
 
@@ -96,6 +93,15 @@ def draft_game_config(diffs_audio, diffs_optional, existing=None):
         if not gc[k]:
             del gc[k]
     return gc, list(dict.fromkeys(skipped))  # each kind's pass notes the same unreadable file
+
+
+def put_change(changes, file, fmt, section, key, value):
+    """Adds one change in the shape its format takes: file, section, key, value for the
+    sectioned formats (an ini file may skip the section), file, key, value for the rest."""
+    tgt = changes.setdefault(file, {})
+    if fmt in ("ini", "ini_braces", "registry") and (section or fmt != "ini"):
+        tgt = tgt.setdefault(section, {})
+    tgt[key] = value
 
 
 # Speaker layouts, in the order a list of them is written, and the title each gets. The titles are
@@ -146,10 +152,7 @@ def draft_speaker_settings(layout_diffs, gc):
             speakers = ["surround"] + [l for l in speakers if l not in SURROUND]
         changes = {}
         for (file, fmt, section, k), v in sorted(key):
-            tgt = changes.setdefault(file, {})
-            if fmt in ("ini", "ini_braces", "registry") and (section or fmt != "ini"):
-                tgt = tgt.setdefault(section, {})
-            tgt[k] = v
+            put_change(changes, file, fmt, section, k, v)
         speakers = sorted(speakers, key=SPEAKER_ORDER.index)
         out.append((SPEAKER_ORDER.index(speakers[0]), {
             "title": SPEAKER_TITLES[speakers[0]], "reason": "TODO reason",
