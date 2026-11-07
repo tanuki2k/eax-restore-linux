@@ -347,6 +347,9 @@ upgrade_config_line() {
 # the games themselves read them. braced_pairs is "{key} = {value}"
 # lines. ini_braces is a "[section]" line, "{" on its own
 # line, then "key = value;" lines up to "}". A binary_switches key is one on/off setting, 0 or 1.
+# Takes the current format names only: a manifest line's format goes through
+# upgrade_config_line first. An unknown name prints a message to stderr and
+# returns 1 rather than reading a registry or binary file as text.
 config_get_key() {
     local file="$1" fmt="$2" sec="$3" key="$4" found
     [ -f "$file" ] || { echo "__ABSENT__"; return; }
@@ -361,6 +364,8 @@ config_get_key() {
         if [ -n "$found" ]; then echo "${found#* }"; else echo "__ABSENT__"; fi
         return
     fi
+    [[ "$fmt" =~ ^(ini|set_commands|key_value|braced_pairs|ini_braces|quoted_pairs)$ ]] || {
+        echo "config_get_key: unknown format '$fmt'" >&2; return 1; }
     LC_ALL=C awk -v fmt="$fmt" -v sec="$sec" -v key="$key" '
         function is_header(l,   n, r) {
             if (!match(l, /^[ \t]*\[[^]]*\]/)) return 0
@@ -457,7 +462,8 @@ _gadb_set() {
 # the active line is added right after it. binary_switches only switches an existing
 # on/off setting (see _gadb_set), binary_offset one byte at a position (_byte_set), and binary_text a length-prefixed text found by the bytes before it (_lenstr_set). Writes through a temp file in the
 # same folder and swaps it in, so a failure never leaves a half-written file.
-# Returns 1 if the file couldn't be written.
+# Returns 1 if the file couldn't be written or the format isn't a current name
+# (a manifest line's format goes through upgrade_config_line first).
 config_set_key() {
     local file="$1" fmt="$2" sec="$3" key="$4" value="$5"
     local crlf=0 current tmp

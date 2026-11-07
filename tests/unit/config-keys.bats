@@ -406,3 +406,15 @@ config_find_text_end() {  # <file> -> byte position just past the anchored text
     [[ "$output" == *"UseEAX"*"True ✓ already set"* ]]
     [[ "$output" == *"Use3DSound"*"False → True"* ]]
 }
+
+@test "config_get_key and config_set_key refuse an old or unknown format name" {
+    local f="$BATS_TEST_TMPDIR/a.ini"
+    printf '[S]\nk=1\n' > "$f"
+    run config_get_key "$f" flat_ini S k
+    [ "$status" -eq 1 ]
+    run config_get_key "$f" wine_reg S k
+    [ "$status" -eq 1 ]
+    run config_set_key "$f" flat_ini S k 2
+    [ "$status" -eq 1 ]
+    [ "$(config_get_key "$f" ini S k)" == "1" ]
+}
