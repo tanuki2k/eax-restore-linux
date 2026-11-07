@@ -513,6 +513,21 @@ config_set_key() {
         function flush_blanks(   i) { for (i = 1; i <= nb; i++) outl("", beol[i]); nb = 0 }
 '"$_CONFIG_AWK_IS_HEADER"'
         function ini_line() { return key "=" val }
+        function braces_line() { return "\t" key " = " val ";" }
+        # Rewrites or drops the line when it is the key (spacing around the = and
+        # the key spelling kept; suffix is the closing ";" ini_braces lines
+        # carry). Returns 1 when it handled the line.
+        function replace_key(suffix,   p, k, kt, sp) {
+            p = index($0, "=")
+            if (p <= 0) return 0
+            k = substr($0, 1, p - 1); kt = k; gsub(/^[ \t]+|[ \t]+$/, "", kt)
+            if (tolower(kt) != lkey) return 0
+            done = 1
+            if (del) return 1
+            sp = (substr($0, p + 1, 1) == " ") ? " " : ""
+            out(k "=" sp val suffix)
+            return 1
+        }
         BEGIN {
             lsec = tolower(sec); lkey = tolower(key); insec = (fmt == "ini" && sec == ""); seen_sec = insec; done = 0; nb = 0
             del = (val == "__DELETE__"); eol = (crlf ? "\r\n" : "\n"); prev_c = 0
@@ -531,42 +546,20 @@ config_set_key() {
             }
             if ($0 ~ /^[ \t]*$/) { nb++; beol[nb] = eol; next }
             flush_blanks()
-            if (insec && !done) {
-                p = index($0, "=")
-                if (p > 0) {
-                    k = substr($0, 1, p - 1); kt = k; gsub(/^[ \t]+|[ \t]+$/, "", kt)
-                    if (tolower(kt) == lkey) {
-                        done = 1
-                        if (del) next
-                        sp = (substr($0, p + 1, 1) == " ") ? " " : ""
-                        out(k "=" sp val); next
-                    }
-                }
-            }
+            if (insec && !done && replace_key("")) next
             out($0); next
         }
         fmt == "ini_braces" {
             if (is_header($0)) {
-                if (insec && !done && !del) { out("\t" key " = " val ";"); done = 1 }
+                if (insec && !done && !del) { out(braces_line()); done = 1 }
                 insec = (tolower(hname) == lsec); if (insec) seen_sec = 1
                 out($0); next
             }
             if (insec && !done && $0 ~ /^[ \t]*\}/) {
-                if (!del) out("\t" key " = " val ";")
+                if (!del) out(braces_line())
                 done = 1; out($0); insec = 0; next
             }
-            if (insec && !done) {
-                p = index($0, "=")
-                if (p > 0) {
-                    k = substr($0, 1, p - 1); kt = k; gsub(/^[ \t]+|[ \t]+$/, "", kt)
-                    if (tolower(kt) == lkey) {
-                        done = 1
-                        if (del) next
-                        sp = (substr($0, p + 1, 1) == " ") ? " " : ""
-                        out(k "=" sp val ";"); next
-                    }
-                }
-            }
+            if (insec && !done && replace_key(";")) next
             out($0); next
         }
         fmt == "set_commands" {
@@ -625,8 +618,8 @@ config_set_key() {
         }
         END {
             if (fmt == "ini_braces") {
-                if (insec && !done && !del) { out("\t" key " = " val ";"); out("}"); done = 1 }
-                else if (!seen_sec && !done && !del) { if (NR > 0) out(""); out("[" sec "]"); out("{"); out("\t" key " = " val ";"); out("}") }
+                if (insec && !done && !del) { out(braces_line()); out("}"); done = 1 }
+                else if (!seen_sec && !done && !del) { if (NR > 0) out(""); out("[" sec "]"); out("{"); out(braces_line()); out("}") }
                 flush_blanks()
             } else if (fmt == "ini") {
                 if (insec && !done && !del) { out(ini_line()); done = 1 }
