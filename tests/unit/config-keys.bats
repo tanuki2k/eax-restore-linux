@@ -459,3 +459,26 @@ config_find_text_end() {  # <file> -> byte position just past the anchored text
     apply_game_settings
     [ "$(cat "$INSTALL_MANIFEST")" == "$unknown" ]
 }
+
+@test "apply_game_settings drops a record with an empty format field" {
+    local f="$BATS_TEST_TMPDIR/a.ini"
+    printf '[S]\nk=1\n' > "$f"
+    PREV_CONFIG_LINES=("CONFIG:audio"$'\t'"t"$'\t'"$f")
+    GAME_SETTINGS_PLAN=()
+    INSTALL_MANIFEST="$BATS_TEST_TMPDIR/manifest"
+    : > "$INSTALL_MANIFEST"
+    apply_game_settings
+    [ ! -s "$INSTALL_MANIFEST" ]
+}
+
+@test "revert_game_settings leaves a record with an unreadable format recorded and the file alone" {
+    local f="$BATS_TEST_TMPDIR/a.ini" line
+    printf '[S]\nk=2\n' > "$f"
+    line="CONFIG:audio"$'\t'"t"$'\t'"$f"$'\t'"future_format"$'\t'"S"$'\t'"k"$'\t'"1"$'\t'"2"
+    GAME_SETTINGS_REVERT_GROUPS=("audio"$'\x1f'"t"$'\x1f'"$line")
+    GAME_SETTINGS_KEPT=()
+    revert_game_settings || true
+    [ "${#GAME_SETTINGS_KEPT[@]}" -eq 1 ]
+    [ "${GAME_SETTINGS_KEPT[0]}" == "$line" ]
+    [ "$(config_get_key "$f" ini S k)" == "2" ]
+}

@@ -299,9 +299,20 @@ _lenstr_set() {
 
 # The current format names: every one, and the ones that are plain text
 # files (the rest are binary files or the registry, each with its own
-# reader). The one place to edit when a format is added or renamed.
+# reader). Edit these when a format is added or renamed; the usage comments
+# of config_get_key and config_set_key, upgrade_format_name and the schema
+# list the names too.
 CONFIG_FORMATS_RE='^(ini|set_commands|key_value|braced_pairs|ini_braces|quoted_pairs|binary_offset|binary_text|binary_switches|registry)$'
 CONFIG_TEXT_FORMATS_RE='^(ini|set_commands|key_value|braced_pairs|ini_braces|quoted_pairs)$'
+
+# Usage: config_format_unreadable <format>
+# True for a record's format that is named but not one this script knows (a
+# newer build wrote it). Such a record can't be checked or put back, so it is
+# kept in the manifest. An empty format is a damaged line, not an unknown
+# format, and is treated like any other record with nothing to act on.
+config_format_unreadable() {
+    [ -n "$1" ] && [[ ! "$1" =~ $CONFIG_FORMATS_RE ]]
+}
 
 # Usage: upgrade_format_name <format>
 # Sets UPGRADED_FORMAT to the format's current name: dev builds from before
@@ -1843,8 +1854,8 @@ apply_game_settings() {
         # A format this script can't read (from a newer build) can't be
         # checked, file or no file, so the record stays: dropping it would
         # leave the change with nothing to put it back.
-        if [[ ! "${f[3]}" =~ $CONFIG_FORMATS_RE ]]; then echo "$line" >> "$INSTALL_MANIFEST"; continue; fi
-        [ -f "${f[2]}" ] || continue
+        if config_format_unreadable "${f[3]}"; then echo "$line" >> "$INSTALL_MANIFEST"; continue; fi
+        [ -n "${f[3]}" ] && [ -f "${f[2]}" ] || continue
         config_values_equal "${f[3]}" "$(config_get_key "${f[2]}" "${f[3]}" "${f[4]}" "${f[5]}")" "${f[7]}" \
             && echo "$line" >> "$INSTALL_MANIFEST"
     done
@@ -2036,6 +2047,8 @@ revert_game_settings() {
         while IFS= read -r line; do
             [ -n "$line" ] || continue
             mapfile -t -d $'\t' f < <(printf '%s' "${line#CONFIG:}")
+            # Can't be read or put back by this script: leave it recorded.
+            if config_format_unreadable "${f[3]}"; then GAME_SETTINGS_KEPT+=("$line"); continue; fi
             [ -f "${f[2]}" ] || continue
             if [ "${f[3]}" == "registry" ]; then
                 [ -n "$reg_state" ] || { wine_registry_quiet && reg_state="ok" || reg_state="busy"; }
