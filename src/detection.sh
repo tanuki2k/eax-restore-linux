@@ -1619,6 +1619,218 @@ confirm_continue_if_openal_native() {
     _api_step_choose
 }
 
+# The steps of detect_game_environment below. They share its attempt_auto_detect
+# through bash's dynamic scope, so they only run from it.
+
+# Steam: the game's AppID, from the library scan or the appmanifest files.
+_env_find_steam_appid() {
+    if [ -n "$SCANNED_APPID" ]; then
+        # Already known from the library scanner in get_game_directory —
+        # skip the redundant search and go straight to prefix
+        # verification below regardless of the gate above: the AppID is
+        # already known, and the prefix lookup after it is a mandatory
+        # protontricks query with no manual alternative, so there's
+        # nothing left here for the gate to meaningfully govern.
+        APPID="$SCANNED_APPID"
+        print_status "Using AppID ${BOLD}$APPID${NC} from the library scan." ""
+    else
+        if [ "$attempt_auto_detect" -eq 1 ]; then
+            print_task "Searching for Steam AppID"
+            # Use the top-level folder directly under steamapps/common/, not
+            # the leaf of GAME_DIR — the .exe is often nested in a subfolder
+            # (e.g. GameName/bin/x64), whose basename won't match the
+            # appmanifest's "installdir" value.
+            INSTALL_DIR="${GAME_DIR#*/steamapps/common/}"
+            INSTALL_DIR="${INSTALL_DIR%%/*}"
+            print_status "Scanning local appmanifest files for folder: $INSTALL_DIR" ""
+            # Escape BRE metacharacters (folder names with brackets, dots, etc.
+            # are common — e.g. "[Definitive Edition]") since this pattern
+            # also relies on \s as a wildcard, which -F would otherwise take
+            # away by disabling regex interpretation entirely.
+            INSTALL_DIR_ESCAPED=$(printf '%s' "$INSTALL_DIR" | sed 's/[][\.*^$]/\\&/g')
+            MANIFEST_FILE=$(grep -il "\"installdir\"\s*\"$INSTALL_DIR_ESCAPED\"" "${GAME_DIR%%/steamapps/common/*}/steamapps"/appmanifest_*.acf 2>/dev/null | head -n 1)
+
+            if [ -n "$MANIFEST_FILE" ]; then
+                AUTO_APPID=$(basename "$MANIFEST_FILE" | tr -dc '0-9')
+                print_status "Found AppID: ${BOLD}$AUTO_APPID${NC}" ""
+                if confirm "Use this detected Steam AppID?"; then APPID="$AUTO_APPID"; fi
+            else
+                print_status "Search complete. No matching AppID found." "$YELLOW"
+            fi
+        fi
+    fi
+}
+
+# Steam: asks protontricks for the AppID's prefix and confirms it, asking for
+# the AppID by hand when needed. Returns early (RESTART_REQUESTED, or the
+# player quit) without a prefix.
+_env_verify_steam_prefix() {
+    while true; do
+        if [ -z "$APPID" ]; then
+            print_result "Enter the Steam AppID manually: " "$YELLOW"
+            echo -e "${WHITE} Tip: Found on the game's Steam Store URL, or in Steam by right-clicking the game -> Properties -> Updates.${NC}"
+            echo -e -n "> "
+            if ! read_answer APPID; then
+                # stdin closed (piped/exhausted) — can't keep prompting, so
+                # offer game reselection / exit rather than spinning.
+                print_error "A Steam AppID is required — protontricks uses it to locate the game's Proton prefix."
+                prompt_restart_or_quit 0
+                return
+            fi
+            APPID=$(echo "$APPID" | tr -dc '0-9')
+            # Empty / non-numeric entry: re-prompt. There's no skip — the
+            # AppID is required for protontricks to locate the prefix.
+            [ -z "$APPID" ] && continue
+        fi
+
+        echo ""
+        print_status "Querying Protontricks database for AppID ${BOLD}${APPID}${NC}..." ""
+        # Output (and errors) go to the log too, so a failed lookup shows why.
+        log_cmd "protontricks -c 'echo \$WINEPREFIX' $APPID${STEAM_DIR:+ (STEAM_DIR=$STEAM_DIR)}"
+        DETECTED_STEAM_PREFIX=$(protontricks -c 'echo $WINEPREFIX' "$APPID" 2>> "$EAX_LOG_FILE" | tee -a "$EAX_LOG_FILE" | grep "/pfx" | tail -n 1 | tr -d '\r')
+
+        if [ -n "$DETECTED_STEAM_PREFIX" ] && [ -d "$DETECTED_STEAM_PREFIX" ]; then
+            print_detected "Detected Prefix" "$DETECTED_STEAM_PREFIX"
+            if confirm "Use this detected prefix?"; then
+                PREFIX_PATH="$DETECTED_STEAM_PREFIX"
+                ACF_FILE="${GAME_DIR%%/steamapps/common/*}/steamapps/appmanifest_${APPID}.acf"
+                if [ -z "$GAME_NAME" ]; then
+                    # Same source appid/gog_id already come from, not the
+                    # curated JSON — the appmanifest's own "name" key.
+                    [ -f "$ACF_FILE" ] && GAME_NAME=$(acf_value "$ACF_FILE" name)
+                    [ -z "$GAME_NAME" ] && GAME_NAME="AppID $APPID"
+                fi
+                show_profile_if_unseen "$APPID" "steam"
+                confirm_continue_if_eax_impossible "$APPID" "steam" "$ACF_FILE"
+                # User chose to go back and pick a different game — unwind
+                # to the config flow's Step 1-2 loop.
+                [ -n "$RESTART_REQUESTED" ] && return
+                break
+            fi
+            APPID=""
+        elif [ -d "$STEAM_LIBRARY/steamapps/compatdata/$APPID/pfx/drive_c" ]; then
+            # The prefix is right there beside the game, so it's
+            # protontricks that can't see it — and every later registry
+            # step goes through protontricks too, so it has to be fixed
+            # rather than worked around.
+            log_cmd "steam: $STEAM_LIBRARY/steamapps/compatdata/$APPID/pfx exists, but protontricks didn't report it"
+            print_error "The Proton prefix for AppID ${APPID} exists, but protontricks couldn't find it:" \
+                "  $STEAM_LIBRARY/steamapps/compatdata/$APPID/pfx"
+            if declare -F protontricks &>/dev/null; then
+                # Preflight only defines the function for the Flatpak build.
+                print_paragraph "Flatpak protontricks can only see the folders it has been given access to." \
+                    "Allow it to read this Steam library by running the command below, then" \
+                    "check again:" \
+                    "" \
+                    "  flatpak override --user --filesystem=\"$STEAM_LIBRARY\" com.github.Matoking.protontricks"
+            else
+                print_paragraph "protontricks' own output is in the run log, and usually says why."
+            fi
+            if ! confirm "Check this AppID again?"; then APPID=""; fi
+        else
+            print_error "Proton prefix not found for AppID ${APPID}."
+            if install_is_linux_build "$(game_install_root)"; then
+                # A Linux build never runs through Proton, so launching it
+                # won't make a prefix: the Windows build has to come first.
+                local beta_branch=""
+                ensure_game_database && beta_branch=$(gdb_field "$APPID" steam '.stores.steam.beta_branch // empty')
+                print_paragraph "Steam installed the Linux version of ${GAME_NAME:-this game}, which doesn't use Proton."
+                print_linux_build_note steam "$beta_branch"
+                print_paragraph "Then launch ${GAME_NAME:-the game} once, close it, and check again."
+            else
+                print_paragraph "If you just installed this game, Proton has not generated the prefix yet." \
+                    "Please launch the game at least once, close it, and try again."
+            fi
+            # "No" clears the AppID and drops back to the manual prompt for a
+            # corrected value; an empty entry there triggers restart/quit.
+            if ! confirm "Check this AppID again?"; then APPID=""; fi
+        fi
+    done
+}
+
+# Non-Steam: Heroic's prefix for the game folder, offered for confirmation.
+_env_find_heroic_prefix() {
+    HEROIC_APP_NAME=""
+    HEROIC_GAME_ID=""; HEROIC_EXPECTED_PREFIX=""; HEROIC_PREFIX_SOURCE=""; HEROIC_GAME_TITLE=""; HEROIC_ROOT=""; HEROIC_RUNNER_TYPE=""
+    DETECTED_PREFIX=""; DETECTED_APP_NAME=""
+    if [ "$attempt_auto_detect" -eq 1 ]; then
+        IFS=$'\x1f' read -r DETECTED_PREFIX DETECTED_APP_NAME HEROIC_GAME_ID HEROIC_PREFIX_SOURCE HEROIC_GAME_TITLE HEROIC_ROOT \
+            <<< "$(detect_heroic_prefix_verbose "$GAME_DIR")"
+    else
+        # Still look the game up (quietly) so the prefix check below can
+        # compare a hand-typed prefix with the one Heroic uses.
+        IFS=$'\x1f' read -r DETECTED_PREFIX DETECTED_APP_NAME HEROIC_GAME_ID HEROIC_PREFIX_SOURCE HEROIC_GAME_TITLE HEROIC_ROOT \
+            <<< "$(detect_heroic_prefix_verbose "$GAME_DIR" 2>/dev/null)"
+    fi
+    HEROIC_EXPECTED_PREFIX="$DETECTED_PREFIX"
+    # Found from the game folder, not the prefix, so it's kept whichever
+    # prefix is used: a typed one still gets the game's profile, its EAX
+    # check and its settings.
+    HEROIC_APP_NAME="$DETECTED_APP_NAME"
+    if [ "$attempt_auto_detect" -eq 1 ]; then
+        if [ -n "$DETECTED_PREFIX" ]; then
+            print_detected "Detected Prefix" "$DETECTED_PREFIX"
+            [ "$HEROIC_PREFIX_SOURCE" == "shared" ] && print_status "This is Heroic's shared prefix, because ${HEROIC_GAME_TITLE:-this game} has no prefix of its own." "$DIM"
+            if confirm "Use this detected prefix?"; then
+                PREFIX_PATH="$DETECTED_PREFIX"
+            fi
+        fi
+    fi
+}
+
+# Non-Steam: confirms the prefix, asking for a path by hand when needed.
+# Returns 1 on an early exit (RESTART_REQUESTED, or the player quit).
+_env_verify_wine_prefix() {
+    while true; do
+        if [ -z "$PREFIX_PATH" ]; then
+            print_result "Enter the Wine prefix path: " "$YELLOW"
+            echo -e "${WHITE} Example Heroic: ~/Games/Heroic/Prefixes/[Game-Name]${NC}"
+            echo -e -n "> "
+            if ! read_answer PREFIX_PATH; then
+                # stdin closed (piped/exhausted) — can't keep prompting, so
+                # offer game reselection / exit rather than spinning.
+                print_error "A Wine prefix is required — it's where the DLL override and prefix-side files go."
+                prompt_restart_or_quit 0
+                return 1
+            fi
+            # Empty entry: re-prompt. There's no skip — the prefix is where
+            # the DLL override, the system32/syswow64 copy and the VC++
+            # check all happen.
+            [ -z "$PREFIX_PATH" ] && continue
+            PREFIX_PATH="$(clean_typed_path "$PREFIX_PATH")"
+            [ -n "$PREFIX_PATH" ] && [[ "$PREFIX_PATH" != /* ]] && PREFIX_PATH="$PWD/$PREFIX_PATH"
+        fi
+
+        if [ -d "$PREFIX_PATH/drive_c" ]; then
+            echo ""
+            print_status "Prefix verified!" "$GREEN"
+            if ! check_heroic_prefix_match; then PREFIX_PATH=""; continue; fi
+            if [ -z "$GAME_NAME" ] && [ -n "$HEROIC_APP_NAME" ]; then
+                # Same source the GOG ID already comes from, not the
+                # curated JSON — Heroic's own install folder name.
+                HEROIC_INSTALL_PATH=$(find_heroic_install_path "$HEROIC_APP_NAME")
+                [ -n "$HEROIC_INSTALL_PATH" ] && GAME_NAME="$(basename "$HEROIC_INSTALL_PATH")"
+                [ -z "$GAME_NAME" ] && GAME_NAME="GOG ID $HEROIC_APP_NAME"
+            fi
+            show_profile_if_unseen "$HEROIC_APP_NAME" "gog"
+            confirm_continue_if_eax_impossible "$HEROIC_APP_NAME" "gog"
+            # User chose to go back and pick a different game — unwind to
+            # the config flow's Step 1-2 loop.
+            [ -n "$RESTART_REQUESTED" ] && return 1
+            break
+        else
+            print_error "Initialised Wine prefix not found at that location."
+            print_paragraph "If you just installed this game, the launcher has not generated the prefix yet." \
+                "Please run the game at least once, close it, and try again."
+
+            # "No" clears the path and drops back to the manual prompt for a
+            # corrected value; an empty entry there triggers restart/quit.
+            if ! confirm "Check this path again?"; then PREFIX_PATH=""; fi
+        fi
+    done
+    return 0
+}
+
 detect_game_environment() {
     APPID=""
     PREFIX_PATH=""
@@ -1632,203 +1844,15 @@ detect_game_environment() {
     if [[ "$GAME_DIR" == *"/steamapps/common/"* ]]; then
         LAUNCHER_TYPE="1"
         print_result "Steam installation detected!" "$GREEN"
-
-        if [ -n "$SCANNED_APPID" ]; then
-            # Already known from the library scanner in get_game_directory —
-            # skip the redundant search and go straight to prefix
-            # verification below regardless of the gate above: the AppID is
-            # already known, and the prefix lookup after it is a mandatory
-            # protontricks query with no manual alternative, so there's
-            # nothing left here for the gate to meaningfully govern.
-            APPID="$SCANNED_APPID"
-            print_status "Using AppID ${BOLD}$APPID${NC} from the library scan." ""
-        else
-            if [ "$attempt_auto_detect" -eq 1 ]; then
-                print_task "Searching for Steam AppID"
-                # Use the top-level folder directly under steamapps/common/, not
-                # the leaf of GAME_DIR — the .exe is often nested in a subfolder
-                # (e.g. GameName/bin/x64), whose basename won't match the
-                # appmanifest's "installdir" value.
-                INSTALL_DIR="${GAME_DIR#*/steamapps/common/}"
-                INSTALL_DIR="${INSTALL_DIR%%/*}"
-                print_status "Scanning local appmanifest files for folder: $INSTALL_DIR" ""
-                # Escape BRE metacharacters (folder names with brackets, dots, etc.
-                # are common — e.g. "[Definitive Edition]") since this pattern
-                # also relies on \s as a wildcard, which -F would otherwise take
-                # away by disabling regex interpretation entirely.
-                INSTALL_DIR_ESCAPED=$(printf '%s' "$INSTALL_DIR" | sed 's/[][\.*^$]/\\&/g')
-                MANIFEST_FILE=$(grep -il "\"installdir\"\s*\"$INSTALL_DIR_ESCAPED\"" "${GAME_DIR%%/steamapps/common/*}/steamapps"/appmanifest_*.acf 2>/dev/null | head -n 1)
-
-                if [ -n "$MANIFEST_FILE" ]; then
-                    AUTO_APPID=$(basename "$MANIFEST_FILE" | tr -dc '0-9')
-                    print_status "Found AppID: ${BOLD}$AUTO_APPID${NC}" ""
-                    if confirm "Use this detected Steam AppID?"; then APPID="$AUTO_APPID"; fi
-                else
-                    print_status "Search complete. No matching AppID found." "$YELLOW"
-                fi
-            fi
-        fi
-
+        _env_find_steam_appid
         pin_steam_dir
         print_task "Verifying Wine Prefix"
-        while true; do
-            if [ -z "$APPID" ]; then
-                print_result "Enter the Steam AppID manually: " "$YELLOW"
-                echo -e "${WHITE} Tip: Found on the game's Steam Store URL, or in Steam by right-clicking the game -> Properties -> Updates.${NC}"
-                echo -e -n "> "
-                if ! read_answer APPID; then
-                    # stdin closed (piped/exhausted) — can't keep prompting, so
-                    # offer game reselection / exit rather than spinning.
-                    print_error "A Steam AppID is required — protontricks uses it to locate the game's Proton prefix."
-                    prompt_restart_or_quit 0
-                    return
-                fi
-                APPID=$(echo "$APPID" | tr -dc '0-9')
-                # Empty / non-numeric entry: re-prompt. There's no skip — the
-                # AppID is required for protontricks to locate the prefix.
-                [ -z "$APPID" ] && continue
-            fi
-
-            echo ""
-            print_status "Querying Protontricks database for AppID ${BOLD}${APPID}${NC}..." ""
-            # Output (and errors) go to the log too, so a failed lookup shows why.
-            log_cmd "protontricks -c 'echo \$WINEPREFIX' $APPID${STEAM_DIR:+ (STEAM_DIR=$STEAM_DIR)}"
-            DETECTED_STEAM_PREFIX=$(protontricks -c 'echo $WINEPREFIX' "$APPID" 2>> "$EAX_LOG_FILE" | tee -a "$EAX_LOG_FILE" | grep "/pfx" | tail -n 1 | tr -d '\r')
-
-            if [ -n "$DETECTED_STEAM_PREFIX" ] && [ -d "$DETECTED_STEAM_PREFIX" ]; then
-                print_detected "Detected Prefix" "$DETECTED_STEAM_PREFIX"
-                if confirm "Use this detected prefix?"; then
-                    PREFIX_PATH="$DETECTED_STEAM_PREFIX"
-                    ACF_FILE="${GAME_DIR%%/steamapps/common/*}/steamapps/appmanifest_${APPID}.acf"
-                    if [ -z "$GAME_NAME" ]; then
-                        # Same source appid/gog_id already come from, not the
-                        # curated JSON — the appmanifest's own "name" key.
-                        [ -f "$ACF_FILE" ] && GAME_NAME=$(acf_value "$ACF_FILE" name)
-                        [ -z "$GAME_NAME" ] && GAME_NAME="AppID $APPID"
-                    fi
-                    show_profile_if_unseen "$APPID" "steam"
-                    confirm_continue_if_eax_impossible "$APPID" "steam" "$ACF_FILE"
-                    # User chose to go back and pick a different game — unwind
-                    # to the config flow's Step 1-2 loop.
-                    [ -n "$RESTART_REQUESTED" ] && return
-                    break
-                fi
-                APPID=""
-            elif [ -d "$STEAM_LIBRARY/steamapps/compatdata/$APPID/pfx/drive_c" ]; then
-                # The prefix is right there beside the game, so it's
-                # protontricks that can't see it — and every later registry
-                # step goes through protontricks too, so it has to be fixed
-                # rather than worked around.
-                log_cmd "steam: $STEAM_LIBRARY/steamapps/compatdata/$APPID/pfx exists, but protontricks didn't report it"
-                print_error "The Proton prefix for AppID ${APPID} exists, but protontricks couldn't find it:" \
-                    "  $STEAM_LIBRARY/steamapps/compatdata/$APPID/pfx"
-                if declare -F protontricks &>/dev/null; then
-                    # Preflight only defines the function for the Flatpak build.
-                    print_paragraph "Flatpak protontricks can only see the folders it has been given access to." \
-                        "Allow it to read this Steam library by running the command below, then" \
-                        "check again:" \
-                        "" \
-                        "  flatpak override --user --filesystem=\"$STEAM_LIBRARY\" com.github.Matoking.protontricks"
-                else
-                    print_paragraph "protontricks' own output is in the run log, and usually says why."
-                fi
-                if ! confirm "Check this AppID again?"; then APPID=""; fi
-            else
-                print_error "Proton prefix not found for AppID ${APPID}."
-                if install_is_linux_build "$(game_install_root)"; then
-                    # A Linux build never runs through Proton, so launching it
-                    # won't make a prefix: the Windows build has to come first.
-                    local beta_branch=""
-                    ensure_game_database && beta_branch=$(gdb_field "$APPID" steam '.stores.steam.beta_branch // empty')
-                    print_paragraph "Steam installed the Linux version of ${GAME_NAME:-this game}, which doesn't use Proton."
-                    print_linux_build_note steam "$beta_branch"
-                    print_paragraph "Then launch ${GAME_NAME:-the game} once, close it, and check again."
-                else
-                    print_paragraph "If you just installed this game, Proton has not generated the prefix yet." \
-                        "Please launch the game at least once, close it, and try again."
-                fi
-                # "No" clears the AppID and drops back to the manual prompt for a
-                # corrected value; an empty entry there triggers restart/quit.
-                if ! confirm "Check this AppID again?"; then APPID=""; fi
-            fi
-        done
+        _env_verify_steam_prefix
     else
         LAUNCHER_TYPE="2"
         print_result "Non-Steam installation detected (Heroic/GOG, or a manually created Wine prefix)!" "$GREEN"
-        HEROIC_APP_NAME=""
-        HEROIC_GAME_ID=""; HEROIC_EXPECTED_PREFIX=""; HEROIC_PREFIX_SOURCE=""; HEROIC_GAME_TITLE=""; HEROIC_ROOT=""; HEROIC_RUNNER_TYPE=""
-        DETECTED_PREFIX=""; DETECTED_APP_NAME=""
-        if [ "$attempt_auto_detect" -eq 1 ]; then
-            IFS=$'\x1f' read -r DETECTED_PREFIX DETECTED_APP_NAME HEROIC_GAME_ID HEROIC_PREFIX_SOURCE HEROIC_GAME_TITLE HEROIC_ROOT \
-                <<< "$(detect_heroic_prefix_verbose "$GAME_DIR")"
-        else
-            # Still look the game up (quietly) so the prefix check below can
-            # compare a hand-typed prefix with the one Heroic uses.
-            IFS=$'\x1f' read -r DETECTED_PREFIX DETECTED_APP_NAME HEROIC_GAME_ID HEROIC_PREFIX_SOURCE HEROIC_GAME_TITLE HEROIC_ROOT \
-                <<< "$(detect_heroic_prefix_verbose "$GAME_DIR" 2>/dev/null)"
-        fi
-        HEROIC_EXPECTED_PREFIX="$DETECTED_PREFIX"
-        # Found from the game folder, not the prefix, so it's kept whichever
-        # prefix is used: a typed one still gets the game's profile, its EAX
-        # check and its settings.
-        HEROIC_APP_NAME="$DETECTED_APP_NAME"
-        if [ "$attempt_auto_detect" -eq 1 ]; then
-            if [ -n "$DETECTED_PREFIX" ]; then
-                print_detected "Detected Prefix" "$DETECTED_PREFIX"
-                [ "$HEROIC_PREFIX_SOURCE" == "shared" ] && print_status "This is Heroic's shared prefix, because ${HEROIC_GAME_TITLE:-this game} has no prefix of its own." "$DIM"
-                if confirm "Use this detected prefix?"; then
-                    PREFIX_PATH="$DETECTED_PREFIX"
-                fi
-            fi
-        fi
-
-        while true; do
-            if [ -z "$PREFIX_PATH" ]; then
-                print_result "Enter the Wine prefix path: " "$YELLOW"
-                echo -e "${WHITE} Example Heroic: ~/Games/Heroic/Prefixes/[Game-Name]${NC}"
-                echo -e -n "> "
-                if ! read_answer PREFIX_PATH; then
-                    # stdin closed (piped/exhausted) — can't keep prompting, so
-                    # offer game reselection / exit rather than spinning.
-                    print_error "A Wine prefix is required — it's where the DLL override and prefix-side files go."
-                    prompt_restart_or_quit 0
-                    return
-                fi
-                # Empty entry: re-prompt. There's no skip — the prefix is where
-                # the DLL override, the system32/syswow64 copy and the VC++
-                # check all happen.
-                [ -z "$PREFIX_PATH" ] && continue
-                PREFIX_PATH="$(clean_typed_path "$PREFIX_PATH")"
-                [ -n "$PREFIX_PATH" ] && [[ "$PREFIX_PATH" != /* ]] && PREFIX_PATH="$PWD/$PREFIX_PATH"
-            fi
-
-            if [ -d "$PREFIX_PATH/drive_c" ]; then
-                echo ""
-                print_status "Prefix verified!" "$GREEN"
-                if ! check_heroic_prefix_match; then PREFIX_PATH=""; continue; fi
-                if [ -z "$GAME_NAME" ] && [ -n "$HEROIC_APP_NAME" ]; then
-                    # Same source the GOG ID already comes from, not the
-                    # curated JSON — Heroic's own install folder name.
-                    HEROIC_INSTALL_PATH=$(find_heroic_install_path "$HEROIC_APP_NAME")
-                    [ -n "$HEROIC_INSTALL_PATH" ] && GAME_NAME="$(basename "$HEROIC_INSTALL_PATH")"
-                    [ -z "$GAME_NAME" ] && GAME_NAME="GOG ID $HEROIC_APP_NAME"
-                fi
-                show_profile_if_unseen "$HEROIC_APP_NAME" "gog"
-                confirm_continue_if_eax_impossible "$HEROIC_APP_NAME" "gog"
-                # User chose to go back and pick a different game — unwind to
-                # the config flow's Step 1-2 loop.
-                [ -n "$RESTART_REQUESTED" ] && return
-                break
-            else
-                print_error "Initialised Wine prefix not found at that location."
-                print_paragraph "If you just installed this game, the launcher has not generated the prefix yet." \
-                    "Please run the game at least once, close it, and try again."
-
-                # "No" clears the path and drops back to the manual prompt for a
-                # corrected value; an empty entry there triggers restart/quit.
-                if ! confirm "Check this path again?"; then PREFIX_PATH=""; fi
-            fi
-        done
+        _env_find_heroic_prefix
+        _env_verify_wine_prefix || return
 
         # Runs for uninstall too: its registry cleanup goes through the
         # same Wine binary, so it needs the game's own runner just as much.
