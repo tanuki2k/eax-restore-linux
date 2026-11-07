@@ -1840,11 +1840,11 @@ apply_game_settings() {
     for line in "${PREV_CONFIG_LINES[@]}"; do
         mapfile -t -d $'\t' f < <(printf '%s' "${line#CONFIG:}")
         [ -n "${recorded["${f[2]}"$'\x1f'"${f[4]}"$'\x1f'"${f[5]}"]:-}" ] && continue
-        [ -f "${f[2]}" ] || continue
         # A format this script can't read (from a newer build) can't be
-        # checked, so the record stays: dropping it would leave the change
-        # with nothing to put it back.
+        # checked, file or no file, so the record stays: dropping it would
+        # leave the change with nothing to put it back.
         if [[ ! "${f[3]}" =~ $CONFIG_FORMATS_RE ]]; then echo "$line" >> "$INSTALL_MANIFEST"; continue; fi
+        [ -f "${f[2]}" ] || continue
         config_values_equal "${f[3]}" "$(config_get_key "${f[2]}" "${f[3]}" "${f[4]}" "${f[5]}")" "${f[7]}" \
             && echo "$line" >> "$INSTALL_MANIFEST"
     done

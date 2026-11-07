@@ -447,3 +447,15 @@ config_find_text_end() {  # <file> -> byte position just past the anchored text
     apply_game_settings
     [ "$(cat "$INSTALL_MANIFEST")" == "$line" ]
 }
+
+@test "apply_game_settings keeps an unreadable-format record even when its file is missing, and still drops a known one" {
+    local gone="$BATS_TEST_TMPDIR/gone.ini" unknown known
+    unknown="CONFIG:audio"$'\t'"t"$'\t'"$gone"$'\t'"future_format"$'\t'"S"$'\t'"k"$'\t'"1"$'\t'"2"
+    known="CONFIG:audio"$'\t'"t"$'\t'"$gone"$'\t'"ini"$'\t'"S"$'\t'"k"$'\t'"1"$'\t'"2"
+    PREV_CONFIG_LINES=("$unknown" "$known")
+    GAME_SETTINGS_PLAN=()
+    INSTALL_MANIFEST="$BATS_TEST_TMPDIR/manifest"
+    : > "$INSTALL_MANIFEST"
+    apply_game_settings
+    [ "$(cat "$INSTALL_MANIFEST")" == "$unknown" ]
+}
