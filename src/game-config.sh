@@ -297,6 +297,12 @@ _lenstr_set() {
     return 1
 }
 
+# The current format names: every one, and the ones that are plain text
+# files (the rest are binary files or the registry, each with its own
+# reader). The one place to edit when a format is added or renamed.
+CONFIG_FORMATS_RE='^(ini|set_commands|key_value|braced_pairs|ini_braces|quoted_pairs|binary_offset|binary_text|binary_switches|registry)$'
+CONFIG_TEXT_FORMATS_RE='^(ini|set_commands|key_value|braced_pairs|ini_braces|quoted_pairs)$'
+
 # Usage: upgrade_format_name <format>
 # Sets UPGRADED_FORMAT to the format's current name: dev builds from before
 # the formats were renamed wrote the old names into the manifest. A current
@@ -354,7 +360,7 @@ config_get_key() {
     local file="$1" fmt="$2" sec="$3" key="$4" found
     # Checked before the file exists, so a stale name fails the same way
     # whether or not the game's file is there.
-    [[ "$fmt" =~ ^(ini|set_commands|key_value|braced_pairs|ini_braces|quoted_pairs|binary_offset|binary_text|binary_switches|registry)$ ]] || {
+    [[ "$fmt" =~ $CONFIG_FORMATS_RE ]] || {
         echo "config_get_key: unknown format '$fmt'" >&2; return 1; }
     [ -f "$file" ] || { echo "__ABSENT__"; return; }
     if [ "$fmt" == "registry" ]; then
@@ -474,7 +480,7 @@ config_set_key() {
     [ "$fmt" == "binary_switches" ] && { _gadb_set "$file" "$key" "$value"; return; }
     [ "$fmt" == "registry" ] && { _wine_reg_set "$file" "$sec" "$key" "$value"; return; }
     # Anything else would match no rule below and write out an empty file.
-    [[ "$fmt" =~ ^(ini|set_commands|key_value|braced_pairs|ini_braces|quoted_pairs)$ ]] || return 1
+    [[ "$fmt" =~ $CONFIG_TEXT_FORMATS_RE ]] || return 1
     # Judged by the first line for lines this adds to an empty or new file; every
     # existing line keeps its own ending.
     [ -f "$file" ] && head -n 1 "$file" 2>/dev/null | LC_ALL=C grep -q $'\r' && crlf=1
@@ -857,7 +863,7 @@ config_row_is_safe() {
     local -a locs
     local name_re='^[A-Za-z0-9._ -]+$' value_re='^[A-Za-z0-9._ ()-]*$'
     local reg_key_re='^[A-Za-z0-9._ ()-]+(\\[A-Za-z0-9._ ()-]+)*$'
-    [[ "$fmt" =~ ^(ini|set_commands|key_value|braced_pairs|ini_braces|quoted_pairs|binary_offset|binary_text|binary_switches|registry)$ ]] || return 1
+    [[ "$fmt" =~ $CONFIG_FORMATS_RE ]] || return 1
     [ -n "$locations" ] || return 1
     IFS='|' read -ra locs <<< "$locations"
     for loc in "${locs[@]}"; do
@@ -1835,6 +1841,10 @@ apply_game_settings() {
         mapfile -t -d $'\t' f < <(printf '%s' "${line#CONFIG:}")
         [ -n "${recorded["${f[2]}"$'\x1f'"${f[4]}"$'\x1f'"${f[5]}"]:-}" ] && continue
         [ -f "${f[2]}" ] || continue
+        # A format this script can't read (from a newer build) can't be
+        # checked, so the record stays: dropping it would leave the change
+        # with nothing to put it back.
+        if [[ ! "${f[3]}" =~ $CONFIG_FORMATS_RE ]]; then echo "$line" >> "$INSTALL_MANIFEST"; continue; fi
         config_values_equal "${f[3]}" "$(config_get_key "${f[2]}" "${f[3]}" "${f[4]}" "${f[5]}")" "${f[7]}" \
             && echo "$line" >> "$INSTALL_MANIFEST"
     done

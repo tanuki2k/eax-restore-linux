@@ -435,3 +435,15 @@ config_find_text_end() {  # <file> -> byte position just past the anchored text
     config_set_key "${fields[2]}" "$fmt" "${fields[4]}" "${fields[5]}" "${fields[7]}"
     [ "$(config_get_key "${fields[2]}" "$fmt" "${fields[4]}" "${fields[5]}")" == "2" ]
 }
+
+@test "apply_game_settings keeps a previous record whose format it can't read" {
+    local f="$BATS_TEST_TMPDIR/a.ini" line
+    printf '[S]\nk=1\n' > "$f"
+    line="CONFIG:audio"$'\t'"t"$'\t'"$f"$'\t'"future_format"$'\t'"S"$'\t'"k"$'\t'"1"$'\t'"2"
+    PREV_CONFIG_LINES=("$line")
+    GAME_SETTINGS_PLAN=()
+    INSTALL_MANIFEST="$BATS_TEST_TMPDIR/manifest"
+    : > "$INSTALL_MANIFEST"
+    apply_game_settings
+    [ "$(cat "$INSTALL_MANIFEST")" == "$line" ]
+}
