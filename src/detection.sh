@@ -101,6 +101,139 @@ show_hidden_folder_tip_popup() {
     fi
 }
 
+# The steps of get_game_directory below. They share its locals (preset, retype,
+# action and the flags) through bash's dynamic scope, so they only run from it.
+
+# Prints the common game locations, once per get_game_directory run.
+_show_common_locations() {
+    [ "$LOCATIONS_SHOWN" -eq 1 ] && return
+    # Its own leading blank line, like print_note: it can follow the step
+    # divider, the menu's answer or a note directly.
+    echo ""
+    echo -e "${WHITE}Common game locations:${NC}\n"
+    echo -e "${WHITE} Linux Desktop (Steam): ~/.local/share/Steam/steamapps/common/[Game]${NC}"
+    echo -e "${WHITE} Steam Deck (SD Card):  /run/media/mmcblk0p1/steamapps/common/[Game]${NC}"
+    echo -e "${WHITE} Heroic / GOG:          ~/Games/Heroic/[Game]${NC}"
+    LOCATIONS_SHOWN=1
+}
+
+# The step's own menu: sets action to scan, gui, manual or main_menu.
+_locate_menu() {
+    echo ""
+    # Build the menu fresh each pass: which options apply can shrink
+    # (e.g. a scan that just came up empty stays offered — the user
+    # might pick something else next time), and skipping straight to
+    # the one available action avoids asking a one-choice "choice".
+    local -a menu_keys=() menu_actions=()
+    if [ "$can_scan" -eq 1 ]; then
+        print_key_option "[S]can your Steam/Heroic library"
+        menu_keys+=("s"); menu_actions+=("scan")
+    fi
+    if [ "$have_gui_picker" -eq 1 ]; then
+        print_key_option "[B]rowse for the game folder"
+        menu_keys+=("b"); menu_actions+=("gui")
+    fi
+    print_key_option "[M]anually type the game path"
+    menu_keys+=("m"); menu_actions+=("manual")
+    # Uninstall, VC++ runtime install and DSOAL logging come here
+    # from the main menu without a locate method, so they get a way
+    # back to it (see MAIN_MENU_SHOWN).
+    if [ -n "$MAIN_MENU_SHOWN" ]; then
+        echo ""
+        print_key_option "[R]eturn to the $(return_menu_label)"
+        menu_keys+=("r"); menu_actions+=("main_menu")
+    fi
+
+    if [ "${#menu_actions[@]}" -eq 1 ]; then
+        action="${menu_actions[0]}"
+    else
+        local choice keys i
+        keys="$(IFS=/; echo "${menu_keys[*]}")"
+        while [ -z "$action" ]; do
+            prompt "How would you like to locate the game? [${keys}]: "
+            read_answer choice || exit 0
+            choice="${choice,,}"
+            for i in "${!menu_keys[@]}"; do
+                [ "$choice" == "${menu_keys[$i]}" ] && action="${menu_actions[$i]}"
+            done
+            [ -n "$action" ] || print_result "That's not a valid option — please type $(join_choices "${menu_keys[@]}")." "$YELLOW"
+        done
+    fi
+}
+
+# The library scan. Returns 0 when get_game_directory is done (a game was picked,
+# or the list's [R]eturn asked for the main menu), 1 to show the menu again.
+_locate_scan() {
+    print_note "the game database is a work in progress. If your game isn't listed, it may" \
+        "still have EAX — choose [M] under the list to type its path yourself."
+    # No goes back to the locate menu. EAX_RESTORE_GAME already
+    # named the game, so there is nothing to scan blindly.
+    if [ -z "$EAX_RESTORE_GAME" ] \
+        && ! confirm "Scan your libraries, knowing the game database is a work in progress?"; then
+        return 1
+    fi
+    if scan_game_libraries; then
+        echo -e "\n${GREEN}Using: $(tilde_path "$GAME_DIR")${NC}"
+        note_game_used "$GAME_DIR"
+        return 0
+    fi
+    # The list's [M]anually / [R]eturn (see SCAN_NEXT).
+    case "$SCAN_NEXT" in
+        manual) RESTART_REQUESTED=""; preset="manual"; return 1 ;;
+        return)
+            RESTART_REQUESTED=1
+            return 0
+            ;;
+    esac
+    # A scan that bailed (nothing picked, or an EAX-impossible
+    # pick where the user chose "different game") drops back to
+    # this menu on its own — clear the restart flag so it can't
+    # leak past a later successful pick into the Step 1-2 loop.
+    # (Started from the main menu, the next pass sets it again
+    # to go back there.)
+    RESTART_REQUESTED=""
+    return 1
+}
+
+# Browse with the graphical picker. Returns 1 when no folder was chosen.
+_locate_gui() {
+    _show_common_locations
+    show_hidden_folder_tip_popup
+    GAME_DIR=$(pick_directory_gui)
+    GAME_DIR="${GAME_DIR%/}"
+    if [ -z "$GAME_DIR" ]; then
+        print_result "No folder selected." "$YELLOW"
+        # No goes back to the locate menu (or the main menu it
+        # came from, via back_to_main_menu).
+        confirm "Browse for the game folder again?" && preset="gui"
+        return 1
+    fi
+    print_status "Selected: $GAME_DIR" "$DIM"
+}
+
+# Checks the folder the player gave. Returns 0 to use it, 1 to ask again
+# (GAME_DIR is cleared, and a typed path is asked for again via preset).
+_locate_check_dir() {
+    if [ -d "$GAME_DIR" ]; then
+        if [ "$SCRIPT_ACTION" == "i" ]; then
+            EXE_COUNT=$(find "$GAME_DIR" -maxdepth 2 -type f -iname "*.exe" | wc -l)
+            if [ "$EXE_COUNT" -eq 0 ]; then
+                print_warning "No .exe files were found in this directory or its immediate subfolders."
+                if confirm "Are you absolutely sure this is the correct game folder?" N; then return 0; fi
+                echo ""
+                GAME_DIR=""
+                [ "$retype" -eq 1 ] && preset="manual"
+                return 1
+            fi
+        fi
+        return 0
+    fi
+    print_error "Directory not found. Please check the path and try again."
+    GAME_DIR=""
+    [ "$retype" -eq 1 ] && preset="manual"
+    return 1
+}
+
 get_game_directory() {
     GAME_DIR=""
     GAME_NAME=""
@@ -143,19 +276,7 @@ get_game_directory() {
     local back_to_main_menu=0
     [ -n "$preset" ] && [ -n "$MAIN_MENU_SHOWN" ] && back_to_main_menu=1
 
-    local locations_shown=0
-    _show_common_locations() {
-        [ "$locations_shown" -eq 1 ] && return
-        # Its own leading blank line, like print_note: it can follow the step
-        # divider, the menu's answer or a note directly.
-        echo ""
-        echo -e "${WHITE}Common game locations:${NC}\n"
-        echo -e "${WHITE} Linux Desktop (Steam): ~/.local/share/Steam/steamapps/common/[Game]${NC}"
-        echo -e "${WHITE} Steam Deck (SD Card):  /run/media/mmcblk0p1/steamapps/common/[Game]${NC}"
-        echo -e "${WHITE} Heroic / GOG:          ~/Games/Heroic/[Game]${NC}"
-        locations_shown=1
-    }
-
+    LOCATIONS_SHOWN=0
     local retype
     while [ -z "$GAME_DIR" ]; do
         local action=""
@@ -164,102 +285,22 @@ get_game_directory() {
             action="$preset"; preset=""
         elif [ "$back_to_main_menu" -eq 1 ]; then
             RESTART_REQUESTED=1
-            unset -f _show_common_locations
             return
         else
-            echo ""
-            # Build the menu fresh each pass: which options apply can shrink
-            # (e.g. a scan that just came up empty stays offered — the user
-            # might pick something else next time), and skipping straight to
-            # the one available action avoids asking a one-choice "choice".
-            local -a menu_keys=() menu_actions=()
-            if [ "$can_scan" -eq 1 ]; then
-                print_key_option "[S]can your Steam/Heroic library"
-                menu_keys+=("s"); menu_actions+=("scan")
-            fi
-            if [ "$have_gui_picker" -eq 1 ]; then
-                print_key_option "[B]rowse for the game folder"
-                menu_keys+=("b"); menu_actions+=("gui")
-            fi
-            print_key_option "[M]anually type the game path"
-            menu_keys+=("m"); menu_actions+=("manual")
-            # Uninstall, VC++ runtime install and DSOAL logging come here
-            # from the main menu without a locate method, so they get a way
-            # back to it (see MAIN_MENU_SHOWN).
-            if [ -n "$MAIN_MENU_SHOWN" ]; then
-                echo ""
-                print_key_option "[R]eturn to the $(return_menu_label)"
-                menu_keys+=("r"); menu_actions+=("main_menu")
-            fi
-
-            if [ "${#menu_actions[@]}" -eq 1 ]; then
-                action="${menu_actions[0]}"
-            else
-                local choice keys i
-                keys="$(IFS=/; echo "${menu_keys[*]}")"
-                while [ -z "$action" ]; do
-                    prompt "How would you like to locate the game? [${keys}]: "
-                    read_answer choice || exit 0
-                    choice="${choice,,}"
-                    for i in "${!menu_keys[@]}"; do
-                        [ "$choice" == "${menu_keys[$i]}" ] && action="${menu_actions[$i]}"
-                    done
-                    [ -n "$action" ] || print_result "That's not a valid option — please type $(join_choices "${menu_keys[@]}")." "$YELLOW"
-                done
-            fi
+            _locate_menu
         fi
 
         case "$action" in
             main_menu)
                 RESTART_REQUESTED=1
-                unset -f _show_common_locations
                 return
                 ;;
             scan)
-                print_note "the game database is a work in progress. If your game isn't listed, it may" \
-                    "still have EAX — choose [M] under the list to type its path yourself."
-                # No goes back to the locate menu. EAX_RESTORE_GAME already
-                # named the game, so there is nothing to scan blindly.
-                if [ -z "$EAX_RESTORE_GAME" ] \
-                    && ! confirm "Scan your libraries, knowing the game database is a work in progress?"; then
-                    continue
-                fi
-                if scan_game_libraries; then
-                    echo -e "\n${GREEN}Using: $(tilde_path "$GAME_DIR")${NC}"
-                    note_game_used "$GAME_DIR"
-                    return
-                fi
-                # The list's [M]anually / [R]eturn (see SCAN_NEXT).
-                case "$SCAN_NEXT" in
-                    manual) RESTART_REQUESTED=""; preset="manual"; continue ;;
-                    return)
-                        RESTART_REQUESTED=1
-                        unset -f _show_common_locations
-                        return
-                        ;;
-                esac
-                # A scan that bailed (nothing picked, or an EAX-impossible
-                # pick where the user chose "different game") drops back to
-                # this menu on its own — clear the restart flag so it can't
-                # leak past a later successful pick into the Step 1-2 loop.
-                # (Started from the main menu, the next pass sets it again
-                # to go back there.)
-                RESTART_REQUESTED=""
+                _locate_scan && return
                 continue
                 ;;
             gui)
-                _show_common_locations
-                show_hidden_folder_tip_popup
-                GAME_DIR=$(pick_directory_gui)
-                GAME_DIR="${GAME_DIR%/}"
-                if [ -z "$GAME_DIR" ]; then
-                    print_result "No folder selected." "$YELLOW"
-                    # No goes back to the locate menu (or the main menu it
-                    # came from, via back_to_main_menu).
-                    confirm "Browse for the game folder again?" && preset="gui"
-                    continue
-                fi
-                print_status "Selected: $GAME_DIR" "$DIM"
+                _locate_gui || continue
                 ;;
             manual)
                 # Before typing or browsing for a path (not before the menu or
@@ -272,29 +313,10 @@ get_game_directory() {
         # A blank answer: back, without an error.
         [ -n "$GAME_DIR" ] || continue
 
-        if [ -d "$GAME_DIR" ]; then
-            if [ "$SCRIPT_ACTION" == "i" ]; then
-                EXE_COUNT=$(find "$GAME_DIR" -maxdepth 2 -type f -iname "*.exe" | wc -l)
-                if [ "$EXE_COUNT" -eq 0 ]; then
-                    print_warning "No .exe files were found in this directory or its immediate subfolders."
-                    if confirm "Are you absolutely sure this is the correct game folder?" N; then break; fi
-                    echo ""
-                    GAME_DIR=""
-                    [ "$retype" -eq 1 ] && preset="manual"
-                else
-                    break
-                fi
-            else
-                break
-            fi
-        else
-            print_error "Directory not found. Please check the path and try again."
-            GAME_DIR=""
-            [ "$retype" -eq 1 ] && preset="manual"
-        fi
+        _locate_check_dir || continue
+        break
     done
 
-    unset -f _show_common_locations
     note_game_used "$GAME_DIR"
 }
 
