@@ -1800,95 +1800,91 @@ registry_quiet_once() {
     [ "$_state" == "ok" ]
 }
 
-# Usage: apply_game_settings
-# Phase 4: writes GAME_SETTINGS_PLAN into the game's config files and records
-# each change in the manifest as
-#   CONFIG:<audio|optional>\t<title>\t<path>\t<format>\t<section>\t<key>\t<old>\t<new>
-# Each file is backed up once as <file>.eax-restore.bak before its first edit
-# ever, and re-read first so a change made since Phase 3 isn't clobbered
-# needlessly. On a reinstall, the old value recorded last time is kept (it's
-# the player's original), and last run's CONFIG lines for settings still in
-# effect are carried over so uninstall can still revert them.
-apply_game_settings() {
-    local -A recorded=() prev_old=()
-    local line cat title path fmt sec key new file old state reg_state=""
-    local -a f
+# Usage: _apply_skip_there <key> <path> <title> <why>
+# The warning for one setting that can't be applied to one file, e.g. "<key>
+# in <file> <why>, so "<title>" wasn't applied there."
+_apply_skip_there() {
+    print_warning_arrow "$1 in $(basename "$2") $4, so \"$3\" wasn't applied there."
+}
 
-    # Last install's original values, by path/section/key.
-    for line in "${PREV_CONFIG_LINES[@]}"; do
-        parse_config_line "$line" f
-        prev_old["${f[2]}"$'\x1f'"${f[4]}"$'\x1f'"${f[5]}"]="${f[6]}"
-    done
-
-    if [ ${#GAME_SETTINGS_PLAN[@]} -gt 0 ]; then
-        print_phase_task "Applying game settings"
-        local -A changed_count=() backed_up=()
-        for line in "${GAME_SETTINGS_PLAN[@]}"; do
-            mapfile -t -d $'\x1f' f < <(printf '%s' "$line")
-            cat="${f[0]}"; title="${f[1]}"; path="${f[2]}"; fmt="${f[3]}"; sec="${f[4]}"; key="${f[5]}"
-            new="${f[6]}"; file="${f[7]}"; state="${f[9]}"
-
-            # Once, before the registry file is backed up or read.
-            if [ "$fmt" == "registry" ]; then
-                registry_quiet_once reg_state || { record_deploy_failure "$path"; continue; }
+# Usage: _apply_prepare_file <path> <file> <state> <title>
+# Gets one config file ready for its first edit: creates it when the plan says
+# to, otherwise backs it up once. Returns 1 when its settings must be skipped.
+# Uses apply_game_settings' backed_up table.
+_apply_prepare_file() {
+    local path="$1" file="$2" state="$3" title="$4"
+    if [ ! -f "$path" ]; then
+        if [ "$state" != "create" ]; then
+            print_warning_arrow "$(basename "$path") has gone missing since the settings were chosen, so \"$title\" wasn't applied."
+            return 1
+        fi
+        if touch "$path" 2>/dev/null; then
+            echo "$path" >> "$INSTALL_MANIFEST"
+            backed_up[$path]=1   # nothing of the player's to back up in a file just created
+            print_status "Created: $(basename "$path")"
+        else
+            record_deploy_failure "$path"; return 1
+        fi
+    elif [ -z "${backed_up[$path]:-}" ]; then
+        clear_crash_marker "$file" "$path"
+        if [ ! -e "$path.eax-restore.bak" ] && [ -z "${PREV_MANIFEST_FILES[$path]:-}" ]; then
+            if cp -p "$path" "$path.eax-restore.bak" 2>/dev/null; then
+                print_status "Backed up $(basename "$path") to $(basename "$path").eax-restore.bak"
+            else
+                print_warning_arrow "Couldn't back up $(basename "$path") first, so the original value is only in the install record."
             fi
-
-            if [ ! -f "$path" ]; then
-                if [ "$state" != "create" ]; then
-                    print_warning_arrow "$(basename "$path") has gone missing since the settings were chosen, so \"$title\" wasn't applied."
-                    continue
-                fi
-                if touch "$path" 2>/dev/null; then
-                    echo "$path" >> "$INSTALL_MANIFEST"
-                    backed_up[$path]=1   # nothing of the player's to back up in a file just created
-                    print_status "Created: $(basename "$path")"
-                else
-                    record_deploy_failure "$path"; continue
-                fi
-            elif [ -z "${backed_up[$path]:-}" ]; then
-                clear_crash_marker "$file" "$path"
-                if [ ! -e "$path.eax-restore.bak" ] && [ -z "${PREV_MANIFEST_FILES[$path]:-}" ]; then
-                    if cp -p "$path" "$path.eax-restore.bak" 2>/dev/null; then
-                        print_status "Backed up $(basename "$path") to $(basename "$path").eax-restore.bak"
-                    else
-                        print_warning_arrow "Couldn't back up $(basename "$path") first, so the original value is only in the install record."
-                    fi
-                fi
-                backed_up[$path]=1
-            fi
-
-            old="$(config_get_key "$path" "$fmt" "$sec" "$key")"
-            config_values_equal "$fmt" "$old" "$new" && continue
-            # Revert can only write 0 or 1 back to a binary_switches flag, so any other
-            # original value would be changed for good.
-            if [ "$fmt" == "binary_switches" ] && [[ ! "$old" =~ ^[01]$ ]]; then
-                print_warning_arrow "$key in $(basename "$path") isn't a plain on/off value, so \"$title\" wasn't applied there."
-                continue
-            fi
-            # A value with a tab or line break can't go in a manifest line
-            # (tab-separated), so uninstall couldn't put it back.
-            if [[ "$old" == *[$'\t\n']* ]]; then
-                print_warning_arrow "$key in $(basename "$path") holds a tab or line break, so \"$title\" wasn't applied there."
-                continue
-            fi
-            if ! config_set_key "$path" "$fmt" "$sec" "$key" "$new" \
-                || ! { [ "$new" == "__DELETE__" ] || config_values_equal "$fmt" "$(config_get_key "$path" "$fmt" "$sec" "$key")" "$new"; }; then
-                record_deploy_failure "$path"; continue
-            fi
-            [ -n "${prev_old["$path"$'\x1f'"$sec"$'\x1f'"$key"]+x}" ] && old="${prev_old["$path"$'\x1f'"$sec"$'\x1f'"$key"]}"
-            printf 'CONFIG:%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$cat" "$title" "$path" "$fmt" "$sec" "$key" "$old" "$new" >> "$INSTALL_MANIFEST"
-            recorded["$path"$'\x1f'"$sec"$'\x1f'"$key"]=1
-            changed_count[$path]=$(( ${changed_count[$path]:-0} + 1 ))
-            [[ " ${GAME_SETTINGS_APPLIED[*]-} " == *" $title "* ]] || GAME_SETTINGS_APPLIED+=("$title")
-        done
-        for path in "${!changed_count[@]}"; do
-            local n="${changed_count[$path]}" noun="setting"
-            [ "$n" -ne 1 ] && noun="settings"
-            print_status "Updated $(basename "$path") ($n $noun)"
-        done
+        fi
+        backed_up[$path]=1
     fi
+}
 
-    # Carry over last install's changes that are still in effect.
+# Usage: _apply_one_setting <GAME_SETTINGS_PLAN row>
+# Writes one planned row, checks it took and records it in the manifest. Uses
+# apply_game_settings' tables (prev_old, recorded, changed_count, backed_up,
+# reg_state), so it only runs from there.
+_apply_one_setting() {
+    local -a f
+    mapfile -t -d $'\x1f' f < <(printf '%s' "$1")
+    local cat="${f[0]}" title="${f[1]}" path="${f[2]}" fmt="${f[3]}" sec="${f[4]}" key="${f[5]}"
+    local new="${f[6]}" file="${f[7]}" state="${f[9]}" old
+
+    # Once, before the registry file is backed up or read.
+    if [ "$fmt" == "registry" ]; then
+        registry_quiet_once reg_state || { record_deploy_failure "$path"; return; }
+    fi
+    _apply_prepare_file "$path" "$file" "$state" "$title" || return
+
+    old="$(config_get_key "$path" "$fmt" "$sec" "$key")"
+    config_values_equal "$fmt" "$old" "$new" && return
+    # Revert can only write 0 or 1 back to a binary_switches flag, so any other
+    # original value would be changed for good.
+    if [ "$fmt" == "binary_switches" ] && [[ ! "$old" =~ ^[01]$ ]]; then
+        _apply_skip_there "$key" "$path" "$title" "isn't a plain on/off value"
+        return
+    fi
+    # A value with a tab or line break can't go in a manifest line
+    # (tab-separated), so uninstall couldn't put it back.
+    if [[ "$old" == *[$'\t\n']* ]]; then
+        _apply_skip_there "$key" "$path" "$title" "holds a tab or line break"
+        return
+    fi
+    if ! config_set_key "$path" "$fmt" "$sec" "$key" "$new" \
+        || ! { [ "$new" == "__DELETE__" ] || config_values_equal "$fmt" "$(config_get_key "$path" "$fmt" "$sec" "$key")" "$new"; }; then
+        record_deploy_failure "$path"; return
+    fi
+    [ -n "${prev_old["$path"$'\x1f'"$sec"$'\x1f'"$key"]+x}" ] && old="${prev_old["$path"$'\x1f'"$sec"$'\x1f'"$key"]}"
+    printf 'CONFIG:%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$cat" "$title" "$path" "$fmt" "$sec" "$key" "$old" "$new" >> "$INSTALL_MANIFEST"
+    recorded["$path"$'\x1f'"$sec"$'\x1f'"$key"]=1
+    changed_count[$path]=$(( ${changed_count[$path]:-0} + 1 ))
+    [[ " ${GAME_SETTINGS_APPLIED[*]-} " == *" $title "* ]] || GAME_SETTINGS_APPLIED+=("$title")
+}
+
+# Carries over last install's CONFIG lines whose change is still in effect, so
+# uninstall can still revert them. Skips the ones apply_game_settings just
+# rewrote (its recorded table).
+_apply_carry_over_config_lines() {
+    local line
+    local -a f
     for line in "${PREV_CONFIG_LINES[@]}"; do
         parse_config_line "$line" f
         [ -n "${recorded["${f[2]}"$'\x1f'"${f[4]}"$'\x1f'"${f[5]}"]:-}" ] && continue
@@ -1900,6 +1896,40 @@ apply_game_settings() {
         config_values_equal "${f[3]}" "$(config_get_key "${f[2]}" "${f[3]}" "${f[4]}" "${f[5]}")" "${f[7]}" \
             && echo "$line" >> "$INSTALL_MANIFEST"
     done
+}
+
+# Usage: apply_game_settings
+# Phase 4: writes GAME_SETTINGS_PLAN into the game's config files and records
+# each change in the manifest as
+#   CONFIG:<audio|optional>\t<title>\t<path>\t<format>\t<section>\t<key>\t<old>\t<new>
+# Each file is backed up once as <file>.eax-restore.bak before its first edit
+# ever, and re-read first so a change made since Phase 3 isn't clobbered
+# needlessly. On a reinstall, the old value recorded last time is kept (it's
+# the player's original), and last run's CONFIG lines for settings still in
+# effect are carried over so uninstall can still revert them.
+apply_game_settings() {
+    local -A recorded=() prev_old=()
+    local line path reg_state=""
+    local -a f
+
+    # Last install's original values, by path/section/key.
+    for line in "${PREV_CONFIG_LINES[@]}"; do
+        parse_config_line "$line" f
+        prev_old["${f[2]}"$'\x1f'"${f[4]}"$'\x1f'"${f[5]}"]="${f[6]}"
+    done
+
+    if [ ${#GAME_SETTINGS_PLAN[@]} -gt 0 ]; then
+        print_phase_task "Applying game settings"
+        local -A changed_count=() backed_up=()
+        for line in "${GAME_SETTINGS_PLAN[@]}"; do _apply_one_setting "$line"; done
+        for path in "${!changed_count[@]}"; do
+            local n="${changed_count[$path]}" noun="setting"
+            [ "$n" -ne 1 ] && noun="settings"
+            print_status "Updated $(basename "$path") ($n $noun)"
+        done
+    fi
+
+    _apply_carry_over_config_lines
 }
 
 # Usage: update_game_settings_in_manifest
