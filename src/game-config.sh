@@ -14,7 +14,7 @@
 #   __ABSENT__            (read side only) the key isn't in the file
 
 # Usage: _gadb_find <file> <key>
-# binary_switches is Monolith's binary game database, which F.E.A.R. keeps its player
+# The binary_switches format is Monolith's binary game database, which F.E.A.R. keeps its player
 # profile in (Profile000.gdb): a "GADB" header with the string table's size
 # at byte 8, the string table from byte 28 (NUL-separated names), then
 # 4-byte-aligned little-endian records of [name's offset in the string
@@ -295,6 +295,39 @@ _lenstr_set() {
     fi
     rm -f "$tmp"
     return 1
+}
+
+# Usage: upgrade_config_line <manifest line>
+# Sets UPGRADED_LINE to the line with an old format name in a CONFIG: line's
+# format field (the fourth) replaced by its current name. Dev builds from
+# before the formats were renamed wrote the old names into the manifest, and
+# uninstall and Tools read them back. Any other line is kept as it is. Every
+# reader of CONFIG lines goes through this, and so does the matching of a
+# reverted line against the manifest, so both sides are in the new spelling.
+# Sets a variable instead of printing so the callers don't fork a subshell
+# per line. Delete this once no dev install from before 0.29 is expected to
+# still be around.
+UPGRADED_LINE=""
+upgrade_config_line() {
+    local line="$1" rest old new
+    UPGRADED_LINE="$line"
+    [[ "$line" == CONFIG:*$'\t'*$'\t'*$'\t'* ]] || return 0
+    rest="${line#*$'\t'*$'\t'*$'\t'}"
+    old="${rest%%$'\t'*}"
+    case "$old" in
+        flat_ini) new="ini" ;;
+        gas_cfg) new="ini_braces" ;;
+        idtech_cfg) new="set_commands" ;;
+        dark_cfg|ltx) new="key_value" ;;
+        brace_cfg) new="braced_pairs" ;;
+        quoted_cfg) new="quoted_pairs" ;;
+        byte_cfg) new="binary_offset" ;;
+        lenstr_cfg) new="binary_text" ;;
+        gadb) new="binary_switches" ;;
+        wine_reg) new="registry" ;;
+        *) return 0 ;;
+    esac
+    UPGRADED_LINE="${line%"$rest"}${new}${rest#"$old"}"
 }
 
 # Usage: config_get_key <file> <ini|set_commands|key_value|braced_pairs|ini_braces|quoted_pairs|binary_offset|binary_text|binary_switches|registry> <section> <key>
@@ -1804,9 +1837,9 @@ update_game_settings_in_manifest() {
     revert_game_settings
     for entry in "${GAME_SETTINGS_REVERT_GROUPS[@]}"; do
         lines="${entry#*$'\x1f'}"; lines="${lines#*$'\x1f'}"
-        while IFS= read -r line; do [ -n "$line" ] && dropped["$line"]=1; done <<< "$lines"
+        while IFS= read -r line; do [ -n "$line" ] || continue; upgrade_config_line "$line"; dropped["$UPGRADED_LINE"]=1; done <<< "$lines"
     done
-    for line in "${GAME_SETTINGS_KEPT[@]}"; do unset 'dropped[$line]'; done
+    for line in "${GAME_SETTINGS_KEPT[@]}"; do upgrade_config_line "$line"; unset 'dropped[$UPGRADED_LINE]'; done
 
     declare -gA PREV_MANIFEST_FILES=()
     PREV_CONFIG_LINES=()
@@ -1814,6 +1847,7 @@ update_game_settings_in_manifest() {
         record_deploy_failure "$INSTALL_MANIFEST"; return 1; }
     while IFS= read -r line; do
         if [[ "$line" == CONFIG:* ]]; then
+            upgrade_config_line "$line"; line="$UPGRADED_LINE"
             [ -n "${dropped[$line]:-}" ] || PREV_CONFIG_LINES+=("$line")
         else
             printf '%s\n' "$line"

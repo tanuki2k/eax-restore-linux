@@ -61,6 +61,18 @@ config_get_ini() {
     diff "$BATS_TEST_TMPDIR/before" "$BATS_TEST_TMPDIR/after" || { tail -25 "$OUT"; false; }
 }
 
+@test "uninstall reads a manifest written with an old format name" {
+    snapshot "$BATS_TEST_TMPDIR/before"
+    install_profile
+    # What a dev build from before the formats were renamed wrote.
+    sed -i -E $'/^CONFIG:/ s/\tini\t/\tflat_ini\t/' "$GAME/.eax-restore-manifest.txt"
+    grep -q $'\tflat_ini\t' "$GAME/.eax-restore-manifest.txt"
+    uninstall_profile_answers "$BATS_TEST_TMPDIR/un"
+    run_script "$BATS_TEST_TMPDIR/un"
+    snapshot "$BATS_TEST_TMPDIR/after"
+    diff "$BATS_TEST_TMPDIR/before" "$BATS_TEST_TMPDIR/after" || { tail -25 "$OUT"; false; }
+}
+
 @test "uninstall can keep the settings while removing everything else" {
     install_profile
     uninstall_profile_answers "$BATS_TEST_TMPDIR/un" n

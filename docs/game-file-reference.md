@@ -293,7 +293,7 @@ Use the game's own word instead of "mixer" where it has one, and a bare apostrop
 
 The shape depends on the file's format:
 
-* `ini` and `ini_braces` files: file, then section, then key, then value. An `ini` file without sections skips the section: file, then key, then value.
+* `ini` and `ini_braces` files: file, then section, then key, then value. An `ini` file without sections skips the section: file, then key, then value. `ini_braces` and `registry` always need the section; the database build rejects a change without one.
 * `registry` files: file, then registry key, then value name, then value.
 * Every other format: file, then key, then value. The key is a byte position for `binary_offset`, the hex bytes before the text (with an optional `+N`) for `binary_text`, and the setting's name for `binary_switches`.
 

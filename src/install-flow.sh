@@ -127,7 +127,7 @@
         while IFS= read -r line; do
             [[ "$line" == /* ]] && { PREV_MANIFEST_FILES["$line"]=1; PREV_FILE_LINES+=("$line"); }
             [[ "$line" == REGISTRY:* || "$line" == VCRUN || "$line" == VCRUN:* || "$line" == VCRUN$'\t'* || "$line" == EAXUNIFIED ]] && PREV_STATE_LINES+=("$line")
-            [[ "$line" == CONFIG:* ]] && PREV_CONFIG_LINES+=("$line")
+            [[ "$line" == CONFIG:* ]] && { upgrade_config_line "$line"; PREV_CONFIG_LINES+=("$UPGRADED_LINE"); }
             [[ "$line" == LAUNCHER:* ]] && PREV_LAUNCHER_LINES+=("$line")
         done < "$INSTALL_MANIFEST"
     fi

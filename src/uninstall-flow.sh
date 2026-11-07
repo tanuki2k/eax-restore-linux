@@ -93,7 +93,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
                 "EAXUNIFIED") EAX_UNIFIED_INSTALLED="y"; continue ;;
                 # Game settings changed in the game's own config files —
                 # reverted in step 7, never removed as files.
-                CONFIG:*) CONFIG_LINES+=("$manifest_entry"); continue ;;
+                CONFIG:*) upgrade_config_line "$manifest_entry"; CONFIG_LINES+=("$UPGRADED_LINE"); continue ;;
                 # The DLL override added to Steam's launch options / Heroic's
                 # environment variables — reverted in step 5.
                 LAUNCHER:*) LAUNCHER_LINES+=("$manifest_entry"); continue ;;

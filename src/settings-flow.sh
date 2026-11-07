@@ -78,6 +78,7 @@ if [ -n "$SETTINGS_TOOL_MODE" ]; then
     settings_titles=()
     while IFS= read -r line; do
         [[ "$line" == CONFIG:* ]] || continue
+        upgrade_config_line "$line"; line="$UPGRADED_LINE"
         mapfile -t -d $'\t' settings_f < <(printf '%s' "${line#CONFIG:}")
         settings_title="${settings_f[1]}"
         [ -n "${settings_lines[$settings_title]+x}" ] || settings_titles+=("$settings_title")

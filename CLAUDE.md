@@ -239,8 +239,8 @@ their execution order in the assembled script):
 9. **`game-config.sh`** — the Game Settings feature: `config_get_key` /
    `config_set_key` (awk readers/writers for the text config formats, keeping CRLF,
    key spelling and spacing, plus `_gadb_find`/`_gadb_set`, which switch an on/off
-   setting in place in Monolith's binary `binary_switches` profile, and `_wine_reg_read`/
-   `_wine_reg_set`, which edit a dword or string value in the prefix's
+   setting in place for the `binary_switches` format (Monolith's binary profile), and
+   `_wine_reg_read`/`_wine_reg_set`, which, for the `registry` format, edit a dword or string value in the prefix's
    `system.reg`/`user.reg` text, a key as the section; `wine_registry_quiet` waits
    for wineserver to save and exit before the first one is written, since it
    writes those files back from memory), `resolve_config_file`, `print_game_settings_details` (the database browser's Tab view: every setting's reason, file, keys and values, via `load_game_config_rows` and `print_config_rows` with `__ANY__` for the unknown current value), `offer_alsoft_settings` (phase 3's first question, run from `game_settings_step`),

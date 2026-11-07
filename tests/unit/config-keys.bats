@@ -95,6 +95,29 @@ setup() {
     [ "$(config_get_key "$F" ini one a)" == "2" ]
 }
 
+@test "key_value: a commented-out line starting with the key is an example, the active line goes after it" {
+    write_file "$F" '; snd_efx off\nsnd_volume 1\n'
+    [ "$(config_get_key "$F" key_value "" snd_efx)" == "__FALSE__" ]
+    config_set_key "$F" key_value "" snd_efx on
+    [ "$(cat "$F")" == $'; snd_efx off\nsnd_efx on\nsnd_volume 1' ]
+    [ "$(config_get_key "$F" key_value "" snd_efx)" == "on" ]
+}
+
+@test "upgrade_config_line: maps every old format name in a CONFIG line and leaves others alone" {
+    local old new
+    for pair in flat_ini:ini gas_cfg:ini_braces idtech_cfg:set_commands dark_cfg:key_value ltx:key_value \
+                brace_cfg:braced_pairs quoted_cfg:quoted_pairs byte_cfg:binary_offset lenstr_cfg:binary_text \
+                gadb:binary_switches wine_reg:registry ini:ini registry:registry; do
+        old="${pair%%:*}"; new="${pair##*:}"
+        upgrade_config_line "CONFIG:audio"$'\t'"Enable EAX"$'\t'"/p/f"$'\t'"$old"$'\t'"s"$'\t'"k"$'\t'$'\t'"1"
+        [ "$UPGRADED_LINE" == \
+          "CONFIG:audio"$'\t'"Enable EAX"$'\t'"/p/f"$'\t'"$new"$'\t'"s"$'\t'"k"$'\t'$'\t'"1" ]
+    done
+    upgrade_config_line "/some/file"; [ "$UPGRADED_LINE" == "/some/file" ]
+    upgrade_config_line "VCRUN"; [ "$UPGRADED_LINE" == "VCRUN" ]
+    upgrade_config_line "CONFIG:audio"$'\t'"t"; [ "$UPGRADED_LINE" == "CONFIG:audio"$'\t'"t" ]
+}
+
 # ---- set_commands ------------------------------------------------------------
 
 @test "set_commands: reads set/seta values with quotes stripped" {

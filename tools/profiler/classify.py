@@ -79,8 +79,11 @@ def draft_game_config(diffs_audio, diffs_optional, existing=None):
                 if not c["expressible"] or c["new"] is None:
                     skipped.append(f"{d['file']} {c['section']} {c['key']}: value {c['new']!r} can't be expressed in the schema")
                     continue
+                if d["format"] in ("ini_braces", "registry") and not c["section"]:
+                    skipped.append(f"{d['file']} {c['key']}: {d['format']} needs a section and none was found - write it by hand")
+                    continue
                 tgt = group.setdefault(d["file"], {})
-                if d["format"] in ("ini", "ini_braces", "registry") and c["section"]:
+                if d["format"] in ("ini", "ini_braces", "registry") and (c["section"] or d["format"] != "ini"):
                     tgt = tgt.setdefault(c["section"], {})
                 tgt[c["key"]] = c["new"]
         if group:
@@ -125,6 +128,9 @@ def draft_speaker_settings(layout_diffs, gc):
                 if not c["expressible"] or c["new"] is None:
                     skipped.append(f"{d['file']} {c['key']} in the {layout} run: value {c['new']!r} can't be expressed in the schema")
                     continue
+                if d["format"] in ("ini_braces", "registry") and not c["section"]:
+                    skipped.append(f"{d['file']} {c['key']} in the {layout} run: {d['format']} needs a section and none was found - write it by hand")
+                    continue
                 changes[(d["file"], d["format"], c["section"], c["key"])] = c["new"]
                 gc["files"].setdefault(d["file"], {"format": d["format"], "locations": [d["location"]]})
                 if d["created"]:
@@ -141,7 +147,7 @@ def draft_speaker_settings(layout_diffs, gc):
         changes = {}
         for (file, fmt, section, k), v in sorted(key):
             tgt = changes.setdefault(file, {})
-            if fmt in ("ini", "ini_braces", "registry") and section:
+            if fmt in ("ini", "ini_braces", "registry") and (section or fmt != "ini"):
                 tgt = tgt.setdefault(section, {})
             tgt[k] = v
         speakers = sorted(speakers, key=SPEAKER_ORDER.index)
