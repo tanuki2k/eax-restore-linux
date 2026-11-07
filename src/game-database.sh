@@ -1605,6 +1605,41 @@ print_community_patches_summary() {
     print_wrapped "$PROFILE_PATCHES"
 }
 
+# Hard stop for a game with nothing to restore: the profile's Status already
+# said why when it was just shown, otherwise the message given as the
+# arguments does. Then the player can pick another game, or quit with status 1.
+# Usage: _eax_block <id> <steam|gog> <message line> ...
+_eax_block() {
+    local id="$1" store="$2"
+    shift 2
+    if [ -n "$SCANNED_NOTES_SHOWN" ]; then
+        print_eax_block_error "$id" "$store"
+    else
+        print_error "$@"
+    fi
+    prompt_restart_or_quit 1
+}
+
+# Usage: _eax_on_beta_branch <store> <beta_branch> <acf_file>
+# True when the player says this install is already on the Steam beta branch
+# that keeps EAX, so the EAX-removed warning doesn't apply.
+# A known beta branch restores EAX in place — offer to check whether the
+# user is already on it before showing a warning that wouldn't apply to
+# them. Opt-in and reported before acting on it, same as every other
+# auto-detect in this script (Proton prefix, AppID search): ask first,
+# detect, report the raw result, then a separate confirm before it's
+# allowed to skip the warning.
+_eax_on_beta_branch() {
+    local store="$1" beta_branch="$2" acf_file="$3"
+    [ "$store" == "steam" ] && [ -n "$beta_branch" ] && [ -n "$acf_file" ] || return 1
+    confirm "Check if you're already on Steam's '$beta_branch' beta branch, which keeps EAX intact?" || return 1
+    local detected
+    detected=$(detect_steam_beta_branch "$acf_file")
+    print_status "Detected beta branch: ${detected:-none}" ""
+    [ "$detected" == "$beta_branch" ] || return 1
+    confirm "Skip the EAX-removed warning — this build should already have EAX intact?"
+}
+
 confirm_continue_if_eax_impossible() {
     # Usage: confirm_continue_if_eax_impossible <id> <steam|gog> [acf_file]
     # "built_in" (EAX already works without this script) only asks whether
@@ -1658,46 +1693,21 @@ confirm_continue_if_eax_impossible() {
     # Right after the GAME PROFILE (always the case unless the database is
     # missing and the hardcoded fallback matched), its Status has said why.
     if [ "$status" == "not_implemented" ]; then
-        if [ -n "$SCANNED_NOTES_SHOWN" ]; then
-            print_eax_block_error "$1" "$store"
-        else
-            print_error "This edition never implemented EAX/environmental audio in the first place, so" \
-                "there would be nothing here for this script to restore."
-        fi
-        prompt_restart_or_quit 1
+        _eax_block "$1" "$store" \
+            "This edition never implemented EAX/environmental audio in the first place, so" \
+            "there would be nothing here for this script to restore."
         return
     fi
 
     if [ "$workaround" != "true" ]; then
-        if [ -n "$SCANNED_NOTES_SHOWN" ]; then
-            print_eax_block_error "$1" "$store"
-        else
-            print_error "EAX/A3D support was removed from this build by a software update, and there's" \
-                "no known in-place fix — restoring it would need a separate install this script" \
-                "isn't pointed at."
-        fi
-        prompt_restart_or_quit 1
+        _eax_block "$1" "$store" \
+            "EAX/A3D support was removed from this build by a software update, and there's" \
+            "no known in-place fix — restoring it would need a separate install this script" \
+            "isn't pointed at."
         return
     fi
 
-    # A known beta branch restores EAX in place — offer to check whether the
-    # user is already on it before showing a warning that wouldn't apply to
-    # them. Opt-in and reported before acting on it, same as every other
-    # auto-detect in this script (Proton prefix, AppID search): ask first,
-    # detect, report the raw result, then a separate confirm before it's
-    # allowed to skip the warning below.
-    if [ "$store" == "steam" ] && [ -n "$beta_branch" ] && [ -n "$acf_file" ]; then
-        if confirm "Check if you're already on Steam's '$beta_branch' beta branch, which keeps EAX intact?"; then
-            local detected
-            detected=$(detect_steam_beta_branch "$acf_file")
-            print_status "Detected beta branch: ${detected:-none}" ""
-            if [ "$detected" == "$beta_branch" ]; then
-                if confirm "Skip the EAX-removed warning — this build should already have EAX intact?"; then
-                    return
-                fi
-            fi
-        fi
-    fi
+    _eax_on_beta_branch "$store" "$beta_branch" "$acf_file" && return
 
     print_warning "EAX/A3D support was removed from this build by a software update, so there's" \
         "nothing for this script to restore on the current default build."
