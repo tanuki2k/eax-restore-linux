@@ -818,79 +818,41 @@ print_linux_build_note() {
     fi
 }
 
-resolve_exe_folder() {
-    # Usage: resolve_exe_folder <install_root> [beta_branch] [exe_hint] [steam|gog]
-    # A scanned install root isn't always the .exe folder — many titles nest
-    # it (e.g. GameName/bin/x64), and get_game_directory's own detection
-    # comment notes exactly this. Mirrors the prefix stage's shape: first
-    # asks whether to auto-detect at all (No -> straight to manual entry),
-    # then builds one ranked list of candidate folders (the root itself, if
-    # it holds a real .exe, followed by nested folders ranked name-match
-    # first) and shows the best one for a "Found ... / Use this location?"
-    # (Y/n) confirm. Declining opens a menu -- pick from the other detected
-    # folders (when there's more than one), type a path, or go back to game
-    # selection -- rather than dead-ending. Returns 1 (GAME_DIR left empty)
-    # if the user declines/goes back at any point.
-    #
-    # beta_branch (optional, from game-database.json's stores.steam.beta_branch)
-    # tailors the "no .exe found" case: some titles (e.g. KOTOR2) ship a
-    # native Linux port that Steam installs by default, which has no .exe at
-    # all -- the Windows build only comes down once the user opts into that
-    # beta branch. Passed in by scan_game_libraries, which already knows the
-    # matched game's profile at this point.
-    #
-    # exe_hint (optional, from the game profile's `exe`) is the main
-    # .exe's file name. The shallowest folder under the install root holding
-    # a file of that name becomes the top pick -- this handles layouts that
-    # defeat the name heuristics below, e.g. Double Agent, which ships a root
-    # launcher plus separate single-player and multiplayer builds. When no
-    # such file exists (a different build, a moved install) detection
-    # carries on as normal.
-    #
-    # store (optional, the scan's match) picks the Linux-build advice; without
-    # it, a path under steamapps/common is Steam and anything else Heroic's.
-    local root="$1"
-    local beta_branch="$2"
-    local exe_hint="$3"
-    local store="$4"
-    [ -n "$store" ] || { [[ "$root" == */steamapps/common/* ]] && store="steam" || store="gog"; }
-    GAME_DIR=""
+# Nested installs often bundle third-party installers/utilities
+# alongside the real game .exe (redistributables, anti-cheat setup,
+# crash handlers, uninstallers, DRM clients like TAGES). Folder name
+# alone isn't a reliable filter -- "Launcher" or "bin" folders
+# legitimately hold real game exes for some titles too -- so this blocks
+# by the installer/utility's own distinctive basename instead, wherever
+# it's nested.
+EXE_JUNK_RE='^(unins(t(all)?)?[0-9]*|vc_?redist.*|(dx|directx)?setup|dxsetup|dxwebsetup|dx[0-9]+ger|dx[0-9]+ntger|dotnetfx.*|ndp[0-9].*|windowsdesktop-runtime.*|oalinst|physx.*|easyanticheat.*|eac_?setup.*|eaclauncher|be(service|daisy|launcher|_ex)[a-z0-9_]*|battleye.*|unitycrashhandler.*|crashreport(er|client)?|crash_?handler|crashpad_handler|bugsplat.*|epiconlineservices(installer)?|epicwebhelper.*|rockstar-games-launcher|social-club-setup|tagesclient.*|vulkanrt.*installer.*|gamingrepair(tool)?|registrationreminder|overlayinjector|cleanup|touchup|driverversionchecker|layerschecker|supporttool|dowser|iscopyfiles|detectionui.*|eax[0-9]*unified_redist.*|reg|.*updatelauncher|adb?e?rdr.*|ue3?redist.*|unrealfrontend|unrealconsole|uescriptprofiler|cookersync|testapp|.*oshelper)\.exe$'
 
-    # A look again after a Linux-build switch (below) skips the header and
-    # the "automatically?" gate the player already answered.
-    if [ -z "${RESOLVE_EXE_RETRY:-}" ]; then
-        print_step 2 "Locate Game Executable"
-        print_paragraph "This step finds the folder ${GAME_NAME:-the game}'s .exe runs from, since the game loads" \
-            "its audio DLLs from there."
-    fi
+# Usage: _exe_is_junk <exe path>
+# True for an installer or utility .exe by its own name (EXE_JUNK_RE).
+_exe_is_junk() {
+    local base
+    base="$(basename "$1" | tr '[:upper:]' '[:lower:]')"
+    [[ "$base" =~ $EXE_JUNK_RE ]]
+}
 
-    # Nested installs often bundle third-party installers/utilities
-    # alongside the real game .exe (redistributables, anti-cheat setup,
-    # crash handlers, uninstallers, DRM clients like TAGES). Folder name
-    # alone isn't a reliable filter -- "Launcher" or "bin" folders
-    # legitimately hold real game exes for some titles too -- so this blocks
-    # by the installer/utility's own distinctive basename instead, wherever
-    # it's nested.
-    local junk_exe_re='^(unins(t(all)?)?[0-9]*|vc_?redist.*|(dx|directx)?setup|dxsetup|dxwebsetup|dx[0-9]+ger|dx[0-9]+ntger|dotnetfx.*|ndp[0-9].*|windowsdesktop-runtime.*|oalinst|physx.*|easyanticheat.*|eac_?setup.*|eaclauncher|be(service|daisy|launcher|_ex)[a-z0-9_]*|battleye.*|unitycrashhandler.*|crashreport(er|client)?|crash_?handler|crashpad_handler|bugsplat.*|epiconlineservices(installer)?|epicwebhelper.*|rockstar-games-launcher|social-club-setup|tagesclient.*|vulkanrt.*installer.*|gamingrepair(tool)?|registrationreminder|overlayinjector|cleanup|touchup|driverversionchecker|layerschecker|supporttool|dowser|iscopyfiles|detectionui.*|eax[0-9]*unified_redist.*|reg|.*updatelauncher|adb?e?rdr.*|ue3?redist.*|unrealfrontend|unrealconsole|uescriptprofiler|cookersync|testapp|.*oshelper)\.exe$'
+# Usage: _exe_name_matches <normalised folder name> <exe path>
+# True when the .exe's normalised name contains the install folder's, or the
+# other way round: a name match for ranking candidate folders.
+_exe_name_matches() {
+    local exe_norm
+    [ -n "$1" ] || return 1
+    exe_norm="$(normalize_game_name "$(basename "$2" .exe)")"
+    [[ "$exe_norm" == *"$1"* ]] || [[ "$1" == *"$exe_norm"* ]]
+}
 
-    # Up-front gate, same as the prefix stage's "Find <game>'s prefix
-    # automatically?" -- a detected folder is still a guess, and
-    # some users would rather just type the path. confirm defaults to Yes and
-    # returns 1 on EOF, so a closed stdin falls to manual entry, which itself
-    # returns 1 on EOF -- a clean bail, no spin.
-    if [ -z "${RESOLVE_EXE_RETRY:-}" ] && ! confirm "Find ${GAME_NAME:-the game}'s .exe automatically?"; then
-        resolve_exe_manual_entry "$root" && return 0
-        return 1
-    fi
-
-    local f base exe_norm root_norm
-    root_norm="$(normalize_game_name "$(basename "$root")")"
-
-    # One ranked list of candidate folders + a representative .exe name per
-    # folder (knowing the location isn't as reassuring as seeing the actual
-    # filename about to be treated as the game's executable).
-    local -a cand_dirs=()
-    local -A cand_exe_name=()
+# Builds resolve_exe_folder's ranked list: cand_dirs (best first) and the
+# .exe name to show for each in cand_exe_name. Uses its root, exe_hint and
+# root_norm, so it only runs from there.
+_exe_collect_candidates() {
+    local f d i
+    # A representative .exe name per folder (knowing the location isn't as
+    # reassuring as seeing the actual filename about to be treated as the
+    # game's executable).
 
     # The database's own exe name wins outright when it's actually there --
     # it was checked against a real install, which no name heuristic can beat.
@@ -915,11 +877,9 @@ resolve_exe_folder() {
         local root_exes=() root_exe_name=""
         while IFS= read -r f; do root_exes+=("$f"); done < <(find "$root" -maxdepth 1 -type f -iname "*.exe" 2>/dev/null)
         for f in "${root_exes[@]}"; do
-            base="$(basename "$f" | tr '[:upper:]' '[:lower:]')"
-            [[ "$base" =~ $junk_exe_re ]] && continue
+            _exe_is_junk "$f" && continue
             [ -z "$root_exe_name" ] && root_exe_name="$(basename "$f")"
-            exe_norm="$(normalize_game_name "$(basename "$f" .exe)")"
-            if [ -n "$root_norm" ] && { [[ "$exe_norm" == *"$root_norm"* ]] || [[ "$root_norm" == *"$exe_norm"* ]]; }; then
+            if _exe_name_matches "$root_norm" "$f"; then
                 root_exe_name="$(basename "$f")"
                 break
             fi
@@ -947,8 +907,7 @@ resolve_exe_folder() {
 
     local candidates=()
     for f in "${all_exes[@]}"; do
-        base="$(basename "$f" | tr '[:upper:]' '[:lower:]')"
-        [[ "$base" =~ $junk_exe_re ]] && continue
+        _exe_is_junk "$f" && continue
         candidates+=("$f")
     done
     # Only fall back to the junk-only set when the root gave us nothing
@@ -978,8 +937,7 @@ resolve_exe_folder() {
         for f in "${candidates[@]}"; do
             [ "$(dirname "$f")" = "$d" ] || continue
             [ -z "${dir_exe_name[$d]:-}" ] && dir_exe_name["$d"]="$(basename "$f")"
-            exe_norm="$(normalize_game_name "$(basename "$f" .exe)")"
-            if [ -n "$root_norm" ] && { [[ "$exe_norm" == *"$root_norm"* ]] || [[ "$root_norm" == *"$exe_norm"* ]]; }; then
+            if _exe_name_matches "$root_norm" "$f"; then
                 dir_is_match=1
                 dir_exe_name["$d"]="$(basename "$f")"
                 break
@@ -1014,43 +972,38 @@ resolve_exe_folder() {
     if [ ${#audio_dirs[@]} -gt 0 ] && [ ${#quiet_dirs[@]} -gt 0 ]; then
         cand_dirs=("${cand_dirs[@]:0:keep_first}" "${audio_dirs[@]}" "${quiet_dirs[@]}")
     fi
+}
 
-    if [ ${#cand_dirs[@]} -eq 0 ]; then
-        if install_is_linux_build "$root"; then
-            # The install root would only take Windows files a Linux game
-            # never loads, so the way on is the Windows build, then a look again.
-            local launcher_name="Steam"
-            [ "$store" == "gog" ] && launcher_name="Heroic"
-            print_warning "$launcher_name installed the Linux version of ${GAME_NAME:-this game}, which this script can't fix."
-            print_linux_build_note "$store" "$beta_branch"
-            while confirm "Look for ${GAME_NAME:-the game}'s .exe again?"; do
-                if ! install_is_linux_build "$root"; then
-                    RESOLVE_EXE_RETRY=1 resolve_exe_folder "$@"
-                    return
-                fi
-                print_status "$launcher_name still has the Linux version of ${GAME_NAME:-the game}." "$YELLOW"
-            done
-            return 1
-        fi
-        print_warning "No .exe files were found anywhere under this install."
-        if confirm "Use the install root anyway?" N; then GAME_DIR="$root"; return 0; fi
+# Nothing to pick: a Linux build gets the way to the Windows one and a
+# look again; otherwise the player can still use the install root.
+# Returns resolve_exe_folder's status. Uses its root, store, beta_branch and
+# orig_args.
+_exe_none_found() {
+    if install_is_linux_build "$root"; then
+        # The install root would only take Windows files a Linux game
+        # never loads, so the way on is the Windows build, then a look again.
+        local launcher_name="Steam"
+        [ "$store" == "gog" ] && launcher_name="Heroic"
+        print_warning "$launcher_name installed the Linux version of ${GAME_NAME:-this game}, which this script can't fix."
+        print_linux_build_note "$store" "$beta_branch"
+        while confirm "Look for ${GAME_NAME:-the game}'s .exe again?"; do
+            if ! install_is_linux_build "$root"; then
+                RESOLVE_EXE_RETRY=1 resolve_exe_folder "${orig_args[@]}"
+                return
+            fi
+            print_status "$launcher_name still has the Linux version of ${GAME_NAME:-the game}." "$YELLOW"
+        done
         return 1
     fi
+    print_warning "No .exe files were found anywhere under this install."
+    if confirm "Use the install root anyway?" N; then GAME_DIR="$root"; return 0; fi
+    return 1
+}
 
-    # Confirm the top pick (the scanned root when it holds a real .exe,
-    # otherwise the best name-matched nested folder) — the same
-    # "Found ... / Use this location?" the prefix stage uses for its detected
-    # value. Declining opens a menu rather than dead-ending back at the
-    # locate-the-game step: step through the other detected folders, type a
-    # path, or go back to game selection.
-    echo ""
-    print_status "${GREEN}Found the game executable:${NC} ${BOLD}${cand_exe_name[${cand_dirs[0]}]}${NC}" ""
-    echo -e "    ${DIM}in $(tilde_path "${cand_dirs[0]}")${NC}"
-    if confirm "Use this location?"; then
-        GAME_DIR="${cand_dirs[0]}"
-        return 0
-    fi
-
+# The "Use this location?" was declined: pick one of the other detected
+# folders, type a path, or go back to game selection. Returns
+# resolve_exe_folder's status. Uses its root, cand_dirs and cand_exe_name.
+_exe_pick_fallback() {
     local have_more=0 fb_max=2
     if [ ${#cand_dirs[@]} -gt 1 ]; then have_more=1; fb_max=3; fi
 
@@ -1101,6 +1054,94 @@ resolve_exe_folder() {
     [ "$have_more" -eq 1 ] && choice=$((choice - 1))
     [ "$choice" -eq 1 ] && resolve_exe_manual_entry "$root" && return 0
     return 1
+}
+
+resolve_exe_folder() {
+    # Usage: resolve_exe_folder <install_root> [beta_branch] [exe_hint] [steam|gog]
+    # A scanned install root isn't always the .exe folder — many titles nest
+    # it (e.g. GameName/bin/x64), and get_game_directory's own detection
+    # comment notes exactly this. Mirrors the prefix stage's shape: first
+    # asks whether to auto-detect at all (No -> straight to manual entry),
+    # then builds one ranked list of candidate folders (the root itself, if
+    # it holds a real .exe, followed by nested folders ranked name-match
+    # first) and shows the best one for a "Found ... / Use this location?"
+    # (Y/n) confirm. Declining opens a menu -- pick from the other detected
+    # folders (when there's more than one), type a path, or go back to game
+    # selection -- rather than dead-ending. Returns 1 (GAME_DIR left empty)
+    # if the user declines/goes back at any point.
+    #
+    # beta_branch (optional, from game-database.json's stores.steam.beta_branch)
+    # tailors the "no .exe found" case: some titles (e.g. KOTOR2) ship a
+    # native Linux port that Steam installs by default, which has no .exe at
+    # all -- the Windows build only comes down once the user opts into that
+    # beta branch. Passed in by scan_game_libraries, which already knows the
+    # matched game's profile at this point.
+    #
+    # exe_hint (optional, from the game profile's `exe`) is the main
+    # .exe's file name. The shallowest folder under the install root holding
+    # a file of that name becomes the top pick -- this handles layouts that
+    # defeat the name heuristics below, e.g. Double Agent, which ships a root
+    # launcher plus separate single-player and multiplayer builds. When no
+    # such file exists (a different build, a moved install) detection
+    # carries on as normal.
+    #
+    # store (optional, the scan's match) picks the Linux-build advice; without
+    # it, a path under steamapps/common is Steam and anything else Heroic's.
+    local root="$1"
+    local beta_branch="$2"
+    local exe_hint="$3"
+    local store="$4"
+    [ -n "$store" ] || { [[ "$root" == */steamapps/common/* ]] && store="steam" || store="gog"; }
+    GAME_DIR=""
+    local -a orig_args=("$@")
+
+    # A look again after a Linux-build switch (below) skips the header and
+    # the "automatically?" gate the player already answered.
+    if [ -z "${RESOLVE_EXE_RETRY:-}" ]; then
+        print_step 2 "Locate Game Executable"
+        print_paragraph "This step finds the folder ${GAME_NAME:-the game}'s .exe runs from, since the game loads" \
+            "its audio DLLs from there."
+    fi
+    # Up-front gate, same as the prefix stage's "Find <game>'s prefix
+    # automatically?" -- a detected folder is still a guess, and
+    # some users would rather just type the path. confirm defaults to Yes and
+    # returns 1 on EOF, so a closed stdin falls to manual entry, which itself
+    # returns 1 on EOF -- a clean bail, no spin.
+    if [ -z "${RESOLVE_EXE_RETRY:-}" ] && ! confirm "Find ${GAME_NAME:-the game}'s .exe automatically?"; then
+        resolve_exe_manual_entry "$root" && return 0
+        return 1
+    fi
+
+    local root_norm
+    root_norm="$(normalize_game_name "$(basename "$root")")"
+
+    # One ranked list of candidate folders + a representative .exe name per
+    # folder (knowing the location isn't as reassuring as seeing the actual
+    # filename about to be treated as the game's executable).
+    local -a cand_dirs=()
+    local -A cand_exe_name=()
+    _exe_collect_candidates
+
+    if [ ${#cand_dirs[@]} -eq 0 ]; then
+        _exe_none_found
+        return
+    fi
+
+    # Confirm the top pick (the scanned root when it holds a real .exe,
+    # otherwise the best name-matched nested folder) — the same
+    # "Found ... / Use this location?" the prefix stage uses for its detected
+    # value. Declining opens a menu rather than dead-ending back at the
+    # locate-the-game step: step through the other detected folders, type a
+    # path, or go back to game selection.
+    echo ""
+    print_status "${GREEN}Found the game executable:${NC} ${BOLD}${cand_exe_name[${cand_dirs[0]}]}${NC}" ""
+    echo -e "    ${DIM}in $(tilde_path "${cand_dirs[0]}")${NC}"
+    if confirm "Use this location?"; then
+        GAME_DIR="${cand_dirs[0]}"
+        return 0
+    fi
+
+    _exe_pick_fallback
 }
 
 confirm_game_dir_has_exe() {
