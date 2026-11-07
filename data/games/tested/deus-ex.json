@@ -31,7 +31,7 @@
         "title": "Enable Pro Logic surround sound",
         "reason": "Sets Deus Ex's mixer to Pro Logic surround sound.",
         "only_if": { "speakers": "matrix" },
-        "changes": { "DeusEx.ini": { "Galaxy.GalaxyAudioSubsystem": { "UseSurround": true } } },
+        "changes": { "DeusEx.ini": { "Galaxy.GalaxyAudioSubsystem": { "UseSurround": "True" } } },
         "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
         "tested": true
       }

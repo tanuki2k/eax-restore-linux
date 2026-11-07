@@ -43,7 +43,7 @@
         "title": "Enable Pro Logic surround sound",
         "reason": "Sets Unreal's mixer to Pro Logic surround sound.",
         "only_if": { "speakers": "matrix" },
-        "changes": { "Unreal.ini": { "GalaxyAudioSubsystem": { "UseSurround": true } } },
+        "changes": { "Unreal.ini": { "GalaxyAudioSubsystem": { "UseSurround": "True" } } },
         "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
         "tested": true
       }

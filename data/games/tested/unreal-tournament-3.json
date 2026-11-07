@@ -32,7 +32,7 @@
         "title": "Enable Pro Logic surround sound",
         "reason": "Sets Unreal Tournament 3's mixer to Pro Logic surround sound.",
         "only_if": { "speakers": "matrix" },
-        "changes": { "UTEngine.ini": { "Galaxy.GalaxyAudioSubsystem": { "UseSurround": true } } },
+        "changes": { "UTEngine.ini": { "Galaxy.GalaxyAudioSubsystem": { "UseSurround": "True" } } },
         "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
         "tested": true
       }

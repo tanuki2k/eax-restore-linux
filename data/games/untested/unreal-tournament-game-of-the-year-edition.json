@@ -41,7 +41,7 @@
         "reason": "Sets Unreal Tournament's mixer to Pro Logic surround sound.",
         "only_if": { "speakers": "matrix" },
         "changes": {
-          "UnrealTournament.ini": { "Galaxy.GalaxyAudioSubsystem": { "UseSurround": true } }
+          "UnrealTournament.ini": { "Galaxy.GalaxyAudioSubsystem": { "UseSurround": "True" } }
         },
         "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
         "tested": false

@@ -866,7 +866,7 @@
             "changes": {
               "System.ini": {
                 "Galaxy.GalaxyAudioSubsystem": {
-                  "UseSurround": true
+                  "UseSurround": "True"
                 }
               }
             },
@@ -1090,7 +1090,7 @@
             "changes": {
               "DeusEx.ini": {
                 "Galaxy.GalaxyAudioSubsystem": {
-                  "UseSurround": true
+                  "UseSurround": "True"
                 }
               }
             },
@@ -4913,7 +4913,7 @@
             "changes": {
               "Unreal.ini": {
                 "GalaxyAudioSubsystem": {
-                  "UseSurround": true
+                  "UseSurround": "True"
                 }
               }
             },
@@ -5164,7 +5164,7 @@
             "changes": {
               "UTEngine.ini": {
                 "Galaxy.GalaxyAudioSubsystem": {
-                  "UseSurround": true
+                  "UseSurround": "True"
                 }
               }
             },
@@ -5242,7 +5242,7 @@
             "changes": {
               "UnrealTournament.ini": {
                 "Galaxy.GalaxyAudioSubsystem": {
-                  "UseSurround": true
+                  "UseSurround": "True"
                 }
               }
             },
@@ -5374,7 +5374,7 @@
             "changes": {
               "XCom.ini": {
                 "Galaxy.GalaxyAudioSubsystem": {
-                  "UseSurround": true
+                  "UseSurround": "True"
                 }
               }
             },

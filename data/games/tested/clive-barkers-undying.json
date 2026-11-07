@@ -25,7 +25,7 @@
         "title": "Enable Pro Logic surround sound",
         "reason": "Sets Clive Barker's Undying's mixer to Pro Logic surround sound.",
         "only_if": { "speakers": "matrix" },
-        "changes": { "System.ini": { "Galaxy.GalaxyAudioSubsystem": { "UseSurround": true } } },
+        "changes": { "System.ini": { "Galaxy.GalaxyAudioSubsystem": { "UseSurround": "True" } } },
         "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
         "tested": true
       }
