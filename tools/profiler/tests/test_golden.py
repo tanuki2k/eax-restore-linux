@@ -37,7 +37,7 @@ class Fear(unittest.TestCase):
             f = os.path.join(t, "p.gdb")
             with open(f, "wb") as fh:
                 fh.write(before)
-            bash("".join(f'config_set_key "{f}" gadb "" {k} 1; ' for k in want))  # the script's own writer
+            bash("".join(f'config_set_key "{f}" binary_switches "" {k} 1; ' for k in want))  # the script's own writer
             with open(f, "rb") as fh:
                 after = fh.read()
             game, sd = world(t, {FEAR_GDB: before}, {FEAR_GDB: after})
@@ -67,12 +67,12 @@ class Fear(unittest.TestCase):
         parsed = capture.parse_gadb(data)
         self.assertTrue(parsed)
         names = sorted(parsed)[:60]
-        out = bash(f'for k in {" ".join(names)}; do echo "$k=$(config_get_key "{REAL_GDB}" gadb "" "$k")"; done')
+        out = bash(f'for k in {" ".join(names)}; do echo "$k=$(config_get_key "{REAL_GDB}" binary_switches "" "$k")"; done')
         self.assertEqual(dict(ln.split("=", 1) for ln in out.split()), {k: parsed[k] for k in names})
 
 
 class Descent3(unittest.TestCase):
-    """The one wine_reg entry: a dword and a string under the game's registry key."""
+    """The one registry entry: a dword and a string under the game's registry key."""
     HDR = "WINE REGISTRY Version 2\n\n"
     KEY = "Software\\\\Wow6432Node\\\\Outrage\\\\Descent3"
 

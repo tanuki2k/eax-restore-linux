@@ -150,7 +150,7 @@ function markUnsaved() {
   const now = prune(GAME);
   const at = pathAt;
   const sig = JSON.stringify;
-  const sectioned = (f) => ["ini", "gas_cfg", "wine_reg"].includes((((GAME.game_config || {}).files || {})[f] || {}).format);
+  const sectioned = (f) => ["ini", "ini_braces", "registry"].includes((((GAME.game_config || {}).files || {})[f] || {}).format);
   $$("[data-path]").forEach((f) => {
     const was = at(SAVED, f.dataset.path);
     f.classList.toggle("unsaved", sig(at(now, f.dataset.path)) !== sig(was));
@@ -457,7 +457,7 @@ function fileCards(parent, key, valueSchema, path) {
       el("div", { class: "addrow" }, el("button", { type: "button", class: "btn", onclick: async () => {
         const n = await askText("Add a config file", "File name, e.g. game.ini, Quake4Config.cfg, Profile000.gdb or system.reg", "Add"); if (!n) return;
         if (m()[n] && !(await askConfirm(`${n} is already in this profile. Replace it with an empty entry?`, "Replace", true))) return;
-        m()[n] = { format: n.endsWith(".reg") ? "wine_reg" : n.endsWith(".gdb") ? "gadb" : n.endsWith(".ltx") ? "ltx" : n.endsWith(".gas") ? "gas_cfg" : "ini", locations: [n.endsWith(".reg") ? "prefix:" + n : "game_exe:" + n] }; changed(); draw();
+        m()[n] = { format: n.endsWith(".reg") ? "registry" : n.endsWith(".gdb") ? "binary_switches" : n.endsWith(".ltx") ? "key_value" : n.endsWith(".gas") ? "ini_braces" : "ini", locations: [n.endsWith(".reg") ? "prefix:" + n : "game_exe:" + n] }; changed(); draw();
       } }, "+ Add a config file")));
   };
   draw(); return box;
@@ -466,7 +466,7 @@ function fileCards(parent, key, valueSchema, path) {
 function changesEditor(setting, key) {
   const box = el("div");
   const files = () => (GAME.game_config && GAME.game_config.files) || {};
-  const sectioned = (f) => ["ini", "gas_cfg", "wine_reg"].includes((files()[f] || {}).format);
+  const sectioned = (f) => ["ini", "ini_braces", "registry"].includes((files()[f] || {}).format);
   const rows = () => {
     const out = [];
     for (const [f, a] of Object.entries(setting[key] || {})) for (const [k, v] of Object.entries(a)) {
@@ -1225,9 +1225,9 @@ function applyDrops(gc) {
     out[kind] = out[kind].filter((st) => {
       for (const [file, body] of Object.entries(st.changes)) {
         const fmt = (out.files[file] || {}).format;
-        const sectioned = ["ini", "gas_cfg", "wine_reg"].includes(fmt);
+        const sectioned = ["ini", "ini_braces", "registry"].includes(fmt);
         for (const [a, v] of Object.entries(body)) {
-          if (sectioned) { for (const k of Object.keys(v)) if (DROP.has([file, fmt, a, k].join("\0"))) delete v[k]; if (!Object.keys(v).length) delete body[a]; }
+          if (sectioned && v && typeof v === "object") { for (const k of Object.keys(v)) if (DROP.has([file, fmt, a, k].join("\0"))) delete v[k]; if (!Object.keys(v).length) delete body[a]; }
           else if (DROP.has([file, fmt, "", a].join("\0"))) delete body[a];
         }
         if (!Object.keys(body).length) delete st.changes[file];
@@ -1251,16 +1251,16 @@ function moveByCategory(gc) {
   for (const [from, to] of [["audio_settings", "optional"], ["optional_settings", "audio"]]) {
     for (const st of (gc[from] || []).filter((x) => !x.only_if)) {
       for (const [file, body] of Object.entries(st.changes)) {
-        const fmt = (gc.files[file] || {}).format, sectioned = ["ini", "gas_cfg", "wine_reg"].includes(fmt);
+        const fmt = (gc.files[file] || {}).format, sectioned = ["ini", "ini_braces", "registry"].includes(fmt);
         const move = (sec, key, val) => {
           if (CAT.get([file, fmt, sec, key].join("\0")) !== to) return false;
           const dest = into(to === "audio" ? "audio_settings" : "optional_settings").changes;
           const t = dest[file] = dest[file] || {};
-          (sectioned ? (t[sec] = t[sec] || {}) : t)[key] = val;
+          (sectioned && sec ? (t[sec] = t[sec] || {}) : t)[key] = val;
           return true;
         };
         for (const [a, v] of Object.entries(body)) {
-          if (sectioned) { for (const [k, val] of Object.entries(v)) if (move(a, k, val)) delete v[k]; if (!Object.keys(v).length) delete body[a]; }
+          if (sectioned && v && typeof v === "object") { for (const [k, val] of Object.entries(v)) if (move(a, k, val)) delete v[k]; if (!Object.keys(v).length) delete body[a]; }
           else if (move("", a, v)) delete body[a];
         }
         if (!Object.keys(body).length) delete st.changes[file];

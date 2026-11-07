@@ -3,18 +3,18 @@
 # ==============================================================================
 # Everything the script changes in a game's own config files comes from that
 # game's profile (game_config.audio_settings / optional_settings) — the script
-# itself only knows how to read and edit the seven config formats, never which
+# itself only knows how to read and edit the ten config formats, never which
 # game needs what. Decided in phases 2-3 (Speaker Configuration, then phase 3's Game Audio
 # Settings offers the alsoft.ini values and the game's own settings), applied in
 # Phase 4, recorded in the manifest as CONFIG: lines, reverted on uninstall.
 #
 # Values travel through here as plain strings plus three markers:
-#   __TRUE__ / __FALSE__  a dark_cfg flag switched on / off (true/false in JSON)
+#   __TRUE__ / __FALSE__  a key_value flag switched on / off (true/false in JSON)
 #   __DELETE__            remove the key (null in JSON)
 #   __ABSENT__            (read side only) the key isn't in the file
 
 # Usage: _gadb_find <file> <key>
-# gadb is Monolith's binary game database, which F.E.A.R. keeps its player
+# binary_switches is Monolith's binary game database, which F.E.A.R. keeps its player
 # profile in (Profile000.gdb): a "GADB" header with the string table's size
 # at byte 8, the string table from byte 28 (NUL-separated names), then
 # 4-byte-aligned little-endian records of [name's offset in the string
@@ -44,7 +44,7 @@ _gadb_find() {
         }'
 }
 
-# wine_reg is one of Wine's registry files, system.reg (HKLM) or user.reg
+# registry is one of Wine's registry files, system.reg (HKLM) or user.reg
 # (HKCU), which Wine keeps as text in the prefix: "[Key\\Path] <time>"
 # headers with doubled backslashes, then "Name"=dword:0000000a or
 # "Name"="text" lines. The section is the key's path with single
@@ -110,7 +110,7 @@ _wine_reg_read() {
 }
 
 # Usage: _wine_reg_set <file> <key path> <value name> <value>
-# config_set_key for wine_reg. A value keeps its type: a dword stays a dword
+# config_set_key for registry. A value keeps its type: a dword stays a dword
 # (so the new value must be a number), a string stays a string. A new value
 # is a dword when it's a number, else a string; a new key goes at the end of
 # the file with Wine's own header lines. Never touches a raw value. Only
@@ -163,7 +163,7 @@ _wine_reg_set() {
 }
 
 # Usage: _byte_offset <key>
-# byte_cfg keys are byte positions in the file, counted from 0, written in
+# binary_offset keys are byte positions in the file, counted from 0, written in
 # decimal or as 0x hex. Prints the decimal position, or fails for anything else.
 _byte_offset() {
     if [[ "$1" =~ ^0[xX][0-9a-fA-F]{1,8}$ ]]; then echo "$((16#${1:2}))"
@@ -183,7 +183,7 @@ _byte_get() {
 }
 
 # Usage: _byte_set <file> <key> <0-255>
-# config_set_key for byte_cfg: overwrites the one byte in place (Messiah's
+# config_set_key for binary_offset: overwrites the one byte in place (Messiah's
 # Messiah.cfg keeps its sound driver in a byte or two). Never grows the file,
 # so a position past its end or a value outside 0-255 returns 1. Writes a
 # copy in the same folder, checks the byte reads back, then swaps it in.
@@ -203,7 +203,7 @@ _byte_set() {
 }
 
 # Usage: _lenstr_find <file> <anchor>
-# lenstr_cfg keys are an even-length hex string, the bytes that sit right
+# binary_text keys are an even-length hex string, the bytes that sit right
 # before a 4-byte little-endian length and then that many characters of text
 # (Freedom Force's options.dat keeps its sound driver's name that way). Prints
 # "<position of the length> <length> <text>" for the first match whose length
@@ -261,7 +261,7 @@ _lenstr_get() {
 }
 
 # Usage: _lenstr_set <file> <key> <value>
-# config_set_key for lenstr_cfg. For a plain anchor it swaps the text for a new
+# config_set_key for binary_text. For a plain anchor it swaps the text for a new
 # one of any length (1-64 characters), writing its new length in front. For
 # <anchor>+<N> it overwrites that one byte with a number 0-255. Every other
 # byte stays as it was, and a file that doesn't have the text or the byte is
@@ -297,23 +297,23 @@ _lenstr_set() {
     return 1
 }
 
-# Usage: config_get_key <file> <ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gas_cfg|ltx|quoted_cfg|byte_cfg|lenstr_cfg|gadb|wine_reg> <section> <key>
-# Prints the key's current value, __ABSENT__ if it isn't set, or (dark_cfg
+# Usage: config_get_key <file> <ini|set_commands|key_value|braced_pairs|ini_braces|quoted_pairs|binary_offset|binary_text|binary_switches|registry> <section> <key>
+# Prints the key's current value, __ABSENT__ if it isn't set, or (key_value
 # only) __TRUE__ for an active bare flag and __FALSE__ for a flag that's only
 # present commented out. Section and key names match case-insensitively, like
-# the games themselves read them. brace_cfg is Fallout Tactics' "{key} = {value}"
-# lines. gas_cfg is Dungeon Siege's prefs.gas: a "[section]" line, "{" on its own
-# line, then "key = value;" lines up to "}". A gadb key is one on/off setting, 0 or 1.
+# the games themselves read them. braced_pairs is "{key} = {value}"
+# lines. ini_braces is a "[section]" line, "{" on its own
+# line, then "key = value;" lines up to "}". A binary_switches key is one on/off setting, 0 or 1.
 config_get_key() {
     local file="$1" fmt="$2" sec="$3" key="$4" found
     [ -f "$file" ] || { echo "__ABSENT__"; return; }
-    if [ "$fmt" == "wine_reg" ]; then
+    if [ "$fmt" == "registry" ]; then
         found="$(_wine_reg_read "$file" "$sec" "$key")"; echo "${found#*$'\t'}"
         return
     fi
-    if [ "$fmt" == "byte_cfg" ]; then _byte_get "$file" "$key"; return; fi
-    if [ "$fmt" == "lenstr_cfg" ]; then _lenstr_get "$file" "$key"; return; fi
-    if [ "$fmt" == "gadb" ]; then
+    if [ "$fmt" == "binary_offset" ]; then _byte_get "$file" "$key"; return; fi
+    if [ "$fmt" == "binary_text" ]; then _lenstr_get "$file" "$key"; return; fi
+    if [ "$fmt" == "binary_switches" ]; then
         found="$(_gadb_find "$file" "$key")"
         if [ -n "$found" ]; then echo "${found#* }"; else echo "__ABSENT__"; fi
         return
@@ -326,11 +326,11 @@ config_get_key() {
             sub(/^[ \t]*\[/, "", n); sub(/\]$/, "", n); hname = n
             return 1
         }
-        BEGIN { lsec = tolower(sec); lkey = tolower(key); insec = (fmt != "ini" && fmt != "gas_cfg"); found = 0; commented = 0 }
+        BEGIN { lsec = tolower(sec); lkey = tolower(key); insec = (fmt != "ini" && fmt != "ini_braces") || (fmt == "ini" && sec == ""); found = 0; commented = 0 }
         { sub(/\r$/, "") }
         NR == 1 && substr($0, 1, 3) == "\357\273\277" { $0 = substr($0, 4) }
-        fmt == "ini" || fmt == "flat_ini" {
-            if (fmt == "ini" && is_header($0)) { insec = (tolower(hname) == lsec); next }
+        fmt == "ini" {
+            if (is_header($0)) { insec = (tolower(hname) == lsec); next }
             if (!insec) next
             p = index($0, "="); if (p == 0) next
             k = substr($0, 1, p - 1); gsub(/^[ \t]+|[ \t]+$/, "", k)
@@ -338,14 +338,14 @@ config_get_key() {
             v = substr($0, p + 1); gsub(/^[ \t]+|[ \t]+$/, "", v)
             print v; found = 1; exit
         }
-        fmt == "idtech_cfg" {
+        fmt == "set_commands" {
             line = $0; if (!match(tolower(line), /^[ \t]*seta?[ \t]+/)) next
             rest = substr(line, RLENGTH + 1); split(rest, a, /[ \t]+/)
             if (tolower(a[1]) != lkey) next
             v = substr(rest, length(a[1]) + 1); gsub(/^[ \t]+|[ \t]+$/, "", v); gsub(/^"|"$/, "", v)
             print v; found = 1; exit
         }
-        fmt == "dark_cfg" {
+        fmt == "key_value" {
             line = $0; is_comment = (line ~ /^[ \t]*;/)
             sub(/^[ \t]*;?[ \t]*/, "", line); split(line, a, /[ \t]+/)
             if (tolower(a[1]) != lkey) next
@@ -353,13 +353,7 @@ config_get_key() {
             v = substr(line, length(a[1]) + 1); gsub(/^[ \t]+|[ \t]+$/, "", v)
             print (v == "" ? "__TRUE__" : v); found = 1; exit
         }
-        fmt == "ltx" {
-            line = $0; sub(/^[ \t]+/, "", line); split(line, a, /[ \t]+/)
-            if (tolower(a[1]) != lkey) next
-            v = substr(line, length(a[1]) + 1); gsub(/^[ \t]+|[ \t]+$/, "", v)
-            print v; found = 1; exit
-        }
-        fmt == "quoted_cfg" {
+        fmt == "quoted_pairs" {
             if (!match($0, /^[ \t]*"[^"]*"[ \t]*/)) next
             k = substr($0, 1, RLENGTH); v = substr($0, RLENGTH + 1)
             sub(/^[ \t]*"/, "", k); sub(/"[ \t]*$/, "", k)
@@ -367,14 +361,14 @@ config_get_key() {
             sub(/[ \t]+$/, "", v); gsub(/^"|"$/, "", v)
             print v; found = 1; exit
         }
-        fmt == "brace_cfg" {
+        fmt == "braced_pairs" {
             if (!match($0, /^[ \t]*\{[^}]*\}[ \t]*=[ \t]*\{/)) next
             k = substr($0, 1, RLENGTH); sub(/^[ \t]*\{[ \t]*/, "", k); sub(/[ \t]*\}.*$/, "", k)
             if (tolower(k) != lkey) next
             v = substr($0, RLENGTH + 1); sub(/\}[ \t]*$/, "", v)
             print v; found = 1; exit
         }
-        fmt == "gas_cfg" {
+        fmt == "ini_braces" {
             if (is_header($0)) { insec = (tolower(hname) == lsec); next }
             if (!insec) next
             p = index($0, "="); if (p == 0) next
@@ -383,12 +377,12 @@ config_get_key() {
             v = substr($0, p + 1); gsub(/^[ \t]+|;?[ \t]*$/, "", v)
             print v; found = 1; exit
         }
-        END { if (!found) print ((fmt == "dark_cfg" && commented) ? "__FALSE__" : "__ABSENT__") }
+        END { if (!found) print ((fmt == "key_value" && commented) ? "__FALSE__" : "__ABSENT__") }
     ' "$file"
 }
 
 # Usage: _gadb_set <file> <key> <0|1>
-# config_set_key for gadb: overwrites the value of the key's existing on/off
+# config_set_key for binary_switches: overwrites the value of the key's existing on/off
 # record in place. Never adds or removes a record, since the file's offsets
 # would all move, so an absent key or any value but 0/1 returns 1. Writes a
 # copy in the same folder, checks the new value reads back, then swaps it in.
@@ -408,29 +402,28 @@ _gadb_set() {
     return 1
 }
 
-# Usage: config_set_key <file> <ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gas_cfg|ltx|quoted_cfg|byte_cfg|lenstr_cfg|gadb|wine_reg> <section> <key> <value>
+# Usage: config_set_key <file> <ini|set_commands|key_value|braced_pairs|ini_braces|quoted_pairs|binary_offset|binary_text|binary_switches|registry> <section> <key> <value>
 # Sets (or with __DELETE__ removes) one key, keeping everything else in the
 # file as it was — including CRLF line endings, the original spelling of an
 # existing key, and "key = value" spacing. A missing ini key goes at the end
-# of its section (or a new section at the end of the file); a missing flat_ini
-# or cfg key is appended. ltx is
-# the X-Ray engine's user.ltx (S.T.A.L.K.E.R.): "key value" lines, no sections, no flags.
-# quoted_cfg is Monolith's autoexec.cfg (Shogo): "key" "value" lines, both quoted. An existing brace_cfg key only has the text between
-# its value's braces replaced. flat_ini is ini without [sections] — the whole file
-# is one section, so its rows carry no section name. For dark_cfg, a commented-out example line is left in place and
-# the active line is added right after it. gadb only switches an existing
-# on/off setting (see _gadb_set), byte_cfg one byte at a position (_byte_set), and lenstr_cfg a length-prefixed text found by the bytes before it (_lenstr_set). Writes through a temp file in the
+# of its section (or a new section at the end of the file); a missing key in
+# any other format is appended. Section "" is the top of an ini file, before its
+# first [header], or a whole file with no headers.
+# quoted_pairs is "key" "value" lines, both quoted. An existing braced_pairs key only has the text between
+# its value's braces replaced. For key_value, a commented-out example line is left in place and
+# the active line is added right after it. binary_switches only switches an existing
+# on/off setting (see _gadb_set), binary_offset one byte at a position (_byte_set), and binary_text a length-prefixed text found by the bytes before it (_lenstr_set). Writes through a temp file in the
 # same folder and swaps it in, so a failure never leaves a half-written file.
 # Returns 1 if the file couldn't be written.
 config_set_key() {
     local file="$1" fmt="$2" sec="$3" key="$4" value="$5"
     local crlf=0 current tmp
-    [ "$fmt" == "byte_cfg" ] && { _byte_set "$file" "$key" "$value"; return; }
-    [ "$fmt" == "lenstr_cfg" ] && { _lenstr_set "$file" "$key" "$value"; return; }
-    [ "$fmt" == "gadb" ] && { _gadb_set "$file" "$key" "$value"; return; }
-    [ "$fmt" == "wine_reg" ] && { _wine_reg_set "$file" "$sec" "$key" "$value"; return; }
+    [ "$fmt" == "binary_offset" ] && { _byte_set "$file" "$key" "$value"; return; }
+    [ "$fmt" == "binary_text" ] && { _lenstr_set "$file" "$key" "$value"; return; }
+    [ "$fmt" == "binary_switches" ] && { _gadb_set "$file" "$key" "$value"; return; }
+    [ "$fmt" == "registry" ] && { _wine_reg_set "$file" "$sec" "$key" "$value"; return; }
     # Anything else would match no rule below and write out an empty file.
-    [[ "$fmt" =~ ^(ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gas_cfg|ltx|quoted_cfg)$ ]] || return 1
+    [[ "$fmt" =~ ^(ini|set_commands|key_value|braced_pairs|ini_braces|quoted_pairs)$ ]] || return 1
     # Judged by the first line for lines this adds to an empty or new file; every
     # existing line keeps its own ending.
     [ -f "$file" ] && head -n 1 "$file" 2>/dev/null | LC_ALL=C grep -q $'\r' && crlf=1
@@ -455,7 +448,7 @@ config_set_key() {
         }
         function ini_line() { return key "=" val }
         BEGIN {
-            lsec = tolower(sec); lkey = tolower(key); insec = (fmt == "flat_ini"); seen_sec = insec; done = 0; nb = 0
+            lsec = tolower(sec); lkey = tolower(key); insec = (fmt == "ini" && sec == ""); seen_sec = insec; done = 0; nb = 0
             del = (val == "__DELETE__"); eol = (crlf ? "\r\n" : "\n"); prev_c = 0
             active = (current != "__ABSENT__" && current != "__FALSE__")
         }
@@ -463,8 +456,8 @@ config_set_key() {
         # lines this adds take the ending of the line before them.
         { eol = ($0 ~ /\r$/) ? "\r\n" : "\n"; sub(/\r$/, "") }
         NR == 1 && substr($0, 1, 3) == "\357\273\277" { bom = 1; $0 = substr($0, 4) }
-        fmt == "ini" || fmt == "flat_ini" {
-            if (fmt == "ini" && is_header($0)) {
+        fmt == "ini" {
+            if (is_header($0)) {
                 if (insec && !done && !del) { out(ini_line()); done = 1 }
                 flush_blanks()
                 insec = (tolower(hname) == lsec); if (insec) seen_sec = 1
@@ -486,7 +479,7 @@ config_set_key() {
             }
             out($0); next
         }
-        fmt == "gas_cfg" {
+        fmt == "ini_braces" {
             if (is_header($0)) {
                 if (insec && !done && !del) { out("\t" key " = " val ";"); done = 1 }
                 insec = (tolower(hname) == lsec); if (insec) seen_sec = 1
@@ -510,7 +503,7 @@ config_set_key() {
             }
             out($0); next
         }
-        fmt == "idtech_cfg" {
+        fmt == "set_commands" {
             line = $0
             if (!done && match(tolower(line), /^[ \t]*seta?[ \t]+/)) {
                 lead = substr(line, 1, RLENGTH); rest = substr(line, RLENGTH + 1); split(rest, a, /[ \t]+/)
@@ -525,7 +518,7 @@ config_set_key() {
             }
             out(line); next
         }
-        fmt == "dark_cfg" {
+        fmt == "key_value" {
             line = $0; is_comment = (line ~ /^[ \t]*;/)
             t = line; sub(/^[ \t]*;?[ \t]*/, "", t); split(t, a, /[ \t]+/)
             if (tolower(a[1]) != lkey) { prev_c = 0; out(line); next }
@@ -548,12 +541,7 @@ config_set_key() {
             }
             next
         }
-        fmt == "ltx" {
-            line = $0; t = line; sub(/^[ \t]+/, "", t); split(t, a, /[ \t]+/)
-            if (!done && tolower(a[1]) == lkey) { done = 1; if (!del) out(a[1] " " val); next }
-            out(line); next
-        }
-        fmt == "quoted_cfg" {
+        fmt == "quoted_pairs" {
             if (!done && match($0, /^[ \t]*"[^"]*"[ \t]*/)) {
                 head = substr($0, 1, RLENGTH); k = head
                 sub(/^[ \t]*"/, "", k); sub(/"[ \t]*$/, "", k)
@@ -561,7 +549,7 @@ config_set_key() {
             }
             out($0); next
         }
-        fmt == "brace_cfg" {
+        fmt == "braced_pairs" {
             if (!done && match($0, /^[ \t]*\{[^}]*\}[ \t]*=[ \t]*\{/)) {
                 head = substr($0, 1, RLENGTH); k = head
                 sub(/^[ \t]*\{[ \t]*/, "", k); sub(/[ \t]*\}.*$/, "", k)
@@ -570,11 +558,11 @@ config_set_key() {
             out($0); next
         }
         END {
-            if (fmt == "gas_cfg") {
+            if (fmt == "ini_braces") {
                 if (insec && !done && !del) { out("\t" key " = " val ";"); out("}"); done = 1 }
                 else if (!seen_sec && !done && !del) { if (NR > 0) out(""); out("[" sec "]"); out("{"); out("\t" key " = " val ";"); out("}") }
                 flush_blanks()
-            } else if (fmt == "ini" || fmt == "flat_ini") {
+            } else if (fmt == "ini") {
                 if (insec && !done && !del) { out(ini_line()); done = 1 }
                 flush_blanks()
                 if (!seen_sec && !done && !del) {
@@ -582,10 +570,9 @@ config_set_key() {
                     out("[" sec "]"); out(ini_line())
                 }
             } else if (!done && !del && val != "__FALSE__") {
-                if (fmt == "idtech_cfg") out("seta " key " \"" val "\"")
-                else if (fmt == "brace_cfg") out("{" key "} = {" val "}")
-                else if (fmt == "ltx") out(key " " val)
-                else if (fmt == "quoted_cfg") out("\"" key "\" \"" val "\"")
+                if (fmt == "set_commands") out("seta " key " \"" val "\"")
+                else if (fmt == "braced_pairs") out("{" key "} = {" val "}")
+                else if (fmt == "quoted_pairs") out("\"" key "\" \"" val "\"")
                 else out(val == "__TRUE__" ? key : key " " val)
             }
         }
@@ -597,14 +584,14 @@ config_set_key() {
 
 # Usage: config_values_equal <format> <a> <b>
 # ini values compare case-insensitively (Unreal reads "True" and "true" the
-# same), and so do wine_reg strings, while its dwords compare as numbers
+# same), and so do registry strings, while its dwords compare as numbers
 # ("03" is 3); everything else must match exactly.
 config_values_equal() {
     # Removing a key and the key not being there are the same state.
     if { [ "$2" == "__ABSENT__" ] && [ "$3" == "__DELETE__" ]; } || { [ "$2" == "__DELETE__" ] && [ "$3" == "__ABSENT__" ]; }; then return 0
-    elif { [ "$1" == "wine_reg" ] || [ "$1" == "byte_cfg" ] || [ "$1" == "lenstr_cfg" ]; } && [[ "$2" =~ ^[0-9]{1,10}$ && "$3" =~ ^[0-9]{1,10}$ ]]; then
+    elif { [ "$1" == "registry" ] || [ "$1" == "binary_offset" ] || [ "$1" == "binary_text" ]; } && [[ "$2" =~ ^[0-9]{1,10}$ && "$3" =~ ^[0-9]{1,10}$ ]]; then
         [ "$((10#$2))" -eq "$((10#$3))" ]
-    elif [ "$1" == "ini" ] || [ "$1" == "gas_cfg" ] || [ "$1" == "wine_reg" ]; then [ "${2,,}" == "${3,,}" ]
+    elif [ "$1" == "ini" ] || [ "$1" == "ini_braces" ] || [ "$1" == "registry" ]; then [ "${2,,}" == "${3,,}" ]
     else [ "$2" == "$3" ]; fi
 }
 
@@ -675,7 +662,7 @@ resolve_config_file() {
             prefix_public_documents)
                 [ -n "${PREFIX_PATH:-}" ] || continue
                 dirs=("$PREFIX_PATH/drive_c/users/Public/Documents") ;;
-            # The prefix's own registry files (wine_reg), nothing else.
+            # The prefix's own registry files (registry), nothing else.
             prefix)
                 [ -n "${PREFIX_PATH:-}" ] && [[ "$rel" =~ ^(system|user)\.reg$ ]] || continue
                 dirs=("$PREFIX_PATH") ;;
@@ -795,8 +782,11 @@ load_game_config_rows() {
         | select('"$with_untested"' or .f.tested == true)
         | .cat as $cat | .i as $i | .f as $f
         | $f.changes | to_entries[] | .key as $file | ($files[$file] // {}) as $def
-        | (if $def.format == "ini" or $def.format == "gas_cfg" or $def.format == "wine_reg"
-             then (.value | to_entries[] | .key as $sec | .value | to_entries[] | [$sec, .key, .value])
+        | (if $def.format == "ini" or $def.format == "ini_braces" or $def.format == "registry"
+             then (.value | to_entries[]
+                   | if (.value | type) == "object"
+                     then .key as $sec | .value | to_entries[] | [$sec, .key, .value]
+                     else ["", .key, .value] end)
              else (.value | to_entries[] | ["", .key, .value]) end) as $kv
         | [$cat, ($i | tostring), $f.title, ($f.reason | br), (($f.only_if.stores // []) | join(",")),
            ([$f.only_if.speakers // empty] | flatten | join(",")), ($f.follow_up // "" | br), $file, ($def.format // ""),
@@ -809,43 +799,45 @@ load_game_config_rows() {
 # Usage: config_row_is_safe <format> <locations> <section> <key> <value>
 # The schema already enforces all this in CI; this re-checks only what could
 # touch the wrong file or corrupt one, in case a bad entry slips through.
-# wine_reg is the only format for the prefix's registry files, and only
+# registry is the only format for the prefix's registry files, and only
 # them; its section is a registry key path, backslash-separated.
 config_row_is_safe() {
     local fmt="$1" locations="$2" sec="$3" key="$4" value="$5" loc
     local -a locs
     local name_re='^[A-Za-z0-9._ -]+$' value_re='^[A-Za-z0-9._ ()-]*$'
     local reg_key_re='^[A-Za-z0-9._ ()-]+(\\[A-Za-z0-9._ ()-]+)*$'
-    [[ "$fmt" =~ ^(ini|flat_ini|idtech_cfg|dark_cfg|brace_cfg|gas_cfg|ltx|quoted_cfg|byte_cfg|lenstr_cfg|gadb|wine_reg)$ ]] || return 1
+    [[ "$fmt" =~ ^(ini|set_commands|key_value|braced_pairs|ini_braces|quoted_pairs|binary_offset|binary_text|binary_switches|registry)$ ]] || return 1
     [ -n "$locations" ] || return 1
     IFS='|' read -ra locs <<< "$locations"
     for loc in "${locs[@]}"; do
-        if [ "$fmt" == "wine_reg" ]; then
+        if [ "$fmt" == "registry" ]; then
             [[ "$loc" =~ ^prefix:(system|user)\.reg$ ]] || return 1
             continue
         fi
         [[ "$loc" =~ ^(game_exe|game_root|game|install|prefix_documents|prefix_appdata|prefix_localappdata|prefix_public_documents):[^/\\] ]] || return 1
         [[ "$loc" == *..* || "$loc" == *\\* ]] && return 1
     done
-    if [ "$fmt" == "lenstr_cfg" ]; then [[ "${key/+/}" =~ $name_re ]] || return 1; else [[ "$key" =~ $name_re ]] || return 1; fi
-    if [ "$fmt" == "ini" ] || [ "$fmt" == "gas_cfg" ]; then [[ "$sec" =~ $name_re ]] || return 1; fi
-    if [ "$fmt" == "wine_reg" ]; then [[ "$sec" =~ $reg_key_re ]] && [[ "$sec" != *..* ]] || return 1; fi
-    if [ "$fmt" == "byte_cfg" ]; then
+    if [ "$fmt" == "binary_text" ]; then [[ "${key/+/}" =~ $name_re ]] || return 1; else [[ "$key" =~ $name_re ]] || return 1; fi
+    # An ini file's own top, before its first [header], has no section name.
+    if [ "$fmt" == "ini" ]; then [ -z "$sec" ] || [[ "$sec" =~ $name_re ]] || return 1; fi
+    if [ "$fmt" == "ini_braces" ]; then [[ "$sec" =~ $name_re ]] || return 1; fi
+    if [ "$fmt" == "registry" ]; then [[ "$sec" =~ $reg_key_re ]] && [[ "$sec" != *..* ]] || return 1; fi
+    if [ "$fmt" == "binary_offset" ]; then
         _byte_offset "$key" >/dev/null && [[ "$value" =~ ^[0-9]{1,3}$ ]] && [ "$((10#$value))" -le 255 ] || return 1
     fi
-    # A lenstr_cfg key is the hex bytes in front of the text, plus +N for a byte
+    # A binary_text key is the hex bytes in front of the text, plus +N for a byte
     # N past its end, which takes a number 0-255.
-    if [ "$fmt" == "lenstr_cfg" ]; then
+    if [ "$fmt" == "binary_text" ]; then
         if [[ "$key" == *+* ]]; then
             [[ "$key" =~ ^([0-9A-Fa-f]{2}){1,16}\+[0-9]{1,5}$ ]] && [[ "$value" =~ ^[0-9]{1,3}$ ]] && [ "$((10#$value))" -le 255 ] || return 1
         else
             [[ "$key" =~ ^([0-9A-Fa-f]{2}){1,16}$ ]] && [ -n "$value" ] && [ "${#value}" -le 64 ] || return 1
         fi
     fi
-    # A gadb setting can only be switched on or off in place.
-    if [ "$fmt" == "gadb" ]; then [[ "$value" =~ ^[01]$ ]] || return 1; fi
+    # A binary_switches setting can only be switched on or off in place.
+    if [ "$fmt" == "binary_switches" ]; then [[ "$value" =~ ^[01]$ ]] || return 1; fi
     case "$value" in
-        __TRUE__|__FALSE__) [ "$fmt" == "dark_cfg" ] || return 1 ;;
+        __TRUE__|__FALSE__) [ "$fmt" == "key_value" ] || return 1 ;;
         __DELETE__) ;;
         *) [[ "$value" =~ $value_re ]] || return 1 ;;
     esac
@@ -853,7 +845,7 @@ config_row_is_safe() {
 
 # Usage: print_config_rows <rows>
 # Prints a fix's changes as a tree: the file on its own line, its [section]
-# under it (ini only), then one "key  old → new" line per change, with the
+# under it (ini, ini_braces and registry), then one "key  old → new" line per change, with the
 # keys lined up. A file or section line is only printed when it differs from
 # the row above. <rows> is newline-separated \x1f rows of
 # file, section, key, old, new. An old value of __ANY__ prints just
@@ -1684,7 +1676,7 @@ clear_crash_marker() {
 }
 
 # Usage: wine_registry_quiet
-# Before the first wine_reg change of a run: Wine keeps the registry in
+# Before the first registry change of a run: Wine keeps the registry in
 # wineserver's memory and writes system.reg / user.reg back when it exits,
 # which would undo an edit made while it runs. So this waits for it to save
 # and exit (e.g. after the install's own registry import). Returns 1 while
@@ -1727,7 +1719,7 @@ apply_game_settings() {
             new="${f[6]}"; file="${f[7]}"; state="${f[9]}"
 
             # Once, before the registry file is backed up or read.
-            if [ "$fmt" == "wine_reg" ]; then
+            if [ "$fmt" == "registry" ]; then
                 [ -n "$reg_state" ] || { wine_registry_quiet && reg_state="ok" || reg_state="busy"; }
                 [ "$reg_state" == "ok" ] || { record_deploy_failure "$path"; continue; }
             fi
@@ -1758,9 +1750,9 @@ apply_game_settings() {
 
             old="$(config_get_key "$path" "$fmt" "$sec" "$key")"
             config_values_equal "$fmt" "$old" "$new" && continue
-            # Revert can only write 0 or 1 back to a gadb flag, so any other
+            # Revert can only write 0 or 1 back to a binary_switches flag, so any other
             # original value would be changed for good.
-            if [ "$fmt" == "gadb" ] && [[ ! "$old" =~ ^[01]$ ]]; then
+            if [ "$fmt" == "binary_switches" ] && [[ ! "$old" =~ ^[01]$ ]]; then
                 print_warning_arrow "$key in $(basename "$path") isn't a plain on/off value, so \"$title\" wasn't applied there."
                 continue
             fi
@@ -1983,7 +1975,7 @@ revert_game_settings() {
             [ -n "$line" ] || continue
             mapfile -t -d $'\t' f < <(printf '%s' "${line#CONFIG:}")
             [ -f "${f[2]}" ] || continue
-            if [ "${f[3]}" == "wine_reg" ]; then
+            if [ "${f[3]}" == "registry" ]; then
                 [ -n "$reg_state" ] || { wine_registry_quiet && reg_state="ok" || reg_state="busy"; }
                 if [ "$reg_state" != "ok" ]; then GAME_SETTINGS_KEPT+=("$line"); continue; fi
             fi

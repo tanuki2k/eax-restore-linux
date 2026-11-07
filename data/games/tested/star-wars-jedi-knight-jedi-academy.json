@@ -11,9 +11,9 @@
   "eax": { "api": "openal", "versions": ["1.0", "2.0", "3.0", "4.0"] },
   "game_config": {
     "files": {
-      "jaconfig.cfg": { "format": "idtech_cfg", "locations": ["game_exe:base/jaconfig.cfg"] },
+      "jaconfig.cfg": { "format": "set_commands", "locations": ["game_exe:base/jaconfig.cfg"] },
       "jampconfig.cfg": {
-        "format": "idtech_cfg",
+        "format": "set_commands",
         "locations": ["game_exe:base/jampconfig.cfg"],
         "if_missing": "skip"
       }

@@ -59,30 +59,30 @@ round_trip() {  # <fmt> <section> <key> <new> <original value to put back>
     cmp "$F" "$F.orig"
 }
 
-@test "gas_cfg: a header with a trailing comment is found" {
+@test "ini_braces: a header with a trailing comment is found" {
     write_file "$F" '[prefs] // audio\n{\n\ta = 1;\n}\n'
-    [ "$(config_get_key "$F" gas_cfg prefs a)" == "1" ]
+    [ "$(config_get_key "$F" ini_braces prefs a)" == "1" ]
 }
 
-@test "idtech_cfg: set stays set and an unquoted value stays unquoted" {
+@test "set_commands: set stays set and an unquoted value stays unquoted" {
     write_file "$F" 'set s_volume 5\nseta s_other "1"\n'
-    config_set_key "$F" idtech_cfg "" s_volume 7
-    config_set_key "$F" idtech_cfg "" s_other 2
+    config_set_key "$F" set_commands "" s_volume 7
+    config_set_key "$F" set_commands "" s_other 2
     [ "$(cat "$F")" == $'set s_volume 7\nseta s_other "2"' ]
 }
 
-@test "dark_cfg: turning a flag back off removes the line the install added" {
+@test "key_value: turning a flag back off removes the line the install added" {
     write_file "$F" 'Key1\n;eax_on\nKey2\n'
     cp "$F" "$F.orig"
-    config_set_key "$F" dark_cfg "" eax_on __TRUE__
-    [ "$(config_get_key "$F" dark_cfg "" eax_on)" == "__TRUE__" ]
-    config_set_key "$F" dark_cfg "" eax_on __FALSE__
+    config_set_key "$F" key_value "" eax_on __TRUE__
+    [ "$(config_get_key "$F" key_value "" eax_on)" == "__TRUE__" ]
+    config_set_key "$F" key_value "" eax_on __FALSE__
     cmp "$F" "$F.orig"
 }
 
-@test "wine_reg: a string with an escaped backslash before a quote reads back as written" {
+@test "registry: a string with an escaped backslash before a quote reads back as written" {
     printf 'WINE REGISTRY Version 2\n\n[Software\\\\T] 1\n"N"="a\\\\\\"b"\n' > "$F"
-    [ "$(config_get_key "$F" wine_reg 'Software\T' N)" == 'a\"b' ]
+    [ "$(config_get_key "$F" registry 'Software\T' N)" == 'a\"b' ]
 }
 
 @test "merge_dll_override: dsound.dll and dsound are the same rule" {

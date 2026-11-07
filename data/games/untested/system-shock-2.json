@@ -23,7 +23,7 @@
   "game_config": {
     "files": {
       "cam_ext.cfg": {
-        "format": "dark_cfg",
+        "format": "key_value",
         "locations": ["game_exe:cam_ext.cfg"],
         "if_missing": "skip"
       }

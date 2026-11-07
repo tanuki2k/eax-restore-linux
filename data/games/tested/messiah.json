@@ -9,7 +9,7 @@
   },
   "eax": { "api": "directsound3d", "versions": ["2.0"] },
   "game_config": {
-    "files": { "Messiah.cfg": { "format": "byte_cfg", "locations": ["game_exe:Messiah.cfg"] } },
+    "files": { "Messiah.cfg": { "format": "binary_offset", "locations": ["game_exe:Messiah.cfg"] } },
     "audio_settings": [
       {
         "title": "Enable EAX",

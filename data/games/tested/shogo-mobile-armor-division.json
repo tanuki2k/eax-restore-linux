@@ -10,8 +10,8 @@
   "eax": { "api": "directsound3d", "sound_system": "miles", "versions": ["1.0"] },
   "game_config": {
     "files": {
-      "system.reg": { "format": "wine_reg", "locations": ["prefix:system.reg"] },
-      "autoexec.cfg": { "format": "quoted_cfg", "locations": ["game_exe:autoexec.cfg"] }
+      "system.reg": { "format": "registry", "locations": ["prefix:system.reg"] },
+      "autoexec.cfg": { "format": "quoted_pairs", "locations": ["game_exe:autoexec.cfg"] }
     },
     "audio_settings": [
       {

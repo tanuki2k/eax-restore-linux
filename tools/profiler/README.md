@@ -130,10 +130,10 @@ When it starts, the editor fetches its checkout's upstream branch in the backgro
 
 The header shows a build number next to the title, with the branch and commit the editor is running from. It's the number of commits that have touched `tools/profiler`, counted from git, so there's nothing to bump.
 
-Binary `gadb` files, like F.E.A.R.'s profile, are read by key name, the same way the script reads them, so a switched on or off setting comes through like any other change. Launching through Heroic's `heroic://launch?appName=...&runner=gog` URL has been checked on a real install.
+Binary `binary_switches` files, like F.E.A.R.'s profile, are read by key name, the same way the script reads them, so a switched on or off setting comes through like any other change. Launching through Heroic's `heroic://launch?appName=...&runner=gog` URL has been checked on a real install.
 
 ## For developers
 
 The code is in `capture.py` (library, snapshots, diffs), `classify.py` (noise flags, the drafted `game_config`, the AI passes), `cleanup.py`, `dbio.py`, `ai.py`, `profiler.py` (the server), `submit.py` (the Submit button), `update.py` (the Update banner), `web/` (the page) and `install-launcher.sh` (the app-menu entry).
 
-The tests run with `python3 -I -m unittest discover -s tools/profiler/tests`. They include golden checks that F.E.A.R.'s `gadb` changes and Descent 3's registry changes come out as their database entries say. `tests/integration/profiler-answers.bats` fails if the script's prompts drift from the canned answers in `capture.py`.
+The tests run with `python3 -I -m unittest discover -s tools/profiler/tests`. They include golden checks that F.E.A.R.'s `binary_switches` changes and Descent 3's registry changes come out as their database entries say. `tests/integration/profiler-answers.bats` fails if the script's prompts drift from the canned answers in `capture.py`.

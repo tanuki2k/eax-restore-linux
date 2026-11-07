@@ -24,8 +24,8 @@ and user-facing docs, and `docs/contributing-games.md` (workflow) and
 **Design rule: anything specific to a game or engine lives in the database, never as a
 special case in the script's code** — config edits, the audio API (and so the engine),
 alsoft.ini values, recommended tweaks. The script only knows how to read and edit the
-twelve config formats (`ini`, `flat_ini`, `idtech_cfg`, `dark_cfg`, `brace_cfg`, `gas_cfg`, `ltx`, `quoted_cfg`, `byte_cfg` (single bytes at fixed offsets), `lenstr_cfg` (length-prefixed text found by the bytes before it), the binary `gadb`,
-and `wine_reg`, the prefix's registry files), not which game needs what.
+ten config formats (`ini`, `ini_braces`, `set_commands`, `key_value`, `braced_pairs`, `quoted_pairs`, `binary_offset` (single bytes at fixed offsets), `binary_text` (length-prefixed text found by the bytes before it), `binary_switches` (Monolith's binary profile),
+and `registry`, the prefix's registry files), not which game needs what.
 
 `eax-restore-linux.sh` is **not committed to the repo** — it's a generated build
 artifact. Its source lives split across `src/*.sh` (one file per functional group);
@@ -126,7 +126,7 @@ launcher hardcodes `releases/latest`).
   `.github/workflows/test.yml` runs them plus `bash -n`, `shellcheck --severity=error`
   over `dist/`, `build.sh` and `tools/`, and the profiler's Python tests,
   `cd tools/profiler && python3 -m unittest discover -s tests`). `tests/unit/` sources
-  `src/*.sh` directly and covers the config editors (every format, gadb, wine_reg),
+  `src/*.sh` directly and covers the config editors (every format, binary_switches, registry),
   launch-option/VDF/Heroic editing, `parse_selection` and the speaker round trip.
   `tests/integration/` runs the built script against a fake Steam world in a temp
   `$HOME` (`env.bash`: fake library, prefix, caches, PE stubs; `tests/fixtures/bin`
@@ -239,7 +239,7 @@ their execution order in the assembled script):
 9. **`game-config.sh`** — the Game Settings feature: `config_get_key` /
    `config_set_key` (awk readers/writers for the text config formats, keeping CRLF,
    key spelling and spacing, plus `_gadb_find`/`_gadb_set`, which switch an on/off
-   setting in place in Monolith's binary `gadb` profile, and `_wine_reg_read`/
+   setting in place in Monolith's binary `binary_switches` profile, and `_wine_reg_read`/
    `_wine_reg_set`, which edit a dword or string value in the prefix's
    `system.reg`/`user.reg` text, a key as the section; `wine_registry_quiet` waits
    for wineserver to save and exit before the first one is written, since it

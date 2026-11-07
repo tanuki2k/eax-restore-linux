@@ -21,7 +21,7 @@
   "game_config": {
     "files": {
       "options.ini": {
-        "format": "flat_ini",
+        "format": "ini",
         "locations": [
           "game_root:save/SaveGames/User Options/options.ini",
           "prefix_documents:Thief - Deadly Shadows/SaveGames/User Options/options.ini"

@@ -17,7 +17,7 @@
   "game_config": {
     "files": {
       "user.ltx": {
-        "format": "ltx",
+        "format": "key_value",
         "locations": ["prefix_documents:stalker-shoc/user.ltx", "game_root:_appdata_/user.ltx"]
       }
     },

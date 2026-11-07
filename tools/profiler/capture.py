@@ -211,31 +211,31 @@ def _load(session_dir, label):
 def guess_format(path, text):
     low = path.lower()
     if low.endswith(".reg"):
-        return "wine_reg"
+        return "registry"
     if low.endswith(".gdb"):
-        return "gadb"
+        return "binary_switches"
     if re.search(r"^\s*seta?\s+\S+\s+\"", text, re.M):
-        return "idtech_cfg"
+        return "set_commands"
     if re.search(r"^\s*\{[^}]+\}\s*=\s*\{", text, re.M):
-        return "brace_cfg"
+        return "braced_pairs"
     if re.search(r'^\s*"[^"]+"\s+"[^"]*"\s*$', text, re.M):
-        return "quoted_cfg"  # Monolith's autoexec.cfg: "key" "value"
+        return "quoted_pairs"  # "key" "value"
     if low.endswith(".gas") or re.search(r"^\s*\[[^\]]+\]\s*\n\s*\{", text, re.M):
-        return "gas_cfg"  # Siege Engine: [section], "{", then "key = value;" lines
+        return "ini_braces"  # [section], "{", then "key = value;" lines
     if re.search(r"^\s*\[[^\]]+\]\s*$", text, re.M):
         return "ini"
     if low.endswith(".ini"):
-        return "flat_ini"
+        return "ini"
     lines = [ln.strip() for ln in text.splitlines() if ln.strip() and not ln.strip().startswith(("//", "#", ";"))]
     eq = sum(1 for ln in lines if re.match(r"^[^=\s]+\s*=", ln))
     kv = sum(1 for ln in lines if re.match(r"^[A-Za-z_][\w.]*\s+\S", ln))
     if low.endswith((".cfg", ".con", ".ini")) and kv > eq and kv >= 3:
-        return "dark_cfg"  # "Key Value" lines, e.g. Alpha Prime's settings.cfg
+        return "key_value"  # "Key Value" lines, e.g. Alpha Prime's settings.cfg
     if low.endswith(".ltx"):
-        return "ltx"  # X-Ray's user.ltx: "key value" lines
+        return "key_value"  # "key value" lines, like user.ltx
     if low.endswith(".cfg") or low.endswith(".con"):
-        return "dark_cfg" if re.search(r"^;?[A-Za-z_]\w*\s*$", text, re.M) and not eq else "flat_ini"
-    return "flat_ini"
+        return "key_value" if re.search(r"^;?[A-Za-z_]\w*\s*$", text, re.M) and not eq else "ini"
+    return "ini"
 
 
 def parse_values(fmt, text):
@@ -251,7 +251,7 @@ def parse_values(fmt, text):
             elif "=" in ln and not ln.startswith((";", "#")):
                 k, v = ln.split("=", 1)
                 out[(sec, k.strip())] = v.strip()
-    elif fmt == "gas_cfg":
+    elif fmt == "ini_braces":
         sec = ""
         for ln in text.splitlines():
             ln = ln.strip()
@@ -261,33 +261,23 @@ def parse_values(fmt, text):
             elif "=" in ln and not ln.startswith(("//", "#")):
                 k, v = ln.split("=", 1)
                 out[(sec, k.strip())] = re.sub(r";\s*$", "", v.strip())
-    elif fmt == "flat_ini":
-        for ln in text.splitlines():
-            if "=" in ln and not ln.strip().startswith((";", "#", "//")):
-                k, v = ln.split("=", 1)
-                out[("", k.strip())] = v.strip()
-    elif fmt == "idtech_cfg":
+    elif fmt == "set_commands":
         for m in re.finditer(r'^\s*(?:seta|set|setu|sets)\s+(\S+)\s+"?([^"\r\n]*)"?\s*$', text, re.M):
             out[("", m.group(1))] = m.group(2)
-    elif fmt == "brace_cfg":
+    elif fmt == "braced_pairs":
         for m in re.finditer(r"^\s*\{([^}]*)\}\s*=\s*\{([^}]*)\}", text, re.M):
             out[("", m.group(1).strip())] = m.group(2).strip()
-    elif fmt == "quoted_cfg":
+    elif fmt == "quoted_pairs":
         for m in re.finditer(r'^\s*"([^"]+)"\s+"([^"]*)"\s*$', text, re.M):
             out[("", m.group(1))] = m.group(2)
-    elif fmt == "ltx":
-        for ln in text.splitlines():
-            m = re.match(r"^\s*([A-Za-z_][\w.]*)(?:\s+(.*?))?\s*$", ln)
-            if m:
-                out[("", m.group(1))] = m.group(2) or ""
-    elif fmt == "dark_cfg":
+    elif fmt == "key_value":
         for ln in text.splitlines():
             ln = ln.strip()
             m = re.match(r"^(;?)([A-Za-z_][\w.]*)(?:\s+(.*))?$", ln)
             if m:
                 off, k, v = m.groups()
                 out[("", k)] = (v.strip() if v else ("false" if off else "true"))
-    elif fmt == "wine_reg":
+    elif fmt == "registry":
         out = parse_reg(text)
     return out
 
@@ -353,7 +343,7 @@ def diff_snapshots(game, session_dir, a, b, ignore=()):
         entry = {"path": p, "file": os.path.basename(p), "format": fmt,
                  "location": ("prefix:" + os.path.basename(p)) if is_reg else location_of(game, p),
                  "created": p not in A, "changes": []}
-        if fmt == "gadb":
+        if fmt == "binary_switches":
             ga, gb = parse_gadb(A.get(p, b"")), parse_gadb(B.get(p, b""))
             if ga is None and p not in A:
                 ga = {}

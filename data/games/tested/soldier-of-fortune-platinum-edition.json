@@ -12,7 +12,9 @@
     "tweaks": ["eax_unified"]
   },
   "game_config": {
-    "files": { "config.cfg": { "format": "idtech_cfg", "locations": ["game_exe:user/config.cfg"] } },
+    "files": {
+      "config.cfg": { "format": "set_commands", "locations": ["game_exe:user/config.cfg"] }
+    },
     "audio_settings": [
       {
         "title": "Enable EAX",

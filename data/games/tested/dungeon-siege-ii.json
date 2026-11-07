@@ -19,7 +19,7 @@
   "game_config": {
     "files": {
       "prefs.gas": {
-        "format": "gas_cfg",
+        "format": "ini_braces",
         "locations": ["prefix_documents:My Games/Dungeon Siege 2/Save/prefs.gas"]
       }
     },

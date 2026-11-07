@@ -11,7 +11,7 @@
   "eax": { "api": "directsound3d", "sound_system": "miles", "versions": ["1.0", "2.0"] },
   "game_config": {
     "files": {
-      "options.dat": { "format": "lenstr_cfg", "locations": ["game_exe:Data/options.dat"] }
+      "options.dat": { "format": "binary_text", "locations": ["game_exe:Data/options.dat"] }
     },
     "audio_settings": [
       {

@@ -711,7 +711,7 @@ mod tests {
       "stores":{"steam":{"id":2210},"gog":{"id":1836059896}},
       "eax":{"api":"openal","versions":["4.0","5.0"]},
       "sources":[{"title":"PCGamingWiki: Quake 4","url":"https://example.org/q4"}],
-      "game_config":{"files":{"q.cfg":{"format":"idtech_cfg"}},
+      "game_config":{"files":{"q.cfg":{"format":"set_commands"}},
         "audio_settings":[{"title":"Enable EAX effects","tested":true,"reason":"r","changes":{"q.cfg":{"a":"1"}}},
           {"title":"Steam only thing","tested":false,"reason":"r","only_if":{"stores":["steam"]},"changes":{"q.cfg":{"b":"1"}}}],
         "optional_settings":[{"title":"Fix blurry text","tested":true,"reason":"r","follow_up":"Restart once.","changes":{"q.cfg":{"c":"1"}}}]}}"#;

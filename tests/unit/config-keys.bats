@@ -71,145 +71,153 @@ setup() {
     [ "$(cat "$F")" == $'[one]\nk=1\n[two]\nk=9' ]
 }
 
-# ---- flat_ini --------------------------------------------------------------
+# ---- ini, no section ----------------------------------------------------
 
-@test "flat_ini: reads and replaces without sections" {
+@test "ini with no section: reads and replaces in a file without headers" {
     write_file "$F" 'a=1\nSound = on\n'
-    [ "$(config_get_key "$F" flat_ini "" sound)" == "on" ]
-    config_set_key "$F" flat_ini "" sound off
-    [ "$(config_get_key "$F" flat_ini "" sound)" == "off" ]
-    [ "$(config_get_key "$F" flat_ini "" a)" == "1" ]
+    [ "$(config_get_key "$F" ini "" sound)" == "on" ]
+    config_set_key "$F" ini "" sound off
+    [ "$(config_get_key "$F" ini "" sound)" == "off" ]
+    [ "$(config_get_key "$F" ini "" a)" == "1" ]
 }
 
-@test "flat_ini: appends a missing key" {
+@test "ini with no section: appends a missing key to a file without headers" {
     write_file "$F" 'a=1\n'
-    config_set_key "$F" flat_ini "" b 2
+    config_set_key "$F" ini "" b 2
     [ "$(cat "$F")" == $'a=1\nb=2' ]
 }
 
-# ---- idtech_cfg ------------------------------------------------------------
-
-@test "idtech_cfg: reads set/seta values with quotes stripped" {
-    write_file "$F" 'seta s_numberOfSpeakers "6"\nset other 1\n'
-    [ "$(config_get_key "$F" idtech_cfg "" s_numberofspeakers)" == "6" ]
-    [ "$(config_get_key "$F" idtech_cfg "" other)" == "1" ]
+@test "ini with no section: the top of a file with headers is the part before the first one" {
+    write_file "$F" 'a=1\n[one]\na=2\n'
+    [ "$(config_get_key "$F" ini "" a)" == "1" ]
+    config_set_key "$F" ini "" b 3
+    [ "$(cat "$F")" == $'a=1\nb=3\n[one]\na=2' ]
+    [ "$(config_get_key "$F" ini one a)" == "2" ]
 }
 
-@test "idtech_cfg: rewrites the line as seta with a quoted value" {
+# ---- set_commands ------------------------------------------------------------
+
+@test "set_commands: reads set/seta values with quotes stripped" {
+    write_file "$F" 'seta s_numberOfSpeakers "6"\nset other 1\n'
+    [ "$(config_get_key "$F" set_commands "" s_numberofspeakers)" == "6" ]
+    [ "$(config_get_key "$F" set_commands "" other)" == "1" ]
+}
+
+@test "set_commands: rewrites the line as seta with a quoted value" {
     write_file "$F" 'seta s_numberOfSpeakers "2"\nseta keep "x"\n'
-    config_set_key "$F" idtech_cfg "" s_numberOfSpeakers 6
+    config_set_key "$F" set_commands "" s_numberOfSpeakers 6
     [ "$(cat "$F")" == $'seta s_numberOfSpeakers "6"\nseta keep "x"' ]
 }
 
-@test "idtech_cfg: ignores commented lines and appends when missing" {
+@test "set_commands: ignores commented lines and appends when missing" {
     write_file "$F" '// seta foo "1"\nseta bar "2"\n'
-    [ "$(config_get_key "$F" idtech_cfg "" foo)" == "__ABSENT__" ]
-    config_set_key "$F" idtech_cfg "" foo 5
-    [ "$(config_get_key "$F" idtech_cfg "" foo)" == "5" ]
-    [ "$(config_get_key "$F" idtech_cfg "" bar)" == "2" ]
+    [ "$(config_get_key "$F" set_commands "" foo)" == "__ABSENT__" ]
+    config_set_key "$F" set_commands "" foo 5
+    [ "$(config_get_key "$F" set_commands "" foo)" == "5" ]
+    [ "$(config_get_key "$F" set_commands "" bar)" == "2" ]
 }
 
-@test "idtech_cfg: __DELETE__ removes the line" {
+@test "set_commands: __DELETE__ removes the line" {
     write_file "$F" 'seta a "1"\nseta b "2"\n'
-    config_set_key "$F" idtech_cfg "" a __DELETE__
+    config_set_key "$F" set_commands "" a __DELETE__
     [ "$(cat "$F")" == 'seta b "2"' ]
 }
 
-# ---- dark_cfg --------------------------------------------------------------
+# ---- key_value --------------------------------------------------------------
 
-@test "dark_cfg: bare flag reads __TRUE__, commented flag __FALSE__, none __ABSENT__" {
+@test "key_value: bare flag reads __TRUE__, commented flag __FALSE__, none __ABSENT__" {
     write_file "$F" 'dx_flag\n;off_flag\nvalue_key 5\n'
-    [ "$(config_get_key "$F" dark_cfg "" dx_flag)" == "__TRUE__" ]
-    [ "$(config_get_key "$F" dark_cfg "" off_flag)" == "__FALSE__" ]
-    [ "$(config_get_key "$F" dark_cfg "" value_key)" == "5" ]
-    [ "$(config_get_key "$F" dark_cfg "" nothing)" == "__ABSENT__" ]
+    [ "$(config_get_key "$F" key_value "" dx_flag)" == "__TRUE__" ]
+    [ "$(config_get_key "$F" key_value "" off_flag)" == "__FALSE__" ]
+    [ "$(config_get_key "$F" key_value "" value_key)" == "5" ]
+    [ "$(config_get_key "$F" key_value "" nothing)" == "__ABSENT__" ]
 }
 
-@test "dark_cfg: __TRUE__ activates after a commented example, which stays" {
+@test "key_value: __TRUE__ activates after a commented example, which stays" {
     write_file "$F" '; comment\n;eax\nother\n'
-    config_set_key "$F" dark_cfg "" eax __TRUE__
+    config_set_key "$F" key_value "" eax __TRUE__
     [ "$(cat "$F")" == $'; comment\n;eax\neax\nother' ]
 }
 
-@test "dark_cfg: __FALSE__ comments an active flag out" {
+@test "key_value: __FALSE__ comments an active flag out" {
     write_file "$F" 'eax\nother\n'
-    config_set_key "$F" dark_cfg "" eax __FALSE__
+    config_set_key "$F" key_value "" eax __FALSE__
     [ "$(cat "$F")" == $';eax\nother' ]
-    [ "$(config_get_key "$F" dark_cfg "" eax)" == "__FALSE__" ]
+    [ "$(config_get_key "$F" key_value "" eax)" == "__FALSE__" ]
 }
 
-@test "dark_cfg: sets a value on a keyed line" {
+@test "key_value: sets a value on a keyed line" {
     write_file "$F" 'snd_vol 3\n'
-    config_set_key "$F" dark_cfg "" snd_vol 8
-    [ "$(config_get_key "$F" dark_cfg "" snd_vol)" == "8" ]
+    config_set_key "$F" key_value "" snd_vol 8
+    [ "$(config_get_key "$F" key_value "" snd_vol)" == "8" ]
 }
 
-# ---- ltx -------------------------------------------------------------------
+# ---- key_value, plain lines -----------------------------------------
 
-@test "ltx: reads a key=value line, case-insensitive, absent otherwise" {
+@test "key_value, plain lines: reads a key=value line, case-insensitive, absent otherwise" {
     write_file "$F" 'snd_efx on\r\nvid_mode 1024x768\r\n'
-    [ "$(config_get_key "$F" ltx "" SND_EFX)" == "on" ]
-    [ "$(config_get_key "$F" ltx "" vid_mode)" == "1024x768" ]
-    [ "$(config_get_key "$F" ltx "" nothing)" == "__ABSENT__" ]
+    [ "$(config_get_key "$F" key_value "" SND_EFX)" == "on" ]
+    [ "$(config_get_key "$F" key_value "" vid_mode)" == "1024x768" ]
+    [ "$(config_get_key "$F" key_value "" nothing)" == "__ABSENT__" ]
 }
 
-@test "ltx: replaces in place keeping spelling and CRLF, appends and deletes" {
+@test "key_value, plain lines: replaces in place keeping spelling and CRLF, appends and deletes" {
     write_file "$F" 'Snd_Efx off\r\nsnd_targets 32\r\n'
-    config_set_key "$F" ltx "" snd_efx on
+    config_set_key "$F" key_value "" snd_efx on
     [ "$(cat "$F")" == $'Snd_Efx on\r\nsnd_targets 32\r' ]
-    config_set_key "$F" ltx "" snd_volume_eff 1.0
-    [ "$(config_get_key "$F" ltx "" snd_volume_eff)" == "1.0" ]
-    config_set_key "$F" ltx "" snd_targets __DELETE__
-    [ "$(config_get_key "$F" ltx "" snd_targets)" == "__ABSENT__" ]
+    config_set_key "$F" key_value "" snd_volume_eff 1.0
+    [ "$(config_get_key "$F" key_value "" snd_volume_eff)" == "1.0" ]
+    config_set_key "$F" key_value "" snd_targets __DELETE__
+    [ "$(config_get_key "$F" key_value "" snd_targets)" == "__ABSENT__" ]
 }
 
-# ---- brace_cfg -------------------------------------------------------------
+# ---- braced_pairs -------------------------------------------------------------
 
-@test "brace_cfg: reads and replaces only the text inside the value braces" {
+@test "braced_pairs: reads and replaces only the text inside the value braces" {
     write_file "$F" '{Sound} = {on}\n{Other} = {1}\n'
-    [ "$(config_get_key "$F" brace_cfg "" sound)" == "on" ]
-    config_set_key "$F" brace_cfg "" Sound off
+    [ "$(config_get_key "$F" braced_pairs "" sound)" == "on" ]
+    config_set_key "$F" braced_pairs "" Sound off
     [ "$(cat "$F")" == $'{Sound} = {off}\n{Other} = {1}' ]
 }
 
-# ---- quoted_cfg ------------------------------------------------------------
+# ---- quoted_pairs ------------------------------------------------------------
 
-@test "quoted_cfg: reads and replaces a quoted value, keeping the other lines" {
+@test "quoted_pairs: reads and replaces a quoted value, keeping the other lines" {
     write_file "$F" '"MusicVolume" "50.000000"\n"3dsoundprovider" "0"\n"Renderer" "Primary Display Driver"\n'
-    [ "$(config_get_key "$F" quoted_cfg "" 3DSoundProvider)" == "0" ]
-    [ "$(config_get_key "$F" quoted_cfg "" Renderer)" == "Primary Display Driver" ]
-    config_set_key "$F" quoted_cfg "" 3dsoundprovider 2
+    [ "$(config_get_key "$F" quoted_pairs "" 3DSoundProvider)" == "0" ]
+    [ "$(config_get_key "$F" quoted_pairs "" Renderer)" == "Primary Display Driver" ]
+    config_set_key "$F" quoted_pairs "" 3dsoundprovider 2
     [ "$(cat "$F")" == $'"MusicVolume" "50.000000"\n"3dsoundprovider" "2"\n"Renderer" "Primary Display Driver"' ]
 }
 
-@test "quoted_cfg: a missing key is appended quoted, and __DELETE__ removes the line" {
+@test "quoted_pairs: a missing key is appended quoted, and __DELETE__ removes the line" {
     write_file "$F" '"a" "1"\r\n"b" "2"\r\n'
-    config_set_key "$F" quoted_cfg "" 3dsoundprovidername "Microsoft DirectSound3D with Creative Labs EAX(TM)"
-    [ "$(config_get_key "$F" quoted_cfg "" 3dsoundprovidername)" == "Microsoft DirectSound3D with Creative Labs EAX(TM)" ]
-    config_set_key "$F" quoted_cfg "" a __DELETE__
-    [ "$(config_get_key "$F" quoted_cfg "" a)" == "__ABSENT__" ]
-    [ "$(config_get_key "$F" quoted_cfg "" b)" == "2" ]
+    config_set_key "$F" quoted_pairs "" 3dsoundprovidername "Microsoft DirectSound3D with Creative Labs EAX(TM)"
+    [ "$(config_get_key "$F" quoted_pairs "" 3dsoundprovidername)" == "Microsoft DirectSound3D with Creative Labs EAX(TM)" ]
+    config_set_key "$F" quoted_pairs "" a __DELETE__
+    [ "$(config_get_key "$F" quoted_pairs "" a)" == "__ABSENT__" ]
+    [ "$(config_get_key "$F" quoted_pairs "" b)" == "2" ]
 }
 
-# ---- byte_cfg --------------------------------------------------------------
+# ---- binary_offset --------------------------------------------------------------
 
-@test "byte_cfg: reads and replaces one byte by decimal or hex position, leaving the rest" {
+@test "binary_offset: reads and replaces one byte by decimal or hex position, leaving the rest" {
     printf '\x15\x00\x03\x00\xff' > "$F"
-    [ "$(config_get_key "$F" byte_cfg "" 0x2)" == "3" ]
-    [ "$(config_get_key "$F" byte_cfg "" 4)" == "255" ]
-    config_set_key "$F" byte_cfg "" 0x2 2
+    [ "$(config_get_key "$F" binary_offset "" 0x2)" == "3" ]
+    [ "$(config_get_key "$F" binary_offset "" 4)" == "255" ]
+    config_set_key "$F" binary_offset "" 0x2 2
     [ "$(od -An -v -tx1 "$F" | tr -d ' \n')" == "15000200ff" ]
 }
 
-@test "byte_cfg: a position past the end is absent and is never written" {
+@test "binary_offset: a position past the end is absent and is never written" {
     printf '\x01\x02' > "$F"
-    [ "$(config_get_key "$F" byte_cfg "" 0x10)" == "__ABSENT__" ]
-    ! config_set_key "$F" byte_cfg "" 0x10 1
-    ! config_set_key "$F" byte_cfg "" 0 256
+    [ "$(config_get_key "$F" binary_offset "" 0x10)" == "__ABSENT__" ]
+    ! config_set_key "$F" binary_offset "" 0x10 1
+    ! config_set_key "$F" binary_offset "" 0 256
     [ "$(stat -c %s "$F")" == "2" ]
 }
 
-# ---- lenstr_cfg ------------------------------------------------------------
+# ---- binary_text ------------------------------------------------------------
 
 # A stand-in for Freedom Force's options.dat: a binary file with a 4-byte
 # little-endian length and then text, found by the bytes just before the length.
@@ -227,99 +235,99 @@ config_find_text_end() {  # <file> -> byte position just past the anchored text
     echo "$((pos + 4 + len))"
 }
 
-@test "lenstr_cfg: reads the text after the anchor and writes a longer one, fixing its length and keeping the rest" {
+@test "binary_text: reads the text after the anchor and writes a longer one, fixing its length and keeping the rest" {
     lenstr_file "any" "minute_man"
-    [ "$(config_get_key "$F" lenstr_cfg "" 0000803f)" == "any" ]
-    config_set_key "$F" lenstr_cfg "" 0000803f "Creative Labs EAX 2 (TM)"
-    [ "$(config_get_key "$F" lenstr_cfg "" 0000803f)" == "Creative Labs EAX 2 (TM)" ]
+    [ "$(config_get_key "$F" binary_text "" 0000803f)" == "any" ]
+    config_set_key "$F" binary_text "" 0000803f "Creative Labs EAX 2 (TM)"
+    [ "$(config_get_key "$F" binary_text "" 0000803f)" == "Creative Labs EAX 2 (TM)" ]
     lenstr_file "Creative Labs EAX 2 (TM)" "minute_man"
     cp "$F" "$F.expected"
     lenstr_file "any" "minute_man"
-    config_set_key "$F" lenstr_cfg "" 0000803f "Creative Labs EAX 2 (TM)"
+    config_set_key "$F" binary_text "" 0000803f "Creative Labs EAX 2 (TM)"
     cmp "$F" "$F.expected"
 }
 
-@test "lenstr_cfg: setting the old text back restores the original bytes" {
+@test "binary_text: setting the old text back restores the original bytes" {
     lenstr_file "any" "minute_man"
     cp "$F" "$F.orig"
-    config_set_key "$F" lenstr_cfg "" 0000803f "Creative Labs EAX 2 (TM)"
-    config_set_key "$F" lenstr_cfg "" 0000803f "any"
+    config_set_key "$F" binary_text "" 0000803f "Creative Labs EAX 2 (TM)"
+    config_set_key "$F" binary_text "" 0000803f "any"
     cmp "$F" "$F.orig"
 }
 
-@test "lenstr_cfg: skips an anchor that isn't followed by a sane length and printable text" {
+@test "binary_text: skips an anchor that isn't followed by a sane length and printable text" {
     printf '\x00\x00\x80\x3f\x02\x00\x00\x00\x00\x40' > "$F"
     printf '\x00\x00\x80\x3f\x03\x00\x00\x00any' >> "$F"
-    [ "$(config_get_key "$F" lenstr_cfg "" 0000803f)" == "any" ]
+    [ "$(config_get_key "$F" binary_text "" 0000803f)" == "any" ]
 }
 
-@test "lenstr_cfg: an anchor that isn't there is absent and is never written" {
+@test "binary_text: an anchor that isn't there is absent and is never written" {
     printf 'HDR4\x01\x02\x03\x04' > "$F"
-    [ "$(config_get_key "$F" lenstr_cfg "" 0000803f)" == "__ABSENT__" ]
-    ! config_set_key "$F" lenstr_cfg "" 0000803f "any"
-    ! config_set_key "$F" lenstr_cfg "" nothex "any"
+    [ "$(config_get_key "$F" binary_text "" 0000803f)" == "__ABSENT__" ]
+    ! config_set_key "$F" binary_text "" 0000803f "any"
+    ! config_set_key "$F" binary_text "" nothex "any"
     [ "$(cat "$F")" == $'HDR4\x01\x02\x03\x04' ]
 }
 
-@test "lenstr_cfg: a row needs a hex anchor and plain text" {
-    config_row_is_safe lenstr_cfg "game_exe:Data/options.dat" "" 0000803f "Creative Labs EAX 2 (TM)"
-    ! config_row_is_safe lenstr_cfg "game_exe:Data/options.dat" "" 803 "any"
-    ! config_row_is_safe lenstr_cfg "game_exe:Data/options.dat" "" 0000803f ""
+@test "binary_text: a row needs a hex anchor and plain text" {
+    config_row_is_safe binary_text "game_exe:Data/options.dat" "" 0000803f "Creative Labs EAX 2 (TM)"
+    ! config_row_is_safe binary_text "game_exe:Data/options.dat" "" 803 "any"
+    ! config_row_is_safe binary_text "game_exe:Data/options.dat" "" 0000803f ""
 }
 
-@test "lenstr_cfg: a key with +N reads and sets the byte N past the end of the text, wherever the text ends" {
+@test "binary_text: a key with +N reads and sets the byte N past the end of the text, wherever the text ends" {
     lenstr_file "any" "minute_man"
     printf '\x00\x00\x00\x00\x07' >> "$F"
     local at=$(( $(stat -c %s "$F") - 1 ))
     # The byte is 7 now; its distance from the text's end is what the key names.
     local d=$(( at - ( $(config_find_text_end "$F") ) ))
-    [ "$(config_get_key "$F" lenstr_cfg "" "0000803f+$d")" == "7" ]
-    config_set_key "$F" lenstr_cfg "" "0000803f+$d" 2
-    [ "$(config_get_key "$F" lenstr_cfg "" "0000803f+$d")" == "2" ]
+    [ "$(config_get_key "$F" binary_text "" "0000803f+$d")" == "7" ]
+    config_set_key "$F" binary_text "" "0000803f+$d" 2
+    [ "$(config_get_key "$F" binary_text "" "0000803f+$d")" == "2" ]
     # A longer driver name moves the byte; the same key still finds it.
-    config_set_key "$F" lenstr_cfg "" 0000803f "Creative Labs EAX 2 (TM)"
-    [ "$(config_get_key "$F" lenstr_cfg "" "0000803f+$d")" == "2" ]
+    config_set_key "$F" binary_text "" 0000803f "Creative Labs EAX 2 (TM)"
+    [ "$(config_get_key "$F" binary_text "" "0000803f+$d")" == "2" ]
     [ "$(stat -c %s "$F")" == "$(( at + 1 + 21 ))" ]
 }
 
-@test "lenstr_cfg: a +N byte past the end of the file is absent and never written; its value must be 0-255" {
+@test "binary_text: a +N byte past the end of the file is absent and never written; its value must be 0-255" {
     lenstr_file "any" "minute_man"
-    [ "$(config_get_key "$F" lenstr_cfg "" 0000803f+9999)" == "__ABSENT__" ]
-    ! config_set_key "$F" lenstr_cfg "" 0000803f+9999 1
-    ! config_set_key "$F" lenstr_cfg "" 0000803f+2 256
-    ! config_set_key "$F" lenstr_cfg "" 0000803f+2 x
+    [ "$(config_get_key "$F" binary_text "" 0000803f+9999)" == "__ABSENT__" ]
+    ! config_set_key "$F" binary_text "" 0000803f+9999 1
+    ! config_set_key "$F" binary_text "" 0000803f+2 256
+    ! config_set_key "$F" binary_text "" 0000803f+2 x
 }
 
-@test "lenstr_cfg: a row with a +N key needs a number from 0 to 255" {
-    config_row_is_safe lenstr_cfg "game_exe:Data/options.dat" "" 0000803f+46 1
-    ! config_row_is_safe lenstr_cfg "game_exe:Data/options.dat" "" 0000803f+46 300
-    ! config_row_is_safe lenstr_cfg "game_exe:Data/options.dat" "" 0000803f+46 ""
-    ! config_row_is_safe lenstr_cfg "game_exe:Data/options.dat" "" 0000803f+x 1
+@test "binary_text: a row with a +N key needs a number from 0 to 255" {
+    config_row_is_safe binary_text "game_exe:Data/options.dat" "" 0000803f+46 1
+    ! config_row_is_safe binary_text "game_exe:Data/options.dat" "" 0000803f+46 300
+    ! config_row_is_safe binary_text "game_exe:Data/options.dat" "" 0000803f+46 ""
+    ! config_row_is_safe binary_text "game_exe:Data/options.dat" "" 0000803f+x 1
 }
 
-# ---- gas_cfg ---------------------------------------------------------------
+# ---- ini_braces ---------------------------------------------------------------
 
-@test "gas_cfg: reads a value without its semicolon and keeps tabs, spacing and the semicolon on a change" {
+@test "ini_braces: reads a value without its semicolon and keeps tabs, spacing and the semicolon on a change" {
     write_file "$F" '[prefs]\n{\n\tblood = red;\n\teax_enabled = false;\n}\n'
-    [ "$(config_get_key "$F" gas_cfg prefs EAX_Enabled)" == "false" ]
-    config_set_key "$F" gas_cfg prefs eax_enabled true
+    [ "$(config_get_key "$F" ini_braces prefs EAX_Enabled)" == "false" ]
+    config_set_key "$F" ini_braces prefs eax_enabled true
     [ "$(cat "$F")" == $'[prefs]\n{\n\tblood = red;\n\teax_enabled = true;\n}' ]
 }
 
-@test "gas_cfg: a missing key goes before the closing brace, and a missing section is added" {
+@test "ini_braces: a missing key goes before the closing brace, and a missing section is added" {
     write_file "$F" '[prefs]\r\n{\r\n\tblood = red;\r\n}\r\n'
-    config_set_key "$F" gas_cfg prefs eax_enabled true
+    config_set_key "$F" ini_braces prefs eax_enabled true
     [ "$(cat "$F")" == $'[prefs]\r\n{\r\n\tblood = red;\r\n\teax_enabled = true;\r\n}\r' ]
-    [ "$(config_get_key "$F" gas_cfg prefs eax_enabled)" == "true" ]
-    [ "$(config_get_key "$F" gas_cfg other eax_enabled)" == "__ABSENT__" ]
-    config_set_key "$F" gas_cfg other a 1
-    [ "$(config_get_key "$F" gas_cfg other a)" == "1" ]
-    [ "$(config_get_key "$F" gas_cfg prefs blood)" == "red" ]
+    [ "$(config_get_key "$F" ini_braces prefs eax_enabled)" == "true" ]
+    [ "$(config_get_key "$F" ini_braces other eax_enabled)" == "__ABSENT__" ]
+    config_set_key "$F" ini_braces other a 1
+    [ "$(config_get_key "$F" ini_braces other a)" == "1" ]
+    [ "$(config_get_key "$F" ini_braces prefs blood)" == "red" ]
 }
 
-@test "gas_cfg: __DELETE__ removes the line" {
+@test "ini_braces: __DELETE__ removes the line" {
     write_file "$F" '[prefs]\n{\n\ta = 1;\n\tb = 2;\n}\n'
-    config_set_key "$F" gas_cfg prefs a __DELETE__
+    config_set_key "$F" ini_braces prefs a __DELETE__
     [ "$(cat "$F")" == $'[prefs]\n{\n\tb = 2;\n}' ]
 }
 
@@ -327,12 +335,12 @@ config_find_text_end() {  # <file> -> byte position just past the anchored text
 
 @test "a set then get round-trips for every text format" {
     local fmt
-    for fmt in ini flat_ini idtech_cfg dark_cfg ltx brace_cfg gas_cfg quoted_cfg; do
+    for fmt in ini set_commands key_value braced_pairs ini_braces quoted_pairs; do
         rm -f "$F"
         write_file "$F" ''
         config_set_key "$F" "$fmt" sec key 7
-        # brace_cfg only edits keys already in the file, so it can't add one
-        [ "$fmt" == brace_cfg ] && continue
+        # braced_pairs only edits keys already in the file, so it can't add one
+        [ "$fmt" == braced_pairs ] && continue
         [ "$(config_get_key "$F" "$fmt" sec key)" == "7" ] || { echo "$fmt failed"; return 1; }
     done
 }

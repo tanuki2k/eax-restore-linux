@@ -64,7 +64,7 @@ def draft_game_config(diffs_audio, diffs_optional, existing=None):
             if d.get("unparsed"):
                 skipped.append(f"{d['file']} changed, but no keys could be read from it (guessed format: {d['format']}) - set its format by hand")
                 continue
-            if d["format"] == "gadb" and d.get("binary_offsets") is not None:
+            if d["format"] == "binary_switches" and d.get("binary_offsets") is not None:
                 skipped.append(f"{d['file']}: changed at byte offsets {d['binary_offsets']}, but it isn't a GADB file the tool can read - set the key by hand")
                 continue
             if not d["location"]:
@@ -80,7 +80,7 @@ def draft_game_config(diffs_audio, diffs_optional, existing=None):
                     skipped.append(f"{d['file']} {c['section']} {c['key']}: value {c['new']!r} can't be expressed in the schema")
                     continue
                 tgt = group.setdefault(d["file"], {})
-                if d["format"] in ("ini", "gas_cfg", "wine_reg"):
+                if d["format"] in ("ini", "ini_braces", "registry") and c["section"]:
                     tgt = tgt.setdefault(c["section"], {})
                 tgt[c["key"]] = c["new"]
         if group:
@@ -141,7 +141,7 @@ def draft_speaker_settings(layout_diffs, gc):
         changes = {}
         for (file, fmt, section, k), v in sorted(key):
             tgt = changes.setdefault(file, {})
-            if fmt in ("ini", "gas_cfg", "wine_reg"):
+            if fmt in ("ini", "ini_braces", "registry") and section:
                 tgt = tgt.setdefault(section, {})
             tgt[k] = v
         speakers = sorted(speakers, key=SPEAKER_ORDER.index)

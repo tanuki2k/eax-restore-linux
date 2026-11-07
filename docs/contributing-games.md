@@ -67,7 +67,7 @@ Here is a trimmed example. `data/games/tested/` has plenty more, and the [game f
   "eax": { "api": "openal", "versions": ["4.0", "5.0"] },
   "game_config": {
     "files": {
-      "Quake4Config.cfg": { "format": "idtech_cfg", "locations": ["game_exe:q4base/Quake4Config.cfg"] }
+      "Quake4Config.cfg": { "format": "set_commands", "locations": ["game_exe:q4base/Quake4Config.cfg"] }
     },
     "audio_settings": [
       {

@@ -222,7 +222,7 @@
       }
     },
     "name_part": {
-      "description": "The name of a config section or key. A lenstr_cfg key can end in +N.",
+      "description": "The name of a config section or key. A binary_text key can end in +N, a binary_offset key can be 0x hex.",
       "type": "string",
       "pattern": "^[A-Za-z0-9._ -]+(\\+[0-9]+)?(?!\\n)$"
     },
@@ -237,7 +237,7 @@
       "pattern": "^[A-Za-z0-9._ ()-]*(?!\\n)$"
     },
     "value": {
-      "description": "Text sets the value (for a registry number, a decimal number). true or false switches a NewDark flag on or off. null removes the key.",
+      "description": "Text sets the value (a decimal number for a registry number). true or false switches a key_value flag on or off. null removes the key.",
       "anyOf": [
         { "$ref": "#/$defs/value_string" },
         { "type": "boolean" },
@@ -254,8 +254,8 @@
       "additionalProperties": false,
       "properties": {
         "format": {
-          "description": "How the file is laid out:\nini: [Section] then key=value.\nflat_ini: key=value lines with no sections.\nidtech_cfg: seta key \"value\".\ndark_cfg: NewDark \"key value\" lines. A bare key is a flag that's on, and ;key turns it off.\nbrace_cfg: {key} = {value} lines (Fallout Tactics' bos.cfg).\ngas_cfg: [section], then key = value; lines between { and } (Dungeon Siege's prefs.gas).\nltx: key value lines with no sections (S.T.A.L.K.E.R.'s user.ltx, Dreamfall's prefs.dat).\nquoted_cfg: \"key\" \"value\" lines (Shogo's autoexec.cfg).\nbyte_cfg: a binary file with no key names. A key is a byte position counted from 0 (decimal or 0x hex) and the value is that byte as a number from 0 to 255. It can only change a byte the file already has.\nlenstr_cfg: a binary file that stores text as a 4-byte length followed by the characters (Freedom Force's options.dat). A key is the hex bytes just before that length, like 0000803f, and the value is the new text, up to 64 characters. The text can change length. A key like 0000803f+46 is instead the single byte 47 bytes past the end of that text, with a value from 0 to 255. It can only change text or a byte the file already has.\ngadb: Monolith's binary profile (F.E.A.R.'s Profile000.gdb). It can only switch an existing on/off setting, so values are \"0\" or \"1\".\nwine_reg: the prefix's system.reg or user.reg, for a game that keeps its options in the registry. Only numbers and text can be changed, a number as a decimal.",
-          "enum": ["ini", "flat_ini", "idtech_cfg", "dark_cfg", "brace_cfg", "gas_cfg", "ltx", "quoted_cfg", "byte_cfg", "lenstr_cfg", "gadb", "wine_reg"]
+          "description": "How the file is laid out:\nini: [Section] then key=value. A change without a section is for lines before the first [Section], or a file with no sections.\nini_braces: [section], then key = value; lines between { and } (Dungeon Siege's prefs.gas).\nset_commands: set key \"value\" or seta key \"value\" lines.\nkey_value: key value lines, with no sections (S.T.A.L.K.E.R.'s user.ltx). A bare key is a flag that's on, and ;key turns it off.\nbraced_pairs: {key} = {value} lines.\nquoted_pairs: \"key\" \"value\" lines.\nbinary_offset: a binary file with no key names. A key is a byte position counted from 0 (decimal or 0x hex) and the value is that byte as a number from 0 to 255. It can only change a byte the file already has.\nbinary_text: a binary file that stores text as a 4-byte length followed by the characters. A key is the hex bytes just before that length, like 0000803f, and the value is the new text, up to 64 characters. The text can change length. A key like 0000803f+46 is instead the single byte 47 bytes past the end of that text, with a value from 0 to 255. It can only change text or a byte the file already has.\nbinary_switches: a binary file of named on/off settings (F.E.A.R.'s Profile000.gdb). A key is the setting's name. It can only switch an existing setting, so values are \"0\" or \"1\".\nregistry: the prefix's system.reg or user.reg, for a game that keeps its options in the registry. Only numbers and text can be changed, a number as a decimal.",
+          "enum": ["ini", "ini_braces", "set_commands", "key_value", "braced_pairs", "quoted_pairs", "binary_offset", "binary_text", "binary_switches", "registry"]
         },
         "locations": {
           "description": "Where to look for the file, in order, written as \"base:path\". The first one that exists is used. The base is one of:\ngame_exe: the folder the game's .exe runs from.\ngame_root: the game's top-level install folder.\nprefix_documents, prefix_appdata, prefix_localappdata: the matching user folder inside the game's Wine prefix.\nprefix_public_documents: the Public Documents folder inside the Wine prefix.\nprefix: only for a registry file, as prefix:system.reg or prefix:user.reg.",
@@ -285,7 +285,7 @@
           "not": { "enum": [".", ".."] }
         }
       },
-      "if": { "properties": { "format": { "const": "wine_reg" } } },
+      "if": { "properties": { "format": { "const": "registry" } } },
       "then": { "properties": { "locations": { "items": { "pattern": "^prefix:" } } } },
       "else": { "properties": { "locations": { "items": { "not": { "pattern": "^prefix:" } } } } }
     },
@@ -327,7 +327,7 @@
           }
         },
         "changes": {
-          "description": "What to change:\nini and gas_cfg files: file, section, key, value.\nOther text files: file, key, value.\nRegistry files: file, registry key, value name, value.\nEvery file must first be defined under game_config.files.",
+          "description": "What to change:\nini and ini_braces files: file, section, key, value. An ini file can skip the section.\nregistry: file, registry key, value name, value.\nEvery other format: file, key, value.\nEvery file must first be defined under game_config.files.",
           "type": "object",
           "minProperties": 1,
           "propertyNames": { "$ref": "#/$defs/config_file_name" },

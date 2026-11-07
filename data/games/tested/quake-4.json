@@ -12,11 +12,11 @@
   "game_config": {
     "files": {
       "Quake4Config.cfg": {
-        "format": "idtech_cfg",
+        "format": "set_commands",
         "locations": ["game_exe:q4base/Quake4Config.cfg"]
       },
       "autoexec.cfg": {
-        "format": "idtech_cfg",
+        "format": "set_commands",
         "locations": ["game_exe:q4base/autoexec.cfg"],
         "if_missing": "create"
       }

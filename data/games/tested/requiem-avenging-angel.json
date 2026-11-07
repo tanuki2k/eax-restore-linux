@@ -9,7 +9,9 @@
   },
   "eax": { "api": "directsound3d", "sound_system": "miles", "versions": ["1.0"] },
   "game_config": {
-    "files": { "latest.cfg": { "format": "byte_cfg", "locations": ["game_exe:Gamers/latest.cfg"] } },
+    "files": {
+      "latest.cfg": { "format": "binary_offset", "locations": ["game_exe:Gamers/latest.cfg"] }
+    },
     "audio_settings": [
       {
         "title": "Enable EAX",

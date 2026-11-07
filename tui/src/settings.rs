@@ -121,7 +121,7 @@ fn rows(s: &Setting, files: &std::collections::BTreeMap<String, ConfigFile>) -> 
     for (file, change) in &s.changes {
         let sectioned = files
             .get(file)
-            .is_some_and(|d| matches!(d.format.as_str(), "ini" | "gas_cfg" | "wine_reg"));
+            .is_some_and(|d| matches!(d.format.as_str(), "ini" | "ini_braces" | "registry"));
         let Value::Object(map) = change else { continue };
         for (k, v) in map {
             match v {
@@ -319,7 +319,7 @@ mod tests {
     const QUAKE: &str = r#"{"id":"q","name":"Quake 4",
       "install":{"alsoft_ini":{"reverb":{"boost":6}},"alsoft_tested":true},
       "game_config":{
-        "files":{"Quake4Config.cfg":{"format":"idtech_cfg","locations":["game_exe:q4base/Quake4Config.cfg"]}},
+        "files":{"Quake4Config.cfg":{"format":"set_commands","locations":["game_exe:q4base/Quake4Config.cfg"]}},
         "audio_settings":[{"title":"Enable EAX effects","tested":true,
           "reason":"Quake 4 ships with its EAX sound options off, so there's no reverb and no muffling of sounds through walls.",
           "changes":{"Quake4Config.cfg":{"s_useOpenAL":"1","s_useEAXReverb":"1","s_numberOfSpeakers":"6"}}},

@@ -10,7 +10,7 @@
   "eax": { "api": "directsound3d", "sound_system": "miles", "versions": ["1.0", "2.0", "3.0"] },
   "game_config": {
     "files": {
-      "steamuser.cfg": { "format": "idtech_cfg", "locations": ["game_root:base/steamuser.cfg"] }
+      "steamuser.cfg": { "format": "set_commands", "locations": ["game_root:base/steamuser.cfg"] }
     },
     "audio_settings": [
       {

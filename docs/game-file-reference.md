@@ -209,20 +209,18 @@ The config files, each keyed by file name. A file has the fields below.
 
 | Value | Layout | Example |
 | --- | --- | --- |
-| `"ini"` | `[Section]` headers with `key=value` lines | |
-| `"flat_ini"` | `key=value` lines with no `[Section]` headers | Thief: Deadly Shadows' `options.ini` |
-| `"idtech_cfg"` | `seta key "value"` lines | id Tech games |
-| `"dark_cfg"` | NewDark's `key value` lines, where a bare `key` turns a flag on and `;key` turns it off | |
-| `"brace_cfg"` | `{key} = {value}` lines | Fallout Tactics' `bos.cfg` |
-| `"gas_cfg"` | A `[section]` with `key = value;` lines between `{` and `}` | Dungeon Siege's `prefs.gas` |
-| `"ltx"` | `key value` lines with no sections | S.T.A.L.K.E.R.'s `user.ltx`, Dreamfall's `prefs.dat` |
-| `"quoted_cfg"` | `"key" "value"` lines, both in quotes | Shogo's `autoexec.cfg` |
-| `"byte_cfg"` | A binary file with no key names. The key is a byte position counted from 0 (decimal, or hex like `0x1b2`) and the value is that byte as a number from 0 to 255. The script only changes a byte the file already has. | Messiah's `Messiah.cfg` |
-| `"lenstr_cfg"` | A binary file that stores text as a 4-byte length followed by the characters. The key is the hex bytes just before that length, like `0000803f`, and the value is the new text, up to 64 characters of letters, digits, spaces and `. _ ( ) -`. The text can change length, and the script fixes the length in front of it. It uses the first match with a length of 1 to 64 and printable text after it, and only changes text the file already has. A key like `0000803f+46` is instead the single byte that many bytes past the end of that text, with a value from 0 to 255, for settings stored after a text that can change length. Pick bytes that don't change with the player's other options. | Freedom Force's `options.dat` |
-| `"gadb"` | Monolith's binary game database. The script can only switch a setting the file already has on or off, so the values are `"0"` or `"1"`. | F.E.A.R.'s `Profile000.gdb` |
-| `"wine_reg"` | For a game that keeps its options in the registry | Descent 3 |
+| `"ini"` | `[Section]` headers with `key=value` lines. Leave the section out for a file with no headers, or for lines above the first one. | Unreal Tournament's `UnrealTournament.ini`, Thief: Deadly Shadows' `options.ini` (no sections) |
+| `"ini_braces"` | A `[section]` with `key = value;` lines between `{` and `}` | Dungeon Siege's `prefs.gas` |
+| `"set_commands"` | `set key "value"` and `seta key "value"` lines | DOOM 3's `DoomConfig.cfg` |
+| `"key_value"` | `key value` lines with no sections. A bare `key` turns a flag on and `;key` turns it off. | S.T.A.L.K.E.R.'s `user.ltx`, Thief Gold's `cam_ext.cfg` |
+| `"braced_pairs"` | `{key} = {value}` lines | Fallout Tactics' `bos.cfg` |
+| `"quoted_pairs"` | `"key" "value"` lines, both in quotes | Shogo's `autoexec.cfg` |
+| `"binary_offset"` | A binary file with no key names. The key is a byte position counted from 0 (decimal, or hex like `0x1b2`) and the value is that byte as a number from 0 to 255. The script only changes a byte the file already has. | Messiah's `Messiah.cfg` |
+| `"binary_text"` | A binary file that stores text as a 4-byte length followed by the characters. The key is the hex bytes just before that length, like `0000803f`, and the value is the new text, up to 64 characters of letters, digits, spaces and `. _ ( ) -`. The text can change length, and the script fixes the length in front of it. It uses the first match with a length of 1 to 64 and printable text after it, and only changes text the file already has. A key like `0000803f+46` is instead the single byte that many bytes past the end of that text, with a value from 0 to 255, for settings stored after a text that can change length. Pick bytes that don't change with the player's other options. | Freedom Force's `options.dat` |
+| `"binary_switches"` | A binary file of named on/off settings. The key is the setting's name. The script can only switch a setting the file already has, so the values are `"0"` or `"1"`. | F.E.A.R.'s `Profile000.gdb` |
+| `"registry"` | For a game that keeps its options in the registry | Descent 3 |
 
-A `"wine_reg"` file works differently from the rest:
+A `"registry"` file works differently from the rest:
 
 * The "file" is the prefix's `system.reg` (for `HKEY_LOCAL_MACHINE`) or `user.reg` (for `HKEY_CURRENT_USER`), and it is keyed `"system.reg"` or `"user.reg"`.
 * Only number (dword) and text values can be changed, and numbers are written in decimal.
@@ -238,10 +236,10 @@ Where to look, in order, written as `"base:path"`. The first one that exists is 
 | `game_root` | The game's top-level install folder |
 | `prefix_documents`, `prefix_appdata`, `prefix_localappdata` | Inside the Wine prefix's user folder |
 | `prefix_public_documents` | The prefix's shared `Public\Documents`, where F.E.A.R. keeps its profiles |
-| `prefix` | For a `wine_reg` file only, as `"prefix:system.reg"` or `"prefix:user.reg"` |
+| `prefix` | For a `registry` file only, as `"prefix:system.reg"` or `"prefix:user.reg"` |
 
 > [!WARNING]
-> Paths can't contain `..`, a leading `/` or backslashes. A file name under `files` must end in `.ini`, `.cfg`, `.gdb`, `.reg`, `.txt`, `.ltx`, `.gas` or `.dat`. A location must end in `.ini`, `.cfg`, `.gdb`, `.txt`, `.ltx`, `.gas` or `.dat`, except that a `wine_reg` file takes only `prefix:` locations.
+> Paths can't contain `..`, a leading `/` or backslashes. A file name under `files` must end in `.ini`, `.cfg`, `.gdb`, `.reg`, `.txt`, `.ltx`, `.gas` or `.dat`. A location must end in `.ini`, `.cfg`, `.gdb`, `.txt`, `.ltx`, `.gas` or `.dat`, except that a `registry` file takes only `prefix:` locations.
 
 #### `all_locations`
 
@@ -295,13 +293,13 @@ Use the game's own word instead of "mixer" where it has one, and a bare apostrop
 
 The shape depends on the file's format:
 
-* `ini` and `gas_cfg` files: file, then section, then key, then value.
-* `flat_ini`, `idtech_cfg`, `dark_cfg`, `brace_cfg`, `ltx`, `quoted_cfg`, `byte_cfg` and `gadb` files: file, then key, then value.
-* `wine_reg` files: file, then registry key, then value name, then value.
+* `ini` and `ini_braces` files: file, then section, then key, then value. An `ini` file without sections skips the section: file, then key, then value.
+* `registry` files: file, then registry key, then value name, then value.
+* Every other format: file, then key, then value. The key is a byte position for `binary_offset`, the hex bytes before the text (with an optional `+N`) for `binary_text`, and the setting's name for `binary_switches`.
 
-For `wine_reg`, give the key path as the `.reg` file shows it below its hive: `{ "system.reg": { "Software\\Wow6432Node\\Outrage\\Descent3": { "Name": "3" } } }`. The script also finds it without `Wow6432Node\` in a 32-bit prefix.
+For `registry`, give the key path as the `.reg` file shows it below its hive: `{ "system.reg": { "Software\\Wow6432Node\\Outrage\\Descent3": { "Name": "3" } } }`. The script also finds it without `Wow6432Node\` in a 32-bit prefix.
 
-Values are strings made of letters, digits, spaces and the characters `. _ ( ) -`. Section and key names allow the same, without the brackets. Anything else fails the schema. `true` and `false` switch a `dark_cfg` flag, and `null` removes the key. Every file you mention must be listed in `files`.
+Values can use letters, digits, spaces and the characters `. _ ( ) -`. Section, key and registry-key names can use the same, except the brackets. Anything else fails the schema. `true` and `false` switch a `key_value` flag, and `null` removes the key. Every file you mention must be listed in `files`.
 
 #### `only_if`
 

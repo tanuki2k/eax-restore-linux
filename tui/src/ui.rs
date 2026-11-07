@@ -915,7 +915,7 @@ mod tests {
 
     const WITH_SETTINGS: &str = r#"{"games":[{"id":"q","name":"Quake 4",
       "game_config":{
-        "files":{"q.cfg":{"format":"idtech_cfg","locations":["game_exe:q4base/q.cfg"]}},
+        "files":{"q.cfg":{"format":"set_commands","locations":["game_exe:q4base/q.cfg"]}},
         "audio_settings":[{"title":"Enable EAX effects","tested":true,"reason":"It ships with EAX off.",
           "changes":{"q.cfg":{"s_useOpenAL":"1"}}}]}}]}"#;
 
@@ -945,7 +945,7 @@ mod tests {
             .collect::<Vec<_>>()
             .join(",");
         let json = format!(
-            r#"{{"games":[{{"id":"q","name":"Quake 4","game_config":{{"files":{{"q.cfg":{{"format":"idtech_cfg"}}}},"audio_settings":[{many}]}}}}]}}"#
+            r#"{{"games":[{{"id":"q","name":"Quake 4","game_config":{{"files":{{"q.cfg":{{"format":"set_commands"}}}},"audio_settings":[{many}]}}}}]}}"#
         );
         let mut app = App::new(entries(&json));
         press(&mut app, ratatui::crossterm::event::KeyCode::Right);
@@ -1260,7 +1260,7 @@ mod tests {
             .collect::<Vec<_>>()
             .join(",");
         let json = format!(
-            r#"{{"games":[{{"id":"q","name":"Quake 4","game_config":{{"files":{{"q.cfg":{{"format":"idtech_cfg"}}}},"audio_settings":[{many}]}}}}]}}"#
+            r#"{{"games":[{{"id":"q","name":"Quake 4","game_config":{{"files":{{"q.cfg":{{"format":"set_commands"}}}},"audio_settings":[{many}]}}}}]}}"#
         );
         let mut app = App::new(entries(&json));
         press(&mut app, ratatui::crossterm::event::KeyCode::Right);

@@ -20,7 +20,7 @@ def world(tmp, before, after):
 
 
 class Capture(unittest.TestCase):
-    def test_idtech_matches_quake4_database_entry(self):
+    def test_set_commands_matches_quake4_database_entry(self):
         q4 = dbio.load("tested", "quake-4")
         want = q4["game_config"]["audio_settings"][0]["changes"]["Quake4Config.cfg"]
         before = 'seta s_useOpenAL "0"\nseta s_useEAXReverb "0"\nseta s_useEAXOcclusion "0"\nseta s_volume_dB "0"\n'
@@ -30,7 +30,7 @@ class Capture(unittest.TestCase):
             diffs = capture.diff_snapshots(game, sd, "a", "b")
             gc, skipped = classify.draft_game_config(diffs, [])
         self.assertEqual(gc["audio_settings"][0]["changes"]["Quake4Config.cfg"], want)
-        self.assertEqual(gc["files"]["Quake4Config.cfg"], {"format": "idtech_cfg", "locations": ["game_exe:q4base/Quake4Config.cfg"]})
+        self.assertEqual(gc["files"]["Quake4Config.cfg"], {"format": "set_commands", "locations": ["game_exe:q4base/Quake4Config.cfg"]})
         self.assertEqual(skipped, [])
 
     def test_ini_sections_and_noise(self):
@@ -99,15 +99,15 @@ class ConfigTxt(unittest.TestCase):
             gc, skipped = classify.draft_game_config(capture.diff_snapshots(game, sd, "a", "b"), [])
         self.assertEqual(gc["files"]["Player.txt"], {"format": "ini", "locations": ["game_exe:Profiles/Player.txt"]})
 
-    def test_gas_file_is_captured_as_gas_cfg_with_the_semicolon_dropped(self):
+    def test_gas_file_is_captured_as_ini_braces_with_the_semicolon_dropped(self):
         before = "[prefs]\n{\n\tblood = red;\n\teax_enabled = false;\n}\n"
         after = before.replace("eax_enabled = false", "eax_enabled = true")
-        self.assertEqual(capture.guess_format("prefs.gas", before), "gas_cfg")
-        self.assertEqual(capture.parse_values("gas_cfg", after)[("prefs", "eax_enabled")], "true")
+        self.assertEqual(capture.guess_format("prefs.gas", before), "ini_braces")
+        self.assertEqual(capture.parse_values("ini_braces", after)[("prefs", "eax_enabled")], "true")
         with tempfile.TemporaryDirectory() as t:
             game, sd = world(t, {"prefs.gas": before}, {"prefs.gas": after})
             gc, skipped = classify.draft_game_config(capture.diff_snapshots(game, sd, "a", "b"), [])
-        self.assertEqual(gc["files"]["prefs.gas"]["format"], "gas_cfg")
+        self.assertEqual(gc["files"]["prefs.gas"]["format"], "ini_braces")
         self.assertEqual(gc["audio_settings"][0]["changes"], {"prefs.gas": {"prefs": {"eax_enabled": "true"}}})
 
 
@@ -195,7 +195,7 @@ class KeyValueFormat(unittest.TestCase):
         with tempfile.TemporaryDirectory() as t:
             game, sd = world(t, {"settings.cfg": a}, {"settings.cfg": b})
             diffs = capture.diff_snapshots(game, sd, "a", "b")
-        self.assertEqual(diffs[0]["format"], "dark_cfg")
+        self.assertEqual(diffs[0]["format"], "key_value")
         self.assertEqual({c["key"]: c["new"] for c in diffs[0]["changes"]}, {"EnableEAX": "0", "FSAA": "3"})
 
     def test_unreadable_change_is_reported_not_silent(self):

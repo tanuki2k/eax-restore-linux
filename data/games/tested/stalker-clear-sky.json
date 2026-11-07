@@ -17,7 +17,7 @@
   "game_config": {
     "files": {
       "user.ltx": {
-        "format": "ltx",
+        "format": "key_value",
         "locations": ["prefix_documents:Stalker-STCS/user.ltx", "game_root:_appdata_/user.ltx"],
         "crash_marker": "tmp.ltx"
       }

@@ -20,12 +20,20 @@
   "game_config": {
     "files": {
       "cam_ext.cfg": {
-        "format": "dark_cfg",
+        "format": "key_value",
         "locations": ["game_exe:cam_ext.cfg"],
         "if_missing": "skip"
       },
-      "DARK.CFG": { "format": "dark_cfg", "locations": ["game_exe:DARK.CFG"], "if_missing": "skip" },
-      "dark.cfg": { "format": "dark_cfg", "locations": ["game_exe:dark.cfg"], "if_missing": "skip" }
+      "DARK.CFG": {
+        "format": "key_value",
+        "locations": ["game_exe:DARK.CFG"],
+        "if_missing": "skip"
+      },
+      "dark.cfg": {
+        "format": "key_value",
+        "locations": ["game_exe:dark.cfg"],
+        "if_missing": "skip"
+      }
     },
     "audio_settings": [
       {

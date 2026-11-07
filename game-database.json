@@ -75,7 +75,7 @@
       "game_config": {
         "files": {
           "settings.cfg": {
-            "format": "dark_cfg",
+            "format": "key_value",
             "locations": [
               "game_exe:settings.cfg"
             ]
@@ -943,7 +943,7 @@
       "game_config": {
         "files": {
           "Profile000.gdb": {
-            "format": "gadb",
+            "format": "binary_switches",
             "locations": [
               "prefix_public_documents:Monolith Productions/Condemned/Profiles/Profile000.gdb"
             ]
@@ -987,7 +987,7 @@
       "game_config": {
         "files": {
           "system.reg": {
-            "format": "wine_reg",
+            "format": "registry",
             "locations": [
               "prefix:system.reg"
             ]
@@ -1182,13 +1182,13 @@
       "game_config": {
         "files": {
           "DoomConfig.cfg": {
-            "format": "idtech_cfg",
+            "format": "set_commands",
             "locations": [
               "game_exe:base/DoomConfig.cfg"
             ]
           },
           "d3xp DoomConfig.cfg": {
-            "format": "idtech_cfg",
+            "format": "set_commands",
             "locations": [
               "game_exe:d3xp/DoomConfig.cfg"
             ],
@@ -1303,7 +1303,7 @@
       "game_config": {
         "files": {
           "prefs.dat": {
-            "format": "ltx",
+            "format": "key_value",
             "locations": [
               "game_exe:prefs.dat"
             ]
@@ -1368,7 +1368,7 @@
       "game_config": {
         "files": {
           "prefs.gas": {
-            "format": "gas_cfg",
+            "format": "ini_braces",
             "locations": [
               "prefix_documents:Dungeon Siege/prefs.gas"
             ]
@@ -1418,7 +1418,7 @@
       "game_config": {
         "files": {
           "prefs.gas": {
-            "format": "gas_cfg",
+            "format": "ini_braces",
             "locations": [
               "prefix_documents:My Games/Dungeon Siege 2/Save/prefs.gas"
             ]
@@ -1486,7 +1486,7 @@
       "game_config": {
         "files": {
           "Profile000.gdb": {
-            "format": "gadb",
+            "format": "binary_switches",
             "locations": [
               "prefix_public_documents:Monolith Productions/FEAR/Profiles/Profile000.gdb"
             ]
@@ -1542,7 +1542,7 @@
       "game_config": {
         "files": {
           "Profile000.gdb": {
-            "format": "gadb",
+            "format": "binary_switches",
             "locations": [
               "prefix_public_documents:TimeGate Studios/FEARXP/Profiles/Profile000.gdb"
             ]
@@ -1601,7 +1601,7 @@
       "game_config": {
         "files": {
           "Profile000.gdb": {
-            "format": "gadb",
+            "format": "binary_switches",
             "locations": [
               "prefix_public_documents:TimeGate Studios/FEARXP2/Profiles/Profile000.gdb"
             ]
@@ -1663,19 +1663,19 @@
       "game_config": {
         "files": {
           "Profile000.gdb": {
-            "format": "gadb",
+            "format": "binary_switches",
             "locations": [
               "prefix_public_documents:Monolith Productions/FEAR/Profiles/Profile000.gdb"
             ]
           },
           "FEARXP Profile000.gdb": {
-            "format": "gadb",
+            "format": "binary_switches",
             "locations": [
               "prefix_public_documents:TimeGate Studios/FEARXP/Profiles/Profile000.gdb"
             ]
           },
           "FEARXP2 Profile000.gdb": {
-            "format": "gadb",
+            "format": "binary_switches",
             "locations": [
               "prefix_public_documents:TimeGate Studios/FEARXP2/Profiles/Profile000.gdb"
             ]
@@ -1754,7 +1754,7 @@
       "game_config": {
         "files": {
           "bos.cfg": {
-            "format": "brace_cfg",
+            "format": "braced_pairs",
             "locations": [
               "game_exe:core/bos.cfg"
             ]
@@ -1799,7 +1799,7 @@
       "game_config": {
         "files": {
           "bos.cfg": {
-            "format": "brace_cfg",
+            "format": "braced_pairs",
             "locations": [
               "game_exe:core/bos.cfg"
             ]
@@ -1902,7 +1902,7 @@
       "game_config": {
         "files": {
           "options.dat": {
-            "format": "lenstr_cfg",
+            "format": "binary_text",
             "locations": [
               "game_exe:Data/options.dat"
             ]
@@ -2388,7 +2388,7 @@
       "game_config": {
         "files": {
           "Messiah.cfg": {
-            "format": "byte_cfg",
+            "format": "binary_offset",
             "locations": [
               "game_exe:Messiah.cfg"
             ]
@@ -2868,7 +2868,7 @@
       "game_config": {
         "files": {
           "user.reg": {
-            "format": "wine_reg",
+            "format": "registry",
             "locations": [
               "prefix:user.reg"
             ]
@@ -2982,13 +2982,13 @@
       "game_config": {
         "files": {
           "Quake4Config.cfg": {
-            "format": "idtech_cfg",
+            "format": "set_commands",
             "locations": [
               "game_exe:q4base/Quake4Config.cfg"
             ]
           },
           "autoexec.cfg": {
-            "format": "idtech_cfg",
+            "format": "set_commands",
             "locations": [
               "game_exe:q4base/autoexec.cfg"
             ],
@@ -3121,7 +3121,7 @@
       "game_config": {
         "files": {
           "latest.cfg": {
-            "format": "byte_cfg",
+            "format": "binary_offset",
             "locations": [
               "game_exe:Gamers/latest.cfg"
             ]
@@ -3199,7 +3199,7 @@
       "game_config": {
         "files": {
           "user.ltx": {
-            "format": "ltx",
+            "format": "key_value",
             "locations": [
               "prefix_documents:stalker-cop/user.ltx",
               "game_root:user.ltx"
@@ -3273,7 +3273,7 @@
       "game_config": {
         "files": {
           "user.ltx": {
-            "format": "ltx",
+            "format": "key_value",
             "locations": [
               "prefix_documents:Stalker-STCS/user.ltx",
               "game_root:_appdata_/user.ltx"
@@ -3352,7 +3352,7 @@
       "game_config": {
         "files": {
           "user.ltx": {
-            "format": "ltx",
+            "format": "key_value",
             "locations": [
               "prefix_documents:stalker-shoc/user.ltx",
               "game_root:_appdata_/user.ltx"
@@ -3418,13 +3418,13 @@
       "game_config": {
         "files": {
           "system.reg": {
-            "format": "wine_reg",
+            "format": "registry",
             "locations": [
               "prefix:system.reg"
             ]
           },
           "autoexec.cfg": {
-            "format": "quoted_cfg",
+            "format": "quoted_pairs",
             "locations": [
               "game_exe:autoexec.cfg"
             ]
@@ -3472,7 +3472,7 @@
       "game_config": {
         "files": {
           "sof2sp.cfg": {
-            "format": "idtech_cfg",
+            "format": "set_commands",
             "locations": [
               "game_exe:base/sof2sp.cfg"
             ]
@@ -3519,7 +3519,7 @@
       "game_config": {
         "files": {
           "config.cfg": {
-            "format": "idtech_cfg",
+            "format": "set_commands",
             "locations": [
               "game_exe:user/config.cfg"
             ]
@@ -3562,7 +3562,7 @@
       "game_config": {
         "files": {
           "steamuser.cfg": {
-            "format": "idtech_cfg",
+            "format": "set_commands",
             "locations": [
               "game_root:base/steamuser.cfg"
             ]
@@ -3683,13 +3683,13 @@
       "game_config": {
         "files": {
           "jk2config.cfg": {
-            "format": "idtech_cfg",
+            "format": "set_commands",
             "locations": [
               "game_exe:base/jk2config.cfg"
             ]
           },
           "jk2mpconfig.cfg": {
-            "format": "idtech_cfg",
+            "format": "set_commands",
             "locations": [
               "game_exe:base/jk2mpconfig.cfg"
             ],
@@ -3740,13 +3740,13 @@
       "game_config": {
         "files": {
           "jaconfig.cfg": {
-            "format": "idtech_cfg",
+            "format": "set_commands",
             "locations": [
               "game_exe:base/jaconfig.cfg"
             ]
           },
           "jampconfig.cfg": {
-            "format": "idtech_cfg",
+            "format": "set_commands",
             "locations": [
               "game_exe:base/jampconfig.cfg"
             ],
@@ -4046,7 +4046,7 @@
       "game_config": {
         "files": {
           "cam_ext.cfg": {
-            "format": "dark_cfg",
+            "format": "key_value",
             "locations": [
               "game_exe:cam_ext.cfg"
             ],
@@ -4258,21 +4258,21 @@
       "game_config": {
         "files": {
           "cam_ext.cfg": {
-            "format": "dark_cfg",
+            "format": "key_value",
             "locations": [
               "game_exe:cam_ext.cfg"
             ],
             "if_missing": "skip"
           },
           "DARK.CFG": {
-            "format": "dark_cfg",
+            "format": "key_value",
             "locations": [
               "game_exe:DARK.CFG"
             ],
             "if_missing": "skip"
           },
           "dark.cfg": {
-            "format": "dark_cfg",
+            "format": "key_value",
             "locations": [
               "game_exe:dark.cfg"
             ],
@@ -4340,7 +4340,7 @@
       "game_config": {
         "files": {
           "cam_ext.cfg": {
-            "format": "dark_cfg",
+            "format": "key_value",
             "locations": [
               "game_exe:cam_ext.cfg"
             ],
@@ -4411,7 +4411,7 @@
       "game_config": {
         "files": {
           "options.ini": {
-            "format": "flat_ini",
+            "format": "ini",
             "locations": [
               "game_root:save/SaveGames/User Options/options.ini",
               "prefix_documents:Thief - Deadly Shadows/SaveGames/User Options/options.ini"

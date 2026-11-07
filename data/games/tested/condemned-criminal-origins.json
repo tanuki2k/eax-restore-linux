@@ -18,7 +18,7 @@
   "game_config": {
     "files": {
       "Profile000.gdb": {
-        "format": "gadb",
+        "format": "binary_switches",
         "locations": [
           "prefix_public_documents:Monolith Productions/Condemned/Profiles/Profile000.gdb"
         ]
