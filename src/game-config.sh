@@ -300,9 +300,11 @@ _lenstr_set() {
 # Usage: upgrade_format_name <format>
 # Sets UPGRADED_FORMAT to the format's current name: dev builds from before
 # the formats were renamed wrote the old names into the manifest. A current
-# or unknown name is kept as it is. config_get_key and config_set_key apply
-# this themselves, so a reader that forgets to upgrade a manifest line still
-# works. Delete this once no dev install from before 0.29 is expected to
+# or unknown name is kept as it is. Only upgrade_config_line calls it: a
+# manifest line is upgraded once, where it is read, because everything after
+# that (the registry guard, config_values_equal, config_get_key and
+# config_set_key, the kept-versus-dropped comparison) tests the current
+# spelling. Delete this once no dev install from before 0.29 is expected to
 # still be around.
 UPGRADED_FORMAT=""
 upgrade_format_name() {
@@ -346,8 +348,7 @@ upgrade_config_line() {
 # lines. ini_braces is a "[section]" line, "{" on its own
 # line, then "key = value;" lines up to "}". A binary_switches key is one on/off setting, 0 or 1.
 config_get_key() {
-    local file="$1" fmt sec="$3" key="$4" found
-    upgrade_format_name "$2"; fmt="$UPGRADED_FORMAT"
+    local file="$1" fmt="$2" sec="$3" key="$4" found
     [ -f "$file" ] || { echo "__ABSENT__"; return; }
     if [ "$fmt" == "registry" ]; then
         found="$(_wine_reg_read "$file" "$sec" "$key")"; echo "${found#*$'\t'}"
@@ -458,9 +459,8 @@ _gadb_set() {
 # same folder and swaps it in, so a failure never leaves a half-written file.
 # Returns 1 if the file couldn't be written.
 config_set_key() {
-    local file="$1" fmt sec="$3" key="$4" value="$5"
+    local file="$1" fmt="$2" sec="$3" key="$4" value="$5"
     local crlf=0 current tmp
-    upgrade_format_name "$2"; fmt="$UPGRADED_FORMAT"
     [ "$fmt" == "binary_offset" ] && { _byte_set "$file" "$key" "$value"; return; }
     [ "$fmt" == "binary_text" ] && { _lenstr_set "$file" "$key" "$value"; return; }
     [ "$fmt" == "binary_switches" ] && { _gadb_set "$file" "$key" "$value"; return; }
