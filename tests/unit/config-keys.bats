@@ -418,3 +418,20 @@ config_find_text_end() {  # <file> -> byte position just past the anchored text
     [ "$status" -eq 1 ]
     [ "$(config_get_key "$f" ini S k)" == "1" ]
 }
+
+@test "config_get_key refuses an old format name whether or not the file exists" {
+    run config_get_key "$BATS_TEST_TMPDIR/missing.ini" flat_ini S k
+    [ "$status" -eq 1 ]
+}
+
+@test "an old-name CONFIG line works with config_get_key and config_set_key once upgraded" {
+    local f="$BATS_TEST_TMPDIR/a.ini" line fmt
+    printf '[S]\nk=1\n' > "$f"
+    line="CONFIG:audio"$'\t'"t"$'\t'"$f"$'\t'"flat_ini"$'\t'"S"$'\t'"k"$'\t'"1"$'\t'"2"
+    upgrade_config_line "$line"
+    mapfile -t -d $'\t' fields < <(printf '%s' "${UPGRADED_LINE#CONFIG:}")
+    fmt="${fields[3]}"
+    [ "$fmt" == "ini" ]
+    config_set_key "${fields[2]}" "$fmt" "${fields[4]}" "${fields[5]}" "${fields[7]}"
+    [ "$(config_get_key "${fields[2]}" "$fmt" "${fields[4]}" "${fields[5]}")" == "2" ]
+}

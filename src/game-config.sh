@@ -352,6 +352,10 @@ upgrade_config_line() {
 # returns 1 rather than reading a registry or binary file as text.
 config_get_key() {
     local file="$1" fmt="$2" sec="$3" key="$4" found
+    # Checked before the file exists, so a stale name fails the same way
+    # whether or not the game's file is there.
+    [[ "$fmt" =~ ^(ini|set_commands|key_value|braced_pairs|ini_braces|quoted_pairs|binary_offset|binary_text|binary_switches|registry)$ ]] || {
+        echo "config_get_key: unknown format '$fmt'" >&2; return 1; }
     [ -f "$file" ] || { echo "__ABSENT__"; return; }
     if [ "$fmt" == "registry" ]; then
         found="$(_wine_reg_read "$file" "$sec" "$key")"; echo "${found#*$'\t'}"
@@ -364,8 +368,6 @@ config_get_key() {
         if [ -n "$found" ]; then echo "${found#* }"; else echo "__ABSENT__"; fi
         return
     fi
-    [[ "$fmt" =~ ^(ini|set_commands|key_value|braced_pairs|ini_braces|quoted_pairs)$ ]] || {
-        echo "config_get_key: unknown format '$fmt'" >&2; return 1; }
     LC_ALL=C awk -v fmt="$fmt" -v sec="$sec" -v key="$key" '
         function is_header(l,   n, r) {
             if (!match(l, /^[ \t]*\[[^]]*\]/)) return 0
