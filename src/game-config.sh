@@ -1064,6 +1064,30 @@ print_game_settings_details() {
     echo ""
 }
 
+# Usage: _speaker_radio <result var> <question> <record label> <start on> <fallback> <value> <title> <detail> [<value> <title> <detail> ...]
+# One speaker question as a radio_select: the dot starts on the item whose value
+# is <start on> (or <fallback> when that matches none), and the picked item's
+# value goes into <result var>.
+_speaker_radio() {
+    local -n _result="$1"
+    local question="$2" label="$3" start="$4" fallback="$5"
+    shift 5
+    local -a values=() titles=()
+    RADIO_DETAILS=()
+    while [ $# -ge 3 ]; do values+=("$1"); titles+=("$2"); RADIO_DETAILS+=("$3"); shift 3; done
+    local i
+    RADIO_INITIAL=1
+    for i in "${!values[@]}"; do
+        [ "${values[$i]}" == "$fallback" ] && RADIO_INITIAL=$((i + 1))
+    done
+    for i in "${!values[@]}"; do
+        [ -n "$start" ] && [ "${values[$i]}" == "$start" ] && RADIO_INITIAL=$((i + 1))
+    done
+    print_result "$question"
+    radio_select "$label" "${titles[@]}"
+    _result="${values[$((RADIO_CHOICE - 1))]}"
+}
+
 # Usage: ask_speaker_configuration
 # Step 8's speaker questions, shared with Tools → Speaker configuration. Sets
 # OUTPUT_MODE (stereo / surround / matrix), STEREO_MODE (stereo only),
@@ -1074,38 +1098,24 @@ ask_speaker_configuration() {
     local prev_mode="${OUTPUT_MODE:-}" prev_stereo="${STEREO_MODE:-}"
     local prev_hrtf="${ENABLE_HRTF:-}" prev_channels="${SURROUND_CHANNELS:-}"
 
-    print_result "What kind of audio output are you using?"
-    case "$prev_mode" in surround) RADIO_INITIAL=2 ;; matrix) RADIO_INITIAL=3 ;; *) RADIO_INITIAL=1 ;; esac
-    RADIO_DETAILS=("Headphones, or two speakers."
-        "Four to eight speakers, such as 5.1 or 7.1."
-        "Stereo that a receiver or soundbar decodes into surround.")
-    radio_select "Audio output" "Stereo" "Surround sound" "Matrix encoding"
-    OUTPUT_MODE_CHOICE="$RADIO_CHOICE"
+    _speaker_radio OUTPUT_MODE "What kind of audio output are you using?" "Audio output" "$prev_mode" stereo \
+        stereo "Stereo" "Headphones, or two speakers." \
+        surround "Surround sound" "Four to eight speakers, such as 5.1 or 7.1." \
+        matrix "Matrix encoding" "Stereo that a receiver or soundbar decodes into surround."
 
     ENABLE_HRTF=""
     SURROUND_CHANNELS=""
 
-    if [ "$OUTPUT_MODE_CHOICE" == "1" ]; then
-        OUTPUT_MODE="stereo"
+    if [ "$OUTPUT_MODE" == "stereo" ]; then
+        # Starts on the saved choice only when the saved output was stereo.
+        local start_stereo=""
+        [ "$prev_mode" == "stereo" ] && start_stereo="$prev_stereo"
+        _speaker_radio STEREO_MODE "What are you listening on?" "Listening on" "$start_stereo" auto \
+            auto "Auto" "Leaves it to the sound engine to work out whether it's speakers or headphones." \
+            speakers "Speakers" "Two speakers in front of you." \
+            headphones "Headphones" "Headphones or earbuds."
 
-        print_result "What are you listening on?"
-        RADIO_INITIAL=1
-        if [ "$prev_mode" == "stereo" ]; then
-            case "$prev_stereo" in speakers) RADIO_INITIAL=2 ;; headphones) RADIO_INITIAL=3 ;; esac
-        fi
-        RADIO_DETAILS=("Leaves it to the sound engine to work out whether it's speakers or headphones."
-            "Two speakers in front of you."
-            "Headphones or earbuds.")
-        radio_select "Listening on" "Auto" "Speakers" "Headphones"
-        STEREO_MODE_CHOICE="$RADIO_CHOICE"
-
-        case "$STEREO_MODE_CHOICE" in
-            1) STEREO_MODE="auto" ;;
-            2) STEREO_MODE="speakers" ;;
-            3) STEREO_MODE="headphones" ;;
-        esac
-
-        if [ "$STEREO_MODE_CHOICE" == "2" ]; then
+        if [ "$STEREO_MODE" == "speakers" ]; then
             # HRTF is a headphone-only binaural technique — meaningless (and
             # actively harmful to positional accuracy) over real speakers.
             ENABLE_HRTF="n"
@@ -1125,28 +1135,13 @@ ask_speaker_configuration() {
                 ENABLE_HRTF="n"
             fi
         fi
-    elif [ "$OUTPUT_MODE_CHOICE" == "2" ]; then
-        OUTPUT_MODE="surround"
-
-        print_result "Which speaker layout do you have?"
-        case "$prev_channels" in
-            quad) RADIO_INITIAL=1 ;; surround61) RADIO_INITIAL=3 ;; surround71) RADIO_INITIAL=4 ;;
-            *) RADIO_INITIAL=2 ;;
-        esac
-        RADIO_DETAILS=("Front left and right, rear left and right."
-            "Front left, centre and right, two surrounds and a subwoofer."
-            "5.1 plus a rear centre speaker."
-            "5.1 plus rear left and right speakers.")
+    elif [ "$OUTPUT_MODE" == "surround" ]; then
         # Same names as speaker_label, so the recap matches the pick.
-        radio_select "Speaker layout" "Quad (4.0)" "Surround 5.1" "Surround 6.1" "Surround 7.1"
-        case "$RADIO_CHOICE" in
-            1) SURROUND_CHANNELS="quad" ;;
-            2) SURROUND_CHANNELS="surround51" ;;
-            3) SURROUND_CHANNELS="surround61" ;;
-            4) SURROUND_CHANNELS="surround71" ;;
-        esac
-    else
-        OUTPUT_MODE="matrix"
+        _speaker_radio SURROUND_CHANNELS "Which speaker layout do you have?" "Speaker layout" "$prev_channels" surround51 \
+            quad "Quad (4.0)" "Front left and right, rear left and right." \
+            surround51 "Surround 5.1" "Front left, centre and right, two surrounds and a subwoofer." \
+            surround61 "Surround 6.1" "5.1 plus a rear centre speaker." \
+            surround71 "Surround 7.1" "5.1 plus rear left and right speakers."
     fi
 }
 
