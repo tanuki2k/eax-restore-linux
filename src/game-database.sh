@@ -483,6 +483,161 @@ detect_steam_beta_branch() {
     echo "$key"
 }
 
+# The steps of scan_game_libraries below. They share its lists (names, meta_names,
+# paths, stores and ids, one entry per game found) through bash's dynamic scope,
+# so they only run from it.
+
+# Fills steam_names and gog_names: store ID -> the database's display name for
+# every game that has an entry in that store.
+_scan_load_db_names() {
+local db_id db_name
+while IFS=$'\x1f' read -r db_id db_name; do
+    [[ -v steam_names[$db_id] ]] || steam_names[$db_id]="$db_name"
+done < <(jq -r '.games[] | select(.stores.steam.id != null) | [(.stores.steam.id | tostring), (.name // "" | split("\n")[0])] | join("\u001f")' "$GAME_DATABASE_FILE" 2>/dev/null)
+while IFS=$'\x1f' read -r db_id db_name; do
+    [[ -v gog_names[$db_id] ]] || gog_names[$db_id]="$db_name"
+done < <(jq -r '.games[] | select(.stores.gog.id != null) | [(.stores.gog.id | tostring), (.name // "" | split("\n")[0])] | join("\u001f")' "$GAME_DATABASE_FILE" 2>/dev/null)
+}
+
+# Steam games in the database that are installed in a Steam library.
+_scan_steam_games() {
+if [ ${#steam_names[@]} -gt 0 ]; then
+    local libs=() lib
+    while IFS= read -r lib; do libs+=("$lib"); done < <(steam_library_dirs)
+    print_status "Checking ${#libs[@]} Steam library folder(s)..." ""
+
+    local acf appid installdir name meta_name
+    for lib in "${libs[@]}"; do
+        for acf in "$lib"/appmanifest_*.acf; do
+            [ -f "$acf" ] || continue
+            appid="${acf##*appmanifest_}"; appid="${appid%.acf}"
+            [[ -v steam_names[$appid] ]] || continue
+            installdir=$(acf_value "$acf" installdir)
+            [ -n "$installdir" ] && [ -d "$lib/common/$installdir" ] || continue
+            name="${steam_names[$appid]}"
+            [ -z "$name" ] && name="AppID $appid"
+            meta_name=$(acf_value "$acf" name)
+            [ -z "$meta_name" ] && meta_name="AppID $appid"
+            names+=("$name")
+            meta_names+=("$meta_name")
+            paths+=("$lib/common/$installdir")
+            stores+=("steam")
+            ids+=("$appid")
+        done
+    done
+fi
+}
+
+# Heroic (GOG) games in the database that are installed.
+_scan_heroic_games() {
+if [ ${#gog_names[@]} -gt 0 ]; then
+    local installed_jsons
+    installed_jsons=$(heroic_installed_jsons)
+    print_status "Checking Heroic installed.json files..." ""
+    local json_file install_path app_name name meta_name
+    while IFS= read -r json_file; do
+        [ -z "$json_file" ] && continue
+        while IFS=$'\t' read -r install_path app_name; do
+            [ -z "$install_path" ] || [ -z "$app_name" ] && continue
+            [[ -v gog_names[$app_name] ]] || continue
+            [ -d "$install_path" ] || continue
+            name="${gog_names[$app_name]}"
+            [ -z "$name" ] && name="GOG ID $app_name"
+            meta_name="$(basename "$install_path")"
+            [ -z "$meta_name" ] && meta_name="GOG ID $app_name"
+            names+=("$name")
+            meta_names+=("$meta_name")
+            paths+=("$install_path")
+            stores+=("gog")
+            ids+=("$app_name")
+        done < <(heroic_installed_records "$json_file")
+    done <<< "$installed_jsons"
+fi
+}
+
+# Puts the lists in display-name order.
+_scan_sort_by_name() {
+    # Discovery order is appmanifest glob order (AppIDs compared as text)
+    # with Heroic tacked on after, which means nothing to someone scanning
+    # the list by eye -- sort by display name instead, Steam before GOG for
+    # a title owned on both.
+    local i order=() s_names=() s_meta=() s_paths=() s_stores=() s_ids=()
+    while IFS= read -r i; do order+=("$i"); done < <(
+        for i in "${!names[@]}"; do printf '%s\t%s\t%d\n' "${names[$i]}" "${stores[$i]}" "$i"; done \
+            | sort -f -t$'\t' -k1,1 -k2,2r | cut -f3)
+    for i in "${order[@]}"; do
+        s_names+=("${names[$i]}"); s_meta+=("${meta_names[$i]}"); s_paths+=("${paths[$i]}")
+        s_stores+=("${stores[$i]}"); s_ids+=("${ids[$i]}")
+    done
+    names=("${s_names[@]}"); meta_names=("${s_meta[@]}"); paths=("${s_paths[@]}")
+    stores=("${s_stores[@]}"); ids=("${s_ids[@]}")
+}
+
+# Shows the list (or takes EAX_RESTORE_GAME's pick) and sets choice, 1-based.
+# Returns 1 for [M]anually or [R]eturn (SCAN_NEXT says which).
+_scan_pick_game() {
+    # A long list goes in pages (paged_select). Not in the list: type the
+    # path instead, or go back (SCAN_NEXT tells get_game_directory which).
+    PAGED_LABELS=("${names[@]}"); PAGED_DETAILS=()
+    for i in "${!stores[@]}"; do
+        if [ "${stores[$i]}" == "gog" ]; then PAGED_DETAILS+=("(GOG)"); else PAGED_DETAILS+=("(Steam)"); fi
+    done
+    local -a extra=("m|[M]anually type the game path")
+    [ -n "$MAIN_MENU_SHOWN" ] && extra+=("|" "r|[R]eturn to the $(return_menu_label)")
+    # EAX_RESTORE_GAME ("steam:2210") names the pick up front, so no list.
+    local preset_choice=""
+    if [ -n "$preset_game" ]; then
+        for i in "${!stores[@]}"; do
+            [ "${stores[$i]}:${ids[$i]}" == "$preset_game" ] && { preset_choice=$((i + 1)); break; }
+        done
+        if [ -z "$preset_choice" ]; then
+            local missing_name
+            missing_name=$(gdb_field "${preset_game#*:}" "${preset_game%%:*}" '.name // empty')
+            print_note "${missing_name:-That game} isn't in your Steam or Heroic libraries, so here are the games that are."
+        fi
+    fi
+    if [ -n "$preset_choice" ]; then
+        PAGED_CHOICE="$preset_choice"
+    else
+        paged_select "Games with a profile in your libraries" "${extra[@]}" || exit 0
+    fi
+    case "$PAGED_CHOICE" in
+        m) SCAN_NEXT="manual"; return 1 ;;
+        r) SCAN_NEXT="return"; return 1 ;;
+    esac
+    choice="$PAGED_CHOICE"
+}
+
+# Shows the picked game's profile, asks to continue and finds its .exe folder.
+# Returns 1 when the player backs out. Takes the 0-based index of the pick.
+_scan_open_pick() {
+    local idx="$1"
+    show_game_details_block "${ids[$idx]}" "${stores[$idx]}" "${paths[$idx]}"
+    block_if_eax_not_implemented "${ids[$idx]}" "${stores[$idx]}" "${meta_names[$idx]}"
+    # User chose "pick a different game" at the EAX-impossible prompt — bail
+    # back to get_game_directory's menu instead of asking to continue with it.
+    [ -n "$RESTART_REQUESTED" ] && return 1
+
+    if [ "$(game_eax_status "${ids[$idx]}" "${stores[$idx]}")" == "built_in" ]; then
+        confirm_built_in_install "${meta_names[$idx]}" || return 1
+    else
+        confirm "Continue with this game?" || return 1
+    fi
+
+    GAME_NAME="${meta_names[$idx]}"
+
+    local beta_branch="" exe_name
+    if [ "${stores[$idx]}" == "steam" ]; then
+        beta_branch=$(gdb_field "${ids[$idx]}" steam '.stores.steam.beta_branch // empty')
+    fi
+    exe_name=$(gdb_field "${ids[$idx]}" "${stores[$idx]}" '.exe // empty')
+    resolve_exe_folder "${paths[$idx]}" "$beta_branch" "$exe_name" "${stores[$idx]}" || return 1
+    GAME_INSTALL_ROOT="${paths[$idx]}"
+
+    [ "${stores[$idx]}" == "steam" ] && SCANNED_APPID="${ids[$idx]}"
+    return 0
+}
+
 scan_game_libraries() {
     # Usage: scan_game_libraries
     # Opt-in alternative to browsing/typing a path: scans Steam and Heroic
@@ -525,68 +680,13 @@ scan_game_libraries() {
     # pick is made, for use in prompts that need the actual game's name.
     local names=() meta_names=() paths=() stores=() ids=()
 
-    # --- Steam ---
     # Both stores' id -> display name maps come from one jq run each, so the
-    # loops below test membership and fetch the name without a process per game.
+    # loops in the steps below test membership and fetch the name without a
+    # process per game.
     local -A steam_names=() gog_names=()
-    local db_id db_name
-    while IFS=$'\x1f' read -r db_id db_name; do
-        [[ -v steam_names[$db_id] ]] || steam_names[$db_id]="$db_name"
-    done < <(jq -r '.games[] | select(.stores.steam.id != null) | [(.stores.steam.id | tostring), (.name // "" | split("\n")[0])] | join("\u001f")' "$GAME_DATABASE_FILE" 2>/dev/null)
-    while IFS=$'\x1f' read -r db_id db_name; do
-        [[ -v gog_names[$db_id] ]] || gog_names[$db_id]="$db_name"
-    done < <(jq -r '.games[] | select(.stores.gog.id != null) | [(.stores.gog.id | tostring), (.name // "" | split("\n")[0])] | join("\u001f")' "$GAME_DATABASE_FILE" 2>/dev/null)
-
-    if [ ${#steam_names[@]} -gt 0 ]; then
-        local libs=() lib
-        while IFS= read -r lib; do libs+=("$lib"); done < <(steam_library_dirs)
-        print_status "Checking ${#libs[@]} Steam library folder(s)..." ""
-
-        local acf appid installdir name meta_name
-        for lib in "${libs[@]}"; do
-            for acf in "$lib"/appmanifest_*.acf; do
-                [ -f "$acf" ] || continue
-                appid="${acf##*appmanifest_}"; appid="${appid%.acf}"
-                [[ -v steam_names[$appid] ]] || continue
-                installdir=$(acf_value "$acf" installdir)
-                [ -n "$installdir" ] && [ -d "$lib/common/$installdir" ] || continue
-                name="${steam_names[$appid]}"
-                [ -z "$name" ] && name="AppID $appid"
-                meta_name=$(acf_value "$acf" name)
-                [ -z "$meta_name" ] && meta_name="AppID $appid"
-                names+=("$name")
-                meta_names+=("$meta_name")
-                paths+=("$lib/common/$installdir")
-                stores+=("steam")
-                ids+=("$appid")
-            done
-        done
-    fi
-
-    # --- Heroic ---
-    if [ ${#gog_names[@]} -gt 0 ]; then
-        local installed_jsons
-        installed_jsons=$(heroic_installed_jsons)
-        print_status "Checking Heroic installed.json files..." ""
-        local json_file install_path app_name name meta_name
-        while IFS= read -r json_file; do
-            [ -z "$json_file" ] && continue
-            while IFS=$'\t' read -r install_path app_name; do
-                [ -z "$install_path" ] || [ -z "$app_name" ] && continue
-                [[ -v gog_names[$app_name] ]] || continue
-                [ -d "$install_path" ] || continue
-                name="${gog_names[$app_name]}"
-                [ -z "$name" ] && name="GOG ID $app_name"
-                meta_name="$(basename "$install_path")"
-                [ -z "$meta_name" ] && meta_name="GOG ID $app_name"
-                names+=("$name")
-                meta_names+=("$meta_name")
-                paths+=("$install_path")
-                stores+=("gog")
-                ids+=("$app_name")
-            done < <(heroic_installed_records "$json_file")
-        done <<< "$installed_jsons"
-    fi
+    _scan_load_db_names
+    _scan_steam_games
+    _scan_heroic_games
 
     if [ ${#names[@]} -eq 0 ]; then
         print_warning "No games from the game database were found in your Steam or Heroic libraries."
@@ -595,78 +695,12 @@ scan_game_libraries() {
         return 1
     fi
 
-    # Discovery order is appmanifest glob order (AppIDs compared as text)
-    # with Heroic tacked on after, which means nothing to someone scanning
-    # the list by eye -- sort by display name instead, Steam before GOG for
-    # a title owned on both.
-    local i order=() s_names=() s_meta=() s_paths=() s_stores=() s_ids=()
-    while IFS= read -r i; do order+=("$i"); done < <(
-        for i in "${!names[@]}"; do printf '%s\t%s\t%d\n' "${names[$i]}" "${stores[$i]}" "$i"; done \
-            | sort -f -t$'\t' -k1,1 -k2,2r | cut -f3)
-    for i in "${order[@]}"; do
-        s_names+=("${names[$i]}"); s_meta+=("${meta_names[$i]}"); s_paths+=("${paths[$i]}")
-        s_stores+=("${stores[$i]}"); s_ids+=("${ids[$i]}")
-    done
-    names=("${s_names[@]}"); meta_names=("${s_meta[@]}"); paths=("${s_paths[@]}")
-    stores=("${s_stores[@]}"); ids=("${s_ids[@]}")
+    local i
+    _scan_sort_by_name
 
-    # A long list goes in pages (paged_select). Not in the list: type the
-    # path instead, or go back (SCAN_NEXT tells get_game_directory which).
-    PAGED_LABELS=("${names[@]}"); PAGED_DETAILS=()
-    for i in "${!stores[@]}"; do
-        if [ "${stores[$i]}" == "gog" ]; then PAGED_DETAILS+=("(GOG)"); else PAGED_DETAILS+=("(Steam)"); fi
-    done
-    local -a extra=("m|[M]anually type the game path")
-    [ -n "$MAIN_MENU_SHOWN" ] && extra+=("|" "r|[R]eturn to the $(return_menu_label)")
-    # EAX_RESTORE_GAME ("steam:2210") names the pick up front, so no list.
-    local preset_choice=""
-    if [ -n "$preset_game" ]; then
-        for i in "${!stores[@]}"; do
-            [ "${stores[$i]}:${ids[$i]}" == "$preset_game" ] && { preset_choice=$((i + 1)); break; }
-        done
-        if [ -z "$preset_choice" ]; then
-            local missing_name
-            missing_name=$(gdb_field "${preset_game#*:}" "${preset_game%%:*}" '.name // empty')
-            print_note "${missing_name:-That game} isn't in your Steam or Heroic libraries, so here are the games that are."
-        fi
-    fi
-    if [ -n "$preset_choice" ]; then
-        PAGED_CHOICE="$preset_choice"
-    else
-        paged_select "Games with a profile in your libraries" "${extra[@]}" || exit 0
-    fi
-    case "$PAGED_CHOICE" in
-        m) SCAN_NEXT="manual"; return 1 ;;
-        r) SCAN_NEXT="return"; return 1 ;;
-    esac
-    local choice="$PAGED_CHOICE"
-
-    local idx=$((choice - 1))
-
-    show_game_details_block "${ids[$idx]}" "${stores[$idx]}" "${paths[$idx]}"
-    block_if_eax_not_implemented "${ids[$idx]}" "${stores[$idx]}" "${meta_names[$idx]}"
-    # User chose "pick a different game" at the EAX-impossible prompt — bail
-    # back to get_game_directory's menu instead of asking to continue with it.
-    [ -n "$RESTART_REQUESTED" ] && return 1
-
-    if [ "$(game_eax_status "${ids[$idx]}" "${stores[$idx]}")" == "built_in" ]; then
-        confirm_built_in_install "${meta_names[$idx]}" || return 1
-    else
-        confirm "Continue with this game?" || return 1
-    fi
-
-    GAME_NAME="${meta_names[$idx]}"
-
-    local beta_branch="" exe_name
-    if [ "${stores[$idx]}" == "steam" ]; then
-        beta_branch=$(gdb_field "${ids[$idx]}" steam '.stores.steam.beta_branch // empty')
-    fi
-    exe_name=$(gdb_field "${ids[$idx]}" "${stores[$idx]}" '.exe // empty')
-    resolve_exe_folder "${paths[$idx]}" "$beta_branch" "$exe_name" "${stores[$idx]}" || return 1
-    GAME_INSTALL_ROOT="${paths[$idx]}"
-
-    [ "${stores[$idx]}" == "steam" ] && SCANNED_APPID="${ids[$idx]}"
-    return 0
+    local choice
+    _scan_pick_game || return 1
+    _scan_open_pick $((choice - 1))
 }
 
 # Per-game notes and EAX-impossible flags now live in the community-
