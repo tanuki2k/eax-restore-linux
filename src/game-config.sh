@@ -1508,7 +1508,7 @@ game_settings_step() {
         echo ""
         while IFS= read -r line; do
             [ -n "$line" ] || continue
-            mapfile -t -d $'\t' c < <(printf '%s' "${line#CONFIG:}")
+            parse_config_line "$line" c
             display_rows+="$(tilde_path "${c[2]}")"$'\x1f'"${c[4]}"$'\x1f'"${c[5]}"$'\x1f'"${c[6]}"$'\x1f'"${c[7]}"$'\n'
         done <<< "${GAME_SETTINGS_RECORDED[${fix_title[$id]}]}"
         print_config_rows "$display_rows"
@@ -1756,6 +1756,21 @@ wine_registry_quiet() {
     return 0
 }
 
+# Splits a manifest "CONFIG:" line (tab-separated) into the array named by $2.
+parse_config_line() {
+    local -n _out="$2"
+    mapfile -t -d $'\t' _out < <(printf '%s' "${1#CONFIG:}")
+}
+
+# Waits for wineserver to save the registry the first time it is called in a
+# loop; $1 names the caller's state variable ("" until asked, then ok/busy), so
+# later registry rows reuse the answer. Returns 0 when the files are safe to edit.
+registry_quiet_once() {
+    local -n _state="$1"
+    [ -n "$_state" ] || { wine_registry_quiet && _state="ok" || _state="busy"; }
+    [ "$_state" == "ok" ]
+}
+
 # Usage: apply_game_settings
 # Phase 4: writes GAME_SETTINGS_PLAN into the game's config files and records
 # each change in the manifest as
@@ -1772,7 +1787,7 @@ apply_game_settings() {
 
     # Last install's original values, by path/section/key.
     for line in "${PREV_CONFIG_LINES[@]}"; do
-        mapfile -t -d $'\t' f < <(printf '%s' "${line#CONFIG:}")
+        parse_config_line "$line" f
         prev_old["${f[2]}"$'\x1f'"${f[4]}"$'\x1f'"${f[5]}"]="${f[6]}"
     done
 
@@ -1786,8 +1801,7 @@ apply_game_settings() {
 
             # Once, before the registry file is backed up or read.
             if [ "$fmt" == "registry" ]; then
-                [ -n "$reg_state" ] || { wine_registry_quiet && reg_state="ok" || reg_state="busy"; }
-                [ "$reg_state" == "ok" ] || { record_deploy_failure "$path"; continue; }
+                registry_quiet_once reg_state || { record_deploy_failure "$path"; continue; }
             fi
 
             if [ ! -f "$path" ]; then
@@ -1847,7 +1861,7 @@ apply_game_settings() {
 
     # Carry over last install's changes that are still in effect.
     for line in "${PREV_CONFIG_LINES[@]}"; do
-        mapfile -t -d $'\t' f < <(printf '%s' "${line#CONFIG:}")
+        parse_config_line "$line" f
         [ -n "${recorded["${f[2]}"$'\x1f'"${f[4]}"$'\x1f'"${f[5]}"]:-}" ] && continue
         # A format this script can't read (from a newer build) can't be
         # checked, file or no file, so the record stays: dropping it would
@@ -1984,7 +1998,7 @@ choose_game_settings_to_revert() {
     local line g
     local -a f
     for line in "${CONFIG_LINES[@]}"; do
-        mapfile -t -d $'\t' f < <(printf '%s' "${line#CONFIG:}")
+        parse_config_line "$line" f
         g="${f[0]/#extras/optional}"$'\x1f'"${f[1]}"
         [ -n "${group_lines[$g]+x}" ] || groups+=("$g")
         group_lines[$g]+="$line"$'\n'
@@ -2006,7 +2020,7 @@ choose_game_settings_to_revert() {
             display_rows=""
             while IFS= read -r line; do
                 [ -n "$line" ] || continue
-                mapfile -t -d $'\t' f < <(printf '%s' "${line#CONFIG:}")
+                parse_config_line "$line" f
                 display_rows+="$(tilde_path "${f[2]}")"$'\x1f'"${f[4]}"$'\x1f'"${f[5]}"$'\x1f'"${f[7]}"$'\x1f'"${f[6]}"$'\n'
             done <<< "${group_lines[$g]}"
             bodies+=("$(print_config_rows "$display_rows")")
@@ -2044,7 +2058,7 @@ revert_game_settings() {
         restored=0
         while IFS= read -r line; do
             [ -n "$line" ] || continue
-            mapfile -t -d $'\t' f < <(printf '%s' "${line#CONFIG:}")
+            parse_config_line "$line" f
             # A damaged line (no format at all) has nothing to put back.
             [ -n "${f[3]}" ] || continue
             # A format from a newer build: leave it recorded, and say so, since
@@ -2055,8 +2069,7 @@ revert_game_settings() {
             fi
             [ -f "${f[2]}" ] || continue
             if [ "${f[3]}" == "registry" ]; then
-                [ -n "$reg_state" ] || { wine_registry_quiet && reg_state="ok" || reg_state="busy"; }
-                if [ "$reg_state" != "ok" ]; then GAME_SETTINGS_KEPT+=("$line"); continue; fi
+                registry_quiet_once reg_state || { GAME_SETTINGS_KEPT+=("$line"); continue; }
             fi
             current="$(config_get_key "${f[2]}" "${f[3]}" "${f[4]}" "${f[5]}")"
             if ! config_values_equal "${f[3]}" "$current" "${f[7]}"; then
