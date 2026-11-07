@@ -6,7 +6,8 @@
 #
 # Each game gets an "id" (its file name without .json); the "$schema" editor
 # hint is dropped. Also checks what data/schema.json can't express: every file
-# a fix changes must be defined in that game's game_config.files.
+# a fix changes must be defined in that game's game_config.files, and only
+# key_value files take true/false (the script writes them as flags).
 #
 # Usage: tools/build-game-database.sh           # write game-database.json
 #        tools/build-game-database.sh --check   # exit 1 if the committed file is out of date
@@ -34,11 +35,16 @@ fi
 errors=""
 for f in "${all_files[@]}"; do
     file_errors="$(jq -r --arg f "$f" '
-        (.game_config.files // {} | keys) as $defined
+        (.game_config.files // {}) as $files
+        | ($files | keys) as $defined
         | (.game_config.audio_settings // []) + (.game_config.optional_settings // [])
-        | .[] | .title as $title | (.changes // {}) | keys[]
-        | select(. as $file | $defined | index($file) | not)
-        | "\($f): \"\($title)\" changes \(.), which isn'\''t defined in game_config.files"' "$f")" \
+        | .[] | .title as $title | (.changes // {}) | to_entries[]
+        | .key as $file | .value as $v
+        | if ($defined | index($file) | not)
+          then "\($f): \"\($title)\" changes \($file), which isn'\''t defined in game_config.files"
+          elif ([$v | .. | booleans] | length) > 0 and ($files[$file].format != "key_value")
+          then "\($f): \"\($title)\" uses true or false for \($file), which is \($files[$file].format), not key_value — write the value as text"
+          else empty end' "$f")" \
         || { echo "$f: not valid JSON, or not shaped like a game file" >&2; exit 1; }
     [ -n "$file_errors" ] && errors+="${errors:+$'\n'}$file_errors"
 done
