@@ -357,6 +357,16 @@ upgrade_config_line() {
     UPGRADED_LINE="${line%"$rest"}${UPGRADED_FORMAT}${rest#"$old"}"
 }
 
+# awk source shared by config_get_key and config_set_key, so the two agree on
+# what a section header is. Spliced into each program between its quotes.
+_CONFIG_AWK_IS_HEADER='        function is_header(l,   n, r) {
+            if (!match(l, /^[ \t]*\[[^]]*\]/)) return 0
+            n = substr(l, 1, RLENGTH); r = substr(l, RLENGTH + 1)
+            if (r !~ /^[ \t]*(([;#]|\/\/).*)?$/) return 0
+            sub(/^[ \t]*\[/, "", n); sub(/\]$/, "", n); hname = n
+            return 1
+        }'
+
 # Usage: config_get_key <file> <ini|set_commands|key_value|braced_pairs|ini_braces|quoted_pairs|binary_offset|binary_text|binary_switches|registry> <section> <key>
 # Prints the key's current value, __ABSENT__ if it isn't set, or (key_value
 # only) __TRUE__ for an active bare flag and __FALSE__ for a flag that's only
@@ -386,13 +396,7 @@ config_get_key() {
         return
     fi
     LC_ALL=C awk -v fmt="$fmt" -v sec="$sec" -v key="$key" '
-        function is_header(l,   n, r) {
-            if (!match(l, /^[ \t]*\[[^]]*\]/)) return 0
-            n = substr(l, 1, RLENGTH); r = substr(l, RLENGTH + 1)
-            if (r !~ /^[ \t]*(([;#]|\/\/).*)?$/) return 0
-            sub(/^[ \t]*\[/, "", n); sub(/\]$/, "", n); hname = n
-            return 1
-        }
+'"$_CONFIG_AWK_IS_HEADER"'
         BEGIN { lsec = tolower(sec); lkey = tolower(key); insec = (fmt != "ini" && fmt != "ini_braces") || (fmt == "ini" && sec == ""); found = 0; commented = 0 }
         { sub(/\r$/, "") }
         NR == 1 && substr($0, 1, 3) == "\357\273\277" { $0 = substr($0, 4) }
@@ -507,13 +511,7 @@ config_set_key() {
         }
         function out(line) { outl(line, eol) }
         function flush_blanks(   i) { for (i = 1; i <= nb; i++) outl("", beol[i]); nb = 0 }
-        function is_header(l,   n, r) {
-            if (!match(l, /^[ \t]*\[[^]]*\]/)) return 0
-            n = substr(l, 1, RLENGTH); r = substr(l, RLENGTH + 1)
-            if (r !~ /^[ \t]*(([;#]|\/\/).*)?$/) return 0
-            sub(/^[ \t]*\[/, "", n); sub(/\]$/, "", n); hname = n
-            return 1
-        }
+'"$_CONFIG_AWK_IS_HEADER"'
         function ini_line() { return key "=" val }
         BEGIN {
             lsec = tolower(sec); lkey = tolower(key); insec = (fmt == "ini" && sec == ""); seen_sec = insec; done = 0; nb = 0
