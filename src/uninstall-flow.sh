@@ -225,7 +225,6 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         "folder and put back any originals it replaced."
 
     # Phase 1 only works out what to do; nothing is removed until Phase 2.
-    FILES_DECLINED="0"
     FINAL_REMOVE=()
     FINAL_RESTORE_TARGETS=()
     FINAL_RESTORE_SOURCES=()
@@ -279,9 +278,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         echo -e -n "> "
         read_answer CONFIRM_UNINSTALL
 
-        if [[ "$CONFIRM_UNINSTALL" =~ $NO_RE ]]; then
-            FILES_DECLINED="1"
-        else
+        if [[ ! "$CONFIRM_UNINSTALL" =~ $NO_RE ]]; then
             parse_selection "${#FILES_TO_REMOVE[@]}" "$CONFIRM_UNINSTALL"
 
             idx=1
@@ -300,15 +297,9 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
                 idx=$((idx + 1))
             done
 
-            if [ ${#FINAL_REMOVE[@]} -eq 0 ]; then
-                print_status "Nothing selected, so no files will be removed." "$YELLOW"
-                FILES_DECLINED="1"
-            else
-                # A partial removal means some tracked files will still be
-                # genuinely there — the "fully uninstalled" sentinel must not
-                # be written in that case, same as a full decline.
-                [ ${#FINAL_REMOVE[@]} -lt ${#FILES_TO_REMOVE[@]} ] && FILES_DECLINED="1"
-            fi
+            # Files left behind stay in the manifest, which is why the "fully
+            # uninstalled" marker is only written once nothing is left in it.
+            [ ${#FINAL_REMOVE[@]} -eq 0 ] && print_status "Nothing selected, so no files will be removed." "$YELLOW"
         fi
     else
         print_status "No DSOAL/OpenAL files left to remove." ""
