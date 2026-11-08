@@ -494,3 +494,42 @@ config_find_text_end() {  # <file> -> byte position just past the anchored text
     [[ "$output" != *"unknown format"* && "$output" != *"changed since install"* ]]
     [ "$(config_get_key "$f" ini S k)" == "2" ]
 }
+
+# ---- xml_attributes ----------------------------------------------------------
+
+@test "xml_attributes: reads an attribute of a tag, section and key matched case-insensitively" {
+    write_file "$F" '<Settings>\n<Sound SfxVol="80" UseEAX="1" NumBuffers="8"/>\n</Settings>\n'
+    [ "$(config_get_key "$F" xml_attributes sound useeax)" == "1" ]
+    [ "$(config_get_key "$F" xml_attributes Sound NumBuffers)" == "8" ]
+    [ "$(config_get_key "$F" xml_attributes Sound Missing)" == "__ABSENT__" ]
+    [ "$(config_get_key "$F" xml_attributes Music UseEAX)" == "__ABSENT__" ]
+}
+
+@test "xml_attributes: replaces one value and leaves every other byte alone" {
+    write_file "$F" '<Settings>\r\n<Sound SfxVol="80" UseEAX="0" Other="UseEAX=9" />\r\n</Settings>\r\n'
+    config_set_key "$F" xml_attributes Sound UseEAX 1
+    [ "$(config_get_key "$F" xml_attributes Sound UseEAX)" == "1" ]
+    [ "$(cat "$F")" == $'<Settings>\r\n<Sound SfxVol="80" UseEAX="1" Other="UseEAX=9" />\r\n</Settings>'$'\r' ]
+}
+
+@test "xml_attributes: a tag name that only starts with the section is skipped" {
+    write_file "$F" '<SoundBank UseEAX="0"/>\n<Sound UseEAX="0"/>\n'
+    config_set_key "$F" xml_attributes Sound UseEAX 1
+    [ "$(cat "$F")" == $'<SoundBank UseEAX="0"/>\n<Sound UseEAX="1"/>' ]
+}
+
+@test "xml_attributes: a missing attribute is added inside its tag, and __DELETE__ removes it" {
+    write_file "$F" '<Sound SfxVol="80" />\n'
+    config_set_key "$F" xml_attributes Sound UseEAX 1
+    [ "$(cat "$F")" == '<Sound SfxVol="80" UseEAX="1" />' ]
+    config_set_key "$F" xml_attributes Sound UseEAX __DELETE__
+    [ "$(cat "$F")" == '<Sound SfxVol="80" />' ]
+}
+
+@test "xml_attributes: a tag the file lacks makes the write fail and leaves the file alone" {
+    write_file "$F" '<Settings>\n</Settings>\n'
+    run config_set_key "$F" xml_attributes Sound UseEAX 1
+    [ "$status" -eq 1 ]
+    [ "$(cat "$F")" == $'<Settings>\n</Settings>' ]
+    [ -z "$(ls -A "$BATS_TEST_TMPDIR" | grep eax-restore-cfg)" ]
+}

@@ -45,9 +45,9 @@ for f in "${all_files[@]}"; do
           then "\($f): \"\($title)\" changes \($file), which isn'\''t defined in game_config.files"
           elif ([$v | .. | booleans] | length) > 0 and ($files[$file].format != "key_value")
           then "\($f): \"\($title)\" uses true or false for \($file), which is \($files[$file].format), not key_value — write the value as text"
-          elif ($files[$file].format | IN("ini_braces", "registry")) and ([$v[] | select(type != "object")] | length) > 0
+          elif ($files[$file].format | IN("ini_braces", "xml_attributes", "registry")) and ([$v[] | select(type != "object")] | length) > 0
           then "\($f): \"\($title)\" changes \($file) without a section: \($files[$file].format) needs file, section, key, value"
-          elif ($files[$file].format | IN("ini", "ini_braces", "registry") | not) and ([$v[] | select(type == "object")] | length) > 0
+          elif ($files[$file].format | IN("ini", "ini_braces", "xml_attributes", "registry") | not) and ([$v[] | select(type == "object")] | length) > 0
           then "\($f): \"\($title)\" changes \($file) with a section: \($files[$file].format) takes file, key, value"
           else empty end' "$f")" \
         || { echo "$f: not valid JSON, or not shaped like a game file" >&2; exit 1; }

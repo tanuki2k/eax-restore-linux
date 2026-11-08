@@ -1,0 +1,28 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Hitman: Blood Money",
+  "description": "Hitman: Blood Money is a singleplayer third-person stealth game and the fourth in the Hitman series.",
+  "released": "2006-05-26",
+  "exe": "HitmanBloodMoney.exe",
+  "stores": {
+    "steam": { "id": 6860 },
+    "gog": { "id": 1942346586 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["2.0", "3.0", "4.0"] },
+  "game_config": {
+    "files": {
+      "HitmanBloodMoney.ini": {
+        "format": "key_value",
+        "locations": ["game_exe:HitmanBloodMoney.ini"]
+      }
+    },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in Hitman: Blood Money's configuration.",
+        "changes": { "HitmanBloodMoney.ini": { "UseEAX": "1" } },
+        "tested": true
+      }
+    ]
+  }
+}

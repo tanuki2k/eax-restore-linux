@@ -302,8 +302,8 @@ _lenstr_set() {
 # reader). Edit these when a format is added or renamed; the usage comments
 # of config_get_key and config_set_key, upgrade_format_name and the schema
 # list the names too.
-CONFIG_FORMATS_RE='^(ini|set_commands|key_value|braced_pairs|ini_braces|quoted_pairs|binary_offset|binary_text|binary_switches|registry)$'
-CONFIG_TEXT_FORMATS_RE='^(ini|set_commands|key_value|braced_pairs|ini_braces|quoted_pairs)$'
+CONFIG_FORMATS_RE='^(ini|set_commands|key_value|braced_pairs|ini_braces|quoted_pairs|xml_attributes|binary_offset|binary_text|binary_switches|registry)$'
+CONFIG_TEXT_FORMATS_RE='^(ini|set_commands|key_value|braced_pairs|ini_braces|quoted_pairs|xml_attributes)$'
 
 # Usage: config_format_unreadable <format>
 # True for a record's format that is named but not one this script knows (a
@@ -367,7 +367,41 @@ _CONFIG_AWK_IS_HEADER='        function is_header(l,   n, r) {
             return 1
         }'
 
-# Usage: config_get_key <file> <ini|set_commands|key_value|braced_pairs|ini_braces|quoted_pairs|binary_offset|binary_text|binary_switches|registry> <section> <key>
+# awk functions shared by config_get_key and config_set_key for xml_attributes,
+# a tag's attributes on one line: <Sound UseEAX="1" NumBuffers="8"/>. The
+# section is the tag's name, the key an attribute's name, both matched
+# case-insensitively. xml_tag finds the first tag with that name on a line and
+# sets xs / xe to its first and last character (the closing ">"). xml_attr
+# finds a double-quoted attribute inside that tag text and sets a_s to its
+# name's first character, a_vs to its value's and a_e to its closing quote.
+_CONFIG_AWK_XML='
+        function xml_tag(line, name,   lc, base, p, c, e) {
+            lc = tolower(line); base = 0
+            while ((p = index(substr(lc, base + 1), "<" name)) > 0) {
+                p += base; c = substr(lc, p + 1 + length(name), 1)
+                if (c == "" || c ~ /[ \t\/>]/) {
+                    e = index(substr(lc, p), ">"); if (e == 0) return 0
+                    xs = p; xe = p + e - 1; return 1
+                }
+                base = p
+            }
+            return 0
+        }
+        function xml_attr(tag, name,   lt, base, p, rest) {
+            lt = tolower(tag); base = 0
+            while ((p = index(substr(lt, base + 1), name)) > 0) {
+                p += base
+                rest = substr(tag, p + length(name))
+                if (substr(lt, p - 1, 1) ~ /[ \t]/ && match(rest, /^[ \t]*=[ \t]*"[^"]*"/)) {
+                    a_s = p; a_vs = p + length(name) + index(rest, "\""); a_e = p + length(name) + RLENGTH - 1
+                    return 1
+                }
+                base = p
+            }
+            return 0
+        }'
+
+# Usage: config_get_key <file> <ini|set_commands|key_value|braced_pairs|ini_braces|quoted_pairs|xml_attributes|binary_offset|binary_text|binary_switches|registry> <section> <key>
 # Prints the key's current value, __ABSENT__ if it isn't set, or (key_value
 # only) __TRUE__ for an active bare flag and __FALSE__ for a flag that's only
 # present commented out. Section and key names match case-insensitively, like
@@ -396,7 +430,7 @@ config_get_key() {
         return
     fi
     LC_ALL=C awk -v fmt="$fmt" -v sec="$sec" -v key="$key" '
-'"$_CONFIG_AWK_IS_HEADER"'
+'"$_CONFIG_AWK_IS_HEADER$_CONFIG_AWK_XML"'
         BEGIN { lsec = tolower(sec); lkey = tolower(key); insec = (fmt != "ini" && fmt != "ini_braces") || (fmt == "ini" && sec == ""); found = 0; commented = 0 }
         { sub(/\r$/, "") }
         NR == 1 && substr($0, 1, 3) == "\357\273\277" { $0 = substr($0, 4) }
@@ -431,6 +465,12 @@ config_get_key() {
             if (tolower(k) != lkey) next
             sub(/[ \t]+$/, "", v); gsub(/^"|"$/, "", v)
             print v; found = 1; exit
+        }
+        fmt == "xml_attributes" {
+            if (!xml_tag($0, lsec)) next
+            tag = substr($0, xs, xe - xs + 1)
+            if (!xml_attr(tag, lkey)) next
+            print substr(tag, a_vs, a_e - a_vs); found = 1; exit
         }
         fmt == "braced_pairs" {
             if (!match($0, /^[ \t]*\{[^}]*\}[ \t]*=[ \t]*\{/)) next
@@ -473,14 +513,15 @@ _gadb_set() {
     return 1
 }
 
-# Usage: config_set_key <file> <ini|set_commands|key_value|braced_pairs|ini_braces|quoted_pairs|binary_offset|binary_text|binary_switches|registry> <section> <key> <value>
+# Usage: config_set_key <file> <ini|set_commands|key_value|braced_pairs|ini_braces|quoted_pairs|xml_attributes|binary_offset|binary_text|binary_switches|registry> <section> <key> <value>
 # Sets (or with __DELETE__ removes) one key, keeping everything else in the
 # file as it was — including CRLF line endings, the original spelling of an
 # existing key, and "key = value" spacing. A missing ini key goes at the end
 # of its section (or a new section at the end of the file); a missing key in
-# any other format is appended. Section "" is the top of an ini file, before its
+# any other format is appended (xml_attributes: added to its tag, and the call
+# fails when the file has no such tag). Section "" is the top of an ini file, before its
 # first [header], or a whole file with no headers.
-# quoted_pairs is "key" "value" lines, both quoted. An existing braced_pairs key only has the text between
+# quoted_pairs is "key" "value" lines, both quoted. xml_attributes is <Tag Key="value"/> on one line: the section is the tag, the key an attribute. An existing braced_pairs key only has the text between
 # its value's braces replaced. For key_value, a commented-out example line is left in place and
 # the active line is added right after it. binary_switches only switches an existing
 # on/off setting (see _gadb_set), binary_offset one byte at a position (_byte_set), and binary_text a length-prefixed text found by the bytes before it (_lenstr_set). Writes through a temp file in the
@@ -511,7 +552,7 @@ config_set_key() {
         }
         function out(line) { outl(line, eol) }
         function flush_blanks(   i) { for (i = 1; i <= nb; i++) outl("", beol[i]); nb = 0 }
-'"$_CONFIG_AWK_IS_HEADER"'
+'"$_CONFIG_AWK_IS_HEADER$_CONFIG_AWK_XML"'
         function ini_line() { return key "=" val }
         function braces_line() { return "\t" key " = " val ";" }
         # Rewrites or drops the line when it is the key (spacing around the = and
@@ -608,6 +649,24 @@ config_set_key() {
             }
             out($0); next
         }
+        fmt == "xml_attributes" {
+            if (!done && xml_tag($0, lsec)) {
+                tag = substr($0, xs, xe - xs + 1); done = 1
+                if (xml_attr(tag, lkey)) {
+                    if (del) {
+                        cut = a_s; while (cut > 1 && substr(tag, cut - 1, 1) ~ /[ \t]/) cut--
+                        tag = substr(tag, 1, cut - 1) substr(tag, a_e + 1)
+                    } else tag = substr(tag, 1, a_vs - 1) val substr(tag, a_e)
+                } else if (!del) {
+                    closer = (tag ~ /\/>$/) ? "/>" : ">"
+                    body = substr(tag, 1, length(tag) - length(closer))
+                    match(body, /[ \t]*$/); trail = substr(body, RSTART); sub(/[ \t]*$/, "", body)
+                    tag = body " " key "=\"" val "\"" trail closer
+                }
+                out(substr($0, 1, xs - 1) tag substr($0, xe + 1)); next
+            }
+            out($0); next
+        }
         fmt == "braced_pairs" {
             if (!done && match($0, /^[ \t]*\{[^}]*\}[ \t]*=[ \t]*\{/)) {
                 head = substr($0, 1, RLENGTH); k = head
@@ -628,6 +687,9 @@ config_set_key() {
                     if (NR > 0) out("")
                     out("[" sec "]"); out(ini_line())
                 }
+            } else if (fmt == "xml_attributes") {
+                # Only a tag the file already has can take an attribute.
+                if (!done && !del) exit 1
             } else if (!done && !del && val != "__FALSE__") {
                 if (fmt == "set_commands") out("seta " key " \"" val "\"")
                 else if (fmt == "braced_pairs") out("{" key "} = {" val "}")

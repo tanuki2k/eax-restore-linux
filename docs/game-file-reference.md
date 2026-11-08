@@ -215,6 +215,7 @@ The config files, each keyed by file name. A file has the fields below.
 | `"key_value"` | `key value` lines with no sections. A bare `key` turns a flag on and `;key` turns it off. | S.T.A.L.K.E.R.'s `user.ltx`, Thief Gold's `cam_ext.cfg` |
 | `"braced_pairs"` | `{key} = {value}` lines | Fallout Tactics' `bos.cfg` |
 | `"quoted_pairs"` | `"key" "value"` lines, both in quotes | Shogo's `autoexec.cfg` |
+| `"xml_attributes"` | A tag with its attributes in double quotes on one line, like `<Sound UseEAX="1" />`. The section is the tag's name and the key an attribute's name. The script only changes a tag the file already has, and adds the attribute to that tag if it isn't there. | Hitman: Codename 47's `Hitman.cfg` |
 | `"binary_offset"` | A binary file with no key names. The key is a byte position counted from 0 (decimal, or hex like `0x1b2`) and the value is that byte as a number from 0 to 255. The script only changes a byte the file already has. | Messiah's `Messiah.cfg` |
 | `"binary_text"` | A binary file that stores text as a 4-byte length followed by the characters. The key is the hex bytes just before that length, like `0000803f`, and the value is the new text, up to 64 characters of letters, digits, spaces and `. _ ( ) -`. The text can change length, and the script fixes the length in front of it. It uses the first match with a length of 1 to 64 and printable text after it, and only changes text the file already has. A key like `0000803f+46` is instead the single byte that many bytes past the end of that text, with a value from 0 to 255, for settings stored after a text that can change length. Pick bytes that don't change with the player's other options. | Freedom Force's `options.dat` |
 | `"binary_switches"` | A binary file of named on/off settings. The key is the setting's name. The script can only switch a setting the file already has, so the values are `"0"` or `"1"`. | F.E.A.R.'s `Profile000.gdb` |
@@ -293,7 +294,7 @@ Use the game's own word instead of "mixer" where it has one, and a bare apostrop
 
 The shape depends on the file's format:
 
-* `ini` and `ini_braces` files: file, then section, then key, then value. An `ini` file without sections skips the section: file, then key, then value. `ini_braces` and `registry` always need the section; the database build rejects a change without one.
+* `ini`, `ini_braces` and `xml_attributes` files: file, then section, then key, then value. An `ini` file without sections skips the section: file, then key, then value. `ini_braces`, `xml_attributes` and `registry` always need the section; the database build rejects a change without one.
 * `registry` files: file, then registry key, then value name, then value.
 * Every other format: file, then key, then value. The key is a byte position for `binary_offset`, the hex bytes before the text (with an optional `+N`) for `binary_text`, and the setting's name for `binary_switches`.
 

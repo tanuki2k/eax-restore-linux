@@ -2105,7 +2105,53 @@
           "eax_unified"
         ]
       },
-      "tested": false
+      "game_config": {
+        "files": {
+          "Hitman2.ini": {
+            "format": "key_value",
+            "locations": [
+              "game_exe:Hitman2.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Hitman 2: Silent Assassin's configuration.",
+            "changes": {
+              "Hitman2.ini": {
+                "UseEAX": "1"
+              }
+            },
+            "tested": true
+          }
+        ],
+        "optional_settings": [
+          {
+            "title": "Raise sound buffers",
+            "reason": "Hitman 2: Silent Assassin can play more sounds at once with its sound buffers at the maximum of 128.",
+            "changes": {
+              "Hitman2.ini": {
+                "NumSoundBuffers": "128"
+              }
+            }
+          },
+          {
+            "title": "Raise graphics quality",
+            "reason": "Automatically sets Hitman 2: Silent Assassin draw distance, level of detail, shadow detail and antialiasing at its highest settings.",
+            "changes": {
+              "Hitman2.ini": {
+                "DrawDistance": "1.200000",
+                "LevelOfDetail": "2",
+                "ShadowDetail": "2",
+                "Antialias": "8",
+                "Anisotropy": "1",
+                "DisableTrilinearFiltering": "1"
+              }
+            }
+          }
+        ]
+      }
     },
     {
       "id": "hitman-blood-money",
@@ -2129,7 +2175,28 @@
           "4.0"
         ]
       },
-      "tested": false
+      "game_config": {
+        "files": {
+          "HitmanBloodMoney.ini": {
+            "format": "key_value",
+            "locations": [
+              "game_exe:HitmanBloodMoney.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Hitman: Blood Money's configuration.",
+            "changes": {
+              "HitmanBloodMoney.ini": {
+                "UseEAX": "1"
+              }
+            },
+            "tested": true
+          }
+        ]
+      }
     },
     {
       "id": "hitman-codename-47",
@@ -2155,6 +2222,30 @@
       "install": {
         "tweaks": [
           "eax_unified"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "Hitman.cfg": {
+            "format": "xml_attributes",
+            "locations": [
+              "game_exe:Hitman.cfg"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Hitman: Codename 47's configuration.",
+            "changes": {
+              "Hitman.cfg": {
+                "Sound": {
+                  "UseEAX": "1"
+                }
+              }
+            },
+            "tested": true
+          }
         ]
       },
       "tested": false
@@ -2186,7 +2277,56 @@
           "eax_unified"
         ]
       },
-      "tested": false
+      "game_config": {
+        "files": {
+          "HitmanContracts.ini": {
+            "format": "key_value",
+            "locations": [
+              "game_exe:HitmanContracts.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Hitman: Contracts' configuration.",
+            "changes": {
+              "HitmanContracts.ini": {
+                "UseEAX": "1"
+              }
+            },
+            "tested": true
+          }
+        ],
+        "optional_settings": [
+          {
+            "title": "Raise sound buffers",
+            "reason": "Hitman: Contracts can play more sounds at once with 128 sound buffers.",
+            "changes": {
+              "HitmanContracts.ini": {
+                "NumSoundBuffers": "128"
+              }
+            }
+          },
+          {
+            "title": "Raise graphics quality",
+            "reason": "Automatically sets Hitman: Contracts' draw distance, level of detail, shadow detail, post-filter detail, bump mapping and weather effects at their highest settings.",
+            "changes": {
+              "HitmanContracts.ini": {
+                "DrawDistance": "1.000000",
+                "LevelOfDetail": "2",
+                "ShadowDetail": "2",
+                "PostFilterLOD": "2",
+                "DisableBump": "0",
+                "WeatherEffects": "1",
+                "DisableTrilinearFiltering": "1",
+                "Anisotropy": "1",
+                "TextureResolution": "0"
+              }
+            }
+          }
+        ]
+      }
     },
     {
       "id": "icewind-dale-complete",

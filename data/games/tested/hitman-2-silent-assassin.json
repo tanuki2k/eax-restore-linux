@@ -1,0 +1,47 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Hitman 2: Silent Assassin",
+  "description": "Hitman 2: Silent Assassin is a singleplayer third-person stealth game and the second in the Hitman series.",
+  "released": "2002-10-01",
+  "exe": "hitman2.exe",
+  "stores": {
+    "steam": { "id": 6850 },
+    "gog": { "id": 1207659002 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0", "3.0"] },
+  "install": {
+    "tweaks": ["eax_unified"]
+  },
+  "game_config": {
+    "files": { "Hitman2.ini": { "format": "key_value", "locations": ["game_exe:Hitman2.ini"] } },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in Hitman 2: Silent Assassin's configuration.",
+        "changes": { "Hitman2.ini": { "UseEAX": "1" } },
+        "tested": true
+      }
+    ],
+    "optional_settings": [
+      {
+        "title": "Raise sound buffers",
+        "reason": "Hitman 2: Silent Assassin can play more sounds at once with its sound buffers at the maximum of 128.",
+        "changes": { "Hitman2.ini": { "NumSoundBuffers": "128" } }
+      },
+      {
+        "title": "Raise graphics quality",
+        "reason": "Automatically sets Hitman 2: Silent Assassin draw distance, level of detail, shadow detail and antialiasing at its highest settings.",
+        "changes": {
+          "Hitman2.ini": {
+            "DrawDistance": "1.200000",
+            "LevelOfDetail": "2",
+            "ShadowDetail": "2",
+            "Antialias": "8",
+            "Anisotropy": "1",
+            "DisableTrilinearFiltering": "1"
+          }
+        }
+      }
+    ]
+  }
+}

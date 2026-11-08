@@ -24,7 +24,7 @@ and user-facing docs, and `docs/contributing-games.md` (workflow) and
 **Design rule: anything specific to a game or engine lives in the database, never as a
 special case in the script's code** — config edits, the audio API (and so the engine),
 alsoft.ini values, recommended tweaks. The script only knows how to read and edit the
-ten config formats (`ini`, `ini_braces`, `set_commands`, `key_value`, `braced_pairs`, `quoted_pairs`, `binary_offset` (single bytes at fixed offsets), `binary_text` (length-prefixed text found by the bytes before it), `binary_switches` (Monolith's binary profile),
+eleven config formats (`ini`, `ini_braces`, `set_commands`, `key_value`, `braced_pairs`, `quoted_pairs`, `xml_attributes` (a tag's attributes on one line), `binary_offset` (single bytes at fixed offsets), `binary_text` (length-prefixed text found by the bytes before it), `binary_switches` (Monolith's binary profile),
 and `registry`, the prefix's registry files), not which game needs what.
 
 `eax-restore-linux.sh` is **not committed to the repo** — it's a generated build

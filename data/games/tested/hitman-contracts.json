@@ -1,0 +1,55 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Hitman: Contracts",
+  "description": "Hitman: Contracts is a singleplayer third-person stealth game and the third in the Hitman series.",
+  "released": "2004-04-20",
+  "exe": "HitmanContracts.exe",
+  "stores": {
+    "steam": { "id": 247430 },
+    "gog": { "id": 1207660853 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0", "3.0"] },
+  "install": {
+    "tweaks": ["eax_unified"]
+  },
+  "game_config": {
+    "files": {
+      "HitmanContracts.ini": {
+        "format": "key_value",
+        "locations": ["game_exe:HitmanContracts.ini"]
+      }
+    },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in Hitman: Contracts' configuration.",
+        "changes": { "HitmanContracts.ini": { "UseEAX": "1" } },
+        "tested": true
+      }
+    ],
+    "optional_settings": [
+      {
+        "title": "Raise sound buffers",
+        "reason": "Hitman: Contracts can play more sounds at once with 128 sound buffers.",
+        "changes": { "HitmanContracts.ini": { "NumSoundBuffers": "128" } }
+      },
+      {
+        "title": "Raise graphics quality",
+        "reason": "Automatically sets Hitman: Contracts' draw distance, level of detail, shadow detail, post-filter detail, bump mapping and weather effects at their highest settings.",
+        "changes": {
+          "HitmanContracts.ini": {
+            "DrawDistance": "1.000000",
+            "LevelOfDetail": "2",
+            "ShadowDetail": "2",
+            "PostFilterLOD": "2",
+            "DisableBump": "0",
+            "WeatherEffects": "1",
+            "DisableTrilinearFiltering": "1",
+            "Anisotropy": "1",
+            "TextureResolution": "0"
+          }
+        }
+      }
+    ]
+  }
+}
