@@ -102,8 +102,16 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
             # manifest sits in a folder anyone can write to, and whatever it
             # lists gets deleted.
             manifest_entry="${manifest_entry%$'\r'}"
+            # 0.28.x also recorded the folder it copied the HRTF profiles to;
+            # it's taken back whole, but only a real folder (remove_legacy_hrtf_dir
+            # checks what's in it in Phase 2).
+            legacy_dir=0
+            if manifest_is_legacy_hrtf_dir "$manifest_entry"; then
+                legacy_dir=1
+                if [ -L "$manifest_entry" ] || { [ -e "$manifest_entry" ] && [ ! -d "$manifest_entry" ]; }; then legacy_dir=2; fi
+            fi
             if [[ "$manifest_entry" != /* || "/$manifest_entry/" == *"/../"* ]] \
-                || ! manifest_file_is_ours "$manifest_entry" \
+                || { [ "$legacy_dir" -ne 1 ] && ! manifest_file_is_ours "$manifest_entry"; } \
                 || ! manifest_path_in_scope "$manifest_entry" "$manifest_scope"; then
                 print_warning_arrow "Skipped ${manifest_entry} because it isn't one of the files this script installed."
                 STALE_MANIFEST_LINES+=("$manifest_entry")
@@ -427,7 +435,8 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         # uninstall still knows it's ours.
         REMOVED_FILES=()
         for f in "${FINAL_REMOVE[@]}"; do
-            if rm -f "$f" 2>/dev/null && [ ! -e "$f" ] && [ ! -L "$f" ]; then
+            if { if manifest_is_legacy_hrtf_dir "$f" && [ -d "$f" ] && [ ! -L "$f" ]; then remove_legacy_hrtf_dir "$f"; else rm -f "$f" 2>/dev/null; fi; } \
+                && [ ! -e "$f" ] && [ ! -L "$f" ]; then
                 REMOVED_FILES+=("$f")
             else
                 print_warning_arrow "Couldn't remove $(tilde_path "$f"), so it stays in the install record."

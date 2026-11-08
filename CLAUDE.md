@@ -356,7 +356,9 @@ cached copy.
 they touched; when a manifest exists, uninstall only ever removes what's in it and
 restores the timestamped backups made at install time. Manifest file lines are
 only acted on when they're absolute and have one of the deployed names
-(`manifest_file_is_ours`). If no manifest is found (e.g. an install predating this
+(`manifest_file_is_ours`), plus the one folder 0.28.x recorded, `<game>/OpenAL` or
+`<game>/OpenAL/HRTF` (`manifest_is_legacy_hrtf_dir`; `remove_legacy_hrtf_dir` removes it
+only when it holds nothing but HRTF data). If no manifest is found (e.g. an install predating this
 mechanism), uninstall falls back to a scan for known filenames (`dsound.dll`,
 `dsoal-aldrv.dll`, `OpenAL32.dll`, etc.) that lists only files whose content is what
 this script puts there (`looks_like_our_file`) — a last resort that's less precise

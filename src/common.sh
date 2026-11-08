@@ -58,6 +58,31 @@ manifest_file_is_ours() {
     return 1
 }
 
+# Usage: manifest_is_legacy_hrtf_dir <path>
+# True when the manifest line names the folder 0.28.x copied the HRTF profiles
+# into (<game>/OpenAL, or just <game>/OpenAL/HRTF when OpenAL was already
+# there). Only the name; the caller still checks the path is inside the game's
+# install and that it's a real folder. Nothing deploys it any more, but
+# uninstalling an install from that version still has to take it back.
+manifest_is_legacy_hrtf_dir() {
+    case "$1" in
+        */OpenAL|*/OpenAL/HRTF) return 0 ;;
+    esac
+    return 1
+}
+
+# Usage: remove_legacy_hrtf_dir <dir>
+# Removes the folder only when it holds nothing but what the install put in it:
+# HRTF data sets (.mhr), their credits and the small .txt/.json/.ini files that
+# come with them. Anything else (a mod's own file, a symlink) leaves the
+# folder as it is and returns 1.
+remove_legacy_hrtf_dir() {
+    [ -d "$1" ] && [ ! -L "$1" ] || return 1
+    [ -z "$(find "$1" ! -type d ! \( -type f \( -iname '*.mhr' -o -iname '*.txt' -o -iname '*.json' -o -iname '*.ini' \) \) -print -quit 2>/dev/null)" ] || return 1
+    rm -rf -- "$1" 2>/dev/null
+    [ ! -e "$1" ]
+}
+
 # Usage: shell_quote <text>
 # The text in single quotes, safe to splice into a string a shell will parse
 # (protontricks -c runs its argument through sh).
