@@ -105,7 +105,8 @@ The script deploys other people's work:
 
 * **kcat (Christopher Robinson)** writes [DSOAL](https://github.com/kcat/dsoal) and [OpenAL Soft](https://github.com/kcat/openal-soft). The script uses kcat's own builds: a tested DSOAL revision pinned from the [`archive`](https://github.com/kcat/dsoal/releases/tag/archive) release, or the newest `latest-master` or archive build, together with OpenAL Soft's newest release or its rolling pre-release.
 * **ThreeDeeJay** contributed the Win32/Win64 packaging pipeline that kcat's daily DSOAL builds now come from.
+* **Creative Technology** owns EAX Unified. `assets/EAX4Unified_redist_4001.zip` is Creative's redistributable installer, taken from PCGamingWiki. It's kept here because Creative's own download is gone and PCGamingWiki doesn't offer a direct download. It remains Creative's intellectual property and is not covered by this project's MIT license.
 
 ## License
 
-[MIT](LICENSE).
+[MIT](LICENSE), for this project's own code and data. Creative's EAX Unified redistributable in `assets/` is Creative's and keeps its own terms (see Credits).
