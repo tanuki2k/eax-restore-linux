@@ -106,29 +106,9 @@ launcher hardcodes `releases/latest`).
   `EAX_RESTORE_GAME_DATABASE_FILE=/path/to/file.json` (point at a local JSON edit before
   it's pushed) are useful when iterating — see the script's own
   `--- Environment Variables ---` header comment for the full list.
-- **Rust TUI (`tui/`):** a full-screen front end that lists database, library and
-  manually installed games and hands install, uninstall and the Tools to this
-  script through `EAX_RESTORE_ACTION`, `EAX_RESTORE_GAME_DIR` and
-  `EAX_RESTORE_GAME`; the script stays the engine until the Rust port replaces
-  it. Checks, as `.github/workflows/tui.yml` runs them: `cd tui && cargo fmt --check
-  && cargo clippy --locked --all-targets -- -D warnings && cargo test --locked`.
-  Run it with `cargo run -- ../game-database.json` after `./build.sh`. Its look copies the old fzf browser's (boxed Search,
-  Filters and Games beside a full-height pane; the colours are in `tui/src/theme.rs`,
-  taken from fzf's palette and the script's `GREEN`/`YELLOW`/`WHITE`; the script's bold
-  colours use ratatui's `Light*` names because crossterm writes the plain ones as the dark palette
-  entry, where a terminal draws `\033[1;33m` bright). The right pane switches between
-  Profile and Settings with ←/→ (Shift-↑/↓ scrolls it); F1 lists every key (`tui/src/help.rs`: keep it in step
-  with `app.rs`), Ctrl-F gives the pane the whole screen, and Ctrl-L puts it under the list instead of
-  beside it (it does that by itself below 104 columns); `--list`, `--settings NAME` and `--profile NAME`
-  print the game list, one game's settings view or its profile without the TUI, which is
-  how the Rust views are compared with the Bash browser's `print_game_settings_details`
-  and `print_game_profile_stores` (word for word, for every game). The Games list keeps its window between redraws (`App::list_offset`) and moves it only
-  when the highlight is within 3 rows of an edge, like fzf's `--scroll-off`. It finds the
-  script via `EAX_RESTORE_SCRIPT`, beside itself, its cache (`~/.local/share/
-  eax-restore-linux/tui/<channel>/`) or `dist/`, skipping any that lacks
-  `EAX_RESTORE_ACTION`; if none, it downloads its channel's release script and
-  checks it against the `.sha256` (`EAX_RESTORE_CHANNEL=dev` at build time picks
-  the dev channel).
+- **Rust TUI:** a work-in-progress front end that lives on the `dev` branch only (`tui/`
+  and `.github/workflows/tui.yml`). It is not part of `main` or the stable release, and
+  `dev`'s `CLAUDE.md` describes it.
 - **Tests:** `./build.sh && bats tests/unit tests/integration` (needs `bats`;
   `.github/workflows/test.yml` runs them plus `bash -n`, `shellcheck --severity=error`
   over `dist/`, `build.sh` and `tools/`, and the profiler's Python tests,
