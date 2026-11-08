@@ -82,7 +82,8 @@ launcher hardcodes `releases/latest`).
   `<commit-date>`, and a git-less checkout leaves the `src/globals.sh` literals
   untouched. Setting `BUILD_VERSION=` and/or `BUILD_DATE=` in the environment
   overrides the corresponding stamp (assembled output only, never
-  `src/globals.sh`) — handy locally; the `dev` workflow no longer needs them.
+  `src/globals.sh`); `BUILD_CHANNEL=stable|dev` forces a stable or dev build whatever the
+  branch (the release workflow's dry run uses `stable`) — handy locally; the `dev` workflow no longer needs them.
 - **Syntax-check after any edit:** `bash -n dist/eax-restore-linux.sh`
 - **Shellcheck (if installed):** `shellcheck dist/eax-restore-linux.sh`
 - **After editing the database** (`data/games/{tested,untested}/*.json` or

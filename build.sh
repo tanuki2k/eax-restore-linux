@@ -81,6 +81,14 @@ is_dev_build=false
 if [ -n "$branch" ] && [ "$branch" != "main" ] && [ "$on_release_tag" != true ]; then
     is_dev_build=true
 fi
+# BUILD_CHANNEL=stable|dev forces the answer, for building as `main` would from
+# another branch (the release workflow's dry run).
+case "${BUILD_CHANNEL:-}" in
+    stable) is_dev_build=false ;;
+    dev) is_dev_build=true ;;
+    "") ;;
+    *) echo "build.sh: BUILD_CHANNEL must be stable or dev, not '${BUILD_CHANNEL}'." >&2; exit 1 ;;
+esac
 
 if [ -z "$stamp_version" ] && [ "$is_dev_build" = true ]; then
     base="$(sed -nE 's/^SCRIPT_VERSION="([^"]+)".*/\1/p' "$out")"
