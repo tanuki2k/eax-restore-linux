@@ -8,6 +8,10 @@ tools/profiler/eax-profiler               # starts it and opens http://127.0.0.1
 
 You need `python3`, `jq`, `curl` and the Python `jsonschema` package (`python3-jsonschema` on most distros). `--port N` picks another port. It builds `dist/` itself when that's missing or out of date.
 
+![The editor with Quake 4 open on its Overview tab: the game list on the left, the form in the middle, and the problems list and JSON preview on the right](https://raw.githubusercontent.com/tanuki2k/eax-restore-linux/main/docs/images/profile-editor/editor-overview.png)
+
+The list on the left holds every game file, the form is in the middle, and the right-hand column shows any problems and a live preview of the JSON file that will be written.
+
 ## Contents
 
 [Starting it](#starting-it) · [Editing](#editing) · [AI](#ai) · [Capture](#capture) · [Submit](#submit) · [Manage installs](#manage-installs) · [Housekeeping](#housekeeping)
@@ -24,7 +28,13 @@ The plain command still works: `python3 tools/profiler/profiler.py [--port 8765]
 
 The **Edit** tab builds its forms from `data/schema.json`, with dropdowns, checkboxes and a table for a setting's changes. It validates as you type. When you save, it first shows the exact change to the file, then writes it, runs `tools/format-game-database.sh` and lists anything still invalid. "Move to..." does the `git mv` between drafts, untested and tested. **Rebuild database** runs `tools/build-game-database.sh`.
 
+The preview before anything is written looks like this:
+
+![The "Write these changes?" window showing the lines that will be added to quake-4.json, with Cancel and Write file buttons](https://raw.githubusercontent.com/tanuki2k/eax-restore-linux/main/docs/images/profile-editor/editor-save-preview.png)
+
 **Verified.** Each game setting, and a game's alsoft.ini values, has a *Verified* or *Not verified* button in its header. It's visible even when the card is folded, and a click switches it. The Audio and Optional settings headings count how many are not verified yet. If you edit a verified setting's changes, its *Only offer when...* or the alsoft.ini values, it goes back to not verified, because what was checked has changed. The card's ↺ undoes that along with the edit. The list under the search box can show only the games with no game settings, or only those with something not verified. An amber *cfg* tag marks the second kind.
+
+![The Game settings tab for Quake 4, with a setting's header showing its change count, a green Verified button, and the up, down and move-to-Optional buttons](https://raw.githubusercontent.com/tanuki2k/eax-restore-linux/main/docs/images/profile-editor/editor-game-settings.png)
 
 **Build status.** The tool compares each saved game file with `game-database.json`, the way `tools/build-game-database.sh` would write it. A game that differs gets an amber "changed" or "not built" tag in the list and a badge in its header. The **Rebuild database** button shows how many games it's behind, including entries whose file has been removed. Drafts are never built, so they show nothing. This reflects the saved file, not edits you haven't saved yet.
 
@@ -51,6 +61,8 @@ Capture replaces doing the comparison by hand.
 
 > [!NOTE]
 > It's experimental, so its tab is hidden until you turn on **Show the Capture tab** under **Capture** in Settings. The browser remembers the setting.
+
+![The Settings page with the Appearance choices and the Show the Capture tab checkbox](https://raw.githubusercontent.com/tanuki2k/eax-restore-linux/main/docs/images/profile-editor/editor-settings.png)
 
 There are three stages, all on one screen.
 
