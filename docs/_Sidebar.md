@@ -15,3 +15,6 @@ The game database
 Tutorials
 * [Your first install](tutorials/first-install.md)
 * [Add a game](tutorials/add-a-game.md)
+
+The project
+* [Roadmap](roadmap.md)
