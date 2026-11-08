@@ -2,7 +2,7 @@
 
 This is a local web page for editing the game files in `data/games/` and `data/drafts/`. It can also work out what a game's settings should be by watching what changes when you turn the sound options on. It's plain Python 3 from the standard library, plus `jsonschema` for validation.
 
-This guide is part of the [game database](https://github.com/tanuki2k/eax-restore-linux/blob/HEAD/docs/database/overview.md) docs. To work through adding a game from start to finish, follow the [Add a game tutorial](https://github.com/tanuki2k/eax-restore-linux/blob/HEAD/docs/tutorials/add-a-game.md).
+This guide is part of the [game database](https://github.com/tanuki2k/eax-restore-linux/blob/HEAD/docs/database/database-overview.md) docs. To work through adding a game from start to finish, follow the [Add a game tutorial](https://github.com/tanuki2k/eax-restore-linux/blob/HEAD/docs/tutorials/add-a-game.md).
 
 ```bash
 tools/profiler/eax-profiler               # starts it and opens http://127.0.0.1:8765

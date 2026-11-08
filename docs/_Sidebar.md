@@ -7,7 +7,7 @@ Using the script
 * [Troubleshooting](script/troubleshooting.md)
 
 The game database
-* [The game database](database/overview.md)
+* [The game database](database/database-overview.md)
 * [Game file reference](database/game-file-reference.md)
 * [Contributing a game](database/contributing.md)
 * [The profile editor](database/profile-editor.md)

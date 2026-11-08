@@ -6,7 +6,7 @@ You need a clone of this repository, `python3`, `jq`, `curl`, the Python `jsonsc
 
 ## 1. Check the game isn't there
 
-Open the script and go to Tools, then Browse game profiles, and search for the game. The browser hides games nobody has checked yet, so press Ctrl-T to include them. The editor's sidebar lists every game file. If an entry exists but is wrong, open it from the sidebar instead of pressing **+ Add game**. [The game database](../database/overview.md) explains how entries are stored.
+Open the script and go to Tools, then Browse game profiles, and search for the game. The browser hides games nobody has checked yet, so press Ctrl-T to include them. The editor's sidebar lists every game file. If an entry exists but is wrong, open it from the sidebar instead of pressing **+ Add game**. [The game database](../database/database-overview.md) explains how entries are stored.
 
 ## 2. Start the editor
 
