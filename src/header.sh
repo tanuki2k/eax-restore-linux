@@ -92,7 +92,8 @@
 #   repeat runs on a machine you've already verified.
 #
 # * EAX_RESTORE_SKIP_UPDATE_CHECK=1  Skips the start-up check for a newer
-#   version of the script. The check is also skipped without a terminal.
+#   version of the script. The check is also skipped without a terminal or with an
+#   answers file.
 #
 # * EAX_RESTORE_DSOAL_PIN=1  Uses the stable kcat/dsoal build (the revision
 #   pinned in the script, taken from kcat's "archive" release) without

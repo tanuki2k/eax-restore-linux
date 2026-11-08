@@ -8,8 +8,8 @@ print_banner "PRE-FLIGHT SYSTEM CHECK"
 
 EAX_RESTORE_SKIP_PREFLIGHT="${EAX_RESTORE_SKIP_PREFLIGHT:-}"
 if is_truthy "$EAX_RESTORE_SKIP_PREFLIGHT"; then
-    print_note "EAX_RESTORE_SKIP_PREFLIGHT is set — skipping the tool scan and trusting that curl," \
-        "unzip, file, protontricks, winetricks, wine, and jq are already available."
+    print_note "EAX_RESTORE_SKIP_PREFLIGHT is set, so the script is skipping its tool scan and trusting" \
+        "that curl, unzip, file, grep, awk, protontricks, winetricks, wine, and jq are already installed."
 
     # Still needed by the rest of the script, just done quietly: the
     # protontricks Flatpak fallback function, and WINE_CMD.

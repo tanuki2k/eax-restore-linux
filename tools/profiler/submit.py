@@ -10,7 +10,7 @@ from urllib.parse import quote
 import dbio
 
 UPSTREAM = os.environ.get("EAX_PROFILER_UPSTREAM", "tanuki2k/eax-restore-linux")
-BASE = os.environ.get("EAX_PROFILER_BASE", "dev")  # until dev becomes main
+BASE = os.environ.get("EAX_PROFILER_BASE", "dev")  # game data lands on dev first; main gets it from there
 URL_LIMIT = 7000  # GitHub's new-file page takes the content in the address; longer ones get cut off
 LONG_NUMBER = re.compile(r"\d{9,}")
 

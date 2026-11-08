@@ -44,9 +44,9 @@ a manual step: bump `SCRIPT_VERSION` in `src/globals.sh`, run
 `./build.sh`, generate `dist/eax-restore-linux.sh.sha256` with
 `sha256sum dist/eax-restore-linux.sh > dist/eax-restore-linux.sh.sha256` (lets users
 verify the download, see README's "Verifying the download"), and create a GitHub
-release tagged `vX.Y` (or `vX.Y.Z` for a patch, e.g. `v0.28.6`) with `dist/eax-restore-linux.sh`,
+release tagged `vX.Y` (or `vX.Y.Z` for a patch, e.g. `v0.29.1`) with `dist/eax-restore-linux.sh`,
 `dist/eax-restore-linux.sh.sha256`, and `eax-restore-linux.desktop` attached as assets
-(matching the existing `v0.28.6` release) — mark it as the latest release so the
+(matching the previous release) — mark it as the latest release so the
 `releases/latest/download/` URLs resolve to it. `SCRIPT_DATE` is **not** bumped by
 hand: `build.sh` derives it from the HEAD commit date (`git show -s --format=%cs`)
 at build time — a plain `vX.Y[.Z]` checkout gets that tag's commit date. The
@@ -93,7 +93,7 @@ launcher hardcodes `releases/latest`).
   database with the Tools menu's browser — a quick look at how an entry's
   profile reads.
 - **Run the script:** `./dist/eax-restore-linux.sh` (interactive; requires `curl`, `unzip`,
-  `file`, `jq`, plus `protontricks` for Steam games or `winetricks` for Heroic/GOG
+  `file`, `jq`, `grep`, `awk`, plus `protontricks` for Steam games or `winetricks` for Heroic/GOG
   games — the script's own pre-flight check offers to install missing ones).
   `EAX_RESTORE_SKIP_PREFLIGHT=1`, `EAX_RESTORE_SKIP_CACHE_CHECK=1`, and
   `EAX_RESTORE_GAME_DATABASE_FILE=/path/to/file.json` (point at a local JSON edit before
@@ -313,7 +313,7 @@ their execution order in the assembled script):
     loop opened just above the main menu in `vcrun-only-flow.sh` and closed
     (`break; done`) at the bottom of `install-flow.sh` lets install step 1 go
     back to the main menu: when the menu was shown (`MAIN_MENU_SHOWN`), a "no"
-    while picking a game sets `RESTART_REQUESTED` and the steps 1-2 loop does
+    while picking a game sets `RESTART_REQUESTED` and the steps 1-3 loop does
     `continue 2`. Uninstall, VC++ runtime install, DSOAL logging and EAX Unified install keep step
     1's own menu, which then offers "[R]eturn to the main menu" the same way.
     The Tools items go back to the Tools menu instead (`OPEN_TOOLS_MENU`, set
@@ -343,9 +343,9 @@ download only on change, verify integrity (`unzip -tq` + the pinned SHA256 via
 `verify_checksum`, or a live GitHub-published digest via `verify_or_confirm`), and keep
 the existing cache on a failed download. Stable DSOAL is the pinned
 `DSOAL_PINNED_REV` (`src/globals.sh`): advancing it after testing a newer archive build
-is part of the release routine. `game-database.json` is fetched separately (on dev, from the
-`dev` branch and cached as `game-database.v3.json`, since schema 3 only exists there
-until 0.29 merges) by
+is part of the release routine. `game-database.json` is fetched separately (from the
+branch `DATA_BRANCH` names: `main` in a stable build, `dev` in a dev build, which `build.sh`
+stamps like the version; cached as `game-database.v3.json`, named for the schema) by
 `ensure_game_database()` (called on demand from step 1's scan and several other call
 sites — memoized per run) — it deliberately always fetches fresh (no staleness check)
 since it's a small, community-edited file where PRs should take effect immediately,
@@ -388,7 +388,7 @@ All user-facing output goes through `echo -e` with the colour vars defined in
 The recurring shapes built from those vars — banners, prompts, arrow sub-steps,
 Note:/Warning:/Error: messages, wrapped prose — are centralized as helper functions in
 `ui.sh`; **use the helper for any of the shapes below instead of hand-rolling the
-`echo -e` sequence.** Preflight through the Stage 2 "Launcher Identification" step
+`echo -e` sequence.** Preflight through Phase 1 step 3, "Launcher Identification",
 (`preflight.sh`, `config-flow.sh` header/steps, `get_game_directory`/
 `detect_game_environment` in `detection.sh`) is the canonical example of the helpers
 in use — match its look when extending any of these flows. The rest of the script is

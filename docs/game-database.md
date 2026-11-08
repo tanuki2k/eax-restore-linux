@@ -2,7 +2,7 @@
 
 When you start an install, the script can scan your Steam and Heroic libraries for games it recognises. You pick one from the list instead of hunting for its folder.
 
-What it recognises comes from [`game-database.json`](https://github.com/tanuki2k/eax-restore-linux/blob/HEAD/game-database.json), a community-maintained file in this repo, built from one small file per game in [`data/games/`](https://github.com/tanuki2k/eax-restore-linux/blob/HEAD/data/games/). The script fetches it fresh on every run from the `dev` branch, so a fix to a game's entry reaches you straight away. It keeps a local copy as `game-database.v3.json`, which it falls back to when you're offline.
+What it recognises comes from [`game-database.json`](https://github.com/tanuki2k/eax-restore-linux/blob/HEAD/game-database.json), a community-maintained file in this repo, built from one small file per game in [`data/games/`](https://github.com/tanuki2k/eax-restore-linux/blob/HEAD/data/games/). The script fetches it fresh on every run (a stable release reads the `main` branch, a dev build reads `dev`), so a fix to a game's entry reaches you straight away. It keeps a local copy as `game-database.v3.json`, which it falls back to when you're offline.
 
 ## What a game's entry gives you
 

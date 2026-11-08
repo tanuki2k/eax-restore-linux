@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-Only the latest version of `eax-restore-linux.sh` on the `main` branch is supported. Please update to the latest version before reporting an issue.
+Only the [latest release](../../releases/latest) is supported. The `dev` pre-release is unstable and unsupported. Please update to the latest release before reporting an issue.
 
 ## Reporting a Vulnerability
 

@@ -265,7 +265,7 @@ get_game_directory() {
 
     # The main menu's choice (S/B/M) is used once, on the first pass, in
     # place of this step's own menu. A retry — a scan that came up empty, a
-    # folder that isn't there, the steps 1-2 restart loop — gets the menu.
+    # folder that isn't there, the steps 1-3 restart loop — gets the menu.
     local preset="${LOCATE_METHOD:-}"
     LOCATE_METHOD=""
     [ "$preset" == "scan" ] && [ "$can_scan" -eq 0 ] && preset=""
