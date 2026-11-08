@@ -11,7 +11,7 @@ This is a hobby project: one Bash script and a database of games. Contributions 
 
 ## Reporting bugs
 
-[Open an issue](../../issues/new) and tell me which game and launcher you were using (Steam/Proton or Heroic/Wine), what went wrong and the exact error message if there was one. If you can, paste the relevant part of the script's output. The log file helps even more, and [Troubleshooting](docs/troubleshooting.md) says where it is.
+[Open an issue](../../issues/new) and tell me which game and launcher you were using (Steam/Proton or Heroic/Wine), what went wrong and the exact error message if there was one. If you can, paste the relevant part of the script's output. The log file helps even more, and [Troubleshooting](docs/script/troubleshooting.md) says where it is.
 
 ## Suggesting enhancements
 
@@ -27,7 +27,7 @@ Open an issue and describe what you were trying to do. If it only matters for on
 
 ## Adding or fixing a game
 
-Game profiles are the JSON files under `data/games/` and `data/drafts/`. [Contributing a game](docs/contributing-games.md) covers the workflow, and the [game file reference](docs/game-file-reference.md) describes every field. You can also use the profile editor, `tools/profiler/eax-profiler`. It runs in your browser, and its Capture tab can find the config keys for you (see [its README](tools/profiler/README.md)).
+Game profiles are the JSON files under `data/games/` and `data/drafts/`. [Contributing a game](docs/database/contributing.md) covers the workflow, and the [game file reference](docs/database/game-file-reference.md) describes every field. You can also use the profile editor, `tools/profiler/eax-profiler`. It runs in your browser, and its Capture tab can find the config keys for you (see [its README](tools/profiler/README.md)).
 
 A new entry starts in `data/games/untested/`. Before moving one to `tested/`, check each store ID against the store's own page. The editor marks IDs it found on your install as `local_install_verified`, but that only means they were seen locally.
 
