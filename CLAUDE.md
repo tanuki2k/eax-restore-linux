@@ -129,6 +129,13 @@ launcher hardcodes `releases/latest`).
   `EAX_RESTORE_ACTION`; if none, it downloads its channel's release script and
   checks it against the `.sha256` (`EAX_RESTORE_CHANNEL=dev` at build time picks
   the dev channel).
+- **Docs and the wiki:** `docs/` is split into `script/`, `database/` and `tutorials/`, and
+  the repo links between pages by folder path. The wiki is generated from it by
+  `.github/workflows/wiki-sync.yml` on every push to `main` that touches `docs/`, using
+  `tools/build-wiki.py`: GitHub wikis ignore folders, so it flattens every page to its file
+  name, rewrites the links to match, and adds the profile editor's README as `profile-editor`.
+  Page file names must stay unique across the folders. To see what it makes, run
+  `tools/build-wiki.py docs tools/profiler/README.md /tmp/wiki`.
 - **Tests:** `./build.sh && bats tests/unit tests/integration` (needs `bats`;
   `.github/workflows/test.yml` runs them plus `bash -n`, `shellcheck --severity=error`
   over `dist/`, `build.sh` and `tools/`, and the profiler's Python tests,

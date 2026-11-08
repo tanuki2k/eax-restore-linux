@@ -15,7 +15,7 @@ These pages cover [eax-restore-linux](https://github.com/tanuki2k/eax-restore-li
 
 | Page | What's in it |
 | --- | --- |
-| [The game database](database/overview.md) | What an entry holds, how the files are built and what tested means |
+| [The game database](database/database-overview.md) | What an entry holds, how the files are built and what tested means |
 | [Game file reference](database/game-file-reference.md) | Every field in a game's file |
 | [Contributing a game](database/contributing.md) | The rules for adding or fixing a game |
 | [The profile editor](database/profile-editor.md) | The editor you use to write and check entries |
