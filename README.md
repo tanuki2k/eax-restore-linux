@@ -105,7 +105,7 @@ The script deploys other people's work:
 
 * **kcat (Christopher Robinson)** writes [DSOAL](https://github.com/kcat/dsoal) and [OpenAL Soft](https://github.com/kcat/openal-soft). The script uses kcat's own builds: a tested DSOAL revision pinned from the [`archive`](https://github.com/kcat/dsoal/releases/tag/archive) release, or the newest `latest-master` or archive build, together with OpenAL Soft's newest release or its rolling pre-release.
 * **ThreeDeeJay** contributed the Win32/Win64 packaging pipeline that kcat's daily DSOAL builds now come from.
-* **Creative Technology** owns EAX Unified. `assets/EAX4Unified_redist_4001.zip` is Creative's redistributable installer, available from [PCGamingWiki's file library](https://community.pcgamingwiki.com/files/file/367-eax-unified/) and the [VOGONS Vintage Driver Library](https://vogonsdrivers.com/getfile.php?fileid=2226&menustate=0). It's kept here because Creative's own download is gone and neither site offers a direct download link. It remains Creative's intellectual property and is not covered by this project's MIT license.
+* **Creative Technology** owns EAX Unified. `assets/EAX4Unified_redist_4001.zip` is Creative's redistributable installer, available from [PCGamingWiki's file library](https://community.pcgamingwiki.com/files/file/367-eax-unified/) and the [VOGONS Vintage Driver Library](https://vogonsdrivers.com/getfile.php?fileid=2226&menustate=0). It's kept here because Creative's own download is gone and neither site wants to be linked to for the file itself. It remains Creative's intellectual property and is not covered by this project's MIT license.
 
 ## License
 
