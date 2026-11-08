@@ -92,7 +92,7 @@ Like the install, it asks everything first (which files to remove, whether to cl
 | --- | --- |
 | [How it works](docs/how-it-works.md) | An install step by step, plus the Tools menu and profile browser |
 | [Library scanning and the game database](docs/game-database.md) | How the script recognises your games and what it knows about them |
-| [Using the profile editor](docs/profile-editor.md) | Adding or fixing a game with the editor in your browser |
+| [Using the profile editor](tools/profiler/README.md) | Adding or fixing a game with the editor in your browser |
 | [Environment variables](docs/environment-variables.md) | Options for repeat runs and scripting |
 | [Troubleshooting](docs/troubleshooting.md) | Run logs, DSOAL logging and bug reports |
 | [Contributing a game](docs/contributing-games.md) | Adding or fixing a game profile |
