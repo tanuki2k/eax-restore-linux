@@ -1,0 +1,10 @@
+{
+  "$schema": "../schema.json",
+  "name": "Freespace 2",
+  "description": "Freespace 2 is a singleplayer and multiplayer space combat simulation game and the second in the FreeSpace series.",
+  "released": "1999-09-30",
+  "stores": {
+    "gog": { "id": 5 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0"] }
+}

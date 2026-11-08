@@ -1,0 +1,13 @@
+{
+  "$schema": "../schema.json",
+  "name": "Prince of Persia: The Sands of Time",
+  "description": "Prince of Persia: The Sands of Time is a singleplayer third-person action-adventure and platform game and the first in the Sands of Time trilogy of the Prince of Persia series.",
+  "released": "2003-12-02",
+  "stores": {
+    "steam": { "id": 13600 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0", "3.0"] },
+  "install": {
+    "tweaks": ["eax_unified"]
+  }
+}

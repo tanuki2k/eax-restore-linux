@@ -1,0 +1,10 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Battlestations: Midway",
+  "description": "Battlestations: Midway is a singleplayer and multiplayer naval action and real-time tactics game and the first in the Battlestations series.",
+  "released": "2007-01-30",
+  "stores": {
+    "steam": { "id": 6870 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["3.0", "4.0"] }
+}

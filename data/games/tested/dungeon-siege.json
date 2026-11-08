@@ -1,0 +1,31 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Dungeon Siege",
+  "description": "Dungeon Siege is a singleplayer and multiplayer third-person action role-playing game and the first in the Dungeon Siege series.",
+  "released": "2002-04-05",
+  "exe": "DungeonSiege.exe",
+  "stores": {
+    "steam": { "id": 39190 },
+    "gog": {
+      "id": 1185868626,
+      "store_details": "GOG sells this only in the 'Dungeon Siege Collection', together with Dungeon Siege II and Dungeon Siege III."
+    }
+  },
+  "eax": { "api": "directsound3d", "sound_system": "miles", "versions": ["1.0"] },
+  "game_config": {
+    "files": {
+      "prefs.gas": {
+        "format": "ini_braces",
+        "locations": ["prefix_documents:Dungeon Siege/prefs.gas"]
+      }
+    },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in Dungeon Siege's configuration.",
+        "changes": { "prefs.gas": { "prefs": { "eax_enabled": "true" } } },
+        "tested": true
+      }
+    ]
+  }
+}

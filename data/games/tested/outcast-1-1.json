@@ -1,0 +1,16 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Outcast 1.1",
+  "description": "Outcast 1.1 is a singleplayer third-person action-adventure game, an enhanced edition of 1999's Outcast, recompiled from the original source code and improved to run smoothly on today's computers.",
+  "released": "2014-12-18",
+  "stores": {
+    "steam": { "id": 336610 },
+    "gog": { "id": 1207658853 }
+  },
+  "eax": {
+    "api": "directsound3d",
+    "status": "not_implemented",
+    "problem": "This is the 2014 Outcast 1.1, not the original 1999 Outcast, and it has no EAX."
+  },
+  "notes": "The original 1999 Outcast supports EAX, and GOG includes it as a separate download among the extras."
+}

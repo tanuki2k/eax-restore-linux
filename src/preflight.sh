@@ -1,0 +1,115 @@
+# ==============================================================================
+# SCRIPT START
+# ==============================================================================
+clear
+print_start_header
+
+print_banner "PRE-FLIGHT SYSTEM CHECK"
+
+EAX_RESTORE_SKIP_PREFLIGHT="${EAX_RESTORE_SKIP_PREFLIGHT:-}"
+if is_truthy "$EAX_RESTORE_SKIP_PREFLIGHT"; then
+    print_note "EAX_RESTORE_SKIP_PREFLIGHT is set, so the script is skipping its tool scan and trusting" \
+        "that curl, unzip, file, grep, awk, protontricks, winetricks, wine, and jq are already installed."
+
+    # Still needed by the rest of the script, just done quietly: the
+    # protontricks Flatpak fallback function, and WINE_CMD.
+    if ! command -v protontricks &> /dev/null && flatpak info com.github.Matoking.protontricks &> /dev/null; then
+        protontricks() { flatpak run com.github.Matoking.protontricks "$@"; }
+    fi
+    WINE_CMD="wine"
+    command -v wine &> /dev/null || WINE_CMD=$(find_local_wine)
+else
+    echo -e "\n${CYAN}Verifying required base tools before accessing cache...${NC}\n"
+
+    REQUIRED_BASE_PKGS=("curl" "unzip" "file" "grep" "awk")
+    MISSING_BASE_PKGS=()
+
+    for pkg in "${REQUIRED_BASE_PKGS[@]}"; do
+        echo -n -e " -> Checking for ${YELLOW}$pkg${NC}... "
+        if command -v "$pkg" &> /dev/null; then echo -e "${GREEN}FOUND${NC}"; else echo -e "${YELLOW}${BOLD}MISSING${NC}"; MISSING_BASE_PKGS+=("$pkg"); fi
+    done
+
+    # protontricks is for Steam games and winetricks for Heroic/GOG ones: a machine with
+    # only one launcher shouldn't be made to install the other's tool. With neither
+    # launcher found (or both), both are asked for, as before.
+    HAS_STEAM_LIB=0; HAS_HEROIC_LIB=0
+    [ -n "$(steam_roots)" ] && HAS_STEAM_LIB=1
+    [ -n "$(heroic_roots)" ] && HAS_HEROIC_LIB=1
+    NEED_PROTONTRICKS=1; NEED_WINETRICKS=1
+    [ "$HAS_STEAM_LIB" -eq 0 ] && [ "$HAS_HEROIC_LIB" -eq 1 ] && NEED_PROTONTRICKS=0
+    [ "$HAS_HEROIC_LIB" -eq 0 ] && [ "$HAS_STEAM_LIB" -eq 1 ] && NEED_WINETRICKS=0
+
+    echo -n -e " -> Checking for ${YELLOW}protontricks${NC}... "
+    if command -v protontricks &> /dev/null; then
+        echo -e "${GREEN}FOUND${NC}"
+    else
+        if flatpak info com.github.Matoking.protontricks &> /dev/null; then
+            echo -e "${GREEN}FOUND (Flatpak)${NC}"
+            protontricks() { flatpak run com.github.Matoking.protontricks "$@"; }
+        elif [ "$NEED_PROTONTRICKS" -eq 0 ]; then
+            echo -e "${DIM}MISSING (only needed for Steam games, and none were found)${NC}"
+        else
+            echo -e "${YELLOW}MISSING (Required for Steam games)${NC}"
+            MISSING_BASE_PKGS+=("protontricks")
+        fi
+    fi
+
+    echo -n -e " -> Checking for ${YELLOW}winetricks${NC}... "
+    if command -v winetricks &> /dev/null; then echo -e "${GREEN}FOUND${NC}"
+    elif [ "$NEED_WINETRICKS" -eq 0 ]; then echo -e "${DIM}MISSING (only needed for Heroic/GOG games, and none were found)${NC}"
+    else echo -e "${YELLOW}MISSING (Required for Heroic/GOG games)${NC}"; MISSING_BASE_PKGS+=("winetricks"); fi
+
+    echo -n -e " -> Checking for ${YELLOW}wine binary${NC}... "
+    WINE_CMD="wine"
+    if command -v wine &> /dev/null; then
+        echo -e "${GREEN}FOUND (System)${NC}"
+    else
+        WINE_CMD=$(find_local_wine)
+        if [ -n "$WINE_CMD" ]; then echo -e "${GREEN}FOUND (Local Heroic)${NC}"
+        else echo -e "${YELLOW}MISSING (Registry patches for non-Steam games will be skipped)${NC}"; WINE_CMD=""; fi
+    fi
+
+    echo -n -e " -> Checking for ${YELLOW}jq${NC}... "
+    if command -v jq &> /dev/null; then
+        echo -e "${GREEN}FOUND${NC}"
+    else
+        echo -e "${YELLOW}MISSING (required for checksum verification and the game database)${NC}"
+        MISSING_BASE_PKGS+=("jq")
+    fi
+
+    # Optional for now: only Tools → Browse game profiles uses it, and that
+    # offers to install it too. Installed along with any required tool that's
+    # missing, on its own so a failure can't stop the script, but never asked
+    # about by itself here, which would mean a question on every run.
+    FZF_MISSING=0
+    echo -n -e " -> Checking for ${YELLOW}fzf${NC}... "
+    if command -v fzf &> /dev/null; then echo -e "${GREEN}FOUND${NC}"
+    else echo -e "${DIM}MISSING (optional, for browsing game profiles)${NC}"; FZF_MISSING=1; fi
+
+    if [ ${#MISSING_BASE_PKGS[@]} -gt 0 ]; then
+        print_error "this script needs a few tools that aren't installed yet: ${MISSING_BASE_PKGS[*]}"
+        if is_steamos; then
+            print_warning "SteamOS detected. To protect your immutable filesystem, please install missing" \
+                "tools via the Discover software centre."
+            print_error "Cannot proceed without base dependencies. Exiting."; exit 1
+        else
+            install_question="Auto-install these dependencies now? (Requires sudo)"
+            [ "$FZF_MISSING" -eq 1 ] && install_question="Auto-install these dependencies, plus fzf for browsing game profiles? (Requires sudo)"
+            if confirm "$install_question"; then
+                install_packages "${MISSING_BASE_PKGS[@]}" \
+                    || { print_error "Cannot proceed without base dependencies. Exiting."; exit 1; }
+                print_status "Dependencies installed successfully." "$GREEN"
+                if [ "$FZF_MISSING" -eq 1 ]; then
+                    install_packages fzf && FZF_MISSING=0 \
+                        || print_note_arrow "fzf didn't install, so browsing game profiles will offer it again."
+                fi
+            else print_error "Cannot proceed without base dependencies. Exiting."; exit 1; fi
+        fi
+    else print_status "All base requirements met." "$GREEN"; fi
+fi
+
+# Fetched once here, before the main menu, so its status line doesn't show
+# up partway through a step, and the menus can leave out what needs it when
+# it's missing (GAME_DATABASE_FILE stays empty). Every later call reuses this
+# result.
+ensure_game_database

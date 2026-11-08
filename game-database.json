@@ -1,0 +1,5569 @@
+{
+  "schema_version": 3,
+  "_readme": "Generated from data/games/tested/*.json and data/games/untested/*.json by tools/build-game-database.sh; do not edit by hand. Games from untested/ carry \"tested\": false. Field reference: data/schema.json and docs/game-file-reference.md.",
+  "games": [
+    {
+      "id": "alpha-centauri",
+      "name": "Alpha Centauri",
+      "description": "Alpha Centauri is a singleplayer and multiplayer turn-based 4X strategy game.",
+      "released": "1999-02-09",
+      "exe": "terran.exe",
+      "stores": {
+        "steam": {
+          "id": 2204130,
+          "store_details": "Sold as the 'Planetary Pack', bundling the Alien Crossfire expansion."
+        },
+        "gog": {
+          "id": 1207658936,
+          "store_details": "Sold as the 'Planetary Pack', bundling the Alien Crossfire expansion."
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "Alpha Centauri.Ini": {
+            "format": "ini",
+            "locations": [
+              "game_exe:Alpha Centauri.Ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Alpha Centauri's configuration.",
+            "changes": {
+              "Alpha Centauri.Ini": {
+                "Alpha Centauri": {
+                  "ds3d": "1",
+                  "eax": "1"
+                }
+              }
+            },
+            "tested": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "alpha-prime",
+      "name": "Alpha Prime",
+      "description": "Alpha Prime is a singleplayer first-person shooter game.",
+      "released": "2006-12-21",
+      "exe": "AlphaPrime.exe",
+      "stores": {
+        "steam": {
+          "id": 2590
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "4.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "com_registry_routing"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "settings.cfg": {
+            "format": "key_value",
+            "locations": [
+              "game_exe:settings.cfg"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Alpha Prime's configuration.",
+            "changes": {
+              "settings.cfg": {
+                "EnableEAX": "1",
+                "EnableSoundOcclusion": "1"
+              }
+            },
+            "tested": false
+          },
+          {
+            "title": "Enable stereo sound",
+            "reason": "Sets Alpha Prime's speakers to stereo sound.",
+            "only_if": {
+              "speakers": "stereo"
+            },
+            "changes": {
+              "settings.cfg": {
+                "Speakers": "2"
+              }
+            },
+            "tested": false
+          },
+          {
+            "title": "Enable headphones",
+            "reason": "Sets Alpha Prime's speakers to headphones.",
+            "only_if": {
+              "speakers": "headphones"
+            },
+            "changes": {
+              "settings.cfg": {
+                "Speakers": "4"
+              }
+            },
+            "tested": false
+          },
+          {
+            "title": "Enable Pro Logic surround sound",
+            "reason": "Sets Alpha Prime's speakers to Pro Logic surround sound.",
+            "only_if": {
+              "speakers": "matrix"
+            },
+            "changes": {
+              "settings.cfg": {
+                "Speakers": "5"
+              }
+            },
+            "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+            "tested": false
+          },
+          {
+            "title": "Enable 4.0 surround sound",
+            "reason": "Sets Alpha Prime's speakers to 4.0 surround sound.",
+            "only_if": {
+              "speakers": "quad"
+            },
+            "changes": {
+              "settings.cfg": {
+                "Speakers": "3"
+              }
+            },
+            "tested": false
+          },
+          {
+            "title": "Enable 5.1 surround sound",
+            "reason": "Sets Alpha Prime's speakers to 5.1 surround sound.",
+            "only_if": {
+              "speakers": [
+                "surround51",
+                "surround61"
+              ]
+            },
+            "changes": {
+              "settings.cfg": {
+                "Speakers": "6"
+              }
+            },
+            "tested": false
+          },
+          {
+            "title": "Enable 7.1 surround sound",
+            "reason": "Sets Alpha Prime's speakers to 7.1 surround sound.",
+            "only_if": {
+              "speakers": "surround71"
+            },
+            "changes": {
+              "settings.cfg": {
+                "Speakers": "7"
+              }
+            },
+            "tested": false
+          }
+        ]
+      },
+      "notes": "Alpha Prime sets its speaker option back to stereo every time it starts, so the speaker settings offered later don't last. That happened with Proton's default PipeWire audio driver, and with a 7.1 output on the PulseAudio driver.",
+      "tested": false
+    },
+    {
+      "id": "anachronox",
+      "name": "Anachronox",
+      "description": "Anachronox is a singleplayer third-person role-playing game.",
+      "released": "2001-06-27",
+      "exe": "anox.exe",
+      "stores": {
+        "steam": {
+          "id": 242940
+        },
+        "gog": {
+          "id": 1207659012
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0"
+        ]
+      },
+      "tested": false
+    },
+    {
+      "id": "aquanox",
+      "name": "AquaNox",
+      "description": "AquaNox is a singleplayer and multiplayer first-person shooter and submarine simulation game and the first in the AquaNox series.",
+      "released": "2001-10-12",
+      "stores": {
+        "steam": {
+          "id": 39630
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0"
+        ]
+      },
+      "tested": false
+    },
+    {
+      "id": "arx-fatalis",
+      "name": "Arx Fatalis",
+      "description": "Arx Fatalis is a singleplayer first-person action role-playing game.",
+      "released": "2002-06-28",
+      "exe": "arx.exe",
+      "stores": {
+        "steam": {
+          "id": 1700
+        },
+        "gog": {
+          "id": 1207658680
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "cfg.ini": {
+            "format": "ini",
+            "locations": [
+              "game_exe:cfg.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Arx Fatalis' configuration.",
+            "changes": {
+              "cfg.ini": {
+                "AUDIO": {
+                  "EAX": "1"
+                }
+              }
+            },
+            "tested": false
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Arx Libertatis",
+          "url": "https://arx-libertatis.org/"
+        }
+      ],
+      "notes": "On Linux, the Arx Libertatis engine reimplementation (arx-libertatis.org) is a strong alternative: it runs natively without Wine or Proton, reuses your Arx Fatalis data files and plays the game's environmental reverb out of the box. Use it or EAX, not both.",
+      "tested": false
+    },
+    {
+      "id": "assassins-creed",
+      "name": "Assassin's Creed",
+      "description": "Assassin's Creed is a singleplayer third-person action-adventure and stealth game and the first in the Assassin's Creed series.",
+      "released": "2008-04-08",
+      "exe": "AssassinsCreed_Dx9.exe",
+      "stores": {
+        "steam": {
+          "id": 15100
+        },
+        "gog": {
+          "id": 1207659023
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0",
+          "4.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified"
+        ]
+      },
+      "notes": "The PC 'Director's Cut Edition' sold on both stores is the original 2008 PC port of the 2007 console game, with four PC-exclusive bonus missions and DirectX 10 support added on top.",
+      "tested": false
+    },
+    {
+      "id": "avencast-rise-of-the-mage",
+      "name": "Avencast: Rise of the Mage",
+      "description": "Avencast: Rise of the Mage is a singleplayer third-person action role-playing game.",
+      "released": "2007-11-14",
+      "stores": {
+        "gog": {
+          "id": 1731734113
+        }
+      },
+      "eax": {
+        "api": "openal",
+        "versions": [
+          "2.0",
+          "3.0",
+          "4.0",
+          "5.0"
+        ]
+      },
+      "tested": false
+    },
+    {
+      "id": "baldurs-gate-2-complete",
+      "name": "Baldur's Gate 2 Complete",
+      "description": "Baldur's Gate 2 Complete is a singleplayer and multiplayer isometric role-playing game.",
+      "released": "2000-09-21",
+      "exe": "BGMain.exe",
+      "stores": {
+        "gog": {
+          "id": 1207658893,
+          "delisted": true,
+          "store_details": "This is the original 2000 Baldur's Gate II: Shadows of Amn with its Throne of Bhaal expansion. GOG stopped selling it by November 2016 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "baldur.ini": {
+            "format": "ini",
+            "locations": [
+              "game_exe:baldur.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Baldur's Gate II's configuration.",
+            "changes": {
+              "baldur.ini": {
+                "Game Options": {
+                  "Environmental Audio": "1"
+                }
+              }
+            },
+            "tested": true
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "GOG forum: BGEE, BG2EE, IWEE vs originals",
+          "url": "https://www.gog.com/forum/baldurs_gate_series/bgee_bg2ee_iwee_vs_originals"
+        }
+      ]
+    },
+    {
+      "id": "baldurs-gate-ii-enhanced-edition",
+      "name": "Baldur's Gate II: Enhanced Edition",
+      "description": "Baldur's Gate II: Enhanced Edition is a singleplayer and multiplayer isometric role-playing game, an enhanced edition of 2000's Baldur's Gate II: Shadows of Amn.",
+      "released": "2013-11-15",
+      "exe": "BaldurII.exe",
+      "stores": {
+        "steam": {
+          "id": 257350
+        },
+        "gog": {
+          "id": 1207666373
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "status": "not_implemented",
+        "problem": "This is the Enhanced Edition, not the classic Baldur's Gate II, and it has no EAX."
+      },
+      "notes": "Baldur's Gate 2 Complete, a separate purchase on GOG, is the original 2000 release that still supports EAX."
+    },
+    {
+      "id": "baldurs-gate-enhanced-edition",
+      "name": "Baldur's Gate: Enhanced Edition",
+      "description": "Baldur's Gate: Enhanced Edition is a singleplayer and multiplayer isometric role-playing game, an enhanced edition of 1998's Baldur's Gate.",
+      "released": "2012-11-28",
+      "exe": "Baldur.exe",
+      "stores": {
+        "steam": {
+          "id": 228280
+        },
+        "gog": {
+          "id": 1207666353
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "status": "not_implemented",
+        "problem": "This is the Enhanced Edition, not the classic Baldur's Gate, and it has no EAX."
+      },
+      "notes": "Baldur's Gate: The Original Saga, a separate purchase on GOG, is the original 1998 release that still supports EAX."
+    },
+    {
+      "id": "baldurs-gate-the-original-saga",
+      "name": "Baldur's Gate: The Original Saga",
+      "description": "Baldur's Gate: The Original Saga is a singleplayer and multiplayer isometric role-playing game.",
+      "released": "1998-12-21",
+      "exe": "BGMain.exe",
+      "stores": {
+        "gog": {
+          "id": 1207658886,
+          "delisted": true,
+          "store_details": "This is the original 1998 Baldur's Gate with its Tales of the Sword Coast expansion. GOG stopped selling it by November 2016 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "Baldur.ini": {
+            "format": "ini",
+            "locations": [
+              "game_exe:Baldur.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Baldur's Gate's configuration.",
+            "changes": {
+              "Baldur.ini": {
+                "Game Options": {
+                  "Environmental Audio": "1"
+                }
+              }
+            },
+            "tested": true
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "GOG forum: BGEE, BG2EE, IWEE vs originals",
+          "url": "https://www.gog.com/forum/baldurs_gate_series/bgee_bg2ee_iwee_vs_originals"
+        }
+      ]
+    },
+    {
+      "id": "battlestations-midway",
+      "name": "Battlestations: Midway",
+      "description": "Battlestations: Midway is a singleplayer and multiplayer naval action and real-time tactics game and the first in the Battlestations series.",
+      "released": "2007-01-30",
+      "stores": {
+        "steam": {
+          "id": 6870
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "3.0",
+          "4.0"
+        ]
+      },
+      "tested": false
+    },
+    {
+      "id": "bioshock",
+      "name": "BioShock",
+      "description": "BioShock is a singleplayer first-person shooter and immersive sim game and the first in the BioShock series.",
+      "released": "2007-08-21",
+      "exe": "Bioshock.exe",
+      "stores": {
+        "steam": {
+          "id": 7670,
+          "store_details": "This is the original 2007 BioShock, an ideal candidate for restoring EAX sound."
+        }
+      },
+      "eax": {
+        "api": "openal",
+        "versions": [
+          "4.0",
+          "5.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "Bioshock.ini": {
+            "format": "ini",
+            "locations": [
+              "prefix_appdata:Bioshock/Bioshock.ini"
+            ],
+            "crash_marker": "Running.ini"
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in BioShock's configuration.",
+            "changes": {
+              "Bioshock.ini": {
+                "ShockGame.ShockUserSettings": {
+                  "bEAXEnabled": "True"
+                }
+              }
+            },
+            "follow_up": "If BioShock starts with EAX turned off, make sure you quit the game from its main menu, otherwise it assumes the game crashed and resets Bioshock.ini to its previous state. If this happens, manually turn on 'Use Creative EAX Audio' in the game's audio settings.",
+            "tested": true
+          },
+          {
+            "title": "Enable 4.0 surround sound",
+            "reason": "Sets BioShock's mixer to 4.0 surround sound.",
+            "only_if": {
+              "speakers": "quad"
+            },
+            "changes": {
+              "Bioshock.ini": {
+                "ShockGame.ShockUserSettings": {
+                  "SpeakerMode": "SM_Quad"
+                }
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Enable 5.1 surround sound",
+            "reason": "Sets BioShock's mixer to 5.1 surround sound.",
+            "only_if": {
+              "speakers": [
+                "surround51",
+                "surround61"
+              ]
+            },
+            "changes": {
+              "Bioshock.ini": {
+                "ShockGame.ShockUserSettings": {
+                  "SpeakerMode": "SM_5_1"
+                }
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Enable 7.1 surround sound",
+            "reason": "Sets BioShock's mixer to 7.1 surround sound.",
+            "only_if": {
+              "speakers": "surround71"
+            },
+            "changes": {
+              "Bioshock.ini": {
+                "ShockGame.ShockUserSettings": {
+                  "SpeakerMode": "SM_7_1"
+                }
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Enable Pro Logic surround sound",
+            "reason": "Sets BioShock's mixer to Pro Logic surround sound.",
+            "only_if": {
+              "speakers": "matrix"
+            },
+            "changes": {
+              "Bioshock.ini": {
+                "ShockGame.ShockUserSettings": {
+                  "SpeakerMode": "SM_ProLogic"
+                }
+              }
+            },
+            "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+            "tested": true
+          }
+        ],
+        "optional_settings": [
+          {
+            "title": "Raise texture filtering",
+            "reason": "BioShock filters textures at a low level, so floors and walls blur when seen at an angle.",
+            "changes": {
+              "Bioshock.ini": {
+                "D3DDrv.D3DRenderDevice": {
+                  "LevelOfAnisotropy": "16"
+                },
+                "D3DDrv10.D3DRenderDevice10": {
+                  "LevelOfAnisotropy": "16"
+                }
+              }
+            },
+            "tested": true
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Creative's BioShock audio guide (archived)",
+          "url": "https://web.archive.org/web/20080514015042/http://www.soundblaster.com/products/gaming/article.asp?articleID=71545&categoryID=13"
+        },
+        {
+          "title": "PCGamingWiki: BioShock",
+          "url": "https://www.pcgamingwiki.com/wiki/BioShock"
+        }
+      ]
+    },
+    {
+      "id": "brothers-in-arms-earned-in-blood",
+      "name": "Brothers in Arms: Earned in Blood",
+      "description": "Brothers in Arms: Earned in Blood is a singleplayer and multiplayer first-person tactical shooter game and the second in the Brothers in Arms series.",
+      "released": "2005-10-06",
+      "exe": "EiB.exe",
+      "stores": {
+        "steam": {
+          "id": 19800
+        },
+        "gog": {
+          "id": 1239584357
+        }
+      },
+      "eax": {
+        "api": "openal",
+        "versions": [
+          "2.0",
+          "3.0",
+          "4.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "EiB.ini": {
+            "format": "ini",
+            "locations": [
+              "game_exe:EiB.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Earned in Blood's configuration.",
+            "changes": {
+              "EiB.ini": {
+                "ALAudio.ALAudioSubsystem": {
+                  "UseDefaultDriver": "False",
+                  "UseEAX": "True",
+                  "Use3DSound": "True"
+                }
+              }
+            },
+            "tested": false
+          }
+        ]
+      },
+      "tested": false
+    },
+    {
+      "id": "brothers-in-arms-hells-highway",
+      "name": "Brothers in Arms: Hell's Highway",
+      "description": "Brothers in Arms: Hell's Highway is a singleplayer and multiplayer first-person tactical shooter game and the third in the Brothers in Arms series.",
+      "released": "2008-10-07",
+      "exe": "biahh.exe",
+      "stores": {
+        "steam": {
+          "id": 15390
+        },
+        "gog": {
+          "id": 1796017250
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "4.0",
+          "5.0"
+        ]
+      },
+      "tested": false
+    },
+    {
+      "id": "brothers-in-arms-road-to-hill-30",
+      "name": "Brothers in Arms: Road to Hill 30",
+      "description": "Brothers in Arms: Road to Hill 30 is a singleplayer and multiplayer first-person tactical shooter game and the first in the Brothers in Arms series.",
+      "released": "2005-03-08",
+      "exe": "bia.exe",
+      "stores": {
+        "steam": {
+          "id": 15190
+        },
+        "gog": {
+          "id": 1993805983
+        }
+      },
+      "eax": {
+        "api": "openal",
+        "versions": [
+          "2.0",
+          "3.0",
+          "4.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "bia.ini": {
+            "format": "ini",
+            "locations": [
+              "game_exe:bia.ini",
+              "prefix_appdata:Gearbox Software/Brothers In Arms/MattBaker/bia.ini"
+            ],
+            "all_locations": true
+          },
+          "Default.ini": {
+            "format": "ini",
+            "locations": [
+              "game_exe:Default.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Brothers in Arms' configuration.",
+            "changes": {
+              "bia.ini": {
+                "ALAudio.ALAudioSubsystem": {
+                  "UseDefaultDriver": "False",
+                  "UseEAX": "True",
+                  "Use3DSound": "True"
+                }
+              },
+              "Default.ini": {
+                "ALAudio.ALAudioSubsystem": {
+                  "UseDefaultDriver": "False",
+                  "UseEAX": "True",
+                  "Use3DSound": "True"
+                }
+              }
+            },
+            "tested": false
+          }
+        ],
+        "optional_settings": [
+          {
+            "title": "Raise anisotropic filtering, grass and decal detail",
+            "reason": "Out of the box the game uses lower detail settings. This raises anisotropic filtering to 16, grass detail and decoration draw distance to 2, and bullet decals to 256.",
+            "changes": {
+              "bia.ini": {
+                "Engine.GameInfo": {
+                  "bBlobShadowsOnly": "False"
+                },
+                "Engine.TerrainInfo": {
+                  "DecoDrawDistanceScale": "2.000000"
+                },
+                "gbxBase.ImpactManager": {
+                  "MaxBulletDecals": "256"
+                },
+                "D3DDrv.D3DRenderDevice": {
+                  "LevelOfAnisotropy": "16",
+                  "UseCubeMapRenderTarget": "True"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "tested": false
+    },
+    {
+      "id": "call-of-juarez",
+      "name": "Call of Juarez",
+      "description": "Call of Juarez is a singleplayer and multiplayer first-person shooter game and the first in the Call of Juarez series.",
+      "released": "2006-09-15",
+      "stores": {
+        "steam": {
+          "id": 3020
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified"
+        ]
+      },
+      "tested": false
+    },
+    {
+      "id": "clive-barkers-undying",
+      "name": "Clive Barker's Undying",
+      "description": "Clive Barker's Undying is a singleplayer first-person shooter and survival horror game.",
+      "released": "2001-02-22",
+      "exe": "Undying.exe",
+      "stores": {
+        "gog": {
+          "id": 1207659191
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "System.ini": {
+            "format": "ini",
+            "locations": [
+              "game_exe:System.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Clive Barker's Undying's configuration.",
+            "changes": {
+              "System.ini": {
+                "Galaxy.GalaxyAudioSubsystem": {
+                  "Use3dHardware": "True",
+                  "UseSpatial": "True"
+                }
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Enable Pro Logic surround sound",
+            "reason": "Sets Clive Barker's Undying's mixer to Pro Logic surround sound.",
+            "only_if": {
+              "speakers": "matrix"
+            },
+            "changes": {
+              "System.ini": {
+                "Galaxy.GalaxyAudioSubsystem": {
+                  "UseSurround": "True"
+                }
+              }
+            },
+            "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+            "tested": true
+          }
+        ],
+        "optional_settings": [
+          {
+            "title": "Raise sound quality",
+            "reason": "Clive Barker's Undying mixes its sound at a low sample rate, which dulls high-pitched sounds.",
+            "changes": {
+              "System.ini": {
+                "Galaxy.GalaxyAudioSubsystem": {
+                  "OutputRate": "48000Hz"
+                }
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Raise texture filtering",
+            "reason": "Clive Barker's Undying filters textures at a low level, so a visible line shows where each floor and wall texture switches to a blurrier version.",
+            "changes": {
+              "System.ini": {
+                "D3DDrv.D3DRenderDevice": {
+                  "UseTrilinear": "True"
+                }
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Raise color depth",
+            "reason": "Clive Barker's Undying runs fullscreen with a reduced color range, so smooth shading like skies and shadows shows visible bands.",
+            "changes": {
+              "System.ini": {
+                "WinDrv.WindowsClient": {
+                  "FullscreenColorBits": "32"
+                }
+              }
+            },
+            "tested": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "condemned-criminal-origins",
+      "name": "Condemned: Criminal Origins",
+      "description": "Condemned: Criminal Origins is a singleplayer first-person survival horror and action game and the first in the Condemned series.",
+      "released": "2006-04-11",
+      "exe": "Condemned.exe",
+      "stores": {
+        "steam": {
+          "id": 4720,
+          "delisted": true,
+          "store_details": "Delisted from Steam and the Microsoft Store at the end of October 2025, with no reason given."
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "2.0",
+          "3.0",
+          "4.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "Profile000.gdb": {
+            "format": "binary_switches",
+            "locations": [
+              "prefix_public_documents:Monolith Productions/Condemned/Profiles/Profile000.gdb"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Condemned's configuration.",
+            "changes": {
+              "Profile000.gdb": {
+                "UseHWSound": "1",
+                "UseEAX": "1",
+                "UseEAX4": "1"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "descent-3",
+      "name": "Descent 3",
+      "description": "Descent 3 is a singleplayer and multiplayer first-person shooter game and the third in the Descent series.",
+      "released": "1999-06-17",
+      "exe": "MAIN.EXE",
+      "stores": {
+        "steam": {
+          "id": 273590
+        },
+        "gog": {
+          "id": 1207658657
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "2.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "system.reg": {
+            "format": "registry",
+            "locations": [
+              "prefix:system.reg"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Descent 3's configuration.",
+            "changes": {
+              "system.reg": {
+                "Software\\Wow6432Node\\Outrage\\Descent3": {
+                  "SoundMixer": "6",
+                  "SoundcardName": "Primary Sound Driver"
+                }
+              }
+            },
+            "tested": true
+          }
+        ],
+        "optional_settings": [
+          {
+            "title": "Set detail level to a fixed preset and LAN connection",
+            "reason": "Descent 3 saves its detail preset and network connection type in the registry. The changes show it was set to detail setting 3, marked as configured, with a LAN connection at Fast speed.",
+            "changes": {
+              "system.reg": {
+                "Software\\Wow6432Node\\Outrage\\Descent3": {
+                  "ConnectionSpeed": "Fast",
+                  "DetailLevelConfigured": "1",
+                  "NetworkConnection": "LAN",
+                  "PredefDetailSetting": "3"
+                }
+              }
+            },
+            "tested": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "deus-ex",
+      "name": "Deus Ex",
+      "description": "Deus Ex is a singleplayer and multiplayer first-person action role-playing and immersive sim game and the first in the Deus Ex series.",
+      "released": "2000-06-23",
+      "exe": "DeusEx.exe",
+      "stores": {
+        "steam": {
+          "id": 6910
+        },
+        "gog": {
+          "id": 1207658995
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0"
+        ]
+      },
+      "install": {
+        "alsoft_ini": {
+          "reverb": {
+            "boost": "6"
+          }
+        },
+        "alsoft_tested": true
+      },
+      "game_config": {
+        "files": {
+          "DeusEx.ini": {
+            "format": "ini",
+            "locations": [
+              "game_exe:DeusEx.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Deus Ex's configuration.",
+            "changes": {
+              "DeusEx.ini": {
+                "Engine.Engine": {
+                  "AudioDevice": "Galaxy.GalaxyAudioSubsystem"
+                },
+                "Galaxy.GalaxyAudioSubsystem": {
+                  "Use3dHardware": "True",
+                  "UseReverb": "True"
+                }
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Enable Pro Logic surround sound",
+            "reason": "Sets Deus Ex's mixer to Pro Logic surround sound.",
+            "only_if": {
+              "speakers": "matrix"
+            },
+            "changes": {
+              "DeusEx.ini": {
+                "Galaxy.GalaxyAudioSubsystem": {
+                  "UseSurround": "True"
+                }
+              }
+            },
+            "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+            "tested": true
+          }
+        ],
+        "optional_settings": [
+          {
+            "title": "Raise sound quality",
+            "reason": "Deus Ex mixes its sound at a lower rate than most sound systems play at, so it's resampled before you hear it.",
+            "changes": {
+              "DeusEx.ini": {
+                "Galaxy.GalaxyAudioSubsystem": {
+                  "OutputRate": "48000Hz"
+                }
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Raise texture filtering",
+            "reason": "Deus Ex filters textures at a low level, so a visible line shows where each floor and wall texture switches to a blurrier version.",
+            "changes": {
+              "DeusEx.ini": {
+                "D3DDrv.D3DRenderDevice": {
+                  "UseTrilinear": "True"
+                }
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Raise color depth",
+            "reason": "Deus Ex runs fullscreen with a reduced color range, so smooth shading like skies and shadows shows visible bands.",
+            "changes": {
+              "DeusEx.ini": {
+                "WinDrv.WindowsClient": {
+                  "FullscreenColorBits": "32"
+                }
+              }
+            },
+            "tested": true
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "DSOAL issue #79",
+          "url": "https://github.com/kcat/dsoal/issues/79"
+        },
+        {
+          "title": "Unreal DirectX11 Renderer",
+          "url": "https://www.moddb.com/mods/unreal-directx11-renderer-for-ut-ug-rune-and-dx"
+        },
+        {
+          "title": "Kcat - Dsoal - Deus Ex No reverb",
+          "url": "https://github.com/kcat/dsoal/issues/79"
+        }
+      ],
+      "notes": "Reverb is quiet by default, so the install offers to boost it. Stay on the default Galaxy driver: the community ALAudio mod doesn't pass the game's EAX reverb through."
+    },
+    {
+      "id": "doom-3",
+      "name": "DOOM 3",
+      "description": "DOOM 3 is a singleplayer and multiplayer first-person shooter and survival horror game and the third main game in the Doom series.",
+      "released": "2004-08-03",
+      "exe": "Doom3.exe",
+      "stores": {
+        "steam": {
+          "id": 9050,
+          "companion_apps": [
+            9070
+          ],
+          "store_details": "DOOM 3 is sold as a bundle with Resurrection of Evil and DOOM 3: BFG Edition. Steam lists Resurrection of Evil as its own game."
+        },
+        "gog": {
+          "id": 1492054092,
+          "id_source": "local_install_verified",
+          "store_details": "DOOM 3 is sold as a bundle with Resurrection of Evil and DOOM 3: BFG Edition. Heroic shows the bundle as two library entries."
+        }
+      },
+      "eax": {
+        "api": "openal",
+        "versions": [
+          "4.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "DoomConfig.cfg": {
+            "format": "set_commands",
+            "locations": [
+              "game_exe:base/DoomConfig.cfg"
+            ]
+          },
+          "d3xp DoomConfig.cfg": {
+            "format": "set_commands",
+            "locations": [
+              "game_exe:d3xp/DoomConfig.cfg"
+            ],
+            "if_missing": "skip"
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in DOOM 3's configuration.",
+            "changes": {
+              "DoomConfig.cfg": {
+                "s_useOpenAL": "1",
+                "s_useEAXReverb": "1"
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Enable EAX in Resurrection of Evil",
+            "reason": "Automatically enables EAX in Resurrection of Evil's configuration.",
+            "changes": {
+              "d3xp DoomConfig.cfg": {
+                "s_useOpenAL": "1",
+                "s_useEAXReverb": "1"
+              }
+            },
+            "tested": true
+          }
+        ],
+        "optional_settings": [
+          {
+            "title": "Fix low image quality",
+            "reason": "DOOM 3 can't detect how much memory modern graphics cards have, so it loads its lowest-resolution textures.",
+            "changes": {
+              "DoomConfig.cfg": {
+                "com_videoRam": "1024",
+                "image_downSize": "0",
+                "image_downSizeBump": "0",
+                "image_downSizeSpecular": "0",
+                "image_ignoreHighQuality": "0"
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Fix low image quality in Resurrection of Evil",
+            "reason": "Resurrection of Evil can't detect how much memory modern graphics cards have, so it loads its lowest-resolution textures.",
+            "changes": {
+              "d3xp DoomConfig.cfg": {
+                "com_videoRam": "1024",
+                "image_downSize": "0",
+                "image_downSizeBump": "0",
+                "image_downSizeSpecular": "0"
+              }
+            },
+            "tested": true
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Steam: DOOM 3",
+          "url": "https://store.steampowered.com/app/208200/"
+        },
+        {
+          "title": "GOG: DOOM 3",
+          "url": "https://www.gog.com/en/game/doom_3"
+        }
+      ]
+    },
+    {
+      "id": "doom-3-bfg-edition",
+      "name": "DOOM 3: BFG Edition",
+      "description": "DOOM 3: BFG Edition is a singleplayer and multiplayer first-person shooter and survival horror game, a remaster of 2004's DOOM 3.",
+      "released": "2012-10",
+      "exe": "Doom3BFG.exe",
+      "stores": {
+        "steam": {
+          "id": 208200
+        },
+        "gog": {
+          "id": 1135892318
+        }
+      },
+      "eax": {
+        "api": "openal",
+        "status": "not_implemented",
+        "problem": "This is the 2012 BFG Edition, not the classic DOOM 3, and it has no EAX."
+      },
+      "notes": "If you also own the classic DOOM 3, that one has EAX — it comes with the same purchase."
+    },
+    {
+      "id": "dreamfall-the-longest-journey",
+      "name": "Dreamfall: The Longest Journey",
+      "description": "Dreamfall: The Longest Journey is a singleplayer third-person adventure game and the second in The Longest Journey series.",
+      "released": "2006-04-17",
+      "exe": "dreamfall.exe",
+      "stores": {
+        "steam": {
+          "id": 6300
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "sound_system": "miles",
+        "versions": [
+          "3.0",
+          "4.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "prefs.dat": {
+            "format": "key_value",
+            "locations": [
+              "game_exe:prefs.dat"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Dreamfall's configuration.",
+            "changes": {
+              "prefs.dat": {
+                "audio_channel_config": "224"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "dungeon-keeper-ii",
+      "name": "Dungeon Keeper II",
+      "description": "Dungeon Keeper II is a singleplayer and multiplayer real-time strategy and dungeon management game and the second in the Dungeon Keeper series.",
+      "released": "1999-06-25",
+      "stores": {
+        "steam": {
+          "id": 2616460
+        },
+        "gog": {
+          "id": 1207658959
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0"
+        ]
+      },
+      "tested": false
+    },
+    {
+      "id": "dungeon-siege",
+      "name": "Dungeon Siege",
+      "description": "Dungeon Siege is a singleplayer and multiplayer third-person action role-playing game and the first in the Dungeon Siege series.",
+      "released": "2002-04-05",
+      "exe": "DungeonSiege.exe",
+      "stores": {
+        "steam": {
+          "id": 39190
+        },
+        "gog": {
+          "id": 1185868626,
+          "store_details": "GOG sells this only in the 'Dungeon Siege Collection', together with Dungeon Siege II and Dungeon Siege III."
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "sound_system": "miles",
+        "versions": [
+          "1.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "prefs.gas": {
+            "format": "ini_braces",
+            "locations": [
+              "prefix_documents:Dungeon Siege/prefs.gas"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Dungeon Siege's configuration.",
+            "changes": {
+              "prefs.gas": {
+                "prefs": {
+                  "eax_enabled": "true"
+                }
+              }
+            },
+            "tested": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "dungeon-siege-ii",
+      "name": "Dungeon Siege II",
+      "description": "Dungeon Siege II is a singleplayer and multiplayer third-person action role-playing game and the second in the Dungeon Siege series.",
+      "released": "2005-08-16",
+      "exe": "DungeonSiege2.exe",
+      "stores": {
+        "steam": {
+          "id": 39200
+        },
+        "gog": {
+          "id": 1837106902,
+          "store_details": "GOG sells this only in the 'Dungeon Siege Collection', together with Dungeon Siege and Dungeon Siege III."
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "sound_system": "miles",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0",
+          "4.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "prefs.gas": {
+            "format": "ini_braces",
+            "locations": [
+              "prefix_documents:My Games/Dungeon Siege 2/Save/prefs.gas"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Dungeon Siege II's configuration.",
+            "changes": {
+              "prefs.gas": {
+                "prefs": {
+                  "eax_enabled": "true"
+                }
+              }
+            },
+            "tested": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "dungeons-and-dragons-dragonshard",
+      "name": "Dungeons & Dragons: Dragonshard",
+      "description": "Dungeons & Dragons: Dragonshard is a singleplayer and multiplayer real-time strategy and role-playing game.",
+      "released": "2005-09-27",
+      "exe": "Dragonshard.exe",
+      "stores": {
+        "gog": {
+          "id": 1207658928
+        }
+      },
+      "eax": {
+        "api": "directsound3d"
+      },
+      "notes": "Turn on 'Creative EAX' in the game's Audio Settings (per the Vogons Wiki).",
+      "tested": false
+    },
+    {
+      "id": "fear",
+      "name": "F.E.A.R.",
+      "description": "F.E.A.R. is a singleplayer and multiplayer first-person shooter and horror game and the first in the F.E.A.R. series.",
+      "released": "2005-10-18",
+      "exe": "FEAR.exe",
+      "stores": {
+        "steam": {
+          "id": 21090,
+          "store_details": "Steam lists the Extraction Point and Perseus Mandate expansions as separate games in the library, so each one is set up on its own."
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "2.0",
+          "3.0",
+          "4.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified",
+          "expand_audio_limits"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "Profile000.gdb": {
+            "format": "binary_switches",
+            "locations": [
+              "prefix_public_documents:Monolith Productions/FEAR/Profiles/Profile000.gdb"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in F.E.A.R.'s configuration.",
+            "changes": {
+              "Profile000.gdb": {
+                "UseHWSound": "1",
+                "UseEAX": "1",
+                "UseEAX4": "1"
+              }
+            },
+            "tested": true
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "PCGamingWiki: F.E.A.R.",
+          "url": "https://www.pcgamingwiki.com/wiki/F.E.A.R."
+        }
+      ]
+    },
+    {
+      "id": "fear-extraction-point",
+      "name": "F.E.A.R. Extraction Point",
+      "description": "F.E.A.R. Extraction Point is a singleplayer first-person shooter and horror expansion for F.E.A.R.",
+      "released": "2006-10-24",
+      "exe": "FEARXP.exe",
+      "stores": {
+        "steam": {
+          "id": 21110,
+          "patches": "The English version loses some radio voices when hardware sound is on, and the unofficial 'F.E.A.R. Extraction Point EAX Fix' brings them back (per PCGamingWiki)."
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "2.0",
+          "4.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified",
+          "expand_audio_limits"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "Profile000.gdb": {
+            "format": "binary_switches",
+            "locations": [
+              "prefix_public_documents:TimeGate Studios/FEARXP/Profiles/Profile000.gdb"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in F.E.A.R. Extraction Point's configuration.",
+            "changes": {
+              "Profile000.gdb": {
+                "UseHWSound": "1",
+                "UseEAX": "1",
+                "UseEAX4": "1"
+              }
+            },
+            "tested": true
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "PCGamingWiki: F.E.A.R.",
+          "url": "https://www.pcgamingwiki.com/wiki/F.E.A.R."
+        },
+        {
+          "title": "F.E.A.R. Extraction Point EAX Fix",
+          "url": "https://community.pcgamingwiki.com/files/file/2600-fear-extraction-point-eax-fix"
+        }
+      ]
+    },
+    {
+      "id": "fear-perseus-mandate",
+      "name": "F.E.A.R. Perseus Mandate",
+      "description": "F.E.A.R. Perseus Mandate is a singleplayer and multiplayer first-person shooter and horror expansion for F.E.A.R.",
+      "released": "2007-11-06",
+      "exe": "FEARXP2.exe",
+      "stores": {
+        "steam": {
+          "id": 21120
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "2.0",
+          "4.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified",
+          "expand_audio_limits"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "Profile000.gdb": {
+            "format": "binary_switches",
+            "locations": [
+              "prefix_public_documents:TimeGate Studios/FEARXP2/Profiles/Profile000.gdb"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in F.E.A.R. Perseus Mandate's configuration.",
+            "changes": {
+              "Profile000.gdb": {
+                "UseHWSound": "1",
+                "UseEAX": "1",
+                "UseEAX4": "1"
+              }
+            },
+            "tested": true
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "PCGamingWiki: F.E.A.R. Perseus Mandate",
+          "url": "https://www.pcgamingwiki.com/wiki/F.E.A.R._Perseus_Mandate"
+        }
+      ]
+    },
+    {
+      "id": "fear-platinum",
+      "name": "F.E.A.R. Platinum",
+      "description": "F.E.A.R. Platinum is a singleplayer and multiplayer first-person shooter and horror game.",
+      "released": "2005-10-18",
+      "exe": "FEAR.exe",
+      "stores": {
+        "gog": {
+          "id": 1423058413,
+          "extra_exe_folders": [
+            "FEARXP",
+            "FEARXP2"
+          ],
+          "store_details": "This bundles F.E.A.R. with its Extraction Point and Perseus Mandate expansions in one install, each with its own exe.",
+          "patches": "The English version of Extraction Point loses some radio voices when hardware sound is on, and the unofficial 'F.E.A.R. Extraction Point EAX Fix' brings them back (per PCGamingWiki)."
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "2.0",
+          "3.0",
+          "4.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified",
+          "expand_audio_limits"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "Profile000.gdb": {
+            "format": "binary_switches",
+            "locations": [
+              "prefix_public_documents:Monolith Productions/FEAR/Profiles/Profile000.gdb"
+            ]
+          },
+          "FEARXP Profile000.gdb": {
+            "format": "binary_switches",
+            "locations": [
+              "prefix_public_documents:TimeGate Studios/FEARXP/Profiles/Profile000.gdb"
+            ]
+          },
+          "FEARXP2 Profile000.gdb": {
+            "format": "binary_switches",
+            "locations": [
+              "prefix_public_documents:TimeGate Studios/FEARXP2/Profiles/Profile000.gdb"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in F.E.A.R.'s configuration.",
+            "changes": {
+              "Profile000.gdb": {
+                "UseHWSound": "1",
+                "UseEAX": "1",
+                "UseEAX4": "1"
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Enable EAX in Extraction Point",
+            "reason": "Automatically enables EAX in F.E.A.R. Extraction Point's configuration.",
+            "changes": {
+              "FEARXP Profile000.gdb": {
+                "UseHWSound": "1",
+                "UseEAX": "1",
+                "UseEAX4": "1"
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Enable EAX in Perseus Mandate",
+            "reason": "Automatically enables EAX in F.E.A.R. Perseus Mandate's configuration.",
+            "changes": {
+              "FEARXP2 Profile000.gdb": {
+                "UseHWSound": "1",
+                "UseEAX": "1",
+                "UseEAX4": "1"
+              }
+            },
+            "tested": true
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "PCGamingWiki: F.E.A.R.",
+          "url": "https://www.pcgamingwiki.com/wiki/F.E.A.R."
+        },
+        {
+          "title": "F.E.A.R. Extraction Point EAX Fix",
+          "url": "https://community.pcgamingwiki.com/files/file/2600-fear-extraction-point-eax-fix"
+        }
+      ]
+    },
+    {
+      "id": "fallout-tactics-classic",
+      "name": "Fallout Tactics Classic",
+      "description": "Fallout Tactics Classic is a singleplayer and multiplayer isometric tactical role-playing game and a spin-off in the Fallout series.",
+      "released": "2001-03-15",
+      "exe": "BOS.exe",
+      "stores": {
+        "gog": {
+          "id": 3,
+          "store_details": "This is the older 'Classic' GOG product some existing owners' libraries still show, from before GOG relisted the game. It's the same game, with the same EAX support."
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "sound_system": "miles",
+        "versions": [
+          "1.0",
+          "2.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "bos.cfg": {
+            "format": "braced_pairs",
+            "locations": [
+              "game_exe:core/bos.cfg"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Fallout Tactics' configuration.",
+            "changes": {
+              "bos.cfg": {
+                "sound.provider": "Creative Labs EAX 2 (TM)"
+              }
+            },
+            "tested": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "fallout-tactics-brotherhood-of-steel",
+      "name": "Fallout Tactics: Brotherhood of Steel",
+      "description": "Fallout Tactics: Brotherhood of Steel is a singleplayer and multiplayer isometric tactical role-playing game and a spin-off in the Fallout series.",
+      "released": "2001-03-15",
+      "exe": "BOS.exe",
+      "stores": {
+        "steam": {
+          "id": 38420
+        },
+        "gog": {
+          "id": 1440152063
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "sound_system": "miles",
+        "versions": [
+          "1.0",
+          "2.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "bos.cfg": {
+            "format": "braced_pairs",
+            "locations": [
+              "game_exe:core/bos.cfg"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Fallout Tactics' configuration.",
+            "changes": {
+              "bos.cfg": {
+                "sound.provider": "Creative Labs EAX 2 (TM)"
+              }
+            },
+            "tested": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "far-cry-2",
+      "name": "Far Cry 2",
+      "description": "Far Cry 2 is a singleplayer and multiplayer open-world first-person shooter game and the second in the Far Cry series.",
+      "released": "2008-10-21",
+      "exe": "FarCry2.exe",
+      "stores": {
+        "steam": {
+          "id": 19900
+        },
+        "gog": {
+          "id": 1207659042,
+          "store_details": "GOG sells this as the 'Fortune's Edition' bundle, which throws in some bonus content."
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0",
+          "4.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified"
+        ]
+      }
+    },
+    {
+      "id": "freedom-fighters",
+      "name": "Freedom Fighters",
+      "description": "Freedom Fighters is a singleplayer and multiplayer third-person squad shooter game.",
+      "released": "2003-09-25",
+      "exe": "Freedom.Exe",
+      "stores": {
+        "steam": {
+          "id": 1347780
+        },
+        "gog": {
+          "id": 1756362098
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified"
+        ]
+      }
+    },
+    {
+      "id": "freedom-force",
+      "name": "Freedom Force",
+      "description": "Freedom Force is a singleplayer and multiplayer real-time tactics role-playing game and the first in the Freedom Force series.",
+      "released": "2002-03-26",
+      "exe": "fforce.exe",
+      "stores": {
+        "steam": {
+          "id": 8880
+        },
+        "gog": {
+          "id": 1445250806
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "sound_system": "miles",
+        "versions": [
+          "1.0",
+          "2.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "options.dat": {
+            "format": "binary_text",
+            "locations": [
+              "game_exe:Data/options.dat"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Freedom Force's configuration.",
+            "changes": {
+              "options.dat": {
+                "0000803f": "Creative Labs EAX 2 (TM)"
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Enable stereo sound",
+            "reason": "Sets Freedom Force's mixer to stereo sound.",
+            "only_if": {
+              "speakers": "stereo"
+            },
+            "changes": {
+              "options.dat": {
+                "0000803f+46": "0"
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Enable headphones",
+            "reason": "Sets Freedom Force's mixer to headphones.",
+            "only_if": {
+              "speakers": "headphones"
+            },
+            "changes": {
+              "options.dat": {
+                "0000803f+46": "1"
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Enable Pro Logic surround sound",
+            "reason": "Sets Freedom Force's mixer to Pro Logic surround sound.",
+            "only_if": {
+              "speakers": "matrix"
+            },
+            "changes": {
+              "options.dat": {
+                "0000803f+46": "2"
+              }
+            },
+            "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+            "tested": true
+          },
+          {
+            "title": "Enable 4.0 surround sound",
+            "reason": "Sets Freedom Force's mixer to 4.0 surround sound.",
+            "only_if": {
+              "speakers": "quad"
+            },
+            "changes": {
+              "options.dat": {
+                "0000803f+46": "3"
+              }
+            },
+            "tested": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "freedom-force-vs-the-third-reich",
+      "name": "Freedom Force vs. the Third Reich",
+      "description": "Freedom Force vs. the Third Reich is a singleplayer and multiplayer real-time tactics role-playing game and the second in the Freedom Force series.",
+      "released": "2005-03-08",
+      "exe": "ffvt3r.exe",
+      "stores": {
+        "steam": {
+          "id": 8890
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0"
+        ]
+      },
+      "tested": false
+    },
+    {
+      "id": "half-life",
+      "name": "Half-Life",
+      "description": "Half-Life is a singleplayer and multiplayer first-person shooter game and the first in the Half-Life series.",
+      "released": "1998-11-19",
+      "exe": "hl.exe",
+      "stores": {
+        "steam": {
+          "id": 70,
+          "patches": "MetaAudio (github.com/LAGonauta/MetaAudio, needs MetaHookSv) adds EAX/A3D-style reverb and HRTF to the current Steam build."
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0"
+        ],
+        "status": "removed_by_patch",
+        "problem": "The original release used DirectSound3D, but a 2013 update replaced it with a newer audio engine that dropped EAX entirely.",
+        "fix": "If you still have the pre-2013 retail release, point this script at that install instead — EAX still works there."
+      }
+    },
+    {
+      "id": "half-life-blue-shift",
+      "name": "Half-Life: Blue Shift",
+      "description": "Half-Life: Blue Shift is a singleplayer first-person shooter expansion for Half-Life.",
+      "released": "2001-06-12",
+      "stores": {
+        "steam": {
+          "id": 130
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0"
+        ],
+        "status": "removed_by_patch",
+        "problem": "The original release used DirectSound3D, but a 2013 update replaced it with a newer audio engine that dropped EAX entirely.",
+        "fix": "If you still have the original pre-2013 retail/CD release installed outside Steam, its EAX calls are intact and this script restores EAX normally there."
+      }
+    },
+    {
+      "id": "half-life-opposing-force",
+      "name": "Half-Life: Opposing Force",
+      "description": "Half-Life: Opposing Force is a singleplayer and multiplayer first-person shooter expansion for Half-Life.",
+      "released": "1999-11-19",
+      "stores": {
+        "steam": {
+          "id": 50
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0"
+        ],
+        "status": "removed_by_patch",
+        "problem": "The original release used DirectSound3D, but a 2013 update replaced it with a newer audio engine that dropped EAX entirely.",
+        "fix": "If you still have the original pre-2013 retail/CD release installed outside Steam, its EAX calls are intact and this script restores EAX normally there."
+      }
+    },
+    {
+      "id": "hidden-and-dangerous-2",
+      "name": "Hidden & Dangerous 2",
+      "description": "Hidden & Dangerous 2 is a singleplayer and multiplayer first- and third-person tactical shooter game and the second in the Hidden & Dangerous series.",
+      "released": "2003-10-23",
+      "exe": "hd2.exe",
+      "stores": {
+        "steam": {
+          "id": 703320
+        },
+        "gog": {
+          "id": 1576810170
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "3.0"
+        ]
+      }
+    },
+    {
+      "id": "hitman-2-silent-assassin",
+      "name": "Hitman 2: Silent Assassin",
+      "description": "Hitman 2: Silent Assassin is a singleplayer third-person stealth game and the second in the Hitman series.",
+      "released": "2002-10-01",
+      "exe": "hitman2.exe",
+      "stores": {
+        "steam": {
+          "id": 6850
+        },
+        "gog": {
+          "id": 1207659002
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "Hitman2.ini": {
+            "format": "key_value",
+            "locations": [
+              "game_exe:Hitman2.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Hitman 2: Silent Assassin's configuration.",
+            "changes": {
+              "Hitman2.ini": {
+                "UseEAX": "1"
+              }
+            },
+            "tested": true
+          }
+        ],
+        "optional_settings": [
+          {
+            "title": "Raise sound buffers",
+            "reason": "Hitman 2: Silent Assassin can play more sounds at once with its sound buffers at the maximum of 128.",
+            "changes": {
+              "Hitman2.ini": {
+                "NumSoundBuffers": "128"
+              }
+            }
+          },
+          {
+            "title": "Raise graphics quality",
+            "reason": "Automatically sets Hitman 2: Silent Assassin draw distance, level of detail, shadow detail and antialiasing at its highest settings.",
+            "changes": {
+              "Hitman2.ini": {
+                "DrawDistance": "1.200000",
+                "LevelOfDetail": "2",
+                "ShadowDetail": "2",
+                "Antialias": "8",
+                "Anisotropy": "1",
+                "DisableTrilinearFiltering": "1"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "hitman-blood-money",
+      "name": "Hitman: Blood Money",
+      "description": "Hitman: Blood Money is a singleplayer third-person stealth game and the fourth in the Hitman series.",
+      "released": "2006-05-26",
+      "exe": "HitmanBloodMoney.exe",
+      "stores": {
+        "steam": {
+          "id": 6860
+        },
+        "gog": {
+          "id": 1942346586
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "2.0",
+          "3.0",
+          "4.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "HitmanBloodMoney.ini": {
+            "format": "key_value",
+            "locations": [
+              "game_exe:HitmanBloodMoney.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Hitman: Blood Money's configuration.",
+            "changes": {
+              "HitmanBloodMoney.ini": {
+                "UseEAX": "1"
+              }
+            },
+            "tested": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "hitman-codename-47",
+      "name": "Hitman: Codename 47",
+      "description": "Hitman: Codename 47 is a singleplayer third-person stealth game and the first in the Hitman series.",
+      "released": "2000-11-19",
+      "exe": "Hitman.Exe",
+      "stores": {
+        "steam": {
+          "id": 6900
+        },
+        "gog": {
+          "id": 1207658996
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "Hitman.cfg": {
+            "format": "xml_attributes",
+            "locations": [
+              "game_exe:Hitman.cfg"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Hitman: Codename 47's configuration.",
+            "changes": {
+              "Hitman.cfg": {
+                "Sound": {
+                  "UseEAX": "1"
+                }
+              }
+            },
+            "tested": true
+          }
+        ]
+      },
+      "tested": false
+    },
+    {
+      "id": "hitman-contracts",
+      "name": "Hitman: Contracts",
+      "description": "Hitman: Contracts is a singleplayer third-person stealth game and the third in the Hitman series.",
+      "released": "2004-04-20",
+      "exe": "HitmanContracts.exe",
+      "stores": {
+        "steam": {
+          "id": 247430
+        },
+        "gog": {
+          "id": 1207660853
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "HitmanContracts.ini": {
+            "format": "key_value",
+            "locations": [
+              "game_exe:HitmanContracts.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Hitman: Contracts' configuration.",
+            "changes": {
+              "HitmanContracts.ini": {
+                "UseEAX": "1"
+              }
+            },
+            "tested": true
+          }
+        ],
+        "optional_settings": [
+          {
+            "title": "Raise sound buffers",
+            "reason": "Hitman: Contracts can play more sounds at once with 128 sound buffers.",
+            "changes": {
+              "HitmanContracts.ini": {
+                "NumSoundBuffers": "128"
+              }
+            }
+          },
+          {
+            "title": "Raise graphics quality",
+            "reason": "Automatically sets Hitman: Contracts' draw distance, level of detail, shadow detail, post-filter detail, bump mapping and weather effects at their highest settings.",
+            "changes": {
+              "HitmanContracts.ini": {
+                "DrawDistance": "1.000000",
+                "LevelOfDetail": "2",
+                "ShadowDetail": "2",
+                "PostFilterLOD": "2",
+                "DisableBump": "0",
+                "WeatherEffects": "1",
+                "DisableTrilinearFiltering": "1",
+                "Anisotropy": "1",
+                "TextureResolution": "0"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "icewind-dale-complete",
+      "name": "Icewind Dale Complete",
+      "description": "Icewind Dale Complete is a singleplayer and multiplayer isometric role-playing game.",
+      "released": "2000-06-29",
+      "exe": "IDMain.exe",
+      "stores": {
+        "gog": {
+          "id": 1207658888,
+          "delisted": true,
+          "store_details": "This is the original 2000 Icewind Dale with its Heart of Winter and Trials of the Luremaster expansions. GOG had stopped selling it by November 2016 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "icewind.ini": {
+            "format": "ini",
+            "locations": [
+              "game_exe:icewind.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Icewind Dale's configuration.",
+            "changes": {
+              "icewind.ini": {
+                "Game Options": {
+                  "Environmental Audio": "1"
+                }
+              }
+            },
+            "tested": true
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "GOG forum: BGEE, BG2EE, IWEE vs originals",
+          "url": "https://www.gog.com/forum/baldurs_gate_series/bgee_bg2ee_iwee_vs_originals"
+        }
+      ]
+    },
+    {
+      "id": "icewind-dale-ii",
+      "name": "Icewind Dale II",
+      "description": "Icewind Dale II is a singleplayer and multiplayer isometric role-playing game and the second in the Icewind Dale series.",
+      "released": "2002-08-27",
+      "exe": "IWD2.exe",
+      "stores": {
+        "gog": {
+          "id": 1207658891,
+          "store_details": "Sold as 'Icewind Dale 2 Complete'."
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "icewind2.ini": {
+            "format": "ini",
+            "locations": [
+              "game_exe:icewind2.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Icewind Dale II's configuration.",
+            "changes": {
+              "icewind2.ini": {
+                "Game Options": {
+                  "Environmental Audio": "1"
+                }
+              }
+            },
+            "tested": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "icewind-dale-enhanced-edition",
+      "name": "Icewind Dale: Enhanced Edition",
+      "description": "Icewind Dale: Enhanced Edition is a singleplayer and multiplayer isometric role-playing game, an enhanced edition of 2000's Icewind Dale.",
+      "released": "2014-10-30",
+      "stores": {
+        "steam": {
+          "id": 321800
+        },
+        "gog": {
+          "id": 1207666683
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "status": "not_implemented",
+        "problem": "This is the Enhanced Edition, not the classic Icewind Dale, and it has no EAX."
+      },
+      "notes": "If you also own the classic Icewind Dale, it's a separate GOG purchase, 'Icewind Dale Complete', and that one has EAX."
+    },
+    {
+      "id": "mafia",
+      "name": "Mafia",
+      "description": "Mafia is a singleplayer third-person action-adventure game and the first in the Mafia series.",
+      "released": "2002-08-29",
+      "stores": {
+        "gog": {
+          "id": 1595659240
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified"
+        ]
+      },
+      "tested": false
+    },
+    {
+      "id": "max-payne-2-the-fall-of-max-payne",
+      "name": "Max Payne 2: The Fall of Max Payne",
+      "description": "Max Payne 2: The Fall of Max Payne is a singleplayer third-person shooter game and the second in the Max Payne series.",
+      "released": "2003-10-15",
+      "exe": "maxpayne2.exe",
+      "stores": {
+        "steam": {
+          "id": 12150
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified"
+        ]
+      }
+    },
+    {
+      "id": "medal-of-honor-allied-assault",
+      "name": "Medal of Honor: Allied Assault",
+      "description": "Medal of Honor: Allied Assault is a singleplayer and multiplayer first-person shooter game and the third in the Medal of Honor series.",
+      "released": "2002-01-22",
+      "stores": {
+        "gog": {
+          "id": 1207659126,
+          "store_details": "Sold as the 'War Chest' edition — the base game plus the Spearhead and Breakthrough expansions."
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0"
+        ]
+      },
+      "tested": false
+    },
+    {
+      "id": "messiah",
+      "name": "Messiah",
+      "description": "Messiah is a singleplayer third-person action-adventure game.",
+      "released": "2000-03-29",
+      "exe": "MessiahGlide3x.exe",
+      "stores": {
+        "gog": {
+          "id": 7
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "2.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "Messiah.cfg": {
+            "format": "binary_offset",
+            "locations": [
+              "game_exe:Messiah.cfg"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Messiah's configuration.",
+            "changes": {
+              "Messiah.cfg": {
+                "0x160": "3",
+                "0x1b2": "1"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "neverwinter-nights-2",
+      "name": "Neverwinter Nights 2",
+      "description": "Neverwinter Nights 2 is a singleplayer and multiplayer third-person role-playing game and the second in the Neverwinter Nights series.",
+      "released": "2006-10-31",
+      "exe": "nwn2main.exe",
+      "stores": {
+        "gog": {
+          "id": 1207659162,
+          "store_details": "This is the original 2006 Neverwinter Nights 2 with its Mask of the Betrayer and Storm of Zehir expansions and the Mysteries of Westgate adventure pack. It's an ideal candidate for restoring EAX sound."
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "sound_system": "miles",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "nwn2.ini": {
+            "format": "ini",
+            "locations": [
+              "prefix_documents:Neverwinter Nights 2/nwn2.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Neverwinter Nights 2's configuration.",
+            "changes": {
+              "nwn2.ini": {
+                "Sound Options": {
+                  "3D Provider": "Creative Labs EAX 3 (TM)",
+                  "Environment Effects": "1"
+                }
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Enable stereo sound",
+            "reason": "Sets Neverwinter Nights 2's mixer to stereo sound.",
+            "only_if": {
+              "speakers": "stereo"
+            },
+            "changes": {
+              "nwn2.ini": {
+                "Sound Options": {
+                  "Speaker Type": "3"
+                }
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Enable 4.0 surround sound",
+            "reason": "Sets Neverwinter Nights 2's mixer to 4.0 surround sound.",
+            "only_if": {
+              "speakers": "quad"
+            },
+            "changes": {
+              "nwn2.ini": {
+                "Sound Options": {
+                  "Speaker Type": "3"
+                }
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Enable 5.1 surround sound",
+            "reason": "Sets Neverwinter Nights 2's mixer to 5.1 surround sound.",
+            "only_if": {
+              "speakers": [
+                "surround51",
+                "surround61"
+              ]
+            },
+            "changes": {
+              "nwn2.ini": {
+                "Sound Options": {
+                  "Speaker Type": "4"
+                }
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Enable 7.1 surround sound",
+            "reason": "Sets Neverwinter Nights 2's mixer to 7.1 surround sound.",
+            "only_if": {
+              "speakers": "surround71"
+            },
+            "changes": {
+              "nwn2.ini": {
+                "Sound Options": {
+                  "Speaker Type": "5"
+                }
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Enable Pro Logic surround sound",
+            "reason": "Sets Neverwinter Nights 2's mixer to Pro Logic surround sound.",
+            "only_if": {
+              "speakers": "matrix"
+            },
+            "changes": {
+              "nwn2.ini": {
+                "Sound Options": {
+                  "Speaker Type": "2"
+                }
+              }
+            },
+            "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+            "tested": true
+          },
+          {
+            "title": "Enable headphones",
+            "reason": "Sets Neverwinter Nights 2's mixer to headphones.",
+            "only_if": {
+              "speakers": "headphones"
+            },
+            "changes": {
+              "nwn2.ini": {
+                "Sound Options": {
+                  "Speaker Type": "1"
+                }
+              }
+            },
+            "tested": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "neverwinter-nights-2-enhanced-edition",
+      "name": "Neverwinter Nights 2: Enhanced Edition",
+      "description": "Neverwinter Nights 2: Enhanced Edition is a singleplayer and multiplayer third-person role-playing game, an enhanced edition of 2006's Neverwinter Nights 2.",
+      "released": "2025-07-15",
+      "stores": {
+        "steam": {
+          "id": 2738630
+        },
+        "gog": {
+          "id": 1993442013
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "status": "not_implemented",
+        "problem": "This is the 2025 Enhanced Edition, not the classic Neverwinter Nights 2, and it has no EAX."
+      },
+      "notes": "GOG still sells the classic edition of Neverwinter Nights 2, which supports EAX, as Neverwinter Nights 2 Complete."
+    },
+    {
+      "id": "neverwinter-nights-diamond",
+      "name": "Neverwinter Nights Diamond",
+      "description": "Neverwinter Nights Diamond is a singleplayer and multiplayer third-person role-playing game.",
+      "released": "2002-06-18",
+      "exe": "nwmain.exe",
+      "stores": {
+        "gog": {
+          "id": 1207658890,
+          "delisted": true,
+          "store_details": "This is the original 2002 Neverwinter Nights with both expansions and the premium modules. GOG stopped selling it on its own in October 2018 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "sound_system": "miles",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "nwn.ini": {
+            "format": "ini",
+            "locations": [
+              "game_exe:nwn.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Neverwinter Nights' configuration.",
+            "changes": {
+              "nwn.ini": {
+                "Sound Options": {
+                  "3D Provider": "Creative Labs EAX 3 (TM)",
+                  "Environment Effects": "1"
+                }
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Enable stereo sound",
+            "reason": "Sets Neverwinter Nights' mixer to stereo sound.",
+            "only_if": {
+              "speakers": "stereo"
+            },
+            "changes": {
+              "nwn.ini": {
+                "Sound Options": {
+                  "Speaker Type": "0"
+                }
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Enable 4.0 surround sound",
+            "reason": "Sets Neverwinter Nights' mixer to 4.0 surround sound.",
+            "only_if": {
+              "speakers": "quad"
+            },
+            "changes": {
+              "nwn.ini": {
+                "Sound Options": {
+                  "Speaker Type": "3"
+                }
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Enable 5.1 surround sound",
+            "reason": "Sets Neverwinter Nights' mixer to 5.1 surround sound.",
+            "only_if": {
+              "speakers": [
+                "surround51",
+                "surround61"
+              ]
+            },
+            "changes": {
+              "nwn.ini": {
+                "Sound Options": {
+                  "Speaker Type": "4"
+                }
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Enable 7.1 surround sound",
+            "reason": "Sets Neverwinter Nights' mixer to 7.1 surround sound.",
+            "only_if": {
+              "speakers": "surround71"
+            },
+            "changes": {
+              "nwn.ini": {
+                "Sound Options": {
+                  "Speaker Type": "5"
+                }
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Enable Pro Logic surround sound",
+            "reason": "Sets Neverwinter Nights' mixer to Pro Logic surround sound.",
+            "only_if": {
+              "speakers": "matrix"
+            },
+            "changes": {
+              "nwn.ini": {
+                "Sound Options": {
+                  "Speaker Type": "2"
+                }
+              }
+            },
+            "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+            "tested": true
+          },
+          {
+            "title": "Enable headphones",
+            "reason": "Sets Neverwinter Nights' mixer to headphones.",
+            "only_if": {
+              "speakers": "headphones"
+            },
+            "changes": {
+              "nwn.ini": {
+                "Sound Options": {
+                  "Speaker Type": "1"
+                }
+              }
+            },
+            "tested": true
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "GOG: Neverwinter Nights: Enhanced Edition release post",
+          "url": "https://www.gog.com/forum/general/release_neverwinter_nights_enhanced_edition_c05bc"
+        }
+      ]
+    },
+    {
+      "id": "neverwinter-nights-enhanced-edition",
+      "name": "Neverwinter Nights: Enhanced Edition",
+      "description": "Neverwinter Nights: Enhanced Edition is a singleplayer and multiplayer third-person role-playing game, an enhanced edition of 2002's Neverwinter Nights.",
+      "released": "2018-03-27",
+      "stores": {
+        "steam": {
+          "id": 704450
+        },
+        "gog": {
+          "id": 1097893768
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "status": "not_implemented",
+        "problem": "This is the Enhanced Edition, not the classic Neverwinter Nights, and it has no EAX."
+      },
+      "notes": "If you also own the classic Neverwinter Nights, it's a separate GOG purchase, 'Neverwinter Nights Diamond', and that one has EAX."
+    },
+    {
+      "id": "outcast-second-contact",
+      "name": "Outcast - Second Contact",
+      "description": "Outcast - Second Contact is a singleplayer third-person action-adventure game, a remake of 1999's Outcast.",
+      "released": "2017-11-14",
+      "stores": {
+        "steam": {
+          "id": 618970
+        },
+        "gog": {
+          "id": 2109390794
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "status": "not_implemented",
+        "problem": "This is the 2017 remake, not the original 1999 Outcast, and it has no EAX."
+      },
+      "notes": "The original 1999 Outcast supports EAX."
+    },
+    {
+      "id": "outcast-1-1",
+      "name": "Outcast 1.1",
+      "description": "Outcast 1.1 is a singleplayer third-person action-adventure game, an enhanced edition of 1999's Outcast, recompiled from the original source code and improved to run smoothly on today's computers.",
+      "released": "2014-12-18",
+      "stores": {
+        "steam": {
+          "id": 336610
+        },
+        "gog": {
+          "id": 1207658853
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "status": "not_implemented",
+        "problem": "This is the 2014 Outcast 1.1, not the original 1999 Outcast, and it has no EAX."
+      },
+      "notes": "The original 1999 Outcast supports EAX, and GOG includes it as a separate download among the extras."
+    },
+    {
+      "id": "planescape-torment",
+      "name": "Planescape: Torment",
+      "description": "Planescape: Torment is a singleplayer isometric role-playing game.",
+      "released": "1999-12-10",
+      "exe": "Torment.exe",
+      "stores": {
+        "gog": {
+          "id": 1207658887,
+          "delisted": true,
+          "store_details": "This is the original 1999 Planescape: Torment. GOG stopped selling it on its own in April 2017 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "Torment.ini": {
+            "format": "ini",
+            "locations": [
+              "game_exe:Torment.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Planescape: Torment's configuration.",
+            "changes": {
+              "Torment.ini": {
+                "Game Options": {
+                  "Environmental Audio": "1"
+                }
+              }
+            },
+            "tested": true
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "GOG forum: Planescape: Torment: Enhanced Edition announcement",
+          "url": "https://www.gog.com/forum/planescape_torment/planescape_torment_enhanced_edition_1"
+        }
+      ]
+    },
+    {
+      "id": "planescape-torment-enhanced-edition",
+      "name": "Planescape: Torment: Enhanced Edition",
+      "description": "Planescape: Torment: Enhanced Edition is a singleplayer isometric role-playing game, an enhanced edition of 1999's Planescape: Torment.",
+      "released": "2017-04-11",
+      "stores": {
+        "steam": {
+          "id": 466300
+        },
+        "gog": {
+          "id": 1203613131
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "status": "not_implemented",
+        "problem": "This is the Enhanced Edition, not the original Planescape: Torment, and it has no EAX."
+      },
+      "notes": "If you still own the original 1999 Planescape: Torment, which GOG stopped selling on its own in April 2017, that one still supports EAX."
+    },
+    {
+      "id": "project-eden",
+      "name": "Project Eden",
+      "description": "Project Eden is a singleplayer and multiplayer third-person squad action-adventure game.",
+      "released": "2001-10-12",
+      "exe": "Eden.exe",
+      "stores": {
+        "gog": {
+          "id": 1207659235
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "user.reg": {
+            "format": "registry",
+            "locations": [
+              "prefix:user.reg"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Project Eden's configuration.",
+            "changes": {
+              "user.reg": {
+                "Software\\Core Design\\Project Eden\\1.0\\SfxHardware\\Direct Sound\\Primary Sound Driver": {
+                  "Reverb": "1",
+                  "UseHardwareMixing": "1"
+                }
+              }
+            },
+            "tested": true
+          }
+        ],
+        "optional_settings": [
+          {
+            "title": "Set sample rate to 44100 Hz",
+            "reason": "Project Eden saves its sound sample rate in the registry, and this sets it to CD quality.",
+            "changes": {
+              "user.reg": {
+                "Software\\Core Design\\Project Eden\\1.0\\SfxHardware\\Direct Sound\\Primary Sound Driver": {
+                  "Samplerate": "44100"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "psychonauts",
+      "name": "Psychonauts",
+      "description": "Psychonauts is a singleplayer third-person platform and action-adventure game and the first in the Psychonauts series.",
+      "released": "2005-04-19",
+      "stores": {
+        "steam": {
+          "id": 3830
+        },
+        "gog": {
+          "id": 1207658807
+        }
+      },
+      "eax": {
+        "api": "openal",
+        "versions": [
+          "2.0",
+          "3.0",
+          "4.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "AudioSettings.ini": {
+            "format": "ini",
+            "locations": [
+              "game_exe:AudioSettings.ini"
+            ],
+            "if_missing": "create"
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Psychonauts' configuration. The game has no in-game option for this.",
+            "changes": {
+              "AudioSettings.ini": {
+                "AudioSettings": {
+                  "UseEAX": "true"
+                }
+              }
+            },
+            "tested": false
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "PCGamingWiki: Psychonauts",
+          "url": "https://www.pcgamingwiki.com/wiki/Psychonauts"
+        }
+      ],
+      "tested": false
+    },
+    {
+      "id": "quake-4",
+      "name": "Quake 4",
+      "description": "Quake 4 is a singleplayer and multiplayer first-person shooter game and the fourth in the Quake series.",
+      "released": "2005-10-18",
+      "exe": "Quake4.exe",
+      "stores": {
+        "steam": {
+          "id": 2210
+        },
+        "gog": {
+          "id": 1836059896
+        }
+      },
+      "eax": {
+        "api": "openal",
+        "versions": [
+          "4.0",
+          "5.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "Quake4Config.cfg": {
+            "format": "set_commands",
+            "locations": [
+              "game_exe:q4base/Quake4Config.cfg"
+            ]
+          },
+          "autoexec.cfg": {
+            "format": "set_commands",
+            "locations": [
+              "game_exe:q4base/autoexec.cfg"
+            ],
+            "if_missing": "create"
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Quake 4's configuration.",
+            "changes": {
+              "Quake4Config.cfg": {
+                "s_useOpenAL": "1",
+                "s_useEAXReverb": "1",
+                "s_useEAXOcclusion": "1"
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Enable 5.1 surround sound",
+            "reason": "Sets Quake 4's mixer to 5.1 surround sound.",
+            "only_if": {
+              "speakers": "surround"
+            },
+            "changes": {
+              "Quake4Config.cfg": {
+                "s_numberOfSpeakers": "6"
+              }
+            },
+            "tested": true
+          }
+        ],
+        "optional_settings": [
+          {
+            "title": "Fix low image quality",
+            "reason": "Quake 4 can't detect how much memory modern graphics cards have, so it picks low-quality settings and loads its lowest-resolution textures.",
+            "changes": {
+              "autoexec.cfg": {
+                "com_videoRam": "1024",
+                "r_renderer": "best",
+                "com_machineSpec": "3",
+                "r_shadows": "1",
+                "r_skipSky": "0",
+                "r_skipBump": "0",
+                "r_skipSpecular": "0",
+                "r_skipNewAmbient": "1",
+                "r_forceAmbient": "0",
+                "r_multiSamples": "4",
+                "image_anisotropy": "8",
+                "image_ignoreHighQuality": "0",
+                "image_downSize": "0",
+                "image_downSizeBump": "0",
+                "image_downSizeSpecular": "0",
+                "image_useCache": "0",
+                "image_useCompression": "0",
+                "image_useNormalCompression": "0",
+                "image_usePrecompressedTextures": "0",
+                "image_lodbias": "-2",
+                "image_filter": "GL_LINEAR_MIPMAP_LINEAR"
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Fix blurry text",
+            "reason": "Quake 4 limits how sharply it draws its smaller text, so menu and HUD text looks blurry at high resolutions. A few multiplayer menus can cut off text with this on.",
+            "changes": {
+              "autoexec.cfg": {
+                "gui_smallFontLimit": "0",
+                "gui_mediumFontLimit": "0"
+              }
+            },
+            "tested": true
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "PCGamingWiki: Quake 4",
+          "url": "https://www.pcgamingwiki.com/wiki/Quake_4"
+        }
+      ]
+    },
+    {
+      "id": "red-faction",
+      "name": "Red Faction",
+      "description": "Red Faction is a singleplayer and multiplayer first-person shooter game and the first in the Red Faction series.",
+      "released": "2001-09-18",
+      "stores": {
+        "steam": {
+          "id": 20530
+        },
+        "gog": {
+          "id": 1207660623
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified"
+        ]
+      },
+      "tested": false
+    },
+    {
+      "id": "requiem-avenging-angel",
+      "name": "Requiem: Avenging Angel",
+      "description": "Requiem: Avenging Angel is a singleplayer and multiplayer first-person shooter game.",
+      "released": "1999-03-31",
+      "exe": "Requiem.exe",
+      "stores": {
+        "gog": {
+          "id": 1449581489
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "sound_system": "miles",
+        "versions": [
+          "1.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "latest.cfg": {
+            "format": "binary_offset",
+            "locations": [
+              "game_exe:Gamers/latest.cfg"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Requiem's configuration.",
+            "changes": {
+              "latest.cfg": {
+                "0x17": "1"
+              }
+            },
+            "tested": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "rune-classic",
+      "name": "Rune Classic",
+      "description": "Rune Classic is a singleplayer and multiplayer third-person action-adventure game.",
+      "released": "2000-10-27",
+      "exe": "Rune.exe",
+      "stores": {
+        "steam": {
+          "id": 210950
+        },
+        "gog": {
+          "id": 1207660013
+        }
+      },
+      "eax": {
+        "api": "openal",
+        "versions": [
+          "2.0"
+        ],
+        "status": "not_implemented",
+        "problem": "Rune Classic has a broken implementation of OpenAL and lacks environmental reverb (EFX), occlusion, and proper positional sound tracking. ",
+        "fix": "Further investigation is required to see how community patches could fix this and how to incorporate them into the script."
+      },
+      "sources": [
+        {
+          "title": "Rune Classic Remaster",
+          "url": "https://www.nexusmods.com/runeclassic/mods/1"
+        }
+      ],
+      "tested": false
+    },
+    {
+      "id": "stalker-call-of-pripyat",
+      "name": "S.T.A.L.K.E.R.: Call of Pripyat",
+      "description": "S.T.A.L.K.E.R.: Call of Pripyat is a singleplayer and multiplayer open-world first-person shooter and survival horror game and the third in the S.T.A.L.K.E.R. series.",
+      "released": "2009-10-02",
+      "exe": "xrEngine.exe",
+      "stores": {
+        "steam": {
+          "id": 41700
+        },
+        "gog": {
+          "id": 1207660583
+        }
+      },
+      "eax": {
+        "api": "openal",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0"
+        ],
+        "problem": "Stalker's X-Ray engine supports EAX via OpenAL. However the game's map data lacks environmental audio effects.",
+        "fix": "A community patch is available that adds environmental effects to the game's levels."
+      },
+      "game_config": {
+        "files": {
+          "user.ltx": {
+            "format": "key_value",
+            "locations": [
+              "prefix_documents:stalker-cop/user.ltx",
+              "game_root:user.ltx"
+            ],
+            "crash_marker": "tmp.ltx"
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in S.T.A.L.K.E.R.: Call of Pripyat's configuration.",
+            "changes": {
+              "user.ltx": {
+                "snd_device": "OpenAL Soft",
+                "snd_efx": "on"
+              }
+            },
+            "tested": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "stalker-call-of-prypiat-enhanced-edition",
+      "name": "S.T.A.L.K.E.R.: Call of Prypiat - Enhanced Edition",
+      "description": "S.T.A.L.K.E.R.: Call of Prypiat - Enhanced Edition is an open-world first-person shooter and survival horror game, an enhanced edition of 2009's S.T.A.L.K.E.R.: Call of Pripyat.",
+      "released": "2025-05-20",
+      "exe": "xrEngine.exe",
+      "stores": {
+        "steam": {
+          "id": 2427430
+        },
+        "gog": {
+          "id": 1525093053
+        }
+      },
+      "eax": {
+        "api": "openal",
+        "versions": [
+          "2.0"
+        ],
+        "status": "built_in",
+        "problem": "Unlike the original Call of Pripyat, it comes with OpenAL Soft, which has EAX built in, so its reverb doesn't depend on a Creative sound card."
+      },
+      "tested": false
+    },
+    {
+      "id": "stalker-clear-sky",
+      "name": "S.T.A.L.K.E.R.: Clear Sky",
+      "description": "S.T.A.L.K.E.R.: Clear Sky is a singleplayer and multiplayer open-world first-person shooter and survival horror game and the second in the S.T.A.L.K.E.R. series.",
+      "released": "2008-08-22",
+      "exe": "xrEngine.exe",
+      "stores": {
+        "steam": {
+          "id": 20510
+        },
+        "gog": {
+          "id": 1207660603
+        }
+      },
+      "eax": {
+        "api": "openal",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0"
+        ],
+        "problem": "Stalker's X-Ray engine supports EAX via OpenAL. However the game's map data lacks environmental audio effects.",
+        "fix": "A community patch is available that adds environmental effects to the game's levels."
+      },
+      "game_config": {
+        "files": {
+          "user.ltx": {
+            "format": "key_value",
+            "locations": [
+              "prefix_documents:Stalker-STCS/user.ltx",
+              "game_root:_appdata_/user.ltx"
+            ],
+            "crash_marker": "tmp.ltx"
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in S.T.A.L.K.E.R.: Clear Sky's configuration.",
+            "only_if": {
+              "stores": [
+                "gog"
+              ]
+            },
+            "changes": {
+              "user.ltx": {
+                "snd_efx": "on",
+                "snd_device": "OpenAL Soft"
+              }
+            },
+            "tested": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "stalker-clear-sky-enhanced-edition",
+      "name": "S.T.A.L.K.E.R.: Clear Sky - Enhanced Edition",
+      "description": "S.T.A.L.K.E.R.: Clear Sky - Enhanced Edition is an open-world first-person shooter and survival horror game, an enhanced edition of 2008's S.T.A.L.K.E.R.: Clear Sky.",
+      "released": "2025-05-20",
+      "exe": "xrEngine.exe",
+      "stores": {
+        "steam": {
+          "id": 2427420
+        },
+        "gog": {
+          "id": 1709591792
+        }
+      },
+      "eax": {
+        "api": "openal",
+        "versions": [
+          "2.0"
+        ],
+        "status": "built_in",
+        "problem": "Unlike the original Clear Sky, it comes with OpenAL Soft, which has EAX built in, so its reverb doesn't depend on a Creative sound card."
+      },
+      "tested": false
+    },
+    {
+      "id": "stalker-shadow-of-chernobyl",
+      "name": "S.T.A.L.K.E.R.: Shadow of Chernobyl",
+      "description": "S.T.A.L.K.E.R.: Shadow of Chernobyl is a singleplayer and multiplayer open-world first-person shooter and survival horror game and the first in the S.T.A.L.K.E.R. series.",
+      "released": "2007-03-20",
+      "exe": "XR_3DA.exe",
+      "stores": {
+        "steam": {
+          "id": 4500
+        },
+        "gog": {
+          "id": 1207660573
+        }
+      },
+      "eax": {
+        "api": "openal",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0"
+        ],
+        "problem": "Stalker's X-Ray engine supports EAX via OpenAL. However the game's map data lacks environmental audio effects.",
+        "fix": "A community patch is available that adds environmental effects to the game's levels."
+      },
+      "game_config": {
+        "files": {
+          "user.ltx": {
+            "format": "key_value",
+            "locations": [
+              "prefix_documents:stalker-shoc/user.ltx",
+              "game_root:_appdata_/user.ltx"
+            ]
+          }
+        },
+        "optional_settings": [
+          {
+            "title": "Remove head bob.",
+            "reason": "The game's default setting has a rather aggressive head bob, this may make some users feel uncomfortable.",
+            "changes": {
+              "user.ltx": {
+                "cam_inert": "0"
+              }
+            },
+            "tested": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "stalker-shadow-of-chornobyl-enhanced-edition",
+      "name": "S.T.A.L.K.E.R.: Shadow of Chornobyl - Enhanced Edition",
+      "description": "S.T.A.L.K.E.R.: Shadow of Chornobyl - Enhanced Edition is an open-world first-person shooter and survival horror game, an enhanced edition of 2007's S.T.A.L.K.E.R.: Shadow of Chernobyl.",
+      "released": "2025-05-20",
+      "exe": "xrEngine.exe",
+      "stores": {
+        "steam": {
+          "id": 2427410
+        },
+        "gog": {
+          "id": 1542429427
+        }
+      },
+      "eax": {
+        "api": "openal",
+        "versions": [
+          "2.0"
+        ],
+        "status": "built_in",
+        "problem": "Unlike the original Shadow of Chernobyl, it comes with OpenAL Soft, which has EAX built in, so its reverb doesn't depend on a Creative sound card."
+      },
+      "tested": false
+    },
+    {
+      "id": "shogo-mobile-armor-division",
+      "name": "Shogo: Mobile Armor Division",
+      "description": "Shogo: Mobile Armor Division is a singleplayer and multiplayer first-person shooter game.",
+      "released": "1998-10-15",
+      "exe": "Client.exe",
+      "stores": {
+        "gog": {
+          "id": 1207658659
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "sound_system": "miles",
+        "versions": [
+          "1.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "system.reg": {
+            "format": "registry",
+            "locations": [
+              "prefix:system.reg"
+            ]
+          },
+          "autoexec.cfg": {
+            "format": "quoted_pairs",
+            "locations": [
+              "game_exe:autoexec.cfg"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Shogo's configuration.",
+            "changes": {
+              "autoexec.cfg": {
+                "3dsoundprovider": "2",
+                "3dsoundprovidername": "Microsoft DirectSound3D with Creative Labs EAX(TM)"
+              },
+              "system.reg": {
+                "Software\\Wow6432Node\\Monolith Productions\\Shogo\\1.0": {
+                  "Sound Provider": "2",
+                  "Sound Provider Name": "Microsoft DirectSound3D with Creative Labs EAX(TM)",
+                  "Sound Reverb": "150"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "soldier-of-fortune-ii-double-helix",
+      "name": "Soldier of Fortune II: Double Helix",
+      "description": "Soldier of Fortune II: Double Helix is a singleplayer and multiplayer first-person shooter game and the second in the Soldier of Fortune series.",
+      "released": "2002-05-21",
+      "exe": "SoF2.exe",
+      "stores": {
+        "gog": {
+          "id": 1228964594,
+          "store_details": "Sold as the 'Gold Edition'."
+        }
+      },
+      "eax": {
+        "api": "openal",
+        "versions": [
+          "3.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "sof2sp.cfg": {
+            "format": "set_commands",
+            "locations": [
+              "game_exe:base/sof2sp.cfg"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Soldier of Fortune II's configuration.",
+            "changes": {
+              "sof2sp.cfg": {
+                "snd_dll": "al"
+              }
+            },
+            "tested": true
+          }
+        ]
+      },
+      "notes": "Only single-player has EAX — multiplayer (SoF2MP.exe) has none."
+    },
+    {
+      "id": "soldier-of-fortune-platinum-edition",
+      "name": "Soldier of Fortune: Platinum Edition",
+      "description": "Soldier of Fortune: Platinum Edition is a singleplayer and multiplayer first-person shooter, an edition of the first game in the Soldier of Fortune series.",
+      "released": "2000-03-27",
+      "exe": "SoF.exe",
+      "stores": {
+        "gog": {
+          "id": 1828104558
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "config.cfg": {
+            "format": "set_commands",
+            "locations": [
+              "game_exe:user/config.cfg"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Soldier of Fortune's configuration.",
+            "changes": {
+              "config.cfg": {
+                "snd_dll": "eaxsnd.dll"
+              }
+            },
+            "tested": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "star-trek-elite-force-ii",
+      "name": "Star Trek: Elite Force II",
+      "description": "Star Trek: Elite Force II is a singleplayer and multiplayer first-person shooter game and the second in the Star Trek: Elite Force series.",
+      "released": "2003-06-20",
+      "exe": "EF2.exe",
+      "stores": {
+        "gog": {
+          "id": 2125201406
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "sound_system": "miles",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "steamuser.cfg": {
+            "format": "set_commands",
+            "locations": [
+              "game_root:base/steamuser.cfg"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Star Trek: Elite Force II's configuration. It also sets the sample rate to 44 kHz.",
+            "changes": {
+              "steamuser.cfg": {
+                "s_khz": "44",
+                "s_milesdriver": "eax3"
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Enable stereo sound",
+            "reason": "Sets Star Trek: Elite Force II's mixer to stereo sound.",
+            "only_if": {
+              "speakers": "stereo"
+            },
+            "changes": {
+              "steamuser.cfg": {
+                "s_speaker_type": "0"
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Enable headphones",
+            "reason": "Sets Star Trek: Elite Force II's mixer to headphones.",
+            "only_if": {
+              "speakers": "headphones"
+            },
+            "changes": {
+              "steamuser.cfg": {
+                "s_speaker_type": "1"
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Enable Pro Logic surround sound",
+            "reason": "Sets Star Trek: Elite Force II's mixer to Pro Logic surround sound.",
+            "only_if": {
+              "speakers": "matrix"
+            },
+            "changes": {
+              "steamuser.cfg": {
+                "s_speaker_type": "2"
+              }
+            },
+            "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic."
+          },
+          {
+            "title": "Enable 4.0 surround sound",
+            "reason": "Sets Star Trek: Elite Force II's mixer to 4.0 surround sound.",
+            "only_if": {
+              "speakers": "quad"
+            },
+            "changes": {
+              "steamuser.cfg": {
+                "s_speaker_type": "3"
+              }
+            }
+          },
+          {
+            "title": "Enable 5.1 surround sound",
+            "reason": "Sets Star Trek: Elite Force II's mixer to 5.1 surround sound.",
+            "only_if": {
+              "speakers": "surround51"
+            },
+            "changes": {
+              "steamuser.cfg": {
+                "s_speaker_type": "4"
+              }
+            }
+          },
+          {
+            "title": "Enable 7.1 surround sound",
+            "reason": "Sets Star Trek: Elite Force II's mixer to 7.1 surround sound.",
+            "only_if": {
+              "speakers": "surround71"
+            },
+            "changes": {
+              "steamuser.cfg": {
+                "s_speaker_type": "5"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "star-wars-jedi-knight-ii-jedi-outcast",
+      "name": "Star Wars Jedi Knight II: Jedi Outcast",
+      "description": "Star Wars Jedi Knight II: Jedi Outcast is a singleplayer and multiplayer first- and third-person shooter and action game and the third in the Star Wars: Jedi Knight series.",
+      "released": "2002-03-28",
+      "exe": "jk2sp.exe",
+      "stores": {
+        "steam": {
+          "id": 6030
+        },
+        "gog": {
+          "id": 1428935917
+        }
+      },
+      "eax": {
+        "api": "openal",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "jk2config.cfg": {
+            "format": "set_commands",
+            "locations": [
+              "game_exe:base/jk2config.cfg"
+            ]
+          },
+          "jk2mpconfig.cfg": {
+            "format": "set_commands",
+            "locations": [
+              "game_exe:base/jk2mpconfig.cfg"
+            ],
+            "if_missing": "skip"
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Jedi Outcast's configuration.",
+            "changes": {
+              "jk2config.cfg": {
+                "s_UseOpenAL": "1"
+              },
+              "jk2mpconfig.cfg": {
+                "s_UseOpenAL": "1"
+              }
+            },
+            "follow_up": "If there's no music when Jedi Outcast starts, open the console with Shift + ~, type snd_restart and press Enter.",
+            "tested": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "star-wars-jedi-knight-jedi-academy",
+      "name": "Star Wars Jedi Knight: Jedi Academy",
+      "description": "Star Wars Jedi Knight: Jedi Academy is a singleplayer and multiplayer first- and third-person shooter and action game and the fourth in the Star Wars: Jedi Knight series.",
+      "released": "2003-09-16",
+      "exe": "jasp.exe",
+      "stores": {
+        "steam": {
+          "id": 6020
+        },
+        "gog": {
+          "id": 1428935726
+        }
+      },
+      "eax": {
+        "api": "openal",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0",
+          "4.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "jaconfig.cfg": {
+            "format": "set_commands",
+            "locations": [
+              "game_exe:base/jaconfig.cfg"
+            ]
+          },
+          "jampconfig.cfg": {
+            "format": "set_commands",
+            "locations": [
+              "game_exe:base/jampconfig.cfg"
+            ],
+            "if_missing": "skip"
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Jedi Academy's configuration.",
+            "changes": {
+              "jaconfig.cfg": {
+                "s_UseOpenAL": "1"
+              },
+              "jampconfig.cfg": {
+                "s_UseOpenAL": "1"
+              }
+            },
+            "follow_up": "If there's no music when Jedi Academy starts, open the console with Shift + ~, type snd_restart and press Enter. Please note: Jedi Academy has no music in its main menu.",
+            "tested": true
+          }
+        ]
+      },
+      "notes": "Game's default graphical settings are low. These could be maxed out by updating the game's profile with its higher settings."
+    },
+    {
+      "id": "star-wars-knights-of-the-old-republic",
+      "name": "Star Wars: Knights of the Old Republic",
+      "description": "Star Wars: Knights of the Old Republic is a singleplayer third-person role-playing game and the first in the Star Wars: Knights of the Old Republic series.",
+      "released": "2003-11-19",
+      "exe": "swkotor.exe",
+      "stores": {
+        "steam": {
+          "id": 32370
+        },
+        "gog": {
+          "id": 1207666283
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "sound_system": "miles",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "swkotor.ini": {
+            "format": "ini",
+            "locations": [
+              "game_exe:swkotor.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in KOTOR's configuration.",
+            "changes": {
+              "swkotor.ini": {
+                "Sound Options": {
+                  "EAX": "3"
+                }
+              }
+            },
+            "tested": true
+          }
+        ],
+        "optional_settings": [
+          {
+            "title": "Raise anti-aliasing and anisotropic filtering",
+            "reason": "The game's graphics options default to no anti-aliasing and no anisotropic filtering. This sets 8x anti-aliasing and 16x anisotropic filtering for sharper edges and textures.",
+            "changes": {
+              "swkotor.ini": {
+                "Graphics Options": {
+                  "Anisotropy": "16",
+                  "Anti Aliasing": "8",
+                  "Frame Buffer": "1",
+                  "Soft Shadows": "1"
+                }
+              }
+            },
+            "tested": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "star-wars-knights-of-the-old-republic-ii-the-sith-lords",
+      "name": "Star Wars: Knights of the Old Republic II - The Sith Lords",
+      "description": "Star Wars: Knights of the Old Republic II - The Sith Lords is a singleplayer third-person role-playing game and the second in the Star Wars: Knights of the Old Republic series.",
+      "released": "2005-02-08",
+      "exe": "swkotor2.exe",
+      "stores": {
+        "steam": {
+          "id": 208580,
+          "beta_branch": "legacypc"
+        },
+        "gog": {
+          "id": 1421404581
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "sound_system": "miles",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0"
+        ],
+        "status": "removed_by_patch",
+        "problem": "The original release used DirectSound3D, but a later patch replaced it with a newer audio engine that dropped EAX entirely.",
+        "fix": "Steam beta branch 'legacypc' reverts to the pre-patch build with EAX intact (right-click the game -> Properties -> Betas).",
+        "fix_in_place": true
+      },
+      "tested": false
+    },
+    {
+      "id": "star-wars-republic-commando",
+      "name": "Star Wars: Republic Commando",
+      "description": "Star Wars: Republic Commando is a singleplayer and multiplayer first-person tactical shooter game in the Star Wars series.",
+      "released": "2005-03-01",
+      "exe": "SWRepublicCommando.exe",
+      "stores": {
+        "steam": {
+          "id": 6000
+        },
+        "gog": {
+          "id": 1421405135
+        }
+      },
+      "eax": {
+        "api": "openal",
+        "versions": [
+          "2.0",
+          "3.0"
+        ]
+      },
+      "install": {
+        "alsoft_ini": {
+          "reverb": {
+            "boost": "6"
+          }
+        },
+        "alsoft_tested": true
+      },
+      "game_config": {
+        "files": {
+          "System.ini": {
+            "format": "ini",
+            "locations": [
+              "game_root:GameData/Save/System.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Republic Commando's configuration.",
+            "changes": {
+              "System.ini": {
+                "ALAudio.ALAudioSubsystem": {
+                  "SelectedEAXVersion": "3",
+                  "UseEAX": "True",
+                  "Use3DSound": "True",
+                  "UseDefaultDriver": "False",
+                  "Channels": "32"
+                }
+              }
+            },
+            "tested": true
+          }
+        ],
+        "optional_settings": [
+          {
+            "title": "MAX",
+            "reason": "MAX",
+            "changes": {
+              "System.ini": {
+                "WinDrv.WindowsClient": {
+                  "TextureDetailInterface": "UltraHigh",
+                  "TextureDetailTerrain": "UltraHigh",
+                  "TextureDetailWeaponSkin": "UltraHigh",
+                  "TextureDetailWorld": "UltraHigh",
+                  "TextureDetailRenderMap": "UltraHigh",
+                  "TextureDetailLightmap": "UltraHigh",
+                  "FSAA": "8",
+                  "BumpmappingQuality": "2",
+                  "Shadows": "True"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "swat-4",
+      "name": "SWAT 4",
+      "description": "SWAT 4 is a singleplayer and multiplayer first-person tactical shooter game and the fourth in the SWAT series.",
+      "released": "2005-04-05",
+      "exe": "Swat4.exe",
+      "stores": {
+        "gog": {
+          "id": 1409964317,
+          "extra_exe_folders": [
+            "game_root:ContentExpansion/System"
+          ],
+          "store_details": "Sold as 'SWAT 4: Gold Edition'."
+        }
+      },
+      "eax": {
+        "api": "openal",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "Swat4.ini": {
+            "format": "ini",
+            "locations": [
+              "game_exe:Swat4.ini"
+            ]
+          },
+          "Swat4X.ini": {
+            "format": "ini",
+            "locations": [
+              "game_root:ContentExpansion/System/Swat4X.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in SWAT 4's configuration.",
+            "changes": {
+              "Swat4.ini": {
+                "ALAudio.ALAudioSubsystem": {
+                  "UseDefaultDriver": "False",
+                  "UseEAX": "True",
+                  "Use3DSound": "True"
+                }
+              },
+              "Swat4X.ini": {
+                "ALAudio.ALAudioSubsystem": {
+                  "UseDefaultDriver": "False",
+                  "UseEAX": "True",
+                  "Use3DSound": "True"
+                }
+              }
+            },
+            "tested": false
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Missing radio chatter, issue 1333",
+          "url": "https://github.com/kcat/openal-soft/issues/1333"
+        }
+      ],
+      "notes": "With EAX on, the radio chatter at the start of an instant action mission is silent in the Stable build, but the Latest build fixes it."
+    },
+    {
+      "id": "system-shock-2",
+      "name": "System Shock 2",
+      "description": "System Shock 2 is a singleplayer and multiplayer first-person action role-playing, survival horror and immersive sim game and the second in the System Shock series.",
+      "released": "1999-08-11",
+      "exe": "SS2.exe",
+      "stores": {
+        "steam": {
+          "id": 238210,
+          "delisted": true,
+          "api": "openal",
+          "store_details": "The classic 1999 build was delisted in October 2025. It comes with the NewDark engine patch pre-installed.",
+          "patches": "The System Shock 2 Community Patch (SCP) fixes bugs and polishes the game, and is worth installing alongside EAX."
+        },
+        "gog": {
+          "id": 1207659172,
+          "delisted": true,
+          "store_details": "The classic 1999 build was delisted in October 2025. The original build, without the NewDark engine patch.",
+          "patches": "The System Shock 2 Community Patch (SCP) fixes bugs and polishes the game, and is worth installing alongside EAX."
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "cam_ext.cfg": {
+            "format": "key_value",
+            "locations": [
+              "game_exe:cam_ext.cfg"
+            ],
+            "if_missing": "skip"
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable underwater reverb",
+            "reason": "Some System Shock 2 maps don't mark their underwater areas, so they play the wrong reverb there.",
+            "changes": {
+              "cam_ext.cfg": {
+                "force_underwater_reverb": true
+              }
+            },
+            "tested": false
+          }
+        ],
+        "optional_settings": [
+          {
+            "title": "Enable full-precision mouse look",
+            "reason": "System Shock 2 reads mouse look through standard Windows input by default, which doesn't give high-resolution mice their full precision.",
+            "changes": {
+              "cam_ext.cfg": {
+                "use_raw_mouse_input": true
+              }
+            },
+            "tested": false
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "NewDark's config documentation (new_config_vars.txt)",
+          "url": "https://github.com/JarrodDoyle/rogue-patcher/blob/0e355105dd7d520d0364c5f96d03ae7f9d437353/Resources/NewDark/Docs/NewDark/new_config_vars.txt"
+        }
+      ],
+      "notes": "It comes with NewDark pre-installed, which has its own 'Hardware Acceleration' option in the in-game Audio menu — worth trying if EAX doesn't sound right.",
+      "tested": false
+    },
+    {
+      "id": "system-shock-2-25th-anniversary-remaster",
+      "name": "System Shock 2: 25th Anniversary Remaster",
+      "description": "System Shock 2: 25th Anniversary Remaster is a singleplayer and multiplayer first-person action role-playing, survival horror and immersive sim game, a remaster of 1999's System Shock 2.",
+      "released": "2025-06-26",
+      "exe": "SystemShock2Remastered.exe",
+      "stores": {
+        "steam": {
+          "id": 866570
+        },
+        "gog": {
+          "id": 1448370350
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "status": "not_implemented",
+        "problem": "This is the 25th Anniversary Remaster, not the classic System Shock 2, and it has no EAX."
+      },
+      "notes": "If you also own the classic 1999 System Shock 2, that one has EAX — it's no longer sold, but existing owners keep it."
+    },
+    {
+      "id": "the-wheel-of-time",
+      "name": "The Wheel of Time",
+      "description": "The Wheel of Time is a singleplayer and multiplayer first-person shooter game.",
+      "released": "1999-11-09",
+      "exe": "WoT.exe",
+      "stores": {
+        "gog": {
+          "id": 1584652180
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "WoT.ini": {
+            "format": "ini",
+            "locations": [
+              "game_exe:WoT.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in The Wheel of Time's configuration.",
+            "changes": {
+              "WoT.ini": {
+                "Galaxy.GalaxyAudioSubsystem": {
+                  "Use3dHardware": "True",
+                  "UseSpatial": "True"
+                }
+              }
+            },
+            "tested": false
+          }
+        ],
+        "optional_settings": [
+          {
+            "title": "Raise sound quality",
+            "reason": "The Wheel of Time mixes its sound at a lower rate than most sound systems play at, so it's resampled before you hear it.",
+            "changes": {
+              "WoT.ini": {
+                "Galaxy.GalaxyAudioSubsystem": {
+                  "OutputRate": "48000Hz"
+                }
+              }
+            },
+            "tested": false
+          },
+          {
+            "title": "Raise texture filtering",
+            "reason": "The Wheel of Time filters textures at a low level, so a visible line shows where each floor and wall texture switches to a blurrier version.",
+            "changes": {
+              "WoT.ini": {
+                "D3DDrv.D3DRenderDevice": {
+                  "UseTrilinear": "True"
+                }
+              }
+            },
+            "tested": false
+          },
+          {
+            "title": "Raise color depth",
+            "reason": "The Wheel of Time runs fullscreen with a reduced color range, so smooth shading like skies and shadows shows visible bands.",
+            "changes": {
+              "WoT.ini": {
+                "WinDrv.WindowsClient": {
+                  "FullscreenColorBits": "32"
+                }
+              }
+            },
+            "tested": false
+          },
+          {
+            "title": "Enable detail textures",
+            "reason": "The Wheel of Time leaves detail textures off in its Direct3D renderer, so floors and walls look flat and blurry up close.",
+            "changes": {
+              "WoT.ini": {
+                "D3DDrv.D3DRenderDevice": {
+                  "DetailTextures": "True"
+                }
+              }
+            },
+            "tested": false
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "PCGamingWiki: The Wheel of Time",
+          "url": "https://www.pcgamingwiki.com/wiki/The_Wheel_of_Time"
+        }
+      ],
+      "tested": false
+    },
+    {
+      "id": "the-witcher",
+      "name": "The Witcher Enhanced Edition",
+      "description": "The Witcher is a singleplayer third-person action role-playing game and the first in The Witcher series.",
+      "released": "2007-10-26",
+      "exe": "witcher.exe",
+      "stores": {
+        "steam": {
+          "id": 20900
+        },
+        "gog": {
+          "id": 1207658924
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "sound_system": "miles",
+        "versions": [
+          "4.0"
+        ]
+      },
+      "tested": false
+    },
+    {
+      "id": "thief-gold",
+      "name": "Thief Gold",
+      "description": "Thief Gold is a singleplayer first-person stealth and immersive sim game, an expanded edition of Thief: The Dark Project.",
+      "released": "1998-12-01",
+      "exe": "THIEF.EXE",
+      "stores": {
+        "steam": {
+          "id": 211600,
+          "store_details": "The original build, without the NewDark engine patch.",
+          "patches": "TFix bundles the NewDark engine patch along with a range of modern-system fixes, and is worth installing alongside EAX."
+        },
+        "gog": {
+          "id": 1207658997,
+          "api": "openal",
+          "store_details": "It comes with the NewDark engine patch pre-installed."
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "cam_ext.cfg": {
+            "format": "key_value",
+            "locations": [
+              "game_exe:cam_ext.cfg"
+            ],
+            "if_missing": "skip"
+          },
+          "DARK.CFG": {
+            "format": "key_value",
+            "locations": [
+              "game_exe:DARK.CFG"
+            ],
+            "if_missing": "skip"
+          },
+          "dark.cfg": {
+            "format": "key_value",
+            "locations": [
+              "game_exe:dark.cfg"
+            ],
+            "if_missing": "skip"
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable underwater reverb",
+            "reason": "Some Thief Gold maps don't mark their underwater areas, so they play the wrong reverb there.",
+            "changes": {
+              "cam_ext.cfg": {
+                "force_underwater_reverb": true
+              }
+            },
+            "tested": false
+          }
+        ],
+        "optional_settings": [
+          {
+            "title": "Enable full-precision mouse look",
+            "reason": "Thief Gold reads mouse look through standard Windows input by default, which doesn't give high-resolution mice their full precision.",
+            "changes": {
+              "cam_ext.cfg": {
+                "use_raw_mouse_input": true
+              }
+            },
+            "tested": false
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "NewDark's config documentation (new_config_vars.txt)",
+          "url": "https://github.com/JarrodDoyle/rogue-patcher/blob/0e355105dd7d520d0364c5f96d03ae7f9d437353/Resources/NewDark/Docs/NewDark/new_config_vars.txt"
+        }
+      ],
+      "tested": false
+    },
+    {
+      "id": "thief-ii-the-metal-age",
+      "name": "Thief II: The Metal Age",
+      "description": "Thief II: The Metal Age is a singleplayer first-person stealth and immersive sim game and the second in the Thief series.",
+      "released": "2000-03-23",
+      "exe": "Thief2.exe",
+      "stores": {
+        "steam": {
+          "id": 211740,
+          "store_details": "The original build, without the NewDark engine patch.",
+          "patches": "T2Fix bundles the NewDark engine patch along with a range of modern-system fixes, and is worth installing alongside EAX."
+        },
+        "gog": {
+          "id": 1207659001,
+          "api": "openal",
+          "store_details": "It comes with the NewDark engine patch pre-installed."
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "cam_ext.cfg": {
+            "format": "key_value",
+            "locations": [
+              "game_exe:cam_ext.cfg"
+            ],
+            "if_missing": "skip"
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable underwater reverb",
+            "reason": "Some Thief II maps don't mark their underwater areas, so they play the wrong reverb there.",
+            "changes": {
+              "cam_ext.cfg": {
+                "force_underwater_reverb": true
+              }
+            },
+            "tested": false
+          }
+        ],
+        "optional_settings": [
+          {
+            "title": "Enable full-precision mouse look",
+            "reason": "Thief II reads mouse look through standard Windows input by default, which doesn't give high-resolution mice their full precision.",
+            "changes": {
+              "cam_ext.cfg": {
+                "use_raw_mouse_input": true
+              }
+            },
+            "tested": false
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "NewDark's config documentation (new_config_vars.txt)",
+          "url": "https://github.com/JarrodDoyle/rogue-patcher/blob/0e355105dd7d520d0364c5f96d03ae7f9d437353/Resources/NewDark/Docs/NewDark/new_config_vars.txt"
+        }
+      ],
+      "tested": false
+    },
+    {
+      "id": "thief-deadly-shadows",
+      "name": "Thief: Deadly Shadows",
+      "description": "Thief: Deadly Shadows is a singleplayer first- and third-person stealth and immersive sim game and the third in the Thief series.",
+      "released": "2004-05-25",
+      "exe": "T3Main.exe",
+      "stores": {
+        "steam": {
+          "id": 6980,
+          "patches": "The unofficial 'Sneaky Upgrade' patch  contains various bugfixes and game improvements such as widescreen support."
+        },
+        "gog": {
+          "id": 1207659036,
+          "patches": "The unofficial 'Sneaky Upgrade' patch  contains various bugfixes and game improvements such as widescreen support."
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "3.0",
+          "4.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "options.ini": {
+            "format": "ini",
+            "locations": [
+              "game_root:save/SaveGames/User Options/options.ini",
+              "prefix_documents:Thief - Deadly Shadows/SaveGames/User Options/options.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Thief: Deadly Shadows' configuration.",
+            "changes": {
+              "options.ini": {
+                "UseHWMixing": "1",
+                "UseEAX": "1",
+                "EAXMultipleEnvironments": "1"
+              }
+            },
+            "tested": true
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "PC Gaming Wiki",
+          "url": "https://www.pcgamingwiki.com/wiki/Thief:_Deadly_Shadows"
+        },
+        {
+          "title": "Thief 3 Sneaky Upgrade",
+          "url": "https://www.moddb.com/mods/thief-3-sneaky-upgrade"
+        }
+      ]
+    },
+    {
+      "id": "timeshift",
+      "name": "TimeShift",
+      "description": "TimeShift is a singleplayer and multiplayer first-person shooter game.",
+      "released": "2007-10-30",
+      "stores": {
+        "steam": {
+          "id": 10130
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "4.0",
+          "5.0"
+        ]
+      },
+      "tested": false
+    },
+    {
+      "id": "titan-quest-anniversary-edition",
+      "name": "Titan Quest Anniversary Edition",
+      "description": "Titan Quest Anniversary Edition is a singleplayer and multiplayer isometric action role-playing game, an updated edition of the first in the Titan Quest series that includes its Immortal Throne expansion.",
+      "released": "2016-08-31",
+      "stores": {
+        "steam": {
+          "id": 475150
+        },
+        "gog": {
+          "id": 1196955511
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0",
+          "4.0"
+        ]
+      },
+      "notes": "Both stores now sell only this 2016 Anniversary Edition; no separate classic 2006 listing remains to compare against, and whether its audio path changed from the original hasn't been independently verified here.",
+      "tested": false
+    },
+    {
+      "id": "titan-quest-immortal-throne",
+      "name": "Titan Quest: Immortal Throne",
+      "description": "Titan Quest: Immortal Throne is a singleplayer and multiplayer isometric action role-playing expansion for Titan Quest.",
+      "released": "2007-03-02",
+      "stores": {
+        "steam": {
+          "id": 4550,
+          "delisted": true,
+          "id_source": "steamdb_historical"
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "sound_system": "miles",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0",
+          "4.0"
+        ]
+      },
+      "notes": "New purchases get Titan Quest Anniversary Edition instead, which is a separate game.",
+      "tested": false
+    },
+    {
+      "id": "tom-clancys-ghost-recon-advanced-warfighter-2",
+      "name": "Tom Clancy's Ghost Recon: Advanced Warfighter 2",
+      "description": "Tom Clancy's Ghost Recon: Advanced Warfighter 2 is a singleplayer and multiplayer first-person tactical shooter game and the second in the Tom Clancy's Ghost Recon Advanced Warfighter series.",
+      "released": "2007-06-29",
+      "stores": {
+        "steam": {
+          "id": 13510,
+          "delisted": true,
+          "store_details": "Delisted from Steam around 2015."
+        }
+      },
+      "eax": {
+        "api": "openal",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0",
+          "4.0"
+        ]
+      },
+      "tested": false
+    },
+    {
+      "id": "tom-clancys-rainbow-six-vegas",
+      "name": "Tom Clancy's Rainbow Six: Vegas",
+      "description": "Tom Clancy's Rainbow Six: Vegas is a singleplayer and multiplayer first-person tactical shooter game and the first in the Tom Clancy's Rainbow Six: Vegas series.",
+      "released": "2006-12-12",
+      "exe": "R6Vegas_Game.exe",
+      "stores": {
+        "steam": {
+          "id": 13540
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified"
+        ]
+      }
+    },
+    {
+      "id": "tom-clancys-rainbow-six-vegas-2",
+      "name": "Tom Clancy's Rainbow Six: Vegas 2",
+      "description": "Tom Clancy's Rainbow Six: Vegas 2 is a singleplayer and multiplayer first-person tactical shooter game and the second in the Tom Clancy's Rainbow Six: Vegas series.",
+      "released": "2008-04-15",
+      "exe": "R6Vegas2_Game.exe",
+      "stores": {
+        "steam": {
+          "id": 15120
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0",
+          "4.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified"
+        ]
+      }
+    },
+    {
+      "id": "tom-clancys-splinter-cell",
+      "name": "Tom Clancy's Splinter Cell",
+      "description": "Tom Clancy's Splinter Cell is a singleplayer third-person stealth action game and the first in the Tom Clancy's Splinter Cell series.",
+      "released": "2003-02-18",
+      "exe": "splintercell.exe",
+      "stores": {
+        "steam": {
+          "id": 13560,
+          "patches": "The community patched Enhanced Splinter Cell fixes bugs and provides additional game improvements."
+        },
+        "gog": {
+          "id": 1207659034,
+          "patches": "The community patched Enhanced Splinter Cell fixes bugs and provides additional game improvements."
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "SplinterCellUser.ini": {
+            "format": "ini",
+            "locations": [
+              "game_exe:SplinterCellUser.ini"
+            ]
+          },
+          "SplinterCell.ini": {
+            "format": "ini",
+            "locations": [
+              "game_exe:SplinterCell.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Splinter Cell's configuration.",
+            "changes": {
+              "SplinterCellUser.ini": {
+                "Engine.EPCGameOptions": {
+                  "EAX": "True",
+                  "Sound3DAcc": "True",
+                  "EAX_Capable": "True"
+                }
+              }
+            },
+            "tested": true
+          }
+        ],
+        "optional_settings": [
+          {
+            "title": "Enable volumetric lighting, 32-bit and detail textures",
+            "reason": "These three graphics options are set to True in the config files.",
+            "changes": {
+              "SplinterCell.ini": {
+                "D3DDrv.D3DRenderDevice": {
+                  "VolumetricLighting": "True"
+                }
+              },
+              "SplinterCellUser.ini": {
+                "D3DDrv.D3DRenderDevice": {
+                  "Use32BitTextures": "True",
+                  "DetailTextures": "True"
+                }
+              }
+            }
+          },
+          {
+            "title": "Raise shadow, light map and texture quality to max",
+            "reason": "The game sets shadow, light map and texture detail below the maximum by default. This entry sets all three to level 3 in SplinterCellUser.ini.",
+            "changes": {
+              "SplinterCellUser.ini": {
+                "Engine.EPCGameOptions": {
+                  "ShadowLevel": "3",
+                  "LightMapsLevel": "3",
+                  "TextureLevel": "3"
+                }
+              }
+            }
+          },
+          {
+            "title": "Enable anti-aliasing",
+            "reason": "The change sets AntiAliasing to 2 in SplinterCellUser.ini under Engine.EPCGameOptions. The game is likely to start with anti-aliasing off or lower, so edges look jagged.",
+            "changes": {
+              "SplinterCellUser.ini": {
+                "Engine.EPCGameOptions": {
+                  "AntiAliasing": "2"
+                }
+              }
+            }
+          },
+          {
+            "title": "Fix character models by turning off HardwareSkinning",
+            "reason": "Out of the box, the game may use the GPU to animate character models through the D3D renderer. This setting turns that off, so the CPU does it.",
+            "changes": {
+              "SplinterCell.ini": {
+                "D3DDrv.D3DRenderDevice": {
+                  "HardwareSkinning": "False"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "EnhancedSC",
+          "url": "https://github.com/Joshhhuaaa/EnhancedSC/tree/main"
+        }
+      ]
+    },
+    {
+      "id": "tom-clancys-splinter-cell-chaos-theory",
+      "name": "Tom Clancy's Splinter Cell: Chaos Theory",
+      "description": "Tom Clancy's Splinter Cell: Chaos Theory is a singleplayer and multiplayer third-person stealth action game and the third in the Tom Clancy's Splinter Cell series.",
+      "released": "2005-03-29",
+      "exe": "splintercell3.exe",
+      "stores": {
+        "steam": {
+          "id": 13570
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified",
+          "com_registry_routing"
+        ]
+      }
+    },
+    {
+      "id": "tom-clancys-splinter-cell-double-agent",
+      "name": "Tom Clancy's Splinter Cell: Double Agent",
+      "description": "Tom Clancy's Splinter Cell: Double Agent is a singleplayer and multiplayer third-person stealth action game and the fourth in the Tom Clancy's Splinter Cell series.",
+      "released": "2006-11-07",
+      "exe": "SplinterCell4.exe",
+      "stores": {
+        "steam": {
+          "id": 13580,
+          "extra_exe_folders": [
+            "game_root:SCDA-Online/System"
+          ]
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0",
+          "4.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified"
+        ]
+      },
+      "notes": "Double Agent installs single-player and multiplayer as two separate builds — the multiplayer build (SCDA-Online) no longer works, so set up the single-player build in SCDA-Offline.",
+      "tested": false
+    },
+    {
+      "id": "tomb-raider-the-angel-of-darkness",
+      "name": "Tomb Raider: The Angel of Darkness",
+      "description": "Tomb Raider: The Angel of Darkness is a singleplayer third-person action-adventure game and the sixth in the Tomb Raider series.",
+      "released": "2003-07-01",
+      "exe": "TRAOD.exe",
+      "stores": {
+        "steam": {
+          "id": 225020
+        },
+        "gog": {
+          "id": 1207659089
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0",
+          "4.0"
+        ],
+        "problem": "Tomb Raider: The Angel of Darkness needs Creative's EAX Unified to play EAX sound."
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified"
+        ]
+      },
+      "sources": [
+        {
+          "title": "EAX Unified",
+          "url": "https://community.pcgamingwiki.com/files/file/367-eax-unified/"
+        }
+      ]
+    },
+    {
+      "id": "tron-20",
+      "name": "TRON 2.0",
+      "description": "TRON 2.0 is a singleplayer and multiplayer first-person shooter game in the Tron series.",
+      "released": "2003-08-26",
+      "exe": "Lithtech.exe",
+      "stores": {
+        "steam": {
+          "id": 327740
+        },
+        "gog": {
+          "id": 1655444396
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "2.0",
+          "3.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "Player.txt": {
+            "format": "ini",
+            "locations": [
+              "game_exe:Profiles/Player.txt"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in TRON 2.0's configuration.",
+            "changes": {
+              "Player.txt": {
+                "Sound": {
+                  "eaxenabled": "1"
+                }
+              }
+            },
+            "tested": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "unreal-gold",
+      "name": "Unreal Gold",
+      "description": "Unreal Gold is a singleplayer and multiplayer first-person shooter game, bundling Unreal, the first game in the Unreal series, with its Return to Na Pali expansion.",
+      "released": "1998-05-22",
+      "exe": "Unreal.exe",
+      "stores": {
+        "steam": {
+          "id": 13250,
+          "delisted": true,
+          "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.",
+          "patches": "OldUnreal's v227 patch adds a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
+        },
+        "gog": {
+          "id": 1207658679,
+          "delisted": true,
+          "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.",
+          "patches": "OldUnreal's v227 patch adds a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "Unreal.ini": {
+            "format": "ini",
+            "locations": [
+              "game_exe:Unreal.ini"
+            ]
+          },
+          "User.ini": {
+            "format": "ini",
+            "locations": [
+              "game_exe:User.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Unreal's configuration.",
+            "changes": {
+              "Unreal.ini": {
+                "Galaxy.GalaxyAudioSubsystem": {
+                  "Use3dHardware": "True",
+                  "UseReverb": "True",
+                  "UseSpatial": "True"
+                }
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Enable Pro Logic surround sound",
+            "reason": "Sets Unreal's mixer to Pro Logic surround sound.",
+            "only_if": {
+              "speakers": "matrix"
+            },
+            "changes": {
+              "Unreal.ini": {
+                "GalaxyAudioSubsystem": {
+                  "UseSurround": "True"
+                }
+              }
+            },
+            "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+            "tested": true
+          }
+        ],
+        "optional_settings": [
+          {
+            "title": "Raise sound quality",
+            "reason": "Unreal Gold mixes its sound at a low sample rate, which dulls high-pitched sounds.",
+            "changes": {
+              "Unreal.ini": {
+                "Galaxy.GalaxyAudioSubsystem": {
+                  "OutputRate": "48000Hz"
+                }
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Raise texture filtering",
+            "reason": "Unreal Gold filters textures at a low level, so a visible line shows where each floor and wall texture switches to a blurrier version.",
+            "changes": {
+              "Unreal.ini": {
+                "D3DDrv.D3DRenderDevice": {
+                  "UseTrilinear": "True"
+                }
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Raise color depth",
+            "reason": "Unreal Gold runs fullscreen with a reduced color range, so smooth shading like skies and shadows shows visible bands.",
+            "changes": {
+              "Unreal.ini": {
+                "WinDrv.WindowsClient": {
+                  "FullscreenColorBits": "32"
+                }
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Enable WASD controls",
+            "reason": "Unreal Gold moves with the arrow keys out of the box, and its right mouse button jumps instead of using the weapon's alternate fire.",
+            "changes": {
+              "User.ini": {
+                "Engine.Input": {
+                  "W": "MoveForward",
+                  "A": "StrafeLeft",
+                  "S": "MoveBackward",
+                  "D": "StrafeRight",
+                  "E": "InventoryActivate",
+                  "C": "Duck",
+                  "Ctrl": "Duck",
+                  "RightMouse": "AltFire",
+                  "MiddleMouse": " ",
+                  "MouseWheelUp": "PrevWeapon",
+                  "MouseWheelDown": "NextWeapon"
+                }
+              }
+            },
+            "tested": true
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "OldUnreal",
+          "url": "https://www.oldunreal.com"
+        },
+        {
+          "title": "Unreal DirectX11 Renderer",
+          "url": "https://www.moddb.com/mods/unreal-directx11-renderer-for-ut-ug-rune-and-dx"
+        }
+      ]
+    },
+    {
+      "id": "unreal-ii-the-awakening",
+      "name": "Unreal II: The Awakening",
+      "description": "Unreal II: The Awakening is a singleplayer first-person shooter game and the second in the Unreal series.",
+      "released": "2003-02-04",
+      "exe": "Unreal2.exe",
+      "stores": {
+        "steam": {
+          "id": 13200,
+          "delisted": true,
+          "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale."
+        },
+        "gog": {
+          "id": 1207658677,
+          "delisted": true,
+          "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale."
+        }
+      },
+      "eax": {
+        "api": "openal",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "Unreal2.ini": {
+            "format": "ini",
+            "locations": [
+              "game_exe:Unreal2.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Unreal II's configuration. In the game's options, only the EAX part is shown, as 'EAX 3.0 (Audigy only)'.",
+            "changes": {
+              "Unreal2.ini": {
+                "ALAudio.ALAudioSubsystem": {
+                  "UseDefaultDriver": "False",
+                  "UseEAX": "True",
+                  "Use3DSound": "True"
+                }
+              }
+            },
+            "tested": true
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "OldUnreal",
+          "url": "https://www.oldunreal.com"
+        }
+      ]
+    },
+    {
+      "id": "unreal-tournament-2004",
+      "name": "Unreal Tournament 2004",
+      "description": "Unreal Tournament 2004 is a singleplayer and multiplayer first-person arena shooter game and the third in the Unreal Tournament series.",
+      "released": "2004-03-16",
+      "exe": "UT2004.exe",
+      "stores": {
+        "steam": {
+          "id": 13230,
+          "delisted": true,
+          "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.",
+          "patches": "OldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
+        },
+        "gog": {
+          "id": 1207658691,
+          "delisted": true,
+          "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.",
+          "patches": "OldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
+        }
+      },
+      "eax": {
+        "api": "openal",
+        "versions": [
+          "3.0",
+          "5.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "UT2004.ini": {
+            "format": "ini",
+            "locations": [
+              "game_exe:UT2004.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in UT2004's configuration. In the game's options, this is Audio Mode 'H/W 3D + EAX' with System Driver ticked.",
+            "changes": {
+              "UT2004.ini": {
+                "ALAudio.ALAudioSubsystem": {
+                  "UseDefaultDriver": "False",
+                  "UseEAX": "True",
+                  "Use3DSound": "True"
+                }
+              }
+            },
+            "tested": false
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "OldUnreal",
+          "url": "https://www.oldunreal.com"
+        }
+      ],
+      "tested": false
+    },
+    {
+      "id": "unreal-tournament-3",
+      "name": "Unreal Tournament 3",
+      "description": "Unreal Tournament 3 is a singleplayer and multiplayer first-person arena shooter game and the fourth in the Unreal Tournament series.",
+      "released": "2007-11-19",
+      "exe": "UT3.exe",
+      "stores": {
+        "steam": {
+          "id": 13210,
+          "delisted": true,
+          "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale."
+        }
+      },
+      "eax": {
+        "api": "openal",
+        "versions": [
+          "4.0",
+          "5.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "UTEngine.ini": {
+            "format": "ini",
+            "locations": [
+              "prefix_documents:My Games/Unreal Tournament 3/UTGame/Config/UTEngine.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Unreal Tournament 3's configuration. In the game's options this is 'Hardware OpenAL' ticked, and without it the game has no sound.",
+            "changes": {
+              "UTEngine.ini": {
+                "ALAudio.ALAudioDevice": {
+                  "UseEffectsProcessing": "True"
+                }
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Enable Pro Logic surround sound",
+            "reason": "Sets Unreal Tournament 3's mixer to Pro Logic surround sound.",
+            "only_if": {
+              "speakers": "matrix"
+            },
+            "changes": {
+              "UTEngine.ini": {
+                "Galaxy.GalaxyAudioSubsystem": {
+                  "UseSurround": "True"
+                }
+              }
+            },
+            "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+            "tested": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "unreal-tournament-game-of-the-year-edition",
+      "name": "Unreal Tournament: Game of the Year Edition",
+      "description": "Unreal Tournament: Game of the Year Edition is a singleplayer and multiplayer first-person arena shooter game and the first in the Unreal Tournament series.",
+      "released": "1999-11-22",
+      "exe": "UnrealTournament.exe",
+      "stores": {
+        "steam": {
+          "id": 13240,
+          "delisted": true,
+          "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.",
+          "patches": "Creative's official 'EAX Library Patch' (uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip) adds full EAX 2.0 reverb and muffling of sounds through walls to the original Deathmatch and Capture the Flag maps — historically mirrored at patches-scrolls.com.\n\nOldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
+        },
+        "gog": {
+          "id": 1207658692,
+          "delisted": true,
+          "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.",
+          "patches": "Creative's official 'EAX Library Patch' (uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip) adds full EAX 2.0 reverb and muffling of sounds through walls to the original Deathmatch and Capture the Flag maps — historically mirrored at patches-scrolls.com.\n\nOldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "UnrealTournament.ini": {
+            "format": "ini",
+            "locations": [
+              "game_exe:UnrealTournament.ini"
+            ]
+          },
+          "User.ini": {
+            "format": "ini",
+            "locations": [
+              "game_exe:User.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in Unreal Tournament's configuration.",
+            "changes": {
+              "UnrealTournament.ini": {
+                "Engine.Engine": {
+                  "AudioDevice": "Galaxy.GalaxyAudioSubsystem"
+                },
+                "Galaxy.GalaxyAudioSubsystem": {
+                  "Use3dHardware": "True",
+                  "UseReverb": "True"
+                }
+              }
+            },
+            "tested": false
+          },
+          {
+            "title": "Enable Pro Logic surround sound",
+            "reason": "Sets Unreal Tournament's mixer to Pro Logic surround sound.",
+            "only_if": {
+              "speakers": "matrix"
+            },
+            "changes": {
+              "UnrealTournament.ini": {
+                "Galaxy.GalaxyAudioSubsystem": {
+                  "UseSurround": "True"
+                }
+              }
+            },
+            "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+            "tested": false
+          }
+        ],
+        "optional_settings": [
+          {
+            "title": "Raise sound quality",
+            "reason": "Unreal Tournament: Game of the Year Edition mixes its sound at a low sample rate, which dulls high-pitched sounds.",
+            "changes": {
+              "UnrealTournament.ini": {
+                "Galaxy.GalaxyAudioSubsystem": {
+                  "OutputRate": "48000Hz"
+                }
+              }
+            },
+            "tested": false
+          },
+          {
+            "title": "Raise texture filtering",
+            "reason": "Unreal Tournament: Game of the Year Edition filters textures at a low level, so a visible line shows where each floor and wall texture switches to a blurrier version.",
+            "changes": {
+              "UnrealTournament.ini": {
+                "D3DDrv.D3DRenderDevice": {
+                  "UseTrilinear": "True"
+                }
+              }
+            },
+            "tested": false
+          },
+          {
+            "title": "Raise color depth",
+            "reason": "Unreal Tournament: Game of the Year Edition runs fullscreen with a reduced color range, so smooth shading like skies and shadows shows visible bands.",
+            "changes": {
+              "UnrealTournament.ini": {
+                "WinDrv.WindowsClient": {
+                  "FullscreenColorBits": "32"
+                }
+              }
+            },
+            "tested": false
+          },
+          {
+            "title": "Enable WASD controls",
+            "reason": "Unreal Tournament moves with the arrow keys out of the box, and its Ctrl key jumps instead of crouching.",
+            "changes": {
+              "User.ini": {
+                "Engine.Input": {
+                  "W": "MoveForward",
+                  "A": "StrafeLeft",
+                  "S": "MoveBackward",
+                  "D": "StrafeRight",
+                  "E": "InventoryActivate",
+                  "C": "Duck",
+                  "Ctrl": "Duck",
+                  "RightMouse": "AltFire",
+                  "MouseWheelUp": "PrevWeapon",
+                  "MouseWheelDown": "NextWeapon"
+                }
+              }
+            },
+            "tested": false
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "OldUnreal",
+          "url": "https://www.oldunreal.com"
+        },
+        {
+          "title": "Unreal DirectX11 Renderer",
+          "url": "https://www.moddb.com/mods/unreal-directx11-renderer-for-ut-ug-rune-and-dx"
+        }
+      ],
+      "tested": false
+    },
+    {
+      "id": "x-com-enforcer",
+      "name": "X-COM: Enforcer",
+      "description": "X-COM: Enforcer is a singleplayer and multiplayer third-person shooter game and a spin-off in the X-COM series.",
+      "released": "2001-04-17",
+      "exe": "XCom.exe",
+      "stores": {
+        "steam": {
+          "id": 7770
+        },
+        "gog": {
+          "id": 1445249599
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "XCom.ini": {
+            "format": "ini",
+            "locations": [
+              "game_exe:XCom.ini"
+            ]
+          }
+        },
+        "audio_settings": [
+          {
+            "title": "Enable EAX",
+            "reason": "Automatically enables EAX in X-COM: Enforcer's configuration.",
+            "changes": {
+              "XCom.ini": {
+                "Galaxy.GalaxyAudioSubsystem": {
+                  "Use3dHardware": "True",
+                  "UseSpatial": "True"
+                }
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Enable Pro Logic surround sound",
+            "reason": "Sets X-COM: Enforcer's mixer to Pro Logic surround sound.",
+            "only_if": {
+              "speakers": "matrix"
+            },
+            "changes": {
+              "XCom.ini": {
+                "Galaxy.GalaxyAudioSubsystem": {
+                  "UseSurround": "True"
+                }
+              }
+            },
+            "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+            "tested": true
+          }
+        ],
+        "optional_settings": [
+          {
+            "title": "Raise sound quality",
+            "reason": "X-COM: Enforcer mixes its sound at a low sample rate, which dulls high-pitched sounds.",
+            "changes": {
+              "XCom.ini": {
+                "Galaxy.GalaxyAudioSubsystem": {
+                  "OutputRate": "48000Hz"
+                }
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Raise texture filtering",
+            "reason": "X-COM: Enforcer filters textures at a low level, so a visible line shows where each floor and wall texture switches to a blurrier version.",
+            "changes": {
+              "XCom.ini": {
+                "D3DDrv.D3DRenderDevice": {
+                  "UseTrilinear": "True"
+                }
+              }
+            },
+            "tested": true
+          },
+          {
+            "title": "Raise color depth",
+            "reason": "X-COM: Enforcer runs fullscreen with a reduced color range, so smooth shading like skies and shadows shows visible bands.",
+            "changes": {
+              "XCom.ini": {
+                "WinDrv.WindowsClient": {
+                  "FullscreenColorBits": "32"
+                }
+              }
+            },
+            "tested": true
+          }
+        ]
+      }
+    }
+  ]
+}

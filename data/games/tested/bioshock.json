@@ -1,0 +1,89 @@
+{
+  "$schema": "../../schema.json",
+  "name": "BioShock",
+  "description": "BioShock is a singleplayer first-person shooter and immersive sim game and the first in the BioShock series.",
+  "released": "2007-08-21",
+  "exe": "Bioshock.exe",
+  "stores": {
+    "steam": {
+      "id": 7670,
+      "store_details": "This is the original 2007 BioShock, an ideal candidate for restoring EAX sound."
+    }
+  },
+  "eax": { "api": "openal", "versions": ["4.0", "5.0"] },
+  "game_config": {
+    "files": {
+      "Bioshock.ini": {
+        "format": "ini",
+        "locations": ["prefix_appdata:Bioshock/Bioshock.ini"],
+        "crash_marker": "Running.ini"
+      }
+    },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in BioShock's configuration.",
+        "changes": { "Bioshock.ini": { "ShockGame.ShockUserSettings": { "bEAXEnabled": "True" } } },
+        "follow_up": "If BioShock starts with EAX turned off, make sure you quit the game from its main menu, otherwise it assumes the game crashed and resets Bioshock.ini to its previous state. If this happens, manually turn on 'Use Creative EAX Audio' in the game's audio settings.",
+        "tested": true
+      },
+      {
+        "title": "Enable 4.0 surround sound",
+        "reason": "Sets BioShock's mixer to 4.0 surround sound.",
+        "only_if": { "speakers": "quad" },
+        "changes": {
+          "Bioshock.ini": { "ShockGame.ShockUserSettings": { "SpeakerMode": "SM_Quad" } }
+        },
+        "tested": true
+      },
+      {
+        "title": "Enable 5.1 surround sound",
+        "reason": "Sets BioShock's mixer to 5.1 surround sound.",
+        "only_if": { "speakers": ["surround51", "surround61"] },
+        "changes": {
+          "Bioshock.ini": { "ShockGame.ShockUserSettings": { "SpeakerMode": "SM_5_1" } }
+        },
+        "tested": true
+      },
+      {
+        "title": "Enable 7.1 surround sound",
+        "reason": "Sets BioShock's mixer to 7.1 surround sound.",
+        "only_if": { "speakers": "surround71" },
+        "changes": {
+          "Bioshock.ini": { "ShockGame.ShockUserSettings": { "SpeakerMode": "SM_7_1" } }
+        },
+        "tested": true
+      },
+      {
+        "title": "Enable Pro Logic surround sound",
+        "reason": "Sets BioShock's mixer to Pro Logic surround sound.",
+        "only_if": { "speakers": "matrix" },
+        "changes": {
+          "Bioshock.ini": { "ShockGame.ShockUserSettings": { "SpeakerMode": "SM_ProLogic" } }
+        },
+        "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+        "tested": true
+      }
+    ],
+    "optional_settings": [
+      {
+        "title": "Raise texture filtering",
+        "reason": "BioShock filters textures at a low level, so floors and walls blur when seen at an angle.",
+        "changes": {
+          "Bioshock.ini": {
+            "D3DDrv.D3DRenderDevice": { "LevelOfAnisotropy": "16" },
+            "D3DDrv10.D3DRenderDevice10": { "LevelOfAnisotropy": "16" }
+          }
+        },
+        "tested": true
+      }
+    ]
+  },
+  "sources": [
+    {
+      "title": "Creative's BioShock audio guide (archived)",
+      "url": "https://web.archive.org/web/20080514015042/http://www.soundblaster.com/products/gaming/article.asp?articleID=71545&categoryID=13"
+    },
+    { "title": "PCGamingWiki: BioShock", "url": "https://www.pcgamingwiki.com/wiki/BioShock" }
+  ]
+}

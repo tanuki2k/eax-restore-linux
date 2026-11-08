@@ -1,0 +1,101 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Unreal Gold",
+  "description": "Unreal Gold is a singleplayer and multiplayer first-person shooter game, bundling Unreal, the first game in the Unreal series, with its Return to Na Pali expansion.",
+  "released": "1998-05-22",
+  "exe": "Unreal.exe",
+  "stores": {
+    "steam": {
+      "id": 13250,
+      "delisted": true,
+      "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.",
+      "patches": "OldUnreal's v227 patch adds a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
+    },
+    "gog": {
+      "id": 1207658679,
+      "delisted": true,
+      "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.",
+      "patches": "OldUnreal's v227 patch adds a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
+    }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0"] },
+  "game_config": {
+    "files": {
+      "Unreal.ini": { "format": "ini", "locations": ["game_exe:Unreal.ini"] },
+      "User.ini": { "format": "ini", "locations": ["game_exe:User.ini"] }
+    },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in Unreal's configuration.",
+        "changes": {
+          "Unreal.ini": {
+            "Galaxy.GalaxyAudioSubsystem": {
+              "Use3dHardware": "True",
+              "UseReverb": "True",
+              "UseSpatial": "True"
+            }
+          }
+        },
+        "tested": true
+      },
+      {
+        "title": "Enable Pro Logic surround sound",
+        "reason": "Sets Unreal's mixer to Pro Logic surround sound.",
+        "only_if": { "speakers": "matrix" },
+        "changes": { "Unreal.ini": { "GalaxyAudioSubsystem": { "UseSurround": "True" } } },
+        "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+        "tested": true
+      }
+    ],
+    "optional_settings": [
+      {
+        "title": "Raise sound quality",
+        "reason": "Unreal Gold mixes its sound at a low sample rate, which dulls high-pitched sounds.",
+        "changes": { "Unreal.ini": { "Galaxy.GalaxyAudioSubsystem": { "OutputRate": "48000Hz" } } },
+        "tested": true
+      },
+      {
+        "title": "Raise texture filtering",
+        "reason": "Unreal Gold filters textures at a low level, so a visible line shows where each floor and wall texture switches to a blurrier version.",
+        "changes": { "Unreal.ini": { "D3DDrv.D3DRenderDevice": { "UseTrilinear": "True" } } },
+        "tested": true
+      },
+      {
+        "title": "Raise color depth",
+        "reason": "Unreal Gold runs fullscreen with a reduced color range, so smooth shading like skies and shadows shows visible bands.",
+        "changes": { "Unreal.ini": { "WinDrv.WindowsClient": { "FullscreenColorBits": "32" } } },
+        "tested": true
+      },
+      {
+        "title": "Enable WASD controls",
+        "reason": "Unreal Gold moves with the arrow keys out of the box, and its right mouse button jumps instead of using the weapon's alternate fire.",
+        "changes": {
+          "User.ini": {
+            "Engine.Input": {
+              "W": "MoveForward",
+              "A": "StrafeLeft",
+              "S": "MoveBackward",
+              "D": "StrafeRight",
+              "E": "InventoryActivate",
+              "C": "Duck",
+              "Ctrl": "Duck",
+              "RightMouse": "AltFire",
+              "MiddleMouse": " ",
+              "MouseWheelUp": "PrevWeapon",
+              "MouseWheelDown": "NextWeapon"
+            }
+          }
+        },
+        "tested": true
+      }
+    ]
+  },
+  "sources": [
+    { "title": "OldUnreal", "url": "https://www.oldunreal.com" },
+    {
+      "title": "Unreal DirectX11 Renderer",
+      "url": "https://www.moddb.com/mods/unreal-directx11-renderer-for-ut-ug-rune-and-dx"
+    }
+  ]
+}

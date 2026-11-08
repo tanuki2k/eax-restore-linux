@@ -1,0 +1,17 @@
+{
+  "$schema": "../../schema.json",
+  "name": "S.T.A.L.K.E.R.: Shadow of Chornobyl - Enhanced Edition",
+  "description": "S.T.A.L.K.E.R.: Shadow of Chornobyl - Enhanced Edition is an open-world first-person shooter and survival horror game, an enhanced edition of 2007's S.T.A.L.K.E.R.: Shadow of Chernobyl.",
+  "released": "2025-05-20",
+  "exe": "xrEngine.exe",
+  "stores": {
+    "steam": { "id": 2427410 },
+    "gog": { "id": 1542429427 }
+  },
+  "eax": {
+    "api": "openal",
+    "versions": ["2.0"],
+    "status": "built_in",
+    "problem": "Unlike the original Shadow of Chernobyl, it comes with OpenAL Soft, which has EAX built in, so its reverb doesn't depend on a Creative sound card."
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "../schema.json",
+  "name": "Race Driver: GRID",
+  "description": "Race Driver: GRID is a singleplayer and multiplayer racing game and the first in the Grid series.",
+  "released": "2008-05-30",
+  "stores": {
+    "gog": {
+      "id": 1207659233,
+      "delisted": true,
+      "store_details": "Delisted from GOG and other stores at the end of 2016; GOG attributed the removal to expired car and music licensing."
+    }
+  },
+  "eax": { "api": "directsound3d", "versions": ["5.0"] }
+}

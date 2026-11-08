@@ -1,0 +1,16 @@
+{
+  "$schema": "../schema.json",
+  "name": "Kane & Lynch: Dead Men",
+  "description": "Kane & Lynch: Dead Men is a singleplayer and multiplayer third-person shooter game and the first in the Kane & Lynch series.",
+  "released": "2007-11-13",
+  "exe": "kaneandlynch.exe",
+  "stores": {
+    "steam": {
+      "id": 8080,
+      "delisted": true,
+      "store_details": "Square Enix removed it from sale on Steam in February 2021 and has said it has no plans to restore it."
+    },
+    "gog": { "id": 1721096025 }
+  },
+  "eax": { "api": "openal", "versions": ["2.0", "3.0", "4.0", "5.0"] }
+}

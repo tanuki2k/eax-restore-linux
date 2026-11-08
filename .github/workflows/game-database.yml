@@ -1,0 +1,41 @@
+name: Game Database
+
+on:
+  push:
+    paths:
+      - "data/**"
+      - "tools/**"
+      - "game-database.json"
+      - ".github/workflows/game-database.yml"
+  pull_request:
+    paths:
+      - "data/**"
+      - "tools/**"
+      - "game-database.json"
+      - ".github/workflows/game-database.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install check-jsonschema
+        run: pipx install check-jsonschema
+
+      - name: Schema is valid
+        run: check-jsonschema --check-metaschema data/schema.json
+
+      - name: Game files match the schema
+        run: |
+          shopt -s nullglob
+          check-jsonschema --schemafile data/schema.json data/games/tested/*.json data/games/untested/*.json data/drafts/*.json
+
+      - name: Game files are formatted
+        run: tools/format-game-database.sh --check
+
+      - name: game-database.json is up to date
+        run: tools/build-game-database.sh --check

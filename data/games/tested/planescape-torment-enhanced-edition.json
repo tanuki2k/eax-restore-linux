@@ -1,0 +1,16 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Planescape: Torment: Enhanced Edition",
+  "description": "Planescape: Torment: Enhanced Edition is a singleplayer isometric role-playing game, an enhanced edition of 1999's Planescape: Torment.",
+  "released": "2017-04-11",
+  "stores": {
+    "steam": { "id": 466300 },
+    "gog": { "id": 1203613131 }
+  },
+  "eax": {
+    "api": "directsound3d",
+    "status": "not_implemented",
+    "problem": "This is the Enhanced Edition, not the original Planescape: Torment, and it has no EAX."
+  },
+  "notes": "If you still own the original 1999 Planescape: Torment, which GOG stopped selling on its own in April 2017, that one still supports EAX."
+}

@@ -1,0 +1,11 @@
+{
+  "$schema": "../schema.json",
+  "name": "Postal 2",
+  "description": "Postal 2 is a singleplayer and multiplayer first-person shooter game and the second in the Postal series.",
+  "released": "2003-04-14",
+  "stores": {
+    "steam": { "id": 223470 },
+    "gog": { "id": 1207658755 }
+  },
+  "eax": { "api": "openal", "versions": ["1.0", "2.0", "3.0"] }
+}

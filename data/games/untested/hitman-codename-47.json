@@ -1,0 +1,26 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Hitman: Codename 47",
+  "description": "Hitman: Codename 47 is a singleplayer third-person stealth game and the first in the Hitman series.",
+  "released": "2000-11-19",
+  "exe": "Hitman.Exe",
+  "stores": {
+    "steam": { "id": 6900 },
+    "gog": { "id": 1207658996 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0"] },
+  "install": {
+    "tweaks": ["eax_unified"]
+  },
+  "game_config": {
+    "files": { "Hitman.cfg": { "format": "xml_attributes", "locations": ["game_exe:Hitman.cfg"] } },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in Hitman: Codename 47's configuration.",
+        "changes": { "Hitman.cfg": { "Sound": { "UseEAX": "1" } } },
+        "tested": true
+      }
+    ]
+  }
+}

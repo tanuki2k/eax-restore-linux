@@ -1,0 +1,54 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Freedom Force",
+  "description": "Freedom Force is a singleplayer and multiplayer real-time tactics role-playing game and the first in the Freedom Force series.",
+  "released": "2002-03-26",
+  "exe": "fforce.exe",
+  "stores": {
+    "steam": { "id": 8880 },
+    "gog": { "id": 1445250806 }
+  },
+  "eax": { "api": "directsound3d", "sound_system": "miles", "versions": ["1.0", "2.0"] },
+  "game_config": {
+    "files": {
+      "options.dat": { "format": "binary_text", "locations": ["game_exe:Data/options.dat"] }
+    },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in Freedom Force's configuration.",
+        "changes": { "options.dat": { "0000803f": "Creative Labs EAX 2 (TM)" } },
+        "tested": true
+      },
+      {
+        "title": "Enable stereo sound",
+        "reason": "Sets Freedom Force's mixer to stereo sound.",
+        "only_if": { "speakers": "stereo" },
+        "changes": { "options.dat": { "0000803f+46": "0" } },
+        "tested": true
+      },
+      {
+        "title": "Enable headphones",
+        "reason": "Sets Freedom Force's mixer to headphones.",
+        "only_if": { "speakers": "headphones" },
+        "changes": { "options.dat": { "0000803f+46": "1" } },
+        "tested": true
+      },
+      {
+        "title": "Enable Pro Logic surround sound",
+        "reason": "Sets Freedom Force's mixer to Pro Logic surround sound.",
+        "only_if": { "speakers": "matrix" },
+        "changes": { "options.dat": { "0000803f+46": "2" } },
+        "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+        "tested": true
+      },
+      {
+        "title": "Enable 4.0 surround sound",
+        "reason": "Sets Freedom Force's mixer to 4.0 surround sound.",
+        "only_if": { "speakers": "quad" },
+        "changes": { "options.dat": { "0000803f+46": "3" } },
+        "tested": true
+      }
+    ]
+  }
+}

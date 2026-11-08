@@ -29,7 +29,7 @@ This Code of Conduct applies within all project spaces (issues, pull requests, d
 
 ## Enforcement
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported by [opening an issue](../../issues) or, for sensitive reports, contacting the maintainer directly. All complaints will be reviewed and investigated promptly and fairly.
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported by [opening an issue](../../issues) or, for sensitive reports, [privately through GitHub](../../security/advisories/new), which only the maintainer can read. All complaints will be reviewed and investigated promptly and fairly.
 
 ## Attribution
 

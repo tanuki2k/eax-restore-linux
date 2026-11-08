@@ -1,0 +1,60 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Star Wars: Republic Commando",
+  "description": "Star Wars: Republic Commando is a singleplayer and multiplayer first-person tactical shooter game in the Star Wars series.",
+  "released": "2005-03-01",
+  "exe": "SWRepublicCommando.exe",
+  "stores": {
+    "steam": { "id": 6000 },
+    "gog": { "id": 1421405135 }
+  },
+  "eax": { "api": "openal", "versions": ["2.0", "3.0"] },
+  "install": {
+    "alsoft_ini": { "reverb": { "boost": "6" } },
+    "alsoft_tested": true
+  },
+  "game_config": {
+    "files": {
+      "System.ini": { "format": "ini", "locations": ["game_root:GameData/Save/System.ini"] }
+    },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in Republic Commando's configuration.",
+        "changes": {
+          "System.ini": {
+            "ALAudio.ALAudioSubsystem": {
+              "SelectedEAXVersion": "3",
+              "UseEAX": "True",
+              "Use3DSound": "True",
+              "UseDefaultDriver": "False",
+              "Channels": "32"
+            }
+          }
+        },
+        "tested": true
+      }
+    ],
+    "optional_settings": [
+      {
+        "title": "MAX",
+        "reason": "MAX",
+        "changes": {
+          "System.ini": {
+            "WinDrv.WindowsClient": {
+              "TextureDetailInterface": "UltraHigh",
+              "TextureDetailTerrain": "UltraHigh",
+              "TextureDetailWeaponSkin": "UltraHigh",
+              "TextureDetailWorld": "UltraHigh",
+              "TextureDetailRenderMap": "UltraHigh",
+              "TextureDetailLightmap": "UltraHigh",
+              "FSAA": "8",
+              "BumpmappingQuality": "2",
+              "Shadows": "True"
+            }
+          }
+        }
+      }
+    ]
+  }
+}

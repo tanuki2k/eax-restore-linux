@@ -1,0 +1,16 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Neverwinter Nights: Enhanced Edition",
+  "description": "Neverwinter Nights: Enhanced Edition is a singleplayer and multiplayer third-person role-playing game, an enhanced edition of 2002's Neverwinter Nights.",
+  "released": "2018-03-27",
+  "stores": {
+    "steam": { "id": 704450 },
+    "gog": { "id": 1097893768 }
+  },
+  "eax": {
+    "api": "directsound3d",
+    "status": "not_implemented",
+    "problem": "This is the Enhanced Edition, not the classic Neverwinter Nights, and it has no EAX."
+  },
+  "notes": "If you also own the classic Neverwinter Nights, it's a separate GOG purchase, 'Neverwinter Nights Diamond', and that one has EAX."
+}

@@ -1,0 +1,105 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Unreal Tournament: Game of the Year Edition",
+  "description": "Unreal Tournament: Game of the Year Edition is a singleplayer and multiplayer first-person arena shooter game and the first in the Unreal Tournament series.",
+  "released": "1999-11-22",
+  "exe": "UnrealTournament.exe",
+  "stores": {
+    "steam": {
+      "id": 13240,
+      "delisted": true,
+      "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.",
+      "patches": "Creative's official 'EAX Library Patch' (uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip) adds full EAX 2.0 reverb and muffling of sounds through walls to the original Deathmatch and Capture the Flag maps — historically mirrored at patches-scrolls.com.\n\nOldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
+    },
+    "gog": {
+      "id": 1207658692,
+      "delisted": true,
+      "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.",
+      "patches": "Creative's official 'EAX Library Patch' (uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip) adds full EAX 2.0 reverb and muffling of sounds through walls to the original Deathmatch and Capture the Flag maps — historically mirrored at patches-scrolls.com.\n\nOldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
+    }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0"] },
+  "game_config": {
+    "files": {
+      "UnrealTournament.ini": { "format": "ini", "locations": ["game_exe:UnrealTournament.ini"] },
+      "User.ini": { "format": "ini", "locations": ["game_exe:User.ini"] }
+    },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in Unreal Tournament's configuration.",
+        "changes": {
+          "UnrealTournament.ini": {
+            "Engine.Engine": { "AudioDevice": "Galaxy.GalaxyAudioSubsystem" },
+            "Galaxy.GalaxyAudioSubsystem": { "Use3dHardware": "True", "UseReverb": "True" }
+          }
+        },
+        "tested": false
+      },
+      {
+        "title": "Enable Pro Logic surround sound",
+        "reason": "Sets Unreal Tournament's mixer to Pro Logic surround sound.",
+        "only_if": { "speakers": "matrix" },
+        "changes": {
+          "UnrealTournament.ini": { "Galaxy.GalaxyAudioSubsystem": { "UseSurround": "True" } }
+        },
+        "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+        "tested": false
+      }
+    ],
+    "optional_settings": [
+      {
+        "title": "Raise sound quality",
+        "reason": "Unreal Tournament: Game of the Year Edition mixes its sound at a low sample rate, which dulls high-pitched sounds.",
+        "changes": {
+          "UnrealTournament.ini": { "Galaxy.GalaxyAudioSubsystem": { "OutputRate": "48000Hz" } }
+        },
+        "tested": false
+      },
+      {
+        "title": "Raise texture filtering",
+        "reason": "Unreal Tournament: Game of the Year Edition filters textures at a low level, so a visible line shows where each floor and wall texture switches to a blurrier version.",
+        "changes": {
+          "UnrealTournament.ini": { "D3DDrv.D3DRenderDevice": { "UseTrilinear": "True" } }
+        },
+        "tested": false
+      },
+      {
+        "title": "Raise color depth",
+        "reason": "Unreal Tournament: Game of the Year Edition runs fullscreen with a reduced color range, so smooth shading like skies and shadows shows visible bands.",
+        "changes": {
+          "UnrealTournament.ini": { "WinDrv.WindowsClient": { "FullscreenColorBits": "32" } }
+        },
+        "tested": false
+      },
+      {
+        "title": "Enable WASD controls",
+        "reason": "Unreal Tournament moves with the arrow keys out of the box, and its Ctrl key jumps instead of crouching.",
+        "changes": {
+          "User.ini": {
+            "Engine.Input": {
+              "W": "MoveForward",
+              "A": "StrafeLeft",
+              "S": "MoveBackward",
+              "D": "StrafeRight",
+              "E": "InventoryActivate",
+              "C": "Duck",
+              "Ctrl": "Duck",
+              "RightMouse": "AltFire",
+              "MouseWheelUp": "PrevWeapon",
+              "MouseWheelDown": "NextWeapon"
+            }
+          }
+        },
+        "tested": false
+      }
+    ]
+  },
+  "sources": [
+    { "title": "OldUnreal", "url": "https://www.oldunreal.com" },
+    {
+      "title": "Unreal DirectX11 Renderer",
+      "url": "https://www.moddb.com/mods/unreal-directx11-renderer-for-ut-ug-rune-and-dx"
+    }
+  ]
+}

@@ -1,111 +1,112 @@
-# EAX Restore for Linux (Steam/Proton & Heroic/Wine)
+<div align="center">
 
-A streamlined Bash script designed to automate the installation of DSOAL and OpenAL Soft for classic Windows games running on Linux.
+# EAX Restore for Linux
 
-**How it works:** Back in the late 90s and early 2000s, PC audio was built differently. Games relied heavily on DirectSound3D and Creative's EAX technology to deliver hardware-accelerated spatial audio and dynamic environmental reverb. If you walked into a cave, the echoes changed; if a guard walked behind a thick wall, their footsteps became muffled. Games like *Thief: The Dark Project*, *F.E.A.R.*, *Max Payne 2*, and *Star Wars: Knights of the Old Republic* used EAX to create incredibly immersive soundscapes that modern software audio often flat-out ignores.
+**Bring back EAX and DirectSound3D audio in classic Windows games on Steam/Proton and Heroic/Wine.**
 
-Because modern operating systems and Proton/Wine don't natively support this old hardware pipeline, those advanced audio options are usually grayed out. This script fixes that by deploying **[DSOAL](https://github.com/kcat/dsoal)** (DirectSound3D Object Audio Library) alongside **[OpenAL Soft](https://github.com/kcat/openal-soft)** directly into your game folder. Together, they act as a translation layer. They intercept legacy EAX calls and convert them into standard OpenAL, tricking the game into unlocking its hardware-accelerated audio options and processing the 3D sound flawlessly on your modern CPU.
+[![Latest release](https://img.shields.io/github/v/release/tanuki2k/eax-restore-linux?label=release)](https://github.com/tanuki2k/eax-restore-linux/releases/latest)
+[![License: MIT](https://img.shields.io/github/license/tanuki2k/eax-restore-linux)](LICENSE)
+[![Dev build](https://img.shields.io/badge/dev%20build-pre--release-orange)](https://github.com/tanuki2k/eax-restore-linux/releases/tag/dev)
 
-**Disclaimer:** I've tested this script heavily across various games and launchers, but please use it at your own risk. If you find any bugs, please report them on the issue tracker and I'll do my best to fix them!
+[What it does](#what-it-does) · [Install](#install) · [Steam Deck](#steam-deck) · [Uninstall](#uninstall) · [Docs](#documentation)
 
-**A Personal Note:** While installing DSOAL manually is a known process, it's a tedious, multi-step task involving file hunting and registry edits, inspired by kevinlekiller's project **[reshade-steam-proton](https://github.com/kevinlekiller/reshade-steam-proton)** I wanted a way to streamline the procress. Since I'm not a coder, I built this tool with the assistance of Google Gemini, and it's continued to evolve since with the help of Claude.
+</div>
 
-## Features
+## What it does
 
-* **Dual-Copy Deployment:** Deploys DSOAL/OpenAL files to both your local game folder *and* the Wine/Proton prefix's system folders, with conflict backups on both — not just the game folder.
-* **Engine Choice:** Toggle between the "plug-and-play" ThreeDeeJay Community fork, the PCGamingWiki Community fork (self-hosted mirror), or kcat's official DSOAL + OpenAL Soft baseline.
-* **Dynamic HRTF Integration:** Automatically generates optimized `alsoft.ini` configurations and deploys headphone profiles for incredible 3D binaural audio.
-* **Smart Architecture Scanner:** Automatically detects whether the game executable is 32-bit or 64-bit and grabs the exact right dependencies so the game doesn't crash on launch.
-* **Intelligent Prefix Routing:** Opt-in auto-detection for Steam AppIDs and Heroic Prefix paths, making it easy to find where your game is actually installed. Recently used game folders are remembered and offered as a quick pick on future runs.
-* **Deep Prefix Validation:** Verifies Steam AppIDs via Protontricks and ensures Heroic prefixes are fully initialized before touching any files.
-* **Cache & Offline Mode:** Smart GitHub API downloading with local caching, so if you install the fix to multiple games, it only downloads the files once. Pinned/live checksum verification guards against corrupt or tampered downloads.
-* **Safe File Management:** Interactive conflict resolution safely backs up pre-existing files with timestamps so you never lose original game data. Every install writes a manifest of exactly what it deployed, so uninstall only ever removes what this script actually put there and restores your backups automatically.
-* **COM Registry Injection:** Optional routing of DirectSound CLSIDs directly in the Wine registry. This fixes the stubbornly grayed-out EAX menus in games like *Grand Theft Auto: San Andreas* or *Halo: Combat Evolved*.
-* **Advanced Engine Tweaks:** Optional EAX Unified dummy files (`eax.dll`/`eaxunified.dll`) and expanded audio limits to fix stuttering in chaotic, high-channel games like *F.E.A.R.*
-* **Automatic DLL Overrides:** Sets the `dsound` override for you — in the game's Steam launch options or Heroic environment variables (the default, so it's visible and easy to undo there), or in the Wine prefix registry — or leaves it to you, with instructions. Existing launch options are kept, and uninstall puts them back.
-* **VC++ Runtime Handling:** Detects and installs the Microsoft VC++ 2022 Redistributable when the kcat engine needs it, falling back to a direct Microsoft download if winetricks/protontricks fails, and verifying the actual DLLs on disk rather than trusting exit codes.
-* **Safety Guards:** Refuses to run as root or from Steam's Gaming Mode, and won't auto-modify SteamOS's immutable filesystem.
+Games from the late 90s and early 2000s used DirectSound3D and Creative's EAX for spatial audio and environmental reverb. Walk into a cave and the echoes change. Put a thick wall between you and a guard and his footsteps get muffled. *Thief: The Dark Project*, *F.E.A.R.*, *Max Payne 2* and *Star Wars: Knights of the Old Republic* all did this, and on a modern system you mostly don't hear it.
 
-## Prerequisites
+Windows no longer supports that old hardware pipeline, and neither do Proton or Wine, so the games' advanced audio options are usually grayed out. This script puts **[DSOAL](https://github.com/kcat/dsoal)** and **[OpenAL Soft](https://github.com/kcat/openal-soft)** into your game folder and your Wine prefix. Between them they turn the game's old EAX calls into ordinary OpenAL, so the game finds the sound card it expects, unlocks its audio options, and your CPU does the 3D processing.
 
-The script checks for these dependencies and offers to install them if they are missing:
-* `curl`, `unzip`, `file`, `grep`, `awk`
+It also does the fiddly parts around that: it works out whether the game is 32 or 64-bit, finds the right Wine prefix, backs up any file it replaces, sets the DLL override so the game actually loads the new files, and switches on the game's own EAX options when it knows where they are. Every install writes a list of what it touched, so uninstalling puts everything back.
 
-**Launcher Dependencies:**
-* **Steam Games:** Requires `protontricks`.
-* **Heroic/GOG Games:** Requires `winetricks`.
+> [!WARNING]
+> I've tested this on a range of games and launchers, but use it at your own risk. If you hit a bug, please report it on the issue tracker.
 
-**Optional:**
-* `jq` — enables checksum verification for kcat's official builds. The script still works without it, just with a manual confirmation prompt instead of automatic verification.
+### Why I made it
 
-## Usage
+Setting up DSOAL by hand works, but it takes a lot of steps: hunting down the right files, copying them to the right places, editing the registry. kevinlekiller's **[reshade-steam-proton](https://github.com/kevinlekiller/reshade-steam-proton)** showed me this kind of thing could be automated. I'm not a coder, so I built the first version with Google Gemini, and it has kept growing with Claude's help.
 
-**1. Download the script:**
-Open your terminal and run:
+## Install
+
+You need a terminal and a few common tools. The script checks for them when it starts and offers to install what's missing on apt, pacman and dnf systems. On other distros it asks you to install them yourself, and on SteamOS it points you to Discover.
+
+| You need | For |
+| --- | --- |
+| `curl`, `unzip`, `file`, `grep`, `awk`, `jq` | everything |
+| `protontricks` | Steam games |
+| `winetricks` and `wine` | Heroic and GOG games |
+| `fzf` 0.35 or newer | the profile browser (optional; 0.58 or newer draws it in boxes). The script offers to install it the first time you open the browser. |
+
+Then download the script, make it executable and run it:
 
 ```bash
-curl -LO https://github.com/tanuki2k/eax-restore-linux/raw/refs/heads/main/eax-restore-linux.sh
-```
-
-**2. Make it executable:**
-In the same terminal, run:
-
-```bash
+curl -LO https://github.com/tanuki2k/eax-restore-linux/releases/latest/download/eax-restore-linux.sh
 chmod +x eax-restore-linux.sh
-```
-
-**3. Run the installer:**
-
-```bash
 ./eax-restore-linux.sh
 ```
 
-**4. Follow the prompts:**
-Choose to install or uninstall, provide the game directory, and select your preferred audio configuration.
+The main menu lets you scan your Steam and Heroic libraries for the game, browse to its folder, or type the path. It also has uninstall and a Tools menu.
 
-### Steam Deck Quick Install (Desktop Mode)
+An install has four phases. The first three only ask questions: which game, which audio files and speakers, and which of the game's own settings to change. Nothing on your system changes until you answer the final "Proceed?". [How it works](docs/how-it-works.md) goes through each step.
 
-As an alternative to the terminal steps above, [`eax-restore-linux.desktop`](eax-restore-linux.desktop) is a double-click launcher for Desktop Mode:
+To see what the script does or which version you have, run `./eax-restore-linux.sh --help` or `--version`. Both print and exit without starting anything.
 
-1. Switch to **Desktop Mode** and download [`eax-restore-linux.desktop`](https://github.com/tanuki2k/eax-restore-linux/raw/refs/heads/main/eax-restore-linux.desktop) (e.g. to your Desktop or Downloads folder).
-2. In Dolphin, right-click it and enable **Allow Executing File as Program** (Properties → Permissions), since Plasma won't run it otherwise.
-3. Double-click it and select **Execute**. It fetches the latest script into your home folder (`~/eax-restore-linux.sh`, overwriting any previous copy) and runs it in a terminal — nothing is installed until you follow the prompts, same as running the script manually. The downloaded copy is left behind afterward, so you can re-run it later (e.g. for uninstalls, or another game) without launching the `.desktop` file again.
+<details>
+<summary>Checking your download</summary>
 
-Since the script itself refuses to run in Gaming Mode, this only works from Desktop Mode.
+Every release also has a `.sha256` file for the script. To check that your copy arrived intact:
 
-### Uninstallation
-Run the script, select **(u)ninstall**, and provide the game directory. The script will remove the EAX files, restore original backups, remove the DLL override (from the registry or the launcher's settings), and optionally remove the VC++ runtime it installed.
+```bash
+curl -LO https://github.com/tanuki2k/eax-restore-linux/releases/latest/download/eax-restore-linux.sh.sha256
+sha256sum -c eax-restore-linux.sh.sha256
+```
 
-### Environment Variables
+</details>
 
-For repeat runs or scripting, these can be set to skip prompts:
+> [!NOTE]
+> Every change on the `dev` branch is published as a pre-release you can try at `https://github.com/tanuki2k/eax-restore-linux/releases/download/dev/eax-restore-linux.sh`. Its startup banner shows a `-dev` version with the build date and commit. It's unstable and unsupported, and the `.desktop` launcher below only ever fetches the stable release.
 
-| Variable | Effect |
+## Steam Deck
+
+In Desktop Mode you can skip the terminal. [`eax-restore-linux.desktop`](eax-restore-linux.desktop) is a launcher you double-click.
+
+1. Switch to Desktop Mode and download [`eax-restore-linux.desktop`](https://github.com/tanuki2k/eax-restore-linux/releases/latest/download/eax-restore-linux.desktop) from the [latest release](https://github.com/tanuki2k/eax-restore-linux/releases/latest), to your Desktop or Downloads folder.
+2. In Dolphin, right-click it, open Properties → Permissions and turn on **Allow Executing File as Program**. Plasma won't run it otherwise.
+3. Double-click it and choose **Execute**.
+
+The launcher downloads the newest script to `~/eax-restore-linux.sh` (replacing any older copy) and runs it in a terminal. It asks the same questions as running the script yourself, and installs nothing until you say so. The copy stays in your home folder, so you can run it again for an uninstall or another game without the launcher.
+
+> [!NOTE]
+> The script refuses to run in Gaming Mode, so use Desktop Mode.
+
+## Uninstall
+
+Run the script, choose **[U]ninstall the EAX fix** and give it the game's folder. It removes the files it installed and puts your original files back from the backups. It also takes out the DLL override, wherever it was set (the registry or the launcher's settings). It can remove the VC++ runtime it installed, and put back any game settings it changed, leaving alone anything you've changed yourself since.
+
+Like the install, it asks everything first (which files to remove, whether to close a running launcher, whether to remove the VC++ runtime, which settings to restore) and changes nothing until you confirm one final "Proceed?".
+
+## Documentation
+
+| Page | What's in it |
 | --- | --- |
-| `EAX_RESTORE_SKIP_PREFLIGHT=1` | Skips the pre-flight tool scan, trusting that `curl`, `unzip`, `file`, `protontricks`, `winetricks`, and `wine` are already available. |
-| `EAX_RESTORE_DSOAL_COMMUNITY_V13=1` | Pre-selects the ThreeDeeJay Community engine and jumps straight to install. |
-| `EAX_RESTORE_DSOAL_COMMUNITY_V14=1` | Pre-selects the PCGamingWiki Community engine (self-hosted mirror) and jumps straight to install. |
-| `EAX_RESTORE_DSOAL_OFFICIAL=1` | Pre-selects kcat's official DSOAL + OpenAL Soft engine and jumps straight to install. |
-| `EAX_RESTORE_VCRUN_ONLY=1` | Skips the full install/uninstall flow and just (re)installs the MS VC++ 2022 Redistributable into a game's prefix. |
-| `EAX_RESTORE_NO_LOG=1` | Turns off the per-run log file (see [Logs & Bug Reports](#logs--bug-reports)). |
+| [How it works](docs/how-it-works.md) | An install step by step, plus the Tools menu and profile browser |
+| [Library scanning and the game database](docs/game-database.md) | How the script recognises your games and what it knows about them |
+| [Environment variables](docs/environment-variables.md) | Options for repeat runs and scripting |
+| [Troubleshooting](docs/troubleshooting.md) | Run logs, DSOAL logging and bug reports |
+| [Contributing a game](docs/contributing-games.md) | Adding or fixing a game profile |
+| [Game file reference](docs/game-file-reference.md) | Every field in a game's file |
 
-Only set one `EAX_RESTORE_DSOAL_*` variable at a time.
+The same pages are on the project's wiki, which is generated from `docs/`.
 
-### Logs & Bug Reports
+## Credits
 
-Every run is saved to a log file in `~/.local/state/eax-restore-linux/logs/`, and the script prints its path when the run finishes. Each run gets its own timestamped file (the newest 10 are kept), and `latest.log` always points at the most recent one. Dev builds log separately, to `~/.local/state/eax-restore-linux/logs/dev/`.
+The script deploys other people's work:
 
-The log contains everything shown on screen and your answers to the script's prompts, plus details useful for troubleshooting: your distro, kernel, and Wine/winetricks/protontricks versions, the output of the Wine, winetricks, and protontricks commands the script runs, and a summary of the detected game, prefix, runner (Proton/Wine version), architecture, and chosen engine.
-
-If something goes wrong, please [open a bug report](https://github.com/tanuki2k/eax-restore-linux/issues/new?template=bug_report.md) and attach `~/.local/state/eax-restore-linux/logs/latest.log`. The log includes local file paths, which contain your username — feel free to redact them.
-
-## Credits & Upstream Sources
-
-This script automates the deployment of the following projects:
-
-* **kcat (Christopher Robinson)** - [DSOAL](https://github.com/kcat/dsoal) and [OpenAL Soft](https://github.com/kcat/openal-soft).
-* **ThreeDeeJay** - [DSOAL Community Fork](https://github.com/ThreeDeeJay/dsoal).
-* **PCGamingWiki** - DSOAL v1.4 Community Fork, re-hosted here as a self-hosted mirror since PCGamingWiki blocks automated downloads.
+* **kcat (Christopher Robinson)** writes [DSOAL](https://github.com/kcat/dsoal) and [OpenAL Soft](https://github.com/kcat/openal-soft). The script uses kcat's own builds: a tested DSOAL revision pinned from the [`archive`](https://github.com/kcat/dsoal/releases/tag/archive) release, or the newest `latest-master` or archive build, together with OpenAL Soft's newest release or its rolling pre-release.
+* **ThreeDeeJay** contributed the Win32/Win64 packaging pipeline that kcat's daily DSOAL builds now come from.
+* **Creative Technology** owns EAX Unified. `assets/EAX4Unified_redist_4001.zip` is Creative's redistributable installer, originally on the *Splinter Cell: Double Agent* DVD (the Steam version ships the same file) and available from [PCGamingWiki's file library](https://community.pcgamingwiki.com/files/file/367-eax-unified/) and the [VOGONS Vintage Driver Library](https://vogonsdrivers.com/getfile.php?fileid=2226&menustate=0). It's kept here because Creative's own download is gone and neither site wants to be linked to for the file itself. It remains Creative's intellectual property and is not covered by this project's MIT license. To check the installer yourself, the `EAX4Unified_redist_4001.exe` inside the zip, and the one in the `support` folder of a Steam copy of *Splinter Cell: Double Agent*, both have the SHA-256 `c10e904a6f9869009307f5ca6484c9a0cebb90698e6cc404d7901353f25ff484`.
 
 ## License
-This script is provided under the [MIT License](LICENSE).
+
+[MIT](LICENSE), for this project's own code and data. Creative's EAX Unified redistributable in `assets/` is Creative's and keeps its own terms (see Credits).

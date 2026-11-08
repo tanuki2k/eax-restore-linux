@@ -1,0 +1,61 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Thief Gold",
+  "description": "Thief Gold is a singleplayer first-person stealth and immersive sim game, an expanded edition of Thief: The Dark Project.",
+  "released": "1998-12-01",
+  "exe": "THIEF.EXE",
+  "stores": {
+    "steam": {
+      "id": 211600,
+      "store_details": "The original build, without the NewDark engine patch.",
+      "patches": "TFix bundles the NewDark engine patch along with a range of modern-system fixes, and is worth installing alongside EAX."
+    },
+    "gog": {
+      "id": 1207658997,
+      "api": "openal",
+      "store_details": "It comes with the NewDark engine patch pre-installed."
+    }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0"] },
+  "game_config": {
+    "files": {
+      "cam_ext.cfg": {
+        "format": "key_value",
+        "locations": ["game_exe:cam_ext.cfg"],
+        "if_missing": "skip"
+      },
+      "DARK.CFG": {
+        "format": "key_value",
+        "locations": ["game_exe:DARK.CFG"],
+        "if_missing": "skip"
+      },
+      "dark.cfg": {
+        "format": "key_value",
+        "locations": ["game_exe:dark.cfg"],
+        "if_missing": "skip"
+      }
+    },
+    "audio_settings": [
+      {
+        "title": "Enable underwater reverb",
+        "reason": "Some Thief Gold maps don't mark their underwater areas, so they play the wrong reverb there.",
+        "changes": { "cam_ext.cfg": { "force_underwater_reverb": true } },
+        "tested": false
+      }
+    ],
+    "optional_settings": [
+      {
+        "title": "Enable full-precision mouse look",
+        "reason": "Thief Gold reads mouse look through standard Windows input by default, which doesn't give high-resolution mice their full precision.",
+        "changes": { "cam_ext.cfg": { "use_raw_mouse_input": true } },
+        "tested": false
+      }
+    ]
+  },
+  "sources": [
+    {
+      "title": "NewDark's config documentation (new_config_vars.txt)",
+      "url": "https://github.com/JarrodDoyle/rogue-patcher/blob/0e355105dd7d520d0364c5f96d03ae7f9d437353/Resources/NewDark/Docs/NewDark/new_config_vars.txt"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Soldier of Fortune II: Double Helix",
+  "description": "Soldier of Fortune II: Double Helix is a singleplayer and multiplayer first-person shooter game and the second in the Soldier of Fortune series.",
+  "released": "2002-05-21",
+  "exe": "SoF2.exe",
+  "stores": {
+    "gog": { "id": 1228964594, "store_details": "Sold as the 'Gold Edition'." }
+  },
+  "eax": { "api": "openal", "versions": ["3.0"] },
+  "game_config": {
+    "files": {
+      "sof2sp.cfg": { "format": "set_commands", "locations": ["game_exe:base/sof2sp.cfg"] }
+    },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in Soldier of Fortune II's configuration.",
+        "changes": { "sof2sp.cfg": { "snd_dll": "al" } },
+        "tested": true
+      }
+    ]
+  },
+  "notes": "Only single-player has EAX — multiplayer (SoF2MP.exe) has none."
+}

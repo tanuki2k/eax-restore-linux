@@ -1,0 +1,80 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Neverwinter Nights 2",
+  "description": "Neverwinter Nights 2 is a singleplayer and multiplayer third-person role-playing game and the second in the Neverwinter Nights series.",
+  "released": "2006-10-31",
+  "exe": "nwn2main.exe",
+  "stores": {
+    "gog": {
+      "id": 1207659162,
+      "store_details": "This is the original 2006 Neverwinter Nights 2 with its Mask of the Betrayer and Storm of Zehir expansions and the Mysteries of Westgate adventure pack. It's an ideal candidate for restoring EAX sound."
+    }
+  },
+  "eax": { "api": "directsound3d", "sound_system": "miles", "versions": ["1.0", "2.0", "3.0"] },
+  "game_config": {
+    "files": {
+      "nwn2.ini": {
+        "format": "ini",
+        "locations": ["prefix_documents:Neverwinter Nights 2/nwn2.ini"]
+      }
+    },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in Neverwinter Nights 2's configuration.",
+        "changes": {
+          "nwn2.ini": {
+            "Sound Options": {
+              "3D Provider": "Creative Labs EAX 3 (TM)",
+              "Environment Effects": "1"
+            }
+          }
+        },
+        "tested": true
+      },
+      {
+        "title": "Enable stereo sound",
+        "reason": "Sets Neverwinter Nights 2's mixer to stereo sound.",
+        "only_if": { "speakers": "stereo" },
+        "changes": { "nwn2.ini": { "Sound Options": { "Speaker Type": "3" } } },
+        "tested": true
+      },
+      {
+        "title": "Enable 4.0 surround sound",
+        "reason": "Sets Neverwinter Nights 2's mixer to 4.0 surround sound.",
+        "only_if": { "speakers": "quad" },
+        "changes": { "nwn2.ini": { "Sound Options": { "Speaker Type": "3" } } },
+        "tested": true
+      },
+      {
+        "title": "Enable 5.1 surround sound",
+        "reason": "Sets Neverwinter Nights 2's mixer to 5.1 surround sound.",
+        "only_if": { "speakers": ["surround51", "surround61"] },
+        "changes": { "nwn2.ini": { "Sound Options": { "Speaker Type": "4" } } },
+        "tested": true
+      },
+      {
+        "title": "Enable 7.1 surround sound",
+        "reason": "Sets Neverwinter Nights 2's mixer to 7.1 surround sound.",
+        "only_if": { "speakers": "surround71" },
+        "changes": { "nwn2.ini": { "Sound Options": { "Speaker Type": "5" } } },
+        "tested": true
+      },
+      {
+        "title": "Enable Pro Logic surround sound",
+        "reason": "Sets Neverwinter Nights 2's mixer to Pro Logic surround sound.",
+        "only_if": { "speakers": "matrix" },
+        "changes": { "nwn2.ini": { "Sound Options": { "Speaker Type": "2" } } },
+        "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+        "tested": true
+      },
+      {
+        "title": "Enable headphones",
+        "reason": "Sets Neverwinter Nights 2's mixer to headphones.",
+        "only_if": { "speakers": "headphones" },
+        "changes": { "nwn2.ini": { "Sound Options": { "Speaker Type": "1" } } },
+        "tested": true
+      }
+    ]
+  }
+}

@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Test stub: no launcher or game is ever running in the fake world.
+exit 1

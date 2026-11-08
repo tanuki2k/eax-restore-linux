@@ -1,0 +1,14 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Red Faction",
+  "description": "Red Faction is a singleplayer and multiplayer first-person shooter game and the first in the Red Faction series.",
+  "released": "2001-09-18",
+  "stores": {
+    "steam": { "id": 20530 },
+    "gog": { "id": 1207660623 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0"] },
+  "install": {
+    "tweaks": ["eax_unified"]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Outcast - Second Contact",
+  "description": "Outcast - Second Contact is a singleplayer third-person action-adventure game, a remake of 1999's Outcast.",
+  "released": "2017-11-14",
+  "stores": {
+    "steam": { "id": 618970 },
+    "gog": { "id": 2109390794 }
+  },
+  "eax": {
+    "api": "directsound3d",
+    "status": "not_implemented",
+    "problem": "This is the 2017 remake, not the original 1999 Outcast, and it has no EAX."
+  },
+  "notes": "The original 1999 Outcast supports EAX."
+}

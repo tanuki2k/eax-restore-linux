@@ -1,0 +1,31 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Psychonauts",
+  "description": "Psychonauts is a singleplayer third-person platform and action-adventure game and the first in the Psychonauts series.",
+  "released": "2005-04-19",
+  "stores": {
+    "steam": { "id": 3830 },
+    "gog": { "id": 1207658807 }
+  },
+  "eax": { "api": "openal", "versions": ["2.0", "3.0", "4.0"] },
+  "game_config": {
+    "files": {
+      "AudioSettings.ini": {
+        "format": "ini",
+        "locations": ["game_exe:AudioSettings.ini"],
+        "if_missing": "create"
+      }
+    },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in Psychonauts' configuration. The game has no in-game option for this.",
+        "changes": { "AudioSettings.ini": { "AudioSettings": { "UseEAX": "true" } } },
+        "tested": false
+      }
+    ]
+  },
+  "sources": [
+    { "title": "PCGamingWiki: Psychonauts", "url": "https://www.pcgamingwiki.com/wiki/Psychonauts" }
+  ]
+}

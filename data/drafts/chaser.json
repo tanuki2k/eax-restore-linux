@@ -1,0 +1,10 @@
+{
+  "$schema": "../schema.json",
+  "name": "Chaser",
+  "description": "Chaser is a singleplayer and multiplayer first-person shooter game.",
+  "released": "2003-06-20",
+  "stores": {
+    "gog": { "id": 1207658894 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["3.0"] }
+}

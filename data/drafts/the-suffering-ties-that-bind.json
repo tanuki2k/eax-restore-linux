@@ -1,0 +1,16 @@
+{
+  "$schema": "../schema.json",
+  "name": "The Suffering: Ties That Bind",
+  "description": "The Suffering: Ties That Bind is a singleplayer first- and third-person shooter and survival horror game and the second in The Suffering series.",
+  "released": "2005-09-26",
+  "exe": "SufferingTTB.exe",
+  "stores": {
+    "gog": {
+      "id": 1578481504,
+      "delisted": true,
+      "store_details": "Delisted from GOG on 1 September 2024 at Warner Bros.' request; GOG was the only storefront that carried it."
+    }
+  },
+  "eax": { "api": "directsound3d" },
+  "notes": "The Vogons Wiki confirms an 'Enable EAX' option in the game's configuration utility but doesn't record which EAX version(s) it covers."
+}

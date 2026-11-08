@@ -1,0 +1,13 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Mafia",
+  "description": "Mafia is a singleplayer third-person action-adventure game and the first in the Mafia series.",
+  "released": "2002-08-29",
+  "stores": {
+    "gog": { "id": 1595659240 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0", "3.0"] },
+  "install": {
+    "tweaks": ["eax_unified"]
+  }
+}

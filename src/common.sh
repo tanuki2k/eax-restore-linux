@@ -1,0 +1,249 @@
+
+is_truthy() { [[ "${1,,}" =~ ^(1|true|yes|y)$ ]]; }
+prompt_restart_or_quit() {
+    # Usage: prompt_restart_or_quit [quit_exit_code]
+    # Shared handler for the "this game can't benefit from EAX" dead ends (a
+    # remaster that never implemented it, or a build a patch stripped it
+    # from). Rather than ending the script outright, offer to go back to game
+    # selection: sets RESTART_REQUESTED so the caller chain unwinds to the
+    # flow's Step 1 loop (for an install started from the main menu, on to the
+    # main menu itself, see MAIN_MENU_SHOWN). On a "quit" answer it exits with the given
+    # code (default 0) — passed as 1 by the not_implemented hard-blocks so
+    # they keep their non-zero status. Defaults to "yes" (go back to game
+    # selection): reaching this dead end almost always means the user picked
+    # the wrong build/edition and wants another try, and nothing is deployed
+    # on this path. (An exhausted / non-interactive stdin still exits here —
+    # confirm() treats EOF as "no" regardless of the default.)
+    if confirm "Would you like to go back and choose a different game?" Y; then
+        RESTART_REQUESTED=1
+    else
+        print_result "Exiting."
+        exit "${1:-0}"
+    fi
+}
+is_genuine_dll() {
+    # Usage: is_genuine_dll <path>
+    # Wine creates a "fake DLL" placeholder file with the real DLL's name in
+    # system32/syswow64 for every one of its own builtin implementations, by
+    # default, in every prefix — purely so apps that check "does this file
+    # exist" before running don't refuse to start. These placeholders are
+    # real PE files but contain no actual code, and Wine's own source embeds
+    # a literal signature string in every one it generates: "Wine builtin
+    # DLL" or "Wine placeholder DLL". A plain file-existence or non-empty
+    # check can't tell a genuine installed DLL apart from one of these —
+    # this checks for that signature so callers can. Returns true (0) only
+    # for a file that exists, is non-empty, and does NOT carry that marker.
+    local file="$1"
+    [ -s "$file" ] || return 1
+    grep -qa "Wine builtin DLL\|Wine placeholder DLL" "$file" 2>/dev/null && return 1
+    return 0
+}
+is_openal_soft_dll() {
+    # Usage: is_openal_soft_dll <path>
+    # Tells kcat's OpenAL Soft from Creative's OpenAL32.dll by content, since
+    # the file name is the same: OpenAL Soft carries its own name and its
+    # ALSOFT_ environment variable prefix, while Creative's router (a ~50 KB
+    # DLL that hands off to wrap_oal.dll) names neither. A repacked build
+    # without those strings counts as "not OpenAL Soft".
+    [ -s "$1" ] && grep -qa "OpenAL Soft\|ALSOFT_" "$1" 2>/dev/null
+}
+# Usage: manifest_file_is_ours <path>
+# True when the file's name is one the install deploys. Uninstall only deletes
+# manifest entries that pass, whatever else a manifest says.
+manifest_file_is_ours() {
+    case "${1##*/}" in
+        [Dd][Ss][Oo][Uu][Nn][Dd].[Dd][Ll][Ll]|[Dd][Ss][Oo][Uu][Nn][Dd].[Vv][Xx][Dd]|[Dd][Ss][Oo][Aa][Ll]-[Aa][Ll][Dd][Rr][Vv].[Dd][Ll][Ll]) return 0 ;;
+        [Oo][Pp][Ee][Nn][Aa][Ll]32.[Dd][Ll][Ll]|[Ee][Aa][Xx].[Dd][Ll][Ll]|[Ee][Aa][Xx][Uu][Nn][Ii][Ff][Ii][Ee][Dd].[Dd][Ll][Ll]|alsoft.ini) return 0 ;;
+    esac
+    return 1
+}
+
+# Usage: manifest_is_legacy_hrtf_dir <path>
+# True when the manifest line names the folder 0.28.x copied the HRTF profiles
+# into (<game>/OpenAL, or just <game>/OpenAL/HRTF when OpenAL was already
+# there). Only the name; the caller still checks the path is inside the game's
+# install and that it's a real folder. Nothing deploys it any more, but
+# uninstalling an install from that version still has to take it back.
+manifest_is_legacy_hrtf_dir() {
+    case "$1" in
+        */OpenAL|*/OpenAL/HRTF) return 0 ;;
+    esac
+    return 1
+}
+
+# Usage: remove_legacy_hrtf_dir <dir>
+# Removes the folder only when it holds nothing but what the install put in it:
+# HRTF data sets (.mhr), their credits and the small .txt/.json/.ini files that
+# come with them. Anything else (a mod's own file, a symlink) leaves the
+# folder as it is and returns 1.
+remove_legacy_hrtf_dir() {
+    [ -d "$1" ] && [ ! -L "$1" ] || return 1
+    [ -z "$(find "$1" ! -type d ! \( -type f \( -iname '*.mhr' -o -iname '*.txt' -o -iname '*.json' -o -iname '*.ini' \) \) -print -quit 2>/dev/null)" ] || return 1
+    rm -rf -- "$1" 2>/dev/null
+    [ ! -e "$1" ]
+}
+
+# Usage: shell_quote <text>
+# The text in single quotes, safe to splice into a string a shell will parse
+# (protontricks -c runs its argument through sh).
+shell_quote() {
+    printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"
+}
+
+# Usage: find_glob_escape <text>
+# The text with find's pattern characters ([ ] * ? \) escaped, for -iname with
+# an exe name from the database: "Game [GOG].exe" must match only itself.
+find_glob_escape() {
+    printf '%s' "$1" | sed 's/[][\*?]/\\&/g'
+}
+
+# Usage: manifest_path_in_scope <path> <game install root>
+# True when the path is inside the game's install (game_install_root: the exe
+# folder and its extra exe folders live there) or inside a Wine prefix's C: drive, the only places an install deploys
+# to. A name check alone would let a copied or edited manifest point at another
+# game's dsound.dll.
+manifest_path_in_scope() {
+    case "$1" in
+        "$2"/*|*/drive_c/*) return 0 ;;
+    esac
+    return 1
+}
+
+# Usage: looks_like_our_file <path>
+# True when a regular file with one of the deployed names has the content of
+# what this script puts there: DSOAL's dsound.dll, OpenAL Soft's DLLs, the
+# empty eax dummies, the alsoft.ini it generates. The scan used when there's
+# no manifest relies on this, so a game's own file of the same name is left
+# alone.
+looks_like_our_file() {
+    [ -f "$1" ] && [ ! -L "$1" ] || return 1
+    local name="${1##*/}"
+    case "${name,,}" in
+        dsound.dll) grep -qa "DSOAL" "$1" ;;
+        dsoal-aldrv.dll|openal32.dll) is_openal_soft_dll "$1" ;;
+        eax.dll|eaxunified.dll) [ ! -s "$1" ] ;;
+        alsoft.ini) grep -qa "Auto-generated by EAX Restore Script" "$1" ;;
+        *) return 1 ;;
+    esac
+}
+
+# Usage: oldest_backup <path>
+# Prints the oldest of the timestamped backups an install made of <path>
+# (<path>.bak.YYYYmmdd_HHMMSS), picked by the timestamp in the name: file dates
+# don't say which came first, and other files that merely start with ".bak"
+# aren't ours. Returns 1 when there is none.
+oldest_backup() {
+    local b
+    for b in "$1".bak.[0-9]*_[0-9]*; do
+        [ -e "$b" ] && { printf '%s' "$b"; return 0; }
+    done
+    return 1
+}
+
+# Usage: swap_in <temp file> <target>
+# Replaces the target with the temp file written next to it, keeping the
+# target's permissions. A failed move removes the temp file and returns 1, so
+# a half-written file is never left behind. A target that is a symlink (a
+# dotfile-managed config, say) is written through, so the link stays a link.
+swap_in() {
+    local target="$2"
+    [ -L "$target" ] && target="$(readlink -f "$target")"
+    [ -f "$target" ] && chmod --reference="$target" "$1" 2>/dev/null
+    mv -f "$1" "$target" 2>/dev/null || { rm -f "$1"; return 1; }
+}
+
+# Usage: acf_value <appmanifest_<id>.acf> <key>
+# One top-level string value from a Steam appmanifest ("name", "installdir"),
+# or nothing.
+acf_value() {
+    sed -n "s/^[[:space:]]*\"$2\"[[:space:]]*\"\(.*\)\"[[:space:]]*\$/\1/p" "$1" 2>/dev/null | head -n 1
+}
+
+# Usage: manifest_is_uninstalled <manifest>
+# True when the manifest is the "uninstalled" marker an uninstall leaves
+# behind, not a record of what an install changed.
+manifest_is_uninstalled() {
+    local first
+    IFS= read -r first < "$1" 2>/dev/null
+    [[ "$first" == "# EAX Restore: uninstalled"* ]]
+}
+
+parse_selection() {
+    # Usage: parse_selection <total_count> <input_string>
+    # Parses pacman-style selection syntax into the global SELECTED[1..N]
+    # array (1 = keep/act on, 0 = skip). Empty input selects everything
+    # (matches pressing Enter to accept pacman's full list). Plain numbers
+    # or ranges ("1 2 3", "1-3") narrow the selection to only those. A "^"
+    # prefix ("^4", "^1-3") always excludes — collected and applied in a
+    # second pass after all inclusions, specifically so the order tokens
+    # appear in doesn't matter ("^2 1-3" and "1-3 ^2" both correctly exclude
+    # 2 — an earlier single-pass version let a later plain token's reset
+    # silently wipe out an exclusion that appeared before it). Unrecognized
+    # tokens are ignored rather than erroring, since this reads user input.
+    local total="$1"
+    local input="$2"
+    local i
+
+    SELECTED=()
+    for ((i = 1; i <= total; i++)); do SELECTED[$i]=1; done
+
+    [ -z "$input" ] && return
+
+    input="${input//,/ }"
+    local reset_done=0
+    local token start end body
+    local excludes=()
+
+    for token in $input; do
+        if [[ "$token" == ^* ]]; then
+            excludes+=("$token")
+            continue
+        fi
+        if [ "$reset_done" -eq 0 ]; then
+            for ((i = 1; i <= total; i++)); do SELECTED[$i]=0; done
+            reset_done=1
+        fi
+        if [[ "$token" =~ ^([0-9]+)-([0-9]+)$ ]]; then
+            start="${BASH_REMATCH[1]}"; end="${BASH_REMATCH[2]}"
+        elif [[ "$token" =~ ^[0-9]+$ ]]; then
+            start="$token"; end="$token"
+        else
+            continue
+        fi
+        for ((i = start; i <= end && i <= total; i++)); do SELECTED[$i]=1; done
+    done
+
+    # Second pass: exclusions always win, applied last regardless of where
+    # they appeared in the input.
+    for token in "${excludes[@]}"; do
+        body="${token#^}"
+        if [[ "$body" =~ ^([0-9]+)-([0-9]+)$ ]]; then
+            start="${BASH_REMATCH[1]}"; end="${BASH_REMATCH[2]}"
+        elif [[ "$body" =~ ^[0-9]+$ ]]; then
+            start="$body"; end="$body"
+        else
+            continue
+        fi
+        for ((i = start; i <= end && i <= total; i++)); do SELECTED[$i]=0; done
+    done
+}
+
+# Usage: is_steamos
+# SteamOS's system is read-only, so the package managers can't install there.
+is_steamos() { grep -q "ID=steamos" /etc/os-release 2>/dev/null; }
+
+# Usage: install_packages <package>...
+# Installs the packages with the distro's own package manager (apt, pacman
+# or dnf) through sudo. Returns 1 when the install fails, or when the distro
+# isn't one of those, after asking for them to be installed by hand.
+install_packages() {
+    local flavour
+    flavour="$(. /etc/os-release 2>/dev/null; echo "${ID_LIKE:-$ID}")"
+    print_task "Installing missing packages"
+    case "$flavour" in
+        *debian*|*ubuntu*) sudo apt-get update && sudo apt-get install -y "$@" ;;
+        *arch*) sudo pacman -S --needed "$@" ;;
+        *fedora*) sudo dnf install -y "$@" ;;
+        *) print_error "please install these manually: $*"; return 1 ;;
+    esac
+}

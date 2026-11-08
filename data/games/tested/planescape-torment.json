@@ -1,0 +1,32 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Planescape: Torment",
+  "description": "Planescape: Torment is a singleplayer isometric role-playing game.",
+  "released": "1999-12-10",
+  "exe": "Torment.exe",
+  "stores": {
+    "gog": {
+      "id": 1207658887,
+      "delisted": true,
+      "store_details": "This is the original 1999 Planescape: Torment. GOG stopped selling it on its own in April 2017 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
+    }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0"] },
+  "game_config": {
+    "files": { "Torment.ini": { "format": "ini", "locations": ["game_exe:Torment.ini"] } },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in Planescape: Torment's configuration.",
+        "changes": { "Torment.ini": { "Game Options": { "Environmental Audio": "1" } } },
+        "tested": true
+      }
+    ]
+  },
+  "sources": [
+    {
+      "title": "GOG forum: Planescape: Torment: Enhanced Edition announcement",
+      "url": "https://www.gog.com/forum/planescape_torment/planescape_torment_enhanced_edition_1"
+    }
+  ]
+}

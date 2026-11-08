@@ -1,0 +1,35 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Star Wars Jedi Knight: Jedi Academy",
+  "description": "Star Wars Jedi Knight: Jedi Academy is a singleplayer and multiplayer first- and third-person shooter and action game and the fourth in the Star Wars: Jedi Knight series.",
+  "released": "2003-09-16",
+  "exe": "jasp.exe",
+  "stores": {
+    "steam": { "id": 6020 },
+    "gog": { "id": 1428935726 }
+  },
+  "eax": { "api": "openal", "versions": ["1.0", "2.0", "3.0", "4.0"] },
+  "game_config": {
+    "files": {
+      "jaconfig.cfg": { "format": "set_commands", "locations": ["game_exe:base/jaconfig.cfg"] },
+      "jampconfig.cfg": {
+        "format": "set_commands",
+        "locations": ["game_exe:base/jampconfig.cfg"],
+        "if_missing": "skip"
+      }
+    },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in Jedi Academy's configuration.",
+        "changes": {
+          "jaconfig.cfg": { "s_UseOpenAL": "1" },
+          "jampconfig.cfg": { "s_UseOpenAL": "1" }
+        },
+        "follow_up": "If there's no music when Jedi Academy starts, open the console with Shift + ~, type snd_restart and press Enter. Please note: Jedi Academy has no music in its main menu.",
+        "tested": true
+      }
+    ]
+  },
+  "notes": "Game's default graphical settings are low. These could be maxed out by updating the game's profile with its higher settings."
+}

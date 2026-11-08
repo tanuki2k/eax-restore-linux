@@ -1,0 +1,10 @@
+{
+  "$schema": "../schema.json",
+  "name": "Ghost Master",
+  "description": "Ghost Master is a singleplayer puzzle and strategy game.",
+  "released": "2003-05-23",
+  "stores": {
+    "steam": { "id": 6200 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["3.0"] }
+}

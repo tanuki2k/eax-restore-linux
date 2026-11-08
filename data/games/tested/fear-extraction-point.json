@@ -1,0 +1,40 @@
+{
+  "$schema": "../../schema.json",
+  "name": "F.E.A.R. Extraction Point",
+  "description": "F.E.A.R. Extraction Point is a singleplayer first-person shooter and horror expansion for F.E.A.R.",
+  "released": "2006-10-24",
+  "exe": "FEARXP.exe",
+  "stores": {
+    "steam": {
+      "id": 21110,
+      "patches": "The English version loses some radio voices when hardware sound is on, and the unofficial 'F.E.A.R. Extraction Point EAX Fix' brings them back (per PCGamingWiki)."
+    }
+  },
+  "eax": { "api": "directsound3d", "versions": ["2.0", "4.0"] },
+  "install": {
+    "tweaks": ["eax_unified", "expand_audio_limits"]
+  },
+  "game_config": {
+    "files": {
+      "Profile000.gdb": {
+        "format": "binary_switches",
+        "locations": ["prefix_public_documents:TimeGate Studios/FEARXP/Profiles/Profile000.gdb"]
+      }
+    },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in F.E.A.R. Extraction Point's configuration.",
+        "changes": { "Profile000.gdb": { "UseHWSound": "1", "UseEAX": "1", "UseEAX4": "1" } },
+        "tested": true
+      }
+    ]
+  },
+  "sources": [
+    { "title": "PCGamingWiki: F.E.A.R.", "url": "https://www.pcgamingwiki.com/wiki/F.E.A.R." },
+    {
+      "title": "F.E.A.R. Extraction Point EAX Fix",
+      "url": "https://community.pcgamingwiki.com/files/file/2600-fear-extraction-point-eax-fix"
+    }
+  ]
+}

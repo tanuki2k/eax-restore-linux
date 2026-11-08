@@ -1,0 +1,32 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Icewind Dale Complete",
+  "description": "Icewind Dale Complete is a singleplayer and multiplayer isometric role-playing game.",
+  "released": "2000-06-29",
+  "exe": "IDMain.exe",
+  "stores": {
+    "gog": {
+      "id": 1207658888,
+      "delisted": true,
+      "store_details": "This is the original 2000 Icewind Dale with its Heart of Winter and Trials of the Luremaster expansions. GOG had stopped selling it by November 2016 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
+    }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0"] },
+  "game_config": {
+    "files": { "icewind.ini": { "format": "ini", "locations": ["game_exe:icewind.ini"] } },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in Icewind Dale's configuration.",
+        "changes": { "icewind.ini": { "Game Options": { "Environmental Audio": "1" } } },
+        "tested": true
+      }
+    ]
+  },
+  "sources": [
+    {
+      "title": "GOG forum: BGEE, BG2EE, IWEE vs originals",
+      "url": "https://www.gog.com/forum/baldurs_gate_series/bgee_bg2ee_iwee_vs_originals"
+    }
+  ]
+}

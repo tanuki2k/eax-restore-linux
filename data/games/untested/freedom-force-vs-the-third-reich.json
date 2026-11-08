@@ -1,0 +1,11 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Freedom Force vs. the Third Reich",
+  "description": "Freedom Force vs. the Third Reich is a singleplayer and multiplayer real-time tactics role-playing game and the second in the Freedom Force series.",
+  "released": "2005-03-08",
+  "exe": "ffvt3r.exe",
+  "stores": {
+    "steam": { "id": 8890 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0"] }
+}

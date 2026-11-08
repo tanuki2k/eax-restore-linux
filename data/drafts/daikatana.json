@@ -1,0 +1,12 @@
+{
+  "$schema": "../schema.json",
+  "name": "Daikatana",
+  "description": "Daikatana is a singleplayer and multiplayer first-person shooter game.",
+  "released": "2000-05-23",
+  "exe": "daikatana.exe",
+  "stores": {
+    "steam": { "id": 242980 },
+    "gog": { "id": 1207659168 }
+  },
+  "eax": { "api": "directsound3d" }
+}
