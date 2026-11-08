@@ -1,12 +1,13 @@
 name: Wiki sync
 
 # docs/ is the source; the wiki is generated from it, plus the profile editor's
-# README, which is published as the database/profile-editor page. Needs the repository's
+# README, which is published as the profile-editor page. GitHub wikis ignore
+# folders, so tools/build-wiki.py flattens the pages and their links. Needs the repository's
 # Wiki enabled and its first page created once in the UI, or the clone fails.
 on:
   push:
     branches: [main]
-    paths: ['docs/**', 'tools/profiler/README.md', '.github/workflows/wiki-sync.yml']
+    paths: ['docs/**', 'tools/profiler/README.md', 'tools/build-wiki.py', '.github/workflows/wiki-sync.yml']
   workflow_dispatch:
 
 permissions:
@@ -29,9 +30,7 @@ jobs:
         run: |
           git clone "https://x-access-token:${TOKEN}@github.com/${REPO}.wiki.git" wiki
           find wiki -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
-          cp -r docs/. wiki/
-          mkdir -p wiki/database
-          cp tools/profiler/README.md wiki/database/profile-editor.md
+          tools/build-wiki.py docs tools/profiler/README.md wiki
           cd wiki
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

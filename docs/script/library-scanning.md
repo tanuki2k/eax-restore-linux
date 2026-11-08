@@ -2,7 +2,7 @@
 
 When you start an install, the script can scan your Steam and Heroic libraries for games it recognises. You pick one from the list instead of hunting for its folder.
 
-What it recognises comes from the [game database](../database/overview.md), a community-maintained list the script downloads on every run.
+What it recognises comes from the [game database](../database/database-overview.md), a community-maintained list the script downloads on every run.
 
 ## What a game's entry gives you
 
@@ -18,7 +18,7 @@ That last one needs an explanation. Plenty of games ship with EAX turned off in 
 
 ## Untested games
 
-Entries nobody has checked on a real install yet are left out of the scan and the install, so those games are treated as having no entry. Set `EAX_RESTORE_UNTESTED=1` to include them. The profile browser in the Tools menu can show them too: press Ctrl-T to switch the filter. The [database overview](../database/overview.md#tested-and-untested-games) explains what tested means.
+Entries nobody has checked on a real install yet are left out of the scan and the install, so those games are treated as having no entry. Set `EAX_RESTORE_UNTESTED=1` to include them. The profile browser in the Tools menu can show them too: press Ctrl-T to switch the filter. The [database overview](../database/database-overview.md#tested-and-untested-games) explains what tested means.
 
 Single settings can be unverified too, even in a tested game. Those stay hidden unless you set `EAX_RESTORE_UNTESTED_SETTINGS=1`, and then they're marked "(untested)". See [Environment variables](environment-variables.md).
 

@@ -101,7 +101,7 @@ Like the install, it asks everything first (which files to remove, whether to cl
 
 | Page | What's in it |
 | --- | --- |
-| [The game database](docs/database/overview.md) | What an entry holds, how the files are built and what tested means |
+| [The game database](docs/database/database-overview.md) | What an entry holds, how the files are built and what tested means |
 | [Game file reference](docs/database/game-file-reference.md) | Every field in a game's file |
 | [Contributing a game](docs/database/contributing.md) | The rules for adding or fixing a game |
 | [The profile editor](tools/profiler/README.md) | The editor you use to write and check entries |

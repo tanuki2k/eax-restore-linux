@@ -4,7 +4,7 @@ Pull requests that add or correct a game are welcome. Each game is one file name
 
 ## Where a game file lives
 
-Which folder a file is in says how far along it is. The [database overview](overview.md#where-a-game-file-lives) lists the three folders. A new game starts in `data/games/untested/`.
+Which folder a file is in says how far along it is. The [database overview](database-overview.md#where-a-game-file-lives) lists the three folders. A new game starts in `data/games/untested/`.
 
 To promote a game, `git mv` its file to the next folder and run `tools/format-game-database.sh`. That also updates the file's `"$schema"` line for the new location. Move a game to `tested/` only after you've checked it on a real install.
 
