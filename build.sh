@@ -118,5 +118,13 @@ if [ -n "$stamp_date" ]; then
         || { echo "build.sh: SCRIPT_DATE stamp did not apply" >&2; exit 1; }
 fi
 
+# A dev build fetches the game database and assets from the dev branch, so its
+# data can move ahead of what a stable player gets.
+if [ "$is_dev_build" = true ]; then
+    sed -i -E 's|^DATA_BRANCH=.*|DATA_BRANCH="dev"|' "$out"
+    grep -qxF 'DATA_BRANCH="dev"' "$out" \
+        || { echo "build.sh: DATA_BRANCH stamp did not apply" >&2; exit 1; }
+fi
+
 chmod +x "$out"
 echo "Built $out from ${#COMPONENTS[@]} component files."

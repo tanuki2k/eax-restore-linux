@@ -6,6 +6,9 @@
 # current.
 SCRIPT_VERSION="0.29"
 SCRIPT_DATE="2026-08-13"
+# The branch the game database and EAX Unified zip are fetched from: main for a
+# stable build, dev for a dev build (build.sh stamps it with the version).
+DATA_BRANCH="main"
 
 # --- Colour Definitions ---
 GREEN='\033[0;32m'
@@ -55,7 +58,7 @@ OPENAL_PRERELEASE="$OPENAL_SHARE/prerelease"
 # reused from the cache. The product code is what msiexec /x removes it by.
 EAX_UNIFIED_SHARE="$BASE_SHARE/eax-unified"
 EAX_UNIFIED_EXE="EAX4Unified_redist_4001.exe"
-EAX_UNIFIED_ZIP_URL="https://raw.githubusercontent.com/tanuki2k/eax-restore-linux/dev/assets/EAX4Unified_redist_4001.zip"
+EAX_UNIFIED_ZIP_URL="https://raw.githubusercontent.com/tanuki2k/eax-restore-linux/${DATA_BRANCH}/assets/EAX4Unified_redist_4001.zip"
 EAX_UNIFIED_ZIP_SHA256="2502b6ffebb360549a049baf345048323ee3ddef9983ac2e9f91f9eef5d660d9"
 EAX_UNIFIED_EXE_SHA256="c10e904a6f9869009307f5ca6484c9a0cebb90698e6cc404d7901353f25ff484"
 EAX_UNIFIED_PRODUCT_CODE="{89661B04-C646-4412-B6D3-5E19F02F1F37}"
@@ -107,9 +110,9 @@ DSOAL_PINNED_SHA256="5abe990ff5692fa070d549a8c28df2435842c5d3f586a59b0da5281bc1c
 # against the data take effect without users needing a new script version;
 # cached locally so a fetch failure (offline, rate-limited) degrades to the
 # last-known-good copy instead of losing the feature entirely.
-# Schema 3 only exists on dev, so dev fetches its own branch's copy and caches
-# it under its own name. Revisit when 0.29 merges into main.
-GAME_DATABASE_URL="https://raw.githubusercontent.com/tanuki2k/eax-restore-linux/dev/game-database.json"
+# A stable build reads main's copy and a dev build dev's (DATA_BRANCH), so work
+# in progress on dev, a schema bump included, never reaches stable players.
+GAME_DATABASE_URL="https://raw.githubusercontent.com/tanuki2k/eax-restore-linux/${DATA_BRANCH}/game-database.json"
 GAME_DATABASE_CACHE="$BASE_SHARE/game-database.v3.json"
 GAME_DATABASE_FILE=""
 GAME_DATABASE_FULL_FILE=""
