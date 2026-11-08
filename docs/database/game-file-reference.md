@@ -1,6 +1,6 @@
 # Game file reference
 
-This page covers every field of a game file, in the order of the [example](contributing-games.md#a-game-file). The formal definition is [`data/schema.json`](https://github.com/tanuki2k/eax-restore-linux/blob/HEAD/data/schema.json).
+This page covers every field of a game file, in the order of the [example](contributing.md#a-game-file). The formal definition is [`data/schema.json`](https://github.com/tanuki2k/eax-restore-linux/blob/HEAD/data/schema.json).
 
 ## At a glance
 

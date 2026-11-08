@@ -2,7 +2,7 @@
 
 When you start an install, the script can scan your Steam and Heroic libraries for games it recognises. You pick one from the list instead of hunting for its folder.
 
-What it recognises comes from [`game-database.json`](https://github.com/tanuki2k/eax-restore-linux/blob/HEAD/game-database.json), a community-maintained file in this repo, built from one small file per game in [`data/games/`](https://github.com/tanuki2k/eax-restore-linux/blob/HEAD/data/games/). The script fetches it fresh on every run (a stable release reads the `main` branch, a dev build reads `dev`), so a fix to a game's entry reaches you straight away. It keeps a local copy as `game-database.v3.json`, which it falls back to when you're offline.
+What it recognises comes from the [game database](../database/overview.md), a community-maintained list the script downloads on every run.
 
 ## What a game's entry gives you
 
@@ -16,11 +16,11 @@ If the game is in the database, the install can do a lot more than copy files:
 
 That last one needs an explanation. Plenty of games ship with EAX turned off in their config files, or load their own copy of an audio library instead of the one the script installs. The entry lists those settings. For each one the script shows the file, the value it has now and the value it would set, and applies the ones you accept. Audio settings go in together, once you agree. Optional ones, like a fix for Quake 4's low-resolution textures, are offered one at a time, and only if you want to look through them.
 
-## Tested and untested games
+## Untested games
 
-Each game's file lives in one of two folders. `data/games/tested/` holds games someone has checked on a real install. `data/games/untested/` holds games that are in the database but nobody has checked yet. The install and the library scan ignore the untested ones, so those games are treated as having no entry. Set `EAX_RESTORE_UNTESTED=1` to include them. The profile browser in the Tools menu always lists them, behind its own filter.
+Entries nobody has checked on a real install yet are left out of the scan and the install, so those games are treated as having no entry. Set `EAX_RESTORE_UNTESTED=1` to include them. The profile browser in the Tools menu can show them too: press Ctrl-T to switch the filter. The [database overview](../database/overview.md#tested-and-untested-games) explains what tested means.
 
-Single settings can be unverified too, even in a tested game. Those are left out unless you set `EAX_RESTORE_UNTESTED_SETTINGS=1`, and then they're marked "(untested)". See [Environment variables](environment-variables.md).
+Single settings can be unverified too, even in a tested game. Those stay hidden unless you set `EAX_RESTORE_UNTESTED_SETTINGS=1`, and then they're marked "(untested)". See [Environment variables](environment-variables.md).
 
 ## When your game isn't in the database
 
@@ -39,4 +39,4 @@ The scanner can't see games that aren't in Steam or Heroic, because there's no l
 
 ## Adding or fixing a game
 
-[Contributing a game](contributing-games.md) walks through it.
+The [Add a game tutorial](../tutorials/add-a-game.md) walks through it, and [Contributing a game](../database/contributing.md) has the rules.

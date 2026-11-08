@@ -4,15 +4,9 @@ Pull requests that add or correct a game are welcome. Each game is one file name
 
 ## Where a game file lives
 
-The folder a file is in says how far along it is.
+Which folder a file is in says how far along it is. The [database overview](overview.md#where-a-game-file-lives) lists the three folders. A new game starts in `data/games/untested/`.
 
-| Folder | What it means | Shipped to players? |
-| --- | --- | --- |
-| `data/games/tested/` | Checked against a real install: its store IDs match, its `exe` exists if it has one, and every config file and setting is where the file says. | Yes |
-| `data/games/untested/` | Not checked on a real install yet. New games start here. | Yes, but hidden unless the player sets `EAX_RESTORE_UNTESTED=1`. The profile browser always lists them. |
-| `data/drafts/` | Incomplete or doubtful entries. They are validated against the schema and formatted, nothing more. | No |
-
-To promote a game, `git mv` its file to the next folder and run `tools/format-game-database.sh`. That also updates the file's `"$schema"` line for the new location.
+To promote a game, `git mv` its file to the next folder and run `tools/format-game-database.sh`. That also updates the file's `"$schema"` line for the new location. Move a game to `tested/` only after you've checked it on a real install.
 
 ## Adding a game
 
