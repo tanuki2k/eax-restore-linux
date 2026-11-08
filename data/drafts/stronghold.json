@@ -1,0 +1,13 @@
+{
+  "$schema": "../schema.json",
+  "name": "Stronghold",
+  "description": "Stronghold is a singleplayer and multiplayer real-time strategy and castle-building game and the first in the Stronghold series.",
+  "released": "2001-10-19",
+  "stores": {
+    "gog": {
+      "id": 1207658712,
+      "store_details": "Sold only on GOG, as 'Stronghold HD' — the original 2001 Firefly Studios build."
+    }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0"] }
+}

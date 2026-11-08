@@ -1,0 +1,28 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Arx Fatalis",
+  "description": "Arx Fatalis is a singleplayer first-person action role-playing game.",
+  "released": "2002-06-28",
+  "exe": "arx.exe",
+  "stores": {
+    "steam": { "id": 1700 },
+    "gog": { "id": 1207658680 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0"] },
+  "install": {
+    "tweaks": ["eax_unified"]
+  },
+  "game_config": {
+    "files": { "cfg.ini": { "format": "ini", "locations": ["game_exe:cfg.ini"] } },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in Arx Fatalis' configuration.",
+        "changes": { "cfg.ini": { "AUDIO": { "EAX": "1" } } },
+        "tested": false
+      }
+    ]
+  },
+  "sources": [{ "title": "Arx Libertatis", "url": "https://arx-libertatis.org/" }],
+  "notes": "On Linux, the Arx Libertatis engine reimplementation (arx-libertatis.org) is a strong alternative: it runs natively without Wine or Proton, reuses your Arx Fatalis data files and plays the game's environmental reverb out of the box. Use it or EAX, not both."
+}

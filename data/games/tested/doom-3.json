@@ -1,0 +1,77 @@
+{
+  "$schema": "../../schema.json",
+  "name": "DOOM 3",
+  "description": "DOOM 3 is a singleplayer and multiplayer first-person shooter and survival horror game and the third main game in the Doom series.",
+  "released": "2004-08-03",
+  "exe": "Doom3.exe",
+  "stores": {
+    "steam": {
+      "id": 9050,
+      "companion_apps": [9070],
+      "store_details": "DOOM 3 is sold as a bundle with Resurrection of Evil and DOOM 3: BFG Edition. Steam lists Resurrection of Evil as its own game."
+    },
+    "gog": {
+      "id": 1492054092,
+      "id_source": "local_install_verified",
+      "store_details": "DOOM 3 is sold as a bundle with Resurrection of Evil and DOOM 3: BFG Edition. Heroic shows the bundle as two library entries."
+    }
+  },
+  "eax": { "api": "openal", "versions": ["4.0"] },
+  "game_config": {
+    "files": {
+      "DoomConfig.cfg": { "format": "set_commands", "locations": ["game_exe:base/DoomConfig.cfg"] },
+      "d3xp DoomConfig.cfg": {
+        "format": "set_commands",
+        "locations": ["game_exe:d3xp/DoomConfig.cfg"],
+        "if_missing": "skip"
+      }
+    },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in DOOM 3's configuration.",
+        "changes": { "DoomConfig.cfg": { "s_useOpenAL": "1", "s_useEAXReverb": "1" } },
+        "tested": true
+      },
+      {
+        "title": "Enable EAX in Resurrection of Evil",
+        "reason": "Automatically enables EAX in Resurrection of Evil's configuration.",
+        "changes": { "d3xp DoomConfig.cfg": { "s_useOpenAL": "1", "s_useEAXReverb": "1" } },
+        "tested": true
+      }
+    ],
+    "optional_settings": [
+      {
+        "title": "Fix low image quality",
+        "reason": "DOOM 3 can't detect how much memory modern graphics cards have, so it loads its lowest-resolution textures.",
+        "changes": {
+          "DoomConfig.cfg": {
+            "com_videoRam": "1024",
+            "image_downSize": "0",
+            "image_downSizeBump": "0",
+            "image_downSizeSpecular": "0",
+            "image_ignoreHighQuality": "0"
+          }
+        },
+        "tested": true
+      },
+      {
+        "title": "Fix low image quality in Resurrection of Evil",
+        "reason": "Resurrection of Evil can't detect how much memory modern graphics cards have, so it loads its lowest-resolution textures.",
+        "changes": {
+          "d3xp DoomConfig.cfg": {
+            "com_videoRam": "1024",
+            "image_downSize": "0",
+            "image_downSizeBump": "0",
+            "image_downSizeSpecular": "0"
+          }
+        },
+        "tested": true
+      }
+    ]
+  },
+  "sources": [
+    { "title": "Steam: DOOM 3", "url": "https://store.steampowered.com/app/208200/" },
+    { "title": "GOG: DOOM 3", "url": "https://www.gog.com/en/game/doom_3" }
+  ]
+}

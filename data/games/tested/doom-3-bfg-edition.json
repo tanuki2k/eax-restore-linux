@@ -1,0 +1,17 @@
+{
+  "$schema": "../../schema.json",
+  "name": "DOOM 3: BFG Edition",
+  "description": "DOOM 3: BFG Edition is a singleplayer and multiplayer first-person shooter and survival horror game, a remaster of 2004's DOOM 3.",
+  "released": "2012-10",
+  "exe": "Doom3BFG.exe",
+  "stores": {
+    "steam": { "id": 208200 },
+    "gog": { "id": 1135892318 }
+  },
+  "eax": {
+    "api": "openal",
+    "status": "not_implemented",
+    "problem": "This is the 2012 BFG Edition, not the classic DOOM 3, and it has no EAX."
+  },
+  "notes": "If you also own the classic DOOM 3, that one has EAX — it comes with the same purchase."
+}

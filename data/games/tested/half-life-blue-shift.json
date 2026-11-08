@@ -1,0 +1,16 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Half-Life: Blue Shift",
+  "description": "Half-Life: Blue Shift is a singleplayer first-person shooter expansion for Half-Life.",
+  "released": "2001-06-12",
+  "stores": {
+    "steam": { "id": 130 }
+  },
+  "eax": {
+    "api": "directsound3d",
+    "versions": ["1.0"],
+    "status": "removed_by_patch",
+    "problem": "The original release used DirectSound3D, but a 2013 update replaced it with a newer audio engine that dropped EAX entirely.",
+    "fix": "If you still have the original pre-2013 retail/CD release installed outside Steam, its EAX calls are intact and this script restores EAX normally there."
+  }
+}

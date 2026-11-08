@@ -1,0 +1,17 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Baldur's Gate II: Enhanced Edition",
+  "description": "Baldur's Gate II: Enhanced Edition is a singleplayer and multiplayer isometric role-playing game, an enhanced edition of 2000's Baldur's Gate II: Shadows of Amn.",
+  "released": "2013-11-15",
+  "exe": "BaldurII.exe",
+  "stores": {
+    "steam": { "id": 257350 },
+    "gog": { "id": 1207666373 }
+  },
+  "eax": {
+    "api": "directsound3d",
+    "status": "not_implemented",
+    "problem": "This is the Enhanced Edition, not the classic Baldur's Gate II, and it has no EAX."
+  },
+  "notes": "Baldur's Gate 2 Complete, a separate purchase on GOG, is the original 2000 release that still supports EAX."
+}

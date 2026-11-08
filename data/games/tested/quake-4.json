@@ -1,0 +1,87 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Quake 4",
+  "description": "Quake 4 is a singleplayer and multiplayer first-person shooter game and the fourth in the Quake series.",
+  "released": "2005-10-18",
+  "exe": "Quake4.exe",
+  "stores": {
+    "steam": { "id": 2210 },
+    "gog": { "id": 1836059896 }
+  },
+  "eax": { "api": "openal", "versions": ["4.0", "5.0"] },
+  "game_config": {
+    "files": {
+      "Quake4Config.cfg": {
+        "format": "set_commands",
+        "locations": ["game_exe:q4base/Quake4Config.cfg"]
+      },
+      "autoexec.cfg": {
+        "format": "set_commands",
+        "locations": ["game_exe:q4base/autoexec.cfg"],
+        "if_missing": "create"
+      }
+    },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in Quake 4's configuration.",
+        "changes": {
+          "Quake4Config.cfg": {
+            "s_useOpenAL": "1",
+            "s_useEAXReverb": "1",
+            "s_useEAXOcclusion": "1"
+          }
+        },
+        "tested": true
+      },
+      {
+        "title": "Enable 5.1 surround sound",
+        "reason": "Sets Quake 4's mixer to 5.1 surround sound.",
+        "only_if": { "speakers": "surround" },
+        "changes": { "Quake4Config.cfg": { "s_numberOfSpeakers": "6" } },
+        "tested": true
+      }
+    ],
+    "optional_settings": [
+      {
+        "title": "Fix low image quality",
+        "reason": "Quake 4 can't detect how much memory modern graphics cards have, so it picks low-quality settings and loads its lowest-resolution textures.",
+        "changes": {
+          "autoexec.cfg": {
+            "com_videoRam": "1024",
+            "r_renderer": "best",
+            "com_machineSpec": "3",
+            "r_shadows": "1",
+            "r_skipSky": "0",
+            "r_skipBump": "0",
+            "r_skipSpecular": "0",
+            "r_skipNewAmbient": "1",
+            "r_forceAmbient": "0",
+            "r_multiSamples": "4",
+            "image_anisotropy": "8",
+            "image_ignoreHighQuality": "0",
+            "image_downSize": "0",
+            "image_downSizeBump": "0",
+            "image_downSizeSpecular": "0",
+            "image_useCache": "0",
+            "image_useCompression": "0",
+            "image_useNormalCompression": "0",
+            "image_usePrecompressedTextures": "0",
+            "image_lodbias": "-2",
+            "image_filter": "GL_LINEAR_MIPMAP_LINEAR"
+          }
+        },
+        "tested": true
+      },
+      {
+        "title": "Fix blurry text",
+        "reason": "Quake 4 limits how sharply it draws its smaller text, so menu and HUD text looks blurry at high resolutions. A few multiplayer menus can cut off text with this on.",
+        "changes": { "autoexec.cfg": { "gui_smallFontLimit": "0", "gui_mediumFontLimit": "0" } },
+        "tested": true
+      }
+    ]
+  },
+  "sources": [
+    { "title": "PCGamingWiki: Quake 4", "url": "https://www.pcgamingwiki.com/wiki/Quake_4" }
+  ]
+}

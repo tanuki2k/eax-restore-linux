@@ -1,0 +1,35 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Condemned: Criminal Origins",
+  "description": "Condemned: Criminal Origins is a singleplayer first-person survival horror and action game and the first in the Condemned series.",
+  "released": "2006-04-11",
+  "exe": "Condemned.exe",
+  "stores": {
+    "steam": {
+      "id": 4720,
+      "delisted": true,
+      "store_details": "Delisted from Steam and the Microsoft Store at the end of October 2025, with no reason given."
+    }
+  },
+  "eax": { "api": "directsound3d", "versions": ["2.0", "3.0", "4.0"] },
+  "install": {
+    "tweaks": ["eax_unified"]
+  },
+  "game_config": {
+    "files": {
+      "Profile000.gdb": {
+        "format": "binary_switches",
+        "locations": [
+          "prefix_public_documents:Monolith Productions/Condemned/Profiles/Profile000.gdb"
+        ]
+      }
+    },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in Condemned's configuration.",
+        "changes": { "Profile000.gdb": { "UseHWSound": "1", "UseEAX": "1", "UseEAX4": "1" } }
+      }
+    ]
+  }
+}

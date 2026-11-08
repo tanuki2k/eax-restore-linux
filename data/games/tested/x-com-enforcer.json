@@ -1,0 +1,55 @@
+{
+  "$schema": "../../schema.json",
+  "name": "X-COM: Enforcer",
+  "description": "X-COM: Enforcer is a singleplayer and multiplayer third-person shooter game and a spin-off in the X-COM series.",
+  "released": "2001-04-17",
+  "exe": "XCom.exe",
+  "stores": {
+    "steam": { "id": 7770 },
+    "gog": { "id": 1445249599 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0"] },
+  "game_config": {
+    "files": { "XCom.ini": { "format": "ini", "locations": ["game_exe:XCom.ini"] } },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in X-COM: Enforcer's configuration.",
+        "changes": {
+          "XCom.ini": {
+            "Galaxy.GalaxyAudioSubsystem": { "Use3dHardware": "True", "UseSpatial": "True" }
+          }
+        },
+        "tested": true
+      },
+      {
+        "title": "Enable Pro Logic surround sound",
+        "reason": "Sets X-COM: Enforcer's mixer to Pro Logic surround sound.",
+        "only_if": { "speakers": "matrix" },
+        "changes": { "XCom.ini": { "Galaxy.GalaxyAudioSubsystem": { "UseSurround": "True" } } },
+        "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+        "tested": true
+      }
+    ],
+    "optional_settings": [
+      {
+        "title": "Raise sound quality",
+        "reason": "X-COM: Enforcer mixes its sound at a low sample rate, which dulls high-pitched sounds.",
+        "changes": { "XCom.ini": { "Galaxy.GalaxyAudioSubsystem": { "OutputRate": "48000Hz" } } },
+        "tested": true
+      },
+      {
+        "title": "Raise texture filtering",
+        "reason": "X-COM: Enforcer filters textures at a low level, so a visible line shows where each floor and wall texture switches to a blurrier version.",
+        "changes": { "XCom.ini": { "D3DDrv.D3DRenderDevice": { "UseTrilinear": "True" } } },
+        "tested": true
+      },
+      {
+        "title": "Raise color depth",
+        "reason": "X-COM: Enforcer runs fullscreen with a reduced color range, so smooth shading like skies and shadows shows visible bands.",
+        "changes": { "XCom.ini": { "WinDrv.WindowsClient": { "FullscreenColorBits": "32" } } },
+        "tested": true
+      }
+    ]
+  }
+}

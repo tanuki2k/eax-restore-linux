@@ -1,0 +1,24 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Requiem: Avenging Angel",
+  "description": "Requiem: Avenging Angel is a singleplayer and multiplayer first-person shooter game.",
+  "released": "1999-03-31",
+  "exe": "Requiem.exe",
+  "stores": {
+    "gog": { "id": 1449581489 }
+  },
+  "eax": { "api": "directsound3d", "sound_system": "miles", "versions": ["1.0"] },
+  "game_config": {
+    "files": {
+      "latest.cfg": { "format": "binary_offset", "locations": ["game_exe:Gamers/latest.cfg"] }
+    },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in Requiem's configuration.",
+        "changes": { "latest.cfg": { "0x17": "1" } },
+        "tested": true
+      }
+    ]
+  }
+}

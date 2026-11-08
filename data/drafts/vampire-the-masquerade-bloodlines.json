@@ -1,0 +1,12 @@
+{
+  "$schema": "../schema.json",
+  "name": "Vampire: The Masquerade - Bloodlines",
+  "description": "Vampire: The Masquerade - Bloodlines is a singleplayer first- and third-person action role-playing game and the second in the Vampire: The Masquerade series.",
+  "released": "2004-11-16",
+  "stores": {
+    "steam": { "id": 2600 },
+    "gog": { "id": 1207659240 }
+  },
+  "eax": { "api": "directsound3d" },
+  "notes": "Bloodlines isn't documented (per PCGamingWiki) as having hardware EAX — its sound design is mostly scripted ambience rather than DirectSound3D reverb zones, so restoring EAX may make little to no audible difference here. That's expected, not a fault. (The earlier Vampire: The Masquerade – Redemption, 2000, is the EAX-capable one.)"
+}

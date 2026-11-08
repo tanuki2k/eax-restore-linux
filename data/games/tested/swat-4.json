@@ -1,0 +1,54 @@
+{
+  "$schema": "../../schema.json",
+  "name": "SWAT 4",
+  "description": "SWAT 4 is a singleplayer and multiplayer first-person tactical shooter game and the fourth in the SWAT series.",
+  "released": "2005-04-05",
+  "exe": "Swat4.exe",
+  "stores": {
+    "gog": {
+      "id": 1409964317,
+      "extra_exe_folders": ["game_root:ContentExpansion/System"],
+      "store_details": "Sold as 'SWAT 4: Gold Edition'."
+    }
+  },
+  "eax": { "api": "openal", "versions": ["1.0", "2.0", "3.0"] },
+  "game_config": {
+    "files": {
+      "Swat4.ini": { "format": "ini", "locations": ["game_exe:Swat4.ini"] },
+      "Swat4X.ini": {
+        "format": "ini",
+        "locations": ["game_root:ContentExpansion/System/Swat4X.ini"]
+      }
+    },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in SWAT 4's configuration.",
+        "changes": {
+          "Swat4.ini": {
+            "ALAudio.ALAudioSubsystem": {
+              "UseDefaultDriver": "False",
+              "UseEAX": "True",
+              "Use3DSound": "True"
+            }
+          },
+          "Swat4X.ini": {
+            "ALAudio.ALAudioSubsystem": {
+              "UseDefaultDriver": "False",
+              "UseEAX": "True",
+              "Use3DSound": "True"
+            }
+          }
+        },
+        "tested": false
+      }
+    ]
+  },
+  "sources": [
+    {
+      "title": "Missing radio chatter, issue 1333",
+      "url": "https://github.com/kcat/openal-soft/issues/1333"
+    }
+  ],
+  "notes": "With EAX on, the radio chatter at the start of an instant action mission is silent in the Stable build, but the Latest build fixes it."
+}

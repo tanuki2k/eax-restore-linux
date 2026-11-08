@@ -1,0 +1,10 @@
+{
+  "$schema": "../schema.json",
+  "name": "UFO: Aftershock",
+  "description": "UFO: Aftershock is a singleplayer real-time tactics and strategy game and the second in the UFO series.",
+  "released": "2005-10-21",
+  "stores": {
+    "gog": { "id": 1207658816 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["2.0", "3.0", "4.0"] }
+}

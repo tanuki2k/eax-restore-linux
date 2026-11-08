@@ -1,0 +1,10 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Avencast: Rise of the Mage",
+  "description": "Avencast: Rise of the Mage is a singleplayer third-person action role-playing game.",
+  "released": "2007-11-14",
+  "stores": {
+    "gog": { "id": 1731734113 }
+  },
+  "eax": { "api": "openal", "versions": ["2.0", "3.0", "4.0", "5.0"] }
+}

@@ -1,0 +1,89 @@
+name: Release
+
+# A vX.Y or vX.Y.Z tag publishes the stable release: the script, its checksum
+# and the desktop launcher, marked as the Latest release (what the README's
+# download links and the launcher resolve). It only runs for a commit that is
+# on main, after the same checks as every push. The TUI is not part of it.
+# Run by hand (Actions -> Release -> Run workflow) with "dry run" ticked, it does
+# every step except creating the release and the tag checks, so the workflow can
+# be tried on a branch before a real tag exists.
+on:
+  push:
+    tags: ["v[0-9]*"]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build and check only; don't publish a release"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+
+  release:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check the tag is on main and matches the script's version
+        if: github.ref_type == 'tag'
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main \
+            || { echo "::error::$GITHUB_REF_NAME is not on main, so it can't be a stable release"; exit 1; }
+          base="$(sed -nE 's/^SCRIPT_VERSION="([^"]+)".*/\1/p' src/globals.sh)"
+          case "$GITHUB_REF_NAME" in
+            "v${base}"|"v${base}."[0-9]*) ;;
+            *) echo "::error::Tag $GITHUB_REF_NAME doesn't match SCRIPT_VERSION $base in src/globals.sh"; exit 1 ;;
+          esac
+
+      # A branch build would be stamped as a dev build, so the dry run asks for
+      # the stable stamp that main and a release tag get.
+      - name: Build
+        env:
+          BUILD_CHANNEL: stable
+        run: ./build.sh
+
+      - name: Check the build is a stable one
+        run: |
+          grep -qx 'DATA_BRANCH="main"' dist/eax-restore-linux.sh \
+            || { echo "::error::The build reads its data from a branch other than main"; exit 1; }
+          ! grep -q '^SCRIPT_VERSION=".*-dev' dist/eax-restore-linux.sh \
+            || { echo "::error::The build is stamped as a dev build"; exit 1; }
+          bash -n dist/eax-restore-linux.sh
+
+      - name: Checksum
+        run: |
+          cd dist && sha256sum eax-restore-linux.sh > eax-restore-linux.sh.sha256
+
+      - name: Show what would be published
+        if: github.ref_type != 'tag' || inputs.dry_run
+        run: |
+          ls -l dist/eax-restore-linux.sh dist/eax-restore-linux.sh.sha256 eax-restore-linux.desktop
+          (cd dist && sha256sum -c eax-restore-linux.sh.sha256)
+          echo "Dry run: no release was created."
+
+      - name: Publish
+        if: github.ref_type == 'tag' && !inputs.dry_run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --latest --verify-tag \
+            --title "$GITHUB_REF_NAME" --generate-notes \
+            dist/eax-restore-linux.sh dist/eax-restore-linux.sh.sha256 eax-restore-linux.desktop
+
+      - name: Assert this is the Latest release
+        if: github.ref_type == 'tag' && !inputs.dry_run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          latest=$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" -q .tag_name)
+          echo "Latest release is: $latest"
+          [ "$latest" == "$GITHUB_REF_NAME" ] || { echo "::error::$GITHUB_REF_NAME didn't become the Latest release"; exit 1; }

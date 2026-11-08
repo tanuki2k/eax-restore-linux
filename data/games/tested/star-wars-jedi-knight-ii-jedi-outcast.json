@@ -1,0 +1,34 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Star Wars Jedi Knight II: Jedi Outcast",
+  "description": "Star Wars Jedi Knight II: Jedi Outcast is a singleplayer and multiplayer first- and third-person shooter and action game and the third in the Star Wars: Jedi Knight series.",
+  "released": "2002-03-28",
+  "exe": "jk2sp.exe",
+  "stores": {
+    "steam": { "id": 6030 },
+    "gog": { "id": 1428935917 }
+  },
+  "eax": { "api": "openal", "versions": ["1.0", "2.0", "3.0"] },
+  "game_config": {
+    "files": {
+      "jk2config.cfg": { "format": "set_commands", "locations": ["game_exe:base/jk2config.cfg"] },
+      "jk2mpconfig.cfg": {
+        "format": "set_commands",
+        "locations": ["game_exe:base/jk2mpconfig.cfg"],
+        "if_missing": "skip"
+      }
+    },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in Jedi Outcast's configuration.",
+        "changes": {
+          "jk2config.cfg": { "s_UseOpenAL": "1" },
+          "jk2mpconfig.cfg": { "s_UseOpenAL": "1" }
+        },
+        "follow_up": "If there's no music when Jedi Outcast starts, open the console with Shift + ~, type snd_restart and press Enter.",
+        "tested": true
+      }
+    ]
+  }
+}

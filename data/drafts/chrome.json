@@ -1,0 +1,13 @@
+{
+  "$schema": "../schema.json",
+  "name": "Chrome",
+  "description": "Chrome is a singleplayer and multiplayer first-person shooter game and the first in the Chrome series.",
+  "released": "2003-06-13",
+  "stores": {
+    "steam": { "id": 46420, "delisted": true, "id_source": "steamdb_historical" }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0", "3.0"] },
+  "install": {
+    "tweaks": ["eax_unified"]
+  }
+}

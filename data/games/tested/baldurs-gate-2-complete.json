@@ -1,0 +1,32 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Baldur's Gate 2 Complete",
+  "description": "Baldur's Gate 2 Complete is a singleplayer and multiplayer isometric role-playing game.",
+  "released": "2000-09-21",
+  "exe": "BGMain.exe",
+  "stores": {
+    "gog": {
+      "id": 1207658893,
+      "delisted": true,
+      "store_details": "This is the original 2000 Baldur's Gate II: Shadows of Amn with its Throne of Bhaal expansion. GOG stopped selling it by November 2016 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
+    }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0", "2.0"] },
+  "game_config": {
+    "files": { "baldur.ini": { "format": "ini", "locations": ["game_exe:baldur.ini"] } },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in Baldur's Gate II's configuration.",
+        "changes": { "baldur.ini": { "Game Options": { "Environmental Audio": "1" } } },
+        "tested": true
+      }
+    ]
+  },
+  "sources": [
+    {
+      "title": "GOG forum: BGEE, BG2EE, IWEE vs originals",
+      "url": "https://www.gog.com/forum/baldurs_gate_series/bgee_bg2ee_iwee_vs_originals"
+    }
+  ]
+}

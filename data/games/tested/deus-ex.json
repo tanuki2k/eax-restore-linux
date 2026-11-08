@@ -1,0 +1,72 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Deus Ex",
+  "description": "Deus Ex is a singleplayer and multiplayer first-person action role-playing and immersive sim game and the first in the Deus Ex series.",
+  "released": "2000-06-23",
+  "exe": "DeusEx.exe",
+  "stores": {
+    "steam": { "id": 6910 },
+    "gog": { "id": 1207658995 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0"] },
+  "install": {
+    "alsoft_ini": { "reverb": { "boost": "6" } },
+    "alsoft_tested": true
+  },
+  "game_config": {
+    "files": { "DeusEx.ini": { "format": "ini", "locations": ["game_exe:DeusEx.ini"] } },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in Deus Ex's configuration.",
+        "changes": {
+          "DeusEx.ini": {
+            "Engine.Engine": { "AudioDevice": "Galaxy.GalaxyAudioSubsystem" },
+            "Galaxy.GalaxyAudioSubsystem": { "Use3dHardware": "True", "UseReverb": "True" }
+          }
+        },
+        "tested": true
+      },
+      {
+        "title": "Enable Pro Logic surround sound",
+        "reason": "Sets Deus Ex's mixer to Pro Logic surround sound.",
+        "only_if": { "speakers": "matrix" },
+        "changes": { "DeusEx.ini": { "Galaxy.GalaxyAudioSubsystem": { "UseSurround": "True" } } },
+        "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+        "tested": true
+      }
+    ],
+    "optional_settings": [
+      {
+        "title": "Raise sound quality",
+        "reason": "Deus Ex mixes its sound at a lower rate than most sound systems play at, so it's resampled before you hear it.",
+        "changes": { "DeusEx.ini": { "Galaxy.GalaxyAudioSubsystem": { "OutputRate": "48000Hz" } } },
+        "tested": true
+      },
+      {
+        "title": "Raise texture filtering",
+        "reason": "Deus Ex filters textures at a low level, so a visible line shows where each floor and wall texture switches to a blurrier version.",
+        "changes": { "DeusEx.ini": { "D3DDrv.D3DRenderDevice": { "UseTrilinear": "True" } } },
+        "tested": true
+      },
+      {
+        "title": "Raise color depth",
+        "reason": "Deus Ex runs fullscreen with a reduced color range, so smooth shading like skies and shadows shows visible bands.",
+        "changes": { "DeusEx.ini": { "WinDrv.WindowsClient": { "FullscreenColorBits": "32" } } },
+        "tested": true
+      }
+    ]
+  },
+  "sources": [
+    { "title": "DSOAL issue #79", "url": "https://github.com/kcat/dsoal/issues/79" },
+    {
+      "title": "Unreal DirectX11 Renderer",
+      "url": "https://www.moddb.com/mods/unreal-directx11-renderer-for-ut-ug-rune-and-dx"
+    },
+    {
+      "title": "Kcat - Dsoal - Deus Ex No reverb",
+      "url": "https://github.com/kcat/dsoal/issues/79"
+    }
+  ],
+  "notes": "Reverb is quiet by default, so the install offers to boost it. Stay on the default Galaxy driver: the community ALAudio mod doesn't pass the game's EAX reverb through."
+}

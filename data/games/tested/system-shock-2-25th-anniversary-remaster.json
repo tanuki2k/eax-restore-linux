@@ -1,0 +1,17 @@
+{
+  "$schema": "../../schema.json",
+  "name": "System Shock 2: 25th Anniversary Remaster",
+  "description": "System Shock 2: 25th Anniversary Remaster is a singleplayer and multiplayer first-person action role-playing, survival horror and immersive sim game, a remaster of 1999's System Shock 2.",
+  "released": "2025-06-26",
+  "exe": "SystemShock2Remastered.exe",
+  "stores": {
+    "steam": { "id": 866570 },
+    "gog": { "id": 1448370350 }
+  },
+  "eax": {
+    "api": "directsound3d",
+    "status": "not_implemented",
+    "problem": "This is the 25th Anniversary Remaster, not the classic System Shock 2, and it has no EAX."
+  },
+  "notes": "If you also own the classic 1999 System Shock 2, that one has EAX — it's no longer sold, but existing owners keep it."
+}

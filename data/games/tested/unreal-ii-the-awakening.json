@@ -1,0 +1,40 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Unreal II: The Awakening",
+  "description": "Unreal II: The Awakening is a singleplayer first-person shooter game and the second in the Unreal series.",
+  "released": "2003-02-04",
+  "exe": "Unreal2.exe",
+  "stores": {
+    "steam": {
+      "id": 13200,
+      "delisted": true,
+      "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale."
+    },
+    "gog": {
+      "id": 1207658677,
+      "delisted": true,
+      "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale."
+    }
+  },
+  "eax": { "api": "openal", "versions": ["1.0", "2.0", "3.0"] },
+  "game_config": {
+    "files": { "Unreal2.ini": { "format": "ini", "locations": ["game_exe:Unreal2.ini"] } },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in Unreal II's configuration. In the game's options, only the EAX part is shown, as 'EAX 3.0 (Audigy only)'.",
+        "changes": {
+          "Unreal2.ini": {
+            "ALAudio.ALAudioSubsystem": {
+              "UseDefaultDriver": "False",
+              "UseEAX": "True",
+              "Use3DSound": "True"
+            }
+          }
+        },
+        "tested": true
+      }
+    ]
+  },
+  "sources": [{ "title": "OldUnreal", "url": "https://www.oldunreal.com" }]
+}

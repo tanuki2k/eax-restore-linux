@@ -1,0 +1,11 @@
+{
+  "$schema": "../schema.json",
+  "name": "Gothic",
+  "description": "Gothic is a singleplayer third-person action role-playing game and the first in the Gothic series.",
+  "released": "2001-03-15",
+  "exe": "GOTHIC.EXE",
+  "stores": {
+    "steam": { "id": 65540 }
+  },
+  "eax": { "api": "directsound3d", "versions": ["2.0"] }
+}

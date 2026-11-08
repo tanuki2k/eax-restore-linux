@@ -1,0 +1,42 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Unreal Tournament 2004",
+  "description": "Unreal Tournament 2004 is a singleplayer and multiplayer first-person arena shooter game and the third in the Unreal Tournament series.",
+  "released": "2004-03-16",
+  "exe": "UT2004.exe",
+  "stores": {
+    "steam": {
+      "id": 13230,
+      "delisted": true,
+      "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.",
+      "patches": "OldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
+    },
+    "gog": {
+      "id": 1207658691,
+      "delisted": true,
+      "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.",
+      "patches": "OldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
+    }
+  },
+  "eax": { "api": "openal", "versions": ["3.0", "5.0"] },
+  "game_config": {
+    "files": { "UT2004.ini": { "format": "ini", "locations": ["game_exe:UT2004.ini"] } },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in UT2004's configuration. In the game's options, this is Audio Mode 'H/W 3D + EAX' with System Driver ticked.",
+        "changes": {
+          "UT2004.ini": {
+            "ALAudio.ALAudioSubsystem": {
+              "UseDefaultDriver": "False",
+              "UseEAX": "True",
+              "Use3DSound": "True"
+            }
+          }
+        },
+        "tested": false
+      }
+    ]
+  },
+  "sources": [{ "title": "OldUnreal", "url": "https://www.oldunreal.com" }]
+}

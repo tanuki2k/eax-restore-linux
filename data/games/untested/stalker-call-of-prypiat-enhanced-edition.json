@@ -1,0 +1,17 @@
+{
+  "$schema": "../../schema.json",
+  "name": "S.T.A.L.K.E.R.: Call of Prypiat - Enhanced Edition",
+  "description": "S.T.A.L.K.E.R.: Call of Prypiat - Enhanced Edition is an open-world first-person shooter and survival horror game, an enhanced edition of 2009's S.T.A.L.K.E.R.: Call of Pripyat.",
+  "released": "2025-05-20",
+  "exe": "xrEngine.exe",
+  "stores": {
+    "steam": { "id": 2427430 },
+    "gog": { "id": 1525093053 }
+  },
+  "eax": {
+    "api": "openal",
+    "versions": ["2.0"],
+    "status": "built_in",
+    "problem": "Unlike the original Call of Pripyat, it comes with OpenAL Soft, which has EAX built in, so its reverb doesn't depend on a Creative sound card."
+  }
+}

@@ -1,0 +1,154 @@
+#!/usr/bin/env bash
+
+# ==============================================================================
+# DSOAL & OpenAL Soft Universal Installer for Linux
+# ==============================================================================
+#
+# A streamlined Bash script designed to automate the restoration of EAX 3D
+# audio in older Windows games running on Linux via Steam or Heroic.
+#
+# --- Features ---
+# * Dual-Copy Architecture: Deploys DSOAL/OpenAL files to both the local game
+#   folder and the Wine/Proton prefix system folders, with conflict backups
+#   on both — not just the game folder.
+#
+# * Engine Choice: kcat's DSOAL + OpenAL Soft (translates DirectSound3D/EAX
+#   to OpenAL), or a direct OpenAL Soft swap for games that call OpenAL
+#   natively. Pick Stable (a tested DSOAL revision + OpenAL Soft's newest
+#   release) or Latest (DSOAL's newest build + OpenAL Soft's pre-release),
+#   or each separately; only the builds picked are downloaded.
+#
+# * Smart Detection: Opt-in auto-detection for Steam AppIDs and Heroic Wine
+#   prefixes, plus an opt-in library scan that finds games with a profile already
+#   installed via Steam or Heroic and lets you pick one instead of browsing.
+#
+# * Proton Detection: Identifies Proton runners even within Heroic environments.
+#
+# * Deep Validation: Confirms Heroic/GOG prefixes are initialised via drive_c,
+#   and points you to launch the game first if the prefix isn't ready yet.
+#
+# * Architecture Detection: Scans the game's .exe files for 32-bit vs 64-bit
+#   PE headers to auto-select the matching wrapper build, with a manual
+#   fallback if detection is inconclusive.
+#
+# * Interactive Conflicts: Existing files are backed up (timestamped) before
+#   being overwritten, and restored automatically on uninstall.
+#
+# * Install Manifest: Tracks exactly what each install deployed — files and
+#   registry keys alike — so uninstall only ever removes what this script
+#   actually put there, never guesses by filename, and safely no-ops if run
+#   again on an already-uninstalled game.
+#
+# * Checksum Verification: Live verification against GitHub's published
+#   digests for kcat's rolling builds, plus a pinned SHA256 for the optional
+#   frozen fallback revision, with a clear prompt if a file can't be verified
+#   either way.
+#
+# * Hardened Downloads: Fails loudly on bad HTTP responses, verifies zip
+#   integrity before extracting, and preserves the existing cache instead of
+#   wiping it on a failed download.
+#
+# * Pre-Flight Dependency Check: Verifies curl, unzip, file, protontricks,
+#   winetricks, wine, and jq are available before touching the cache, and
+#   offers to auto-install anything missing via your distro's package
+#   manager (skipped in favour of Discover on SteamOS, per Safety Guards).
+#
+# * EAX Unified: Installs Creative's EAX Unified into the prefix for games that
+#   need it (unless the game ships its own eax.dll).
+#
+# * Advanced Tweaks: Optional COM registry routing, expanded audio limits, and
+#   HRTF headphone output.
+#
+# * Auto-Overrides: Sets WINEDLLOVERRIDES in the game's Steam launch options or
+#   Heroic environment variables (merged with what's already there), or in the
+#   Wine registry — tracked so uninstall can put it back automatically.
+#
+# * Change an installed game: Tools → [G]ame settings turns its audio and
+#   optional game settings on or off, and [S]peaker configuration switches its speaker
+#   setup and the game settings that go with it, without reinstalling.
+#
+# * DSOAL Logging: Tools → [D]SOAL logging turns DSOAL's own log on or off
+#   for a game (DSOAL_LOGLEVEL/DSOAL_LOGFILE in its Steam launch options or
+#   Heroic environment variables), writing dsoal.log to the game folder, plus
+#   OpenAL Soft's own log (ALSOFT_LOGLEVEL/ALSOFT_LOGFILE, openal.log); a game
+#   with OpenAL Soft alone gets only the latter.
+#
+# * EAX Unified: Tools → [E]AX Unified install puts Creative's EAX Unified into a
+#   game's prefix without a full install, recorded so uninstall removes it.
+#
+# * Hybrid Dependencies: Falls back to a direct Microsoft download for the
+#   VC++ 2022 Redistributable when winetricks/protontricks fails, verifying
+#   the actual runtime DLLs on disk rather than trusting exit codes. Uninstall
+#   can offer to remove it again too, with a warning since a prefix may be
+#   shared by other games or apps.
+#
+# * Safety Guards: Refuses to run as root or from Steam's Gaming Mode, and
+#   won't auto-modify SteamOS's immutable filesystem.
+#
+# --- Environment Variables ---
+# * EAX_RESTORE_SKIP_PREFLIGHT=1  Skips the pre-flight tool scan and its
+#   auto-install prompts, trusting that curl, unzip, file, grep, awk, jq,
+#   protontricks, winetricks, and wine are already available. Speeds up
+#   repeat runs on a machine you've already verified.
+#
+# * EAX_RESTORE_SKIP_UPDATE_CHECK=1  Skips the start-up check for a newer
+#   version of the script. The check is also skipped without a terminal or with an
+#   answers file.
+#
+# * EAX_RESTORE_DSOAL_PIN=1  Uses the stable kcat/dsoal build (the revision
+#   pinned in the script, taken from kcat's "archive" release) without
+#   asking, so only the OpenAL Soft build is chosen. Also selects the DSOAL
+#   engine and skips the main menu (goes straight to install) and the
+#   engine-selection prompt, except for a game the script already knows uses
+#   OpenAL, which still gets OpenAL Soft.
+#
+# * EAX_RESTORE_VCRUN_ONLY=1  Skips the full install/uninstall flow and just
+#   (re)installs the MS VC++ 2022 Redistributable into a game's prefix.
+#   Useful if you skipped that step during a normal install and want to go
+#   back for it without redoing everything else.
+#   The main menu's Tools → [V]C++ install does the same.
+#
+# * EAX_RESTORE_SKIP_CACHE_CHECK=1  Doesn't contact GitHub for DSOAL or
+#   OpenAL Soft at all: the build choice only offers the builds already in
+#   the local cache. Speeds up repeat runs on a machine with a cache you know is
+#   current.
+#
+# * EAX_RESTORE_ANSWERS_FILE=/path/to/answers.txt  Answers every prompt from the
+#   file (one line per prompt, lines starting with # ignored) instead of the
+#   terminal, so a run can go unattended. Used by tools/profiler.
+#
+# * EAX_RESTORE_ACTION=install|uninstall|game-settings|speakers|vcrun|dsoal-log|eax-unified
+#   Runs that one action without showing the main menu, for a program with its
+#   own menu (the TUI). The script ends where it would have gone back to a menu.
+#   EAX_RESTORE_GAME_DIR=/path/to/game/exe/folder answers the "where is the game"
+#   step, and for an install EAX_RESTORE_GAME=steam:ID or gog:ID picks that game
+#   from the library scan.
+#
+# * EAX_RESTORE_NO_LOG=1  Turns off the per-run log file. Normally every run
+#   is logged to ~/.local/state/eax-restore-linux/logs/ (newest 10 kept,
+#   latest.log points at the most recent) for attaching to bug reports.
+#
+# * EAX_RESTORE_DSOAL_LOG=1  Turns DSOAL's own log on at its fullest level (4,
+#   every EAX call) as part of an install, the way Tools → DSOAL logging does
+#   (DSOAL_LOGLEVEL/DSOAL_LOGFILE in the game's Steam launch options or Heroic
+#   environment variables), writing dsoal.log to the game folder, plus
+#   ALSOFT_LOGLEVEL=3/ALSOFT_LOGFILE for openal.log. For debugging.
+#
+# * EAX_RESTORE_GAME_DATABASE_FILE=/path/to/file.json  Uses a local file instead
+#   of fetching game-database.json from GitHub. For testing schema/data
+#   edits to the database before they've been pushed to the branch it's
+#   normally fetched from.
+#
+# * EAX_RESTORE_UNTESTED=1  Includes the unverified game profiles. Without it
+#   they're left out, so those games are treated as having no profile. The Tools menu's profile browser always has them,
+#   behind its own tested / untested filter.
+#
+# * EAX_RESTORE_UNTESTED_SETTINGS=1  Offers the game settings (audio and
+#   optional) and alsoft.ini values that aren't marked verified. Without it they're
+#   left out; with it they're tagged "(untested)" (verified
+#   ones show "(tested)"). The profile browser always shows them.
+#
+# --- License ---
+# MIT License
+# Copyright (c) 2026 Tanuki2k
+# ==============================================================================

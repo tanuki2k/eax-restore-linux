@@ -1,0 +1,31 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Brothers in Arms: Earned in Blood",
+  "description": "Brothers in Arms: Earned in Blood is a singleplayer and multiplayer first-person tactical shooter game and the second in the Brothers in Arms series.",
+  "released": "2005-10-06",
+  "exe": "EiB.exe",
+  "stores": {
+    "steam": { "id": 19800 },
+    "gog": { "id": 1239584357 }
+  },
+  "eax": { "api": "openal", "versions": ["2.0", "3.0", "4.0"] },
+  "game_config": {
+    "files": { "EiB.ini": { "format": "ini", "locations": ["game_exe:EiB.ini"] } },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in Earned in Blood's configuration.",
+        "changes": {
+          "EiB.ini": {
+            "ALAudio.ALAudioSubsystem": {
+              "UseDefaultDriver": "False",
+              "UseEAX": "True",
+              "Use3DSound": "True"
+            }
+          }
+        },
+        "tested": false
+      }
+    ]
+  }
+}

@@ -1,0 +1,499 @@
+# ==============================================================================
+# ACTION: INSTALL (PHASE 1: CONFIGURATION)
+# ==============================================================================
+
+# Usage: show_tweak_blurb <eaxunified|limits|com>
+# The heading and two-line description shown above an advanced tweak's
+# question, the same wherever that tweak is offered.
+show_tweak_blurb() {
+    case "$1" in
+        eaxunified)
+            print_result "${BOLD}EAX Unified" "$CYAN"
+            echo -e "${WHITE}Installs Creative's EAX Unified into the game's prefix, for games that ask Windows for it"
+            echo -e "instead of using DirectSound3D directly (like Tomb Raider: The Angel of Darkness).${NC}"
+            ;;
+        limits)
+            print_result "${BOLD}Expand Audio Limits" "$CYAN"
+            echo -e "${WHITE}Forces the engine to handle 256 simultaneous sounds and locks the sample rate to 48kHz."
+            echo -e "Fixes audio dropping out in chaotic games (like F.E.A.R. or Thief), but uses more CPU.${NC}"
+            ;;
+        com)
+            print_result "${BOLD}COM Registry Routing" "$CYAN"
+            echo -e "${WHITE}Explicitly forces the Windows registry to point directly to our custom dsound.dll."
+            echo -e "Beneficial for stubborn late-90s and early-2000s games that actively ignore local DLL files.${NC}"
+            ;;
+    esac
+}
+
+# Usage: print_choices_summary
+# Phase 4's "Configuration finished!" recap of every answer from phases 1-3, shown
+# before the player confirms the deploy so they can check it all in one place.
+# Laid out like the GAME PROFILE: Game details, Sound and Setup headings over
+# one aligned list of rows (print_detail_rows), then the chosen game settings
+# as a subheading list. A value with more than one line continues under the
+# first. Values are plain text (WHITE renders bold).
+print_choices_summary() {
+    local -a groups=() labels=() values=()
+    _choice() { groups+=("$1"); labels+=("$2"); values+=("$3"); }
+
+    _choice game "Game" "${GAME_NAME}"
+    _choice game "Location" "$(tilde_path "$GAME_DIR")"
+    if [ "$LAUNCHER_TYPE" == "1" ]; then _choice game "Launcher" "Steam"
+    elif [ -n "${HEROIC_APP_NAME:-}" ]; then _choice game "Launcher" "Heroic"
+    else _choice game "Launcher" "Wine prefix"; fi
+    [ -n "$PREFIX_PATH" ] && _choice game "Prefix" "$(tilde_path "$PREFIX_PATH")"
+    local i list=""
+    for i in "${!COMPANION_IDS[@]}"; do
+        list+="${list:+$'\n'}${COMPANION_NAMES[$i]} ${DIM}($(tilde_path "${COMPANION_PREFIXES[$i]}"))${NC}"
+    done
+    [ -n "$list" ] && _choice game "Also sets up" "$list"
+    _choice game "Architecture" "${ARCH}-bit"
+
+    if [ "$ENGINE_CHOICE" == "2" ]; then
+        _choice sound "Audio engine" "OpenAL Soft as OpenAL32.dll"
+        _choice sound "Builds" "OpenAL Soft ${OAL_BUILD^} ${DIM}(${OAL_SELECTED_LABEL:-unknown})${NC}"
+    else
+        _choice sound "Audio engine" "DSOAL + OpenAL Soft"
+        _choice sound "Builds" "DSOAL ${DSOAL_BUILD^} ${DIM}(${DSOAL_SELECTED_LABEL:-unknown})${NC}"$'\n'"OpenAL Soft ${OAL_BUILD^} ${DIM}(${OAL_SELECTED_LABEL:-unknown})${NC}"
+    fi
+
+    if [ "$INSTALL_VCRUN" == "y" ]; then _choice setup "VC++ runtimes" "Install"
+    elif [ "${APPLY_VCRUN_OVERRIDES_NEEDED:-0}" == "1" ]; then _choice setup "VC++ runtimes" "Already in the prefix"
+    else _choice setup "VC++ runtimes" "Skip"; fi
+    list=""
+    for i in "${!COMPANION_IDS[@]}"; do
+        case "${COMPANION_VCRUN[$i]:-}" in
+            install) list+="${list:+$'\n'}Install in ${COMPANION_NAMES[$i]}'s prefix" ;;
+            overrides) list+="${list:+$'\n'}Already in ${COMPANION_NAMES[$i]}'s prefix" ;;
+        esac
+    done
+    # Continues the row above it.
+    [ -n "$list" ] && values[${#values[@]}-1]+=$'\n'"$list"
+
+    _choice sound "Speakers" "$(speaker_label)"
+
+    local entry sec key value line
+    list=""
+    for entry in "${ALSOFT_OVERRIDES[@]}"; do
+        IFS=$'\x1f' read -r sec key value <<< "$entry"
+        if [ "$sec/$key" == "reverb/boost" ]; then list+="${list:+$'\n'}Reverb boost +${value} dB"
+        else list+="${list:+$'\n'}${key} = ${value}"; fi
+    done
+    [ -n "$list" ] && _choice sound "alsoft.ini" "$list"
+
+    list=""
+    [ "$INSTALL_EAX_UNIFIED" == "y" ] && list+="${list:+$'\n'}Install EAX Unified"
+    [ "$ADVANCED_LIMITS" == "y" ] && list+="${list:+$'\n'}Expand audio limits"
+    [ "$ADVANCED_COM" == "y" ] && list+="${list:+$'\n'}COM registry routing"
+    _choice sound "Advanced tweaks" "${list:-None}"
+
+    case "$OVERRIDE_METHOD" in
+        launcher) _choice setup "DLL override" "$(launcher_override_where)" ;;
+        registry) _choice setup "DLL override" "$(runner_label) prefix registry" ;;
+        *) _choice setup "DLL override" "You'll set it yourself (instructions at the end)" ;;
+    esac
+    list=""
+    for i in "${!COMPANION_IDS[@]}"; do
+        case "${COMPANION_OVERRIDE[$i]:-}" in
+            launcher) list+="${list:+$'\n'}Steam's launch options for ${COMPANION_NAMES[$i]}" ;;
+            registry) list+="${list:+$'\n'}${COMPANION_NAMES[$i]}'s Proton prefix registry" ;;
+            *) list+="${list:+$'\n'}${COMPANION_NAMES[$i]}: you'll set it yourself" ;;
+        esac
+    done
+    # Continues the row above it.
+    [ -n "$list" ] && values[${#values[@]}-1]+=$'\n'"$list"
+
+    # Only for a game that offered settings: the ones chosen, in order.
+    local settings="" has_settings=0
+    if [ ${#GAME_SETTINGS_PLAN[@]} -gt 0 ] || [ ${#GAME_SETTINGS_DECLINED[@]} -gt 0 ]; then
+        local title
+        local -a f
+        has_settings=1
+        for line in "${GAME_SETTINGS_PLAN[@]}"; do
+            mapfile -t -d $'\x1f' f < <(printf '%s' "$line")
+            title="${f[1]}"
+            [[ $'\n'"$settings"$'\n' == *$'\n'"$title"$'\n'* ]] || settings+="${settings:+$'\n'}${title}"
+        done
+    fi
+
+    # Rows were collected as the answers come up; printed group by group,
+    # through the GAME PROFILE's own row printer, so the two screens match.
+    local g
+    for g in game sound setup; do
+        case "$g" in
+            game) detail_heading "Game details" ;;
+            sound) detail_heading "Sound" ;;
+            setup) detail_heading "Setup" ;;
+        esac
+        for i in "${!labels[@]}"; do
+            [ "${groups[$i]}" == "$g" ] && detail_row "${labels[$i]}" "${values[$i]}"
+        done
+    done
+    print_detail_rows
+    if [ "$has_settings" -eq 1 ]; then
+        print_subheading "Game settings"
+        while IFS= read -r line; do
+            echo -e "  ${line}"
+        done <<< "${settings:-None}"
+    fi
+    unset -f _choice
+}
+
+if [ "$SCRIPT_ACTION" == "i" ]; then
+    # The install runs in four phases whose steps number from 1 again. Each
+    # phase sets STEP_TOTAL (same regardless of launcher/engine branch) —
+    # read by print_step so headers show "N/5. Label" instead of "N. Label".
+    # Phase 1's step 2 ("Locate Game Executable") only ever appears on the
+    # scan path — resolve_exe_folder prints it itself — so browse/manual
+    # users jump straight from 1 to 3. Phase 3's two steps ("Game Audio
+    # Settings", "Optional Game Settings") only appear for a game whose
+    # profile has settings of that kind to offer. Phase 4 is install-flow.sh.
+    STEP_TOTAL=5
+
+    # Nothing is downloaded yet: the build choice fetches only the builds that get
+    # picked. This only checks GitHub can be reached, and stops now if it
+    # can't and nothing usable is cached.
+    check_download_readiness
+
+    print_install_overview
+    # Only Enter continues; nothing has changed yet, so there's nothing to cancel.
+    prompt "Press Enter to continue:"
+    read_answer _
+    print_install_phase 1 "GAME"
+
+    # Steps 1-2 loop: at an EAX-impossible dead end (see prompt_restart_or_quit)
+    # the user can choose to go back and pick a different game instead of the
+    # script exiting, and step 1 hands a "no" while picking a game back the
+    # same way. get_game_directory / scan_game_libraries /
+    # detect_game_environment all unwind on RESTART_REQUESTED. When the main
+    # menu was shown, continue 2 goes back to it (the loop around the main
+    # menu, see vcrun-only-flow.sh); otherwise this re-runs them from the top
+    # with a clean slate (get_game_directory resets the per-game globals on
+    # entry).
+    while true; do
+        RESTART_REQUESTED=""
+
+        # 1. Game Location
+        print_step 1 "Game Location"
+        print_paragraph "This step finds the folder the game is installed in."
+        get_game_directory ""
+        if [ -n "$RESTART_REQUESTED" ]; then
+            [ -n "$MAIN_MENU_SHOWN" ] && continue 2
+            continue
+        fi
+        check_target_writable "$GAME_DIR" "game folder"
+
+        # 3. Game Identification & Launcher Auto-Detect
+        print_step 3 "Launcher Identification"
+        detect_game_environment
+        if [ -n "$RESTART_REQUESTED" ]; then
+            [ -n "$MAIN_MENU_SHOWN" ] && continue 2
+            continue
+        fi
+
+        break
+    done
+
+    # A title that launches more than one exe from its own folders (GOG's
+    # F.E.A.R. Platinum and its expansions) gets the game-folder files in
+    # each of them too — checked for write access now, like GAME_DIR above.
+    if [ "$LAUNCHER_TYPE" == "1" ]; then
+        resolve_extra_exe_folders "$APPID" "steam"
+    else
+        resolve_extra_exe_folders "${HEROIC_APP_NAME:-}" "gog"
+    fi
+    if [ ${#EXTRA_GAME_DIRS[@]} -gt 0 ]; then
+        for extra_dir in "${EXTRA_GAME_DIRS[@]}"; do
+            check_target_writable "$extra_dir" "game folder"
+        done
+        print_status "$GAME_NAME also starts games from $(extra_exe_folders_list), so they get the same files."
+    fi
+
+    # Steam apps that run this game's exe from its folder with their own
+    # prefix and launch options (DOOM 3's Resurrection of Evil) — each gets
+    # the same prefix steps and override as the game itself.
+    resolve_companion_apps "$APPID"
+
+    # 4. Audio API Detection
+    print_step 4 "Audio API Detection"
+    print_paragraph "This step works out whether the game plays its 3D sound through DirectSound3D or" \
+        "OpenAL, so the matching audio fix is installed."
+    if [ "$LAUNCHER_TYPE" == "1" ]; then
+        confirm_continue_if_openal_native "$APPID" "steam" "$GAME_NAME"
+    else
+        confirm_continue_if_openal_native "$HEROIC_APP_NAME" "gog" "$GAME_NAME"
+    fi
+
+    # 5. Architecture Scan
+    select_architecture 5
+
+    # Phase 2: the sound fix itself
+    print_install_phase 2 "SOUND FIX"
+    STEP_TOTAL=5
+
+    # 1. Engine Selection
+    print_step 1 "Audio Engine Selection"
+
+    if [ -n "$OPENAL_NATIVE_MODE" ]; then
+        ENGINE_CHOICE=2
+        print_paragraph "$GAME_NAME uses OpenAL natively — deploying kcat's OpenAL Soft."
+    elif [ -n "$API_CONFIRMED_DS3D" ]; then
+        # The Audio API Detection step positively identified this as a
+        # DirectSound3D title, so there's no menu to show — OpenAL-native
+        # would be a silent no-op here (the game never loads OpenAL32.dll).
+        # Mirrors the OPENAL_NATIVE_MODE branch above.
+        ENGINE_CHOICE=1
+        print_paragraph "$GAME_NAME uses DirectSound3D — deploying kcat DSOAL + OpenAL Soft."
+    else
+    echo -e "\n${WHITE}Before choosing, here is a quick breakdown of the available engines:\n${NC}"
+    echo -e " * ${BOLD}kcat DSOAL + OpenAL Soft:${NC} The standard choice. Intercepts a game's"
+    echo -e "   DirectSound3D/EAX calls and translates them to OpenAL — the right pick for the"
+    echo -e "   vast majority of classic Windows games."
+    echo ""
+    echo -e " * ${BOLD}OpenAL native:${NC} Only for the handful of games that already call OpenAL directly"
+    echo -e "   (no DirectSound3D layer to intercept) — swaps OpenAL Soft in as OpenAL32.dll.\n"
+
+    if is_truthy "$EAX_RESTORE_DSOAL_PIN"; then
+        ENGINE_CHOICE=1
+        echo -e "${GREEN}EAX_RESTORE_DSOAL_PIN is set — using kcat DSOAL + OpenAL Soft.${NC}"
+    else
+        echo -e "${YELLOW}Selection (1 or 2) [Default: 1]: ${NC}"
+        echo ""
+        print_option 1 "kcat DSOAL + OpenAL Soft"
+        print_option 2 "OpenAL native (direct OpenAL32.dll swap)"
+
+        while true; do
+            echo -e -n "\n> "
+            read_answer ENGINE_CHOICE || exit 0
+            ENGINE_CHOICE="${ENGINE_CHOICE:-1}"
+            if [[ "$ENGINE_CHOICE" =~ ^[12]$ ]]; then break; fi
+            print_result "That's not a valid option — please type 1 or 2." "$YELLOW"
+        done
+    fi
+    fi
+
+    # Which builds to deploy, then download just those (choose_builds).
+    choose_builds
+    # Read here, not earlier: the run log's summary records the builds chosen.
+    DSOAL_VER="${DSOAL_BUILD} ${DSOAL_SELECTED_LABEL:-}"
+    OAL_VER="${OAL_BUILD} ${OAL_SELECTED_LABEL:-}"
+
+    # The Wine DLL override this install ultimately needs — dsound.dll for
+    # engine 1 (DSOAL intercepts DirectSound3D), OpenAL32.dll for engine 2
+    # (OpenAL Soft deployed directly, nothing for DSOAL to intercept). Set
+    # once here so every later step (override wording, registry, deployment,
+    # final launch instructions) reads the same value instead of each
+    # re-deriving it from ENGINE_CHOICE or OPENAL_NATIVE_MODE separately.
+    # PRIMARY_DLL_NAME is the lowercase WINEDLLOVERRIDES key; PRIMARY_DLL_FILENAME
+    # is the on-disk filename (Wine treats overrides case-insensitively, but
+    # the actual deployed file is written with its conventional casing).
+    PRIMARY_DLL_NAME="dsound"
+    PRIMARY_DLL_FILENAME="dsound.dll"
+    if [ "$ENGINE_CHOICE" == "2" ]; then
+        PRIMARY_DLL_NAME="openal32"
+        PRIMARY_DLL_FILENAME="OpenAL32.dll"
+    fi
+
+    # 2. VC++ Runtime Dependencies
+    # Both engines are kcat builds (DSOAL, OpenAL Soft) that need the genuine
+    # MS runtime on older Proton/Wine, so this step always runs now rather
+    # than being gated on the engine choice.
+    INSTALL_VCRUN="n"
+    VCRUN_CHECKED="n"
+    print_step 2 "VC++ Runtime Dependencies"
+    print_paragraph "Genuine Microsoft C++ runtime libraries are needed for older Proton/Wine" \
+        "builds (9 and below) to load kcat's DSOAL / OpenAL Soft."
+
+    if confirm "Check $GAME_NAME's prefix for existing VC++ runtime files?"; then
+        VCRUN_CHECKED="y"
+        print_task "Checking prefix for existing VC++ runtime files"
+
+        if [ -n "$PREFIX_PATH" ] && [ -d "$PREFIX_PATH/drive_c/windows" ]; then
+            verify_vcrun_files
+        else
+            VCRUN_SUCCESS=0
+            print_status "Prefix not resolved yet, can't check. Defaulting to asking below." "$YELLOW"
+        fi
+
+        if [ "$VCRUN_SUCCESS" -eq 1 ]; then
+            print_status "Core VC++ runtime files are already present, so there's nothing to install." "$GREEN"
+            print_paragraph "Wine will still be told to use them instead of its own copies, which it" \
+                "prefers by default even when Microsoft's files are there."
+            APPLY_VCRUN_OVERRIDES_NEEDED=1
+        else
+            print_paragraph "These files are missing or incomplete here. Without them, the game may crash" \
+                "silently on startup when it tries to load the audio engine."
+            if confirm "Install genuine MS VC++ runtimes?"; then INSTALL_VCRUN="y"; else INSTALL_VCRUN="n"; fi
+        fi
+    else
+        print_paragraph "Skipping. You can revisit this later with EAX_RESTORE_VCRUN_ONLY=1 without redoing" \
+            "the rest of the install."
+    fi
+    choose_companion_vcrun "$VCRUN_CHECKED"
+
+    # 3. Speaker Configuration
+    print_step 3 "Speaker Configuration"
+    print_paragraph "This step sets up ${GAME_NAME:-the game}'s 3D sound for your speakers or headphones, so" \
+        "sounds come from the right direction."
+    ask_speaker_configuration
+
+    # 4. Advanced Compatibility Tweaks
+    print_step 4 "Advanced Compatibility Tweaks"
+    print_paragraph "This step offers workarounds for the few games that don't play EAX sound even with the" \
+        "fix in place."
+
+    INSTALL_EAX_UNIFIED="n"
+    ADVANCED_LIMITS="n"
+    ADVANCED_COM="n"
+
+    # EAX Unified and COM Registry Routing both target DirectSound3D
+    # specifically and have nothing to attach to on a direct OpenAL32.dll
+    # swap — so engine 2 only ever offers Expand Audio Limits.
+    EAX_UNIFIED_APPLICABLE=1
+    COM_ROUTING_APPLICABLE=1
+    if [ "$ENGINE_CHOICE" == "2" ]; then
+        EAX_UNIFIED_APPLICABLE=0
+        COM_ROUTING_APPLICABLE=0
+    fi
+
+    # the game profile's install.tweaks array (see
+    # resolve_recommended_tweaks in game-database.sh) may flag the tweaks below
+    # for this game. Each flagged, applicable tweak is decided here — before
+    # the generic opt-in gate further down — with a default-Y prompt instead
+    # of the generic default-N one, since the database recommends it
+    # specifically for this title.
+    AUDIO_LIMITS_HANDLED=0
+    COM_ROUTING_HANDLED=0
+    if [ -z "$RECOMMENDED_TWEAKS_RESOLVED" ]; then
+        if [ "$LAUNCHER_TYPE" == "1" ]; then
+            resolve_recommended_tweaks "$APPID" "steam"
+        else
+            resolve_recommended_tweaks "$HEROIC_APP_NAME" "gog"
+        fi
+    fi
+
+    # A game flagged EAX Unified creates Creative's EAX Unified object (eax.dll
+    # in the system folder), and the install adds the real one to the prefix.
+    # A game that ships an eax.dll of its own loads that one instead, so for a
+    # flagged game this checks first and only then offers the install, rather
+    # than using the generic prompt.
+    EAX_UNIFIED_HANDLED=0
+    if [ -n "$EAX_UNIFIED" ] && [ "$EAX_UNIFIED_APPLICABLE" -eq 1 ]; then
+        print_result "$GAME_NAME is one of those exceptions — it needs Creative's EAX Unified to reach EAX,"
+        echo -e "${WHITE}and it may already ship its own eax.dll.${NC}"
+        if confirm "Look in ${GAME_NAME}'s folder for its own eax.dll?" Y; then
+            if game_ships_eax_dll; then
+                print_note "$GAME_NAME already ships its own eax.dll, so EAX Unified isn't needed here."
+            else
+                print_paragraph "$GAME_NAME has no eax.dll of its own."
+                confirm "Install Creative's EAX Unified?" Y && INSTALL_EAX_UNIFIED="y"
+            fi
+            EAX_UNIFIED_HANDLED=1
+        fi
+    fi
+
+    # install.tweaks can flag Expand Audio Limits for a game independently
+    # verified to need it (e.g. F.E.A.R.'s audio dropping out during large
+    # firefights). Applies to both engines, so — unlike the other two — it has
+    # no applicability gate.
+    if [ -n "$RECOMMENDED_AUDIO_LIMITS" ]; then
+        show_tweak_blurb limits
+        if confirm "Expand OpenAL audio limits? $GAME_NAME is flagged in its profile as benefiting from this." Y; then
+            ADVANCED_LIMITS="y"
+        else
+            ADVANCED_LIMITS="n"
+        fi
+        AUDIO_LIMITS_HANDLED=1
+    fi
+
+    # Same idea for COM Registry Routing (e.g. GTA: San Andreas, which needs
+    # it in addition to EAX Unified for EAX to work under Wine/Proton).
+    if [ -n "$RECOMMENDED_COM_ROUTING" ] && [ "$COM_ROUTING_APPLICABLE" -eq 1 ]; then
+        show_tweak_blurb com
+        if confirm "Inject COM registry routing? $GAME_NAME is flagged in its profile as needing this." Y; then
+            ADVANCED_COM="y"
+        else
+            ADVANCED_COM="n"
+        fi
+        COM_ROUTING_HANDLED=1
+    fi
+
+    if [ "$COM_ROUTING_APPLICABLE" -eq 0 ]; then
+        # Engine 2: only Expand Audio Limits could possibly apply, and it's
+        # already been decided above if the database recommended it.
+        if [ "$AUDIO_LIMITS_HANDLED" -eq 0 ]; then
+            print_paragraph "COM Registry Routing targets DirectSound3D specifically, which doesn't apply to a" \
+                "direct OpenAL32.dll swap — only Expand Audio Limits applies here."
+
+            if confirm "Would you like to view and opt-in to this advanced tweak?" N; then
+                show_tweak_blurb limits
+                if confirm "Expand OpenAL audio limits?" N; then
+                    ADVANCED_LIMITS="y"
+                fi
+            fi
+        fi
+    else
+        ANY_TWEAK_HANDLED=0
+        [ "$EAX_UNIFIED_HANDLED" -eq 1 ] && ANY_TWEAK_HANDLED=1
+        [ "$AUDIO_LIMITS_HANDLED" -eq 1 ] && ANY_TWEAK_HANDLED=1
+        [ "$COM_ROUTING_HANDLED" -eq 1 ] && ANY_TWEAK_HANDLED=1
+
+        ALL_HANDLED=1
+        [ "$EAX_UNIFIED_APPLICABLE" -eq 1 ] && [ "$EAX_UNIFIED_HANDLED" -eq 0 ] && ALL_HANDLED=0
+        [ "$AUDIO_LIMITS_HANDLED" -eq 0 ] && ALL_HANDLED=0
+        [ "$COM_ROUTING_APPLICABLE" -eq 1 ] && [ "$COM_ROUTING_HANDLED" -eq 0 ] && ALL_HANDLED=0
+
+        if [ "$ALL_HANDLED" -eq 0 ]; then
+            if [ "$ANY_TWEAK_HANDLED" -eq 1 ]; then
+                GATE_PROMPT="Would you like to view and opt-in to the additional advanced tweaks?"
+            else
+                GATE_PROMPT="Would you like to view and opt-in to these advanced tweaks?"
+            fi
+
+            if confirm "$GATE_PROMPT" N; then
+                if [ "$EAX_UNIFIED_APPLICABLE" -eq 1 ] && [ "$EAX_UNIFIED_HANDLED" -eq 0 ]; then
+                    show_tweak_blurb eaxunified
+                    if confirm "Install Creative's EAX Unified?" N; then
+                        INSTALL_EAX_UNIFIED="y"
+                    fi
+                fi
+
+                if [ "$AUDIO_LIMITS_HANDLED" -eq 0 ]; then
+                    show_tweak_blurb limits
+                    if confirm "Expand OpenAL audio limits?" N; then
+                        ADVANCED_LIMITS="y"
+                    fi
+                fi
+
+                if [ "$COM_ROUTING_APPLICABLE" -eq 1 ] && [ "$COM_ROUTING_HANDLED" -eq 0 ]; then
+                    show_tweak_blurb com
+                    if confirm "Inject COM registry routing?" N; then
+                        ADVANCED_COM="y"
+                    fi
+                fi
+            fi
+        fi
+    fi
+
+    # 5. Automatic DLL Override
+    print_step 5 "DLL Override"
+    print_paragraph "$(runner_label) needs to be told to load the new ${PRIMARY_DLL_FILENAME} instead of its built-in one." \
+        "Where would you like to set that up?"
+
+    # The launcher choice (the default for Steam and Heroic games) writes the
+    # override where a player would by hand — Steam's launch options or
+    # Heroic's environment variables for this game — so it's visible there and
+    # easy to undo.
+    choose_override_method
+    choose_companion_overrides
+
+    # Phase 3: the game's own settings, from its game profile (its config
+    # files, and the alsoft.ini values such as a reverb boost). After the
+    # sound fix, since the speaker answer decides some of them.
+    print_install_phase 3 "GAME SETTINGS"
+    STEP_TOTAL=2
+    GAME_SETTINGS_STEP_SHOWN=""
+    game_settings_step 1
+    [ -n "$GAME_SETTINGS_STEP_SHOWN" ] || print_paragraph "${GAME_NAME} has no settings of its own to change."
+
+    # (continues below: "if" opened above closes at the bottom of install-flow.sh)

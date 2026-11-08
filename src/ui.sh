@@ -1,0 +1,1105 @@
+# ==============================================================================
+# TEXT/OUTPUT STYLING HELPERS
+# ==============================================================================
+# Centralizes the recurring output shapes (banners, STATUS: task headers,
+# arrow status lines, Note:/Warning:/Error: messages, (Y/n) confirms and
+# free-value prompts, numbered menu options, wrapped prose) so call sites
+# share one implementation instead of hand-copied echo -e boilerplate. All
+# helpers write to stdout; a call site whose output is captured or that needs
+# stderr (e.g. a function whose stdout is used via $(...)) redirects the call
+# itself with >&2 rather than this file growing a parallel _err() family.
+# ==============================================================================
+# VISUAL HELPERS
+# ==============================================================================
+# print_divider and the rest of the output-styling helpers live in
+# ui.sh, sourced right after globals.sh.
+print_divider() { echo -e "${CYAN}----------------------------------------------------------${NC}"; }
+
+# Usage: tilde_path "text"
+# Prints text with every "$HOME/..." path shortened to "~/...". Every helper
+# below runs its output through this, so a path shown anywhere in the script
+# reads the way the user would type it -- the absolute form is long, repeats
+# the username on every line, and ends up verbatim in shared bug-report logs.
+# Display only: callers keep the real path in their own variables. An
+# occurrence is left alone when the word it sits in already started as an
+# absolute path (e.g. /mnt/home/<user>/..., a different disk), and the whole
+# thing is skipped when HOME is empty or "/", where it would mangle every path.
+tilde_path() {
+    local t="$1" h="${HOME%/}/" out="" pre
+    if [ "$h" = "/" ]; then printf '%s' "$t"; return; fi
+    while [[ "$t" == *"$h"* ]]; do
+        pre="${t%%"$h"*}"
+        t="${t#*"$h"}"
+        if [[ "${pre##*[[:space:]]}" == /* ]]; then out+="$pre$h"; else out+="$pre~/"; fi
+    done
+    printf '%s' "$out$t"
+}
+
+# Usage: print_banner "LABEL" [COLOR=GREEN]
+# Emits the "--- LABEL ---" banner block: blank line, divider, label, divider.
+# No trailing blank — callers provide their own leading blank before the
+# first content line (most already do via "echo -e \"\n...\""), so the
+# helper doesn't double it up. Used for both "--- PHASE N: X ---"-style
+# banners and richer blocks like "--- GAME PROFILE ---".
+print_banner() {
+    local label="$1"
+    local color="${2:-$GREEN}"
+    echo ""
+    print_divider
+    echo -e "${color}${BOLD}--- ${label} ---${NC}"
+    print_divider
+}
+
+# Usage: print_install_phase N "LABEL"
+# The install's "--- PHASE N OF 4: LABEL ---" banner. Its steps number from 1
+# again in each phase (the caller sets STEP_TOTAL to that phase's count).
+# Not the PHASE_STEP/PHASE_TOTAL progress bar below, which is phase 4's.
+print_install_phase() {
+    print_banner "PHASE $1 OF 4: $2"
+}
+
+# Usage: print_install_overview
+# Shown once before the install's first phase: what the four phases are, and
+# that only the last one changes anything.
+print_install_overview() {
+    print_banner "HOW IT WORKS"
+    # Own rows, not print_paragraph: its WHITE renders bold, and a whole
+    # screen of that reads as shouting. Here only the phase names are bold;
+    # the numbers are GREEN like the phase banners, except the one phase
+    # that changes anything, in YELLOW.
+    echo -e "\nThe install has four phases:\n"
+    echo -e "  ${GREEN}1.${NC}  ${BOLD}Game${NC}           ${DIM}finds the game and works out how it plays sound${NC}"
+    echo -e "  ${GREEN}2.${NC}  ${BOLD}Sound fix${NC}      ${DIM}picks the audio files and sets up your speakers${NC}"
+    echo -e "  ${GREEN}3.${NC}  ${BOLD}Game settings${NC}  ${DIM}offers changes to the game's own audio and other settings${NC}"
+    echo -e "  ${YELLOW}4.${NC}  ${BOLD}Install${NC}        ${DIM}makes the changes, once you've confirmed${NC}"
+    echo -e "\nPhases ${GREEN}1${NC} to ${GREEN}3${NC} only ask questions. Nothing on your system changes until ${YELLOW}phase 4${NC}."
+}
+
+# Usage: print_start_header [design]
+# The logo at the top of every run: one of four designs, picked at random
+# from those no wider than the terminal (80 columns when there's none to
+# measure). The version and date come from SCRIPT_VERSION / SCRIPT_DATE; a
+# dev build's date runs long ("2026-10-10 build g77a706f-dirty"), so each
+# design gives it room. [design] (1-4) forces one, for checking them.
+print_start_header() {
+    local ver="v${SCRIPT_VERSION}" day="${SCRIPT_DATE%% *}" extra
+    extra="${SCRIPT_DATE#"$day"}"; extra="${extra# }"
+    local rule="══════════════════════════════════════════════════════════"
+    local -a d1 d2 d3 d4
+    d1=("  ${CYAN}┏━╸ ┏━┓ ╻ ╻    ┏━┓ ┏━╸ ┏━┓ ╺┳╸ ┏━┓ ┏━┓ ┏━╸${NC}   ${DIM}│${NC} ${DIM}restore hardware EAX${NC}"
+        "  ${CYAN}┣╸  ┣━┫ ┏╋┛    ┣┳┛ ┣╸  ┗━┓  ┃  ┃ ┃ ┣┳┛ ┣╸ ${NC}   ${DIM}│${NC} ${ver} · ${day}"
+        "  ${CYAN}┗━╸ ╹ ╹ ╹ ╹    ╹┗╸ ┗━╸ ┗━┛  ╹  ┗━┛ ╹┗╸ ┗━╸${NC}   ${DIM}│${NC} ${DIM}${extra:-DSOAL · OpenAL Soft}${NC}")
+    local caption="· ${ver} · ${SCRIPT_DATE} ·" pad
+    pad=$(( (58 - ${#caption}) / 2 )); [ "$pad" -lt 0 ] && pad=0
+    d2=("${CYAN}${rule}${NC}"
+        "        ${CYAN}╔══ ╔═╗ ╗ ╔    ╔═╗ ╔══ ╔══ ═╦═ ╔═╗ ╔═╗ ╔══${NC}"
+        "        ${CYAN}╠═  ╠═╣  ╬     ╠╦╝ ╠═  ╚═╗  ║  ║ ║ ╠╦╝ ╠═${NC}"
+        "        ${CYAN}╚══ ╩ ╩ ╝ ╚    ╩╚═ ╚══ ══╝  ╩  ╚═╝ ╩╚═ ╚══${NC}"
+        "${CYAN}${rule}${NC}"
+        "$(printf '%*s' "$pad" "")${DIM}${caption}${NC}")
+    d3=("          ${CYAN}______   ___    _  __${NC}"
+        "         ${CYAN}/ ____/  /   |  | |/ /${NC}"
+        "        ${CYAN}/ __/    / /| |  |   /${NC}"
+        "       ${CYAN}/ /___   / ___ | /   |${NC}"
+        "      ${CYAN}/_____/  /_/  |_|/_/|_|${NC}"
+        "                        ${DIM}r e s t o r e  /  l i n u x${NC}"
+        "                        ${ver} · ${SCRIPT_DATE}")
+    d4=("  ${CYAN}███████╗ █████╗ ██╗  ██╗${NC}  eax-restore-linux"
+        "  ${CYAN}██╔════╝██╔══██╗╚██╗██╔╝${NC}  ${DIM}─────────────────${NC}"
+        "  ${CYAN}█████╗  ███████║ ╚███╔╝ ${NC}  ${DIM}version${NC}  ${SCRIPT_VERSION}"
+        "  ${CYAN}██╔══╝  ██╔══██║ ██╔██╗ ${NC}  ${DIM}date${NC}     ${SCRIPT_DATE}"
+        "  ${CYAN}███████╗██║  ██║██╔╝ ██╗${NC}  ${DIM}engines${NC}  DSOAL · OpenAL Soft"
+        "  ${CYAN}╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝${NC}")
+
+    local cols rows n line widest
+    read -r rows cols < <({ stty size < /dev/tty; } 2>/dev/null)
+    [[ "$cols" =~ ^[0-9]+$ ]] || cols=80
+    # The designs that fit, by their widest line with the colours left out.
+    local -a fit=()
+    local art
+    for n in 1 2 3 4; do
+        # shellcheck disable=SC1087 # indirect expansion of the array named in art
+        art="d$n[@]"; widest=0
+        for line in "${!art}"; do
+            line="$(printf '%b' "$line" | sed 's/\x1b\[[0-9;]*m//g')"
+            [ ${#line} -gt "$widest" ] && widest=${#line}
+        done
+        [ "$widest" -le "$cols" ] && fit+=("$n")
+    done
+    [ ${#fit[@]} -gt 0 ] || fit=(4)
+    n="${1:-${fit[RANDOM % ${#fit[@]}]}}"
+    # shellcheck disable=SC1087 # indirect expansion of the array named in art
+    art="d$n[@]"
+    echo ""
+    for line in "${!art}"; do echo -e "$line"; done
+}
+
+# Usage: term_link <url> <text>
+# <text> as a terminal hyperlink (OSC 8) to <url>, for echo -e / printf %b:
+# the low-level piece for a link inside another line (the end-of-run box).
+# Ended with BEL rather than ESC \, which more terminals accept. Konsole
+# ignores these links unless its profile allows them, so anything the player
+# must be able to open also needs its plain address printed; print_link does
+# both, so prefer it. The run log keeps just <text>.
+term_link() {
+    printf '%s' "\e]8;;$1\a$2\e]8;;\a"
+}
+
+# Usage: print_centred_box <colour> "line" ["line" ...]
+# A thin rounded-corner frame as wide as the dividers, every line centred in
+# it, frame and text in <colour> (the end-of-run log box, after the Amiga's
+# Guru Meditation). An empty argument is a blank row. Lines are measured
+# without their colour codes or terminal links, so either can be used in
+# one; a line too wide for the frame is printed under it as it is.
+print_centred_box() {
+    local colour="$1"; shift
+    local inner=56 line plain left right rule
+    local -a wide=()
+    # No word splitting: the EXIT trap can draw this mid-"IFS= read".
+    printf -v rule '%*s' "$inner" ""; rule="${rule// /─}"
+    echo -e "${colour}┌${rule}┐${NC}"
+    for line in "$@"; do
+        plain="$(printf '%b' "$line" | sed -e 's/\x1b\]8;;[^\x07]*\x07//g' -e 's/\x1b\[[0-9;]*m//g')"
+        if [ ${#plain} -gt "$inner" ]; then wide+=("$line"); continue; fi
+        left=$(( (inner - ${#plain}) / 2 )); right=$(( inner - ${#plain} - left ))
+        echo -e "${colour}│$(printf '%*s' "$left" "")${line}${colour}$(printf '%*s' "$right" "")│${NC}"
+    done
+    echo -e "${colour}└${rule}┘${NC}"
+    for line in "${wide[@]}"; do echo -e "${colour}${line}${NC}"; done
+}
+
+# Usage: print_titled_box <colour> "Title" "line" ["line" ...]
+# A rounded-corner frame as wide as the dividers with the title set in its
+# top edge, lines left-aligned in WHITE: a callout for something the player
+# still has to do (the install's "Before you play" follow-ups). Unlike
+# print_centred_box it doesn't reflow or move anything, so lines come
+# already wrapped to 54 columns; colour codes don't count toward that.
+# TITLED_BOX_CENTRE=1 before the call centres each line instead (the DSOAL
+# logging box, which has no headings of its own to line up under).
+print_titled_box() {
+    local colour="$1" title="$2"; shift 2
+    local inner=56 line plain left pad rule
+    printf -v rule '%*s' $(( inner - ${#title} - 3 )) ""; rule="${rule// /─}"
+    echo -e "${colour}╭─ ${BOLD}${title}${NC}${colour} ${rule}╮${NC}"
+    for line in "$@"; do
+        plain="$(printf '%b' "$line" | sed -e 's/\x1b\]8;;[^\x07]*\x07//g' -e 's/\x1b\[[0-9;]*m//g')"
+        left=1
+        is_truthy "${TITLED_BOX_CENTRE:-}" && left=$(( (inner - ${#plain}) / 2 ))
+        pad=$(( inner - left - ${#plain} )); [ "$pad" -lt 1 ] && pad=1
+        echo -e "${colour}│${NC}$(printf '%*s' "$left" "")${WHITE}${line}${NC}$(printf '%*s' "$pad" "")${colour}│${NC}"
+    done
+    printf -v rule '%*s' "$inner" ""; rule="${rule// /─}"
+    echo -e "${colour}╰${rule}╯${NC}"
+}
+
+# Usage: print_step N "Label"
+# Emits the numbered step header ("2. Launcher Identification") used to
+# separate the sub-stages of an install phase. Same blank/divider/
+# label/divider wrapper as print_banner (no trailing blank either), but a
+# plain (non-bold) CYAN label with no surrounding dashes. When the calling
+# flow has set the STEP_TOTAL global (its fixed step count — each install
+# phase sets its own, uninstall is 7, VCRUN_ONLY is 2), renders "N/TOTAL. Label" instead of just
+# "N. Label" so the user can gauge how much of the flow is left; a caller
+# that never sets it (e.g. detection.sh's select_architecture, invoked from
+# more than one flow) keeps today's plain "N. Label" behavior.
+print_step() {
+    local n="$1"
+    local label="$2"
+    local n_display="$n"
+    [ -n "${STEP_TOTAL:-}" ] && n_display="${n}/${STEP_TOTAL}"
+    echo ""
+    print_divider
+    echo -e "${CYAN}${n_display}. ${label}${NC}"
+    print_divider
+}
+
+# Usage: detail_row "Label" "value"; detail_heading "Heading"; print_detail_rows
+# The GAME PROFILE's field list, shared with Phase 2's choices recap: rows
+# are collected first (into DETAIL_LABELS / DETAIL_VALUES), then printed
+# together, so every value lines up after the longest label in the whole
+# list. A heading is a flush-left "Heading:" line with a blank line above
+# it; a row is " -> Label: value", the label in YELLOW. A value with more
+# than one line continues under the first. print_detail_rows empties the
+# list once it's printed.
+detail_row() { DETAIL_LABELS+=("$1"); DETAIL_VALUES+=("$2"); }
+detail_heading() { DETAIL_LABELS+=(""); DETAIL_VALUES+=("$1"); }
+print_detail_rows() {
+    local i width=0 pad
+    for i in "${!DETAIL_LABELS[@]}"; do
+        [ ${#DETAIL_LABELS[$i]} -gt "$width" ] && width=${#DETAIL_LABELS[$i]}
+    done
+    printf -v pad '%*s' $(( width + 6 )) ""
+    for i in "${!DETAIL_LABELS[@]}"; do
+        if [ -z "${DETAIL_LABELS[$i]}" ]; then
+            echo -e "\n${WHITE}${DETAIL_VALUES[$i]}:${NC}"
+        else
+            printf ' -> %b%s%b:%*s %b\n' "$YELLOW" "${DETAIL_LABELS[$i]}" "$NC" \
+                $(( width - ${#DETAIL_LABELS[$i]} )) "" "${DETAIL_VALUES[$i]//$'\n'/$'\n'$pad}"
+        fi
+    done
+    DETAIL_LABELS=(); DETAIL_VALUES=()
+}
+
+# Usage: print_link "title" "url"
+# The way to print a URL: the title as a terminal link (term_link), indented
+# like print_wrapped, with the plain address dimmed under it, since a
+# terminal without link support (Konsole, by default) can only open an
+# address it can see. An empty title prints just the address. The address
+# isn't wrapped or shortened; terminals still match one that wraps.
+print_link() {
+    [ -n "$1" ] && printf '  %b%b%b\n' "$WHITE" "$(term_link "$2" "$1")" "$NC"
+    printf '  %b%s%b\n' "$DIM${1:+  }" "$2" "$NC"
+}
+
+# Usage: print_detected "Label" "value"
+# A " -> Label: value" line reporting what auto-detection found, with the
+# label in GREEN, just before the confirm that asks whether to use it (e.g.
+# "Detected Prefix:", "Detected Architecture:"). Paths in the value are
+# shortened to ~/.
+print_detected() {
+    echo -e " -> ${GREEN}${1}:${NC} $(tilde_path "$2")"
+}
+
+# Usage: print_status "text" [COLOR=CYAN]
+# The " -> text" arrow sub-step line used for progress/result output. Pass ""
+# explicitly (not just omitting the arg) for plain/uncolored text — needed
+# when the text embeds its own ${BOLD}...${NC} highlight, since WHITE already
+# carries bold (1;37) and would swallow the contrast.
+print_status() {
+    local text="$1"
+    local color="${2-$CYAN}"
+    echo -e " -> ${color}$(tilde_path "$text")${NC}"
+}
+
+# Usage: print_task "text"
+# The "\n${CYAN}STATUS: text...${NC}" header that announces a chunk of work
+# about to run (a scan, a download, a deploy step). Begins with its own
+# leading blank line; the trailing "..." is added here so callers pass just
+# the phrase ("Deploying files to local game folder"). A call site whose
+# stdout is captured redirects itself — print_task "..." >&2 — the same way
+# detection.sh's Heroic scanners already do.
+print_task() {
+    echo -e "\n${CYAN}STATUS: $(tilde_path "$1")...${NC}"
+}
+
+# Usage: print_result "text" [COLOR=WHITE]
+# The first line of a new "component" of output (e.g. right after a
+# print_step/print_banner header). Always begins with its own leading blank
+# line so callers never hand-roll "\n${COLOR}text${NC}" or a standalone
+# echo "" for this purpose. Distinct from print_status's " -> " arrow
+# sub-step lines, which intentionally stack with NO blank between them.
+print_result() {
+    local text="$1"
+    local color="${2:-$WHITE}"
+    echo -e "\n${color}$(tilde_path "$text")${NC}"
+}
+
+# Usage: print_subheading "Label"
+# A "\n${NOTE}  Label:${NC}" section-header line introducing a print_wrapped
+# body — the GAME PROFILE block's Status:/Restoring EAX with:/Additional
+# steps:/Notes:/etc. labels.
+print_subheading() {
+    echo -e "\n${NOTE}  $(tilde_path "$1"):${NC}"
+}
+
+# Usage: print_paragraph "line1" ["line2" ...]
+# A standalone WHITE paragraph — same multi-line joining as print_note/
+# print_warning/print_error but with no prefix. Always begins with its own
+# leading blank line. Only use this for a block that is fully self-contained
+# — i.e. nothing after it relies on a trailing blank this block would
+# otherwise have supplied (a block whose last line's trailing "\n" is
+# load-bearing for unrelated content further down should keep its manual
+# echo -e instead).
+print_paragraph() {
+    local line body="\n${WHITE}$1"
+    shift
+    for line in "$@"; do body+="\n${line}"; done
+    echo -e "$(tilde_path "$body")${NC}"
+}
+
+# Usage: print_note "text" ["more text" ...]
+# Usage: print_note_arrow "text" ["more text" ...]
+# Standalone-paragraph and " -> " arrow-sub-step forms of a "Note: ..."
+# message, in the dedicated NOTE (blue) color. Each argument is printed as
+# its own already-wrapped line, joined with real newlines into a single
+# echo -e call — a caller's manual line breaks are preserved exactly, never
+# rejoined/rewrapped, and (unlike one echo per line) no stray reset-only line
+# is emitted at the end.
+print_note() {
+    local first="$1"; shift
+    local body="\n${NOTE}Note: ${first}"
+    for line in "$@"; do body+="\n${line}"; done
+    echo -e "$(tilde_path "$body")${NC}"
+}
+# Usage: verified_tag [plain] <untested flag>
+# "(tested)" beside a game or setting verified on a real install,
+# "(untested)" (in the Note colour) when the flag is non-empty; "plain" leaves
+# the colours off, for a tick list's title. One place so every screen says it
+# the same way.
+verified_tag() {
+    local plain="" word=tested colour="$GREEN"
+    if [ "${1:-}" == "plain" ]; then plain=1; shift; fi
+    [ -n "${1:-}" ] && { word=untested; colour="$NOTE"; }
+    if [ -n "$plain" ]; then printf '(%s)' "$word"; else printf '%b(%s)%b' "$colour" "$word" "$NC"; fi
+}
+print_note_arrow() {
+    local first="$1"; shift
+    local body=" -> ${NOTE}Note: ${first}"
+    for line in "$@"; do body+="\n${NOTE}${line}"; done
+    echo -e "$(tilde_path "$body")${NC}"
+}
+
+# Usage: print_warning "text" ["more text" ...]
+# Usage: print_warning_arrow "text" ["more text" ...]
+# Standalone-paragraph and " -> " arrow-sub-step forms of a "Warning: ..."
+# message. Both forms are bold YELLOW — kept identical on purpose, unlike
+# the historical inconsistency where the arrow form dropped BOLD. Both also
+# record their headline (first arg) into RUN_WARNINGS for print_run_summary's
+# end-of-run recap.
+print_warning() {
+    local first="$1"; shift
+    RUN_WARNINGS+=("$first")
+    local body="\n${YELLOW}${BOLD}Warning: ${first}"
+    for line in "$@"; do body+="\n${line}"; done
+    echo -e "$(tilde_path "$body")${NC}"
+}
+print_warning_arrow() {
+    local first="$1"; shift
+    RUN_WARNINGS+=("$first")
+    local body=" -> ${YELLOW}${BOLD}Warning: ${first}"
+    for line in "$@"; do body+="\n${YELLOW}${BOLD}${line}"; done
+    echo -e "$(tilde_path "$body")${NC}"
+}
+
+# Usage: print_run_summary
+# Recaps every Warning: headline emitted so far this run, right before a
+# completion banner (INSTALLATION COMPLETE! / UNINSTALL COMPLETE! / VC++
+# RUNTIME INSTALL COMPLETE) — a warning that scrolled by mid-run isn't the
+# only place it's visible. No-op if RUN_WARNINGS is empty.
+print_run_summary() {
+    local count="${#RUN_WARNINGS[@]}"
+    [ "$count" -eq 0 ] && return
+    local noun="warning"
+    [ "$count" -ne 1 ] && noun="warnings"
+    print_banner "WARNINGS" "$YELLOW"
+    echo -e "\n${YELLOW}${BOLD}${count} ${noun} occurred during this run:${NC}"
+    local w
+    for w in "${RUN_WARNINGS[@]}"; do
+        echo -e "  ${YELLOW}- $(tilde_path "$w")${NC}"
+    done
+}
+
+# Usage: print_error "text" ["more text" ...]
+# Usage: print_error_arrow "text" ["more text" ...]
+# Standalone-paragraph and " -> " arrow-sub-step forms of an "Error: ..."
+# message, bold YELLOW.
+print_error() {
+    local first="$1"; shift
+    local body="\n${YELLOW}${BOLD}Error: ${first}"
+    for line in "$@"; do body+="\n${line}"; done
+    echo -e "$(tilde_path "$body")${NC}"
+}
+print_error_arrow() {
+    local first="$1"; shift
+    local body=" -> ${YELLOW}${BOLD}Error: ${first}"
+    for line in "$@"; do body+="\n${YELLOW}${BOLD}${line}"; done
+    echo -e "$(tilde_path "$body")${NC}"
+}
+
+# Usage: print_wrapped "free text"
+# Word-wraps free-form prose (e.g. JSON-sourced notes/hints, not already
+# hand-wrapped script text) at 76 columns and indents it two spaces, in
+# WHITE. Distinct from print_note/print_warning/print_error, whose multi-line
+# arguments are assumed already wrapped by the caller. WRAP_COLUMNS narrows
+# it for a space smaller than the terminal (the database browser's preview),
+# and WRAP_COLOUR sets its colour: empty prints it in the terminal's own
+# normal-weight text (the browser's paragraphs).
+print_wrapped() {
+    # %s for the text: it comes from the game database, and echo -e / %b would turn
+    # a written-out \033 or \0033 in it into a real terminal escape.
+    printf '%b%s%b\n' "${WRAP_COLOUR-$WHITE}" "$(wrap_text "${WRAP_COLUMNS:-76}" "  " "$(tilde_path "$1")")" "$NC"
+}
+
+# Usage: wrap_text <width> <indent> "text"
+# Database prose wrapped at <width>, each line indented. A line break in the
+# text is kept, and an empty line between two is a blank line. The database
+# readers pass a break along as \x1e (gdb_fields, load_game_config_rows),
+# since a real one would split their one-line-per-record output; this turns
+# it back.
+wrap_text() {
+    printf '%s\n' "${3//$'\x1e'/$'\n'}" | fold -s -w "$1" | sed "s/ *\$//; s/^/$2/; s/^ *\$//"
+}
+
+# Usage: print_final_step <number> "Label:" "text"
+# One numbered line of "Final Steps to activate EAX": ` 1. Label: text`, with
+# the label in bold yellow and the text wrapped at WRAP_COLUMNS, continuation
+# lines lined up under the label.
+print_final_step() {
+    local num="$1" label="$2" text lines first rest
+    text="$(tilde_path "$3")"
+    mapfile -t lines < <(printf '%s %s\n' "$label" "$text" | fold -s -w $(( ${WRAP_COLUMNS:-76} - 4 )))
+    first="${lines[0]#"$label"}"
+    echo -e " ${num}. ${YELLOW}${BOLD}${label}${NC}${WHITE}${first}${NC}"
+    for rest in "${lines[@]:1}"; do echo -e "    ${WHITE}${rest}${NC}"; done
+}
+
+# Usage: read_answer VAR
+# Drop-in for `read -r VAR` at a user prompt that also puts the answer in
+# the run log. The terminal echoes typed keys straight to the screen, so
+# they never pass through the log's tee; this sends the answer down stdout
+# afterwards, wrapped in a private OSC (\e]7137;...\a) that terminals
+# ignore and the log writer unwraps, then "\e[1A\n" -- a cursor no-op on
+# screen (Enter already moved it down a line) that gives the log writer
+# the newline it needs to flush the prompt line. Piped (non-tty) answers
+# weren't echoed at all, so they're just printed. EOF returns 1, like read.
+read_answer() {
+    local __ra_rc
+    read -r "$1"; __ra_rc=$?
+    _log_answer "${!1}" "$__ra_rc"
+    return "$__ra_rc"
+}
+
+# Usage: _log_answer <answer> <read's exit code>
+# The run-log half of read_answer, shared with confirm_countdown.
+_log_answer() {
+    local val="${1//[[:cntrl:]]/}"
+    [ "$EAX_LOG_FILE" != "/dev/null" ] || return 0
+    if [ "$2" -ne 0 ]; then
+        echo ""
+    elif [ ! -t 0 ]; then
+        printf '%s\n' "$val"
+    elif [ "$TERM" != "linux" ]; then
+        printf '\e]7137;%s\a\e[1A\n' "$val"
+    fi
+}
+
+# Usage: confirm "Question?" [default=Y|N]
+# Emits the canonical two-line (Y/n)/(y/N) prompt (question line, then a
+# separate "> " read line) and returns 0 for yes, 1 for no. default (Y or N,
+# case-insensitive; Y if omitted) picks which case the prompt hint and an
+# empty answer resolve to. Only for actual yes/no confirms — call sites that
+# need the raw typed value (free text, menu numbers) keep their own
+# echo -e/read -r.
+confirm() {
+    local question="$1"
+    local default="${2:-Y}"
+    local hint="(Y/n)"
+    [[ "${default^^}" == "N" ]] && hint="(y/N)"
+
+    echo -e "\n${YELLOW}$(tilde_path "$question") ${hint}: ${NC}"
+    echo -e -n "> "
+    local answer
+    # EOF (closed/exhausted stdin — a non-interactive run that's out of
+    # pre-fed answers) is not an answer: decline regardless of the default,
+    # so the caller ends cleanly instead of looping on a prompt nothing will
+    # ever respond to.
+    read_answer answer || return 1
+
+    if [[ "${default^^}" == "N" ]]; then
+        [[ "$answer" =~ $YES_RE ]]
+    else
+        [[ ! "$answer" =~ $NO_RE ]]
+    fi
+}
+
+# Usage: interactive_tty
+# True when someone's typing at a terminal and seeing the output. stdout is
+# the run log's tee during a run, so this also accepts fd 3, where the log
+# keeps the real terminal.
+interactive_tty() {
+    { [ -t 0 ] && { [ -t 1 ] || [ -t 3 ]; }; } 2>/dev/null
+}
+
+# Usage: confirm_countdown "Question?" [default=Y|N] [seconds=25]
+# confirm() that answers itself: the "> " line counts down ("(Yes in 25s)")
+# and, if nothing is typed in time, takes the default and sets
+# CONFIRM_TIMED_OUT=1 so the caller can say so. For a question whose default
+# is safe to act on unattended (closing a launcher with no game running), so
+# a player who's walked away doesn't come back to a stalled run. The first
+# key typed stops the countdown and the answer is read as normal. The
+# countdown redraws its line with \r, which the run log collapses to the
+# final state. Piped (non-tty) input has nobody to count down for, so it's
+# plain confirm().
+confirm_countdown() {
+    local question="$1" default="${2:-Y}" seconds="${3:-25}"
+    local hint="(Y/n)" word="Yes" answer="" key="" rest="" rc
+    CONFIRM_TIMED_OUT=0
+    interactive_tty || { confirm "$question" "$default"; return; }
+    [[ "${default^^}" == "N" ]] && { hint="(y/N)"; word="No"; }
+    echo -e "\n${YELLOW}$(tilde_path "$question") ${hint}: ${NC}"
+    while [ "$seconds" -gt 0 ]; do
+        printf '\r\033[K> %b(%s in %ds)%b' "$DIM" "$word" "$seconds" "$NC"
+        read -r -s -n 1 -t 1 key; rc=$?
+        [ "$rc" -eq 0 ] && break
+        # >128 is the one-second timeout; anything else is EOF.
+        [ "$rc" -gt 128 ] || { printf '\r\033[K> \n'; return 1; }
+        seconds=$(( seconds - 1 ))
+    done
+    if [ "$seconds" -eq 0 ]; then
+        CONFIRM_TIMED_OUT=1
+        printf '\r\033[K> \n'
+        [[ "${default^^}" != "N" ]]
+        return
+    fi
+    # read -n 1 returns an empty key for Enter; otherwise show the key and
+    # read the rest of the line. The "> " line printed here is already in the
+    # log; only what the terminal echoes (the rest of the line) needs logging.
+    if [ -n "$key" ]; then
+        printf '\r\033[K> %s' "$key"
+        read -r rest || rest=""
+        _log_answer "$rest" 0
+        answer="${key}${rest}"
+    else
+        printf '\r\033[K> \n'
+    fi
+    if [[ "${default^^}" == "N" ]]; then
+        [[ "$answer" =~ $YES_RE ]]
+    else
+        [[ ! "$answer" =~ $NO_RE ]]
+    fi
+}
+
+# Usage: prompt "question text: "   (caller then does its own `read_answer VAR`)
+# The non-yes/no counterpart of confirm(): a leading blank line, the YELLOW
+# question line, then the separate "> " read line — but NO read, because
+# these call sites need the raw typed value (menu numbers, free-text paths)
+# and usually loop on their own validation. Use confirm() for actual y/n.
+prompt() {
+    echo -e "\n${YELLOW}$(tilde_path "$1")${NC}"
+    echo -e -n "> "
+}
+
+# Usage: print_option N "Label" ["dim detail"]
+# One row of a numbered selection menu: " N) Label", plain/uncolored to match
+# the majority menu style (WHITE carries bold 1;37, so wrapping rows in it
+# made them stand out inconsistently). An optional third arg is appended as a
+# de-emphasized " detail" in DIM — e.g. "in /path/to/dir", "(Steam)". Callers
+# still own the menu's leading/trailing blank lines and the ${YELLOW}
+# "Selection [...]:" prompt + read loop.
+print_option() {
+    local n="$1" label="$2" detail="${3-}"
+    if [ -n "$detail" ]; then
+        echo -e " ${n}) $(tilde_path "$label")${DIM} $(tilde_path "$detail")${NC}"
+    else
+        echo -e " ${n}) $(tilde_path "$label")"
+    fi
+}
+
+# Usage: PAGED_LABELS=(…) PAGED_DETAILS=(…); paged_select "Heading" ["x|[X]label" | "|" ...]
+# A numbered pick list split into pages as tall as the terminal allows (at
+# least 10 rows), so the top of a long list doesn't scroll away. Numbers run
+# on across pages and any of them works from any page; [N]ext / [P]revious
+# show only when there's a page that way (Enter alone is [N]ext). Each extra "x|[X]label" is a letter
+# option after them ("|" alone is a blank line). With no terminal (piped
+# answers) it's one page. Sets PAGED_CHOICE to the number or letter typed;
+# returns 1 when input ends.
+paged_select() {
+    local heading="$1"; shift
+    local total=${#PAGED_LABELS[@]} per_page rows page=0 pages first last i opt choice
+    local -a keys
+    per_page=$total
+    rows="$({ stty size < /dev/tty; } 2>/dev/null | cut -d' ' -f1)"
+    if [ -t 0 ] && [[ "$rows" =~ ^[0-9]+$ ]]; then
+        per_page=$(( rows - 12 ))
+        [ "$per_page" -lt 10 ] && per_page=10
+    fi
+    pages=$(( (total + per_page - 1) / per_page ))
+    PAGED_CHOICE=""
+    while true; do
+        first=$(( page * per_page )); last=$(( first + per_page - 1 ))
+        [ "$last" -ge "$total" ] && last=$(( total - 1 ))
+        if [ "$pages" -gt 1 ]; then print_result "$heading (page $((page + 1)) of ${pages}):"
+        else print_result "$heading:"; fi
+        for ((i = first; i <= last; i++)); do
+            print_option "$((i + 1))" "${PAGED_LABELS[$i]}" "${PAGED_DETAILS[$i]:-}"
+        done
+        keys=()
+        echo ""
+        [ "$page" -lt $(( pages - 1 )) ] && { print_key_option "[N]ext page"; keys+=(n); }
+        [ "$page" -gt 0 ] && { print_key_option "[P]revious page"; keys+=(p); }
+        for opt in "$@"; do
+            if [ "$opt" == "|" ]; then echo ""; continue; fi
+            print_key_option "${opt#*|}"; keys+=("${opt%%|*}")
+        done
+
+        while true; do
+            prompt "Selection [1-${total}${keys[*]:+/}$(IFS=/; echo "${keys[*]}")]: "
+            read_answer choice || return 1
+            choice="${choice,,}"
+            # Enter alone pages forward, same as N (the last page has no N).
+            [ -z "$choice" ] && [[ " ${keys[*]} " == *" n "* ]] && choice=n
+            if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "$total" ]; then
+                PAGED_CHOICE=$((10#$choice)); return 0
+            fi
+            [ -n "$choice" ] && case " ${keys[*]} " in
+                *" $choice "*)
+                    case "$choice" in
+                        n) page=$(( page + 1 )); continue 2 ;;
+                        p) page=$(( page - 1 )); continue 2 ;;
+                        *) PAGED_CHOICE="$choice"; return 0 ;;
+                    esac
+                    ;;
+            esac
+            print_result "That's not a valid option — please type a number from 1-${total}${keys[*]:+, }$(join_choices "${keys[@]}")." "$YELLOW"
+        done
+    done
+}
+
+# Usage: print_key_option "[S]can your Steam/Heroic library"
+# One row of a letter menu, where the bracketed letter is what to type. Same
+# indent as print_option; the caller owns the header, blank lines and prompt.
+print_key_option() {
+    echo -e " $(tilde_path "$1")"
+}
+
+# Usage: return_menu_label
+# Where a flow's [R]eturn option goes: "Tools menu" inside a tool (Optional
+# settings, Speaker configuration, VC++ install, DSOAL logging, EAX Unified install), "main menu"
+# otherwise.
+return_menu_label() {
+    if [ -n "${SETTINGS_TOOL_MODE:-}" ] || [ -n "${DSOAL_LOG_MODE:-}" ] \
+        || [ -n "${EAX_UNIFIED_MODE:-}" ] || [ "${VCRUN_ONLY_MODE:-}" == "menu" ]; then
+        printf 'Tools menu'
+    else
+        printf 'main menu'
+    fi
+}
+
+# Usage: wants_installed_list
+# True when step 1 should open with the installed-games list
+# (prompt_installed_game): uninstall and every Tools item. Not for an install,
+# or for EAX_RESTORE_VCRUN_ONLY's VC++ install, which has no Tools to come
+# from.
+wants_installed_list() {
+    [ "$SCRIPT_ACTION" == "u" ] || [ -n "${SETTINGS_TOOL_MODE:-}" ] \
+        || [ -n "${DSOAL_LOG_MODE:-}" ] || [ -n "${EAX_UNIFIED_MODE:-}" ] || [ "${VCRUN_ONLY_MODE:-}" == "menu" ]
+}
+
+# Usage: tool_gate "line" ["line" ...] || { OPEN_TOOLS_MENU=1; continue; }
+# A Tools item's opening: what it does, then "Continue?" (default yes). False
+# on No, so the caller goes back to the Tools menu.
+tool_gate() {
+    print_paragraph "$@"
+    confirm "Continue?" Y
+}
+
+# Usage: join_choices s b m
+# "s, b or m" — the letters a letter menu accepts, for its "please type" line.
+join_choices() {
+    local n=$# out="" i=1 c
+    for c in "$@"; do
+        if [ "$i" -eq 1 ]; then out="$c"
+        elif [ "$i" -eq "$n" ]; then out+=" or $c"
+        else out+=", $c"; fi
+        i=$((i + 1))
+    done
+    printf '%s' "$out"
+}
+
+# Usage: checklist_select "<fallback prompt>" <title> [<title> ...]
+# A tick list for choosing any of several items: ↑/↓ (or k/j) move, Space
+# ticks or unticks, a ticks all, n unticks all, Enter confirms, Esc (or q)
+# cancels. Fills SELECTED[1..N] (1 = ticked), like parse_selection, and
+# returns 1 on cancel with SELECTED back at the starting ticks.
+# Optional, set by the caller just before and cleared after each use:
+# CHECKLIST_INITIAL=(1 0 …) starts some items unticked (everything starts
+# ticked otherwise; Enter keeps whatever it starts as), and
+# CHECKLIST_DETAILS=("<printed block>" …) gives each item a body (its reason
+# and rows), drawn under its own title so the box sits on the title itself.
+# The list is drawn straight to /dev/tty, since stdout runs through the run
+# log's tee and a redraw per keypress would fill the log; once confirmed it's
+# erased and the final list is printed once through stdout instead. A list
+# taller or wider than the terminal can't be redrawn in place, so its bodies
+# are printed first and the tick list under them has just the titles.
+# Without a terminal to drive it (piped answers), it numbers the titles and
+# asks the fallback prompt, read like a typed selection: Enter for the
+# starting state, numbers for some (see parse_selection), n for none.
+# CHECKLIST_TYPED says which of the two it was (1 = typed).
+checklist_select() {
+    local fallback="$1"; shift
+    local -a items=("$@") initial=("${CHECKLIST_INITIAL[@]}") bodies=()
+    local n=${#items[@]} i
+    for ((i = 0; i < n; i++)); do bodies[i]="${CHECKLIST_DETAILS[$i]:-}"; done
+    CHECKLIST_INITIAL=(); CHECKLIST_DETAILS=()
+    SELECTED=()
+    for ((i = 1; i <= n; i++)); do SELECTED[i]="${initial[$((i - 1))]:-1}"; done
+    local start="${SELECTED[*]}"
+    local has_bodies=0
+    for ((i = 0; i < n; i++)); do [ -n "${bodies[i]}" ] && has_bodies=1; done
+
+    # Each body indented under its title, which sits after " > [x] ".
+    _checklist_body() { printf '%s\n' "${bodies[$1]}" | sed 's/^./  &/'; }
+
+    CHECKLIST_TYPED=0
+    if [ ! -t 0 ] || [ "${TERM:-dumb}" == "dumb" ] || ! { : > /dev/tty; } 2>/dev/null; then
+        CHECKLIST_TYPED=1
+        echo ""
+        for ((i = 0; i < n; i++)); do
+            print_option "$((i + 1))" "${items[i]}"
+            [ -n "${bodies[i]}" ] && { _checklist_body "$i"; echo ""; }
+        done
+        prompt "$fallback"
+        local answer
+        read_answer answer || answer="n"
+        if [[ "$answer" =~ $NO_RE ]]; then
+            for ((i = 1; i <= n; i++)); do SELECTED[i]=0; done
+        elif [ -n "$answer" ] || [ ${#initial[@]} -eq 0 ]; then
+            parse_selection "$n" "$answer"
+        fi
+        unset -f _checklist_body
+        return 0
+    fi
+
+    local cur=1 key rest tty_fd frame lines=0 inline="$has_bodies" rows cols widest box
+    exec {tty_fd}>/dev/tty
+    # The boxes go on the titles only if the whole list fits the terminal:
+    # a redraw can't reach lines that have scrolled off the top or wrapped.
+    if [ "$inline" -eq 1 ]; then
+        read -r rows cols < <({ stty size < /dev/tty; } 2>/dev/null)
+        frame="$(for ((i = 0; i < n; i++)); do printf '\n        %s\n' "${items[i]}"; _checklist_body "$i"; done)"
+        lines=$(( $(printf '%s\n' "$frame" | wc -l) + 2 ))
+        widest=$(printf '%s\n' "$frame" | sed 's/\x1b\[[0-9;]*m//g' | awk '{ if (length > w) w = length } END { print w + 0 }')
+        if [ -z "$rows" ] || [ "$lines" -gt $(( rows - 2 )) ] || [ "$widest" -ge "${cols:-80}" ]; then
+            inline=0
+            for ((i = 0; i < n; i++)); do
+                echo -e "\n  ${BOLD}${items[i]}${NC}"
+                _checklist_body "$i"
+            done
+        fi
+    fi
+    # Let tee finish putting the rows above on screen before drawing under them.
+    sleep 0.1
+    _checklist_frame() {
+        local j box title
+        local hint="Choose with ↑/↓, Space to tick or untick, Enter to confirm, Esc to cancel"
+        [ "$inline" -eq 1 ] || printf '\n%b\n' "${YELLOW}${hint}:${NC}"
+        for ((j = 1; j <= n; j++)); do
+            box="[ ]"; [ "${SELECTED[j]}" == "1" ] && box="[${GREEN}x${NC}]"
+            title="${items[$((j - 1))]}"
+            [ "$inline" -eq 1 ] && printf '\n'
+            if [ "$j" -eq "$cur" ]; then printf '%b\n' " > ${box} ${BOLD}${title}${NC}"
+            else printf '%b\n' "   ${box} ${title}"; fi
+            [ "$inline" -eq 1 ] && [ -n "${bodies[$((j - 1))]}" ] && _checklist_body "$((j - 1))"
+        done
+        [ "$inline" -eq 1 ] && printf '\n%b\n' "${YELLOW}${hint}${NC}"
+    }
+    local cancelled=0 drawn=0
+    while true; do
+        frame="$(_checklist_frame)"
+        # Back over the last frame, then down again from there.
+        [ "$drawn" -eq 1 ] && printf '\e[%dA\r\e[J' "$lines" >&"$tty_fd"
+        printf '%s\n' "$frame" >&"$tty_fd"
+        lines=$(printf '%s\n' "$frame" | wc -l); drawn=1
+        IFS= read -rsn1 key || exit 0
+        case "$key" in
+            "") break ;;
+            " ") SELECTED[cur]=$(( 1 - SELECTED[cur] )) ;;
+            k|K) [ "$cur" -gt 1 ] && cur=$((cur - 1)) ;;
+            j|J) [ "$cur" -lt "$n" ] && cur=$((cur + 1)) ;;
+            a|A) for ((i = 1; i <= n; i++)); do SELECTED[i]=1; done ;;
+            n|N) for ((i = 1; i <= n; i++)); do SELECTED[i]=0; done ;;
+            q|Q) cancelled=1; break ;;
+            $'\e')
+                rest=""; IFS= read -rsn2 -t 0.05 rest
+                case "$rest" in
+                    "") cancelled=1; break ;;
+                    "[A"|"OA") [ "$cur" -gt 1 ] && cur=$((cur - 1)) ;;
+                    "[B"|"OB") [ "$cur" -lt "$n" ] && cur=$((cur + 1)) ;;
+                esac
+                ;;
+        esac
+    done
+    # Erase the list; the record goes to stdout.
+    printf '\e[%dA\r\e[J' "$lines" >&"$tty_fd"
+    exec {tty_fd}>&-
+    unset -f _checklist_frame
+    if [ "$cancelled" -eq 1 ]; then
+        read -ra SELECTED <<< "0 $start"; unset 'SELECTED[0]'
+        unset -f _checklist_body
+        print_result "Cancelled." "$YELLOW"
+        return 1
+    fi
+    for ((i = 1; i <= n; i++)); do
+        box="[ ]"; [ "${SELECTED[i]}" == "1" ] && box="[${GREEN}x${NC}]"
+        if [ "$inline" -eq 1 ]; then
+            echo -e "\n ${box} ${BOLD}${items[$((i - 1))]}${NC}"
+            [ -n "${bodies[$((i - 1))]}" ] && _checklist_body "$((i - 1))"
+        else
+            [ "$i" -eq 1 ] && echo ""
+            echo -e " ${box} ${items[$((i - 1))]}"
+        fi
+    done
+    unset -f _checklist_body
+    return 0
+}
+
+# Usage: RADIO_INITIAL=<n> RADIO_DETAILS=(…) radio_select "<record label>" <title> [<title> ...]
+# checklist_select's single-pick counterpart, for a short menu where each
+# item needs a sentence of explanation: ↑/↓ (or k/j) move the dot, Enter
+# picks it. The highlighted item's description is shown under the list and
+# changes as the dot moves, rather than one under every row, so the titles
+# stay a compact list. Sets RADIO_CHOICE (1-based). No cancel, matching the
+# numbered menus it replaced. RADIO_INITIAL / RADIO_DETAILS are cleared after
+# each use. Drawn to /dev/tty and erased the same way as checklist_select;
+# the record left behind is one " -> <record label>: <title>" line. Without a
+# terminal (piped answers) it's the numbered menu, descriptions dimmed after
+# the titles, read with the same default and validation as before.
+radio_select() {
+    local label="$1"; shift
+    local -a items=("$@") details=("${RADIO_DETAILS[@]}")
+    local n=${#items[@]} cur="${RADIO_INITIAL:-1}" i
+    RADIO_INITIAL=""; RADIO_DETAILS=()
+    [[ "$cur" =~ ^[0-9]+$ ]] && [ "$cur" -ge 1 ] && [ "$cur" -le "$n" ] || cur=1
+
+    if [ ! -t 0 ] || [ "${TERM:-dumb}" == "dumb" ] || ! { : > /dev/tty; } 2>/dev/null; then
+        echo ""
+        for ((i = 0; i < n; i++)); do print_option "$((i + 1))" "${items[i]}" "${details[i]:-}"; done
+        local answer
+        while true; do
+            prompt "Selection [1-$n, Default: $cur]: "
+            read_answer answer || exit 0
+            answer="${answer:-$cur}"
+            if [[ "$answer" =~ ^[0-9]+$ ]] && [ "$answer" -ge 1 ] && [ "$answer" -le "$n" ]; then answer=$((10#$answer)); break; fi
+            print_result "That's not a valid option — please type a number from 1 to $n." "$YELLOW"
+        done
+        RADIO_CHOICE="$answer"
+        print_status "$label: ${items[$((answer - 1))]}" ""
+        return 0
+    fi
+
+    # Every description is padded to the tallest one's line count, so each
+    # frame is the same height and the redraw never leaves stray lines.
+    local width=$(( ${WRAP_COLUMNS:-76} - 3 )) tallest=1 count
+    local -a wrapped=()
+    for ((i = 0; i < n; i++)); do
+        wrapped[i]="$(wrap_text "$width" "   " "${details[i]:-}")"
+        count=$(printf '%s\n' "${wrapped[i]}" | wc -l)
+        [ "$count" -gt "$tallest" ] && tallest="$count"
+    done
+
+    local key rest tty_fd frame lines=0 drawn=0
+    exec {tty_fd}>/dev/tty
+    # Let tee finish putting the heading above on screen before drawing under it.
+    sleep 0.1
+    _radio_frame() {
+        local j pad
+        echo ""
+        for ((j = 1; j <= n; j++)); do
+            if [ "$j" -eq "$cur" ]; then printf '%b\n' " > (${GREEN}•${NC}) ${BOLD}${items[$((j - 1))]}${NC}"
+            else printf '%b\n' "   ( ) ${items[$((j - 1))]}"; fi
+        done
+        echo ""
+        printf '%b%s%b\n' "$DIM" "${wrapped[$((cur - 1))]}" "$NC"
+        pad=$(( tallest - $(printf '%s\n' "${wrapped[$((cur - 1))]}" | wc -l) ))
+        for ((j = 0; j < pad; j++)); do echo ""; done
+        printf '\n%b\n' "${YELLOW}Choose with ↑/↓ and press Enter${NC}"
+    }
+    while true; do
+        frame="$(_radio_frame)"
+        [ "$drawn" -eq 1 ] && printf '\e[%dA\r\e[J' "$lines" >&"$tty_fd"
+        printf '%s\n' "$frame" >&"$tty_fd"
+        lines=$(printf '%s\n' "$frame" | wc -l); drawn=1
+        IFS= read -rsn1 key || exit 0
+        case "$key" in
+            "") break ;;
+            k|K) [ "$cur" -gt 1 ] && cur=$((cur - 1)) ;;
+            j|J) [ "$cur" -lt "$n" ] && cur=$((cur + 1)) ;;
+            $'\e')
+                rest=""; IFS= read -rsn2 -t 0.05 rest
+                case "$rest" in
+                    "[A"|"OA") [ "$cur" -gt 1 ] && cur=$((cur - 1)) ;;
+                    "[B"|"OB") [ "$cur" -lt "$n" ] && cur=$((cur + 1)) ;;
+                esac
+                ;;
+        esac
+    done
+    # Erase the list; the record goes to stdout.
+    printf '\e[%dA\r\e[J' "$lines" >&"$tty_fd"
+    exec {tty_fd}>&-
+    unset -f _radio_frame
+    RADIO_CHOICE="$cur"
+    print_status "$label: ${items[$((cur - 1))]}" ""
+    return 0
+}
+
+# ==============================================================================
+# PROGRESS HELPERS
+# ==============================================================================
+# The look follows dankinstall's installer (AvengeMedia/DankMaterialShell,
+# MIT): a 30-cell █/░ bar with a percentage, and a braille dot spinner on
+# the line of whatever long-running command is in progress. Everything
+# redraws a single line with \r rather than scrolling, which also keeps the
+# run log clean -- its writer collapses each \r-redrawn line to its final
+# state.
+SPINNER_FRAMES=(⣾ ⣽ ⣻ ⢿ ⡿ ⣟ ⣯ ⣷)
+
+# Usage: progress_bar <done> <total>
+# Prints "[██████░░░…] 40%" (no newline) for done/total.
+progress_bar() {
+    local done="$1" total="$2" width=30 filled bar="" i
+    [ "${total:-0}" -gt 0 ] || total=1
+    [ "$done" -gt "$total" ] && done="$total"
+    filled=$(( done * width / total ))
+    for (( i = 0; i < width; i++ )); do
+        if [ "$i" -lt "$filled" ]; then bar+="█"; else bar+="░"; fi
+    done
+    printf '%b[%s]%b %3d%%' "$CYAN" "$bar" "$NC" $(( done * 100 / total ))
+}
+
+# Usage: print_phase_progress <step> <total>
+# The overall PHASE 2 bar, printed once under each step's STATUS: header,
+# e.g. "    [████████████░░░…]  40%  step 2 of 5".
+print_phase_progress() {
+    echo -e "    $(progress_bar "$1" "$2")  ${DIM}step $1 of $2${NC}"
+}
+
+# PHASE 2's single progress bar is pinned to the bottom row of the screen
+# with a terminal scroll region (ESC[top;bottomr, the same trick and spot
+# apt uses), so the deployment output scrolls above it instead of each step
+# printing a bar of its own -- and, unlike pinning it to the top, nothing
+# already on screen has to be pushed away to make room. The row above it is
+# kept blank, so the last line of output (a prompt's "> ", say) never sits
+# right on the bar. Only plain CSI sequences are used, which the
+# run log's writer strips. With no terminal (or a very short one) it falls
+# back to printing the bar under each step's header.
+PHASE_PINNED=""
+PHASE_ROWS=""
+
+# Usage: start_phase_progress <total steps>
+# Call once, right after the user confirms, while nothing else is being
+# printed: the setup goes straight to /dev/tty (so it stays out of the
+# log), which can't race the log's tee only because nothing is in flight.
+start_phase_progress() {
+    PHASE_STEP=0; PHASE_TOTAL="$1"; PHASE_PINNED=""
+    local size rows
+    # stdout must be the terminal too (fd 3 holds it while logging).
+    { [ -t 1 ] || [ -t 3 ]; } 2>/dev/null || return 0
+    size=$({ stty size < /dev/tty; } 2>/dev/null) || return 0
+    rows="${size%% *}"
+    [[ "$rows" =~ ^[0-9]+$ ]] && [ "$rows" -ge 13 ] || return 0
+    PHASE_ROWS="$rows"
+    {
+        # Two newlines then back up: frees the bottom two rows (the bar and
+        # the blank row above it) by scrolling only as far as needed when the
+        # cursor is near the bottom. Then set rows 1..bottom-2 as the scroll
+        # region -- which homes the cursor, hence the save/restore around it
+        # -- and clear the blank row once; nothing writes there after that.
+        printf '\n\n\033[2A\033[s\033[1;%dr\033[%d;1H\033[2K\033[u' "$(( rows - 2 ))" "$(( rows - 1 ))"
+        _draw_pinned_phase_bar
+    } > /dev/tty 2>/dev/null || return 0
+    PHASE_PINNED=1
+    # finish_run_log resets it on any exit while logging; without logging
+    # there's no EXIT trap, so make sure the terminal is still restored.
+    [ -z "$(trap -p EXIT)" ] && trap end_phase_progress EXIT
+}
+
+# Usage: print_phase_task "text"
+# print_task for a PHASE 2 step: bumps PHASE_STEP and updates the bar --
+# redrawn in place on the pinned row (before the header, whose leading
+# blank line then ends the bar's line in the log), or printed under the
+# header when not pinned. Without PHASE_TOTAL (a helper shared with other
+# flows, e.g. VC++-only mode) it's plain print_task.
+print_phase_task() {
+    if [ -z "${PHASE_TOTAL:-}" ]; then print_task "$1"; return; fi
+    PHASE_STEP=$(( ${PHASE_STEP:-0} + 1 ))
+    if [ -n "$PHASE_PINNED" ]; then
+        _draw_pinned_phase_bar
+        print_task "$1"
+    else
+        print_task "$1"
+        print_phase_progress "$PHASE_STEP" "$PHASE_TOTAL"
+    fi
+}
+_draw_pinned_phase_bar() {
+    printf '\033[s\033[%d;1H\033[2K    %s  %bstep %d of %d%b\033[u' "$PHASE_ROWS" \
+        "$(progress_bar "${PHASE_STEP:-0}" "$PHASE_TOTAL")" "$DIM" "${PHASE_STEP:-0}" "$PHASE_TOTAL" "$NC"
+}
+
+# Usage: end_phase_progress
+# Releases the scroll region so what follows scrolls normally, and clears
+# the bar's row and the blank row above it so that output can't land on top
+# of a stale bar. Resetting the region homes the cursor, hence the
+# save/restore around it. Safe to call when nothing is pinned.
+end_phase_progress() {
+    [ -n "$PHASE_PINNED" ] || return 0
+    PHASE_PINNED=""
+    printf '\033[s\033[r\033[%d;1H\033[2K\033[%d;1H\033[2K\033[u' "$(( PHASE_ROWS - 1 ))" "$PHASE_ROWS"
+}
+
+# Runs "$@" in the background and redraws "$1"'s line until it finishes;
+# the calling helper passes the pid-wait loop body as a function. Ctrl-C
+# has to kill the job explicitly: a non-interactive shell starts
+# background jobs with SIGINT ignored, so they'd outlive the script.
+_bg_job_pid=""
+_start_bg_job() {
+    "$@" &
+    _bg_job_pid=$!
+    _bg_saved_int=$(trap -p INT)
+    trap 'kill "$_bg_job_pid" 2>/dev/null; exit 130' INT
+}
+_finish_bg_job() {
+    local rc
+    wait "$_bg_job_pid"; rc=$?
+    _bg_job_pid=""
+    if [ -n "$_bg_saved_int" ]; then eval "$_bg_saved_int"; else trap - INT; fi
+    return "$rc"
+}
+
+# Usage: fetch_with_progress <url> <dest>
+# Drop-in for `curl -fL -# <url> -o <dest>` with a 30-cell bar and the
+# downloaded/total size instead of curl's full-width row of #s. The total
+# comes from a HEAD request (the last Content-Length after redirects); if
+# the server doesn't send one, a spinner and the running size are shown.
+# On failure the line is cleared (curl's own error goes to the run log), so
+# the caller's error message stands alone. Returns curl's exit status.
+fetch_with_progress() {
+    local url="$1" dest="$2" total size frame=0 rc
+    total=$(curl -sIL --connect-timeout 15 --max-time 30 "$url" 2>/dev/null | tr -d '\r' | awk 'tolower($1) == "content-length:" { n = $2 } END { print n + 0 }')
+    rm -f "$dest"
+    _start_bg_job _run_logged "${EAX_LOG_FILE:-/dev/null}" curl -fsSL --connect-timeout 15 --speed-limit 1000 --speed-time 30 "$url" -o "$dest"
+    while kill -0 "$_bg_job_pid" 2>/dev/null; do
+        size=$(stat -c %s "$dest" 2>/dev/null || echo 0)
+        _draw_fetch_line "$size" "$total" "$frame"
+        frame=$(( frame + 1 )); sleep 0.1
+    done
+    _finish_bg_job; rc=$?
+    if [ "$rc" -ne 0 ]; then
+        printf '\r\033[K'
+        return "$rc"
+    fi
+    size=$(stat -c %s "$dest" 2>/dev/null || echo 0)
+    total="$size"
+    _draw_fetch_line "$size" "$total" 0
+    echo ""
+    return 0
+}
+_draw_fetch_line() {
+    local size="$1" total="$2" mb
+    mb=$(awk -v s="$size" -v t="$total" 'BEGIN { if (t > 0) printf "%.1f/%.1f MB", s / 1048576, t / 1048576; else printf "%.1f MB", s / 1048576 }')
+    if [ "$total" -gt 0 ]; then
+        printf '\r    %s  %b%s%b\033[K' "$(progress_bar "$size" "$total")" "$DIM" "$mb" "$NC"
+    else
+        printf '\r    %b%s%b  %b%s%b\033[K' "$CYAN" "${SPINNER_FRAMES[$(( $3 % 8 ))]}" "$NC" "$DIM" "$mb" "$NC"
+    fi
+}
+
+# Usage: run_with_spinner "label" <log file> command [args...]
+# Runs a slow, quiet command (winetricks, protontricks, a Windows installer)
+# with its output appended to <log file>, showing " ⣾ label" while it
+# works. The spinner line is cleared when the command ends, so the caller's
+# own result line takes its place. Returns the command's exit status.
+run_with_spinner() {
+    local label="$1" log="$2" frame=0
+    shift 2
+    _start_bg_job _run_logged "$log" "$@"
+    while kill -0 "$_bg_job_pid" 2>/dev/null; do
+        printf '\r %b%s%b %s\033[K' "$CYAN" "${SPINNER_FRAMES[$(( frame % 8 ))]}" "$NC" "$label"
+        frame=$(( frame + 1 )); sleep 0.1
+    done
+    printf '\r\033[K'
+    _finish_bg_job
+}
+_run_logged() {
+    local log="$1"; shift
+    "$@" &>> "$log"
+}

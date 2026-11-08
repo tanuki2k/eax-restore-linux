@@ -1,0 +1,40 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Star Wars: Knights of the Old Republic",
+  "description": "Star Wars: Knights of the Old Republic is a singleplayer third-person role-playing game and the first in the Star Wars: Knights of the Old Republic series.",
+  "released": "2003-11-19",
+  "exe": "swkotor.exe",
+  "stores": {
+    "steam": { "id": 32370 },
+    "gog": { "id": 1207666283 }
+  },
+  "eax": { "api": "directsound3d", "sound_system": "miles", "versions": ["1.0", "2.0", "3.0"] },
+  "game_config": {
+    "files": { "swkotor.ini": { "format": "ini", "locations": ["game_exe:swkotor.ini"] } },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in KOTOR's configuration.",
+        "changes": { "swkotor.ini": { "Sound Options": { "EAX": "3" } } },
+        "tested": true
+      }
+    ],
+    "optional_settings": [
+      {
+        "title": "Raise anti-aliasing and anisotropic filtering",
+        "reason": "The game's graphics options default to no anti-aliasing and no anisotropic filtering. This sets 8x anti-aliasing and 16x anisotropic filtering for sharper edges and textures.",
+        "changes": {
+          "swkotor.ini": {
+            "Graphics Options": {
+              "Anisotropy": "16",
+              "Anti Aliasing": "8",
+              "Frame Buffer": "1",
+              "Soft Shadows": "1"
+            }
+          }
+        },
+        "tested": true
+      }
+    ]
+  }
+}

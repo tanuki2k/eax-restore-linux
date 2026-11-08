@@ -1,0 +1,10 @@
+{
+  "$schema": "../schema.json",
+  "name": "Resident Evil 2",
+  "description": "Resident Evil 2 is a singleplayer third-person survival horror game and the second in the Resident Evil series.",
+  "released": "1999-02-19",
+  "stores": {
+    "gog": { "id": 1534123252, "store_details": "Sold only on GOG." }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0"] }
+}

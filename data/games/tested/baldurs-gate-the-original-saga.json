@@ -1,0 +1,32 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Baldur's Gate: The Original Saga",
+  "description": "Baldur's Gate: The Original Saga is a singleplayer and multiplayer isometric role-playing game.",
+  "released": "1998-12-21",
+  "exe": "BGMain.exe",
+  "stores": {
+    "gog": {
+      "id": 1207658886,
+      "delisted": true,
+      "store_details": "This is the original 1998 Baldur's Gate with its Tales of the Sword Coast expansion. GOG stopped selling it by November 2016 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
+    }
+  },
+  "eax": { "api": "directsound3d", "versions": ["1.0"] },
+  "game_config": {
+    "files": { "Baldur.ini": { "format": "ini", "locations": ["game_exe:Baldur.ini"] } },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in Baldur's Gate's configuration.",
+        "changes": { "Baldur.ini": { "Game Options": { "Environmental Audio": "1" } } },
+        "tested": true
+      }
+    ]
+  },
+  "sources": [
+    {
+      "title": "GOG forum: BGEE, BG2EE, IWEE vs originals",
+      "url": "https://www.gog.com/forum/baldurs_gate_series/bgee_bg2ee_iwee_vs_originals"
+    }
+  ]
+}

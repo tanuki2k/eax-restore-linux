@@ -1,0 +1,49 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Thief: Deadly Shadows",
+  "description": "Thief: Deadly Shadows is a singleplayer first- and third-person stealth and immersive sim game and the third in the Thief series.",
+  "released": "2004-05-25",
+  "exe": "T3Main.exe",
+  "stores": {
+    "steam": {
+      "id": 6980,
+      "patches": "The unofficial 'Sneaky Upgrade' patch  contains various bugfixes and game improvements such as widescreen support."
+    },
+    "gog": {
+      "id": 1207659036,
+      "patches": "The unofficial 'Sneaky Upgrade' patch  contains various bugfixes and game improvements such as widescreen support."
+    }
+  },
+  "eax": { "api": "directsound3d", "versions": ["3.0", "4.0"] },
+  "install": {
+    "tweaks": ["eax_unified"]
+  },
+  "game_config": {
+    "files": {
+      "options.ini": {
+        "format": "ini",
+        "locations": [
+          "game_root:save/SaveGames/User Options/options.ini",
+          "prefix_documents:Thief - Deadly Shadows/SaveGames/User Options/options.ini"
+        ]
+      }
+    },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in Thief: Deadly Shadows' configuration.",
+        "changes": {
+          "options.ini": { "UseHWMixing": "1", "UseEAX": "1", "EAXMultipleEnvironments": "1" }
+        },
+        "tested": true
+      }
+    ]
+  },
+  "sources": [
+    { "title": "PC Gaming Wiki", "url": "https://www.pcgamingwiki.com/wiki/Thief:_Deadly_Shadows" },
+    {
+      "title": "Thief 3 Sneaky Upgrade",
+      "url": "https://www.moddb.com/mods/thief-3-sneaky-upgrade"
+    }
+  ]
+}

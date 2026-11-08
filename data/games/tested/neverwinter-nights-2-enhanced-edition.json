@@ -1,0 +1,16 @@
+{
+  "$schema": "../../schema.json",
+  "name": "Neverwinter Nights 2: Enhanced Edition",
+  "description": "Neverwinter Nights 2: Enhanced Edition is a singleplayer and multiplayer third-person role-playing game, an enhanced edition of 2006's Neverwinter Nights 2.",
+  "released": "2025-07-15",
+  "stores": {
+    "steam": { "id": 2738630 },
+    "gog": { "id": 1993442013 }
+  },
+  "eax": {
+    "api": "directsound3d",
+    "status": "not_implemented",
+    "problem": "This is the 2025 Enhanced Edition, not the classic Neverwinter Nights 2, and it has no EAX."
+  },
+  "notes": "GOG still sells the classic edition of Neverwinter Nights 2, which supports EAX, as Neverwinter Nights 2 Complete."
+}
