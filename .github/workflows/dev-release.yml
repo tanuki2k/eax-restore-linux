@@ -27,7 +27,7 @@ jobs:
         run: ./build.sh
 
       - name: Checksum
-        run: sha256sum dist/eax-restore-linux.sh > dist/eax-restore-linux.sh.sha256
+        run: cd dist && sha256sum eax-restore-linux.sh > eax-restore-linux.sh.sha256
 
       - name: Read stamp from build
         id: stamp
@@ -46,13 +46,13 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y bats shellcheck jq unzip file python3-jsonschema
 
       - name: Shellcheck
-        run: shellcheck --severity=error dist/eax-restore-linux.sh
+        run: shellcheck --severity=error dist/eax-restore-linux.sh build.sh tools/*.sh tools/profiler/*.sh tools/profiler/eax-profiler
 
       - name: Tests
         run: bats tests/unit tests/integration && (cd tools/profiler && python3 -m unittest discover -s tests)
 
       - name: Validate the game database
-        run: jq empty game-database.json
+        run: jq empty game-database.json && tools/build-game-database.sh --check && tools/format-game-database.sh --check
 
       - name: Publish rolling dev prerelease
         env:

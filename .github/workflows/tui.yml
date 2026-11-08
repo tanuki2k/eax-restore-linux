@@ -4,11 +4,13 @@ on:
   push:
     paths:
       - "tui/**"
+      - "src/**"
       - "game-database.json"
       - ".github/workflows/tui.yml"
   pull_request:
     paths:
       - "tui/**"
+      - "src/**"
       - "game-database.json"
       - ".github/workflows/tui.yml"
 
