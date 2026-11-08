@@ -6,7 +6,7 @@ An install has four phases. The first three only ask questions and look around. 
 
 ## Phase 1: Game
 
-The script starts by finding the game. It can scan your Steam and Heroic libraries and show the games it recognises, or you can browse to the game's folder or type the path. Scanning is the easier route, because the script already knows the game, its store IDs and its Wine prefix. A game that isn't on the list still works. [Library scanning and the game database](game-database.md) covers both cases.
+The script starts by finding the game. It can scan your Steam and Heroic libraries and show the games it recognises, or you can browse to the game's folder or type the path. Scanning is the easier route, because the script already knows the game, its store IDs and its Wine prefix. A game that isn't on the list still works. [Library scanning and the game database](library-scanning.md) covers both cases.
 
 Next it works out how the game is launched, so it can find the right Wine prefix. For Steam it looks up the AppID and checks it with protontricks. For Heroic it finds the game's prefix and makes sure it has been set up, meaning the game has been launched at least once. If it hasn't, the script says so and waits while you start the game and close it again. Steam and Heroic aren't the only options: a retail copy running in a prefix you made yourself works too, and the script asks you for the path.
 

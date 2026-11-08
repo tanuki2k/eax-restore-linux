@@ -1,7 +1,7 @@
 name: Wiki sync
 
 # docs/ is the source; the wiki is generated from it, plus the profile editor's
-# README, which is published as the profile-editor page. Needs the repository's
+# README, which is published as the database/profile-editor page. Needs the repository's
 # Wiki enabled and its first page created once in the UI, or the clone fails.
 on:
   push:
@@ -30,7 +30,8 @@ jobs:
           git clone "https://x-access-token:${TOKEN}@github.com/${REPO}.wiki.git" wiki
           find wiki -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
           cp -r docs/. wiki/
-          cp tools/profiler/README.md wiki/profile-editor.md
+          mkdir -p wiki/database
+          cp tools/profiler/README.md wiki/database/profile-editor.md
           cd wiki
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

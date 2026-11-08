@@ -48,7 +48,7 @@ chmod +x eax-restore-linux.sh
 
 The main menu lets you scan your Steam and Heroic libraries for the game, browse to its folder, or type the path. It also has uninstall and a Tools menu.
 
-An install has four phases. The first three only ask questions: which game, which audio files and speakers, and which of the game's own settings to change. Nothing on your system changes until you answer the final "Proceed?". [How it works](docs/how-it-works.md) goes through each step.
+An install has four phases. The first three only ask questions: which game, which audio files and speakers, and which of the game's own settings to change. Nothing on your system changes until you answer the final "Proceed?". [How it works](docs/script/how-it-works.md) goes through each step.
 
 To see what the script does or which version you have, run `./eax-restore-linux.sh --help` or `--version`. Both print and exit without starting anything.
 
@@ -88,15 +88,30 @@ Like the install, it asks everything first (which files to remove, whether to cl
 
 ## Documentation
 
+**Using the script**
+
 | Page | What's in it |
 | --- | --- |
-| [How it works](docs/how-it-works.md) | An install step by step, plus the Tools menu and profile browser |
-| [Library scanning and the game database](docs/game-database.md) | How the script recognises your games and what it knows about them |
-| [Using the profile editor](tools/profiler/README.md) | Adding or fixing a game with the editor in your browser |
-| [Environment variables](docs/environment-variables.md) | Options for repeat runs and scripting |
-| [Troubleshooting](docs/troubleshooting.md) | Run logs, DSOAL logging and bug reports |
-| [Contributing a game](docs/contributing-games.md) | Adding or fixing a game profile |
-| [Game file reference](docs/game-file-reference.md) | Every field in a game's file |
+| [How it works](docs/script/how-it-works.md) | An install step by step, plus the Tools menu and profile browser |
+| [Library scanning](docs/script/library-scanning.md) | How the script recognises your games and what a game's entry gives you |
+| [Environment variables](docs/script/environment-variables.md) | Options for repeat runs and scripting |
+| [Troubleshooting](docs/script/troubleshooting.md) | Run logs, DSOAL logging and bug reports |
+
+**The game database**
+
+| Page | What's in it |
+| --- | --- |
+| [The game database](docs/database/overview.md) | What an entry holds, how the files are built and what tested means |
+| [Game file reference](docs/database/game-file-reference.md) | Every field in a game's file |
+| [Contributing a game](docs/database/contributing.md) | The rules for adding or fixing a game |
+| [The profile editor](tools/profiler/README.md) | The editor you use to write and check entries |
+
+**Tutorials**
+
+| Page | What's in it |
+| --- | --- |
+| [Your first install](docs/tutorials/first-install.md) | Install the fix into one game, then undo it |
+| [Add a game](docs/tutorials/add-a-game.md) | Write an entry in the editor, test it with the script and send it in |
 
 The same pages are on the project's wiki, which is generated from `docs/`.
 
