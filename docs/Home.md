@@ -6,7 +6,7 @@ These pages cover [eax-restore-linux](https://github.com/tanuki2k/eax-restore-li
 | --- | --- |
 | [How it works](how-it-works.md) | An install step by step, plus the Tools menu and profile browser |
 | [Library scanning and the game database](game-database.md) | How the script recognises your games and what it knows about them |
-| [Reading a game profile](game-profiles.md) | What each part of a game's profile means, and where to see it |
+| [Using the profile editor](profile-editor.md) | Adding or fixing a game with the editor in your browser |
 | [Environment variables](environment-variables.md) | Options for repeat runs and scripting |
 | [Troubleshooting](troubleshooting.md) | Run logs, DSOAL logging and bug reports |
 | [Contributing a game](contributing-games.md) | Adding or fixing a game profile |
