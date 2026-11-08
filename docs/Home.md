@@ -27,4 +27,10 @@ These pages cover [eax-restore-linux](https://github.com/tanuki2k/eax-restore-li
 | [Your first install](tutorials/first-install.md) | Install the fix into one game, then undo it |
 | [Add a game](tutorials/add-a-game.md) | Write an entry in the editor, test it with the script and send it in |
 
+## The project
+
+| Page | What's in it |
+| --- | --- |
+| [Roadmap](roadmap.md) | Where the project is heading |
+
 *The wiki is generated from the `docs/` folder in the repository. Edit the pages there, not in the wiki.*
