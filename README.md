@@ -113,6 +113,8 @@ Like the install, it asks everything first (which files to remove, whether to cl
 | [Your first install](docs/tutorials/first-install.md) | Install the fix into one game, then undo it |
 | [Add a game](docs/tutorials/add-a-game.md) | Write an entry in the editor, test it with the script and send it in |
 
+The [roadmap](docs/roadmap.md) says where the project is heading.
+
 The same pages are on the project's wiki, which is generated from `docs/`.
 
 ## Credits
