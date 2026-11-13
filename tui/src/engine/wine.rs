@@ -194,6 +194,124 @@ impl Prefix {
     }
 }
 
+impl Prefix {
+    /// `protontricks -c "<line>" <appid>`: a shell line run in the prefix.
+    fn protontricks_line(&self, cmd: &[String], app_id: &str, line: &str) -> Command {
+        let mut c = Self::protontricks(cmd);
+        c.arg("-c").arg(line).arg(app_id);
+        c
+    }
+
+    /// Runs a Windows program in the prefix (`run_in_prefix`): through
+    /// protontricks with each argument in double quotes, or the game's Wine.
+    /// `None` when there's nothing to run it with.
+    pub fn run_program(&self, args: &[String]) -> Option<i32> {
+        match &self.runner {
+            Some(Runner::Protontricks { cmd, app_id }) => {
+                let line: String = args.iter().map(|a| format!(" \"{a}\"")).collect();
+                self.run(self.protontricks_line(cmd, app_id, &format!("wine{line}")))
+            }
+            Some(Runner::Wine { wine, .. }) if !self.path.as_os_str().is_empty() => {
+                let mut c = Command::new(wine);
+                c.env("WINEPREFIX", &self.path).args(args);
+                self.run(c)
+            }
+            _ => None,
+        }
+    }
+
+    /// Microsoft's VC++ installer with its flags (`/q`, `/repair /quiet`,
+    /// `/uninstall /q`), then `/norestart`.
+    pub fn run_vc_installer(&self, exe: &Path, flags: &[&str]) -> Option<i32> {
+        match &self.runner {
+            Some(Runner::Protontricks { cmd, app_id }) => {
+                let line = format!("wine \"{}\" {} /norestart", exe.display(), flags.join(" "));
+                self.run(self.protontricks_line(cmd, app_id, &line))
+            }
+            Some(Runner::Wine { wine, .. }) => {
+                let mut c = Command::new(wine);
+                c.env("WINEPREFIX", &self.path)
+                    .arg(exe)
+                    .args(flags)
+                    .arg("/norestart");
+                self.run(c)
+            }
+            None => None,
+        }
+    }
+
+    /// A winetricks verb (`vcrun2022`), forced: Microsoft updates its
+    /// installer in place, so winetricks' own stored checksum goes stale and
+    /// it would stop for a confirmation nobody answers.
+    pub fn install_verb(&self, verb: &str) -> Option<i32> {
+        match &self.runner {
+            Some(Runner::Protontricks { cmd, app_id }) => {
+                let mut c = Self::protontricks(cmd);
+                c.arg(app_id).args(["--force", "-q", verb]);
+                self.run(c)
+            }
+            Some(Runner::Wine { wine, wineserver }) => {
+                let mut c = Command::new("winetricks");
+                c.env("WINEPREFIX", &self.path)
+                    .env("WINE", wine)
+                    .env(
+                        "WINESERVER",
+                        wineserver
+                            .as_deref()
+                            .map(Path::as_os_str)
+                            .unwrap_or_default(),
+                    )
+                    .args(["--force", "-q", verb]);
+                self.run(c)
+            }
+            None => None,
+        }
+    }
+
+    /// `wine reg query <hive> /s /f "Visual C++" /d`'s output.
+    pub fn reg_query_visual_cpp(&self, hive: &str) -> Option<String> {
+        let mut c = match &self.runner {
+            Some(Runner::Protontricks { cmd, app_id }) => self.protontricks_line(
+                cmd,
+                app_id,
+                &format!("wine reg query \"{hive}\" /s /f \"Visual C++\" /d"),
+            ),
+            Some(Runner::Wine { wine, .. }) => {
+                let mut c = Command::new(wine);
+                c.env("WINEPREFIX", &self.path).args([
+                    "reg",
+                    "query",
+                    hive,
+                    "/s",
+                    "/f",
+                    "Visual C++",
+                    "/d",
+                ]);
+                c
+            }
+            None => return None,
+        };
+        let out = c.stdin(Stdio::null()).stderr(Stdio::null()).output().ok()?;
+        Some(String::from_utf8_lossy(&out.stdout).into_owned())
+    }
+
+    pub fn reg_delete(&self, key: &str) {
+        let c = match &self.runner {
+            Some(Runner::Protontricks { cmd, app_id }) => {
+                self.protontricks_line(cmd, app_id, &format!("wine reg delete \"{key}\" /f"))
+            }
+            Some(Runner::Wine { wine, .. }) => {
+                let mut c = Command::new(wine);
+                c.env("WINEPREFIX", &self.path)
+                    .args(["reg", "delete", key, "/f"]);
+                c
+            }
+            None => return,
+        };
+        self.run(c);
+    }
+}
+
 pub fn is_executable(p: &Path) -> bool {
     use std::os::unix::fs::PermissionsExt;
     std::fs::metadata(p).is_ok_and(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)

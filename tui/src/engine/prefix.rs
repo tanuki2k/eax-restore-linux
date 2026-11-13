@@ -109,6 +109,12 @@ fn reg_file(game_dir: &Path, name: &str) -> Option<(PathBuf, std::fs::File)> {
     None
 }
 
+/// Writes `text` to a new .reg file in the game folder, imports it, and
+/// removes the file. regedit's exit code, or `None` when it couldn't run.
+pub fn import_text(prefix: &Prefix, game_dir: &Path, name: &str, text: &str) -> Option<i32> {
+    import(prefix, game_dir, name, text)
+}
+
 fn import(prefix: &Prefix, game_dir: &Path, name: &str, text: &str) -> Option<i32> {
     let (path, mut f) = reg_file(game_dir, name)?;
     let ok = std::io::Write::write_all(&mut f, text.as_bytes()).is_ok();

@@ -26,7 +26,7 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
   checks it against the `.sha256` (`EAX_RESTORE_CHANNEL=dev` at build time picks
   the dev channel). The engine is moving into Rust a stage at a time under
   `tui/src/engine/` (no TUI types in there; the crate is a library, `src/lib.rs`, plus
-  a thin `main.rs`). Stages 1 to 6 and the first half of 7 are done, and no screen calls them yet apart from
+  a thin `main.rs`). Stages 1 to 7 are done, and no screen calls them yet apart from
   the list's "is this game installed" check. Stage 1: `engine/config/` is
   `config_get_key` / `config_set_key`, `config_values_equal`, `config_row_is_safe` and
   `resolve_config_file` for the eleven formats. Stage 2: `engine/files.rs` is the
@@ -87,8 +87,15 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
   read back from user.reg), their removal and the DLL copy into system32/syswow64;
   `engine/deploy.rs` is `handle_conflict` and `deploy_copy`. Checked by
   `tui/tests/prefix_oracle.rs` (the protontricks stub for Steam, a fake wine for Heroic).
-  Still to come in 7b: the VC++ runtime, EAX Unified, companion apps, finding a Heroic
-  game's prefix, and a real `UninstallHost`.
+  Stage 7b (engine only): `engine/vcrun.rs` is `src/vcrun.sh` (genuine-DLL check, the
+  package manager then Microsoft's installer, in repair mode when it's registered, the
+  DLL overrides, the uninstall with its Programs and Features clean-up);
+  `engine/eax_unified.rs` is EAX Unified's install and removal; `engine/host.rs` is
+  `SystemHost`, the real `Host` / `UninstallHost` (the game running from `/proc`,
+  wineserver, the Wine side above, a companion app's own prefix), with closing a
+  launcher left to a callback. Checked by `tui/tests/vcrun_oracle.rs` (a fake
+  protontricks and wine that act as the Windows installers). Finding a Heroic game's
+  prefix is detection, so it comes with Stage 8.
 
 The planned interface (the user's design, not built yet) is a panel like
 Optiscaler-Client's: every choice for an install or uninstall on one screen, plus
