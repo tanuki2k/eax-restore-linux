@@ -124,6 +124,14 @@ setup() {
     grep -q "because it isn.t one of the files this script installed" "$OUT"
 }
 
+@test "a reinstall with no run log leaves no set-aside manifest behind" {
+    # EAX_RESTORE_NO_LOG is on in these tests; the .prev copy used to stay.
+    install_answers "$BATS_TEST_TMPDIR/in"; run_script "$BATS_TEST_TMPDIR/in"
+    install_answers "$BATS_TEST_TMPDIR/in2"; run_script "$BATS_TEST_TMPDIR/in2"
+    grep -q 'INSTALLATION COMPLETE' "$OUT" || { tail -30 "$OUT"; false; }
+    [ ! -e "$GAME/.eax-restore-manifest.txt.prev" ]
+}
+
 @test "a reinstall keeps the registry record of the last install" {
     OVERRIDE_CHOICE=2 install_answers "$BATS_TEST_TMPDIR/in"; run_script "$BATS_TEST_TMPDIR/in"
     grep -q '^REGISTRY:OVERRIDE:dsound' "$GAME/.eax-restore-manifest.txt"
