@@ -315,7 +315,7 @@ pub fn live_manifest_dirs(home: &Path, state_file: &Path) -> BTreeSet<PathBuf> {
 }
 
 #[cfg(test)]
-pub mod tests {
+pub(crate) mod tests {
     use super::*;
 
     /// A fake home: Steam with a second library, one Heroic GOG game.

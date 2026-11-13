@@ -5,12 +5,16 @@ on:
     paths:
       - "tui/**"
       - "src/**"
+      # tui/tests/config_oracle.rs replays the editors' bats cases.
+      - "tests/unit/**"
       - "game-database.json"
       - ".github/workflows/tui.yml"
   pull_request:
     paths:
       - "tui/**"
       - "src/**"
+      # tui/tests/config_oracle.rs replays the editors' bats cases.
+      - "tests/unit/**"
       - "game-database.json"
       - ".github/workflows/tui.yml"
 

@@ -128,7 +128,16 @@ launcher hardcodes `releases/latest`).
   eax-restore-linux/tui/<channel>/`) or `dist/`, skipping any that lacks
   `EAX_RESTORE_ACTION`; if none, it downloads its channel's release script and
   checks it against the `.sha256` (`EAX_RESTORE_CHANNEL=dev` at build time picks
-  the dev channel).
+  the dev channel). The engine is moving into Rust a stage at a time under
+  `tui/src/engine/` (no TUI types in there; the crate is a library, `src/lib.rs`, plus
+  a thin `main.rs`). Stage 1 is done: `engine/config/` is `config_get_key` /
+  `config_set_key`, `config_values_equal`, `config_row_is_safe` and
+  `resolve_config_file` for the eleven formats, not yet called by any screen.
+  `tui/tests/config_oracle.rs` runs each case through the Bash functions and the Rust
+  ones and compares the files byte for byte (the bats tests' own cases, a generated
+  corpus, every setting in the database), so a change to an editor in
+  `src/game-config.sh` needs the same change in `engine/config/`. `eax-restore config
+  get|set FILE FORMAT SECTION KEY [VALUE]` runs the Rust editors by hand.
 - **Docs and the wiki:** `docs/` is split into `script/`, `database/` and `tutorials/`, and
   the repo links between pages by folder path. The wiki is generated from it by
   `.github/workflows/wiki-sync.yml` on every push to `main` that touches `docs/`, using

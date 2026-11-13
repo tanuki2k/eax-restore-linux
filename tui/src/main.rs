@@ -1,19 +1,6 @@
-mod actions;
-mod app;
-mod db;
-mod fetch;
-mod filters;
-mod games;
-mod help;
-mod library;
-mod picker;
-mod profile;
-mod runner;
-mod settings;
-mod theme;
-mod ui;
-
 use anyhow::{Context, Result};
+use eax_restore::engine::config;
+use eax_restore::{app, db, fetch, games, library, profile, runner, settings, ui};
 use ratatui::crossterm::event::{self, Event, KeyEventKind};
 use std::io::Write;
 use std::path::PathBuf;
@@ -48,7 +35,36 @@ fn print_lines(lines: Vec<ratatui::text::Line<'static>>) {
     }
 }
 
+/// `config get|set FILE FORMAT SECTION KEY [VALUE]`: reads or changes one key
+/// with the Rust editors, for checking them by hand against the script's
+/// `config_get_key` / `config_set_key`. Values are spelled as the script
+/// spells them, markers included (`__ABSENT__`, `__TRUE__`, `__DELETE__`).
+fn config_command(args: &[String]) -> Result<()> {
+    const USAGE: &str = "Usage: eax-restore config get FILE FORMAT SECTION KEY\n       eax-restore config set FILE FORMAT SECTION KEY VALUE";
+    match args {
+        [verb, file, format, sec, key] if verb == "get" => {
+            let value = config::get_file(file.as_ref(), format.parse()?, sec, key);
+            let mut out = std::io::stdout().lock();
+            out.write_all(value.as_bytes())?;
+            out.write_all(b"\n")?;
+            Ok(())
+        }
+        [verb, file, format, sec, key, value] if verb == "set" => config::set_file(
+            file.as_ref(),
+            format.parse()?,
+            sec,
+            key,
+            &config::Value::text(value),
+        ),
+        _ => anyhow::bail!(USAGE),
+    }
+}
+
 fn main() -> Result<()> {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    if args.first().is_some_and(|a| a == "config") {
+        return config_command(&args[1..]);
+    }
     // The script runs from another folder, so a chosen path must be absolute.
     let chosen = chosen_database().map(|p| std::fs::canonicalize(&p).unwrap_or(p));
     let db_path = match &chosen {
