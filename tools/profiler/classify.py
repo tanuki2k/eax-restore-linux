@@ -79,7 +79,7 @@ def draft_game_config(diffs_audio, diffs_optional, existing=None):
                 if not c["expressible"] or c["new"] is None:
                     skipped.append(f"{d['file']} {c['section']} {c['key']}: value {c['new']!r} can't be expressed in the schema")
                     continue
-                if d["format"] in ("ini_braces", "registry") and not c["section"]:
+                if d["format"] in ("ini_braces", "xml_attributes", "registry") and not c["section"]:
                     skipped.append(f"{d['file']} {c['key']}: {d['format']} needs a section and none was found - write it by hand")
                     continue
                 put_change(group, d["file"], d["format"], c["section"], c["key"], c["new"])
@@ -99,7 +99,7 @@ def put_change(changes, file, fmt, section, key, value):
     """Adds one change in the shape its format takes: file, section, key, value for the
     sectioned formats (an ini file may skip the section), file, key, value for the rest."""
     tgt = changes.setdefault(file, {})
-    if fmt in ("ini", "ini_braces", "registry") and (section or fmt != "ini"):
+    if fmt in ("ini", "ini_braces", "xml_attributes", "registry") and (section or fmt != "ini"):
         tgt = tgt.setdefault(section, {})
     tgt[key] = value
 
@@ -134,7 +134,7 @@ def draft_speaker_settings(layout_diffs, gc):
                 if not c["expressible"] or c["new"] is None:
                     skipped.append(f"{d['file']} {c['key']} in the {layout} run: value {c['new']!r} can't be expressed in the schema")
                     continue
-                if d["format"] in ("ini_braces", "registry") and not c["section"]:
+                if d["format"] in ("ini_braces", "xml_attributes", "registry") and not c["section"]:
                     skipped.append(f"{d['file']} {c['key']} in the {layout} run: {d['format']} needs a section and none was found - write it by hand")
                     continue
                 changes[(d["file"], d["format"], c["section"], c["key"])] = c["new"]

@@ -495,7 +495,41 @@ config_find_text_end() {  # <file> -> byte position just past the anchored text
     [ "$(config_get_key "$f" ini S k)" == "2" ]
 }
 
+# ---- backslashes --------------------------------------------------------------
+
+@test "a value with backslashes is written and read back as it is" {
+    # awk -v read \n and \G as escapes: this came out as C:Games, a line break, ew.
+    write_file "$F" '[a]\nPath=old\n'
+    config_set_key "$F" ini a path 'C:\Games\new'
+    [ "$(cat "$F")" == $'[a]\nPath=C:\\Games\\new' ]
+    [ "$(config_get_key "$F" ini a PATH)" == 'C:\Games\new' ]
+    write_file "$F" 'seta s_path "x"\n'
+    config_set_key "$F" set_commands "" s_path 'D:\tmp'
+    [ "$(cat "$F")" == 'seta s_path "D:\tmp"' ]
+    config_set_key "$F" key_value "" 'new\key' 'a\tb'
+    [ "$(config_get_key "$F" key_value "" 'new\key')" == 'a\tb' ]
+}
+
 # ---- xml_attributes ----------------------------------------------------------
+
+@test "xml_attributes: a setting's rows carry the tag as their section" {
+    # They came out as key "Sound" with the whole object as the value, which
+    # the safety check refused, so the setting was never applied.
+    source "$REPO_ROOT/src/game-database.sh"
+    GAME_DATABASE_FILE="$BATS_TEST_TMPDIR/db.json"
+    cat > "$GAME_DATABASE_FILE" <<'JSON'
+{"games":[{"id":"g","name":"G","stores":{"steam":{"id":1}},"game_config":{
+  "files":{"g.cfg":{"format":"xml_attributes","locations":["game_exe:g.cfg"]}},
+  "audio_settings":[{"title":"Enable EAX","reason":"r","tested":true,
+    "changes":{"g.cfg":{"Sound":{"UseEAX":"1"}}}}]}}]}
+JSON
+    local row; local -a g
+    row="$(load_game_config_rows 1 steam)"
+    mapfile -t -d $'\x1f' g < <(printf '%s' "$row")
+    [ "${g[8]}" == "xml_attributes" ]
+    [ "${g[11]}" == "Sound" ] && [ "${g[12]}" == "UseEAX" ] && [ "${g[13]}" == "1" ]
+    config_row_is_safe "${g[8]}" "${g[10]}" "${g[11]}" "${g[12]}" "${g[13]}"
+}
 
 @test "xml_attributes: reads an attribute of a tag, section and key matched case-insensitively" {
     write_file "$F" '<Settings>\n<Sound SfxVol="80" UseEAX="1" NumBuffers="8"/>\n</Settings>\n'
