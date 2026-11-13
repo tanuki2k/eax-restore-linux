@@ -26,7 +26,7 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
   checks it against the `.sha256` (`EAX_RESTORE_CHANNEL=dev` at build time picks
   the dev channel). The engine is moving into Rust a stage at a time under
   `tui/src/engine/` (no TUI types in there; the crate is a library, `src/lib.rs`, plus
-  a thin `main.rs`). Stages 1 to 5 are done, and no screen calls them yet apart from
+  a thin `main.rs`). Stages 1 to 6 are done, and no screen calls them yet apart from
   the list's "is this game installed" check. Stage 1: `engine/config/` is
   `config_get_key` / `config_set_key`, `config_values_equal`, `config_row_is_safe` and
   `resolve_config_file` for the eleven formats. Stage 2: `engine/files.rs` is the
@@ -71,6 +71,14 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
   Wine side. `tui/tests/uninstall_oracle.rs` builds the script (`./build.sh`), installs
   the same game twice in the integration tests' fake world, uninstalls one copy with the
   script and the other with the engine, and compares the home folders file for file.
+  Stage 6 (engine only): `engine/builds.rs` is the download half of `src/cache.sh` and
+  `src/verify.sh`: `lookup` (the build labels, without downloading), `ensure_dsoal` /
+  `ensure_openal` (fetch when missing or out of date, `unzip -t`, the pinned SHA256 or
+  GitHub's published digest, swap in only once unpacked), `dsoal_source_dir` and
+  `openal_source_dll`. The network is the `Net` trait (`Curl` runs curl with the
+  script's options); unpacking still shells out to `unzip`, which the script needs too.
+  Installing a build with no published checksum is a callback, not a prompt.
+  `tui/tests/builds_oracle.rs` serves a fake GitHub through a stub curl to both sides.
 
 The planned interface (the user's design, not built yet) is a panel like
 Optiscaler-Client's: every choice for an install or uninstall on one screen, plus
