@@ -128,9 +128,11 @@ write_log_summary() {
         { print }' >> "$EAX_LOG_FILE"
 }
 
-finish_run_log() {
-    local rc=$?
-    trap - EXIT
+# Usage: finish_run_state
+# The exit work that doesn't depend on the run log, so it also runs with
+# EAX_RESTORE_NO_LOG: an install's set-aside manifest, the .reg files an
+# interrupted run didn't delete, and a pinned progress bar.
+finish_run_state() {
     # An install cut short before it carried the last manifest's records over:
     # put them back next to what this run wrote.
     if [ -n "${MANIFEST_PREV:-}" ] && [ -f "$MANIFEST_PREV" ]; then
@@ -142,12 +144,18 @@ finish_run_log() {
     fi
     # .reg files an interrupted run didn't get to delete.
     [ ${#TEMP_FILES_AT_EXIT[@]} -gt 0 ] && rm -f "${TEMP_FILES_AT_EXIT[@]}" 2>/dev/null
-    # A Ctrl-C at a tick list lands here from inside its "IFS= read", with
-    # that empty IFS still in effect; put the usual one back for the rest.
-    local IFS=$' \t\n'
     # Release a pinned PHASE 2 progress bar first, or an exit mid-deploy
     # leaves the terminal scrolling inside its region.
     end_phase_progress
+}
+
+finish_run_log() {
+    local rc=$?
+    trap - EXIT
+    # A Ctrl-C at a tick list lands here from inside its "IFS= read", with
+    # that empty IFS still in effect; put the usual one back for the rest.
+    local IFS=$' \t\n'
+    finish_run_state
     # The log's folder and file name on lines of their own, with $HOME shown
     # as ~, so the path fits the box. The "Meditation #" is the timestamp in
     # the file name, so it names this run's log.
@@ -212,6 +220,12 @@ if ! is_truthy "${EAX_RESTORE_NO_LOG:-}" && mkdir -p "$LOG_DIR" 2>/dev/null; the
     trap finish_run_log EXIT
     # Turn Ctrl-C / kill into a normal exit with the conventional status, so
     # the EXIT trap above records the real exit code (not the last command's).
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+else
+    # No log, but the rest of the exit work still has to happen: without it a
+    # reinstall left its set-aside manifest (.prev) beside the new one.
+    trap 'rc=$?; IFS=$'"'"' \t\n'"'"'; finish_run_state; exit "$rc"' EXIT
     trap 'exit 130' INT
     trap 'exit 143' TERM
 fi
