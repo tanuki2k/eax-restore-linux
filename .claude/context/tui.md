@@ -26,7 +26,7 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
   checks it against the `.sha256` (`EAX_RESTORE_CHANNEL=dev` at build time picks
   the dev channel). The engine is moving into Rust a stage at a time under
   `tui/src/engine/` (no TUI types in there; the crate is a library, `src/lib.rs`, plus
-  a thin `main.rs`). Stages 1 to 3 are done, and no screen calls them yet apart from
+  a thin `main.rs`). Stages 1 to 4 are done, and no screen calls them yet apart from
   the list's "is this game installed" check. Stage 1: `engine/config/` is
   `config_get_key` / `config_set_key`, `config_values_equal`, `config_row_is_safe` and
   `resolve_config_file` for the eleven formats. Stage 2: `engine/files.rs` is the
@@ -53,6 +53,15 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
   the start of `src/settings-flow.sh`) and `engine/process.rs` (`game_exe_running`).
   Checked by `tui/tests/speakers_oracle.rs` and `tui/tests/game_settings_oracle.rs`;
   `installed.rs` copies inline flow code, so it has unit tests only.
+  Stage 4 (engine only): `engine/launcher/` is `src/launcher-config.sh` plus the change
+  half of `src/dsoal-log-flow.sh`. `options.rs` is the launch-option string functions
+  (Bash's regex quirks kept: the longest value wins at the leftmost match, a tie goes to
+  the quoted one, and results lose trailing line breaks as `$(...)` does); `vdf.rs`
+  Steam's localconfig.vdf; `heroic.rs` Heroic's GamesConfig JSON, written the way jq
+  prints it; `target.rs` finds the settings file (`steam_localconfig_for_app`);
+  `changes.rs` writes and reverts the DLL override and turns the sound logs on and off;
+  `control.rs` sees, closes and reopens a launcher from `/proc`. Asking the player
+  whether to close a launcher is the caller's. Checked by `tui/tests/launcher_oracle.rs`.
 
 The planned interface (the user's design, not built yet) is a panel like
 Optiscaler-Client's: every choice for an install or uninstall on one screen, plus

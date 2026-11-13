@@ -8,6 +8,7 @@ pub mod files;
 pub mod game_settings;
 pub mod identify;
 pub mod installed;
+pub mod launcher;
 pub mod manifest;
 pub mod process;
 pub mod speakers;
