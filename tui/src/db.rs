@@ -121,6 +121,14 @@ pub struct ConfigFile {
     /// Every listed location is changed, not just the first that exists.
     #[serde(default)]
     pub all_locations: bool,
+    /// `skip` or `create` when no location exists; empty means the game
+    /// writes the file on its first run.
+    #[serde(default)]
+    pub if_missing: String,
+    /// A file the game keeps beside this one while it runs; left behind, the
+    /// game resets this file on its next start.
+    #[serde(default)]
+    pub crash_marker: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]

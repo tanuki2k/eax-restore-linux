@@ -26,7 +26,7 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
   checks it against the `.sha256` (`EAX_RESTORE_CHANNEL=dev` at build time picks
   the dev channel). The engine is moving into Rust a stage at a time under
   `tui/src/engine/` (no TUI types in there; the crate is a library, `src/lib.rs`, plus
-  a thin `main.rs`). Stages 1 and 2 are done, and no screen calls them yet apart from
+  a thin `main.rs`). Stages 1 to 3 are done, and no screen calls them yet apart from
   the list's "is this game installed" check. Stage 1: `engine/config/` is
   `config_get_key` / `config_set_key`, `config_values_equal`, `config_row_is_safe` and
   `resolve_config_file` for the eleven formats. Stage 2: `engine/files.rs` is the
@@ -41,3 +41,20 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
   `engine/`. The uninstall's manifest reader is inline in `src/uninstall-flow.sh`, so
   `manifest::read` is checked by its own tests instead. `eax-restore config
   get|set FILE FORMAT SECTION KEY [VALUE]` runs the Rust editors by hand.
+  Stage 3 (engine only, no screens: the user will design a panel later, see below):
+  `engine/speakers.rs` (the speaker setup, its alsoft.ini values and label, reading it
+  back, `only_if.speakers` matching), `engine/identify.rs` (`identify_game_dir`),
+  `engine/game_settings.rs` (`rows` = `load_game_config_rows`; `survey` = `_gs_build_plan`
+  without its prompts, a file the game hasn't written yet comes back as `Missing`),
+  `engine/apply.rs` (`apply` = `apply_game_settings`, `update_in_manifest` =
+  `update_game_settings_in_manifest`; what happened comes back in a `Report`, and the
+  game-running and wineserver waits come from a `Host` the caller supplies),
+  `engine/installed.rs` (an install's alsoft.ini files, prefix and recorded settings,
+  the start of `src/settings-flow.sh`) and `engine/process.rs` (`game_exe_running`).
+  Checked by `tui/tests/speakers_oracle.rs` and `tui/tests/game_settings_oracle.rs`;
+  `installed.rs` copies inline flow code, so it has unit tests only.
+
+The planned interface (the user's design, not built yet) is a panel like
+Optiscaler-Client's: every choice for an install or uninstall on one screen, plus
+the install's status. So engine code stays prompt-free: read state, take choices,
+plan, apply.
