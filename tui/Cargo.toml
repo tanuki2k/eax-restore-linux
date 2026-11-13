@@ -9,6 +9,7 @@ publish = false
 [dependencies]
 anyhow = "1"
 nucleo-matcher = "0.3"
+regex = "1"
 ratatui = "0.29"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }

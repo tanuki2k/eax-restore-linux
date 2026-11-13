@@ -26,7 +26,7 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
   checks it against the `.sha256` (`EAX_RESTORE_CHANNEL=dev` at build time picks
   the dev channel). The engine is moving into Rust a stage at a time under
   `tui/src/engine/` (no TUI types in there; the crate is a library, `src/lib.rs`, plus
-  a thin `main.rs`). Stages 1 to 7 and the first half of 8 are done, and no screen calls them yet apart from
+  a thin `main.rs`). Stages 1 to 8 are done, and no screen calls them yet apart from
   the list's "is this game installed" check. Stage 1: `engine/config/` is
   `config_get_key` / `config_set_key`, `config_values_equal`, `config_row_is_safe` and
   `resolve_config_file` for the eleven formats. Stage 2: `engine/files.rs` is the
@@ -104,8 +104,15 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
   copied out of `install-flow.sh` by a script, so keep the two in step.
   `tui/tests/install_oracle.rs` installs the same game in two copies of the fake world,
   one with the script and one with the engine, and compares the home folders. Still to
-  come in 8b: Phases 1-3, the detection that makes a `Plan` (AppID, Steam or Heroic
-  prefix, exe folder, audio API, architecture, extra exe folders, companion apps).
+  come in 8b: Phases 1-3, the detection that makes a `Plan`.
+  Stage 8b (engine only): `engine/detect.rs` is the detection in `src/detection.sh`
+  without its questions (name matching with the `regex` crate, the ranked exe folders,
+  Linux builds, extra exe folders, the audio API from the game's files, the Steam AppID,
+  companion apps, a Heroic game's prefix); `engine/prepare.rs` gathers it into `Facts`
+  and the `Plan` the script's defaults make. Checked by `tui/tests/detect_oracle.rs`, and
+  end to end by `install_oracle.rs`, which installs with a detected plan too. Every
+  oracle test puts `tests/fixtures/bin` first on PATH for the Rust side as well, so the
+  machine's own winetricks or Wine never runs.
 
 The planned interface (the user's design, not built yet) is a panel like
 Optiscaler-Client's: every choice for an install or uninstall on one screen, plus

@@ -62,6 +62,14 @@ pub struct Store {
     pub patches: String,
     /// This store's own audio API, when it differs from the game's.
     pub api: Option<String>,
+    /// More exe folders that need the same files (`game_root:` for one
+    /// beside the exe folder rather than under it).
+    #[serde(default)]
+    pub extra_exe_folders: Vec<String>,
+    /// Steam apps that run the game's exe from its folder with a prefix of
+    /// their own (DOOM 3's Resurrection of Evil).
+    #[serde(default)]
+    pub companion_apps: Vec<Value>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]

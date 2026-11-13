@@ -14,6 +14,7 @@ use eax_restore::engine::game_settings::{self, Purpose, Status, Survey};
 use eax_restore::engine::identify::Store;
 use eax_restore::engine::install::{self, Engine, InstallHost, Override, Plan, Vcrun};
 use eax_restore::engine::launcher::target::Target;
+use eax_restore::engine::prepare;
 use eax_restore::engine::speakers::{Listening, Speakers};
 use eax_restore::engine::wine::{Prefix, Runner};
 use std::collections::{HashMap, HashSet};
@@ -71,6 +72,8 @@ struct Kind {
     heroic: bool,
     registry: bool,
     profile: bool,
+    /// The plan comes from detection (`prepare::gather`), not by hand.
+    gathered: bool,
 }
 
 struct World {
@@ -262,13 +265,29 @@ fn compare(kind: Kind) {
         let _g = LOCK.lock().unwrap_or_else(|e| e.into_inner());
         std::env::set_var("STUB_PREFIX", &b.prefix);
         std::env::set_var("STUB_LOG", tmp.path().join("rust/stub.log"));
+        // The stubs first, as the script's side has them: never the
+        // machine's own winetricks or wineserver.
+        let path = std::env::var("PATH").unwrap_or_default();
+        let stubs = repo_root().join("tests/fixtures/bin");
+        if !path.starts_with(&stubs.display().to_string()) {
+            std::env::set_var("PATH", format!("{}:{path}", stubs.display()));
+        }
         let mut host = FakeHost {
             net: Curl {
                 program: repo_root().join("tests/fixtures/bin/curl"),
             },
         };
+        let p = if kind.gathered {
+            let pt = vec![repo_root()
+                .join("tests/fixtures/bin/protontricks")
+                .display()
+                .to_string()];
+            prepare::gather(&b.game, None, &b.home, &pt).default_plan()
+        } else {
+            plan(&kind, &b)
+        };
         install::execute(
-            &plan(&kind, &b),
+            &p,
             &Cache::new(&b.home),
             &Installer::for_branch("main"),
             &mut host,
@@ -310,6 +329,7 @@ fn kind(name: &'static str) -> Kind {
         heroic: false,
         registry: false,
         profile: false,
+        gathered: false,
     }
 }
 
@@ -365,5 +385,20 @@ fn reinstalls_carry_the_last_install_over() {
         make: "make_world; reg() { OVERRIDE_CHOICE=2 install_answers \"$@\"; }",
         before: Some("reg"),
         ..kind("Steam, registry then launch options")
+    });
+}
+
+#[test]
+fn a_plan_from_detection_matches_the_scripts_defaults() {
+    compare(Kind {
+        gathered: true,
+        ..kind("Steam, detected")
+    });
+    compare(Kind {
+        make: "make_heroic_world",
+        install: "heroic_install_answers",
+        heroic: true,
+        gathered: true,
+        ..kind("Heroic, detected")
     });
 }
