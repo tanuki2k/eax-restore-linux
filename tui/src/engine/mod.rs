@@ -2,6 +2,7 @@
 //! Nothing in here knows about the screens; until a stage reaches parity
 //! with `src/*.sh` the TUI still hands the action to the script.
 
+pub mod alsoft_template;
 pub mod apply;
 pub mod builds;
 pub mod config;
@@ -11,6 +12,7 @@ pub mod files;
 pub mod game_settings;
 pub mod host;
 pub mod identify;
+pub mod install;
 pub mod installed;
 pub mod launcher;
 pub mod manifest;

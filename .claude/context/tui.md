@@ -26,7 +26,7 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
   checks it against the `.sha256` (`EAX_RESTORE_CHANNEL=dev` at build time picks
   the dev channel). The engine is moving into Rust a stage at a time under
   `tui/src/engine/` (no TUI types in there; the crate is a library, `src/lib.rs`, plus
-  a thin `main.rs`). Stages 1 to 7 are done, and no screen calls them yet apart from
+  a thin `main.rs`). Stages 1 to 7 and the first half of 8 are done, and no screen calls them yet apart from
   the list's "is this game installed" check. Stage 1: `engine/config/` is
   `config_get_key` / `config_set_key`, `config_values_equal`, `config_row_is_safe` and
   `resolve_config_file` for the eleven formats. Stage 2: `engine/files.rs` is the
@@ -96,6 +96,16 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
   launcher left to a callback. Checked by `tui/tests/vcrun_oracle.rs` (a fake
   protontricks and wine that act as the Windows installers). Finding a Heroic game's
   prefix is detection, so it comes with Stage 8.
+  Stage 8a (engine only): `engine/install.rs` is Phase 4 of `src/install-flow.sh`, run
+  from a finished `Plan` (game and extra exe folders, prefix, architecture, engine,
+  builds, speakers, alsoft.ini values, override method, VC++, EAX Unified, game
+  settings, companion apps) through an `InstallHost`, with the last install's records
+  carried over on a reinstall. `engine/alsoft_template.rs` is the alsoft.ini text,
+  copied out of `install-flow.sh` by a script, so keep the two in step.
+  `tui/tests/install_oracle.rs` installs the same game in two copies of the fake world,
+  one with the script and one with the engine, and compares the home folders. Still to
+  come in 8b: Phases 1-3, the detection that makes a `Plan` (AppID, Steam or Heroic
+  prefix, exe folder, audio API, architecture, extra exe folders, companion apps).
 
 The planned interface (the user's design, not built yet) is a panel like
 Optiscaler-Client's: every choice for an install or uninstall on one screen, plus
