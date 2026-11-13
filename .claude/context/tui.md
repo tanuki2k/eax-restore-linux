@@ -26,7 +26,7 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
   checks it against the `.sha256` (`EAX_RESTORE_CHANNEL=dev` at build time picks
   the dev channel). The engine is moving into Rust a stage at a time under
   `tui/src/engine/` (no TUI types in there; the crate is a library, `src/lib.rs`, plus
-  a thin `main.rs`). Stages 1 to 4 are done, and no screen calls them yet apart from
+  a thin `main.rs`). Stages 1 to 5 are done, and no screen calls them yet apart from
   the list's "is this game installed" check. Stage 1: `engine/config/` is
   `config_get_key` / `config_set_key`, `config_values_equal`, `config_row_is_safe` and
   `resolve_config_file` for the eleven formats. Stage 2: `engine/files.rs` is the
@@ -62,6 +62,15 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
   `changes.rs` writes and reverts the DLL override and turns the sound logs on and off;
   `control.rs` sees, closes and reopens a launcher from `/proc`. Asking the player
   whether to close a launcher is the caller's. Checked by `tui/tests/launcher_oracle.rs`.
+  Stage 5 (engine only): `engine/uninstall.rs` is `src/uninstall-flow.sh` without its
+  questions: `survey` (Phase 1's findings: the manifest's files and their oldest
+  backups, or the scan when there's no manifest, a prefix shared with another install,
+  the VC++ runtime), `Choices` (its answers) and `execute` (Phase 2, then the manifest
+  rewrite or the "uninstalled" marker). The registry keys, VC++, EAX Unified, companion
+  prefixes and closing a launcher go through an `UninstallHost`, until Stage 7 ports the
+  Wine side. `tui/tests/uninstall_oracle.rs` builds the script (`./build.sh`), installs
+  the same game twice in the integration tests' fake world, uninstalls one copy with the
+  script and the other with the engine, and compares the home folders file for file.
 
 The planned interface (the user's design, not built yet) is a panel like
 Optiscaler-Client's: every choice for an install or uninstall on one screen, plus

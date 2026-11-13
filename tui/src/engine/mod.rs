@@ -12,3 +12,4 @@ pub mod launcher;
 pub mod manifest;
 pub mod process;
 pub mod speakers;
+pub mod uninstall;

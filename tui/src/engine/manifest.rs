@@ -180,7 +180,7 @@ pub enum Vcrun {
 }
 
 /// What a manifest says an install changed, sorted for an uninstall.
-#[derive(Debug, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Recorded {
     /// Deployed files that are still there, in the manifest's order.
     pub files: Vec<PathBuf>,
