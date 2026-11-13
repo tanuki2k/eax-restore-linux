@@ -4,8 +4,8 @@
 # the fallback used only when building without git (e.g. a source tarball):
 # SCRIPT_VERSION is the release base, SCRIPT_DATE just needs to stay roughly
 # current.
-SCRIPT_VERSION="0.29"
-SCRIPT_DATE="2026-08-13"
+SCRIPT_VERSION="0.29.1"
+SCRIPT_DATE="2026-11-13"
 # The branch the game database and EAX Unified zip are fetched from: main for a
 # stable build, dev for a dev build (build.sh stamps it with the version).
 DATA_BRANCH="main"
