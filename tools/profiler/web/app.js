@@ -150,7 +150,7 @@ function markUnsaved() {
   const now = prune(GAME);
   const at = pathAt;
   const sig = JSON.stringify;
-  const sectioned = (f) => ["ini", "ini_braces", "registry"].includes((((GAME.game_config || {}).files || {})[f] || {}).format);
+  const sectioned = (f) => ["ini", "ini_braces", "xml_attributes", "registry"].includes((((GAME.game_config || {}).files || {})[f] || {}).format);
   $$("[data-path]").forEach((f) => {
     const was = at(SAVED, f.dataset.path);
     f.classList.toggle("unsaved", sig(at(now, f.dataset.path)) !== sig(was));
@@ -466,7 +466,7 @@ function fileCards(parent, key, valueSchema, path) {
 function changesEditor(setting, key) {
   const box = el("div");
   const files = () => (GAME.game_config && GAME.game_config.files) || {};
-  const sectioned = (f) => ["ini", "ini_braces", "registry"].includes((files()[f] || {}).format);
+  const sectioned = (f) => ["ini", "ini_braces", "xml_attributes", "registry"].includes((files()[f] || {}).format);
   const rows = () => {
     const out = [];
     for (const [f, a] of Object.entries(setting[key] || {})) for (const [k, v] of Object.entries(a)) {
@@ -1225,7 +1225,7 @@ function applyDrops(gc) {
     out[kind] = out[kind].filter((st) => {
       for (const [file, body] of Object.entries(st.changes)) {
         const fmt = (out.files[file] || {}).format;
-        const sectioned = ["ini", "ini_braces", "registry"].includes(fmt);
+        const sectioned = ["ini", "ini_braces", "xml_attributes", "registry"].includes(fmt);
         for (const [a, v] of Object.entries(body)) {
           if (sectioned && v && typeof v === "object") { for (const k of Object.keys(v)) if (DROP.has([file, fmt, a, k].join("\0"))) delete v[k]; if (!Object.keys(v).length) delete body[a]; }
           else if (DROP.has([file, fmt, "", a].join("\0"))) delete body[a];
@@ -1251,7 +1251,7 @@ function moveByCategory(gc) {
   for (const [from, to] of [["audio_settings", "optional"], ["optional_settings", "audio"]]) {
     for (const st of (gc[from] || []).filter((x) => !x.only_if)) {
       for (const [file, body] of Object.entries(st.changes)) {
-        const fmt = (gc.files[file] || {}).format, sectioned = ["ini", "ini_braces", "registry"].includes(fmt);
+        const fmt = (gc.files[file] || {}).format, sectioned = ["ini", "ini_braces", "xml_attributes", "registry"].includes(fmt);
         const move = (sec, key, val) => {
           if (CAT.get([file, fmt, sec, key].join("\0")) !== to) return false;
           const dest = into(to === "audio" ? "audio_settings" : "optional_settings").changes;

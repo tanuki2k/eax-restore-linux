@@ -429,9 +429,12 @@ config_get_key() {
         if [ -n "$found" ]; then echo "${found#* }"; else echo "__ABSENT__"; fi
         return
     fi
-    LC_ALL=C awk -v fmt="$fmt" -v sec="$sec" -v key="$key" '
+    # The names reach awk through ENVIRON: -v would read a backslash in them
+    # as the start of an escape.
+    CFG_SEC="$sec" CFG_KEY="$key" LC_ALL=C awk -v fmt="$fmt" '
 '"$_CONFIG_AWK_IS_HEADER$_CONFIG_AWK_XML"'
-        BEGIN { lsec = tolower(sec); lkey = tolower(key); insec = (fmt != "ini" && fmt != "ini_braces") || (fmt == "ini" && sec == ""); found = 0; commented = 0 }
+        BEGIN { sec = ENVIRON["CFG_SEC"]; key = ENVIRON["CFG_KEY"]
+            lsec = tolower(sec); lkey = tolower(key); insec = (fmt != "ini" && fmt != "ini_braces") || (fmt == "ini" && sec == ""); found = 0; commented = 0 }
         { sub(/\r$/, "") }
         NR == 1 && substr($0, 1, 3) == "\357\273\277" { $0 = substr($0, 4) }
         fmt == "ini" {
@@ -544,8 +547,11 @@ config_set_key() {
     if [ -s "$file" ] && ! tr -d '\0' < "$file" | cmp -s - "$file"; then return 1; fi
     current="$(config_get_key "$file" "$fmt" "$sec" "$key")"
     tmp="$(mktemp "$(dirname "$file")/.eax-restore-cfg.XXXXXX" 2>/dev/null)" || return 1
-    { [ -f "$file" ] && cat "$file"; } | LC_ALL=C awk -v fmt="$fmt" -v sec="$sec" -v key="$key" -v val="$value" \
-        -v crlf="$crlf" -v current="$current" '
+    # The names and values reach awk through ENVIRON: -v would read a
+    # backslash in them as the start of an escape, so putting back a value
+    # like C:\Games\new wrote "C:Games", a line break and "ew".
+    { [ -f "$file" ] && cat "$file"; } | CFG_SEC="$sec" CFG_KEY="$key" CFG_VAL="$value" CFG_CURRENT="$current" \
+        LC_ALL=C awk -v fmt="$fmt" -v crlf="$crlf" '
         function outl(line, e) {
             if (bom) { line = "\357\273\277" line; bom = 0 }
             printf "%s%s", line, e
@@ -570,6 +576,7 @@ config_set_key() {
             return 1
         }
         BEGIN {
+            sec = ENVIRON["CFG_SEC"]; key = ENVIRON["CFG_KEY"]; val = ENVIRON["CFG_VAL"]; current = ENVIRON["CFG_CURRENT"]
             lsec = tolower(sec); lkey = tolower(key); insec = (fmt == "ini" && sec == ""); seen_sec = insec; done = 0; nb = 0
             del = (val == "__DELETE__"); eol = (crlf ? "\r\n" : "\n"); prev_c = 0
             active = (current != "__ABSENT__" && current != "__FALSE__")
@@ -903,7 +910,7 @@ load_game_config_rows() {
         | select('"$with_untested"' or .f.tested == true)
         | .cat as $cat | .i as $i | .f as $f
         | $f.changes | to_entries[] | .key as $file | ($files[$file] // {}) as $def
-        | (if $def.format == "ini" or $def.format == "ini_braces" or $def.format == "registry"
+        | (if $def.format == "ini" or $def.format == "ini_braces" or $def.format == "xml_attributes" or $def.format == "registry"
              then (.value | to_entries[]
                    | if (.value | type) == "object"
                      then .key as $sec | .value | to_entries[] | [$sec, .key, .value]
@@ -966,7 +973,7 @@ config_row_is_safe() {
 
 # Usage: print_config_rows <rows>
 # Prints a fix's changes as a tree: the file on its own line, its [section]
-# under it (ini, ini_braces and registry), then one "key  old → new" line per change, with the
+# under it (ini, ini_braces, xml_attributes and registry), then one "key  old → new" line per change, with the
 # keys lined up. A file or section line is only printed when it differs from
 # the row above. <rows> is newline-separated \x1f rows of
 # file, section, key, old, new. An old value of __ANY__ prints just
