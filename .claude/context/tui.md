@@ -26,7 +26,7 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
   checks it against the `.sha256` (`EAX_RESTORE_CHANNEL=dev` at build time picks
   the dev channel). The engine is moving into Rust a stage at a time under
   `tui/src/engine/` (no TUI types in there; the crate is a library, `src/lib.rs`, plus
-  a thin `main.rs`). Stages 1 to 6 are done, and no screen calls them yet apart from
+  a thin `main.rs`). Stages 1 to 6 and the first half of 7 are done, and no screen calls them yet apart from
   the list's "is this game installed" check. Stage 1: `engine/config/` is
   `config_get_key` / `config_set_key`, `config_values_equal`, `config_row_is_safe` and
   `resolve_config_file` for the eleven formats. Stage 2: `engine/files.rs` is the
@@ -79,6 +79,16 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
   script's options); unpacking still shells out to `unzip`, which the script needs too.
   Installing a build with no published checksum is a callback, not a prompt.
   `tui/tests/builds_oracle.rs` serves a fake GitHub through a stub curl to both sides.
+  Stage 7a (engine only): `engine/wine.rs` runs things in a prefix (`Runner`:
+  protontricks with the AppID for Steam, Heroic's own Wine build otherwise): `regedit`,
+  waiting for wineserver, Creative's OpenAL runtime, `steam_prefix_for_appid`, Heroic's
+  runner (`heroic_runner`, `heroic_runner_config`) and the exes' 32/64-bit count read
+  from their PE headers. `engine/prefix.rs` is the registry patches (with the override
+  read back from user.reg), their removal and the DLL copy into system32/syswow64;
+  `engine/deploy.rs` is `handle_conflict` and `deploy_copy`. Checked by
+  `tui/tests/prefix_oracle.rs` (the protontricks stub for Steam, a fake wine for Heroic).
+  Still to come in 7b: the VC++ runtime, EAX Unified, companion apps, finding a Heroic
+  game's prefix, and a real `UninstallHost`.
 
 The planned interface (the user's design, not built yet) is a panel like
 Optiscaler-Client's: every choice for an install or uninstall on one screen, plus
