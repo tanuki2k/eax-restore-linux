@@ -1,0 +1,340 @@
+# Architecture and commands in full
+
+Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says when to read it.
+
+## Project goal
+
+`eax-restore-linux.sh` is a single-file Bash installer that restores EAX/DirectSound3D
+hardware audio in classic Windows games running under Steam/Proton or Heroic/Wine on
+Linux. It deploys [DSOAL](https://github.com/kcat/dsoal) and
+[OpenAL Soft](https://github.com/kcat/openal-soft) — which translate legacy EAX/A3D
+calls into OpenAL — into both the game folder and the Wine/Proton prefix, with engine
+choice, architecture detection, prefix/library auto-detection, conflict backups, an
+install manifest for clean uninstall, and checksum-verified downloads with local
+caching. `game-database.json` is the companion community-maintained database that
+drives library scanning, install-time compatibility notes and the Game Settings step
+(changes to a game's own config files) for specific titles. It's **generated**: each
+game is edited as `<id>.json` in `data/games/tested/` (checked against a real install)
+or `data/games/untested/` (not yet) — both shipped — or `data/drafts/` (never shipped),
+defined by `data/schema.json`; `tools/build-game-database.sh` combines the two shipped
+folders. See `README.md` and `docs/` for the full feature list
+and user-facing docs, and `docs/database/contributing.md` (workflow) and
+`docs/database/game-file-reference.md` (the fields).
+
+**Design rule: anything specific to a game or engine lives in the database, never as a
+special case in the script's code** — config edits, the audio API (and so the engine),
+alsoft.ini values, recommended tweaks. The script only knows how to read and edit the
+eleven config formats (`ini`, `ini_braces`, `set_commands`, `key_value`, `braced_pairs`, `quoted_pairs`, `xml_attributes` (a tag's attributes on one line), `binary_offset` (single bytes at fixed offsets), `binary_text` (length-prefixed text found by the bytes before it), `binary_switches` (Monolith's binary profile),
+and `registry`, the prefix's registry files), not which game needs what.
+
+`eax-restore-linux.sh` is **not committed to the repo** — it's a generated build
+artifact. Its source lives split across `src/*.sh` (one file per functional group);
+`build.sh` concatenates them, in the order listed in its `COMPONENTS` array, into
+`dist/eax-restore-linux.sh` (`dist/` is gitignored). Edit the relevant `src/*.sh`
+file and re-run `./build.sh` to regenerate it — never hand-edit
+`dist/eax-restore-linux.sh` directly. There's no other build tooling and no package
+manifest — the repo is the split source, the JSON database, and their docs and
+metadata (`README.md`, `docs/`, `CONTRIBUTING.md`, `LICENSE`, `.github/`, the `.desktop`
+launcher).
+
+
+## Commands in full
+
+## Commands
+
+- **Rebuild after editing anything in `src/`:** `./build.sh` (writes
+  `dist/eax-restore-linux.sh`). By default it stamps the assembled output's
+  `SCRIPT_VERSION`/`SCRIPT_DATE` from the checkout: a `dev`/feature branch gets
+  `<base>-dev` + `<commit-date> build g<sha>` (`-dirty` appended when the tree has
+  uncommitted changes), `main` or a `vX.Y` tag gets the clean base version +
+  `<commit-date>`, and a git-less checkout leaves the `src/globals.sh` literals
+  untouched. Setting `BUILD_VERSION=` and/or `BUILD_DATE=` in the environment
+  overrides the corresponding stamp (assembled output only, never
+  `src/globals.sh`); `BUILD_CHANNEL=stable|dev` forces a stable or dev build whatever the
+  branch (the release workflow's dry run uses `stable`) — handy locally; the `dev` workflow no longer needs them.
+- **Syntax-check after any edit:** `bash -n dist/eax-restore-linux.sh`
+- **Shellcheck (if installed):** `shellcheck dist/eax-restore-linux.sh`
+- **After editing the database** (`data/games/{tested,untested}/*.json` or
+  `data/drafts/*.json`, never `game-database.json` directly): `tools/format-game-database.sh` (canonical key order, empty/default fields
+  dropped), then `tools/build-game-database.sh` (regenerates `game-database.json`).
+  CI (`.github/workflows/game-database.yml`) runs `check-jsonschema --schemafile
+  data/schema.json` over all three folders plus both scripts' `--check` modes; the build
+  also fails if a game's file name is in more than one folder.
+  To find what a new game setting should change, compare the game's config files
+  (and the prefix's registry files) before and after switching its sound options
+  on. `tools/profiler/` (see its README; start it with `tools/profiler/eax-profiler`) automates it: a local web editor plus capture
+  (snapshot, unattended install via `EAX_RESTORE_ANSWERS_FILE`, diff, AI-drafted settings).
+  `tools/browse-game-database.sh [file]` (needs fzf) browses the built
+  database with the Tools menu's browser — a quick look at how an entry's
+  profile reads.
+- **Run the script:** `./dist/eax-restore-linux.sh` (interactive; requires `curl`, `unzip`,
+  `file`, `jq`, `grep`, `awk`, plus `protontricks` for Steam games or `winetricks` for Heroic/GOG
+  games — the script's own pre-flight check offers to install missing ones).
+  `EAX_RESTORE_SKIP_PREFLIGHT=1`, `EAX_RESTORE_SKIP_CACHE_CHECK=1`, and
+  `EAX_RESTORE_GAME_DATABASE_FILE=/path/to/file.json` (point at a local JSON edit before
+  it's pushed) are useful when iterating — see the script's own
+  `--- Environment Variables ---` header comment for the full list.
+- **Docs and the wiki:** `docs/` is split into `script/`, `database/` and `tutorials/`, and
+  the repo links between pages by folder path. The wiki is generated from it by
+  `.github/workflows/wiki-sync.yml` on every push to `main` that touches `docs/`, using
+  `tools/build-wiki.py`: GitHub wikis ignore folders, so it flattens every page to its file
+  name, rewrites the links to match, and adds the profile editor's README as `profile-editor`.
+  Page file names must stay unique across the folders. To see what it makes, run
+  `tools/build-wiki.py docs tools/profiler/README.md /tmp/wiki`.
+- **Tests:** `./build.sh && bats tests/unit tests/integration` (needs `bats`;
+  `.github/workflows/test.yml` runs them plus `bash -n`, `shellcheck --severity=error`
+  over `dist/`, `build.sh` and `tools/`, and the profiler's Python tests,
+  `cd tools/profiler && python3 -m unittest discover -s tests`). `tests/unit/` sources
+  `src/*.sh` directly and covers the config editors (every format, binary_switches, registry),
+  launch-option/VDF/Heroic editing, `parse_selection` and the speaker round trip.
+  `tests/integration/` runs the built script against a fake Steam world in a temp
+  `$HOME` (`env.bash`: fake library, prefix, caches, PE stubs; `tests/fixtures/bin`
+  stubs `protontricks` (its `regedit` import is applied to `user.reg` by
+  `regedit-apply.py`), `winetricks`, `curl`, `pgrep`) with answers piped on stdin
+  (one line per prompt; a new phase 1-3 question needs a line in `install_answers`), and
+  checks that uninstall restores the tree byte for byte. Add a test with each bug fix.
+  Real Proton/launchers, fzf and the tick-list UI are still manual, as is checking
+  `README.md`, `docs/` and the script's own header/inline docs stay in sync with behavior changes.
+
+## Architecture
+
+The source is split across `src/*.sh`, one file per functional group, listed here in
+the order `build.sh` concatenates them into `dist/eax-restore-linux.sh` (which is also
+their execution order in the assembled script):
+
+1. **`header.sh`** — shebang + top header comment block: features list and the
+   authoritative list of `EAX_RESTORE_*` env vars. Keep this in sync with
+   `docs/script/environment-variables.md` whenever a var is added/changed — every
+   existing var should be documented in both places.
+2. **`globals.sh`** — `SCRIPT_VERSION`, colour vars, `BASE_SHARE` and friends
+   (`DSOAL_SHARE`, `OPENAL_SHARE`, `GAME_DATABASE_*`), pinned download URLs/SHA256s,
+   `VCRUN_DLL_NAMES`, `EAX_IMPOSSIBLE_FALLBACK_STEAM`. Pure variable/array
+   assignments only — safe to source before the guards run.
+3. **`args.sh`** — `-h`/`--help` and `-v`/`--version` command-line flag handling
+   (exits before anything else runs). Only needs `globals.sh`'s `SCRIPT_VERSION`/
+   `SCRIPT_DATE`/colour vars, not the `ui.sh` helpers. Keep its `--help` env-var
+   summary in sync with `header.sh`/`docs/script/environment-variables.md` the same way those two are kept
+   in sync with each other.
+4. **`ui.sh`** — the text/output styling helpers (`print_banner`, `print_step`,
+   `print_status`, `print_note`/`print_warning`/`print_error` and their `_arrow`
+   variants, `print_wrapped`, `confirm`, `read_answer`, plus `print_divider`). Sourced
+   right after `globals.sh` since every helper depends on the colour vars defined
+   there. See "Text/output style conventions" below. `print_start_header` is the
+   logo at the top of every run: one of four designs at random, from those that
+   fit the terminal's width (`print_start_header N` forces one). `detail_row` /
+   `detail_heading` / `print_detail_rows` are the GAME PROFILE's field list
+   (flush-left "Heading:" lines over ` -> Label: value` rows, one width for the
+   whole list), shared with Phase 2's choices recap. Also `checklist_select`, the
+   tick list (↑/↓, Space, Enter; Esc cancels and returns 1) for picking any of
+   several items: the optional game settings and uninstall's settings to put
+   back. Use it for any new multi-pick. `CHECKLIST_INITIAL` sets the starting
+   ticks and `CHECKLIST_DETAILS` gives each item a body drawn under its box. It
+   draws to `/dev/tty` so the run log only gets the final list, falls back to
+   titles-only boxes when the list doesn't fit the terminal, and to a numbered
+   "type the numbers" prompt when stdin isn't a terminal (`CHECKLIST_TYPED=1`
+   then, so a caller that asks a follow-up "Apply …?" after Enter can skip it
+   for a typed answer). `radio_select` is its
+   single-pick counterpart (↑/↓, Enter; no cancel) for a short menu where each
+   item needs a sentence: the speaker step's three questions. `RADIO_INITIAL`
+   sets the starting item, `RADIO_DETAILS` the description shown under the list
+   for the highlighted item, answer in `RADIO_CHOICE`; it leaves one
+   ` -> Label: choice` line and falls back to the numbered menu when stdin isn't
+   a terminal. Use it for any new short single-pick menu. `paged_select` is the
+   numbered pick list for a long list (the library scan): pages fit the terminal, [N]ext/[P]revious, the caller's letter keys
+   after them, rows from `PAGED_LABELS`/`PAGED_DETAILS`, answer in
+   `PAGED_CHOICE`. Use it for any new list that can run long.
+5. **`common.sh`** — small helpers used throughout every other file: `is_truthy`,
+   `is_genuine_dll`, `parse_selection`, `is_steamos`, `install_packages` (apt /
+   pacman / dnf via sudo; pre-flight and the fzf offer), and the manifest-trust and
+   backup helpers (`manifest_file_is_ours`, `looks_like_our_file`,
+   `manifest_is_uninstalled`, `oldest_backup`, `swap_in`).
+6. **`guards.sh`** — refuses root / Steam Gaming Mode, runs before any real work
+   starts.
+   `logging.sh` (also before `detection.sh`) writes the per-run timestamped log
+   (`write_log_header`, `log_cmd`, `finish_run_log`; `EAX_RESTORE_NO_LOG`, and dev
+   builds log to their own subfolder).
+7. **`detection.sh`** — Steam AppID / Heroic prefix / architecture detection,
+   `get_game_directory`, `detect_game_environment`, `select_architecture`, etc.
+8. **`game-database.sh`** — the `game-database.json` helpers:
+   `ensure_game_database`, `scan_game_libraries`, `show_game_details_block`
+   (the install's GAME PROFILE: sets `PROFILE_API`/`PROFILE_PATCHES` and the
+   recommended tweaks, then draws it with `print_game_profile`, which only
+   prints: a one-store wrapper around `print_game_profile_stores`, which
+   takes one or more `<store>:<id>` entries of a game; both screens show
+   `released` via `format_release_date`, and without a location (the
+   browser) it adds a `<Store> ID` row per store, a Description section
+   under the fields and a "Before you play" section of the settings'
+   `follow_up`s), `browse_game_database` (Tools → [B]rowse game profiles and
+   `tools/browse-game-database.sh`: one fzf row per game from
+   `browse_game_rows`; the preview, `browse_game_preview`, draws one
+   `print_game_profile_stores` covering every store entry that passes the
+   filters (what they share once, what differs per store; no banner: the pane's label names
+   it), run in a new shell from a `declare -f` dump, or with Tab
+   `print_game_settings_details`, or with F1 `browse_help`; both read
+   `browse_game_stores`, which applies the Ctrl-S / Ctrl-A store (Steam,
+   GOG, or delisted from either or one) and audio (API or EAX version)
+   filters. The keys' state
+   (filters, view, help, order, layout) is one temp file that
+   `browse_state_next` updates; Ctrl-R is fzf's `toggle-sort` (`--tiebreak
+   index` otherwise); Ctrl-L swaps the right pane between beside the list
+   (`BROWSE_SIDE_PERCENT` of the width) and under it, which it also does by
+   itself (fzf 0.58+, the pane's own `<N(...)` option) when a resize crosses
+   `BROWSE_STACK_COLUMNS`; Ctrl-L goes through `browse_layout`, and
+   `browse_filter_header` refits the Filters box (three filters on one, two
+   or three lines, by the list's width) through
+   `transform-header` after every key, but never on a resize: any action
+   run from fzf's `resize` event (a transform that changed the header or the
+   pane) left Konsole's whole screen blank, so a resize only repaints the key
+   bar (`execute-silent`); fzf runs with `--no-mouse`, so the terminal keeps the mouse for selecting text and Ctrl+clicking links; Enter is
+   ignored, so only Esc and fzf's abort keys close it;
+   Ctrl-F is `browse_zoom` (the pane in `less -R`). Needs fzf 0.35
+   (`fzf_at_least`). 0.58+ gets the boxed sections and runs full
+   screen with a one-row bottom margin (`--margin`; not `--height=-1`, whose
+   cursor-relative drawing left ghost frames and a blank screen in Konsole on
+   resize and wheel scroll), so `browse_key_bar` can draw the
+   key bar and version on the last row; older fzf puts the bar on a border
+   line and the filters in four `--header-lines` (`BROWSE_HEADER_LINES`)),
+   `confirm_continue_if_eax_impossible`, etc.
+9. **`game-config.sh`** — the Game Settings feature: `config_get_key` /
+   `config_set_key` (awk readers/writers for the text config formats, keeping CRLF,
+   key spelling and spacing, plus `_gadb_find`/`_gadb_set`, which switch an on/off
+   setting in place for the `binary_switches` format (Monolith's binary profile), and
+   `_wine_reg_read`/`_wine_reg_set`, which, for the `registry` format, edit a dword or string value in the prefix's
+   `system.reg`/`user.reg` text, a key as the section; `wine_registry_quiet` waits
+   for wineserver to save and exit before the first one is written, since it
+   writes those files back from memory), `resolve_config_file`, `print_game_settings_details` (the database browser's Tab view: every setting's reason, file, keys and values, via `load_game_config_rows` and `print_config_rows` with `__ANY__` for the unknown current value), `offer_alsoft_settings` (phase 3's first question, run from `game_settings_step`),
+   `game_settings_step` (phase 3, steps 1-2: audio, then optional), `apply_game_settings` (Phase 4, writes `CONFIG:`
+   manifest lines), `print_game_settings_summary`, `revert_game_settings`
+   (uninstall step 7). All of it driven by the entry's `game_config` /
+   `install.alsoft_ini`. The speaker step lives here too, shared by install
+   Phase 2 step 3 and Tools → Speaker configuration: `ask_speaker_configuration` (the
+   questions), `speaker_alsoft_values` (answers → alsoft.ini values),
+   `speaker_label` and `speaker_config_from_alsoft` (reads them back). The Tools
+   items change an installed game through `game_settings_step`'s two modes
+   (`GAME_SETTINGS_SPEAKERS_ONLY`, `GAME_SETTINGS_EDIT`) and
+   `update_game_settings_in_manifest`, which puts settings back and rewrites the
+   manifest the way a reinstall does.
+10. **`launcher-config.sh`** — Phase 2 step 5's DLL override via the launcher: reads and
+   writes Steam's `localconfig.vdf` launch options (awk, scoped to the game's block
+   under `UserLocalConfigStore/Software/Valve/Steam/apps`) and Heroic's
+   `GamesConfig/<app>.json` `enviromentOptions` (jq), merging into any existing
+   `WINEDLLOVERRIDES`; `choose_override_method` (step 5's launcher / registry /
+   manual menu, launcher first), `apply_launcher_override` (Phase 4, writes `LAUNCHER:` manifest
+   lines), `revert_launcher_overrides` (uninstall step 5). Both launchers keep these
+   files in memory, so before writing, `offer_close_launcher` offers to close the
+   copy that owns the file (`launcher_kind`: native/AppImage or Flatpak, from the
+   file's path) and `reopen_launchers` starts it again afterwards; declining, a
+   running game, or a timeout falls back to waiting for the player to close it.
+   Those messages name the change through `LAUNCHER_CHANGE` (empty: the DLL
+   override; `dsoal_log`: DSOAL logging). Also holds the DSOAL logging helpers
+   (`launch_options_with_dsoal_log` / `_without_`, `heroic_get_env` /
+   `heroic_set_env`); uninstall's revert ignores and drops those variables.
+11. **`vcrun.sh`** — the standalone VC++ runtime installer: `verify_vcrun_files`,
+   `install_vcrun_dependencies`, `uninstall_vcrun_dependencies`, etc. —
+   independently triggerable via `EAX_RESTORE_VCRUN_ONLY`, with its own `"VCRUN"`
+   manifest entries.
+12. **`verify.sh`** — download verification: `verify_checksum`, `verify_or_confirm`,
+    `get_asset_digest`, `confirm_unverified_download`.
+13. **`cache.sh`** — the download/cache engine (`check_download_readiness`,
+    `choose_builds`, `ensure_dsoal_build` / `ensure_openal_build`) and the manifest
+    writers (`start_manifest`, `manifest_dedupe`, `manifest_forget_paths`,
+    `deploy_copy`), plus `handle_conflict` (backs up a file already where one is deployed, without
+    asking — Phase 4 asks nothing).
+`self-update.sh` (after `prefix-steps.sh`) is the once-per-run update check on the
+    stable or dev channel (`check_for_script_update`): silent on failure, skipped
+    with no terminal or an answers file.
+14. **`prefix-steps.sh`** — the install's per-prefix steps as functions
+    (`install_openal_runtime`, `deploy_prefix_dlls`, `apply_prefix_registry`,
+    and uninstall's `remove_prefix_registry`), so a game's own prefix and its
+    Steam companion apps' run the same code. A companion app
+    (`stores.steam.companion_apps`, e.g. DOOM 3's Resurrection of Evil) runs
+    the game's exe from its folder but has its own Proton prefix and launch
+    options: `resolve_companion_apps` (install Phase 1, VC++-only) finds the
+    installed ones and their prefixes into `COMPANION_IDS` / `_NAMES` /
+    `_PREFIXES`, and `with_companion` points `APPID` / `PREFIX_PATH` /
+    `GAME_NAME` at one for a call. Their launch options are written inside
+    `apply_launcher_override` (`apply_companion_launcher_overrides`), so the
+    launcher is closed once.
+15. **`preflight.sh`** through **`install-flow.sh`** — top-level script flow:
+    pre-flight dependency check, the main menu and the `EAX_RESTORE_VCRUN_ONLY`
+    early-exit path (`vcrun-only-flow.sh`), Tools → DSOAL logging
+    (`dsoal-log-flow.sh`, another early exit), Tools → EAX Unified install
+    (`eax-unified-flow.sh`, the same), Tools → Game settings /
+    Speaker configuration (`settings-flow.sh`, which identifies the game from
+    its own folder with `identify_game_dir` and the prefix from the manifest,
+    so it has no launcher step), `ACTION: UNINSTALL`, `ACTION: INSTALL`. The `ACTION: INSTALL` block itself
+    spans two files sharing one `if [ "$SCRIPT_ACTION" == "i" ]` — opened in
+    `config-flow.sh` (phases 1-3: Game, Sound fix, Game settings, all the interactive
+    prompts; `print_install_overview` introduces them and `print_install_phase`
+    (both in `ui.sh`) draws each banner, with steps numbering from 1 in each)
+    and closed in `install-flow.sh` (phase 4: Install, actually deploying
+    files/running protontricks/winetricks). Around all of that, a `while true`
+    loop opened just above the main menu in `vcrun-only-flow.sh` and closed
+    (`break; done`) at the bottom of `install-flow.sh` lets install step 1 go
+    back to the main menu: when the menu was shown (`MAIN_MENU_SHOWN`), a "no"
+    while picking a game sets `RESTART_REQUESTED` and the steps 1-3 loop does
+    `continue 2`. Uninstall, VC++ runtime install, DSOAL logging and EAX Unified install keep step
+    1's own menu, which then offers "[R]eturn to the main menu" the same way.
+    The Tools items go back to the Tools menu instead (`OPEN_TOOLS_MENU`, set
+    before each way out short of finishing; their [R]eturn label comes from
+    `return_menu_label`). `config-flow.sh` also defines
+    `print_choices_summary`, the recap of every Phase 1 answer shown under
+    "Configuration finished!" before the "Proceed?" — a new Phase 1 question
+    should add its answer there. `uninstall-flow.sh` follows the
+    same split in one file: Phase 1 (steps 1-7) only asks and records answers
+    (e.g. `choose_game_settings_to_revert`, whether to remove each launcher
+    override — Phase 2 then asks, with a countdown, before closing and reopening a running launcher), then
+    one "Proceed?" and Phase 2 makes every change under the phase progress bar.
+    Keep new uninstall questions in Phase 1.
+
+All of the above communicate via shared globals (from `globals.sh`, or set by one
+function and read by another) rather than function parameters/return values — that
+convention is unchanged from before the split and spans file boundaries same as it
+previously spanned banner sections within the one file.
+
+**Caching model:** nothing is downloaded up front. `check_download_readiness()` (start
+of the install) only probes GitHub, and stops early when it's offline with no OpenAL
+Soft cached. Phase 2 step 1's `choose_builds()` asks Stable / Latest / each separately, then
+`ensure_dsoal_build()` / `ensure_openal_build()` fetch just the chosen builds: check
+remote version metadata (release `updated_at`, the redirect-resolved tag, or the newest
+`archive` asset while `latest-master` is missing upstream) against a local marker,
+download only on change, verify integrity (`unzip -tq` + the pinned SHA256 via
+`verify_checksum`, or a live GitHub-published digest via `verify_or_confirm`), and keep
+the existing cache on a failed download. Stable DSOAL is the pinned
+`DSOAL_PINNED_REV` (`src/globals.sh`): advancing it after testing a newer archive build
+is part of the release routine. `game-database.json` is fetched separately (from the
+branch `DATA_BRANCH` names: `main` in a stable build, `dev` in a dev build, which `build.sh`
+stamps like the version; cached as `game-database.v3.json`, named for the schema) by
+`ensure_game_database()` (called on demand from step 1's scan and several other call
+sites — memoized per run) — it deliberately always fetches fresh (no staleness check)
+since it's a small, community-edited file where PRs should take effect immediately,
+unlike the large versioned binary bundles; a fetch failure falls back to the last
+cached copy.
+
+**Manifest-driven uninstall:** installs write a manifest of every file/registry key
+they touched; when a manifest exists, uninstall only ever removes what's in it and
+restores the timestamped backups made at install time. Manifest file lines are
+only acted on when they're absolute and have one of the deployed names
+(`manifest_file_is_ours`), plus the one folder 0.28.x recorded, `<game>/OpenAL` or
+`<game>/OpenAL/HRTF` (`manifest_is_legacy_hrtf_dir`; `remove_legacy_hrtf_dir` removes it
+only when it holds nothing but HRTF data). If no manifest is found (e.g. an install predating this
+mechanism), uninstall falls back to a scan for known filenames (`dsound.dll`,
+`dsoal-aldrv.dll`, `OpenAL32.dll`, etc.) that lists only files whose content is what
+this script puts there (`looks_like_our_file`) — a last resort that's less precise
+than the manifest path, so avoid removing/renaming the manifest mechanism itself.
+Uninstall drops what it removed from the manifest as it goes (`manifest_forget_paths`)
+and rewrites the rest at the very end; a reinstall carries the last install's
+registry, VC++ and file records over (`manifest_dedupe` removes repeats).
+The manifest (`.eax-restore-manifest.txt` in the game's exe folder) is plain
+text, one line per change: a deployed file's path, `VCRUN`, `REGISTRY:…`,
+`LAUNCHER:…` or `CONFIG:…` (tab-separated). A companion app's `VCRUN` /
+`REGISTRY:…` lines end in a tab and its AppID (`VCRUN\t9070`); its prefix
+DLLs are absolute paths and its `LAUNCHER:` line names its AppID anyway. New
+manifests start with `MANIFEST_HEADER` ("# EAX Restore manifest, format 2",
+written by `start_manifest`; format 1 had no companion lines); older ones
+have no header and the same lines, and every reader skips `#` lines. After an uninstall the whole file is the "# EAX
+Restore: uninstalled …" marker. Uninstall's and Tools' game list is built from
+the live manifests on disk (`find_installed_game_dirs`: Steam libraries and
+Heroic's game folders) — `$XDG_STATE_HOME/eax-restore-linux/installed-games.txt`
+only stores its most-recently-used order (`note_game_used`,
+`installed_game_dirs`).

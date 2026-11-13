@@ -1,0 +1,43 @@
+# The Rust TUI and the engine port
+
+Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says when to read it.
+
+- **Rust TUI (`tui/`):** a full-screen front end that lists database, library and
+  manually installed games and hands install, uninstall and the Tools to this
+  script through `EAX_RESTORE_ACTION`, `EAX_RESTORE_GAME_DIR` and
+  `EAX_RESTORE_GAME`; the script stays the engine until the Rust port replaces
+  it. Checks, as `.github/workflows/tui.yml` runs them: `cd tui && cargo fmt --check
+  && cargo clippy --locked --all-targets -- -D warnings && cargo test --locked`.
+  Run it with `cargo run -- ../game-database.json` after `./build.sh`. Its look copies the old fzf browser's (boxed Search,
+  Filters and Games beside a full-height pane; the colours are in `tui/src/theme.rs`,
+  taken from fzf's palette and the script's `GREEN`/`YELLOW`/`WHITE`; the script's bold
+  colours use ratatui's `Light*` names because crossterm writes the plain ones as the dark palette
+  entry, where a terminal draws `\033[1;33m` bright). The right pane switches between
+  Profile and Settings with ←/→ (Shift-↑/↓ scrolls it); F1 lists every key (`tui/src/help.rs`: keep it in step
+  with `app.rs`), Ctrl-F gives the pane the whole screen, and Ctrl-L puts it under the list instead of
+  beside it (it does that by itself below 104 columns); `--list`, `--settings NAME` and `--profile NAME`
+  print the game list, one game's settings view or its profile without the TUI, which is
+  how the Rust views are compared with the Bash browser's `print_game_settings_details`
+  and `print_game_profile_stores` (word for word, for every game). The Games list keeps its window between redraws (`App::list_offset`) and moves it only
+  when the highlight is within 3 rows of an edge, like fzf's `--scroll-off`. It finds the
+  script via `EAX_RESTORE_SCRIPT`, beside itself, its cache (`~/.local/share/
+  eax-restore-linux/tui/<channel>/`) or `dist/`, skipping any that lacks
+  `EAX_RESTORE_ACTION`; if none, it downloads its channel's release script and
+  checks it against the `.sha256` (`EAX_RESTORE_CHANNEL=dev` at build time picks
+  the dev channel). The engine is moving into Rust a stage at a time under
+  `tui/src/engine/` (no TUI types in there; the crate is a library, `src/lib.rs`, plus
+  a thin `main.rs`). Stages 1 and 2 are done, and no screen calls them yet apart from
+  the list's "is this game installed" check. Stage 1: `engine/config/` is
+  `config_get_key` / `config_set_key`, `config_values_equal`, `config_row_is_safe` and
+  `resolve_config_file` for the eleven formats. Stage 2: `engine/files.rs` is the
+  name, scope and content checks, the backups and `swap_in` from `src/common.sh`;
+  `engine/manifest.rs` reads a manifest for an uninstall (`read`, the guard against a
+  forged one), parses `CONFIG:` lines and has the writers (`start`, `append`,
+  `dedupe`, `forget`); `engine/config/revert.rs` puts one recorded setting back.
+  `tui/tests/config_oracle.rs` and `tui/tests/manifest_oracle.rs` run each case
+  through the Bash functions and the Rust ones and compare the answers and the files
+  byte for byte (the bats tests' own cases, a generated corpus, every setting in the
+  database), so a change to one of those functions in `src/` needs the same change in
+  `engine/`. The uninstall's manifest reader is inline in `src/uninstall-flow.sh`, so
+  `manifest::read` is checked by its own tests instead. `eax-restore config
+  get|set FILE FORMAT SECTION KEY [VALUE]` runs the Rust editors by hand.
