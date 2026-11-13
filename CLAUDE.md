@@ -130,13 +130,20 @@ launcher hardcodes `releases/latest`).
   checks it against the `.sha256` (`EAX_RESTORE_CHANNEL=dev` at build time picks
   the dev channel). The engine is moving into Rust a stage at a time under
   `tui/src/engine/` (no TUI types in there; the crate is a library, `src/lib.rs`, plus
-  a thin `main.rs`). Stage 1 is done: `engine/config/` is `config_get_key` /
-  `config_set_key`, `config_values_equal`, `config_row_is_safe` and
-  `resolve_config_file` for the eleven formats, not yet called by any screen.
-  `tui/tests/config_oracle.rs` runs each case through the Bash functions and the Rust
-  ones and compares the files byte for byte (the bats tests' own cases, a generated
-  corpus, every setting in the database), so a change to an editor in
-  `src/game-config.sh` needs the same change in `engine/config/`. `eax-restore config
+  a thin `main.rs`). Stages 1 and 2 are done, and no screen calls them yet apart from
+  the list's "is this game installed" check. Stage 1: `engine/config/` is
+  `config_get_key` / `config_set_key`, `config_values_equal`, `config_row_is_safe` and
+  `resolve_config_file` for the eleven formats. Stage 2: `engine/files.rs` is the
+  name, scope and content checks, the backups and `swap_in` from `src/common.sh`;
+  `engine/manifest.rs` reads a manifest for an uninstall (`read`, the guard against a
+  forged one), parses `CONFIG:` lines and has the writers (`start`, `append`,
+  `dedupe`, `forget`); `engine/config/revert.rs` puts one recorded setting back.
+  `tui/tests/config_oracle.rs` and `tui/tests/manifest_oracle.rs` run each case
+  through the Bash functions and the Rust ones and compare the answers and the files
+  byte for byte (the bats tests' own cases, a generated corpus, every setting in the
+  database), so a change to one of those functions in `src/` needs the same change in
+  `engine/`. The uninstall's manifest reader is inline in `src/uninstall-flow.sh`, so
+  `manifest::read` is checked by its own tests instead. `eax-restore config
   get|set FILE FORMAT SECTION KEY [VALUE]` runs the Rust editors by hand.
 - **Docs and the wiki:** `docs/` is split into `script/`, `database/` and `tutorials/`, and
   the repo links between pages by folder path. The wiki is generated from it by

@@ -17,19 +17,21 @@ mod key_value;
 mod pairs;
 pub mod paths;
 mod registry;
+mod revert;
 mod safety;
 mod set_commands;
 mod text;
 mod value;
 mod xml;
 
+pub use revert::{revert, Reverted};
 pub use safety::row_is_safe;
 pub use value::{values_equal, Value};
 
+use crate::engine::files;
 use anyhow::{bail, Context, Result};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::str::FromStr;
-use std::sync::atomic::{AtomicU32, Ordering};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Format {
@@ -207,53 +209,6 @@ pub fn get_file(path: &Path, format: Format, sec: &str, key: &str) -> Value {
     }
 }
 
-static TEMP_COUNTER: AtomicU32 = AtomicU32::new(0);
-
-/// A new file beside `target`, so the rename that swaps it in stays on one
-/// filesystem.
-fn temp_beside(target: &Path) -> Result<(PathBuf, std::fs::File)> {
-    let dir = target
-        .parent()
-        .filter(|d| !d.as_os_str().is_empty())
-        .unwrap_or(Path::new("."));
-    for _ in 0..16 {
-        let name = format!(
-            ".eax-restore-cfg.{}-{}-{}",
-            std::process::id(),
-            now(),
-            TEMP_COUNTER.fetch_add(1, Ordering::Relaxed)
-        );
-        let path = dir.join(name);
-        match std::fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&path)
-        {
-            Ok(file) => return Ok((path, file)),
-            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
-            Err(e) => return Err(e).with_context(|| format!("can't write in {}", dir.display())),
-        }
-    }
-    bail!("can't make a temporary file in {}", dir.display())
-}
-
-/// The script's `swap_in`: writes through a link to the file it points at,
-/// keeps the target's permissions, and renames the new file over it, so a
-/// failure never leaves a half-written file.
-fn swap_in(temp: &Path, target: &Path) -> Result<()> {
-    let target = if target.is_symlink() {
-        std::fs::canonicalize(target).unwrap_or_else(|_| target.to_path_buf())
-    } else {
-        target.to_path_buf()
-    };
-    if let Ok(meta) = std::fs::metadata(&target) {
-        if meta.is_file() {
-            let _ = std::fs::set_permissions(temp, meta.permissions());
-        }
-    }
-    std::fs::rename(temp, &target).with_context(|| format!("can't replace {}", target.display()))
-}
-
 /// [`set`] on a file. A text file that isn't there yet is created when its
 /// folder exists; a binary or registry file must be there already.
 pub fn set_file(path: &Path, format: Format, sec: &str, key: &str, value: &Value) -> Result<()> {
@@ -275,17 +230,7 @@ pub fn set_file_at(
         Err(e) => return Err(e).with_context(|| format!("can't read {}", path.display())),
     };
     let new = set_at(format, &data, sec, key, value, now)?;
-    let (temp, mut file) = temp_beside(path)?;
-    let written = std::io::Write::write_all(&mut file, &new)
-        .with_context(|| format!("can't write {}", temp.display()))
-        .and_then(|()| {
-            drop(file);
-            swap_in(&temp, path)
-        });
-    if written.is_err() {
-        let _ = std::fs::remove_file(&temp);
-    }
-    written
+    files::write_through_temp(path, &new)
 }
 
 #[cfg(test)]

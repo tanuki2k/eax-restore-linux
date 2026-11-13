@@ -8,8 +8,7 @@ use std::collections::{BTreeSet, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-pub const MANIFEST_NAME: &str = ".eax-restore-manifest.txt";
-const UNINSTALLED_MARKER: &str = "# EAX Restore: uninstalled";
+pub const MANIFEST_NAME: &str = crate::engine::manifest::FILE_NAME;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StoreKind {
@@ -257,10 +256,7 @@ pub fn heroic_game_folders(home: &Path) -> BTreeSet<PathBuf> {
 /// True when the folder holds this tool's install: a non-empty manifest that
 /// isn't the "uninstalled" marker an uninstall leaves behind.
 pub fn manifest_is_live(dir: &Path) -> bool {
-    match fs::read_to_string(dir.join(MANIFEST_NAME)) {
-        Ok(text) => !text.is_empty() && !text.starts_with(UNINSTALLED_MARKER),
-        Err(_) => false,
-    }
+    crate::engine::manifest::is_live(&dir.join(MANIFEST_NAME))
 }
 
 /// Every folder holding a live install, found on disk under the Steam libraries

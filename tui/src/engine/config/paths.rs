@@ -2,6 +2,7 @@
 //! `game_install_root`.
 
 use super::safety::split_locations;
+use crate::engine::files::find_existing_variant;
 use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
@@ -27,22 +28,6 @@ pub enum Mode {
     /// Every location that exists, for a game that keeps the same file in
     /// several places (the file's `all_locations`).
     All,
-}
-
-/// The path if it exists, otherwise a same-named file in that folder that
-/// differs only by case. Linux filesystems are case-sensitive, and a game's
-/// file isn't always spelled the way the database has it.
-pub fn find_existing_variant(path: &Path) -> Option<PathBuf> {
-    if path.symlink_metadata().is_ok() {
-        return Some(path.to_path_buf());
-    }
-    let name = path.file_name()?.to_string_lossy().to_lowercase();
-    let dir = path.parent()?;
-    std::fs::read_dir(dir)
-        .ok()?
-        .flatten()
-        .find(|e| e.file_name().to_string_lossy().to_lowercase() == name)
-        .map(|e| e.path())
 }
 
 fn same_file(a: &Path, b: &Path) -> bool {

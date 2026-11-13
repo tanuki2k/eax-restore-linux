@@ -3,3 +3,5 @@
 //! with `src/*.sh` the TUI still hands the action to the script.
 
 pub mod config;
+pub mod files;
+pub mod manifest;
