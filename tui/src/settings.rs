@@ -119,9 +119,12 @@ struct Row {
 fn rows(s: &Setting, files: &std::collections::BTreeMap<String, ConfigFile>) -> Vec<Row> {
     let mut out = Vec::new();
     for (file, change) in &s.changes {
-        let sectioned = files
-            .get(file)
-            .is_some_and(|d| matches!(d.format.as_str(), "ini" | "ini_braces" | "registry"));
+        let sectioned = files.get(file).is_some_and(|d| {
+            matches!(
+                d.format.as_str(),
+                "ini" | "ini_braces" | "xml_attributes" | "registry"
+            )
+        });
         let Value::Object(map) = change else { continue };
         for (k, v) in map {
             match v {
@@ -399,6 +402,18 @@ mod tests {
             t.contains("a.ini (game's install folder and Documents in the Wine prefix: A/a.ini)")
         );
         assert!(t.contains("      [Audio]\n        UseEAX  → 1\n        Rate    → 44100\n      [Video]\n        Fps     → 60"));
+    }
+
+    #[test]
+    fn xml_files_group_attributes_under_their_tag() {
+        let g = game(
+            r#"{"id":"a","name":"A","game_config":{
+              "files":{"g.cfg":{"format":"xml_attributes","locations":["game_exe:g.cfg"]}},
+              "audio_settings":[{"title":"T","reason":"r","tested":true,
+                "changes":{"g.cfg":{"Sound":{"UseEAX":"1"}}}}]}}"#,
+        );
+        let t = text(&lines(&g, 100));
+        assert!(t.contains("      [Sound]\n        UseEAX  → 1"), "{t}");
     }
 
     #[test]
