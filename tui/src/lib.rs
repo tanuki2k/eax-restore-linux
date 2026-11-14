@@ -3,6 +3,7 @@
 
 pub mod actions;
 pub mod app;
+pub mod cli;
 pub mod db;
 pub mod engine;
 pub mod fetch;

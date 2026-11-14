@@ -48,7 +48,9 @@ fn names_exe(cmdline: &str, exe: &str) -> bool {
 /// started, has the game's exe (the profile's `exe`) on its command line.
 /// Wine and Proton keep the Windows path there.
 pub fn exe_running(exe: &str) -> bool {
-    exe_running_in(Path::new("/proc"), std::process::id(), exe)
+    let root = std::env::var_os("EAX_RESTORE_PROC_ROOT")
+        .map_or_else(|| "/proc".into(), std::path::PathBuf::from);
+    exe_running_in(&root, std::process::id(), exe)
 }
 
 fn exe_running_in(proc_root: &Path, me: u32, exe: &str) -> bool {

@@ -98,3 +98,13 @@ impl UninstallHost for SystemHost<'_> {
         }
     }
 }
+
+impl super::install::InstallHost for SystemHost<'_> {
+    fn launcher_closed(&mut self, target: &Target) -> bool {
+        (self.close_launcher)(target)
+    }
+
+    fn net(&mut self) -> &mut dyn Net {
+        self.net
+    }
+}

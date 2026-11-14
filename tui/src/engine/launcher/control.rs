@@ -107,7 +107,10 @@ impl Control {
         Control {
             launcher: t.launcher,
             flatpak: t.is_flatpak(home),
-            proc_root: PathBuf::from("/proc"),
+            // Tests point this at an empty folder, so a launcher really
+            // running on the machine is never seen, closed or reopened.
+            proc_root: std::env::var_os("EAX_RESTORE_PROC_ROOT")
+                .map_or_else(|| PathBuf::from("/proc"), PathBuf::from),
         }
     }
 

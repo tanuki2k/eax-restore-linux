@@ -118,3 +118,13 @@ The planned interface (the user's design, not built yet) is a panel like
 Optiscaler-Client's: every choice for an install or uninstall on one screen, plus
 the install's status. So engine code stays prompt-free: read state, take choices,
 plan, apply.
+
+Headless mode (`tui/src/cli.rs`): `eax-restore status|install|uninstall|speakers|settings|sound-log
+GAME_FOLDER [options]` (`eax-restore --help` lists them) runs the Rust engine with no TUI and
+no Bash script: the script's defaults, flags to change them, and one "(Y/n)" before any change
+(`--yes` skips it; with no terminal and no `--yes` nothing changes). A running Steam or Heroic is
+only closed with `--close-launcher`. `EAX_RESTORE_PROC_ROOT` (tests only) points the
+launcher and game checks at an empty folder instead of `/proc`, so a test never sees or closes a
+real launcher. `tui/tests/headless.rs` runs the program in the fake world: its install matches
+the script's default install, and every command then the uninstall leaves the world as it was.
+

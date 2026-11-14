@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use eax_restore::engine::config;
-use eax_restore::{app, db, fetch, games, library, profile, runner, settings, ui};
+use eax_restore::{app, cli, db, fetch, games, library, profile, runner, settings, ui};
 use ratatui::crossterm::event::{self, Event, KeyEventKind};
 use std::io::Write;
 use std::path::PathBuf;
@@ -64,6 +64,15 @@ fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.first().is_some_and(|a| a == "config") {
         return config_command(&args[1..]);
+    }
+    if args.first().is_some_and(|a| a == "--help" || a == "help") {
+        return cli::run(&["status".to_string(), "--help".to_string()]);
+    }
+    if args
+        .first()
+        .is_some_and(|a| cli::COMMANDS.contains(&a.as_str()))
+    {
+        return cli::run(&args);
     }
     // The script runs from another folder, so a chosen path must be absolute.
     let chosen = chosen_database().map(|p| std::fs::canonicalize(&p).unwrap_or(p));
