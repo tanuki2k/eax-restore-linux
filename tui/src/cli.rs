@@ -198,19 +198,17 @@ fn find_game<'a>(db: &'a Database, store: Option<Store>, id: &str) -> Option<&'a
 
 /// The game folder as given, or the exe folder found under it when it holds
 /// no .exe itself (an install root).
-fn exe_folder(dir: &Path, home: &Path) -> Result<PathBuf> {
-    let dir = std::fs::canonicalize(dir)
-        .with_context(|| format!("There's no folder at {}.", dir.display()))?;
-    let has_exe = std::fs::read_dir(&dir)?.flatten().any(|e| {
+fn exe_folder(dir: &Path, exe_hint: &str, home: &Path) -> Result<PathBuf> {
+    let has_exe = std::fs::read_dir(dir)?.flatten().any(|e| {
         e.file_name()
             .to_string_lossy()
             .to_lowercase()
             .ends_with(".exe")
     });
     if has_exe {
-        return Ok(dir);
+        return Ok(dir.to_path_buf());
     }
-    match detect::exe_candidates(&dir, "").into_iter().next() {
+    match detect::exe_candidates(dir, exe_hint).into_iter().next() {
         Some((d, exe)) => {
             say(format!(
                 "Using {}, the folder {exe} is in.",
@@ -218,7 +216,7 @@ fn exe_folder(dir: &Path, home: &Path) -> Result<PathBuf> {
             ));
             Ok(d)
         }
-        None => Ok(dir),
+        None => Ok(dir.to_path_buf()),
     }
 }
 
@@ -248,9 +246,10 @@ fn game_name(facts: &Facts, game: Option<&Game>) -> String {
                 .map(|h| h.title.clone())
                 .filter(|t| !t.is_empty())
         })
+        // The install's own folder, not the exe folder ("System", "bin").
         .unwrap_or_else(|| {
             facts
-                .game_dir
+                .install_root
                 .file_name()
                 .map(|n| n.to_string_lossy().into_owned())
                 .unwrap_or_default()
@@ -499,7 +498,16 @@ pub fn run(raw: &[String]) -> Result<()> {
     };
     let home = home()?;
     let db = load_database(&args)?;
-    let dir = exe_folder(Path::new(dir), &home)?;
+    let dir = std::fs::canonicalize(dir).with_context(|| format!("There's no folder at {dir}."))?;
+    // The game is looked up first, so its profile's exe picks the exe
+    // folder when the folder given is the install's top folder.
+    let hint = {
+        let first = prepare::gather(&dir, None, &home, &protontricks());
+        find_game(&db, first.store, &first.id)
+            .map(|g| g.exe.clone())
+            .unwrap_or_default()
+    };
+    let dir = exe_folder(&dir, &hint, &home)?;
     let (facts, game) = facts_for(&dir, &db, &home);
     let mut launchers = Launchers {
         close: args.on("--close-launcher"),
@@ -566,6 +574,14 @@ fn status(facts: &Facts, game: Option<&Game>, args: &Args, home: &Path) -> Resul
             "not in the game database"
         }
     ));
+    for c in &facts.companions {
+        let prefix = if c.prefix.is_some() {
+            "has its own prefix"
+        } else {
+            "has no prefix yet"
+        };
+        say(format!("  Also:          {} ({prefix})", c.name));
+    }
     if facts.linux_build {
         say(format!(
             "  {name} is the Linux version, which the EAX fix can't work with."
@@ -755,6 +771,12 @@ fn install(
             Vcrun::Skip => "skip",
         }
     ));
+    for c in &plan.companions {
+        say(format!(
+            "  Also:          {}, which runs from the same folder with a prefix of its own",
+            c.name
+        ));
+    }
     if plan.eax_unified {
         say("  EAX Unified:   install it");
     }
