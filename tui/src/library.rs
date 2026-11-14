@@ -67,6 +67,20 @@ fn steam_roots(home: &Path) -> Vec<PathBuf> {
         .collect()
 }
 
+/// A path for display, with the home folder as `~`. A home of `/` (the app's
+/// before it learns the real one) would turn every path into `~/…`, so it's
+/// left alone.
+pub fn tilde(p: &Path, home: &Path) -> String {
+    if home.parent().is_none() {
+        return p.display().to_string();
+    }
+    match p.strip_prefix(home) {
+        Ok(rest) if rest.as_os_str().is_empty() => "~".into(),
+        Ok(rest) => format!("~/{}", rest.display()),
+        Err(_) => p.display().to_string(),
+    }
+}
+
 /// Every Steam library's `steamapps` folder, once each: the roots' own plus the
 /// `"path"` entries of their `libraryfolders.vdf`.
 pub fn steam_library_dirs(home: &Path) -> Vec<PathBuf> {

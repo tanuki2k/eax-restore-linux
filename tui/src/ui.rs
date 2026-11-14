@@ -20,23 +20,31 @@ use ratatui::Frame;
 use std::collections::HashSet;
 
 pub fn draw(f: &mut Frame, app: &App) {
-    if let Some(p) = &app.panel {
-        crate::panel::view::draw(f, p);
-        if app.help {
-            draw_help(f, app, f.area());
-        }
-        return;
-    }
     let screen = f.area();
     let bar_height = bar_rows(app, screen.width);
     let [body, bar] =
         Layout::vertical([Constraint::Min(3), Constraint::Length(bar_height)]).areas(screen);
+    draw_bar(f, app, bar);
+    if let Some(p) = &app.panel {
+        // The page takes the right pane's place, so the list stays in view.
+        let page = if app.zoom {
+            body
+        } else {
+            let (left, pane) = split(app, body);
+            draw_left(f, app, left);
+            pane
+        };
+        crate::panel::view::draw(f, p, page, body);
+        if app.help {
+            draw_help(f, app, body);
+        }
+        return;
+    }
     if app.zoom {
         draw_pane(f, app, body, true);
     } else {
         draw_body(f, app, body);
     }
-    draw_bar(f, app, bar);
     // Popups sit over the body and leave the key bar showing.
     if let (Some(menu), Some(e)) = (&app.menu, app.current()) {
         draw_menu(f, menu, &e.name, body);
@@ -88,8 +96,10 @@ pub(crate) fn gutter(selected: bool) -> Span<'static> {
     }
 }
 
-fn draw_body(f: &mut Frame, app: &App, body: Rect) {
-    let (left, pane) = match app.layout {
+/// The list's area and the right pane's: side by side, or the pane under the
+/// list when the window is narrow.
+fn split(app: &App, body: Rect) -> (Rect, Rect) {
+    match app.layout {
         PaneLayout::Side => {
             let [l, r] =
                 Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)])
@@ -101,7 +111,11 @@ fn draw_body(f: &mut Frame, app: &App, body: Rect) {
                 .areas(body);
             (t, p)
         }
-    };
+    }
+}
+
+fn draw_body(f: &mut Frame, app: &App, body: Rect) {
+    let (left, pane) = split(app, body);
     draw_left(f, app, left);
     draw_pane(f, app, pane, false);
 }
@@ -388,7 +402,7 @@ fn draw_pane(f: &mut Frame, app: &App, area: Rect, zoomed: bool) {
         }
     } else {
         match current {
-            Some(e) => profile::lines(e, width),
+            Some(e) => profile::lines(e, width, &app.home),
             None => vec![
                 Line::from("No game matches.").dim(),
                 Line::from("Press Ctrl-A to add a game by its folder.").dim(),
@@ -545,6 +559,8 @@ fn draw_help(f: &mut Frame, app: &App, area: Rect) {
 fn bar_items(app: &App) -> Vec<(&'static str, &'static str)> {
     if app.help {
         vec![("↑/↓", "scroll"), ("Esc or F1", "close")]
+    } else if let Some(p) = &app.panel {
+        crate::panel::view::keys(p)
     } else if app.picker.is_some() {
         vec![
             ("↑/↓", "move"),
@@ -800,6 +816,79 @@ mod tests {
             .collect()
     }
 
+    /// Quake 4 with a folder, its page opened with Enter.
+    fn app_with_a_page_open(width: u16) -> (tempfile::TempDir, App) {
+        let home = tempfile::tempdir().unwrap();
+        let dir = home.path().join("Games/Quake 4");
+        std::fs::create_dir_all(&dir).unwrap();
+        let mut games = entries(WITH_SETTINGS);
+        games[0].status = Status::OnThisPc;
+        games[0].path = Some(dir);
+        let mut app = App::new(games);
+        app.set_home(home.path().to_path_buf());
+        app.use_panel = true;
+        app.resize(width);
+        press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
+        assert!(app.panel.is_some());
+        (home, app)
+    }
+
+    /// The row and column of the page's top-left corner: the `╭` in front of
+    /// its title.
+    fn page_corner(app: &App, w: u16, h: u16) -> (usize, usize) {
+        let s = screen(app, w, h);
+        let y = s
+            .lines()
+            .position(|l| l.contains(" Quake 4 ") && l.contains("Not installed"))
+            .unwrap();
+        let line: Vec<char> = s.lines().nth(y).unwrap().chars().collect();
+        let x = line.iter().rposition(|c| *c == '╭').unwrap();
+        (y, x)
+    }
+
+    #[test]
+    fn a_games_page_opens_in_the_right_pane_beside_the_list() {
+        let (_home, mut app) = app_with_a_page_open(120);
+        let s = screen(&app, 120, 40);
+        assert!(s.contains(" Search "), "{s}");
+        assert!(s.contains("Quake 4"));
+        assert_eq!(page_corner(&app, 120, 40), (0, 60));
+
+        // Ctrl-F: the page fills the screen; again, back beside the list.
+        ctrl_key(&mut app, 'f');
+        assert!(app.panel.is_some());
+        assert!(!screen(&app, 120, 40).contains(" Search "));
+        assert_eq!(page_corner(&app, 120, 40), (0, 0));
+        ctrl_key(&mut app, 'f');
+        assert_eq!(page_corner(&app, 120, 40), (0, 60));
+
+        // Ctrl-L: under the list, and back.
+        ctrl_key(&mut app, 'l');
+        let (y, x) = page_corner(&app, 120, 40);
+        assert!(y > 10 && x == 0, "({y}, {x})");
+        ctrl_key(&mut app, 'l');
+        assert_eq!(page_corner(&app, 120, 40), (0, 60));
+    }
+
+    #[test]
+    fn on_a_narrow_screen_the_page_sits_under_the_list() {
+        let (_home, app) = app_with_a_page_open(80);
+        let s = screen(&app, 80, 40);
+        assert_eq!(row_of(&s, " Search "), 0);
+        let (y, x) = page_corner(&app, 80, 40);
+        assert!(y > 10 && x == 0, "({y}, {x})\n{s}");
+    }
+
+    #[test]
+    fn closing_a_full_screen_page_goes_back_to_the_list() {
+        let (_home, mut app) = app_with_a_page_open(120);
+        ctrl_key(&mut app, 'f');
+        press(&mut app, ratatui::crossterm::event::KeyCode::Esc);
+        assert!(app.panel.is_none());
+        assert!(!app.zoom);
+        assert!(screen(&app, 120, 40).contains(" Search "));
+    }
+
     #[test]
     fn shows_the_list_and_the_selected_games_profile() {
         let mut games = entries(
@@ -817,7 +906,7 @@ mod tests {
         assert!(s.contains("Ctrl-E Audio: Any audio"));
         assert!(s.contains("+ Alpha Centauri"));
         assert!(s.contains("System details:"));
-        assert!(s.contains("Status:") && s.contains("Installed"));
+        assert!(s.contains("Status:") && s.contains("DSOAL installed"));
         assert!(s.contains("Platform:") && s.contains("Steam"));
         assert!(s.contains("Location:") && s.contains("/lib/Alpha"));
         assert!(s.contains("EAX Support:") && s.contains("1.0"));
@@ -832,6 +921,7 @@ mod tests {
             game: None,
             store: None,
             path: Some(PathBuf::from("/g/Obscure")),
+            engine: None,
         };
         let s = screen(&App::new(vec![manual]), 120, 14);
         assert!(s.contains("* Obscure"));
@@ -978,6 +1068,7 @@ mod tests {
             game: None,
             store: None,
             path: None,
+            engine: None,
         };
         let mut app = App::new(vec![manual]);
         press(&mut app, ratatui::crossterm::event::KeyCode::Right);

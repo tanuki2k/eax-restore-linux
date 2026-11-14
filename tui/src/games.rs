@@ -2,6 +2,8 @@
 //! this machine.
 
 use crate::db::{Database, Game};
+use crate::engine::install::Engine;
+use crate::engine::installed::engine_in;
 use crate::library::{self, Found, StoreKind};
 use std::collections::{BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
@@ -19,12 +21,14 @@ pub enum Status {
 }
 
 impl Status {
-    pub fn label(self) -> &'static str {
+    /// What the profile's Status row says. `part` is what the game gets:
+    /// "DSOAL" or "OpenAL Soft".
+    pub fn label(self, part: &str) -> String {
         match self {
-            Status::Installed => "Installed",
-            Status::OnThisPc => "On this PC, not installed",
-            Status::NotOnThisPc => "Not on this PC",
-            Status::Manual => "Installed manually (not in the game database)",
+            Status::Installed => format!("{part} installed"),
+            Status::OnThisPc => format!("Game found, {part} not installed yet"),
+            Status::NotOnThisPc => "Game not found on this PC".into(),
+            Status::Manual => format!("{part} installed (manual install)"),
         }
     }
 }
@@ -38,6 +42,8 @@ pub struct Entry {
     pub store: Option<StoreKind>,
     /// The game's folder: the install's folder when installed, else the store's.
     pub path: Option<PathBuf>,
+    /// What a live install in `path` put there; None when nothing is installed.
+    pub engine: Option<Engine>,
 }
 
 impl Entry {
@@ -48,6 +54,7 @@ impl Entry {
             game: Some(game),
             store: None,
             path: None,
+            engine: None,
         }
     }
 }
@@ -161,6 +168,7 @@ pub fn build(db: &Database, home: &Path, state_file: &Path) -> Vec<Entry> {
                 if e.status != Status::Installed {
                     e.status = Status::Installed;
                     e.path = Some(d.clone());
+                    e.engine = engine_in(d);
                 }
                 claimed.insert(d);
             }
@@ -186,6 +194,7 @@ pub fn build(db: &Database, home: &Path, state_file: &Path) -> Vec<Entry> {
                 entry.status = Status::Installed;
                 entry.path = Some(dir.clone());
                 entry.store = store_of_copy(&db.games[i], dir, &heroic);
+                entry.engine = engine_in(dir);
             }
             // Another install of a game already listed: its own row.
             [i] => {
@@ -193,6 +202,7 @@ pub fn build(db: &Database, home: &Path, state_file: &Path) -> Vec<Entry> {
                 e.status = Status::Installed;
                 e.path = Some(dir.clone());
                 e.store = store_of_copy(&db.games[i], dir, &heroic);
+                e.engine = engine_in(dir);
                 entries.push(e);
             }
             _ => entries.push(Entry {
@@ -201,6 +211,7 @@ pub fn build(db: &Database, home: &Path, state_file: &Path) -> Vec<Entry> {
                 game: None,
                 store: None,
                 path: Some(dir.clone()),
+                engine: engine_in(dir),
             }),
         }
     }
@@ -243,6 +254,31 @@ mod tests {
         assert_eq!(by_name(&entries, "Beta").status, Status::OnThisPc);
         assert_eq!(by_name(&entries, "Gamma").status, Status::NotOnThisPc);
         assert_eq!(entries.len(), 4);
+    }
+
+    #[test]
+    fn an_install_records_whether_it_is_dsoal_or_openal_soft() {
+        let w = World::new();
+        w.steam_game(".local/share/Steam", 10, "Alpha");
+        w.steam_game(".local/share/Steam", 20, "Beta");
+        let alpha = w.p(".local/share/Steam/steamapps/common/Alpha");
+        let beta = w.p(".local/share/Steam/steamapps/common/Beta");
+        w.write(
+            ".local/share/Steam/steamapps/common/Alpha/.eax-restore-manifest.txt",
+            &format!("{}/OpenAL32.dll\n", alpha.display()),
+        );
+        w.write(
+            ".local/share/Steam/steamapps/common/Beta/.eax-restore-manifest.txt",
+            &format!("{0}/dsound.dll\n{0}/dsoal-aldrv.dll\n", beta.display()),
+        );
+        let entries = build(
+            &Database::parse(DB).unwrap(),
+            w.home.path(),
+            &w.state_file(),
+        );
+        assert_eq!(by_name(&entries, "Alpha").engine, Some(Engine::OpenAlSoft));
+        assert_eq!(by_name(&entries, "Beta").engine, Some(Engine::Dsoal));
+        assert_eq!(by_name(&entries, "Gamma").engine, None);
     }
 
     #[test]

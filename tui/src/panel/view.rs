@@ -15,40 +15,109 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Clear, Paragraph, Wrap};
 use ratatui::Frame;
 
-pub fn draw(f: &mut Frame, p: &Panel) {
-    let area = f.area();
+/// Draws the page filling `page` (the browser's right pane, so the game list
+/// stays in view). The choice list and yes/no questions are sized for their
+/// text rather than the pane, so they sit over `over`, the whole body.
+pub fn draw(f: &mut Frame, p: &Panel, page: Rect, over: Rect) {
+    let inner_w = page.width.saturating_sub(2);
+    let help = help_text(p);
+    let help_rows = if help.is_empty() {
+        0
+    } else {
+        rows_of(&[Line::from(help.as_str())], inner_w.saturating_sub(2)).min(3) + 2
+    };
     let block = boxed_line(title(p));
-    let inner = block.inner(area);
-    f.render_widget(Clear, area);
-    f.render_widget(block, area);
-    let [body, help, buttons, keys] = Layout::vertical([
-        Constraint::Min(3),
-        Constraint::Length(3),
-        Constraint::Length(1),
+    let inner = block.inner(page);
+    f.render_widget(Clear, page);
+    f.render_widget(block, page);
+    let [body, help_area, buttons] = Layout::vertical([
+        Constraint::Min(1),
+        Constraint::Length(help_rows),
         Constraint::Length(1),
     ])
     .areas(inner);
     match &p.screen {
         Screen::Main => draw_main(f, p, body),
-        Screen::Confirm { lines, jobs } => draw_confirm(f, lines, jobs.is_empty(), body),
-        Screen::Uninstall(u) => draw_uninstall(f, p, u, body),
+        Screen::Confirm { lines, jobs } => boxed_text(
+            f,
+            "Apply changes",
+            confirm_lines(lines, jobs.is_empty()),
+            body,
+        ),
+        Screen::Uninstall(u) => boxed_text(f, "Uninstall", uninstall_lines(p, u), body),
         Screen::Run(r) => draw_run(f, r, body),
     }
-    f.render_widget(
-        Paragraph::new(help_text(p))
-            .wrap(Wrap { trim: true })
-            .block(plain())
-            .style(theme::dim()),
-        help,
-    );
+    if help_rows > 0 {
+        f.render_widget(
+            Paragraph::new(help)
+                .wrap(Wrap { trim: true })
+                .block(plain())
+                .style(theme::dim()),
+            help_area,
+        );
+    }
     draw_buttons(f, p, buttons);
-    f.render_widget(Paragraph::new(key_line(p)).centered(), keys);
     if p.list.is_some() {
-        draw_list(f, p, area);
+        draw_list(f, p, over);
     }
     if let Some(q) = &p.question {
-        draw_question(f, &q.text, &q.ask, area);
+        draw_question(f, &q.text, &q.ask, over);
     }
+}
+
+/// Rows `lines` take, wrapped at `width`.
+fn rows_of(lines: &[Line], width: u16) -> u16 {
+    let w = usize::from(width.max(1));
+    lines
+        .iter()
+        .map(|l| l.width().div_ceil(w).max(1))
+        .sum::<usize>()
+        .try_into()
+        .unwrap_or(u16::MAX)
+}
+
+/// What a Sound or Setup box needs across: the gutter, the widest title,
+/// the widest value of any row (so picking one doesn't resize the page),
+/// and its border.
+fn column_width(rows: &[Row]) -> u16 {
+    let title = rows
+        .iter()
+        .map(|r| r.title.chars().count())
+        .max()
+        .unwrap_or(0);
+    let value = rows
+        .iter()
+        .flat_map(|r| r.options.iter().map(|o| o.label.chars().count()))
+        .max()
+        .unwrap_or(0);
+    (2 + title + 2 + value + 2) as u16
+}
+
+fn status_spans(p: &Panel) -> Line<'static> {
+    Line::from(vec![
+        Span::styled(" Status  ", theme::label()),
+        Span::raw(status_line(p)),
+    ])
+}
+
+/// The status wraps rather than widening the page (a game folder's path
+/// can be long), up to two rows.
+fn status_rows(p: &Panel, inner_w: u16) -> u16 {
+    rows_of(&[status_spans(p)], inner_w).min(2)
+}
+
+/// Sound and Setup side by side when both fit.
+fn side_by_side(p: &Panel, inner_w: u16) -> bool {
+    column_width(&p.sound) + column_width(&p.setup) <= inner_w
+}
+
+fn boxed_text(f: &mut Frame, title: &str, text: Vec<Line<'static>>, area: Rect) {
+    f.render_widget(
+        Paragraph::new(text)
+            .wrap(Wrap { trim: false })
+            .block(boxed(title)),
+        area,
+    );
 }
 
 /// A box with no title.
@@ -84,7 +153,8 @@ fn title(p: &Panel) -> Line<'static> {
 /// One line about what's installed now.
 pub fn status_line(p: &Panel) -> String {
     let Some(i) = &p.installed else {
-        return format!("{} is in {}", p.name, p.facts.game_dir.display());
+        let dir = crate::library::tilde(&p.facts.game_dir, &p.home);
+        return format!("{} is in {dir}", p.name);
     };
     let s = &i.state;
     let mut parts = vec![match s.engine {
@@ -131,22 +201,35 @@ fn draw_main(f: &mut Frame, p: &Panel, area: Rect) {
         );
         return;
     }
-    let rows = p.sound.len().max(p.setup.len()) as u16 + 2;
+    let side = side_by_side(p, area.width);
+    let rows = if side {
+        p.sound.len().max(p.setup.len()) as u16 + 2
+    } else {
+        (p.sound.len() + p.setup.len()) as u16 + 4
+    };
     let [status, choices, settings] = Layout::vertical([
-        Constraint::Length(1),
+        Constraint::Length(status_rows(p, area.width)),
         Constraint::Length(rows),
         Constraint::Min(3),
     ])
     .areas(area);
     f.render_widget(
-        Paragraph::new(Line::from(vec![
-            Span::styled(" Status  ", theme::label()),
-            Span::raw(status_line(p)),
-        ])),
+        Paragraph::new(status_spans(p)).wrap(Wrap { trim: false }),
         status,
     );
-    let [left, right] =
-        Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)]).areas(choices);
+    let [left, right] = if side {
+        Layout::horizontal([
+            Constraint::Length(column_width(&p.sound)),
+            Constraint::Min(0),
+        ])
+        .areas(choices)
+    } else {
+        Layout::vertical([
+            Constraint::Length(p.sound.len() as u16 + 2),
+            Constraint::Min(0),
+        ])
+        .areas(choices)
+    };
     let focus = p.focused();
     draw_rows(
         f,
@@ -262,15 +345,18 @@ fn draw_settings(f: &mut Frame, p: &Panel, area: Rect) {
         } else {
             "There's no profile for this game, so there are no settings to change."
         };
-        f.render_widget(Paragraph::new(text).style(theme::dim()), inner);
+        f.render_widget(
+            Paragraph::new(text)
+                .wrap(Wrap { trim: true })
+                .style(theme::dim()),
+            inner,
+        );
         return;
     }
     let selected = match p.focused() {
         Some(Item::Setting(i)) => Some(i),
         _ => None,
     };
-    let height = usize::from(inner.height);
-    let top = selected.map_or(0, |s| s.saturating_sub(height.saturating_sub(1)));
     let width = p
         .fixes
         .iter()
@@ -279,13 +365,23 @@ fn draw_settings(f: &mut Frame, p: &Panel, area: Rect) {
         .unwrap_or(0)
         .min(40)
         + 2;
+    // gutter, mark and title, then the detail and the untested note.
+    let line_w = |fix: &Fix| {
+        2 + 4 + width + setting_detail(fix).chars().count() + if fix.untested { 11 } else { 0 }
+    };
+    // In a narrow pane, each setting's detail goes on a row of its own under
+    // its title rather than being cut off.
+    let two_rows = p.fixes.iter().any(|x| line_w(x) > usize::from(inner.width));
+    let per = if two_rows { 2 } else { 1 };
+    let height = (usize::from(inner.height) / per).max(1);
+    let top = selected.map_or(0, |s| s.saturating_sub(height.saturating_sub(1)));
     let lines: Vec<Line> = p
         .fixes
         .iter()
         .enumerate()
         .skip(top)
         .take(height)
-        .map(|(i, fix)| {
+        .flat_map(|(i, fix)| {
             let sel = selected == Some(i);
             let mark = if !Panel::tickable(fix) {
                 " – "
@@ -304,20 +400,29 @@ fn draw_settings(f: &mut Frame, p: &Panel, area: Rect) {
             } else {
                 theme::dim()
             };
-            let mut spans = vec![
-                gutter(sel),
-                Span::raw(format!("{mark} ")),
-                Span::styled(format!("{:width$}", truncate(&fix.title, 40)), title_style),
-                Span::styled(setting_detail(fix), theme::dim()),
-            ];
-            if fix.untested {
-                spans.push(Span::styled(" (untested)", theme::note()));
-            }
-            Line::from(spans).style(if sel {
+            let bg = if sel {
                 Style::new().bg(theme::SELECT_BG)
             } else {
                 Style::new()
-            })
+            };
+            let mut detail = vec![Span::styled(setting_detail(fix), theme::dim())];
+            if fix.untested {
+                detail.push(Span::styled(" (untested)", theme::note()));
+            }
+            let head = vec![
+                gutter(sel),
+                Span::raw(format!("{mark} ")),
+                Span::styled(format!("{:width$}", truncate(&fix.title, 40)), title_style),
+            ];
+            if two_rows {
+                let mut under = vec![gutter(sel), Span::raw("    ")];
+                under.extend(detail);
+                vec![Line::from(head).style(bg), Line::from(under).style(bg)]
+            } else {
+                let mut one = head;
+                one.extend(detail);
+                vec![Line::from(one).style(bg)]
+            }
         })
         .collect();
     f.render_widget(Paragraph::new(lines), inner);
@@ -333,41 +438,36 @@ fn truncate(s: &str, max: usize) -> String {
     }
 }
 
-fn draw_confirm(f: &mut Frame, lines: &[(String, String)], nothing: bool, area: Rect) {
+fn confirm_lines(lines: &[(String, String)], nothing: bool) -> Vec<Line<'static>> {
     let mut text: Vec<Line> = Vec::new();
     if nothing {
         text.push(Line::from(
             "Nothing has changed, so there's nothing to apply.",
         ));
-    } else {
-        text.push(Line::from(Span::styled(
-            "Apply these changes?",
-            theme::white(),
-        )));
-        text.push(Line::from(""));
-        let width = lines
-            .iter()
-            .map(|(a, _)| a.chars().count())
-            .max()
-            .unwrap_or(0)
-            + 2;
-        for (what, change) in lines {
-            text.push(Line::from(vec![
-                Span::styled(format!("  {what:width$}"), theme::label()),
-                Span::raw(change.clone()),
-            ]));
-        }
+        return text;
     }
-    f.render_widget(
-        Paragraph::new(text)
-            .wrap(Wrap { trim: false })
-            .block(boxed("Apply changes")),
-        area,
-    );
+    text.push(Line::from(Span::styled(
+        "Apply these changes?",
+        theme::white(),
+    )));
+    text.push(Line::from(""));
+    let width = lines
+        .iter()
+        .map(|(a, _)| a.chars().count())
+        .max()
+        .unwrap_or(0)
+        + 2;
+    for (what, change) in lines {
+        text.push(Line::from(vec![
+            Span::styled(format!("  {what:width$}"), theme::label()),
+            Span::raw(change.clone()),
+        ]));
+    }
+    text
 }
 
-fn draw_uninstall(f: &mut Frame, p: &Panel, u: &super::UninstallView, area: Rect) {
-    let mut text: Vec<Line> = vec![Line::from(Span::styled(
+fn uninstall_lines(p: &Panel, u: &super::UninstallView) -> Vec<Line<'static>> {
+    let mut text: Vec<Line<'static>> = vec![Line::from(Span::styled(
         "Uninstalling removes:",
         theme::white(),
     ))];
@@ -426,18 +526,28 @@ fn draw_uninstall(f: &mut Frame, p: &Panel, u: &super::UninstallView, area: Rect
             "Remove Microsoft's VC++ 2022 runtime from the prefix".into(),
         );
     }
-    f.render_widget(
-        Paragraph::new(text)
-            .wrap(Wrap { trim: false })
-            .block(boxed("Uninstall")),
-        area,
-    );
+    text
 }
 
 const SPINNER: [&str; 4] = ["|", "/", "-", "\\"];
 
 fn draw_run(f: &mut Frame, r: &super::run::RunView, area: Rect) {
-    let mut text: Vec<Line> = Vec::new();
+    let text = run_lines(r);
+    // Keep the end in view.
+    let shown = area.height.saturating_sub(2);
+    let skip = rows_of(&text, area.width.saturating_sub(2)).saturating_sub(shown);
+    let title = if r.finished() { "Done" } else { "Working" };
+    f.render_widget(
+        Paragraph::new(text)
+            .wrap(Wrap { trim: false })
+            .scroll((skip, 0))
+            .block(boxed(title)),
+        area,
+    );
+}
+
+fn run_lines(r: &super::run::RunView) -> Vec<Line<'static>> {
+    let mut text: Vec<Line<'static>> = Vec::new();
     let done = r.finished();
     for (i, s) in r.steps.iter().enumerate() {
         let last = i + 1 == r.steps.len();
@@ -464,17 +574,7 @@ fn draw_run(f: &mut Frame, r: &super::run::RunView, area: Rect) {
             text.push(Line::from(Span::styled(l.clone(), style)));
         }
     }
-    // Keep the end in view.
-    let height = usize::from(area.height.saturating_sub(2));
-    let skip = text.len().saturating_sub(height) as u16;
-    let title = if done { "Done" } else { "Working" };
-    f.render_widget(
-        Paragraph::new(text)
-            .wrap(Wrap { trim: false })
-            .scroll((skip, 0))
-            .block(boxed(title)),
-        area,
-    );
+    text
 }
 
 pub fn button_label(p: &Panel, b: Button) -> &'static str {
@@ -484,7 +584,6 @@ pub fn button_label(p: &Panel, b: Button) -> &'static str {
         Button::Uninstall => "Uninstall…",
         Button::SoundLog if p.sound_log_on => "Turn the sound log off",
         Button::SoundLog => "Turn the sound log on",
-        Button::OtherTools => "Other tools…",
         Button::CheckAgain => "Check again",
         Button::Confirm => match &p.screen {
             Screen::Uninstall(_) => "Uninstall",
@@ -546,7 +645,6 @@ fn help_text(p: &Panel) -> String {
             Button::Uninstall => "Shows what uninstalling removes and puts back.".into(),
             Button::SoundLog if p.sound_log_on => "Stops writing openal.log the next time the game runs.".into(),
             Button::SoundLog => "Writes openal.log in the game's folder the next time it runs, for working out a sound problem.".into(),
-            Button::OtherTools => "The VC++ runtime, EAX Unified and the rest of the game's tools.".into(),
             Button::CheckAgain => "Looks at the game's folder and prefix again.".into(),
             _ => String::new(),
         },
@@ -554,26 +652,27 @@ fn help_text(p: &Panel) -> String {
     }
 }
 
-fn key_line(p: &Panel) -> Line<'static> {
-    let keys: &[(&str, &str)] = if p.question.is_some() {
-        &[("y", "yes"), ("n", "no")]
+/// The page's keys, for the browser's key bar.
+pub fn keys(p: &Panel) -> Vec<(&'static str, &'static str)> {
+    if p.question.is_some() {
+        vec![("y", "yes"), ("n", "no")]
     } else if p.list.is_some() {
-        &[("↑/↓", "move"), ("Enter", "pick"), ("Esc", "keep")]
+        vec![("↑/↓", "move"), ("Enter", "pick"), ("Esc", "keep")]
     } else if p.running() {
-        &[]
+        Vec::new()
     } else if matches!(p.screen, Screen::Run(_)) {
-        &[("Enter", "back to the game")]
+        vec![("Enter", "back to the game")]
     } else if matches!(p.screen, Screen::Confirm { .. }) {
-        &[("←/→", "move"), ("Enter", "press"), ("Esc", "cancel")]
+        vec![("←/→", "move"), ("Enter", "press"), ("Esc", "cancel")]
     } else if matches!(p.screen, Screen::Uninstall(_)) {
-        &[
+        vec![
             ("↑/↓", "move"),
             ("Space", "tick"),
             ("Enter", "press"),
             ("Esc", "cancel"),
         ]
     } else {
-        &[
+        vec![
             ("↑/↓", "move"),
             ("Tab", "next section"),
             ("Enter", "open"),
@@ -581,13 +680,7 @@ fn key_line(p: &Panel) -> Line<'static> {
             ("Esc", "back"),
             ("F1", "help"),
         ]
-    };
-    let mut spans = Vec::new();
-    for (k, what) in keys {
-        spans.push(Span::styled(*k, theme::key()));
-        spans.push(Span::raw(format!(" {what}   ")));
     }
-    Line::from(spans)
 }
 
 fn popup(area: Rect, w: u16, h: u16) -> Rect {

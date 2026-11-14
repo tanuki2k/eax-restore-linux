@@ -21,8 +21,8 @@ impl Filter {
     pub fn label(self) -> &'static str {
         match self {
             Filter::All => "All games",
-            Filter::OnThisPc => "On this PC",
-            Filter::Installed => "Installed",
+            Filter::OnThisPc => "Games on this PC",
+            Filter::Installed => "EAX fix installed",
         }
     }
 
@@ -79,7 +79,7 @@ pub struct Launch {
 pub struct App {
     pub games: Vec<Entry>,
     pub menu: Option<Menu>,
-    /// The open game's panel, full screen.
+    /// The open game's page, drawn over the list.
     pub panel: Option<crate::panel::Panel>,
     /// Enter opens the panel rather than the action menu (off in tests, and
     /// with EAX_RESTORE_ENGINE=bash).
@@ -95,7 +95,7 @@ pub struct App {
     pub help_max: std::cell::Cell<u16>,
     /// The "Add a game" folder picker, while it is open.
     pub picker: Option<Picker>,
-    home: PathBuf,
+    pub(crate) home: PathBuf,
     pub launch: Option<Launch>,
     /// Shown on the key bar's row until the next key.
     pub message: String,
@@ -396,16 +396,24 @@ impl App {
 
     fn handle_panel_key(&mut self, key: KeyEvent) {
         let Some(p) = self.panel.as_mut() else { return };
+        // Full screen and side/under work on the page as they do on the
+        // profile, but not while a choice list or question is up.
+        if key.modifiers.contains(KeyModifiers::CONTROL) && p.list.is_none() && p.question.is_none()
+        {
+            match key.code {
+                KeyCode::Char('f') => return self.zoom = !self.zoom,
+                KeyCode::Char('l') => return self.swap_layout(),
+                _ => {}
+            }
+        }
         p.handle_key(key);
         if p.changed_disk {
             self.rescan = true;
         }
         if p.closed {
-            let tools = p.other_tools;
             self.panel = None;
-            if tools {
-                self.open_action_menu();
-            }
+            // Back on the list, which a full-screen page had covered.
+            self.zoom = false;
         }
     }
 

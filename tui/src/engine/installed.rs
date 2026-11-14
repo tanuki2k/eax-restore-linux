@@ -60,9 +60,10 @@ pub struct InstalledState {
     pub advanced_limits: bool,
 }
 
-fn state_from(lines: &[&[u8]], game_dir: &Path, alsoft: Option<&PathBuf>) -> InstalledState {
+/// DSOAL leaves a dsound.dll in the game's folder; OpenAL Soft alone leaves only
+/// an OpenAL32.dll.
+fn engine_from(lines: &[&[u8]], game_dir: &Path) -> Engine {
     let game = game_dir.as_os_str().as_bytes();
-    let has = |l: &[u8]| lines.contains(&l);
     let ours = |name: &[u8]| {
         lines.iter().any(|l| {
             l.len() > game.len() + 1
@@ -71,11 +72,28 @@ fn state_from(lines: &[&[u8]], game_dir: &Path, alsoft: Option<&PathBuf>) -> Ins
                 && l[game.len() + 1..].eq_ignore_ascii_case(name)
         })
     };
-    let engine = if ours(b"OpenAL32.dll") && !ours(b"dsound.dll") {
+    if ours(b"OpenAL32.dll") && !ours(b"dsound.dll") {
         Engine::OpenAlSoft
     } else {
         Engine::Dsoal
-    };
+    }
+}
+
+/// The engine a live install put in `game_dir`, without the rest of `read`'s
+/// work, for the game list. `None` when there is no live install.
+pub fn engine_in(game_dir: &Path) -> Option<Engine> {
+    let manifest_path = manifest::path_in(game_dir);
+    if !manifest::is_live(&manifest_path) {
+        return None;
+    }
+    let data = std::fs::read(&manifest_path).ok()?;
+    let lines: Vec<&[u8]> = data.split(|&b| b == b'\n').collect();
+    Some(engine_from(&lines, game_dir))
+}
+
+fn state_from(lines: &[&[u8]], game_dir: &Path, alsoft: Option<&PathBuf>) -> InstalledState {
+    let has = |l: &[u8]| lines.contains(&l);
+    let engine = engine_from(lines, game_dir);
     let over = if lines.iter().any(|l| l.starts_with(b"LAUNCHER:")) {
         OverrideKind::Launcher
     } else if lines

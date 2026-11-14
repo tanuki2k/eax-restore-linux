@@ -114,11 +114,7 @@ impl Picker {
 
     /// The path for display, with the home folder as `~`.
     pub fn shown_dir(&self) -> String {
-        match self.dir.strip_prefix(&self.home) {
-            Ok(rest) if rest.as_os_str().is_empty() => "~".into(),
-            Ok(rest) => format!("~/{}", rest.display()),
-            Err(_) => self.dir.display().to_string(),
-        }
+        library::tilde(&self.dir, &self.home)
     }
 }
 

@@ -19,7 +19,7 @@ const ROWS: &[(&str, &str)] = &[
     ("", "Filters"),
     (
         "Tab",
-        "Show: All games → On this PC → Installed. On this PC means found in your Steam or Heroic libraries, or installed by hand.",
+        "Show: All games → Games on this PC → EAX fix installed. Games on this PC are the ones found in your Steam or Heroic libraries, plus any you added yourself.",
     ),
     (
         "Ctrl-S",
@@ -33,6 +33,8 @@ const ROWS: &[(&str, &str)] = &[
     ("Enter", "Open a choice's list (Enter picks, Esc keeps it as it was), or press a button."),
     ("Space", "Tick or untick a game setting."),
     ("Esc", "Back to the list. If you changed something and didn't apply it, it asks first."),
+    ("Ctrl-F", "Show the page full screen. Ctrl-F again puts it back beside the list."),
+    ("Ctrl-L", "Put the page under the list instead of beside it. Ctrl-L again puts it back."),
     ("", "Adding and viewing"),
     ("Ctrl-A", "Add a game that isn't in the list: choose its folder."),
     ("Ctrl-F", "Show the right pane full screen, where ↑/↓ scroll it. Esc or Ctrl-F comes back."),

@@ -5,12 +5,14 @@
 //! what it knows about this PC.
 
 use crate::db::{Game, OnlyIf, Setting, Source, Store};
+use crate::engine::install::Engine;
 use crate::games::Entry;
 use crate::library::StoreKind;
 use crate::settings::wrap;
 use crate::theme;
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
+use std::path::Path;
 
 fn label_of(k: StoreKind) -> &'static str {
     match k {
@@ -632,15 +634,40 @@ pub fn database_lines(g: &Game, width: usize) -> Vec<Line<'static>> {
     game_lines(g, None, Vec::new(), width)
 }
 
+/// What a game gets: "OpenAL Soft" for an OpenAL game, "DSOAL" for the rest.
+/// An install already there says which it has; otherwise the store the game was
+/// found in does, as in the profile's "Restoring EAX with".
+fn part_name(e: &Entry) -> &'static str {
+    let api = match (e.engine, &e.game) {
+        (Some(Engine::OpenAlSoft), _) => "openal",
+        (Some(Engine::Dsoal), _) => "directsound3d",
+        (None, Some(g)) => match e.store {
+            Some(StoreKind::Steam) => g.stores.steam.as_ref().map(|s| api_of(g, s)),
+            Some(StoreKind::Gog) => g.stores.gog.as_ref().map(|s| api_of(g, s)),
+            None => None,
+        }
+        .unwrap_or(g.eax.api.as_str()),
+        (None, None) => "",
+    };
+    if api == "openal" {
+        "OpenAL Soft"
+    } else {
+        "DSOAL"
+    }
+}
+
 /// What this PC says about a game: whether the fix is on it, from which store,
 /// and where.
-fn system_rows(e: &Entry) -> Vec<Item> {
+fn system_rows(e: &Entry, home: &Path) -> Vec<Item> {
     let (_, colour) = crate::ui::marker(e.status);
     let mut items = vec![
         Item::Heading("System details"),
         row(
             "Status",
-            vec![Span::styled(e.status.label(), Style::new().fg(colour))],
+            vec![Span::styled(
+                e.status.label(part_name(e)),
+                Style::new().fg(colour),
+            )],
         ),
     ];
     if let Some(k) = e.store {
@@ -652,15 +679,15 @@ fn system_rows(e: &Entry) -> Vec<Item> {
     if let Some(p) = &e.path {
         items.push(Item::Row(Row {
             label: "Location",
-            value: Value::Text(p.display().to_string(), theme::dim()),
+            value: Value::Text(crate::library::tilde(p, home), theme::dim()),
         }));
     }
     items
 }
 
 /// The pane for a game: the profile from the database, with what this PC says.
-pub fn lines(e: &Entry, width: usize) -> Vec<Line<'static>> {
-    let system = system_rows(e);
+pub fn lines(e: &Entry, width: usize, home: &Path) -> Vec<Line<'static>> {
+    let system = system_rows(e, home);
     match &e.game {
         Some(g) => game_lines(g, e.store, system, width),
         None => {
@@ -830,10 +857,72 @@ mod tests {
         e.status = Status::Installed;
         e.store = Some(StoreKind::Steam);
         e.path = Some("/lib/Quake 4".into());
-        let t = text(&lines(&e, 70));
-        assert!(t.contains("\nSystem details:\n -> Status:            Installed\n"));
+        let t = text(&lines(&e, 70, Path::new("/home/me")));
+        assert!(t.contains("\nSystem details:\n -> Status:            OpenAL Soft installed\n"));
         assert!(t.contains(" -> Platform:          Steam\n"));
         assert!(t.contains(" -> Location:          /lib/Quake 4\n"));
+    }
+
+    fn status_of(e: &Entry) -> String {
+        let t = text(&lines(e, 90, Path::new("/home/me")));
+        let line = t.lines().find(|l| l.contains("Status:")).unwrap();
+        line.split("Status:").nth(1).unwrap().trim().to_string()
+    }
+
+    const THIEF: &str = r#"{"name":"Thief Gold","stores":{"steam":{"id":211740}},
+      "eax":{"api":"directsound3d","versions":["2.0"]}}"#;
+
+    #[test]
+    fn the_status_names_only_the_part_the_game_gets() {
+        let mut thief = Entry::database_only(game(THIEF));
+        thief.status = Status::OnThisPc;
+        thief.store = Some(StoreKind::Steam);
+        thief.path = Some("/lib/Thief Gold".into());
+        assert_eq!(status_of(&thief), "Game found, DSOAL not installed yet");
+        let mut quake = Entry::database_only(game(QUAKE));
+        quake.status = Status::OnThisPc;
+        quake.store = Some(StoreKind::Gog);
+        quake.path = Some("/lib/Quake 4".into());
+        assert_eq!(
+            status_of(&quake),
+            "Game found, OpenAL Soft not installed yet"
+        );
+        assert_eq!(
+            status_of(&Entry::database_only(game(THIEF))),
+            "Game not found on this PC"
+        );
+    }
+
+    #[test]
+    fn an_install_says_which_part_it_put_there() {
+        // The database says OpenAL, but the folder holds DSOAL: the folder wins.
+        let mut quake = Entry::database_only(game(QUAKE));
+        quake.status = Status::Installed;
+        quake.store = Some(StoreKind::Steam);
+        quake.engine = Some(Engine::Dsoal);
+        assert_eq!(status_of(&quake), "DSOAL installed");
+        let manual = Entry {
+            name: "Obscure".into(),
+            status: Status::Manual,
+            game: None,
+            store: None,
+            path: Some("/g/Obscure".into()),
+            engine: Some(Engine::OpenAlSoft),
+        };
+        assert_eq!(status_of(&manual), "OpenAL Soft installed (manual install)");
+    }
+
+    #[test]
+    fn a_location_in_the_home_folder_starts_with_a_tilde() {
+        let mut e = Entry::database_only(game(THIEF));
+        e.status = Status::OnThisPc;
+        e.store = Some(StoreKind::Steam);
+        e.path = Some("/home/me/.local/share/Steam/steamapps/common/Thief Gold".into());
+        let t = text(&lines(&e, 90, Path::new("/home/me")));
+        assert!(t.contains("Location:          ~/.local/share/Steam/steamapps/common/Thief Gold\n"));
+        e.path = Some("/mnt/games/Thief Gold".into());
+        let t = text(&lines(&e, 90, Path::new("/home/me")));
+        assert!(t.contains("Location:          /mnt/games/Thief Gold\n"));
     }
 
     #[test]
@@ -844,8 +933,9 @@ mod tests {
             game: None,
             store: None,
             path: Some("/g/Obscure".into()),
+            engine: None,
         };
-        let t = text(&lines(&e, 60));
+        let t = text(&lines(&e, 60, Path::new("/home/me")));
         assert!(t.contains("System details:"));
         assert!(t.contains("  The game database has no profile for Obscure."));
         assert!(!t.contains("Game details"));

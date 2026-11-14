@@ -151,7 +151,6 @@ pub enum Button {
     Apply,
     Uninstall,
     SoundLog,
-    OtherTools,
     CheckAgain,
     // On the confirm and uninstall screens.
     Confirm,
@@ -235,8 +234,6 @@ pub struct Panel {
     pub sound_log_on: bool,
     /// The panel asked to close; the app drops it.
     pub closed: bool,
-    /// The panel asked for the game menu (VC++, EAX Unified).
-    pub other_tools: bool,
     /// Something was changed on disk, so the game list needs reading again.
     pub changed_disk: bool,
     home: PathBuf,
@@ -269,7 +266,6 @@ impl Panel {
             question: None,
             sound_log_on: false,
             closed: false,
-            other_tools: false,
             changed_disk: false,
             home: home.to_path_buf(),
             untested: ops::untested_from_env(),
@@ -565,16 +561,15 @@ impl Panel {
             Screen::Confirm { .. } => vec![Button::Confirm, Button::Back],
             Screen::Uninstall(_) => vec![Button::Confirm, Button::Back],
             Screen::Run(_) => vec![Button::Back],
-            Screen::Main if self.problem.is_some() => vec![Button::CheckAgain, Button::OtherTools],
+            Screen::Main if self.problem.is_some() => vec![Button::CheckAgain],
             Screen::Main if self.installed.is_some() => {
                 let mut b = vec![Button::Apply, Button::Uninstall];
                 if self.facts.launcher.is_some() {
                     b.push(Button::SoundLog);
                 }
-                b.push(Button::OtherTools);
                 b
             }
-            Screen::Main => vec![Button::Install, Button::OtherTools],
+            Screen::Main => vec![Button::Install],
         }
     }
 
@@ -796,10 +791,6 @@ impl Panel {
             Button::SoundLog => {
                 let level = (!self.sound_log_on).then_some(LogLevel::Full);
                 self.start(vec![Job::SoundLog(level)]);
-            }
-            Button::OtherTools => {
-                self.other_tools = true;
-                self.closed = true;
             }
             Button::CheckAgain => self.reload(),
             Button::Back => {
@@ -1113,11 +1104,11 @@ mod tests {
         let mut p = Panel::open("Test Game", &game, None, &home);
         // Steam's prefix is found through protontricks, which isn't here.
         assert!(p.problem.is_some());
-        assert_eq!(p.buttons(), [Button::CheckAgain, Button::OtherTools]);
+        assert_eq!(p.buttons(), [Button::CheckAgain]);
         p.facts.prefix = Some(home.join(".local/share/Steam/steamapps/compatdata/424242/pfx"));
         p.build();
         assert!(p.problem.is_none(), "{:?}", p.problem);
-        assert_eq!(p.buttons(), [Button::Install, Button::OtherTools]);
+        assert_eq!(p.buttons(), [Button::Install]);
         let default = p.facts.default_plan();
         assert_eq!(p.plan().speakers, default.speakers);
         assert!(!p.dirty());
@@ -1171,5 +1162,88 @@ mod tests {
         assert!(
             matches!(&jobs[..], [Job::Install { plan, .. }] if plan.dsoal_build == Build::Latest)
         );
+    }
+
+    fn screen(p: &Panel, w: u16, h: u16) -> Vec<String> {
+        use ratatui::backend::TestBackend;
+        let mut t = ratatui::Terminal::new(TestBackend::new(w, h)).unwrap();
+        t.draw(|f| view::draw(f, p, f.area(), f.area())).unwrap();
+        let buf = t.backend().buffer().clone();
+        (0..h)
+            .map(|y| (0..w).map(|x| buf[(x, y)].symbol()).collect())
+            .collect()
+    }
+
+    #[test]
+    fn the_page_fills_its_area_and_stacks_when_narrow() {
+        let tmp = tempfile::tempdir().unwrap();
+        let home = tmp.path().join("home");
+        let game = steam_game(&home);
+        let mut p = Panel::open("Test Game", &game, None, &home);
+        p.facts.prefix = Some(home.join(".local/share/Steam/steamapps/compatdata/424242/pfx"));
+        p.build();
+
+        let rows = screen(&p, 130, 40);
+        assert!(rows[0].starts_with('╭') && rows[0].contains("Not installed"));
+        assert!(rows[39].starts_with('╰'), "{}", rows.join("\n"));
+        assert_eq!(
+            row_of(&rows, " Sound "),
+            row_of(&rows, " Setup "),
+            "side by side when wide"
+        );
+
+        // About half of an 120-column window, as in the right pane.
+        let rows = screen(&p, 60, 34);
+        assert!(
+            row_of(&rows, " Setup ") > row_of(&rows, " Sound "),
+            "stacked when narrow"
+        );
+        assert!(
+            rows.iter().any(|r| r.contains("[ Install ]")),
+            "{}",
+            rows.join("\n")
+        );
+    }
+
+    #[test]
+    fn a_narrow_page_puts_each_settings_detail_under_its_title() {
+        let tmp = tempfile::tempdir().unwrap();
+        let home = tmp.path().join("home");
+        let game = steam_game(&home);
+        let mut p = Panel::open("Test Game", &game, None, &home);
+        p.facts.prefix = Some(home.join(".local/share/Steam/steamapps/compatdata/424242/pfx"));
+        p.build();
+        p.fixes = vec![Fix {
+            category: Category::Optional,
+            index: 0,
+            title: "Fix low-res textures".into(),
+            reason: String::new(),
+            follow_up: String::new(),
+            untested: false,
+            status: Status::Missing,
+            plan: Vec::new(),
+            view: Vec::new(),
+            missing_file: Some("Quake4Config.cfg".into()),
+            absent_files: Vec::new(),
+            files: Vec::new(),
+        }];
+        let detail = "waits for Quake4Config.cfg, which the game writes the first time it runs";
+
+        let rows = screen(&p, 130, 40);
+        let title = row_of(&rows, "Fix low-res textures");
+        assert!(rows[title].contains(detail), "one row when it fits");
+
+        let rows = screen(&p, 60, 40);
+        let title = row_of(&rows, "Fix low-res textures");
+        assert!(!rows[title].contains("waits for"));
+        assert!(
+            rows[title + 1].contains("waits for Quake4Config.cfg"),
+            "{}",
+            rows.join("\n")
+        );
+    }
+
+    fn row_of(rows: &[String], s: &str) -> usize {
+        rows.iter().position(|r| r.contains(s)).unwrap()
     }
 }

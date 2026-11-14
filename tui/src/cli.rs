@@ -155,13 +155,6 @@ fn home() -> Result<PathBuf> {
     ))
 }
 
-fn tilde(p: &Path, home: &Path) -> String {
-    match p.strip_prefix(home) {
-        Ok(rest) => format!("~/{}", rest.display()),
-        Err(_) => p.display().to_string(),
-    }
-}
-
 /// How to run protontricks: the program on PATH, or the Flatpak.
 pub fn protontricks() -> Vec<String> {
     let on_path = std::env::var_os("PATH").is_some_and(|p| {
@@ -213,7 +206,7 @@ fn exe_folder(dir: &Path, exe_hint: &str, home: &Path) -> Result<PathBuf> {
         Some((d, exe)) => {
             say(format!(
                 "Using {}, the folder {exe} is in.",
-                tilde(&d, home)
+                library::tilde(&d, home)
             ));
             Ok(d)
         }
@@ -531,7 +524,10 @@ pub fn run(raw: &[String]) -> Result<()> {
 fn status(facts: &Facts, game: Option<&Game>, args: &Args, home: &Path) -> Result<()> {
     let name = game_name(facts, game);
     say(&name);
-    say(format!("  Folder:        {}", tilde(&facts.game_dir, home)));
+    say(format!(
+        "  Folder:        {}",
+        library::tilde(&facts.game_dir, home)
+    ));
     let store = match (facts.store, &facts.heroic) {
         (Some(Store::Steam), _) => format!("Steam (AppID {})", facts.id),
         (_, Some(_)) => "Heroic".to_string(),
@@ -543,7 +539,7 @@ fn status(facts: &Facts, game: Option<&Game>, args: &Args, home: &Path) -> Resul
         facts
             .prefix
             .as_ref()
-            .map_or("not found".to_string(), |p| tilde(p, home))
+            .map_or("not found".to_string(), |p| library::tilde(p, home))
     ));
     say(format!(
         "  Architecture:  {}",
@@ -717,13 +713,16 @@ fn install(
     }
 
     say(format!("Ready to install the EAX fix for {name}:"));
-    say(format!("  Folder:        {}", tilde(&plan.game_dir, home)));
+    say(format!(
+        "  Folder:        {}",
+        library::tilde(&plan.game_dir, home)
+    ));
     for d in &plan.extra_dirs {
-        say(format!("                 {}", tilde(d, home)));
+        say(format!("                 {}", library::tilde(d, home)));
     }
     say(format!(
         "  Prefix:        {}",
-        tilde(&facts.prefix.clone().unwrap_or_default(), home)
+        library::tilde(&facts.prefix.clone().unwrap_or_default(), home)
     ));
     say(format!("  Architecture:  {}-bit", plan.arch));
     say(format!(
@@ -835,7 +834,7 @@ fn install(
                 .split(".bak.")
                 .next()
                 .unwrap_or(""),
-            tilde(b, home)
+            library::tilde(b, home)
         ));
     }
     say(format!("Copied {} files.", r.copied.len()));
@@ -934,7 +933,10 @@ fn uninstall(
         } else {
             ""
         };
-        say(format!("  Remove:        {}{back}", tilde(&f.path, home)));
+        say(format!(
+            "  Remove:        {}{back}",
+            library::tilde(&f.path, home)
+        ));
     }
     if !s.shared_with.is_empty() {
         say("  Kept:          the prefix's files and registry keys, since another game uses the prefix");
@@ -986,7 +988,7 @@ fn uninstall(
     for p in &r.not_removed {
         say(format!(
             "Couldn't remove {}, so it's still listed as part of the EAX fix.",
-            tilde(p, home)
+            library::tilde(p, home)
         ));
     }
     if r.fully_uninstalled {
@@ -1038,7 +1040,7 @@ fn speakers(facts: &Facts, game: Option<&Game>, args: &Args, home: &Path) -> Res
     else {
         bail!(
             "The EAX fix isn't installed in {}. Install it first.",
-            tilde(&facts.game_dir, home)
+            library::tilde(&facts.game_dir, home)
         );
     };
     let old = inst.speakers();
@@ -1084,7 +1086,7 @@ fn speakers(facts: &Facts, game: Option<&Game>, args: &Args, home: &Path) -> Res
     let mut ok = true;
     for f in &inst.alsoft_files {
         if new.write_alsoft(f).is_err() {
-            say(format!("Couldn't write {}.", tilde(f, home)));
+            say(format!("Couldn't write {}.", library::tilde(f, home)));
             ok = false;
         }
     }
@@ -1161,7 +1163,7 @@ fn settings(facts: &Facts, game: Option<&Game>, args: &Args, home: &Path) -> Res
     let Some(inst) = Installed::read(&facts.game_dir, home) else {
         bail!(
             "The EAX fix isn't installed in {}. Install it first.",
-            tilde(&facts.game_dir, home)
+            library::tilde(&facts.game_dir, home)
         );
     };
     let recorded: HashSet<String> = inst.settings.iter().map(|s| s.title.clone()).collect();
@@ -1315,9 +1317,12 @@ fn sound_log(
         ));
         let (dsoal, alsoft) = changes::LogState::default().paths(&game_dir);
         if has_dsoal {
-            say(format!("  {}", tilde(Path::new(&dsoal), &home()?)));
+            say(format!("  {}", library::tilde(Path::new(&dsoal), &home()?)));
         }
-        say(format!("  {}", tilde(Path::new(&alsoft), &home()?)));
+        say(format!(
+            "  {}",
+            library::tilde(Path::new(&alsoft), &home()?)
+        ));
     } else {
         say(format!("The sound log is off for {name}."));
     }

@@ -115,7 +115,10 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
   machine's own winetricks or Wine never runs.
 
 The game panel (`tui/src/panel/`, the user's Optiscaler-Client-style design): Enter on a game
-with a folder opens a full-screen page with its status, every install choice (Sound and Setup
+with a folder opens a page in the right pane, beside the list (`ui::split` gives both; Ctrl-F
+makes it full screen, Ctrl-L puts it under the list; Sound and Setup stack and each setting's
+detail drops to its own row when the pane is narrow; the value list and y/n questions sit over
+the whole body), with its status, every install choice (Sound and Setup
 rows, Enter opens a value list), its game settings as ticks, and buttons. `mod.rs` holds state
 and keys, `view.rs` draws, `run.rs` runs the jobs on a worker thread: steps come back over a
 channel (`Host::step`, which the install and uninstall call where the script prints a phase
@@ -123,9 +126,9 @@ task), questions (closing a launcher, a build with no checksum) open a y/n popup
 goes back over a second channel. On an installed game Apply lists the changes first and only
 reinstalls for engine, builds, override, VC++, architecture, COM routing, limits or EAX Unified;
 speakers and settings change in place (`engine/ops.rs`, shared with the headless commands).
-`engine/installed.rs`'s `InstalledState` is what the rows start at. "Other tools…" closes the
-page and opens the old action menu (VC++, EAX Unified, the script). `EAX_RESTORE_ENGINE=bash`
-keeps Enter on the old menu. Engine code stays prompt-free: read state, take choices, plan,
+`engine/installed.rs`'s `InstalledState` is what the rows start at. The old action menu is
+only for a game with no folder on this PC, and for `EAX_RESTORE_ENGINE=bash`, which keeps
+Enter on it; the page itself covers everything that menu did. Engine code stays prompt-free: read state, take choices, plan,
 apply.
 
 Headless mode (`tui/src/cli.rs`): `eax-restore status|install|uninstall|speakers|settings|sound-log
