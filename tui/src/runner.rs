@@ -63,12 +63,29 @@ pub fn run(script: &Path, env: &[(&str, String)], database: Option<&Path>) {
     for (k, v) in env {
         cmd.env(k, v);
     }
+    run_on_terminal(cmd);
+}
+
+/// Runs this program's own headless command (`args`), the Rust engine, the
+/// same way.
+pub fn run_engine(args: &[String], database: Option<&Path>) {
+    let exe = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("eax-restore"));
+    let mut cmd = Command::new(exe);
+    cmd.args(args);
+    if let Some(db) = database {
+        cmd.arg("--database").arg(db);
+    }
+    run_on_terminal(cmd);
+}
+
+fn run_on_terminal(mut cmd: Command) {
     // The alternate screen, like the TUI's own, so quitting leaves the shell's
     // screen as it was.
     print!("\x1b[?1049h\x1b[2J\x1b[H");
     let _ = io::stdout().flush();
     match cmd.status() {
-        Ok(s) if s.success() => {}
+        // The engine's commands say why they stopped themselves.
+        Ok(s) if s.success() || s.code() == Some(1) => {}
         Ok(s) => match s.code() {
             Some(code) => println!("\nThe installer stopped with exit status {code}."),
             None => println!("\nThe installer was stopped before it finished."),

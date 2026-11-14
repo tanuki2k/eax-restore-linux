@@ -256,6 +256,18 @@ fn game_name(facts: &Facts, game: Option<&Game>) -> String {
         })
 }
 
+/// One line from the terminal, trimmed; `None` with no terminal to ask on.
+fn ask(question: &str) -> Result<Option<String>> {
+    if !std::io::stdin().is_terminal() {
+        return Ok(None);
+    }
+    print!("\n{question}\n> ");
+    std::io::stdout().flush()?;
+    let mut line = String::new();
+    std::io::stdin().lock().read_line(&mut line)?;
+    Ok(Some(line.trim().to_string()))
+}
+
 fn confirm(question: &str, args: &Args) -> Result<bool> {
     if args.on("--yes") {
         return Ok(true);
@@ -1048,11 +1060,14 @@ fn report_change(r: &apply::UpdateReport) {
 
 fn speakers(facts: &Facts, game: Option<&Game>, args: &Args, home: &Path) -> Result<()> {
     let name = game_name(facts, game);
-    let Some(setup) = args.positional.get(1) else {
-        bail!("Which speaker setup? eax-restore speakers GAME_FOLDER stereo|speakers|headphones|matrix|quad|5.1|6.1|7.1");
-    };
     let hrtf = !matches!(args.get("--hrtf"), Some("off"));
-    let new = speakers_from(setup, hrtf)?;
+    let new = match args.positional.get(1) {
+        Some(setup) => speakers_from(setup, hrtf)?,
+        None => match pick_speakers()? {
+            Some(s) => s,
+            None => bail!("There's no terminal to ask which speaker setup to use, so give it on the command line, like eax-restore speakers GAME_FOLDER 5.1 (stereo, speakers, headphones, matrix, quad, 5.1, 6.1 or 7.1)."),
+        },
+    };
     let Some(inst) = Installed::read(&facts.game_dir, home).filter(|i| !i.alsoft_files.is_empty())
     else {
         bail!(
@@ -1116,6 +1131,62 @@ fn speakers(facts: &Facts, game: Option<&Game>, args: &Args, home: &Path) -> Res
     Ok(())
 }
 
+/// "1", "1 or 2", "1, 2 or 3": the numbers a player can type.
+fn numbers_text(n: usize) -> String {
+    match n {
+        0 | 1 => "1".into(),
+        _ => {
+            let head: Vec<String> = (1..n).map(|i| i.to_string()).collect();
+            format!("{} or {n}", head.join(", "))
+        }
+    }
+}
+
+/// The speaker setup, asked on the terminal; `None` with no terminal.
+fn pick_speakers() -> Result<Option<Speakers>> {
+    let choices: [(&str, Speakers); 8] = [
+        (
+            "Headphones, with 3D positioning",
+            Speakers::stereo(Listening::Headphones, true),
+        ),
+        (
+            "Headphones, without 3D positioning",
+            Speakers::stereo(Listening::Headphones, false),
+        ),
+        ("Two speakers", Speakers::stereo(Listening::Speakers, false)),
+        (
+            "Stereo, picking headphones or speakers automatically",
+            Speakers::stereo(Listening::Auto, true),
+        ),
+        (
+            "Pro Logic surround sound, for a receiver or soundbar",
+            Speakers::matrix(),
+        ),
+        ("4.0 surround sound", Speakers::surround(Layout::Quad)),
+        ("5.1 surround sound", Speakers::surround(Layout::Surround51)),
+        ("7.1 surround sound", Speakers::surround(Layout::Surround71)),
+    ];
+    if !std::io::stdin().is_terminal() {
+        return Ok(None);
+    }
+    say("\nWhat are you listening on?");
+    for (i, (label, _)) in choices.iter().enumerate() {
+        say(format!("  {}) {label}", i + 1));
+    }
+    loop {
+        let Some(answer) = ask(&format!("Type a number from 1 to {}:", choices.len()))? else {
+            return Ok(None);
+        };
+        match answer.parse::<usize>() {
+            Ok(n) if (1..=choices.len()).contains(&n) => return Ok(Some(choices[n - 1].1)),
+            _ => say(format!(
+                "That's not a valid option — please type a number from 1 to {}.",
+                choices.len()
+            )),
+        }
+    }
+}
+
 fn settings(facts: &Facts, game: Option<&Game>, args: &Args, home: &Path) -> Result<()> {
     let name = game_name(facts, game);
     let Some(g) = game else {
@@ -1132,7 +1203,57 @@ fn settings(facts: &Facts, game: Option<&Game>, args: &Args, home: &Path) -> Res
         .into_iter()
         .filter(Fix::shown)
         .collect();
-    let (on, off) = (args.all("--on"), args.all("--off"));
+    let (mut on, mut off) = (args.all("--on"), args.all("--off"));
+    let pickable: Vec<&Fix> = fixes
+        .iter()
+        .filter(|f| matches!(f.status, Status::Offer | Status::Applied))
+        .collect();
+    if on.is_empty() && off.is_empty() && !pickable.is_empty() && std::io::stdin().is_terminal() {
+        say(format!("\nGame settings for {name}:"));
+        for f in &fixes {
+            let n = pickable.iter().position(|p| std::ptr::eq(*p, f));
+            let number = n.map_or("   ".to_string(), |n| format!("{:>2})", n + 1));
+            say(format!(
+                "  {number} {} — {}",
+                f.title,
+                status_word(f, &name)
+            ));
+        }
+        loop {
+            let answer = ask("Type the numbers of the settings to switch on or off (e.g. \"1 2\"), or press Enter to leave them as they are:")?
+                .unwrap_or_default();
+            let picks: Option<Vec<usize>> = answer
+                .split([' ', ','])
+                .filter(|w| !w.is_empty())
+                .map(|w| {
+                    w.parse::<usize>()
+                        .ok()
+                        .filter(|n| (1..=pickable.len()).contains(n))
+                })
+                .collect();
+            match picks {
+                Some(p) => {
+                    for n in p {
+                        let f = pickable[n - 1];
+                        if f.status == Status::Applied {
+                            off.push(f.title.clone());
+                        } else {
+                            on.push(f.title.clone());
+                        }
+                    }
+                    break;
+                }
+                None => say(format!(
+                    "That's not a valid option — please type {}.",
+                    numbers_text(pickable.len())
+                )),
+            }
+        }
+        if on.is_empty() && off.is_empty() {
+            say("Nothing was changed.");
+            return Ok(());
+        }
+    }
     if on.is_empty() && off.is_empty() {
         if fixes.is_empty() {
             say(format!("{name} has no game settings to change."));
@@ -1185,16 +1306,18 @@ fn sound_log(
     launchers: &mut Launchers,
 ) -> Result<()> {
     let name = game_name(facts, game);
-    let level = match args.positional.get(1).map(String::as_str) {
-        Some("full") | Some("on") => Some(LogLevel::Full),
-        Some("basic") => Some(LogLevel::Basic),
-        Some("off") => None,
-        _ => bail!("Turn the sound log full, basic or off? eax-restore sound-log GAME_FOLDER full|basic|off"),
-    };
     let Some(t) = facts.launcher.clone() else {
         bail!("{} has no settings saved for {name} yet. If you just installed {name}, launch it once, close it, and try again.", launcher_label(facts));
     };
     let state = changes::log_state(&t);
+    let level = match args.positional.get(1).map(String::as_str) {
+        Some("full") | Some("on") => Some(LogLevel::Full),
+        Some("basic") => Some(LogLevel::Basic),
+        Some("off") => None,
+        // From the TUI: switch it the other way.
+        None if std::io::stdin().is_terminal() => (!state.on()).then_some(LogLevel::Full),
+        _ => bail!("There's no terminal to ask whether the sound log should be full, basic or off, so give it on the command line, like eax-restore sound-log GAME_FOLDER full."),
+    };
     if level.is_none() && !state.on() {
         say(format!("The sound log is already off for {name}."));
         return Ok(());
@@ -1226,9 +1349,9 @@ fn sound_log(
         ));
         let (dsoal, alsoft) = changes::LogState::default().paths(&game_dir);
         if has_dsoal {
-            say(format!("  {dsoal}"));
+            say(format!("  {}", tilde(Path::new(&dsoal), &home()?)));
         }
-        say(format!("  {alsoft}"));
+        say(format!("  {}", tilde(Path::new(&alsoft), &home()?)));
     } else {
         say(format!("The sound log is off for {name}."));
     }

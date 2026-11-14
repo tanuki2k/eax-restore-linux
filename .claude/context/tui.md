@@ -123,7 +123,12 @@ Headless mode (`tui/src/cli.rs`): `eax-restore status|install|uninstall|speakers
 GAME_FOLDER [options]` (`eax-restore --help` lists them) runs the Rust engine with no TUI and
 no Bash script: the script's defaults, flags to change them, and one "(Y/n)" before any change
 (`--yes` skips it; with no terminal and no `--yes` nothing changes). A running Steam or Heroic is
-only closed with `--close-launcher`. `EAX_RESTORE_PROC_ROOT` (tests only) points the
+only closed with `--close-launcher`. The TUI's Enter menu runs these commands
+(`actions::engine_args`, `runner::run_engine`) for install, reinstall, uninstall, speakers, game
+settings and sound logging, so from the TUI those use the Rust engine; VC++ and EAX Unified,
+and an install with no known folder, still run the script, and `EAX_RESTORE_ENGINE=bash` sends
+every action to the script. Started from a terminal with no choice given, `speakers` and
+`settings` ask for it and `sound-log` switches the log the other way. `EAX_RESTORE_PROC_ROOT` (tests only) points the
 launcher and game checks at an empty folder instead of `/proc`, so a test never sees or closes a
 real launcher. `tui/tests/headless.rs` runs the program in the fake world: its install matches
 the script's default install, and every command then the uninstall leaves the world as it was.

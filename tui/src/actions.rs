@@ -75,6 +75,26 @@ fn store_game(e: &Entry) -> Option<String> {
     }
 }
 
+/// The headless command (`eax-restore <command> GAME_FOLDER`) that does this
+/// action with the Rust engine, when there is one and the game's folder is
+/// known. `EAX_RESTORE_ENGINE=bash` sends every action to the script instead.
+pub fn engine_args(e: &Entry, a: Action) -> Option<Vec<String>> {
+    if std::env::var("EAX_RESTORE_ENGINE").is_ok_and(|v| v == "bash") {
+        return None;
+    }
+    let command = match a {
+        Action::Install | Action::Reinstall => "install",
+        Action::Uninstall => "uninstall",
+        Action::Speakers => "speakers",
+        Action::GameSettings => "settings",
+        Action::DsoalLog => "sound-log",
+        // No Rust command yet.
+        Action::Vcrun | Action::EaxUnified => return None,
+    };
+    let path = e.path.as_ref()?;
+    Some(vec![command.to_string(), path.display().to_string()])
+}
+
 /// The environment variables that start the script on this game and action.
 pub fn script_env(e: &Entry, a: Action) -> Vec<(&'static str, String)> {
     let mut env = vec![("EAX_RESTORE_ACTION", a.script_name().to_string())];
@@ -109,6 +129,25 @@ mod tests {
 
     fn get<'a>(env: &'a [(&str, String)], k: &str) -> Option<&'a str> {
         env.iter().find(|(n, _)| *n == k).map(|(_, v)| v.as_str())
+    }
+
+    #[test]
+    fn actions_with_a_rust_command_use_it() {
+        let e = entry(
+            Status::Installed,
+            Some(StoreKind::Steam),
+            Some("/lib/Alpha"),
+        );
+        assert_eq!(
+            engine_args(&e, Action::Uninstall),
+            Some(vec!["uninstall".to_string(), "/lib/Alpha".to_string()])
+        );
+        assert_eq!(engine_args(&e, Action::Reinstall).unwrap()[0], "install");
+        assert_eq!(engine_args(&e, Action::Vcrun), None);
+        assert_eq!(engine_args(&e, Action::EaxUnified), None);
+        // A game with no known folder is left to the script, which asks.
+        let nowhere = entry(Status::NotOnThisPc, None, None);
+        assert_eq!(engine_args(&nowhere, Action::Install), None);
     }
 
     #[test]

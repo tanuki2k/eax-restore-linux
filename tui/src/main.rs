@@ -165,6 +165,16 @@ fn run(
         let Some(launch) = app.launch.take() else {
             continue;
         };
+        if let Some(args) = &launch.args {
+            ratatui::restore();
+            runner::run_engine(args, chosen_db);
+            *terminal = ratatui::init();
+            if let Ok((width, _)) = ratatui::crossterm::terminal::size() {
+                app.resize(width);
+            }
+            app.replace_games(games::build(db, home, state_file));
+            continue;
+        }
         let script = match runner::find_script() {
             Some(s) => s,
             None => {

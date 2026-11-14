@@ -70,7 +70,10 @@ pub struct Menu {
 
 /// What `main` runs outside the TUI: the environment for the Bash installer.
 pub struct Launch {
+    /// For the script.
     pub env: Vec<(&'static str, String)>,
+    /// For the Rust engine's headless command, when the action has one.
+    pub args: Option<Vec<String>>,
 }
 
 pub struct App {
@@ -226,8 +229,10 @@ impl App {
                 let action = menu.actions[menu.selected];
                 self.menu = None;
                 if let Some(&game) = self.visible.get(self.selected) {
+                    let e = &self.games[game];
                     self.launch = Some(Launch {
-                        env: actions::script_env(&self.games[game], action),
+                        env: actions::script_env(e, action),
+                        args: actions::engine_args(e, action),
                     });
                 }
             }
@@ -254,8 +259,10 @@ impl App {
                     ("EAX_RESTORE_ACTION", "install".to_string()),
                     ("EAX_RESTORE_GAME_DIR", p.dir.display().to_string()),
                 ];
+                let args = (!std::env::var("EAX_RESTORE_ENGINE").is_ok_and(|v| v == "bash"))
+                    .then(|| vec!["install".to_string(), p.dir.display().to_string()]);
                 self.picker = None;
-                self.launch = Some(Launch { env });
+                self.launch = Some(Launch { env, args });
             }
             _ => {}
         }
