@@ -22,3 +22,8 @@ tempfile = "3"
 lto = true
 codegen-units = 1
 strip = true
+
+# Dependencies run optimised even in debug builds: unoptimised, the regex
+# crate takes minutes to search a modern game's binaries.
+[profile.dev.package."*"]
+opt-level = 3

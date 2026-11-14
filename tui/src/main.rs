@@ -129,6 +129,7 @@ fn main() -> Result<()> {
 
     let mut app = app::App::new(entries);
     app.set_home(home.clone());
+    app.use_panel = std::env::var("EAX_RESTORE_ENGINE").map_or(true, |v| v != "bash");
     if let Ok((width, _)) = ratatui::crossterm::terminal::size() {
         app.resize(width);
     }
@@ -157,10 +158,21 @@ fn run(
 ) -> Result<()> {
     while !app.quit {
         terminal.draw(|f| ui::draw(f, app))?;
-        match event::read()? {
-            Event::Key(key) if key.kind == KeyEventKind::Press => app.handle_key(key),
-            Event::Resize(width, _) => app.resize(width),
-            _ => {}
+        // While the panel's work runs, redraw for its progress between keys.
+        let running = app.panel.as_ref().is_some_and(|p| p.running());
+        if !running || event::poll(std::time::Duration::from_millis(150))? {
+            match event::read()? {
+                Event::Key(key) if key.kind == KeyEventKind::Press => app.handle_key(key),
+                Event::Resize(width, _) => app.resize(width),
+                _ => {}
+            }
+        }
+        if let Some(p) = app.panel.as_mut() {
+            p.tick();
+        }
+        if app.rescan && app.panel.is_none() {
+            app.rescan = false;
+            app.replace_games(games::build(db, home, state_file));
         }
         let Some(launch) = app.launch.take() else {
             continue;

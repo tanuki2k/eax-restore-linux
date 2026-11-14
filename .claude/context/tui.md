@@ -114,10 +114,19 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
   oracle test puts `tests/fixtures/bin` first on PATH for the Rust side as well, so the
   machine's own winetricks or Wine never runs.
 
-The planned interface (the user's design, not built yet) is a panel like
-Optiscaler-Client's: every choice for an install or uninstall on one screen, plus
-the install's status. So engine code stays prompt-free: read state, take choices,
-plan, apply.
+The game panel (`tui/src/panel/`, the user's Optiscaler-Client-style design): Enter on a game
+with a folder opens a full-screen page with its status, every install choice (Sound and Setup
+rows, Enter opens a value list), its game settings as ticks, and buttons. `mod.rs` holds state
+and keys, `view.rs` draws, `run.rs` runs the jobs on a worker thread: steps come back over a
+channel (`Host::step`, which the install and uninstall call where the script prints a phase
+task), questions (closing a launcher, a build with no checksum) open a y/n popup and the answer
+goes back over a second channel. On an installed game Apply lists the changes first and only
+reinstalls for engine, builds, override, VC++, architecture, COM routing, limits or EAX Unified;
+speakers and settings change in place (`engine/ops.rs`, shared with the headless commands).
+`engine/installed.rs`'s `InstalledState` is what the rows start at. "Other tools…" closes the
+page and opens the old action menu (VC++, EAX Unified, the script). `EAX_RESTORE_ENGINE=bash`
+keeps Enter on the old menu. Engine code stays prompt-free: read state, take choices, plan,
+apply.
 
 Headless mode (`tui/src/cli.rs`): `eax-restore status|install|uninstall|speakers|settings|sound-log
 GAME_FOLDER [options]` (`eax-restore --help` lists them) runs the Rust engine with no TUI and

@@ -17,6 +17,7 @@ pub mod install;
 pub mod installed;
 pub mod launcher;
 pub mod manifest;
+pub mod ops;
 pub mod prefix;
 pub mod prepare;
 pub mod process;

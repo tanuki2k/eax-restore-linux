@@ -11,6 +11,7 @@ pub mod filters;
 pub mod games;
 pub mod help;
 pub mod library;
+pub mod panel;
 pub mod picker;
 pub mod profile;
 pub mod runner;

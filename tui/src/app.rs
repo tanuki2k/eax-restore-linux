@@ -79,6 +79,13 @@ pub struct Launch {
 pub struct App {
     pub games: Vec<Entry>,
     pub menu: Option<Menu>,
+    /// The open game's panel, full screen.
+    pub panel: Option<crate::panel::Panel>,
+    /// Enter opens the panel rather than the action menu (off in tests, and
+    /// with EAX_RESTORE_ENGINE=bash).
+    pub use_panel: bool,
+    /// The panel changed something on disk, so the list needs a fresh scan.
+    pub rescan: bool,
     /// The right pane takes the whole screen (Ctrl-F).
     pub zoom: bool,
     /// The F1 key list is open.
@@ -119,6 +126,9 @@ impl App {
         let mut app = App {
             games,
             menu: None,
+            panel: None,
+            use_panel: false,
+            rescan: false,
             zoom: false,
             help: false,
             help_scroll: 0,
@@ -314,6 +324,22 @@ impl App {
     }
 
     fn open_menu(&mut self) {
+        if self.use_panel {
+            if let Some(e) = self.current().filter(|e| e.path.is_some()) {
+                let dir = e.path.clone().expect("filtered");
+                self.panel = Some(crate::panel::Panel::open(
+                    &e.name,
+                    &dir,
+                    e.game.clone(),
+                    &self.home,
+                ));
+                return;
+            }
+        }
+        self.open_action_menu();
+    }
+
+    fn open_action_menu(&mut self) {
         if let Some(e) = self.current() {
             self.menu = Some(Menu {
                 actions: actions::available(e),
@@ -368,6 +394,21 @@ impl App {
         }
     }
 
+    fn handle_panel_key(&mut self, key: KeyEvent) {
+        let Some(p) = self.panel.as_mut() else { return };
+        p.handle_key(key);
+        if p.changed_disk {
+            self.rescan = true;
+        }
+        if p.closed {
+            let tools = p.other_tools;
+            self.panel = None;
+            if tools {
+                self.open_action_menu();
+            }
+        }
+    }
+
     fn handle_key_inner(&mut self, key: KeyEvent) {
         self.message.clear();
         if self.picker.is_some() {
@@ -378,6 +419,17 @@ impl App {
         }
         if self.help {
             return self.handle_help_key(key);
+        }
+        if self.panel.is_some() {
+            if key.code == KeyCode::F(1)
+                && self
+                    .panel
+                    .as_ref()
+                    .is_some_and(|p| p.list.is_none() && p.question.is_none())
+            {
+                return self.open_help();
+            }
+            return self.handle_panel_key(key);
         }
         if self.zoom {
             return self.handle_zoom_key(key);

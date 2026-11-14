@@ -367,11 +367,13 @@ pub fn execute(plan: &Plan, cache: &Cache, eax: &Installer, host: &mut dyn Insta
         .filter(|p| !p.path.as_os_str().is_empty() && p.path.join("drive_c/windows").is_dir());
 
     if let Some(p) = &plan.prefix {
+        host.step("Installing Creative's OpenAL runtime into the prefix");
         r.openal_runtime = p.install_openal_runtime();
     }
     let mut vcrun_record: Option<&[u8]> = None;
     match (&plan.vcrun, &plan.prefix) {
         (Vcrun::Install, Some(p)) => {
+            host.step("Installing the MS VC++ 2022 Redistributable");
             let rep = vcrun::install(
                 p,
                 game_dir,
@@ -387,6 +389,7 @@ pub fn execute(plan: &Plan, cache: &Cache, eax: &Installer, host: &mut dyn Insta
         (Vcrun::OverridesOnly, Some(p)) => {
             // Recorded even if setting them failed, so uninstall still tries
             // to clear any that did get written.
+            host.step("Setting up the VC++ runtime that's already in the prefix");
             vcrun::set_overrides(p, game_dir, true);
             vcrun_record = Some(b"VCRUN:OVERRIDES");
         }
@@ -394,6 +397,7 @@ pub fn execute(plan: &Plan, cache: &Cache, eax: &Installer, host: &mut dyn Insta
     }
     let mut eax_recorded = false;
     if let (true, Some(p)) = (plan.eax_unified, &plan.prefix) {
+        host.step("Installing Creative's EAX Unified into the prefix");
         let o = eax_unified::install(
             p,
             &cache.root.join("eax-unified"),
@@ -417,8 +421,12 @@ pub fn execute(plan: &Plan, cache: &Cache, eax: &Installer, host: &mut dyn Insta
         append(&m, b"EAXUNIFIED");
     }
 
+    host.step("Copying the files into the game's folder");
     for dir in std::iter::once(game_dir).chain(&plan.extra_dirs) {
         deploy_into(dir, &list, &prev, &stamp, &m, &mut r);
+    }
+    if prefix_ready.is_some() {
+        host.step("Copying the files into the prefix");
     }
     if let Some(p) = prefix_ready {
         let (copied, failed) =
@@ -430,6 +438,7 @@ pub fn execute(plan: &Plan, cache: &Cache, eax: &Installer, host: &mut dyn Insta
 
     // alsoft.ini, written fresh, then the profile's values on top, then the
     // same file into every extra exe folder.
+    host.step("Writing alsoft.ini");
     let ini = game_dir.join("alsoft.ini");
     match handle_conflict(&ini, &prev.files, &stamp) {
         Cleared::Failed => r.failures.push(ini.display().to_string()),
@@ -486,6 +495,7 @@ pub fn execute(plan: &Plan, cache: &Cache, eax: &Installer, host: &mut dyn Insta
     // Companion apps: the same prefix steps in each one's own prefix.
     let mut companion_launchers = Vec::new();
     for c in &plan.companions {
+        host.step(&format!("Setting up {}'s Proton prefix", c.name));
         let tag = format!("\t{}", c.app_id);
         let p = &c.prefix;
         if c.vcrun == Vcrun::Install
@@ -526,6 +536,10 @@ pub fn execute(plan: &Plan, cache: &Cache, eax: &Installer, host: &mut dyn Insta
 
     // The launcher last of the deploy steps, so it's closed only once.
     if let Override::Launcher(t) = &over {
+        host.step(&format!(
+            "Setting the DLL override in {}",
+            t.launcher.label()
+        ));
         over = launcher_override(t, plan, &prev, &m, host, &mut r);
         // As in the script: the companions' launch options are written once
         // the launcher is closed, even when the game's own didn't save.
@@ -575,6 +589,9 @@ pub fn execute(plan: &Plan, cache: &Cache, eax: &Installer, host: &mut dyn Insta
 
     // Always, even with nothing new: it also carries the last install's
     // settings that are still in effect into the new manifest.
+    if !plan.game_settings.is_empty() {
+        host.step("Changing the game's settings");
+    }
     let settings = apply::apply(
         &plan.game_settings,
         &apply::Settings {

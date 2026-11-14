@@ -306,6 +306,9 @@ pub fn execute(s: &Survey, c: &Choices, host: &mut dyn UninstallHost, when: &str
     }
 
     // Game files, then the originals back in their place.
+    if !c.remove.is_empty() {
+        host.step("Removing the files and putting the originals back");
+    }
     let chosen: Vec<&Removal> = s
         .files
         .iter()
@@ -343,6 +346,12 @@ pub fn execute(s: &Survey, c: &Choices, host: &mut dyn UninstallHost, when: &str
     let _ = manifest::forget(&s.manifest, &removed_lines);
 
     // The launchers' DLL overrides.
+    if s.launcher_lines()
+        .iter()
+        .any(|l| !c.keep_launcher.contains(l))
+    {
+        host.step("Removing the DLL override from the launcher");
+    }
     for raw in &s.recorded.launcher {
         let line = String::from_utf8_lossy(raw).into_owned();
         let Some(rec) = LauncherRecord::parse(&line) else {
@@ -373,12 +382,17 @@ pub fn execute(s: &Survey, c: &Choices, host: &mut dyn UninstallHost, when: &str
 
     let mut registry_cleaned = false;
     if let Some(work) = s.registry_work(c) {
+        host.step("Removing the registry changes");
         registry_cleaned = host.remove_registry(&work);
         r.registry_cleaned = Some(registry_cleaned);
     }
     let vcrun_removed = s.vcrun_present && c.remove_vcrun;
     if vcrun_removed {
+        host.step("Removing the MS VC++ 2022 Redistributable");
         host.remove_vcrun();
+    }
+    if s.recorded.eax_unified {
+        host.step("Removing Creative's EAX Unified");
     }
     let eax_unified_removed = s.recorded.eax_unified && host.remove_eax_unified();
     for co in &s.recorded.companions {
@@ -400,6 +414,9 @@ pub fn execute(s: &Survey, c: &Choices, host: &mut dyn UninstallHost, when: &str
         }
     }
     let mut registry_quiet: Option<bool> = None;
+    if !c.revert.is_empty() {
+        host.step("Putting the game's settings back");
+    }
     for g in &c.revert {
         let mut restored = 0;
         for line in &g.lines {

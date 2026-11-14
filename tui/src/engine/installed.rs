@@ -9,6 +9,7 @@ use super::config::paths::game_install_root;
 use super::files;
 use super::game_settings;
 use super::identify::{heroic_installed_jsons, identify_game_dir, Identified};
+use super::install::Engine;
 use super::manifest;
 use super::speakers::Speakers;
 use crate::db::Game;
@@ -30,6 +31,84 @@ pub struct Installed {
     pub prefix: Option<PathBuf>,
     /// The game settings it changed, by setting.
     pub settings: Vec<RevertGroup>,
+    /// What the last install chose, as far as its manifest and files say.
+    pub state: InstalledState,
+}
+
+/// Where an install put the DLL override.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OverrideKind {
+    Launcher,
+    Registry,
+    /// Neither: the player set it by hand.
+    Manual,
+}
+
+/// What an install chose. The DSOAL and OpenAL Soft builds aren't recorded,
+/// so they aren't here.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InstalledState {
+    pub engine: Engine,
+    pub over: OverrideKind,
+    /// 32 or 64, from which system folder the prefix's DLLs went in.
+    pub arch: Option<u8>,
+    /// The VC++ runtime was installed or set up by it.
+    pub vcrun: bool,
+    pub com_routing: bool,
+    pub eax_unified: bool,
+    /// The generated alsoft.ini has the advanced tweaks.
+    pub advanced_limits: bool,
+}
+
+fn state_from(lines: &[&[u8]], game_dir: &Path, alsoft: Option<&PathBuf>) -> InstalledState {
+    let game = game_dir.as_os_str().as_bytes();
+    let has = |l: &[u8]| lines.contains(&l);
+    let ours = |name: &[u8]| {
+        lines.iter().any(|l| {
+            l.len() > game.len() + 1
+                && l.starts_with(game)
+                && l[game.len()] == b'/'
+                && l[game.len() + 1..].eq_ignore_ascii_case(name)
+        })
+    };
+    let engine = if ours(b"OpenAL32.dll") && !ours(b"dsound.dll") {
+        Engine::OpenAlSoft
+    } else {
+        Engine::Dsoal
+    };
+    let over = if lines.iter().any(|l| l.starts_with(b"LAUNCHER:")) {
+        OverrideKind::Launcher
+    } else if lines
+        .iter()
+        .any(|l| l.starts_with(b"REGISTRY:OVERRIDE") && !l.contains(&b'\t'))
+    {
+        OverrideKind::Registry
+    } else {
+        OverrideKind::Manual
+    };
+    let arch = lines.iter().find_map(|l| {
+        let text = String::from_utf8_lossy(l);
+        if text.contains("/drive_c/windows/syswow64/") {
+            Some(32)
+        } else if let Some(at) = text.find("/drive_c/windows/system32/") {
+            // system32 is 64-bit only on a prefix that also has syswow64.
+            let wow = Path::new(&text[..at]).join("drive_c/windows/syswow64");
+            Some(if wow.is_dir() { 64 } else { 32 })
+        } else {
+            None
+        }
+    });
+    InstalledState {
+        engine,
+        over,
+        arch,
+        vcrun: has(b"VCRUN") || has(b"VCRUN:OVERRIDES"),
+        com_routing: has(b"REGISTRY:COM"),
+        eax_unified: has(b"EAXUNIFIED"),
+        advanced_limits: alsoft.is_some_and(|f| {
+            std::fs::read_to_string(f).is_ok_and(|t| t.contains("(Advanced Tweaks)"))
+        }),
+    }
 }
 
 fn has_dotdot(line: &[u8]) -> bool {
@@ -81,7 +160,7 @@ impl Installed {
         );
         let root = install_root.as_os_str().as_bytes();
         let lines: Vec<&[u8]> = data.split(|&b| b == b'\n').collect();
-        let alsoft_files = lines
+        let alsoft_files: Vec<PathBuf> = lines
             .iter()
             .filter(|l| l.starts_with(b"/") && l.ends_with(b"/alsoft.ini") && !has_dotdot(l))
             .filter(|l| files::path_in_scope(l, root))
@@ -101,9 +180,10 @@ impl Installed {
             manifest: manifest_path,
             identified,
             install_root,
-            alsoft_files,
             prefix,
             settings: recorded_settings(&data),
+            state: state_from(&lines, game_dir, alsoft_files.first()),
+            alsoft_files,
         })
     }
 
@@ -186,6 +266,18 @@ mod tests {
         assert_eq!(i.alsoft_files, vec![game.join("alsoft.ini")]);
         assert_eq!(i.prefix.as_deref(), Some(pfx.as_path()));
         assert_eq!(i.speakers(), Some(Speakers::surround(Layout::Surround51)));
+        assert_eq!(
+            i.state,
+            InstalledState {
+                engine: Engine::Dsoal,
+                over: OverrideKind::Manual,
+                arch: Some(32),
+                vcrun: false,
+                com_routing: false,
+                eax_unified: false,
+                advanced_limits: false,
+            }
+        );
         let titles: Vec<_> = i
             .settings
             .iter()

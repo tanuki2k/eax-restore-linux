@@ -6,10 +6,10 @@
 use crate::db::{Database, Game};
 use crate::engine::apply::{self, RevertGroup};
 use crate::engine::builds::{self, Build, Cache, Curl, Got, Pins};
-use crate::engine::config::{self, Format};
+use crate::engine::config;
 use crate::engine::detect;
 use crate::engine::eax_unified::Installer;
-use crate::engine::game_settings::{self, Category, Fix, Purpose, Status, Survey};
+use crate::engine::game_settings::{self, Category, Fix, Purpose, Status};
 use crate::engine::host::SystemHost;
 use crate::engine::identify::Store;
 use crate::engine::install::{self, Engine, Override, Vcrun};
@@ -17,6 +17,7 @@ use crate::engine::installed::Installed;
 use crate::engine::launcher::changes::{self, LogLevel};
 use crate::engine::launcher::control::{self, Control};
 use crate::engine::launcher::target::{Launcher, Target};
+use crate::engine::ops;
 use crate::engine::prepare::{self, Facts};
 use crate::engine::speakers::{Layout, Listening, Speakers};
 use crate::engine::uninstall::{self, Choices, Location, Surveyed};
@@ -162,7 +163,7 @@ fn tilde(p: &Path, home: &Path) -> String {
 }
 
 /// How to run protontricks: the program on PATH, or the Flatpak.
-fn protontricks() -> Vec<String> {
+pub fn protontricks() -> Vec<String> {
     let on_path = std::env::var_os("PATH").is_some_and(|p| {
         std::env::split_paths(&p).any(|d| wine::is_executable(&d.join("protontricks")))
     });
@@ -348,7 +349,7 @@ impl Launchers {
     }
 }
 
-fn eax_installer() -> Installer {
+pub fn eax_installer() -> Installer {
     Installer::for_branch(if fetch::CHANNEL == "dev" {
         "dev"
     } else {
@@ -415,21 +416,7 @@ fn build_from(v: &str) -> Result<Build> {
 }
 
 fn include_untested(args: &Args) -> bool {
-    args.on("--untested")
-        || std::env::var("EAX_RESTORE_UNTESTED_SETTINGS")
-            .is_ok_and(|v| matches!(v.to_lowercase().as_str(), "1" | "true" | "yes" | "y"))
-}
-
-fn crash_markers(game: Option<&Game>) -> HashMap<String, String> {
-    game.map(|g| {
-        g.game_config
-            .files
-            .iter()
-            .filter(|(_, f)| !f.crash_marker.is_empty())
-            .map(|(n, f)| (n.clone(), f.crash_marker.clone()))
-            .collect()
-    })
-    .unwrap_or_default()
+    args.on("--untested") || ops::untested_from_env()
 }
 
 fn survey(
@@ -440,20 +427,14 @@ fn survey(
     recorded: HashSet<String>,
     args: &Args,
 ) -> Vec<Fix> {
-    let survey = Survey {
-        store: facts.store.unwrap_or(Store::Steam),
-        places: config::paths::Places {
-            game_dir: &facts.game_dir,
-            install_root: &facts.install_root,
-            prefix: facts.prefix.as_deref(),
-            user: &std::env::var("USER").unwrap_or_default(),
-        },
+    ops::survey(
+        facts,
+        game,
         speakers,
         purpose,
         recorded,
-        include_untested: include_untested(args),
-    };
-    game_settings::survey(game, &survey)
+        include_untested(args),
+    )
 }
 
 /// A setting's state in a few words, with the game's own names.
@@ -474,11 +455,16 @@ fn status_word(f: &Fix, name: &str) -> String {
     }
 }
 
+fn print_step(what: &str) {
+    say(format!("{what}..."));
+}
+
 fn host<'a>(
     facts: &Facts,
     game: Option<&Game>,
     net: &'a mut Curl,
     close: &'a mut dyn FnMut(&Target) -> bool,
+    on_step: &'a mut dyn FnMut(&str),
     home: &Path,
 ) -> SystemHost<'a> {
     SystemHost {
@@ -494,6 +480,7 @@ fn host<'a>(
         cache: Cache::new(home).root,
         eax_unified: eax_installer(),
         close_launcher: close,
+        on_step,
     }
 }
 
@@ -681,14 +668,7 @@ fn install(
             other => bail!("\"{other}\" isn't a place for the DLL override — use launcher, registry or manual."),
         };
     }
-    for c in plan.companions.iter_mut() {
-        c.over = match &plan.over {
-            Override::Launcher(_) => {
-                Target::steam(home, None, &c.app_id).map_or(Override::Registry, Override::Launcher)
-            }
-            other => other.clone(),
-        };
-    }
+    ops::companion_overrides(&mut plan, home);
     if let Some(v) = args.get("--vcrun") {
         plan.vcrun = match v {
             "install" if facts.vcrun_present => Vcrun::OverridesOnly,
@@ -699,7 +679,7 @@ fn install(
     }
     plan.com_routing = args.on("--com");
     plan.advanced_limits = args.on("--advanced-limits");
-    plan.crash_markers = crash_markers(game);
+    plan.crash_markers = ops::crash_markers(game);
 
     // The game's own settings: every audio one, and the optional ones asked for.
     let wanted: Vec<String> = args.all("--setting");
@@ -731,19 +711,8 @@ fn install(
             }
         }
         // The profile's alsoft.ini values, when they're verified.
-        let tested = g.install.alsoft_tested == Some(true) || include_untested(args);
-        if tested && !args.on("--no-alsoft-values") {
-            for (sec, keys) in g.install.alsoft_ini.iter().flatten() {
-                for (key, value) in keys.as_object().into_iter().flatten() {
-                    let v = match value {
-                        serde_json::Value::String(s) => s.clone(),
-                        other => other.to_string(),
-                    };
-                    if config::row_is_safe(Format::Ini, "game:alsoft.ini", sec, key, &v) {
-                        plan.alsoft_overrides.push((sec.clone(), key.clone(), v));
-                    }
-                }
-            }
+        if !args.on("--no-alsoft-values") {
+            plan.alsoft_overrides = ops::alsoft_values(g, include_untested(args));
         }
     }
 
@@ -848,7 +817,8 @@ fn install(
     }
 
     let mut close = |t: &Target| launchers.closed(t);
-    let mut h = host(facts, game, &mut net, &mut close, home);
+    let mut steps = print_step;
+    let mut h = host(facts, game, &mut net, &mut close, &mut steps, home);
     let r = install::execute(&plan, &cache, &eax_installer(), &mut h);
     if r.no_sources {
         bail!(
@@ -993,7 +963,8 @@ fn uninstall(
     }
     let mut net = Curl::default();
     let mut close = |t: &Target| launchers.closed(t);
-    let mut h = host(facts, game, &mut net, &mut close, home);
+    let mut steps = print_step;
+    let mut h = host(facts, game, &mut net, &mut close, &mut steps, home);
     let when = std::process::Command::new("date")
         .args(["-u", "+%Y-%m-%dT%H:%M:%SZ"])
         .output()
@@ -1036,14 +1007,9 @@ fn change_settings(
 ) -> Result<apply::UpdateReport> {
     let mut net = Curl::default();
     let mut never = |_: &Target| true;
-    let mut h = host(facts, game, &mut net, &mut never, home);
-    apply::update_in_manifest(
-        &crate::engine::manifest::path_in(&facts.game_dir),
-        revert,
-        plan,
-        &crash_markers(game),
-        &mut h,
-    )
+    let mut steps = print_step;
+    let mut h = host(facts, game, &mut net, &mut never, &mut steps, home);
+    ops::change_settings(facts, game, revert, plan, &mut h)
 }
 
 fn report_change(r: &apply::UpdateReport) {

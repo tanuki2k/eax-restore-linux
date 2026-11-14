@@ -22,6 +22,9 @@ pub trait Host {
     /// registry file is read or changed. False when that can't happen (the
     /// game is running).
     fn registry_quiet(&mut self) -> bool;
+    /// A step of the work is starting, named as the player reads it. A
+    /// screen shows it as progress; by default nothing happens.
+    fn step(&mut self, _what: &str) {}
 }
 
 /// Why one key wasn't changed.

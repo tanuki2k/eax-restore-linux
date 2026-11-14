@@ -138,10 +138,31 @@ fn by_level(mut v: Vec<(usize, PathBuf)>) -> Vec<PathBuf> {
     v.into_iter().map(|(_, p)| p).collect()
 }
 
+/// `grep -qi` for a plain string. Game binaries run to tens of megabytes,
+/// so this uses the regex crate's vectorised literal search rather than
+/// comparing at every byte, which took seconds on a modern game.
 fn contains_ci(hay: &[u8], needle: &str) -> bool {
-    let n = needle.to_ascii_lowercase();
-    let n = n.as_bytes();
-    hay.len() >= n.len() && hay.windows(n.len()).any(|w| w.eq_ignore_ascii_case(n))
+    use regex::bytes::{Regex as BytesRegex, RegexBuilder};
+    use std::collections::HashMap;
+    use std::sync::Mutex;
+    static CACHE: OnceLock<Mutex<HashMap<String, BytesRegex>>> = OnceLock::new();
+    let re = {
+        let mut cache = CACHE
+            .get_or_init(Default::default)
+            .lock()
+            .expect("not poisoned");
+        cache
+            .entry(needle.to_string())
+            .or_insert_with(|| {
+                RegexBuilder::new(&regex::escape(needle))
+                    .case_insensitive(true)
+                    .unicode(false)
+                    .build()
+                    .expect("an escaped literal compiles")
+            })
+            .clone()
+    };
+    re.is_match(hay)
 }
 
 fn read(p: &Path) -> Vec<u8> {
@@ -842,6 +863,16 @@ pub fn heroic_install_paths(home: &Path) -> Vec<PathBuf> {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn the_string_search_ignores_case_and_reads_the_needle_literally() {
+        let mut big = vec![0u8; 8 << 20];
+        big.extend_from_slice(b"\0openal32.DLL\0");
+        assert!(contains_ci(&big, "OpenAL32.dll"));
+        assert!(!contains_ci(b"OpenAL32xdll", "OpenAL32.dll"));
+        assert!(!contains_ci(b"dsound", "dsound.dll"));
+        assert!(contains_ci(b"\xffDIRECTSOUND\xfe", "DirectSound"));
+    }
     use super::*;
 
     #[test]

@@ -30,9 +30,15 @@ pub struct SystemHost<'a> {
     /// Called before a launcher's settings file is changed: close it (asking
     /// the player first) and say whether it's closed.
     pub close_launcher: &'a mut dyn FnMut(&Target) -> bool,
+    /// Told when each step of the work starts.
+    pub on_step: &'a mut dyn FnMut(&str),
 }
 
 impl Host for SystemHost<'_> {
+    fn step(&mut self, what: &str) {
+        (self.on_step)(what);
+    }
+
     fn game_running(&mut self) -> bool {
         process::exe_running(&self.game_exe)
     }

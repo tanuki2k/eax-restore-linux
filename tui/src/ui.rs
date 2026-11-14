@@ -20,6 +20,13 @@ use ratatui::Frame;
 use std::collections::HashSet;
 
 pub fn draw(f: &mut Frame, app: &App) {
+    if let Some(p) = &app.panel {
+        crate::panel::view::draw(f, p);
+        if app.help {
+            draw_help(f, app, f.area());
+        }
+        return;
+    }
     let screen = f.area();
     let bar_height = bar_rows(app, screen.width);
     let [body, bar] =
@@ -43,7 +50,7 @@ pub fn draw(f: &mut Frame, app: &App) {
 }
 
 /// A rounded box in the old browser's colours, its title centred in the top edge.
-fn boxed(title: &str) -> Block<'static> {
+pub(crate) fn boxed(title: &str) -> Block<'static> {
     boxed_line(Line::from(Span::styled(
         format!(" {title} "),
         Style::new().fg(theme::LABEL),
@@ -51,7 +58,7 @@ fn boxed(title: &str) -> Block<'static> {
 }
 
 /// The same box with a title made of several styled parts.
-fn boxed_line(title: Line<'static>) -> Block<'static> {
+pub(crate) fn boxed_line(title: Line<'static>) -> Block<'static> {
     Block::bordered()
         .border_type(BorderType::Rounded)
         .border_style(Style::new().fg(theme::BORDER))
@@ -61,13 +68,13 @@ fn boxed_line(title: Line<'static>) -> Block<'static> {
 
 /// The list and its selection: the chosen row has a dark background and, in
 /// front of it, a pink bar (see `gutter`).
-fn selection<'a>(list: List<'a>) -> List<'a> {
+pub(crate) fn selection<'a>(list: List<'a>) -> List<'a> {
     list.highlight_style(Style::new().bg(theme::SELECT_BG))
         .highlight_spacing(HighlightSpacing::Never)
 }
 
 /// The two columns in front of a row: the bar on the chosen one, blank on the rest.
-fn gutter(selected: bool) -> Span<'static> {
+pub(crate) fn gutter(selected: bool) -> Span<'static> {
     if selected {
         Span::styled(
             "▌ ",
