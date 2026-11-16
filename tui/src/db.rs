@@ -89,6 +89,20 @@ pub struct Eax {
     /// Extra steps the player takes to get EAX back.
     #[serde(default)]
     pub fix: String,
+    /// For `removed_by_patch`: the installed build can still be fixed where it
+    /// is (`eax.fix`), so an install goes ahead.
+    #[serde(default)]
+    pub fix_in_place: bool,
+}
+
+impl Eax {
+    /// Nothing for an install to restore: the game never had EAX, or a patch
+    /// took it out with no fix in place. The script's
+    /// `block_if_eax_not_implemented` rule.
+    pub fn none_to_restore(&self) -> bool {
+        self.status == "not_implemented"
+            || (self.status == "removed_by_patch" && !self.fix_in_place)
+    }
 }
 
 /// A page behind the entry's claims: a bare address, or a titled one.

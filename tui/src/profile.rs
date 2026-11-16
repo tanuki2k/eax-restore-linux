@@ -46,7 +46,7 @@ fn stores_of(g: &Game, only: Option<StoreKind>) -> Vec<(StoreKind, &Store)> {
     }
 }
 
-fn api_of<'a>(g: &'a Game, s: &'a Store) -> &'a str {
+pub(crate) fn api_of<'a>(g: &'a Game, s: &'a Store) -> &'a str {
     match s.api.as_deref() {
         Some(a) if !a.is_empty() => a,
         _ if !g.eax.api.is_empty() => &g.eax.api,

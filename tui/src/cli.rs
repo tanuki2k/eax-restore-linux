@@ -10,7 +10,7 @@ use crate::engine::config;
 use crate::engine::detect;
 use crate::engine::eax_unified::Installer;
 use crate::engine::game_settings::{self, Category, Fix, Purpose, Status};
-use crate::engine::host::SystemHost;
+use crate::engine::host::{Event, SystemHost};
 use crate::engine::identify::Store;
 use crate::engine::install::{self, Engine, Override, Vcrun};
 use crate::engine::installed::Installed;
@@ -448,8 +448,12 @@ fn status_word(f: &Fix, name: &str) -> String {
     }
 }
 
-fn print_step(what: &str) {
-    say(format!("{what}..."));
+fn print_step(e: Event, what: &str) {
+    match e {
+        Event::Step => say(format!("{what}...")),
+        Event::Detail => say(format!("    {what}")),
+        Event::Warning => say(format!("    Warning: {what}")),
+    }
 }
 
 fn host<'a>(
@@ -457,7 +461,7 @@ fn host<'a>(
     game: Option<&Game>,
     net: &'a mut Curl,
     close: &'a mut dyn FnMut(&Target) -> bool,
-    on_step: &'a mut dyn FnMut(&str),
+    on_step: &'a mut dyn FnMut(Event, &str),
     home: &Path,
 ) -> SystemHost<'a> {
     SystemHost {
@@ -528,39 +532,10 @@ fn status(facts: &Facts, game: Option<&Game>, args: &Args, home: &Path) -> Resul
         "  Folder:        {}",
         library::tilde(&facts.game_dir, home)
     ));
-    let store = match (facts.store, &facts.heroic) {
-        (Some(Store::Steam), _) => format!("Steam (AppID {})", facts.id),
-        (_, Some(_)) => "Heroic".to_string(),
-        _ => "not found in Steam or Heroic".to_string(),
-    };
-    say(format!("  Launcher:      {store}"));
-    say(format!(
-        "  Prefix:        {}",
-        facts
-            .prefix
-            .as_ref()
-            .map_or("not found".to_string(), |p| library::tilde(p, home))
-    ));
-    say(format!(
-        "  Architecture:  {}",
-        facts
-            .arch
-            .map_or("can't tell from the .exe files".to_string(), |a| format!(
-                "{a}-bit"
-            ))
-    ));
-    say(format!(
-        "  Audio:         {}{}",
-        match facts.engine() {
-            Engine::Dsoal => "DirectSound3D",
-            Engine::OpenAlSoft => "OpenAL",
-        },
-        if facts.api_disagrees() {
-            " (the game's files point to a different audio system than its profile lists)"
-        } else {
-            ""
-        }
-    ));
+    for (ok, label, value) in facts.summary(home) {
+        let mark = if ok { "" } else { "(!) " };
+        say(format!("  {:<15}{mark}{value}", format!("{label}:")));
+    }
     say(format!(
         "  Profile:       {}",
         if game.is_some() {
@@ -713,61 +688,13 @@ fn install(
     }
 
     say(format!("Ready to install the EAX fix for {name}:"));
-    say(format!(
-        "  Folder:        {}",
-        library::tilde(&plan.game_dir, home)
-    ));
-    for d in &plan.extra_dirs {
-        say(format!("                 {}", library::tilde(d, home)));
-    }
-    say(format!(
-        "  Prefix:        {}",
-        library::tilde(&facts.prefix.clone().unwrap_or_default(), home)
-    ));
-    say(format!("  Architecture:  {}-bit", plan.arch));
-    say(format!(
-        "  Audio engine:  {}",
-        match plan.engine {
-            Engine::Dsoal => "DSOAL with OpenAL Soft",
-            Engine::OpenAlSoft => "OpenAL Soft",
-        }
-    ));
-    say(format!("  Speakers:      {}", plan.speakers.label()));
-    say(format!(
-        "  DLL override:  {}",
-        match &plan.over {
-            Override::Launcher(t) if t.launcher == Launcher::Steam =>
-                format!("Steam's launch options for {name}"),
-            Override::Launcher(_) => format!("Heroic's environment variables for {name}"),
-            Override::Registry => "the prefix's registry".to_string(),
-            Override::Manual => "you set it yourself".to_string(),
-        }
-    ));
-    say(format!(
-        "  VC++ runtime:  {}",
-        match plan.vcrun {
-            Vcrun::Install => "install it",
-            Vcrun::OverridesOnly => "already there",
-            Vcrun::Skip => "skip",
-        }
-    ));
-    for c in &plan.companions {
-        say(format!(
-            "  Also:          {}, which runs from the same folder with a prefix of its own",
-            c.name
-        ));
-    }
-    if plan.eax_unified {
-        say("  EAX Unified:   install it");
-    }
-    let mut titles: Vec<&str> = plan
-        .game_settings
-        .iter()
-        .map(|r| r.title.as_str())
-        .collect();
-    titles.dedup();
-    for t in titles {
-        say(format!("  Turn on:       {t}"));
+    for (label, value) in plan.summary(home) {
+        let label = if label.is_empty() {
+            String::new()
+        } else {
+            format!("{label}:")
+        };
+        say(format!("  {label:<15}{value}"));
     }
     for (t, file) in &waiting {
         say(format!(

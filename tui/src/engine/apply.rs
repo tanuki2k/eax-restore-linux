@@ -25,6 +25,11 @@ pub trait Host {
     /// A step of the work is starting, named as the player reads it. A
     /// screen shows it as progress; by default nothing happens.
     fn step(&mut self, _what: &str) {}
+    /// One thing the current step did ("Copied dsound.dll to the game folder"), shown
+    /// under it.
+    fn detail(&mut self, _what: &str) {}
+    /// Something that went wrong, shown as it happens and again at the end.
+    fn warning(&mut self, _what: &str) {}
 }
 
 /// Why one key wasn't changed.

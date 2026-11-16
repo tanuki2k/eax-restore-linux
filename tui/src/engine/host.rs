@@ -16,6 +16,17 @@ use super::wine::{self, Prefix, Runner};
 use std::path::PathBuf;
 use std::time::Duration;
 
+/// What the engine is telling the screen.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Event {
+    /// A step of the work is starting.
+    Step,
+    /// One thing the current step did.
+    Detail,
+    /// Something went wrong.
+    Warning,
+}
+
 pub struct SystemHost<'a> {
     pub prefix: Prefix,
     pub game_dir: PathBuf,
@@ -30,13 +41,22 @@ pub struct SystemHost<'a> {
     /// Called before a launcher's settings file is changed: close it (asking
     /// the player first) and say whether it's closed.
     pub close_launcher: &'a mut dyn FnMut(&Target) -> bool,
-    /// Told when each step of the work starts.
-    pub on_step: &'a mut dyn FnMut(&str),
+    /// Told when each step of the work starts, what it did, and what went
+    /// wrong.
+    pub on_step: &'a mut dyn FnMut(Event, &str),
 }
 
 impl Host for SystemHost<'_> {
     fn step(&mut self, what: &str) {
-        (self.on_step)(what);
+        (self.on_step)(Event::Step, what);
+    }
+
+    fn detail(&mut self, what: &str) {
+        (self.on_step)(Event::Detail, what);
+    }
+
+    fn warning(&mut self, what: &str) {
+        (self.on_step)(Event::Warning, what);
     }
 
     fn game_running(&mut self) -> bool {

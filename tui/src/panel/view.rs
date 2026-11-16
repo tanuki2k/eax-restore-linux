@@ -1,35 +1,159 @@
-//! Draws the panel: its header and status, the Sound and Setup choices side
-//! by side, the game's settings, a line of help for what has focus, and the
-//! buttons. The confirm, uninstall and progress screens take the body's place.
+//! Draws the game page in three columns, like Optiscaler-Client: the cover
+//! and the game's name on the left, its choices in numbered boxes in the
+//! middle (in the order the script asks them), and on the right a Status box
+//! that types itself out like a boot, with the game's profile under it. While
+//! work runs, the right column shows its progress and then how it ended.
 
 use super::{Button, Item, Panel, Row, Screen};
-use crate::engine::game_settings::{Fix, Status};
+use crate::engine::game_settings::{Category, Fix, Status};
 use crate::engine::identify::Store;
 use crate::engine::install::Engine;
 use crate::engine::installed::OverrideKind;
 use crate::theme;
 use crate::ui::{boxed, boxed_line, gutter};
+use ratatui::buffer::Buffer;
 use ratatui::layout::{Constraint, Layout, Rect};
-use ratatui::style::{Modifier, Style};
+use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Clear, Paragraph, Wrap};
+use ratatui::widgets::{Clear, Paragraph, Widget, Wrap};
 use ratatui::Frame;
 
-/// Draws the page filling `page` (the browser's right pane, so the game list
-/// stays in view). The choice list and yes/no questions are sized for their
-/// text rather than the pane, so they sit over `over`, the whole body.
-pub fn draw(f: &mut Frame, p: &Panel, page: Rect, over: Rect) {
-    let inner_w = page.width.saturating_sub(2);
+/// From this width the cover gets a column of its own.
+pub const COVER_FROM: u16 = 150;
+/// From this width the Status column sits beside the choices, not under them.
+pub const BESIDE_FROM: u16 = 100;
+const COVER_W: u16 = 30;
+const RIGHT_W: u16 = 50;
+/// Status box: the badge, then the label column.
+const BADGE_W: usize = 5;
+const LABEL_W: usize = 12;
+
+/// Words wrapped at `width`; a word longer than that is cut across lines
+/// rather than run off the edge. A path is cut by character only, so a space
+/// in a folder's name ("Quake 4") doesn't leave its last word on a line alone.
+fn wrap(text: &str, width: usize) -> Vec<String> {
+    let width = width.max(1);
+    if text.starts_with('/') || text.starts_with("~/") {
+        let chars: Vec<char> = text.chars().collect();
+        return chars
+            .chunks(width)
+            .map(|c| c.iter().collect::<String>())
+            .collect();
+    }
+    crate::settings::wrap(text, width, "")
+        .into_iter()
+        .flat_map(|line| {
+            let chars: Vec<char> = line.chars().collect();
+            chars
+                .chunks(width)
+                .map(|c| c.iter().collect::<String>())
+                .collect::<Vec<_>>()
+        })
+        .collect()
+}
+
+/// Draws the page over `area`, the whole body.
+pub fn draw(f: &mut Frame, p: &Panel, area: Rect) {
+    f.render_widget(Clear, area);
+    let (cover, rest) = if area.width >= COVER_FROM {
+        let [c, r] =
+            Layout::horizontal([Constraint::Length(COVER_W), Constraint::Min(0)]).areas(area);
+        (Some(c), r)
+    } else {
+        (None, area)
+    };
+    let [middle, right] = if area.width >= BESIDE_FROM {
+        Layout::horizontal([Constraint::Min(0), Constraint::Length(RIGHT_W)]).areas(rest)
+    } else {
+        Layout::vertical([Constraint::Percentage(55), Constraint::Percentage(45)]).areas(rest)
+    };
+    if let Some(c) = cover {
+        draw_cover(f, p, c);
+    }
+    draw_middle(f, p, middle);
+    draw_right(f, p, right);
+    if p.list.is_some() {
+        draw_list(f, p, area);
+    }
+    if let Some(q) = &p.question {
+        draw_question(f, &q.text, &q.ask, area);
+    }
+}
+
+/// The left column: the cover as coloured ASCII, then the game's name, its
+/// store, and at the bottom its folder.
+fn draw_cover(f: &mut Frame, p: &Panel, area: Rect) {
+    let block = plain();
+    let inner = block.inner(area);
+    f.render_widget(block, area);
+    let w = usize::from(inner.width.saturating_sub(2)).max(1);
+    let mut below: Vec<Line> = wrap(&p.name, w)
+        .into_iter()
+        .map(|l| Line::from(Span::styled(format!(" {l}"), theme::white())))
+        .collect();
+    if let Some(store) = store_name(p) {
+        below.push(Line::from(Span::styled(
+            format!(" {store}"),
+            theme::green(),
+        )));
+    }
+    let folder: Vec<Line> = wrap(&crate::library::tilde(&p.facts.game_dir, &p.home), w)
+        .into_iter()
+        .map(|l| Line::from(Span::styled(format!(" {l}"), theme::dim())))
+        .collect();
+    let art_rows = inner
+        .height
+        .saturating_sub((below.len() + folder.len() + 2) as u16);
+    let mut lines = match &p.cover {
+        Some(px) => crate::cover::ascii(px, inner.width, art_rows, crate::cover::truecolor()),
+        None => Vec::new(),
+    };
+    lines.push(Line::from(""));
+    lines.extend(below);
+    let top = Rect {
+        height: inner.height.saturating_sub(folder.len() as u16),
+        ..inner
+    };
+    f.render_widget(Paragraph::new(lines), top);
+    let bottom = Rect {
+        y: inner.y + inner.height.saturating_sub(folder.len() as u16),
+        height: (folder.len() as u16).min(inner.height),
+        ..inner
+    };
+    f.render_widget(Paragraph::new(folder), bottom);
+}
+
+fn store_name(p: &Panel) -> Option<&'static str> {
+    match p.facts.store {
+        Some(Store::Steam) => Some("Steam"),
+        Some(Store::Gog) => Some("GOG, through Heroic"),
+        None => None,
+    }
+}
+
+/// The middle column: the choices (or the confirm and uninstall screens), a
+/// line of help for what has focus, and the buttons.
+fn draw_middle(f: &mut Frame, p: &Panel, area: Rect) {
+    let block = boxed_line(title(p));
+    let inner = block.inner(area);
+    f.render_widget(block, area);
+    p.field.set(None);
+    let [banner, inner] =
+        Layout::vertical([Constraint::Length(4), Constraint::Min(0)]).areas(inner);
+    f.render_widget(
+        Paragraph::new(banner_lines(p)).block(boxed("EAX fix")),
+        banner,
+    );
+    // Nothing to choose until the Status box has finished typing.
+    if p.revealing() {
+        return;
+    }
     let help = help_text(p);
     let help_rows = if help.is_empty() {
         0
     } else {
-        rows_of(&[Line::from(help.as_str())], inner_w.saturating_sub(2)).min(3) + 2
+        rows_of(&[Line::from(help.as_str())], inner.width.saturating_sub(4)).min(3) + 2
     };
-    let block = boxed_line(title(p));
-    let inner = block.inner(page);
-    f.render_widget(Clear, page);
-    f.render_widget(block, page);
     let [body, help_area, buttons] = Layout::vertical([
         Constraint::Min(1),
         Constraint::Length(help_rows),
@@ -37,15 +161,19 @@ pub fn draw(f: &mut Frame, p: &Panel, page: Rect, over: Rect) {
     ])
     .areas(inner);
     match &p.screen {
-        Screen::Main => draw_main(f, p, body),
-        Screen::Confirm { lines, jobs } => boxed_text(
+        Screen::Main | Screen::Run(_) => draw_choices(f, p, body),
+        Screen::Confirm {
+            title,
+            heading,
+            lines,
+            jobs,
+        } => boxed_text(
             f,
-            "Apply changes",
-            confirm_lines(lines, jobs.is_empty()),
+            title,
+            confirm_lines(heading, lines, jobs.is_empty()),
             body,
         ),
         Screen::Uninstall(u) => boxed_text(f, "Uninstall", uninstall_lines(p, u), body),
-        Screen::Run(r) => draw_run(f, r, body),
     }
     if help_rows > 0 {
         f.render_widget(
@@ -57,12 +185,508 @@ pub fn draw(f: &mut Frame, p: &Panel, page: Rect, over: Rect) {
         );
     }
     draw_buttons(f, p, buttons);
-    if p.list.is_some() {
-        draw_list(f, p, over);
+}
+
+/// One numbered box on the page: its title, its lines, and the line that
+/// has focus, if any.
+struct PageBox {
+    title: String,
+    lines: Vec<Line<'static>>,
+    /// The focused item's first and last line: a setting that's opened up
+    /// takes several.
+    focus: Option<(usize, usize)>,
+}
+
+/// The row names' column, and the dropdown field's text width: as wide as the
+/// longest option on the page, so picking a value never moves anything, but no
+/// wider than the column leaves room for.
+fn field_geometry(p: &Panel, width: usize) -> (usize, usize) {
+    let title_w = p.rows().map(|r| r.title.chars().count()).max().unwrap_or(0) + 2;
+    let longest = p
+        .rows()
+        .flat_map(|r| r.options.iter().map(|o| o.label.chars().count()))
+        .max()
+        .unwrap_or(0);
+    // Box borders, the gutter, "[ " and " ▾ ]", and " (detected)" after it.
+    let room = width.saturating_sub(2 + 2 + title_w + 6 + 11).max(8);
+    (title_w, longest.min(room))
+}
+
+/// A row's value as a dropdown field, `[ value ▾ ]`, then "(detected)" in green
+/// when the value came from the PC or the profile. The value is green when
+/// detected, yellow when changed; the focused field's chevron is cyan.
+fn field_spans(r: &Row, sel: bool, field_w: usize) -> Vec<Span<'static>> {
+    let frame = Style::new().fg(theme::LABEL);
+    let value_style = if r.chosen != r.original {
+        Style::new()
+            .fg(Color::LightYellow)
+            .add_modifier(Modifier::BOLD)
+    } else if r.shows_detected() {
+        theme::green()
+    } else if sel {
+        Style::new().fg(theme::SELECT_TEXT)
+    } else {
+        Style::new()
+    };
+    let value = truncate(r.value(), field_w);
+    let pad = field_w.saturating_sub(value.chars().count());
+    let mut out = vec![
+        Span::styled("[ ", frame),
+        Span::styled(value, value_style),
+        Span::raw(" ".repeat(pad)),
+        Span::styled(" ▾", if sel { theme::key() } else { frame }),
+        Span::styled(" ]", frame),
+    ];
+    if r.shows_detected() {
+        out.push(Span::styled(" (detected)", theme::green()));
     }
-    if let Some(q) = &p.question {
-        draw_question(f, &q.text, &q.ask, over);
+    out
+}
+
+fn selected_bg(sel: bool) -> Style {
+    if sel {
+        Style::new().bg(theme::SELECT_BG)
+    } else {
+        Style::new()
     }
+}
+
+fn choice_boxes(p: &Panel, width: usize) -> Vec<PageBox> {
+    let focus = p.focused();
+    let (title_w, field_w) = field_geometry(p, width);
+    let mut boxes: Vec<PageBox> = p
+        .sections
+        .iter()
+        .enumerate()
+        .map(|(si, sec)| {
+            let mut at = None;
+            let lines = sec
+                .rows
+                .iter()
+                .enumerate()
+                .map(|(ri, r)| {
+                    let sel = focus == Some(Item::Choice(si, ri));
+                    if sel {
+                        at = Some(ri);
+                    }
+                    let name = if sel {
+                        Style::new().fg(theme::SELECT_TEXT)
+                    } else {
+                        Style::new().fg(theme::FILTER_LABEL)
+                    };
+                    let mut spans = vec![
+                        gutter(sel),
+                        Span::styled(format!("{:title_w$}", r.title), name),
+                    ];
+                    spans.extend(field_spans(r, sel, field_w));
+                    Line::from(spans).style(selected_bg(sel))
+                })
+                .collect();
+            PageBox {
+                title: sec.title.to_string(),
+                lines,
+                focus: at.map(|a| (a, a)),
+            }
+        })
+        .collect();
+    let audio: Vec<usize> = (0..p.fixes.len())
+        .filter(|&i| p.fixes[i].category == Category::Audio)
+        .collect();
+    let optional: Vec<usize> = (0..p.fixes.len())
+        .filter(|&i| p.fixes[i].category != Category::Audio)
+        .collect();
+    if p.fixes.is_empty() {
+        let text = if p.game.is_some() {
+            "The game's profile has no settings to change."
+        } else {
+            "There's no profile for this game, so there are no settings to change."
+        };
+        boxes.push(PageBox {
+            title: "Game settings".into(),
+            lines: wrap(text, width.saturating_sub(4).max(1))
+                .into_iter()
+                .map(|l| Line::from(Span::styled(format!(" {l}"), theme::dim())))
+                .collect(),
+            focus: None,
+        });
+    }
+    for (title, list) in [("Audio settings", audio), ("Optional settings", optional)] {
+        if list.is_empty() {
+            continue;
+        }
+        let (lines, at) = setting_lines(p, &list, width.saturating_sub(2));
+        boxes.push(PageBox {
+            title: title.into(),
+            lines,
+            focus: at,
+        });
+    }
+    for (n, b) in boxes.iter_mut().enumerate() {
+        b.title = format!("{}. {}", n + 1, b.title);
+    }
+    boxes
+}
+
+/// A setting's state, for one that can't be ticked; None for the rest.
+fn setting_state(fix: &Fix, game: &str) -> Option<String> {
+    match fix.status {
+        Status::Missing => Some(format!(
+            "Needs {}, which {game} creates the first time it runs",
+            fix.missing_file.as_deref().unwrap_or("its settings file")
+        )),
+        Status::Already => Some("Already set".into()),
+        Status::Absent => Some(format!(
+            "This version of {game} has no {}",
+            fix.absent_files
+                .first()
+                .map_or("file this setting changes", String::as_str)
+        )),
+        _ => None,
+    }
+}
+
+/// The game's settings in `list`, laid out as the settings pane does: each
+/// title with its tested tag on the right, then what it changes. The focused
+/// one (and any with three keys or fewer) lists every key under its file, one
+/// per line with the arrows lined up; the rest say how many keys each file
+/// gets. A blank line between settings.
+fn setting_lines(
+    p: &Panel,
+    list: &[usize],
+    width: usize,
+) -> (Vec<Line<'static>>, Option<(usize, usize)>) {
+    let selected = match p.focused() {
+        Some(Item::Setting(i)) => Some(i),
+        _ => None,
+    };
+    let mut lines: Vec<Line<'static>> = Vec::new();
+    let mut at: Option<(usize, usize)> = None;
+    for (n, &i) in list.iter().enumerate() {
+        // The focused setting runs to the line before the next one starts.
+        if let Some((start, _)) = at.filter(|_| n > 0 && selected == Some(list[n - 1])) {
+            at = Some((start, lines.len().saturating_sub(1)));
+        }
+        let fix = &p.fixes[i];
+        let sel = selected == Some(i);
+        let bg = selected_bg(sel);
+        if n > 0 {
+            lines.push(Line::raw(""));
+        }
+        if sel {
+            at = Some((lines.len(), lines.len()));
+        }
+        let mark = if !Panel::tickable(fix) {
+            " – "
+        } else if p.ticked.contains(&fix.title) {
+            "[x]"
+        } else {
+            "[ ]"
+        };
+        let changed = p.ticked.contains(&fix.title) != p.ticked_before.contains(&fix.title);
+        let title_style = if changed {
+            Style::new()
+                .fg(Color::LightYellow)
+                .add_modifier(Modifier::BOLD)
+        } else if !Panel::tickable(fix) {
+            theme::dim()
+        } else if sel {
+            Style::new()
+                .fg(theme::SELECT_TEXT)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::new().add_modifier(Modifier::BOLD)
+        };
+        let (tag, tag_style) = if fix.untested {
+            ("(untested)", theme::note())
+        } else {
+            ("(tested)", theme::green())
+        };
+        // Gutter, mark and a space before the title; the tag at the right.
+        let title_room = width.saturating_sub(2 + 4 + tag.len() + 2);
+        let title = truncate(&fix.title, title_room);
+        let pad = title_room.saturating_sub(title.chars().count()) + 1;
+        lines.push(
+            Line::from(vec![
+                gutter(sel),
+                Span::raw(format!("{mark} ")),
+                Span::styled(title, title_style),
+                Span::raw(" ".repeat(pad)),
+                Span::styled(tag, tag_style),
+            ])
+            .style(bg),
+        );
+        // The selection bar is on the title only; the rest of the setting
+        // keeps its background.
+        let under = |text: Span<'static>, indent: usize| {
+            Line::from(vec![gutter(false), Span::raw(" ".repeat(indent)), text]).style(bg)
+        };
+        if let Some(state) = setting_state(fix, &p.name) {
+            for part in wrap(&state, width.saturating_sub(8)) {
+                lines.push(under(Span::styled(part, theme::dim()), 4));
+            }
+            continue;
+        }
+        // The keys, grouped by file, in the order the setting lists them.
+        let mut files: Vec<(String, Vec<&crate::engine::game_settings::ViewRow>)> = Vec::new();
+        for v in &fix.view {
+            let name = v
+                .path
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            match files.iter_mut().find(|(f, _)| *f == name) {
+                Some((_, rows)) => rows.push(v),
+                None => files.push((name, vec![v])),
+            }
+        }
+        if !(sel || fix.view.len() <= 3) {
+            for (file, rows) in &files {
+                let n = rows.len();
+                let what = if n == 1 {
+                    "1 change".to_string()
+                } else {
+                    format!("{n} changes")
+                };
+                lines.push(under(
+                    Span::styled(format!("{what} in {file}"), theme::dim()),
+                    4,
+                ));
+            }
+            continue;
+        }
+        let key_w = fix
+            .view
+            .iter()
+            .map(|v| v.key.chars().count())
+            .max()
+            .unwrap_or(0);
+        let applied = fix.status == Status::Applied;
+        for (file, rows) in &files {
+            lines.push(under(Span::styled(file.clone(), theme::dim()), 4));
+            let mut section: Option<&str> = None;
+            for v in rows {
+                let indent = if v.section.is_empty() {
+                    6
+                } else {
+                    if section != Some(v.section.as_str()) {
+                        lines.push(under(
+                            Span::styled(format!("[{}]", v.section), theme::dim()),
+                            6,
+                        ));
+                    }
+                    8
+                };
+                section = Some(v.section.as_str());
+                let mut spans = vec![
+                    gutter(false),
+                    Span::raw(" ".repeat(indent)),
+                    Span::raw(format!("{:key_w$}  ", v.key)),
+                ];
+                if applied {
+                    spans.push(Span::styled(v.new.display(), theme::green()));
+                } else {
+                    let old = v
+                        .old
+                        .as_ref()
+                        .map_or("(not set)".to_string(), |o| o.display());
+                    spans.push(Span::styled(old, theme::dim()));
+                    spans.push(Span::raw(" → "));
+                    spans.push(Span::styled(v.new.display(), theme::green()));
+                }
+                lines.push(Line::from(spans).style(bg));
+            }
+        }
+    }
+    if let Some((start, _)) = at.filter(|_| list.last().copied() == selected) {
+        at = Some((start, lines.len().saturating_sub(1)));
+    }
+    (lines, at)
+}
+
+/// The numbered boxes, one under another. When they're taller than the
+/// column, the page scrolls to keep the focused row in view.
+fn draw_choices(f: &mut Frame, p: &Panel, area: Rect) {
+    if let Some(problem) = &p.problem {
+        f.render_widget(
+            Paragraph::new(problem.as_str())
+                .wrap(Wrap { trim: true })
+                .block(plain().padding(ratatui::widgets::Padding::uniform(1))),
+            area,
+        );
+        return;
+    }
+    if area.width == 0 || area.height == 0 {
+        return;
+    }
+    let boxes = choice_boxes(p, usize::from(area.width));
+    let total: u16 = boxes.iter().map(|b| b.lines.len() as u16 + 2).sum();
+    let mut page = Buffer::empty(Rect::new(0, 0, area.width, total.max(1)));
+    let mut y = 0;
+    let mut focus_y = None;
+    let mut focus_end = 0;
+    for b in &boxes {
+        let h = b.lines.len() as u16 + 2;
+        if let Some((at, end)) = b.focus {
+            focus_y = Some(y + 1 + at as u16);
+            focus_end = y + 1 + end as u16;
+        }
+        Paragraph::new(b.lines.clone())
+            .block(boxed(&b.title))
+            .render(Rect::new(0, y, area.width, h), &mut page);
+        y += h;
+    }
+    // The focused item stays in view a row clear of the bottom, all of it when
+    // it fits (an opened setting's keys), else from its first line; the
+    // buttons below the boxes show the end.
+    let top = match focus_y {
+        Some(fy) => {
+            let want_end = focus_end + 2;
+            let top = want_end.saturating_sub(area.height).min(fy);
+            top.min(total.saturating_sub(area.height))
+        }
+        None if matches!(p.focused(), Some(Item::Button(_))) => total.saturating_sub(area.height),
+        None => 0,
+    };
+    if let (Some(fy), Some(Item::Choice(..))) = (focus_y, p.focused()) {
+        if fy >= top && fy < top + area.height {
+            let (title_w, field_w) = field_geometry(p, usize::from(area.width));
+            // Past the box's border and the gutter, then the row's name.
+            let x = area.x + 1 + 2 + title_w as u16;
+            p.field.set(Some(Rect::new(
+                x,
+                area.y + fy - top,
+                (field_w as u16 + 6).min(area.width.saturating_sub(x - area.x)),
+                1,
+            )));
+        }
+    }
+    let buf = f.buffer_mut();
+    for row in 0..area.height.min(total.saturating_sub(top)) {
+        for col in 0..area.width {
+            buf[(area.x + col, area.y + row)] = page[(col, top + row)].clone();
+        }
+    }
+    let more = |text: &str, at_y: u16, buf: &mut Buffer| {
+        let w = text.chars().count() as u16;
+        if area.width > w + 2 {
+            buf.set_string(
+                area.x + area.width - w - 2,
+                at_y,
+                text,
+                Style::new().fg(theme::COUNT),
+            );
+        }
+    };
+    if top > 0 {
+        more(" ↑ more ", area.y, buf);
+    }
+    if top + area.height < total {
+        more(" ↓ more ", area.y + area.height - 1, buf);
+    }
+}
+
+/// The right column: the work's progress while it runs (and how it ended),
+/// else the Status box with the game's profile under it.
+fn draw_right(f: &mut Frame, p: &Panel, area: Rect) {
+    if let Screen::Run(r) = &p.screen {
+        return draw_run(f, p, r, area);
+    }
+    let status = status_box_lines(p, usize::from(area.width.saturating_sub(2)));
+    let full = p.status_lines();
+    let full_rows = status_box_lines_all(&full, usize::from(area.width.saturating_sub(2))).len();
+    let h = (full_rows as u16 + 2).min(area.height);
+    let [top, rest] = Layout::vertical([Constraint::Length(h), Constraint::Min(0)]).areas(area);
+    f.render_widget(Paragraph::new(status).block(boxed("Status")), top);
+    if p.revealing() || rest.height < 3 {
+        return;
+    }
+    let w = usize::from(rest.width.saturating_sub(4)).max(10);
+    let lines = match &p.game {
+        Some(g) => crate::profile::database_lines(g, w),
+        None => vec![Line::from(Span::styled(
+            format!(" The game database has no profile for {}.", p.name),
+            theme::dim(),
+        ))],
+    };
+    let max = rows_of(&lines, rest.width.saturating_sub(2)).saturating_sub(rest.height - 2);
+    f.render_widget(
+        Paragraph::new(lines)
+            .wrap(Wrap { trim: false })
+            .scroll((p.info_scroll.min(max), 0))
+            .block(boxed("Game profile")),
+        rest,
+    );
+}
+
+/// One Status line: a green `[OK]` or yellow `[!!]`, the label, then the
+/// value, wrapped under its own column.
+fn status_line_rows(l: &super::StatusLine, width: usize) -> Vec<Line<'static>> {
+    let value_w = width.saturating_sub(1 + BADGE_W + LABEL_W).max(8);
+    let pad = " ".repeat(1 + BADGE_W + LABEL_W);
+    let (badge, style) = if l.ok {
+        ("[OK] ", theme::green())
+    } else {
+        ("[!!] ", theme::label())
+    };
+    wrap(&l.value, value_w)
+        .into_iter()
+        .enumerate()
+        .map(|(i, part)| {
+            if i == 0 {
+                Line::from(vec![
+                    Span::raw(" "),
+                    Span::styled(badge, style),
+                    Span::styled(
+                        format!("{:LABEL_W$}", l.label),
+                        Style::new().fg(theme::FILTER_LABEL),
+                    ),
+                    Span::raw(part),
+                ])
+            } else {
+                Line::from(vec![Span::raw(pad.clone()), Span::raw(part)])
+            }
+        })
+        .collect()
+}
+
+fn status_box_lines_all(lines: &[super::StatusLine], width: usize) -> Vec<Line<'static>> {
+    lines
+        .iter()
+        .flat_map(|l| status_line_rows(l, width))
+        .collect()
+}
+
+/// The Status box as it stands: every line, or while it types itself out,
+/// the lines done so far, the one being typed, and a blinking cursor.
+fn status_box_lines(p: &Panel, width: usize) -> Vec<Line<'static>> {
+    let all = p.status_lines();
+    let Some((done, chars)) = p.revealed() else {
+        return status_box_lines_all(&all, width);
+    };
+    let mut out = status_box_lines_all(&all[..done.min(all.len())], width);
+    let cursor_on = p
+        .reveal
+        .is_some_and(|t| (t.elapsed().as_millis() / 500) % 2 == 0);
+    let cursor = Span::styled(if cursor_on { "█" } else { " " }, theme::white());
+    if let Some(l) = all.get(done) {
+        // The badge comes last, once the line is typed out, as a boot does.
+        let typed: String = format!("{:LABEL_W$}{}", l.label, l.value)
+            .chars()
+            .take(chars)
+            .collect();
+        let label: String = typed.chars().take(LABEL_W).collect();
+        let value: String = typed.chars().skip(LABEL_W).collect();
+        out.push(Line::from(vec![
+            Span::raw(" "),
+            Span::raw(" ".repeat(BADGE_W)),
+            Span::styled(label, Style::new().fg(theme::FILTER_LABEL)),
+            Span::raw(value),
+            cursor,
+        ]));
+    } else {
+        out.push(Line::from(vec![Span::raw(" "), cursor]));
+    }
+    out
 }
 
 /// Rows `lines` take, wrapped at `width`.
@@ -74,41 +698,6 @@ fn rows_of(lines: &[Line], width: u16) -> u16 {
         .sum::<usize>()
         .try_into()
         .unwrap_or(u16::MAX)
-}
-
-/// What a Sound or Setup box needs across: the gutter, the widest title,
-/// the widest value of any row (so picking one doesn't resize the page),
-/// and its border.
-fn column_width(rows: &[Row]) -> u16 {
-    let title = rows
-        .iter()
-        .map(|r| r.title.chars().count())
-        .max()
-        .unwrap_or(0);
-    let value = rows
-        .iter()
-        .flat_map(|r| r.options.iter().map(|o| o.label.chars().count()))
-        .max()
-        .unwrap_or(0);
-    (2 + title + 2 + value + 2) as u16
-}
-
-fn status_spans(p: &Panel) -> Line<'static> {
-    Line::from(vec![
-        Span::styled(" Status  ", theme::label()),
-        Span::raw(status_line(p)),
-    ])
-}
-
-/// The status wraps rather than widening the page (a game folder's path
-/// can be long), up to two rows.
-fn status_rows(p: &Panel, inner_w: u16) -> u16 {
-    rows_of(&[status_spans(p)], inner_w).min(2)
-}
-
-/// Sound and Setup side by side when both fit.
-fn side_by_side(p: &Panel, inner_w: u16) -> bool {
-    column_width(&p.sound) + column_width(&p.setup) <= inner_w
 }
 
 fn boxed_text(f: &mut Frame, title: &str, text: Vec<Line<'static>>, area: Rect) {
@@ -133,11 +722,6 @@ fn title(p: &Panel) -> Line<'static> {
         Some(Store::Gog) => "Heroic",
         None => "",
     };
-    let (state, style) = if p.installed.is_some() {
-        ("EAX fix installed", theme::green())
-    } else {
-        ("Not installed", Style::new().fg(theme::LABEL))
-    };
     let mut parts = vec![Span::styled(format!(" {} ", p.name), theme::white())];
     if !store.is_empty() {
         parts.push(Span::styled(
@@ -145,9 +729,88 @@ fn title(p: &Panel) -> Line<'static> {
             Style::new().fg(theme::LABEL),
         ));
     }
-    parts.push(Span::styled("─ ", Style::new().fg(theme::LABEL)));
-    parts.push(Span::styled(format!("{state} "), style));
     Line::from(parts)
+}
+
+/// The banner's two lines, like Optiscaler-Client's status and compatibility:
+/// whether the fix is in, and what the game's profile says about EAX.
+pub fn banner_lines(p: &Panel) -> Vec<Line<'static>> {
+    let dot = |style: Style, text: String| {
+        Line::from(vec![
+            Span::raw(" "),
+            Span::styled("●", style),
+            Span::raw(" "),
+            Span::styled(text, style),
+        ])
+    };
+    let dim = Style::new().fg(theme::LABEL);
+    let yellow = theme::label();
+    let install = match (&p.installed, &p.problem) {
+        (None, _) if p.no_eax() => dot(dim, "Not installed".into()),
+        (Some(i), _) => dot(
+            theme::green(),
+            format!(
+                "Installed: {}",
+                match i.state.engine {
+                    Engine::Dsoal => "DSOAL with OpenAL Soft",
+                    Engine::OpenAlSoft => "OpenAL Soft",
+                }
+            ),
+        ),
+        (None, Some(_)) if p.facts.linux_build => dot(
+            yellow,
+            format!(
+                "Can't install, because this is the Linux version of {}",
+                p.name
+            ),
+        ),
+        (None, Some(_)) => dot(
+            yellow,
+            format!("Can't install yet, because {} has no Wine prefix", p.name),
+        ),
+        (None, None) => dot(dim, "Not installed".into()),
+    };
+    let compat = match &p.game {
+        None => dot(
+            dim,
+            "Not in the game database, so compatibility isn't known".into(),
+        ),
+        Some(g) => match g.eax.status.as_str() {
+            "built_in" => dot(
+                theme::green(),
+                "Already has EAX, so this adds a newer OpenAL Soft and speaker settings".into(),
+            ),
+            "not_implemented" => dot(yellow, format!("This version of {} has no EAX", p.name)),
+            "removed_by_patch" => dot(yellow, "EAX was removed by a later patch".into()),
+            _ => {
+                let store = match p.facts.store {
+                    Some(Store::Steam) => g.stores.steam.as_ref(),
+                    Some(Store::Gog) => g.stores.gog.as_ref(),
+                    None => None,
+                };
+                let api = store.map_or(g.eax.api.as_str(), |s| crate::profile::api_of(g, s));
+                let with = if api == "openal" {
+                    "OpenAL Soft"
+                } else {
+                    "DSOAL + OpenAL Soft"
+                };
+                let text = if g.eax.versions.is_empty() {
+                    format!("Compatible, restored with {with}")
+                } else {
+                    let v = &g.eax.versions;
+                    let list = match v.split_last() {
+                        Some((last, rest)) if !rest.is_empty() => {
+                            format!("{} and {last}", rest.join(", "))
+                        }
+                        _ => v.join(""),
+                    };
+                    format!("Compatible with EAX {list}, restored with {with}")
+                };
+                dot(theme::green(), text)
+            }
+        },
+    };
+    vec![install, compat]
 }
 
 /// One line about what's installed now.
@@ -191,243 +854,6 @@ pub fn status_line(p: &Panel) -> String {
     parts.join(" · ")
 }
 
-fn draw_main(f: &mut Frame, p: &Panel, area: Rect) {
-    if let Some(problem) = &p.problem {
-        f.render_widget(
-            Paragraph::new(problem.as_str())
-                .wrap(Wrap { trim: true })
-                .block(plain().padding(ratatui::widgets::Padding::uniform(1))),
-            area,
-        );
-        return;
-    }
-    let side = side_by_side(p, area.width);
-    let rows = if side {
-        p.sound.len().max(p.setup.len()) as u16 + 2
-    } else {
-        (p.sound.len() + p.setup.len()) as u16 + 4
-    };
-    let [status, choices, settings] = Layout::vertical([
-        Constraint::Length(status_rows(p, area.width)),
-        Constraint::Length(rows),
-        Constraint::Min(3),
-    ])
-    .areas(area);
-    f.render_widget(
-        Paragraph::new(status_spans(p)).wrap(Wrap { trim: false }),
-        status,
-    );
-    let [left, right] = if side {
-        Layout::horizontal([
-            Constraint::Length(column_width(&p.sound)),
-            Constraint::Min(0),
-        ])
-        .areas(choices)
-    } else {
-        Layout::vertical([
-            Constraint::Length(p.sound.len() as u16 + 2),
-            Constraint::Min(0),
-        ])
-        .areas(choices)
-    };
-    let focus = p.focused();
-    draw_rows(
-        f,
-        "Sound",
-        &p.sound,
-        |i| focus == Some(Item::Sound(i)),
-        left,
-    );
-    draw_rows(
-        f,
-        "Setup",
-        &p.setup,
-        |i| focus == Some(Item::Setup(i)),
-        right,
-    );
-    draw_settings(f, p, settings);
-}
-
-fn draw_rows(
-    f: &mut Frame,
-    title: &str,
-    rows: &[Row],
-    focused: impl Fn(usize) -> bool,
-    area: Rect,
-) {
-    let block = boxed(title);
-    let inner = block.inner(area);
-    f.render_widget(block, area);
-    let width = rows
-        .iter()
-        .map(|r| r.title.chars().count())
-        .max()
-        .unwrap_or(0)
-        + 2;
-    let lines: Vec<Line> = rows
-        .iter()
-        .enumerate()
-        .map(|(i, r)| {
-            let sel = focused(i);
-            let bg = if sel {
-                Style::new().bg(theme::SELECT_BG)
-            } else {
-                Style::new()
-            };
-            let value = if r.chosen != r.original {
-                Style::new()
-                    .fg(ratatui::style::Color::LightYellow)
-                    .add_modifier(Modifier::BOLD)
-            } else {
-                Style::new()
-            };
-            Line::from(vec![
-                gutter(sel),
-                Span::styled(format!("{:width$}", r.title), theme::label()),
-                Span::styled(r.value().to_string(), value),
-            ])
-            .style(bg)
-        })
-        .collect();
-    f.render_widget(Paragraph::new(lines), inner);
-}
-
-/// The values a setting changes, as "file  key old → new".
-fn setting_detail(fix: &Fix) -> String {
-    match fix.status {
-        Status::Missing => format!(
-            "waits for {}, which the game writes the first time it runs",
-            fix.missing_file.as_deref().unwrap_or("its settings file")
-        ),
-        Status::Already => "already set".into(),
-        Status::Applied => fix
-            .view
-            .iter()
-            .map(|v| {
-                let file = v
-                    .path
-                    .file_name()
-                    .map(|n| n.to_string_lossy().into_owned())
-                    .unwrap_or_default();
-                format!("{file} {} = {}", v.key, v.new.display())
-            })
-            .collect::<Vec<_>>()
-            .join(", "),
-        Status::Absent => "this version of the game doesn't have the file".into(),
-        _ => fix
-            .view
-            .iter()
-            .map(|v| {
-                let file = v
-                    .path
-                    .file_name()
-                    .map(|n| n.to_string_lossy().into_owned())
-                    .unwrap_or_default();
-                let old = v
-                    .old
-                    .as_ref()
-                    .map(|o| o.display())
-                    .unwrap_or_else(|| "(not set)".into());
-                format!("{file} {} {old} → {}", v.key, v.new.display())
-            })
-            .collect::<Vec<_>>()
-            .join(", "),
-    }
-}
-
-fn draw_settings(f: &mut Frame, p: &Panel, area: Rect) {
-    let block = boxed("Game settings");
-    let inner = block.inner(area);
-    f.render_widget(block, area);
-    if p.fixes.is_empty() {
-        let text = if p.game.is_some() {
-            "The game's profile has no settings to change."
-        } else {
-            "There's no profile for this game, so there are no settings to change."
-        };
-        f.render_widget(
-            Paragraph::new(text)
-                .wrap(Wrap { trim: true })
-                .style(theme::dim()),
-            inner,
-        );
-        return;
-    }
-    let selected = match p.focused() {
-        Some(Item::Setting(i)) => Some(i),
-        _ => None,
-    };
-    let width = p
-        .fixes
-        .iter()
-        .map(|x| x.title.chars().count())
-        .max()
-        .unwrap_or(0)
-        .min(40)
-        + 2;
-    // gutter, mark and title, then the detail and the untested note.
-    let line_w = |fix: &Fix| {
-        2 + 4 + width + setting_detail(fix).chars().count() + if fix.untested { 11 } else { 0 }
-    };
-    // In a narrow pane, each setting's detail goes on a row of its own under
-    // its title rather than being cut off.
-    let two_rows = p.fixes.iter().any(|x| line_w(x) > usize::from(inner.width));
-    let per = if two_rows { 2 } else { 1 };
-    let height = (usize::from(inner.height) / per).max(1);
-    let top = selected.map_or(0, |s| s.saturating_sub(height.saturating_sub(1)));
-    let lines: Vec<Line> = p
-        .fixes
-        .iter()
-        .enumerate()
-        .skip(top)
-        .take(height)
-        .flat_map(|(i, fix)| {
-            let sel = selected == Some(i);
-            let mark = if !Panel::tickable(fix) {
-                " – "
-            } else if p.ticked.contains(&fix.title) {
-                "[x]"
-            } else {
-                "[ ]"
-            };
-            let changed = p.ticked.contains(&fix.title) != p.ticked_before.contains(&fix.title);
-            let title_style = if changed {
-                Style::new()
-                    .fg(ratatui::style::Color::LightYellow)
-                    .add_modifier(Modifier::BOLD)
-            } else if Panel::tickable(fix) {
-                Style::new()
-            } else {
-                theme::dim()
-            };
-            let bg = if sel {
-                Style::new().bg(theme::SELECT_BG)
-            } else {
-                Style::new()
-            };
-            let mut detail = vec![Span::styled(setting_detail(fix), theme::dim())];
-            if fix.untested {
-                detail.push(Span::styled(" (untested)", theme::note()));
-            }
-            let head = vec![
-                gutter(sel),
-                Span::raw(format!("{mark} ")),
-                Span::styled(format!("{:width$}", truncate(&fix.title, 40)), title_style),
-            ];
-            if two_rows {
-                let mut under = vec![gutter(sel), Span::raw("    ")];
-                under.extend(detail);
-                vec![Line::from(head).style(bg), Line::from(under).style(bg)]
-            } else {
-                let mut one = head;
-                one.extend(detail);
-                vec![Line::from(one).style(bg)]
-            }
-        })
-        .collect();
-    f.render_widget(Paragraph::new(lines), inner);
-}
-
 fn truncate(s: &str, max: usize) -> String {
     if s.chars().count() <= max {
         s.to_string()
@@ -438,7 +864,7 @@ fn truncate(s: &str, max: usize) -> String {
     }
 }
 
-fn confirm_lines(lines: &[(String, String)], nothing: bool) -> Vec<Line<'static>> {
+fn confirm_lines(heading: &str, lines: &[(String, String)], nothing: bool) -> Vec<Line<'static>> {
     let mut text: Vec<Line> = Vec::new();
     if nothing {
         text.push(Line::from(
@@ -447,7 +873,7 @@ fn confirm_lines(lines: &[(String, String)], nothing: bool) -> Vec<Line<'static>
         return text;
     }
     text.push(Line::from(Span::styled(
-        "Apply these changes?",
+        heading.to_string(),
         theme::white(),
     )));
     text.push(Line::from(""));
@@ -459,7 +885,10 @@ fn confirm_lines(lines: &[(String, String)], nothing: bool) -> Vec<Line<'static>
         + 2;
     for (what, change) in lines {
         text.push(Line::from(vec![
-            Span::styled(format!("  {what:width$}"), theme::label()),
+            Span::styled(
+                format!("  {what:width$}"),
+                Style::new().fg(theme::FILTER_LABEL),
+            ),
             Span::raw(change.clone()),
         ]));
     }
@@ -531,25 +960,44 @@ fn uninstall_lines(p: &Panel, u: &super::UninstallView) -> Vec<Line<'static>> {
 
 const SPINNER: [&str; 4] = ["|", "/", "-", "\\"];
 
-fn draw_run(f: &mut Frame, r: &super::run::RunView, area: Rect) {
-    let text = run_lines(r);
-    // Keep the end in view.
+/// The work's box in the right column. While it runs, its end stays in view;
+/// once it's over, PgUp/PgDn scroll it.
+fn draw_run(f: &mut Frame, p: &Panel, r: &super::run::RunView, area: Rect) {
+    let width = usize::from(area.width.saturating_sub(2));
+    let text = run_lines(r, width);
     let shown = area.height.saturating_sub(2);
-    let skip = rows_of(&text, area.width.saturating_sub(2)).saturating_sub(shown);
-    let title = if r.finished() { "Done" } else { "Working" };
+    let rows = rows_of(&text, area.width.saturating_sub(2));
+    let max = rows.saturating_sub(shown);
+    let (title, style) = match &r.result {
+        None => ("Working".to_string(), Style::new().fg(theme::LABEL)),
+        Some(fin) if fin.ok => (fin.title.clone(), theme::green()),
+        Some(fin) => (fin.title.clone(), theme::label()),
+    };
+    let skip = if r.finished() {
+        p.info_scroll.min(max)
+    } else {
+        max
+    };
     f.render_widget(
         Paragraph::new(text)
             .wrap(Wrap { trim: false })
             .scroll((skip, 0))
-            .block(boxed(title)),
+            .block(boxed_line(Line::from(Span::styled(
+                format!(" {title} "),
+                style,
+            )))),
         area,
     );
 }
 
-fn run_lines(r: &super::run::RunView) -> Vec<Line<'static>> {
+/// Each step with a tick (the running one with a spinner) and what it did
+/// under it. Once it's over the details fold away and the finish follows:
+/// what happened, the numbered next steps, the settings changed, and every
+/// warning from the run.
+fn run_lines(r: &super::run::RunView, width: usize) -> Vec<Line<'static>> {
     let mut text: Vec<Line<'static>> = Vec::new();
     let done = r.finished();
-    for (i, s) in r.steps.iter().enumerate() {
+    for (i, (s, details)) in r.steps.iter().enumerate() {
         let last = i + 1 == r.steps.len();
         let mark = if last && !done {
             let tick = std::time::SystemTime::now()
@@ -560,18 +1008,85 @@ fn run_lines(r: &super::run::RunView) -> Vec<Line<'static>> {
             Span::styled(" ✓ ", theme::green())
         };
         text.push(Line::from(vec![mark, Span::raw(s.clone())]));
+        if !done {
+            for d in details {
+                text.push(Line::from(Span::styled(format!("     {d}"), theme::dim())));
+            }
+        }
     }
-    for n in &r.notes {
-        text.push(Line::from(vec![
-            Span::styled(" ! ", theme::label()),
-            Span::raw(n.clone()),
-        ]));
+    if !done {
+        for n in &r.notes {
+            text.push(Line::from(vec![
+                Span::styled(" ! ", theme::label()),
+                Span::raw(n.clone()),
+            ]));
+        }
+        return text;
     }
-    if let Some((ok, lines)) = &r.result {
+    let Some(fin) = &r.result else { return text };
+    let heading = |text: &mut Vec<Line<'static>>, h: String, style: Style| {
         text.push(Line::from(""));
-        let style = if *ok { theme::white() } else { theme::label() };
-        for l in lines {
-            text.push(Line::from(Span::styled(l.clone(), style)));
+        text.push(Line::from(Span::styled(format!(" {h}"), style)));
+    };
+    if !fin.lines.is_empty() {
+        text.push(Line::from(""));
+        let style = if fin.ok {
+            theme::white()
+        } else {
+            theme::label()
+        };
+        for l in &fin.lines {
+            for part in wrap(l, width.saturating_sub(2)) {
+                text.push(Line::from(Span::styled(format!(" {part}"), style)));
+            }
+        }
+    }
+    if !fin.next.is_empty() {
+        heading(&mut text, "Next steps".into(), theme::note());
+        for (n, step) in fin.next.iter().enumerate() {
+            for (i, part) in wrap(step, width.saturating_sub(5)).into_iter().enumerate() {
+                text.push(if i == 0 {
+                    Line::from(vec![
+                        Span::styled(format!("  {}. ", n + 1), theme::key()),
+                        Span::raw(part),
+                    ])
+                } else {
+                    Line::from(format!("     {part}"))
+                });
+            }
+        }
+    }
+    if !fin.settings.is_empty() {
+        heading(&mut text, "Game settings changed".into(), theme::note());
+        for (title, follow) in &fin.settings {
+            text.push(Line::from(vec![
+                Span::styled("  • ", theme::green()),
+                Span::raw(title.clone()),
+            ]));
+            for part in wrap(follow, width.saturating_sub(4)) {
+                text.push(Line::from(Span::styled(
+                    format!("    {part}"),
+                    theme::dim(),
+                )));
+            }
+        }
+    }
+    if !r.notes.is_empty() {
+        let n = r.notes.len();
+        let h = if n == 1 {
+            "1 warning".to_string()
+        } else {
+            format!("{n} warnings")
+        };
+        heading(&mut text, h, theme::label());
+        for note in &r.notes {
+            for (i, part) in wrap(note, width.saturating_sub(4)).into_iter().enumerate() {
+                let lead = if i == 0 { "  ! " } else { "    " };
+                text.push(Line::from(vec![
+                    Span::styled(lead, theme::label()),
+                    Span::raw(part),
+                ]));
+            }
         }
     }
     text
@@ -629,8 +1144,10 @@ fn help_text(p: &Panel) -> String {
         return "Working. This can take a minute while files download.".into();
     }
     match p.focused() {
-        Some(Item::Sound(i)) => p.sound[i].options[p.sound[i].chosen].help.clone(),
-        Some(Item::Setup(i)) => p.setup[i].options[p.setup[i].chosen].help.clone(),
+        Some(Item::Choice(si, ri)) => {
+            let r = p.choice(si, ri);
+            r.options[r.chosen].help.clone()
+        }
         Some(Item::Setting(i)) => {
             let fix = &p.fixes[i];
             if fix.follow_up.is_empty() {
@@ -640,12 +1157,13 @@ fn help_text(p: &Panel) -> String {
             }
         }
         Some(Item::Button(b)) => match b {
-            Button::Install => "Installs the EAX fix with the choices above.".into(),
+            Button::Install => "Shows what will be installed before anything is changed.".into(),
             Button::Apply => "Shows what will change before anything is changed.".into(),
             Button::Uninstall => "Shows what uninstalling removes and puts back.".into(),
             Button::SoundLog if p.sound_log_on => "Stops writing openal.log the next time the game runs.".into(),
             Button::SoundLog => "Writes openal.log in the game's folder the next time it runs, for working out a sound problem.".into(),
             Button::CheckAgain => "Looks at the game's folder and prefix again.".into(),
+            Button::Back if matches!(p.screen, Screen::Main) => "Back to the list.".into(),
             _ => String::new(),
         },
         None => String::new(),
@@ -675,7 +1193,7 @@ pub fn keys(p: &Panel) -> Vec<(&'static str, &'static str)> {
         vec![
             ("↑/↓", "move"),
             ("Tab", "next section"),
-            ("Enter", "open"),
+            ("Enter", "choose"),
             ("Space", "tick"),
             ("Esc", "back"),
             ("F1", "help"),
@@ -699,8 +1217,7 @@ fn draw_list(f: &mut Frame, p: &Panel, area: Rect) {
         return;
     };
     let row = match item {
-        Item::Sound(i) => &p.sound[i],
-        Item::Setup(i) => &p.setup[i],
+        Item::Choice(si, ri) => p.choice(si, ri),
         _ => return,
     };
     let w = row
@@ -738,7 +1255,24 @@ fn draw_list(f: &mut Frame, p: &Panel, area: Rect) {
         );
     }
     let h = lines.len() as u16 + 2;
-    let r = popup(area, w as u16, h);
+    // Under its field, like a dropdown: above it when there's no room below,
+    // in the middle when the field isn't on screen.
+    let r = match p.field.get() {
+        Some(field) => {
+            let w = (w as u16).max(field.width).min(area.width);
+            let x = field.x.min(area.x + area.width - w);
+            let below = field.y + 1;
+            let y = if below + h <= area.y + area.height {
+                below
+            } else if field.y >= area.y + h {
+                field.y - h
+            } else {
+                area.y + area.height.saturating_sub(h)
+            };
+            Rect::new(x, y, w, h.min(area.height))
+        }
+        None => popup(area, w as u16, h),
+    };
     f.render_widget(Clear, r);
     f.render_widget(Paragraph::new(lines).block(boxed(row.title)), r);
 }
@@ -787,4 +1321,57 @@ fn short_path(p: &Panel, path: &std::path::Path) -> String {
         return format!("prefix/{}", rest.display());
     }
     path.display().to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::run::{Finish, RunView};
+    use super::*;
+
+    fn text(lines: &[Line]) -> Vec<String> {
+        lines
+            .iter()
+            .map(|l| l.spans.iter().map(|s| s.content.as_ref()).collect())
+            .collect()
+    }
+
+    #[test]
+    fn the_finish_folds_the_details_and_lists_next_steps_settings_and_warnings() {
+        let r = RunView::finished_with(
+            vec![(
+                "Copying the files into the game's folder".into(),
+                vec!["Copied dsound.dll to the game folder".into()],
+            )],
+            vec!["Couldn't write /x/dsound.dll.".into()],
+            Finish {
+                ok: true,
+                title: "Installed".into(),
+                next: vec![
+                    "Launch Thief Gold. The DLL override is in Steam's launch options, so just hit Play.".into(),
+                ],
+                settings: vec![(
+                    "Enable Pro Logic surround sound".into(),
+                    "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.".into(),
+                )],
+                lines: Vec::new(),
+            },
+        );
+        let t = text(&run_lines(&r, 60)).join("\n");
+        assert!(t.contains(" ✓ Copying the files into the game's folder"));
+        assert!(!t.contains("Copied dsound.dll to the game folder"), "{t}");
+        let order = [
+            " Next steps",
+            "  1. Launch Thief Gold.",
+            " Game settings changed",
+            "  • Enable Pro Logic surround sound",
+            "    Don't forget to set your AV receiver",
+            " 1 warning",
+            "  ! Couldn't write /x/dsound.dll.",
+        ];
+        let at: Vec<usize> = order
+            .iter()
+            .map(|s| t.find(s).unwrap_or_else(|| panic!("{s:?} in\n{t}")))
+            .collect();
+        assert!(at.windows(2).all(|w| w[0] < w[1]), "{t}");
+    }
 }

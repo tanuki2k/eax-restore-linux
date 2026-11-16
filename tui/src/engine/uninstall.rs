@@ -338,6 +338,28 @@ pub fn execute(s: &Survey, c: &Choices, host: &mut dyn UninstallHost, when: &str
             r.restore_failed.push((f.path.clone(), bak.clone()));
         }
     }
+    let name = |p: &Path| {
+        p.file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default()
+    };
+    for p in &r.removed {
+        if r.restored.contains(p) {
+            host.detail(&format!("Put back the original {}", name(p)));
+        } else {
+            host.detail(&format!("Removed {}", name(p)));
+        }
+    }
+    for p in &r.not_removed {
+        host.warning(&format!("Couldn't remove {}.", p.display()));
+    }
+    for (p, bak) in &r.restore_failed {
+        host.warning(&format!(
+            "Couldn't put back the original {}, so it's kept as {}.",
+            name(p),
+            bak.display()
+        ));
+    }
     let removed_lines: Vec<Vec<u8>> = r
         .removed
         .iter()
@@ -360,22 +382,39 @@ pub fn execute(s: &Survey, c: &Choices, host: &mut dyn UninstallHost, when: &str
         if !rec.file.is_file() {
             continue;
         }
+        let launcher = Launcher::from_key(&rec.launcher).unwrap_or(Launcher::Heroic);
+        let where_ = crate::engine::install::override_where(launcher);
         if c.keep_launcher.contains(&line) {
+            host.detail(&format!("Kept the DLL override in {where_}"));
             r.launcher_left.push(line);
             continue;
         }
         let t = Target {
-            launcher: Launcher::from_key(&rec.launcher).unwrap_or(Launcher::Heroic),
+            launcher,
             file: rec.file.clone(),
             id: rec.id.clone(),
         };
         if !host.launcher_closed(&t) {
+            host.warning(&format!(
+                "{} stayed open, so the DLL override is still in {where_}.",
+                launcher.label()
+            ));
             r.launcher_left.push(line);
             continue;
         }
         let outcome = changes::revert_override(&line);
-        if outcome == changes::Reverted::Failed {
-            r.launcher_left.push(line.clone());
+        match outcome {
+            changes::Reverted::Restored => {
+                host.detail(&format!("Removed the DLL override from {where_}"))
+            }
+            changes::Reverted::ChangedSince => host.detail(&format!(
+                "Left the DLL override in {where_}, since it was changed after the install"
+            )),
+            changes::Reverted::Failed => {
+                host.warning(&format!("Couldn't remove the DLL override from {where_}."));
+                r.launcher_left.push(line.clone());
+            }
+            changes::Reverted::NoFile => {}
         }
         r.launcher.push((line, outcome));
     }
@@ -384,6 +423,11 @@ pub fn execute(s: &Survey, c: &Choices, host: &mut dyn UninstallHost, when: &str
     if let Some(work) = s.registry_work(c) {
         host.step("Removing the registry changes");
         registry_cleaned = host.remove_registry(&work);
+        if registry_cleaned {
+            host.detail("Removed");
+        } else {
+            host.warning("Couldn't change the prefix's registry, so its changes are still there.");
+        }
         r.registry_cleaned = Some(registry_cleaned);
     }
     let vcrun_removed = s.vcrun_present && c.remove_vcrun;
@@ -395,6 +439,9 @@ pub fn execute(s: &Survey, c: &Choices, host: &mut dyn UninstallHost, when: &str
         host.step("Removing Creative's EAX Unified");
     }
     let eax_unified_removed = s.recorded.eax_unified && host.remove_eax_unified();
+    if s.recorded.eax_unified && !eax_unified_removed {
+        host.warning("Creative's EAX Unified couldn't be removed.");
+    }
     for co in &s.recorded.companions {
         let vc = co.vcrun.is_some() && c.companion_vcrun.contains(&co.app_id);
         if vc || co.registry_com || co.registry_override.is_some() {
@@ -437,6 +484,7 @@ pub fn execute(s: &Survey, c: &Choices, host: &mut dyn UninstallHost, when: &str
             }
         }
         if restored > 0 {
+            host.detail(&format!("Undid \"{}\"", g.title));
             r.settings_restored.push(g.title.clone());
         }
     }

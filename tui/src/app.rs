@@ -264,6 +264,18 @@ impl App {
             KeyCode::Left | KeyCode::Backspace => p.up(),
             KeyCode::Char('.') => p.toggle_hidden(),
             KeyCode::Char('~') => p.go_home(),
+            KeyCode::Char(' ') if self.use_panel => {
+                // The game's page for that folder, with the game's profile when
+                // the picker was opened for one.
+                let dir = p.dir.clone();
+                let game = p.game.take();
+                let name = dir
+                    .file_name()
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .unwrap_or_default();
+                self.picker = None;
+                self.panel = Some(crate::panel::Panel::open(&name, &dir, game, &self.home));
+            }
             KeyCode::Char(' ') => {
                 let env = vec![
                     ("EAX_RESTORE_ACTION", "install".to_string()),
@@ -323,20 +335,24 @@ impl App {
         }
     }
 
+    /// Enter on a game: its page. A game that wasn't found on this PC needs
+    /// its folder first, so the folder picker asks for it, unless its profile
+    /// says it has no EAX, whose page needs no folder.
     fn open_menu(&mut self) {
-        if self.use_panel {
-            if let Some(e) = self.current().filter(|e| e.path.is_some()) {
-                let dir = e.path.clone().expect("filtered");
-                self.panel = Some(crate::panel::Panel::open(
-                    &e.name,
-                    &dir,
-                    e.game.clone(),
-                    &self.home,
-                ));
-                return;
-            }
+        if !self.use_panel {
+            return self.open_action_menu();
         }
-        self.open_action_menu();
+        let Some(e) = self.current() else { return };
+        let (name, game, path) = (e.name.clone(), e.game.clone(), e.path.clone());
+        if let Some(dir) = path {
+            self.panel = Some(crate::panel::Panel::open(&name, &dir, game, &self.home));
+        } else if game.as_ref().is_some_and(|g| g.eax.none_to_restore()) {
+            self.panel = Some(crate::panel::Panel::without_folder(&name, game, &self.home));
+        } else {
+            let mut picker = Picker::new(picker::start_dir(&self.home), self.home.clone());
+            picker.game = game;
+            self.picker = Some(picker);
+        }
     }
 
     fn open_action_menu(&mut self) {
@@ -396,24 +412,12 @@ impl App {
 
     fn handle_panel_key(&mut self, key: KeyEvent) {
         let Some(p) = self.panel.as_mut() else { return };
-        // Full screen and side/under work on the page as they do on the
-        // profile, but not while a choice list or question is up.
-        if key.modifiers.contains(KeyModifiers::CONTROL) && p.list.is_none() && p.question.is_none()
-        {
-            match key.code {
-                KeyCode::Char('f') => return self.zoom = !self.zoom,
-                KeyCode::Char('l') => return self.swap_layout(),
-                _ => {}
-            }
-        }
         p.handle_key(key);
         if p.changed_disk {
             self.rescan = true;
         }
         if p.closed {
             self.panel = None;
-            // Back on the list, which a full-screen page had covered.
-            self.zoom = false;
         }
     }
 

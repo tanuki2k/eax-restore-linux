@@ -158,9 +158,21 @@ fn run(
 ) -> Result<()> {
     while !app.quit {
         terminal.draw(|f| ui::draw(f, app))?;
-        // While the panel's work runs, redraw for its progress between keys.
-        let running = app.panel.as_ref().is_some_and(|p| p.running());
-        if !running || event::poll(std::time::Duration::from_millis(150))? {
+        // While something on the page moves by itself (the work's progress,
+        // the Status box typing, a cover on its way), redraw between keys:
+        // quickly while it types, so it reads as typing.
+        let wait = app.panel.as_ref().and_then(|p| {
+            if p.revealing() {
+                Some(25)
+            } else {
+                p.animating().then_some(150)
+            }
+        });
+        let key_waiting = match wait {
+            None => true,
+            Some(ms) => event::poll(std::time::Duration::from_millis(ms))?,
+        };
+        if key_waiting {
             match event::read()? {
                 Event::Key(key) if key.kind == KeyEventKind::Press => app.handle_key(key),
                 Event::Resize(width, _) => app.resize(width),

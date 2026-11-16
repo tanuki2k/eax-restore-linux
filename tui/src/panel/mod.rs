@@ -5,6 +5,7 @@
 pub mod run;
 pub mod view;
 
+use crate::cover::{self, Pixels, Wanted};
 use crate::db::Game;
 use crate::engine::apply::RevertGroup;
 use crate::engine::builds::Build;
@@ -20,6 +21,8 @@ use crate::engine::uninstall::{self, Choices, Location, Surveyed};
 use ratatui::crossterm::event::{KeyCode, KeyEvent};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
+use std::sync::mpsc::Receiver;
+use std::time::{Duration, Instant};
 
 /// One value a row can take, and a sentence about it.
 #[derive(Debug, Clone)]
@@ -51,6 +54,16 @@ pub struct Row {
     pub chosen: usize,
     /// What it was when the panel opened: the installed choice, or the default.
     pub original: usize,
+    /// The opening value came from this PC or the game's profile, not a
+    /// default; shown as "(detected)" until it's changed.
+    pub detected: bool,
+}
+
+/// One numbered box of choices, in the order the script asks them.
+#[derive(Debug, Clone)]
+pub struct Section {
+    pub title: &'static str,
+    pub rows: Vec<Row>,
 }
 
 impl Row {
@@ -67,7 +80,16 @@ impl Row {
                 .collect(),
             chosen,
             original: chosen,
+            detected: false,
         }
+    }
+    fn detected(mut self, yes: bool) -> Self {
+        self.detected = yes;
+        self
+    }
+    /// Shown as detected: it came from the PC or profile and wasn't changed.
+    pub fn shows_detected(&self) -> bool {
+        self.detected && !self.changed()
     }
     pub fn value(&self) -> &str {
         &self.options[self.chosen].label
@@ -139,8 +161,8 @@ pub fn speakers_label(s: &Speakers) -> String {
 /// What has focus: a row, a game setting, or a button.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Item {
-    Sound(usize),
-    Setup(usize),
+    /// (section, row) in [`Panel::sections`].
+    Choice(usize, usize),
     Setting(usize),
     Button(Button),
 }
@@ -167,6 +189,9 @@ pub enum Job {
     Install {
         plan: Box<Plan>,
         revert: Vec<RevertGroup>,
+        /// Every audio setting is on, so the game's own EAX switch needs no
+        /// step at the end.
+        audio_done: bool,
     },
     Speakers(Speakers),
     Settings {
@@ -191,8 +216,12 @@ pub struct UninstallView {
 
 pub enum Screen {
     Main,
-    /// What Apply will do, and the jobs that do it.
+    /// What Install or Apply will do, and the jobs that do it.
     Confirm {
+        /// The box's title: "Install" or "Apply changes".
+        title: &'static str,
+        /// The line above the list.
+        heading: String,
         lines: Vec<(String, String)>,
         jobs: Vec<Job>,
     },
@@ -221,8 +250,8 @@ pub struct Panel {
     pub installed: Option<Installed>,
     /// A Linux build or a missing prefix: there's nothing to choose yet.
     pub problem: Option<String>,
-    pub sound: Vec<Row>,
-    pub setup: Vec<Row>,
+    pub sections: Vec<Section>,
+    /// Audio settings first, then optional ones, as the page lists them.
     pub fixes: Vec<Fix>,
     pub ticked: HashSet<String>,
     pub ticked_before: HashSet<String>,
@@ -236,9 +265,35 @@ pub struct Panel {
     pub closed: bool,
     /// Something was changed on disk, so the game list needs reading again.
     pub changed_disk: bool,
-    home: PathBuf,
+    /// When the Status box started typing itself out; None once it's shown
+    /// in full (or with EAX_RESTORE_NO_ANIMATION).
+    pub reveal: Option<Instant>,
+    /// The cover, while it's being found and decoded, then once it's here.
+    cover_rx: Option<Receiver<Option<Pixels>>>,
+    pub cover: Option<Pixels>,
+    /// How far the right column's game profile is scrolled.
+    pub info_scroll: u16,
+    /// Where the focused choice's field was last drawn, so its list opens
+    /// under it like a dropdown.
+    pub field: std::cell::Cell<Option<ratatui::layout::Rect>>,
+    /// False for a page opened without a folder (a game with no EAX that
+    /// isn't on this PC).
+    pub on_this_pc: bool,
+    pub(crate) home: PathBuf,
     untested: bool,
 }
+
+/// One line of the Status box: fine, or a problem worth a look.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StatusLine {
+    pub ok: bool,
+    pub label: &'static str,
+    pub value: String,
+}
+
+/// The pause before each Status line and the time per character it types.
+const LINE_PAUSE_MS: u64 = 60;
+const CHAR_MS: u64 = 3;
 
 impl Panel {
     /// Looks at the game folder and everything around it, as the headless
@@ -247,16 +302,66 @@ impl Panel {
         let pt = crate::cli::protontricks();
         let facts = prepare::gather(dir, game.as_ref(), home, &pt);
         let installed = Installed::read(&facts.game_dir, home);
+        let wanted = Wanted {
+            store: facts.store,
+            id: facts.id.clone(),
+            name: String::new(),
+        };
+        Self::with_facts(name, facts, installed, game, wanted, true, home)
+    }
+
+    /// The page of a game with no folder on this PC, which needs none: one the
+    /// profile says has no EAX. Only the profile shows; nothing is detected.
+    pub fn without_folder(name: &str, game: Option<Game>, home: &Path) -> Self {
+        let facts = prepare::none(game.as_ref());
+        // The cover by whichever store the profile lists.
+        let wanted = match game.as_ref().map(|g| &g.stores) {
+            Some(s) if s.steam.is_some() => Wanted {
+                store: Some(crate::engine::identify::Store::Steam),
+                id: s
+                    .steam
+                    .as_ref()
+                    .map(|x| x.id.to_string())
+                    .unwrap_or_default(),
+                name: String::new(),
+            },
+            Some(s) if s.gog.is_some() => Wanted {
+                store: Some(crate::engine::identify::Store::Gog),
+                id: s.gog.as_ref().map(|x| x.id.to_string()).unwrap_or_default(),
+                name: String::new(),
+            },
+            _ => Wanted {
+                store: None,
+                id: String::new(),
+                name: String::new(),
+            },
+        };
+        Self::with_facts(name, facts, None, game, wanted, false, home)
+    }
+
+    fn with_facts(
+        name: &str,
+        facts: Facts,
+        installed: Option<Installed>,
+        game: Option<Game>,
+        mut wanted: Wanted,
+        on_this_pc: bool,
+        home: &Path,
+    ) -> Self {
+        let name = game
+            .as_ref()
+            .map_or_else(|| name.to_string(), |g| g.name.clone());
+        wanted.name = name.clone();
+        let cover_rx = Some(cover::spawn(home.to_path_buf(), wanted));
+        let animate = !cfg!(test)
+            && std::env::var("EAX_RESTORE_NO_ANIMATION").map_or(true, |v| v.is_empty() || v == "0");
         let mut p = Panel {
-            name: game
-                .as_ref()
-                .map_or_else(|| name.to_string(), |g| g.name.clone()),
+            name,
             facts,
             game,
             installed,
             problem: None,
-            sound: Vec::new(),
-            setup: Vec::new(),
+            sections: Vec::new(),
             fixes: Vec::new(),
             ticked: HashSet::new(),
             ticked_before: HashSet::new(),
@@ -267,6 +372,12 @@ impl Panel {
             sound_log_on: false,
             closed: false,
             changed_disk: false,
+            reveal: animate.then(Instant::now),
+            cover_rx,
+            cover: None,
+            info_scroll: 0,
+            field: std::cell::Cell::new(None),
+            on_this_pc,
             home: home.to_path_buf(),
             untested: ops::untested_from_env(),
         };
@@ -274,9 +385,89 @@ impl Panel {
         p
     }
 
+    /// The Status box: where the game is, what's installed, and what was
+    /// found around it. A line that isn't `ok` is a problem the page knows of.
+    pub fn status_lines(&self) -> Vec<StatusLine> {
+        let f = &self.facts;
+        let line = |ok, label, value: String| StatusLine { ok, label, value };
+        if !self.on_this_pc {
+            return vec![line(true, "Folder", "not found on this PC".into())];
+        }
+        let mut out = vec![line(
+            true,
+            "Folder",
+            crate::library::tilde(&f.game_dir, &self.home),
+        )];
+        if self.installed.is_some() {
+            out.push(line(true, "Installed", view::status_line(self)));
+        }
+        for (ok, label, value) in f.summary(&self.home) {
+            out.push(line(ok, label, value));
+        }
+        out
+    }
+
+    /// How long each Status line takes to type out, in order.
+    fn reveal_times(&self) -> Vec<Duration> {
+        self.status_lines()
+            .iter()
+            .map(|l| {
+                let chars = (l.label.chars().count() + l.value.chars().count()) as u64;
+                Duration::from_millis(LINE_PAUSE_MS + CHAR_MS * chars)
+            })
+            .collect()
+    }
+
+    /// While the Status box is still typing: how many lines are done, and how
+    /// many characters of the next one show. None once it's all shown.
+    pub fn revealed(&self) -> Option<(usize, usize)> {
+        let start = self.reveal?;
+        let mut t = start.elapsed();
+        for (i, d) in self.reveal_times().into_iter().enumerate() {
+            if t < d {
+                let typed = t.saturating_sub(Duration::from_millis(LINE_PAUSE_MS));
+                return Some((i, (typed.as_millis() / u128::from(CHAR_MS)) as usize));
+            }
+            t -= d;
+        }
+        None
+    }
+
+    pub fn revealing(&self) -> bool {
+        self.revealed().is_some()
+    }
+
+    /// Something on the page moves by itself: the work's progress, the
+    /// Status box typing, or a cover still on its way.
+    pub fn animating(&self) -> bool {
+        self.running() || self.revealing() || self.cover_rx.is_some()
+    }
+
+    /// The profile says there's no EAX to restore, so the page offers nothing
+    /// to install.
+    pub fn no_eax(&self) -> bool {
+        self.game.as_ref().is_some_and(|g| g.eax.none_to_restore())
+    }
+
     fn build(&mut self) {
         let f = &self.facts;
         let name = &self.name;
+        if let Some(g) = self.game.as_ref().filter(|g| g.eax.none_to_restore()) {
+            let mut text = if g.eax.problem.is_empty() {
+                format!("{name} never had EAX, so there's nothing to restore.")
+            } else {
+                g.eax.problem.clone()
+            };
+            if !g.eax.fix.is_empty() {
+                text.push_str("\n\n");
+                text.push_str(&g.eax.fix);
+            }
+            self.problem = Some(text);
+            self.sections.clear();
+            self.fixes.clear();
+            self.focus = 0;
+            return;
+        }
         self.problem = if f.linux_build && self.installed.is_none() {
             Some(format!("{name} is installed as its Linux version, which the EAX fix can't work with. Switch it to the Windows version in its launcher, then check again."))
         } else if f.prefix.is_none() && self.installed.is_none() {
@@ -287,6 +478,7 @@ impl Panel {
         let st = self.installed.as_ref().map(|i| i.state.clone());
         let plan = f.default_plan();
 
+        let installed = self.installed.is_some();
         let engine = st.as_ref().map_or(plan.engine, |s| s.engine);
         let mut sound = vec![Row::new(
             RowKind::Engine,
@@ -302,7 +494,8 @@ impl Panel {
                 ),
             ],
             usize::from(engine == Engine::OpenAlSoft),
-        )];
+        )
+        .detected(installed || f.profile_api.is_some() || f.files_api.is_some())];
         let builds = if self.installed.is_some() {
             vec![
                 (
@@ -324,7 +517,7 @@ impl Panel {
                 ),
             ]
         };
-        sound.push(Row::new(RowKind::Builds, "Builds", builds, 0));
+        sound.push(Row::new(RowKind::Builds, "Builds", builds, 0).detected(installed));
         let current = self
             .installed
             .as_ref()
@@ -341,7 +534,13 @@ impl Panel {
                 sp.push((current.label(), "The setup the game has now.".into()));
                 sp.len() - 1
             });
-        let mut sprow = Row::new(RowKind::Speakers, "Speakers", Vec::new(), at);
+        let speakers_found = self
+            .installed
+            .as_ref()
+            .and_then(Installed::speakers)
+            .is_some();
+        let mut sprow =
+            Row::new(RowKind::Speakers, "Speakers", Vec::new(), at).detected(speakers_found);
         sprow.options = sp
             .into_iter()
             .map(|(label, help)| Opt { label, help })
@@ -360,7 +559,8 @@ impl Panel {
                     "Profile's sound values",
                     vec![("Use them", ""), ("Leave them out", "")],
                     0,
-                );
+                )
+                .detected(true);
                 r.options[0].help = help.clone();
                 r.options[1].help = help;
                 sound.push(r);
@@ -400,6 +600,8 @@ impl Panel {
                 Override::Manual => usize::from(has_launcher) + 1,
             },
         };
+        // Where the override goes is the page's choice, not something read
+        // from the game, so it's never shown as detected.
         let mut orow = Row::new(RowKind::Override, "DLL override", Vec::new(), over_at);
         orow.options = over
             .into_iter()
@@ -419,6 +621,7 @@ impl Panel {
                 ],
                 0,
             )
+            .detected(true)
         } else {
             Row::new(
                 RowKind::Vcrun,
@@ -438,10 +641,11 @@ impl Panel {
         };
         setup.push(vc);
         let arch = st.as_ref().and_then(|s| s.arch).unwrap_or(plan.arch);
-        setup.push(Row::new(
-            RowKind::Arch,
-            "Architecture",
-            vec![
+        setup.push(
+            Row::new(
+                RowKind::Arch,
+                "Architecture",
+                vec![
                 (
                     "32-bit",
                     "The game's .exe is 32-bit, and 64-bit files would crash it without an error.",
@@ -451,8 +655,10 @@ impl Panel {
                     "The game's .exe is 64-bit, and 32-bit files would crash it without an error.",
                 ),
             ],
-            usize::from(arch == 64),
-        ));
+                usize::from(arch == 64),
+            )
+            .detected(st.as_ref().and_then(|s| s.arch).is_some() || f.arch.is_some()),
+        );
         setup.push(Row::new(
             RowKind::Com,
             "COM routing",
@@ -464,35 +670,83 @@ impl Panel {
                 ),
             ],
             usize::from(st.as_ref().is_some_and(|s| s.com_routing)),
-        ));
-        setup.push(Row::new(
-            RowKind::Limits,
-            "More sounds at once",
-            vec![
-                ("Off", "The usual number of sounds."),
-                (
-                    "On",
-                    "Lets the game play up to 256 sounds at once, at 48 kHz.",
-                ),
-            ],
-            usize::from(st.as_ref().is_some_and(|s| s.advanced_limits)),
-        ));
-        if f.wants_eax_unified || st.as_ref().is_some_and(|s| s.eax_unified) {
-            setup.push(Row::new(
-                RowKind::EaxUnified,
-                "EAX Unified",
+        )
+        .detected(installed));
+        setup.push(
+            Row::new(
+                RowKind::Limits,
+                "More sounds at once",
                 vec![
+                    ("Off", "The usual number of sounds."),
                     (
-                        "Install it",
-                        "The game's profile says it needs Creative's EAX Unified.",
+                        "On",
+                        "Lets the game play up to 256 sounds at once, at 48 kHz.",
                     ),
-                    ("Skip", "Leaves it out, so the game may play without EAX."),
                 ],
-                0,
-            ));
+                usize::from(st.as_ref().is_some_and(|s| s.advanced_limits)),
+            )
+            .detected(installed),
+        );
+        if f.wants_eax_unified || st.as_ref().is_some_and(|s| s.eax_unified) {
+            setup.push(
+                Row::new(
+                    RowKind::EaxUnified,
+                    "EAX Unified",
+                    vec![
+                        (
+                            "Install it",
+                            "The game's profile says it needs Creative's EAX Unified.",
+                        ),
+                        ("Skip", "Leaves it out, so the game may play without EAX."),
+                    ],
+                    0,
+                )
+                .detected(true),
+            );
         }
-        self.sound = sound;
-        self.setup = setup;
+        // The script's order: audio engine, runtimes, speakers, tweaks, then
+        // the DLL override.
+        let mut all: Vec<Row> = sound.into_iter().chain(setup).collect();
+        let mut take = |kinds: &[RowKind]| -> Vec<Row> {
+            kinds
+                .iter()
+                .filter_map(|k| {
+                    let at = all.iter().position(|r| r.kind == *k)?;
+                    Some(all.remove(at))
+                })
+                .collect()
+        };
+        let sections = vec![
+            Section {
+                title: "Audio engine",
+                rows: take(&[
+                    RowKind::Engine,
+                    RowKind::Builds,
+                    RowKind::Arch,
+                    RowKind::Profile,
+                ]),
+            },
+            Section {
+                title: "Runtimes",
+                rows: take(&[RowKind::Vcrun, RowKind::EaxUnified]),
+            },
+            Section {
+                title: "Speakers",
+                rows: take(&[RowKind::Speakers]),
+            },
+            Section {
+                title: "Compatibility tweaks",
+                rows: take(&[RowKind::Com, RowKind::Limits]),
+            },
+            Section {
+                title: "DLL override",
+                rows: take(&[RowKind::Override]),
+            },
+        ];
+        self.sections = sections
+            .into_iter()
+            .filter(|s| !s.rows.is_empty())
+            .collect();
         self.sound_log_on = f
             .launcher
             .as_ref()
@@ -529,6 +783,8 @@ impl Panel {
             .into_iter()
             .filter(Fix::shown)
             .collect();
+        self.fixes
+            .sort_by_key(|f| u8::from(f.category != Category::Audio));
         if reset {
             self.ticked = self
                 .fixes
@@ -545,10 +801,15 @@ impl Panel {
     }
 
     pub fn row(&self, kind: RowKind) -> Option<&Row> {
-        self.sound
-            .iter()
-            .chain(&self.setup)
-            .find(|r| r.kind == kind)
+        self.rows().find(|r| r.kind == kind)
+    }
+
+    pub fn rows(&self) -> impl Iterator<Item = &Row> {
+        self.sections.iter().flat_map(|s| &s.rows)
+    }
+
+    pub fn choice(&self, s: usize, r: usize) -> &Row {
+        &self.sections[s].rows[r]
     }
 
     /// A setting that can be ticked: one there's something to switch.
@@ -561,6 +822,7 @@ impl Panel {
             Screen::Confirm { .. } => vec![Button::Confirm, Button::Back],
             Screen::Uninstall(_) => vec![Button::Confirm, Button::Back],
             Screen::Run(_) => vec![Button::Back],
+            Screen::Main if self.no_eax() => vec![Button::Back],
             Screen::Main if self.problem.is_some() => vec![Button::CheckAgain],
             Screen::Main if self.installed.is_some() => {
                 let mut b = vec![Button::Apply, Button::Uninstall];
@@ -578,8 +840,9 @@ impl Panel {
         let mut out = Vec::new();
         match &self.screen {
             Screen::Main if self.problem.is_none() => {
-                out.extend((0..self.sound.len()).map(Item::Sound));
-                out.extend((0..self.setup.len()).map(Item::Setup));
+                for (si, sec) in self.sections.iter().enumerate() {
+                    out.extend((0..sec.rows.len()).map(|ri| Item::Choice(si, ri)));
+                }
                 out.extend((0..self.fixes.len()).map(Item::Setting));
             }
             Screen::Uninstall(u) => {
@@ -605,18 +868,23 @@ impl Panel {
 
     fn rows_mut(&mut self, item: Item) -> Option<&mut Row> {
         match item {
-            Item::Sound(i) => self.sound.get_mut(i),
-            Item::Setup(i) => self.setup.get_mut(i),
+            Item::Choice(s, r) => self.sections.get_mut(s)?.rows.get_mut(r),
             _ => None,
         }
     }
 
     /// The panel's choices differ from what it opened with.
     pub fn dirty(&self) -> bool {
-        self.sound.iter().chain(&self.setup).any(Row::changed) || self.ticked != self.ticked_before
+        self.rows().any(Row::changed) || self.ticked != self.ticked_before
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) {
+        // A key while the Status box types itself out only finishes it, so a
+        // stray Enter doesn't press anything.
+        if self.revealing() {
+            self.reveal = None;
+            return;
+        }
         if self.question.is_some() {
             return self.answer_key(key);
         }
@@ -644,6 +912,8 @@ impl Panel {
                 }
             }
             KeyCode::Tab => self.next_section(),
+            KeyCode::PageUp => self.info_scroll = self.info_scroll.saturating_sub(5),
+            KeyCode::PageDown => self.info_scroll = self.info_scroll.saturating_add(5),
             KeyCode::Char(' ') => match self.focused() {
                 Some(Item::Setting(i)) => self.toggle(i),
                 Some(Item::Button(
@@ -660,10 +930,9 @@ impl Panel {
     fn next_section(&mut self) {
         let items = self.items();
         let kind = |i: &Item| match i {
-            Item::Sound(_) => 0,
-            Item::Setup(_) => 1,
-            Item::Setting(_) => 2,
-            Item::Button(_) => 3,
+            Item::Choice(s, _) => *s,
+            Item::Setting(f) => 100 + usize::from(self.fixes[*f].category != Category::Audio),
+            Item::Button(_) => 1000,
         };
         let here = items.get(self.focus).map_or(0, kind);
         self.focus = items.iter().position(|i| kind(i) > here).unwrap_or(0);
@@ -703,8 +972,7 @@ impl Panel {
     fn list_key(&mut self, key: KeyEvent, sel: usize) {
         let Some(item) = self.focused() else { return };
         let len = match item {
-            Item::Sound(i) => self.sound[i].options.len(),
-            Item::Setup(i) => self.setup[i].options.len(),
+            Item::Choice(s, r) => self.choice(s, r).options.len(),
             _ => 0,
         };
         match key.code {
@@ -765,8 +1033,7 @@ impl Panel {
     fn press(&mut self) {
         let Some(item) = self.focused() else { return };
         match item {
-            Item::Sound(i) => self.list = Some(self.sound[i].chosen),
-            Item::Setup(i) => self.list = Some(self.setup[i].chosen),
+            Item::Choice(s, r) => self.list = Some(self.choice(s, r).chosen),
             Item::Setting(i) => self.toggle(i),
             Item::Button(b) => self.button(b),
         }
@@ -776,15 +1043,33 @@ impl Panel {
         match b {
             Button::Install => {
                 let plan = self.plan();
-                let revert = Vec::new();
-                self.start(vec![Job::Install {
-                    plan: Box::new(plan),
-                    revert,
-                }]);
+                let mut lines = plan.summary(&self.home);
+                // The page's own name for the setup, as its Speakers row shows it.
+                for (label, value) in &mut lines {
+                    if label == "Speakers" {
+                        *value = speakers_label(&plan.speakers);
+                    }
+                }
+                self.screen = Screen::Confirm {
+                    title: "Install",
+                    heading: format!("Ready to install the EAX fix for {}:", self.name),
+                    lines,
+                    jobs: vec![Job::Install {
+                        plan: Box::new(plan),
+                        revert: Vec::new(),
+                        audio_done: self.audio_done(),
+                    }],
+                };
+                self.focus = 0;
             }
             Button::Apply => {
                 let (lines, jobs) = self.changes();
-                self.screen = Screen::Confirm { lines, jobs };
+                self.screen = Screen::Confirm {
+                    title: "Apply changes",
+                    heading: "Apply these changes?".into(),
+                    lines,
+                    jobs,
+                };
                 self.focus = 0;
             }
             Button::Uninstall => self.open_uninstall(),
@@ -794,7 +1079,9 @@ impl Panel {
             }
             Button::CheckAgain => self.reload(),
             Button::Back => {
-                if matches!(self.screen, Screen::Run(_)) {
+                if matches!(self.screen, Screen::Main) {
+                    self.closed = true;
+                } else if matches!(self.screen, Screen::Run(_)) {
                     self.reload();
                 } else {
                     self.screen = Screen::Main;
@@ -933,7 +1220,7 @@ impl Panel {
             RowKind::Vcrun,
         ];
         let mut reinstall = false;
-        for r in self.sound.iter().chain(&self.setup) {
+        for r in self.rows() {
             if r.changed() {
                 lines.push((
                     r.title.to_string(),
@@ -977,6 +1264,7 @@ impl Panel {
             jobs.push(Job::Install {
                 plan: Box::new(self.plan()),
                 revert,
+                audio_done: self.audio_done(),
             });
         } else {
             if speakers_changed {
@@ -990,6 +1278,18 @@ impl Panel {
             }
         }
         (lines, jobs)
+    }
+
+    /// Every audio setting the game has is on (ticked, or already set), as
+    /// the script's `game_audio_settings_done`.
+    fn audio_done(&self) -> bool {
+        let mut audio = self
+            .fixes
+            .iter()
+            .filter(|f| f.category == Category::Audio)
+            .peekable();
+        audio.peek().is_some()
+            && audio.all(|f| self.ticked.contains(&f.title) || f.status == Status::Already)
     }
 
     fn start(&mut self, jobs: Vec<Job>) {
@@ -1022,6 +1322,16 @@ impl Panel {
     /// Called often while work runs: takes the worker's messages, and opens
     /// its questions.
     pub fn tick(&mut self) {
+        if let Some(rx) = &self.cover_rx {
+            match rx.try_recv() {
+                Ok(px) => {
+                    self.cover = px;
+                    self.cover_rx = None;
+                }
+                Err(std::sync::mpsc::TryRecvError::Disconnected) => self.cover_rx = None,
+                Err(std::sync::mpsc::TryRecvError::Empty) => {}
+            }
+        }
         if let Screen::Run(r) = &mut self.screen {
             if let Some((text, ask)) = r.poll() {
                 self.question = Some(Question {
@@ -1041,6 +1351,7 @@ impl Panel {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::theme;
     use ratatui::crossterm::event::KeyModifiers;
 
     fn key(code: KeyCode) -> KeyEvent {
@@ -1080,8 +1391,7 @@ mod tests {
             .items()
             .iter()
             .position(|i| match i {
-                Item::Sound(n) => p.sound[*n].kind == kind,
-                Item::Setup(n) => p.setup[*n].kind == kind,
+                Item::Choice(si, ri) => p.choice(*si, *ri).kind == kind,
                 _ => false,
             })
             .unwrap();
@@ -1167,80 +1477,441 @@ mod tests {
     fn screen(p: &Panel, w: u16, h: u16) -> Vec<String> {
         use ratatui::backend::TestBackend;
         let mut t = ratatui::Terminal::new(TestBackend::new(w, h)).unwrap();
-        t.draw(|f| view::draw(f, p, f.area(), f.area())).unwrap();
+        t.draw(|f| view::draw(f, p, f.area())).unwrap();
         let buf = t.backend().buffer().clone();
         (0..h)
             .map(|y| (0..w).map(|x| buf[(x, y)].symbol()).collect())
             .collect()
     }
 
-    #[test]
-    fn the_page_fills_its_area_and_stacks_when_narrow() {
-        let tmp = tempfile::tempdir().unwrap();
-        let home = tmp.path().join("home");
-        let game = steam_game(&home);
-        let mut p = Panel::open("Test Game", &game, None, &home);
+    /// The fake Steam game with its prefix found, ready to install.
+    fn ready(home: &Path) -> Panel {
+        let game = steam_game(home);
+        let mut p = Panel::open("Test Game", &game, None, home);
         p.facts.prefix = Some(home.join(".local/share/Steam/steamapps/compatdata/424242/pfx"));
         p.build();
+        p
+    }
 
-        let rows = screen(&p, 130, 40);
-        assert!(rows[0].starts_with('╭') && rows[0].contains("Not installed"));
-        assert!(rows[39].starts_with('╰'), "{}", rows.join("\n"));
+    fn col_of(row: &str, s: &str) -> usize {
+        row[..row.find(s).unwrap()].chars().count()
+    }
+
+    #[test]
+    fn the_boxes_follow_the_scripts_steps() {
+        let tmp = tempfile::tempdir().unwrap();
+        let p = ready(&tmp.path().join("home"));
+        let titles: Vec<&str> = p.sections.iter().map(|s| s.title).collect();
         assert_eq!(
-            row_of(&rows, " Sound "),
-            row_of(&rows, " Setup "),
-            "side by side when wide"
+            titles,
+            [
+                "Audio engine",
+                "Runtimes",
+                "Speakers",
+                "Compatibility tweaks",
+                "DLL override"
+            ]
+        );
+        let rows = screen(&p, 160, 50);
+        let order: Vec<usize> = [
+            "1. Audio engine",
+            "2. Runtimes",
+            "3. Speakers",
+            "4. Compatibility tweaks",
+            "5. DLL override",
+            "6. Game settings",
+        ]
+        .iter()
+        .map(|t| row_of(&rows, t))
+        .collect();
+        assert!(order.windows(2).all(|w| w[0] < w[1]), "{}", rows.join("\n"));
+    }
+
+    #[test]
+    fn three_columns_when_wide_then_two_then_one_under_another() {
+        let tmp = tempfile::tempdir().unwrap();
+        let p = ready(&tmp.path().join("home"));
+
+        let rows = screen(&p, 160, 50);
+        let title = row_of(&rows, "Test Game ─ Steam");
+        assert!(
+            col_of(&rows[title], "Test Game") > 30,
+            "{}",
+            rows.join("\n")
+        );
+        assert!(
+            rows.iter().any(|r| r.starts_with("│ Test Game")),
+            "the name under the cover"
+        );
+        let status = row_of(&rows, " Status ");
+        assert!(col_of(&rows[status], " Status ") > 110);
+        assert!(rows.iter().any(|r| r.contains("[OK] Folder")));
+        assert!(rows.iter().any(|r| r.contains(" Game profile ")));
+        assert!(rows.iter().any(|r| r.contains("[ Install ]")));
+
+        let rows = screen(&p, 120, 50);
+        assert!(
+            !rows.iter().any(|r| r.starts_with("│ Test Game")),
+            "no cover column"
+        );
+        let status = row_of(&rows, " Status ");
+        assert!(col_of(&rows[status], " Status ") > 70);
+
+        let rows = screen(&p, 90, 60);
+        let status = row_of(&rows, " Status ");
+        assert!(
+            status > row_of(&rows, "1. Audio engine"),
+            "under the choices"
+        );
+    }
+
+    #[test]
+    fn the_status_box_says_what_was_found_and_flags_problems() {
+        let tmp = tempfile::tempdir().unwrap();
+        let home = tmp.path().join("home");
+        let mut p = ready(&home);
+        let lines = p.status_lines();
+        let labels: Vec<&str> = lines.iter().map(|l| l.label).collect();
+        assert_eq!(labels[0], "Folder");
+        assert!(lines[0].value.starts_with("~/"), "{:?}", lines[0]);
+        let store = lines.iter().find(|l| l.label == "Store").unwrap();
+        assert_eq!(store.value, "Steam (AppID 424242)");
+        assert!(lines.iter().all(|l| l.label != "Installed"));
+
+        p.facts.prefix = None;
+        let prefix = p
+            .status_lines()
+            .into_iter()
+            .find(|l| l.label == "Prefix")
+            .unwrap();
+        assert!(!prefix.ok);
+        assert_eq!(prefix.value, "not found yet");
+    }
+
+    #[test]
+    fn detected_values_say_so_until_changed() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut p = ready(&tmp.path().join("home"));
+        // The test game's .exe is 32-bit, so the architecture was detected;
+        // the builds are a default.
+        assert!(p.row(RowKind::Arch).unwrap().shows_detected());
+        assert!(!p.row(RowKind::Builds).unwrap().shows_detected());
+        let rows = screen(&p, 160, 50);
+        let arch = &rows[row_of(&rows, "Architecture")];
+        assert!(
+            arch.contains("[ 32-bit") && arch.contains("▾ ] (detected)"),
+            "{arch}"
+        );
+        assert!(!rows[row_of(&rows, "Builds")].contains("(detected)"));
+
+        // Where the override goes is the page's choice, never "detected".
+        assert!(!p.row(RowKind::Override).unwrap().shows_detected());
+        assert!(!rows[row_of(&rows, "DLL override  ")].contains("(detected)"));
+
+        pick(&mut p, RowKind::Arch, 1);
+        let rows = screen(&p, 160, 50);
+        assert!(!rows[row_of(&rows, "Architecture")].contains("(detected)"));
+        pick(&mut p, RowKind::Arch, 0);
+        assert!(p.row(RowKind::Arch).unwrap().shows_detected());
+    }
+
+    #[test]
+    fn the_page_uses_the_lists_colours() {
+        use ratatui::backend::TestBackend;
+        let tmp = tempfile::tempdir().unwrap();
+        let p = ready(&tmp.path().join("home"));
+        let mut t = ratatui::Terminal::new(TestBackend::new(160, 50)).unwrap();
+        t.draw(|f| view::draw(f, &p, f.area())).unwrap();
+        let buf = t.backend().buffer().clone();
+        let rows = screen(&p, 160, 50);
+        let cell = |row: usize, s: &str| {
+            let x = col_of(&rows[row], s) as u16;
+            buf[(x, row as u16)].clone()
+        };
+        // The focused first row: list selection colours.
+        let engine = row_of(&rows, "Audio engine  ");
+        let c = cell(engine, "Audio engine  ");
+        assert_eq!(c.fg, theme::SELECT_TEXT);
+        assert_eq!(c.bg, theme::SELECT_BG);
+        // Another row's name: the filters' colour; a detected value: green.
+        let arch = row_of(&rows, "Architecture");
+        assert_eq!(cell(arch, "Architecture").fg, theme::FILTER_LABEL);
+        assert_eq!(cell(arch, "32-bit").fg, ratatui::style::Color::Green);
+    }
+
+    #[test]
+    fn install_shows_what_it_will_do_first() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut p = ready(&tmp.path().join("home"));
+        p.focus = p.items().len() - 1;
+        assert_eq!(p.focused(), Some(Item::Button(Button::Install)));
+        p.handle_key(key(KeyCode::Enter));
+        let Screen::Confirm {
+            title,
+            heading,
+            lines,
+            jobs,
+        } = &p.screen
+        else {
+            panic!("no confirm screen");
+        };
+        assert_eq!(*title, "Install");
+        assert_eq!(heading, "Ready to install the EAX fix for Test Game:");
+        assert!(lines
+            .iter()
+            .any(|(l, v)| l == "Audio engine" && v == "DSOAL with OpenAL Soft"));
+        assert!(matches!(jobs[..], [Job::Install { .. }]));
+        assert_eq!(p.buttons(), [Button::Confirm, Button::Back]);
+        p.handle_key(key(KeyCode::Esc));
+        assert!(matches!(p.screen, Screen::Main));
+    }
+
+    #[test]
+    fn the_status_box_types_itself_out_and_a_key_skips_it() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut p = ready(&tmp.path().join("home"));
+        assert!(!p.revealing(), "tests open with it shown");
+        p.reveal = Some(Instant::now() - Duration::from_millis(LINE_PAUSE_MS + 20));
+        let (done, chars) = p.revealed().unwrap();
+        assert_eq!(done, 0);
+        assert!(chars > 0);
+        let rows = screen(&p, 160, 50);
+        assert!(
+            !rows.iter().any(|r| r.contains("[ Install ]")),
+            "no buttons yet"
+        );
+        assert!(
+            !rows.iter().any(|r| r.contains("[OK]")),
+            "no line finished yet"
         );
 
-        // About half of an 120-column window, as in the right pane.
-        let rows = screen(&p, 60, 34);
+        // A key finishes it and does nothing else.
+        let focus = p.focus;
+        p.handle_key(key(KeyCode::Enter));
+        assert!(!p.revealing());
+        assert!(matches!(p.screen, Screen::Main));
+        assert_eq!(p.focus, focus);
+        assert!(p.list.is_none());
+    }
+
+    fn fix(title: &str, status: Status, keys: &[&str]) -> Fix {
+        use crate::engine::config::Value;
+        use crate::engine::game_settings::ViewRow;
+        Fix {
+            category: Category::Optional,
+            index: 0,
+            title: title.into(),
+            reason: String::new(),
+            follow_up: String::new(),
+            untested: false,
+            status,
+            plan: Vec::new(),
+            view: keys
+                .iter()
+                .map(|k| ViewRow {
+                    path: PathBuf::from("/g/autoexec.cfg"),
+                    section: String::new(),
+                    key: k.to_string(),
+                    old: None,
+                    new: Value::text("1"),
+                })
+                .collect(),
+            missing_file: Some("Quake4Config.cfg".into()),
+            absent_files: Vec::new(),
+            files: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn settings_read_like_the_settings_pane() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut p = ready(&tmp.path().join("home"));
+        let many = [
+            "com_videoRam",
+            "r_renderer",
+            "r_shadows",
+            "image_anisotropy",
+        ];
+        p.fixes = vec![
+            fix("Fix low image quality", Status::Offer, &many),
+            fix("Fix blurry text", Status::Offer, &["gui_smallFontLimit"]),
+            fix("Fix low-res textures", Status::Missing, &[]),
+        ];
+        let rows = screen(&p, 160, 60);
+        // Each title with its tag at the right; an unfocused big setting says
+        // how many keys, a small one lists them.
+        let big = row_of(&rows, "Fix low image quality");
+        assert!(rows[big].contains("(tested)"));
         assert!(
-            row_of(&rows, " Setup ") > row_of(&rows, " Sound "),
-            "stacked when narrow"
+            rows[big + 1].contains("4 changes in autoexec.cfg"),
+            "{}",
+            rows.join("\n")
         );
+        let small = row_of(&rows, "Fix blurry text");
+        assert!(rows[small + 1].contains("autoexec.cfg"));
+        assert!(rows[small + 2].contains("gui_smallFontLimit  (not set) → 1"));
+        let waits = row_of(&rows, "Fix low-res textures");
+        assert!(rows[waits + 1].contains("Needs Quake4Config.cfg, which Test Game creates"));
+
+        // Focused, the big one lists every key, the arrows in one column.
+        p.focus = p
+            .items()
+            .iter()
+            .position(|i| *i == Item::Setting(0))
+            .unwrap();
+        let rows = screen(&p, 160, 60);
+        let big = row_of(&rows, "Fix low image quality");
+        let arrows: Vec<usize> = (0..many.len())
+            .map(|k| col_of(&rows[big + 2 + k], "→"))
+            .collect();
+        assert!(rows[big + 2].contains("com_videoRam"));
         assert!(
-            rows.iter().any(|r| r.contains("[ Install ]")),
+            arrows.windows(2).all(|w| w[0] == w[1]),
             "{}",
             rows.join("\n")
         );
     }
 
     #[test]
-    fn a_narrow_page_puts_each_settings_detail_under_its_title() {
+    fn the_banner_says_whether_its_installed_and_compatible() {
         let tmp = tempfile::tempdir().unwrap();
-        let home = tmp.path().join("home");
-        let game = steam_game(&home);
-        let mut p = Panel::open("Test Game", &game, None, &home);
-        p.facts.prefix = Some(home.join(".local/share/Steam/steamapps/compatdata/424242/pfx"));
+        let mut p = ready(&tmp.path().join("home"));
+        let text = |p: &Panel| -> Vec<String> {
+            view::banner_lines(p)
+                .iter()
+                .map(|l| l.spans.iter().map(|s| s.content.as_ref()).collect())
+                .collect()
+        };
+        assert_eq!(
+            text(&p),
+            [
+                " ● Not installed",
+                " ● Not in the game database, so compatibility isn't known"
+            ]
+        );
+        p.game = Some(
+            crate::db::Database::parse(
+                r#"{"games":[{"id":"t","name":"Test Game","stores":{"steam":{"id":424242}},
+                  "eax":{"api":"openal","versions":["4.0","5.0"]}}]}"#,
+            )
+            .unwrap()
+            .games
+            .remove(0),
+        );
+        assert_eq!(
+            text(&p)[1],
+            " ● Compatible with EAX 4.0 and 5.0, restored with OpenAL Soft"
+        );
+        p.facts.prefix = None;
         p.build();
-        p.fixes = vec![Fix {
-            category: Category::Optional,
-            index: 0,
-            title: "Fix low-res textures".into(),
-            reason: String::new(),
-            follow_up: String::new(),
-            untested: false,
-            status: Status::Missing,
-            plan: Vec::new(),
-            view: Vec::new(),
-            missing_file: Some("Quake4Config.cfg".into()),
-            absent_files: Vec::new(),
-            files: Vec::new(),
-        }];
-        let detail = "waits for Quake4Config.cfg, which the game writes the first time it runs";
+        assert_eq!(
+            text(&p)[0],
+            " ● Can't install yet, because Test Game has no Wine prefix"
+        );
+        let rows = screen(&p, 160, 50);
+        assert!(rows.iter().any(|r| r.contains(" EAX fix ")));
+    }
 
-        let rows = screen(&p, 130, 40);
-        let title = row_of(&rows, "Fix low-res textures");
-        assert!(rows[title].contains(detail), "one row when it fits");
-
-        let rows = screen(&p, 60, 40);
-        let title = row_of(&rows, "Fix low-res textures");
-        assert!(!rows[title].contains("waits for"));
+    #[test]
+    fn choices_are_dropdowns_that_open_under_their_row() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut p = ready(&tmp.path().join("home"));
+        let rows = screen(&p, 160, 50);
+        let chevrons: Vec<usize> = ["Audio engine  ", "Builds", "Architecture", "COM routing"]
+            .iter()
+            .map(|name| {
+                let r = &rows[row_of(&rows, name)];
+                assert!(r.contains("[ "), "{r}");
+                col_of(r, "▾")
+            })
+            .collect();
         assert!(
-            rows[title + 1].contains("waits for Quake4Config.cfg"),
+            chevrons.windows(2).all(|w| w[0] == w[1]),
             "{}",
             rows.join("\n")
         );
+
+        // Enter on Builds: its list's top border is the row under the field.
+        pick_focus(&mut p, RowKind::Builds);
+        p.handle_key(key(KeyCode::Enter));
+        let rows = screen(&p, 160, 50);
+        let builds = row_of(&rows, "Builds  ");
+        let top = &rows[builds + 1];
+        assert!(
+            top.contains("╭") && top.contains(" Builds "),
+            "{}",
+            rows.join("\n")
+        );
+    }
+
+    fn profile(eax: &str) -> crate::db::Game {
+        crate::db::Database::parse(&format!(
+            r#"{{"games":[{{"id":"t","name":"Test Game EE","stores":{{"steam":{{"id":424242}}}},
+              "eax":{eax}}}]}}"#
+        ))
+        .unwrap()
+        .games
+        .remove(0)
+    }
+
+    #[test]
+    fn a_game_with_no_eax_explains_why_and_offers_nothing_to_install() {
+        let tmp = tempfile::tempdir().unwrap();
+        let home = tmp.path().join("home");
+        let game = steam_game(&home);
+        let g = profile(
+            r#"{"status":"not_implemented","problem":"This is the Enhanced Edition, and it has no EAX."}"#,
+        );
+        let mut p = Panel::open("Test Game", &game, Some(g.clone()), &home);
+        assert_eq!(
+            p.problem.as_deref(),
+            Some("This is the Enhanced Edition, and it has no EAX.")
+        );
+        assert!(p.sections.is_empty() && p.fixes.is_empty());
+        assert_eq!(p.buttons(), [Button::Back]);
+        let rows = screen(&p, 160, 50);
+        assert!(rows
+            .iter()
+            .any(|r| r.contains("This version of Test Game EE has no EAX")));
+        assert!(!rows.iter().any(|r| r.contains("[ Install ]")));
+        p.handle_key(key(KeyCode::Enter));
+        assert!(p.closed, "Back closes the page");
+
+        // Not on this PC: the same page, with no folder and nothing detected.
+        let p = Panel::without_folder("Test Game EE", Some(g), &home);
+        assert_eq!(
+            p.status_lines(),
+            [StatusLine {
+                ok: true,
+                label: "Folder",
+                value: "not found on this PC".into()
+            }]
+        );
+        assert_eq!(p.buttons(), [Button::Back]);
+        let rows = screen(&p, 160, 50);
+        assert!(rows.iter().any(|r| r.contains("● Not installed")));
+    }
+
+    #[test]
+    fn a_patch_that_removed_eax_with_a_fix_in_place_still_installs() {
+        let tmp = tempfile::tempdir().unwrap();
+        let home = tmp.path().join("home");
+        let game = steam_game(&home);
+        let g = profile(r#"{"status":"removed_by_patch","fix_in_place":true,"fix":"Roll back."}"#);
+        let mut p = Panel::open("Test Game", &game, Some(g), &home);
+        p.facts.prefix = Some(home.join(".local/share/Steam/steamapps/compatdata/424242/pfx"));
+        p.build();
+        assert!(!p.no_eax());
+        assert!(p.problem.is_none());
+        assert_eq!(p.buttons(), [Button::Install]);
+    }
+
+    fn pick_focus(p: &mut Panel, kind: RowKind) {
+        p.focus = p
+            .items()
+            .iter()
+            .position(|i| matches!(i, Item::Choice(si, ri) if p.choice(*si, *ri).kind == kind))
+            .unwrap();
     }
 
     fn row_of(rows: &[String], s: &str) -> usize {

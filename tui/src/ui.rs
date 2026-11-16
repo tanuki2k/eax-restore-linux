@@ -26,15 +26,7 @@ pub fn draw(f: &mut Frame, app: &App) {
         Layout::vertical([Constraint::Min(3), Constraint::Length(bar_height)]).areas(screen);
     draw_bar(f, app, bar);
     if let Some(p) = &app.panel {
-        // The page takes the right pane's place, so the list stays in view.
-        let page = if app.zoom {
-            body
-        } else {
-            let (left, pane) = split(app, body);
-            draw_left(f, app, left);
-            pane
-        };
-        crate::panel::view::draw(f, p, page, body);
+        crate::panel::view::draw(f, p, body);
         if app.help {
             draw_help(f, app, body);
         }
@@ -680,7 +672,11 @@ fn draw_picker(f: &mut Frame, p: &crate::picker::Picker, area: Rect) {
         h,
     );
     f.render_widget(Clear, popup);
-    let block = boxed("Choose the folder with the game's .exe");
+    let title = match &p.game {
+        Some(g) => format!("Choose the folder with {}'s .exe", g.name),
+        None => "Choose the folder with the game's .exe".to_string(),
+    };
+    let block = boxed(&title);
     let inner = block.inner(popup);
     f.render_widget(block, popup);
     let parts = Layout::default()
@@ -837,55 +833,83 @@ mod tests {
     /// its title.
     fn page_corner(app: &App, w: u16, h: u16) -> (usize, usize) {
         let s = screen(app, w, h);
-        let y = s
-            .lines()
-            .position(|l| l.contains(" Quake 4 ") && l.contains("Not installed"))
-            .unwrap();
+        let y = s.lines().position(|l| l.contains(" Quake 4 ")).unwrap();
         let line: Vec<char> = s.lines().nth(y).unwrap().chars().collect();
-        let x = line.iter().rposition(|c| *c == '╭').unwrap();
+        let x = line.iter().position(|c| *c == '╭').unwrap();
         (y, x)
     }
 
     #[test]
-    fn a_games_page_opens_in_the_right_pane_beside_the_list() {
+    fn enter_on_a_game_that_wasnt_found_asks_for_its_folder_then_opens_its_page() {
+        let home = tempfile::tempdir().unwrap();
+        let dir = home.path().join("Games/Quake 4");
+        std::fs::create_dir_all(&dir).unwrap();
+        let mut app = App::new(entries(WITH_SETTINGS));
+        app.set_home(home.path().to_path_buf());
+        app.use_panel = true;
+        press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
+        assert!(app.menu.is_none(), "not the old menu");
+        assert!(app.panel.is_none());
+        assert!(screen(&app, 120, 40).contains("Choose the folder with Quake 4's .exe"));
+
+        // Space in the folder picks it: the page opens with the game's profile.
+        app.picker.as_mut().unwrap().dir = dir;
+        press(&mut app, ratatui::crossterm::event::KeyCode::Char(' '));
+        assert!(app.picker.is_none());
+        let p = app.panel.as_ref().expect("the page");
+        assert_eq!(p.name, "Quake 4");
+        assert!(p.game.is_some());
+    }
+
+    #[test]
+    fn ctrl_a_then_space_opens_a_page_for_that_folder() {
+        let home = tempfile::tempdir().unwrap();
+        let dir = home.path().join("Games/Obscure");
+        std::fs::create_dir_all(&dir).unwrap();
+        let mut app = App::new(entries(WITH_SETTINGS));
+        app.set_home(home.path().to_path_buf());
+        app.use_panel = true;
+        ctrl_key(&mut app, 'a');
+        assert!(screen(&app, 120, 40).contains("Choose the folder with the game's .exe"));
+        app.picker.as_mut().unwrap().dir = dir;
+        press(&mut app, ratatui::crossterm::event::KeyCode::Char(' '));
+        let p = app.panel.as_ref().expect("the page");
+        assert_eq!(p.name, "Obscure");
+        assert!(p.game.is_none());
+        assert!(app.launch.is_none(), "nothing runs outside the TUI");
+    }
+
+    #[test]
+    fn enter_on_a_game_with_no_eax_opens_its_page_without_a_folder() {
+        let home = tempfile::tempdir().unwrap();
+        let mut app = App::new(entries(
+            r#"{"games":[{"id":"bg","name":"Baldur's Gate: Enhanced Edition",
+              "eax":{"status":"not_implemented","problem":"It has no EAX."}}]}"#,
+        ));
+        app.set_home(home.path().to_path_buf());
+        app.use_panel = true;
+        press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
+        assert!(app.picker.is_none() && app.menu.is_none());
+        let p = app.panel.as_ref().expect("the page");
+        assert!(!p.on_this_pc);
+        assert_eq!(p.problem.as_deref(), Some("It has no EAX."));
+    }
+
+    #[test]
+    fn a_games_page_takes_the_whole_screen_and_esc_goes_back() {
         let (_home, mut app) = app_with_a_page_open(120);
         let s = screen(&app, 120, 40);
-        assert!(s.contains(" Search "), "{s}");
-        assert!(s.contains("Quake 4"));
-        assert_eq!(page_corner(&app, 120, 40), (0, 60));
-
-        // Ctrl-F: the page fills the screen; again, back beside the list.
+        assert!(!s.contains(" Search "), "{s}");
+        assert_eq!(page_corner(&app, 120, 40), (0, 0));
+        assert!(s.contains(" Status "));
+        // Ctrl-L and Ctrl-F are the list's; the page ignores them.
+        ctrl_key(&mut app, 'l');
         ctrl_key(&mut app, 'f');
         assert!(app.panel.is_some());
-        assert!(!screen(&app, 120, 40).contains(" Search "));
         assert_eq!(page_corner(&app, 120, 40), (0, 0));
-        ctrl_key(&mut app, 'f');
-        assert_eq!(page_corner(&app, 120, 40), (0, 60));
 
-        // Ctrl-L: under the list, and back.
-        ctrl_key(&mut app, 'l');
-        let (y, x) = page_corner(&app, 120, 40);
-        assert!(y > 10 && x == 0, "({y}, {x})");
-        ctrl_key(&mut app, 'l');
-        assert_eq!(page_corner(&app, 120, 40), (0, 60));
-    }
-
-    #[test]
-    fn on_a_narrow_screen_the_page_sits_under_the_list() {
-        let (_home, app) = app_with_a_page_open(80);
-        let s = screen(&app, 80, 40);
-        assert_eq!(row_of(&s, " Search "), 0);
-        let (y, x) = page_corner(&app, 80, 40);
-        assert!(y > 10 && x == 0, "({y}, {x})\n{s}");
-    }
-
-    #[test]
-    fn closing_a_full_screen_page_goes_back_to_the_list() {
-        let (_home, mut app) = app_with_a_page_open(120);
-        ctrl_key(&mut app, 'f');
         press(&mut app, ratatui::crossterm::event::KeyCode::Esc);
         assert!(app.panel.is_none());
-        assert!(!app.zoom);
         assert!(screen(&app, 120, 40).contains(" Search "));
     }
 

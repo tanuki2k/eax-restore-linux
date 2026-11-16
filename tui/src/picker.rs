@@ -16,6 +16,9 @@ pub struct Picker {
     /// The first folder showing in the list, kept between redraws so the window
     /// only moves when the highlight nears its edge. Set by `draw`.
     pub offset: std::cell::Cell<usize>,
+    /// The database game the folder is wanted for, when Enter on a game that
+    /// wasn't found opened the picker; None for Ctrl-A.
+    pub game: Option<crate::db::Game>,
     home: PathBuf,
 }
 
@@ -44,6 +47,7 @@ impl Picker {
             show_hidden: false,
             exes: 0,
             offset: std::cell::Cell::new(0),
+            game: None,
             home,
         };
         p.reload();

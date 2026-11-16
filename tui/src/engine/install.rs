@@ -349,6 +349,200 @@ fn sound_log_on(t: &Target, plan: &Plan) -> bool {
 }
 
 /// Runs the install. `eax_unified` names the installer and its checksums.
+impl Plan {
+    /// What the install is about to do, one (label, value) row each, for the
+    /// page's confirm screen and `eax-restore install`. A row with an empty
+    /// label carries on the one above.
+    pub fn summary(&self, home: &Path) -> Vec<(String, String)> {
+        let tilde = |p: &Path| crate::library::tilde(p, home);
+        let mut out = vec![("Folder".to_string(), tilde(&self.game_dir))];
+        out.extend(self.extra_dirs.iter().map(|d| (String::new(), tilde(d))));
+        out.push((
+            "Prefix".into(),
+            self.prefix
+                .as_ref()
+                .map_or("not found".to_string(), |p| tilde(&p.path)),
+        ));
+        out.push(("Architecture".into(), format!("{}-bit", self.arch)));
+        out.push((
+            "Audio engine".into(),
+            match self.engine {
+                Engine::Dsoal => "DSOAL with OpenAL Soft",
+                Engine::OpenAlSoft => "OpenAL Soft",
+            }
+            .into(),
+        ));
+        out.push(("Speakers".into(), self.speakers.label()));
+        out.push((
+            "DLL override".into(),
+            match &self.over {
+                Override::Launcher(t) => override_where(t.launcher).to_string(),
+                Override::Registry => "the prefix's registry".into(),
+                Override::Manual => "you set it yourself".into(),
+            },
+        ));
+        out.push((
+            "VC++ runtime".into(),
+            match self.vcrun {
+                Vcrun::Install => "install it",
+                Vcrun::OverridesOnly => "already there",
+                Vcrun::Skip => "skip",
+            }
+            .into(),
+        ));
+        for c in &self.companions {
+            out.push((
+                "Also".into(),
+                format!(
+                    "{}, which runs from the same folder with a prefix of its own",
+                    c.name
+                ),
+            ));
+        }
+        if self.eax_unified {
+            out.push(("EAX Unified".into(), "install it".into()));
+        }
+        let mut titles: Vec<&str> = self
+            .game_settings
+            .iter()
+            .map(|r| r.title.as_str())
+            .collect();
+        titles.dedup();
+        for t in titles {
+            out.push(("Game settings".into(), t.to_string()));
+        }
+        out
+    }
+}
+
+/// The line a player adds by hand when the override couldn't be written: a
+/// Steam launch option, or a Heroic environment variable.
+pub fn manual_override_line(engine: Engine, steam: bool) -> String {
+    let value = format!("{}=n,b", engine.primary_dll());
+    if steam {
+        format!("Steam launch options: WINEDLLOVERRIDES=\"{value}\" %command%")
+    } else {
+        format!("Heroic environment variable: WINEDLLOVERRIDES = {value}")
+    }
+}
+
+/// What the player does next, as the script's "Final Steps to activate EAX":
+/// launch the game (or first add the override), the companion apps, then
+/// switch EAX on in the game unless its audio settings already did.
+pub fn next_steps(
+    plan: &Plan,
+    over: &Override,
+    name: &str,
+    steam: bool,
+    audio_done: bool,
+) -> Vec<String> {
+    let mut out = Vec::new();
+    match over {
+        Override::Launcher(t) => out.push(format!(
+            "Launch {name}. The DLL override is in {}, so just hit Play.",
+            override_where(t.launcher)
+        )),
+        Override::Registry => out.push(format!(
+            "Launch {name}. The DLL override is in its prefix's registry, so just hit Play."
+        )),
+        Override::Manual => {
+            out.push(format!(
+                "Add the DLL override, then launch {name}. {}",
+                manual_override_line(plan.engine, steam)
+            ));
+        }
+    }
+    for c in &plan.companions {
+        out.push(match &c.over {
+            Override::Launcher(_) => format!(
+                "{}: the DLL override is in its own Steam launch options too.",
+                c.name
+            ),
+            Override::Registry => format!(
+                "{}: the DLL override is in its own prefix's registry too.",
+                c.name
+            ),
+            Override::Manual => format!(
+                "{}: add the same launch option to it. {}",
+                c.name,
+                manual_override_line(plan.engine, true)
+            ),
+        });
+    }
+    if !audio_done {
+        out.push(format!(
+            "In {name}'s audio settings, turn on EAX, 3D Sound or Hardware Acceleration."
+        ));
+    }
+    out
+}
+
+/// Where a copied file went, as the player reads it: "game folder", another
+/// exe folder by its name, or the prefix's system folder.
+fn place(plan: &Plan, path: &Path) -> String {
+    let dir = path.parent().unwrap_or(path);
+    if dir == plan.game_dir {
+        return "the game folder".into();
+    }
+    let text = dir.to_string_lossy();
+    if let Some(at) = text.find("/drive_c/windows/") {
+        return format!("the prefix's {}", &text[at + "/drive_c/windows/".len()..]);
+    }
+    dir.file_name().map_or_else(
+        || text.into_owned(),
+        |n| format!("the {} folder", n.to_string_lossy()),
+    )
+}
+
+/// Where a launcher keeps the override, as the player knows it.
+pub fn override_where(l: Launcher) -> &'static str {
+    match l {
+        Launcher::Steam => "Steam's launch options",
+        Launcher::Heroic => "Heroic's environment variables",
+    }
+}
+
+fn file_name(path: &Path) -> String {
+    path.file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default()
+}
+
+/// How far each of the report's lists had got, so a step reports only what
+/// it added.
+#[derive(Clone, Copy)]
+struct Marks {
+    copied: usize,
+    backed_up: usize,
+    failures: usize,
+}
+
+impl Marks {
+    fn of(r: &Report) -> Self {
+        Marks {
+            copied: r.copied.len(),
+            backed_up: r.backed_up.len(),
+            failures: r.failures.len(),
+        }
+    }
+}
+
+/// Tells the host what a step added to the report: backups, copies, then
+/// anything that couldn't be written.
+fn report_since(m: Marks, r: &Report, plan: &Plan, host: &mut dyn InstallHost) {
+    for b in &r.backed_up[m.backed_up..] {
+        let name = file_name(b);
+        let original = name.split(".bak.").next().unwrap_or(&name);
+        host.detail(&format!("Backed up the original {original}"));
+    }
+    for c in &r.copied[m.copied..] {
+        host.detail(&format!("Copied {} to {}", file_name(c), place(plan, c)));
+    }
+    for f in &r.failures[m.failures..] {
+        host.warning(&format!("Couldn't write {f}."));
+    }
+}
+
 pub fn execute(plan: &Plan, cache: &Cache, eax: &Installer, host: &mut dyn InstallHost) -> Report {
     let mut r = Report::default();
     // Checked before anything changes, so a missing build never leaves the
@@ -369,6 +563,15 @@ pub fn execute(plan: &Plan, cache: &Cache, eax: &Installer, host: &mut dyn Insta
     if let Some(p) = &plan.prefix {
         host.step("Installing Creative's OpenAL runtime into the prefix");
         r.openal_runtime = p.install_openal_runtime();
+        match r.openal_runtime {
+            Some(0) => host.detail("Installed"),
+            Some(code) => host.warning(&format!(
+                "Creative's OpenAL runtime didn't install (exit code {code})."
+            )),
+            None => host.warning(
+                "Creative's OpenAL runtime wasn't installed, since nothing could run its installer.",
+            ),
+        }
     }
     let mut vcrun_record: Option<&[u8]> = None;
     match (&plan.vcrun, &plan.prefix) {
@@ -383,6 +586,9 @@ pub fn execute(plan: &Plan, cache: &Cache, eax: &Installer, host: &mut dyn Insta
             );
             if rep.ok() {
                 vcrun_record = Some(b"VCRUN");
+                host.detail("Installed");
+            } else {
+                host.warning("The MS VC++ 2022 Redistributable didn't install.");
             }
             r.vcrun = Some(rep);
         }
@@ -392,6 +598,7 @@ pub fn execute(plan: &Plan, cache: &Cache, eax: &Installer, host: &mut dyn Insta
             host.step("Setting up the VC++ runtime that's already in the prefix");
             vcrun::set_overrides(p, game_dir, true);
             vcrun_record = Some(b"VCRUN:OVERRIDES");
+            host.detail("Wine now uses the prefix's own VC++ files");
         }
         _ => {}
     }
@@ -406,6 +613,13 @@ pub fn execute(plan: &Plan, cache: &Cache, eax: &Installer, host: &mut dyn Insta
             Duration::from_secs(1),
         );
         eax_recorded = o == eax_unified::Outcome::Installed;
+        match o {
+            eax_unified::Outcome::Installed => host.detail("Installed"),
+            eax_unified::Outcome::AlreadyThere => host.detail("Already in the prefix"),
+            eax_unified::Outcome::NoInstaller => host
+                .warning("Creative's EAX Unified couldn't be downloaded, so it wasn't installed."),
+            eax_unified::Outcome::Failed => host.warning("Creative's EAX Unified didn't install."),
+        }
         r.eax_unified = Some(o);
     }
 
@@ -422,23 +636,28 @@ pub fn execute(plan: &Plan, cache: &Cache, eax: &Installer, host: &mut dyn Insta
     }
 
     host.step("Copying the files into the game's folder");
+    let marks = Marks::of(&r);
     for dir in std::iter::once(game_dir).chain(&plan.extra_dirs) {
         deploy_into(dir, &list, &prev, &stamp, &m, &mut r);
     }
+    report_since(marks, &r, plan, host);
     if prefix_ready.is_some() {
         host.step("Copying the files into the prefix");
     }
     if let Some(p) = prefix_ready {
+        let marks = Marks::of(&r);
         let (copied, failed) =
             prefix::deploy_prefix_dlls(&p.path, plan.arch, &list, &prev.files, &stamp, &m);
         r.copied.extend(copied);
         r.failures
             .extend(failed.iter().map(|f| f.display().to_string()));
+        report_since(marks, &r, plan, host);
     }
 
     // alsoft.ini, written fresh, then the profile's values on top, then the
     // same file into every extra exe folder.
     host.step("Writing alsoft.ini");
+    let marks = Marks::of(&r);
     let ini = game_dir.join("alsoft.ini");
     match handle_conflict(&ini, &prev.files, &stamp) {
         Cleared::Failed => r.failures.push(ini.display().to_string()),
@@ -472,9 +691,20 @@ pub fn execute(plan: &Plan, cache: &Cache, eax: &Installer, host: &mut dyn Insta
             }
         }
     }
+    report_since(marks, &r, plan, host);
+    if !r.failures[marks.failures..]
+        .iter()
+        .any(|f| f == &ini.display().to_string())
+    {
+        host.detail("Wrote alsoft.ini in the game folder");
+        if !plan.alsoft_overrides.is_empty() {
+            host.detail("Added the sound values from the game's profile to alsoft.ini");
+        }
+    }
 
     let mut over = plan.over.clone();
     if plan.com_routing || over == Override::Registry {
+        host.step("Changing the prefix's registry");
         let registry_override = (over == Override::Registry).then_some(primary);
         for line in prefix::registry_lines(plan.com_routing, registry_override, "") {
             append(&m, line.as_bytes());
@@ -485,8 +715,16 @@ pub fn execute(plan: &Plan, cache: &Cache, eax: &Installer, host: &mut dyn Insta
         };
         if status != RegStatus::Ok {
             r.failures.push("registry".into());
+            host.warning("Couldn't change the prefix's registry.");
             if registry_override.is_some() {
                 over = Override::Manual;
+            }
+        } else {
+            if registry_override.is_some() {
+                host.detail("DLL override set in the prefix's registry");
+            }
+            if plan.com_routing {
+                host.detail("COM routing set in the prefix's registry");
             }
         }
         r.registry = Some(status);
@@ -540,7 +778,23 @@ pub fn execute(plan: &Plan, cache: &Cache, eax: &Installer, host: &mut dyn Insta
             "Setting the DLL override in {}",
             t.launcher.label()
         ));
-        over = launcher_override(t, plan, &prev, &m, host, &mut r);
+        let marks = Marks::of(&r);
+        let launcher = t.launcher;
+        let written = launcher_override(t, plan, &prev, &m, host, &mut r);
+        let where_ = override_where(launcher);
+        match &r.launcher {
+            Some(Written::Set(_)) => host.detail(&format!("DLL override added to {where_}")),
+            Some(Written::Already(_)) => {
+                host.detail(&format!("DLL override was already in {where_}"))
+            }
+            _ if r.launcher_left_open => host.warning(&format!(
+                "{} stayed open, so the DLL override wasn't added to it.",
+                launcher.label()
+            )),
+            _ => {}
+        }
+        report_since(marks, &r, plan, host);
+        over = written;
         // As in the script: the companions' launch options are written once
         // the launcher is closed, even when the game's own didn't save.
         if !r.launcher_left_open {
@@ -602,6 +856,12 @@ pub fn execute(plan: &Plan, cache: &Cache, eax: &Installer, host: &mut dyn Insta
         },
         host,
     );
+    for t in &settings.applied {
+        host.detail(&format!("Turned on \"{t}\""));
+    }
+    for f in &settings.failed {
+        host.warning(&format!("Couldn't write {}.", f.display()));
+    }
     r.failures
         .extend(settings.failed.iter().map(|f| f.display().to_string()));
     r.settings = Some(settings);
@@ -609,4 +869,72 @@ pub fn execute(plan: &Plan, cache: &Cache, eax: &Installer, host: &mut dyn Insta
         let _ = std::fs::remove_file(p);
     }
     r
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn plan() -> (tempfile::TempDir, Plan) {
+        let tmp = tempfile::tempdir().unwrap();
+        let game = tmp.path().join("Game");
+        std::fs::create_dir_all(&game).unwrap();
+        let plan = super::super::prepare::gather(&game, None, tmp.path(), &[]).default_plan();
+        (tmp, plan)
+    }
+
+    #[test]
+    fn with_the_override_written_it_says_just_hit_play() {
+        let (_tmp, p) = plan();
+        let steam = Override::Launcher(Target {
+            launcher: Launcher::Steam,
+            file: PathBuf::from("/x/localconfig.vdf"),
+            id: "10".into(),
+        });
+        let steps = next_steps(&p, &steam, "Thief Gold", true, false);
+        assert_eq!(
+            steps[0],
+            "Launch Thief Gold. The DLL override is in Steam's launch options, so just hit Play."
+        );
+        assert!(steps
+            .last()
+            .unwrap()
+            .starts_with("In Thief Gold's audio settings"));
+        let steps = next_steps(&p, &Override::Registry, "Thief Gold", true, true);
+        assert_eq!(steps.len(), 1, "EAX already on: no in-game step");
+        assert!(steps[0].contains("prefix's registry"));
+    }
+
+    #[test]
+    fn without_it_the_exact_line_to_add_comes_first() {
+        let (_tmp, p) = plan();
+        let steps = next_steps(&p, &Override::Manual, "Thief Gold", true, true);
+        assert_eq!(
+            steps,
+            ["Add the DLL override, then launch Thief Gold. Steam launch options: WINEDLLOVERRIDES=\"dsound=n,b\" %command%"]
+        );
+        let steps = next_steps(&p, &Override::Manual, "Thief Gold", false, true);
+        assert!(steps[0].ends_with("Heroic environment variable: WINEDLLOVERRIDES = dsound=n,b"));
+    }
+
+    #[test]
+    fn the_summary_lists_the_choices() {
+        let (tmp, p) = plan();
+        let rows = p.summary(tmp.path());
+        let labels: Vec<&str> = rows.iter().map(|(l, _)| l.as_str()).collect();
+        assert_eq!(
+            labels,
+            [
+                "Folder",
+                "Prefix",
+                "Architecture",
+                "Audio engine",
+                "Speakers",
+                "DLL override",
+                "VC++ runtime"
+            ]
+        );
+        assert_eq!(rows[0].1, "~/Game");
+        assert_eq!(rows[3].1, "DSOAL with OpenAL Soft");
+    }
 }

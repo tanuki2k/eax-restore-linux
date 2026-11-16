@@ -144,7 +144,7 @@ pub fn scan_steam(home: &Path, ids: &HashSet<u64>) -> Vec<Found> {
     out
 }
 
-fn heroic_roots(home: &Path) -> Vec<PathBuf> {
+pub fn heroic_roots(home: &Path) -> Vec<PathBuf> {
     [
         ".config/heroic",
         ".var/app/com.heroicgameslauncher.hgl/config/heroic",

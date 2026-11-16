@@ -86,6 +86,31 @@ pub fn fallback_wine(home: &Path) -> Option<PathBuf> {
 
 /// Looks at the game folder (its exe folder) and everything around it.
 /// `protontricks` is how to run it, for a Steam game's prefix.
+/// Facts for a game with no folder on this PC: nothing detected, only what
+/// its profile says.
+pub fn none(game: Option<&Game>) -> Facts {
+    Facts {
+        game_dir: PathBuf::new(),
+        install_root: PathBuf::new(),
+        identified: None,
+        store: None,
+        id: String::new(),
+        heroic: None,
+        prefix: None,
+        runner: None,
+        linux_build: false,
+        exe_folders: Vec::new(),
+        extra_dirs: Vec::new(),
+        profile_api: game.map(|g| g.eax.api.clone()).filter(|a| !a.is_empty()),
+        files_api: None,
+        arch: None,
+        companions: Vec::new(),
+        launcher: None,
+        vcrun_present: false,
+        wants_eax_unified: false,
+    }
+}
+
 pub fn gather(game_dir: &Path, game: Option<&Game>, home: &Path, protontricks: &[String]) -> Facts {
     let identified = identify_game_dir(game_dir, home);
     let install_root = game_install_root(
@@ -270,6 +295,66 @@ impl Facts {
 
     /// The files point to a different API than the profile names, which the
     /// player should be told about.
+    /// What was found around the game, one line each, for the page's Status
+    /// box and `eax-restore status`: (fine, label, value). A line that isn't
+    /// fine is a problem: no prefix yet, a Linux build, no store.
+    pub fn summary(&self, home: &Path) -> Vec<(bool, &'static str, String)> {
+        let tilde = |p: &Path| crate::library::tilde(p, home);
+        let mut out = Vec::new();
+        out.push(match (self.store, &self.heroic) {
+            (Some(Store::Steam), _) => (true, "Store", format!("Steam (AppID {})", self.id)),
+            (_, Some(_)) => (true, "Store", "GOG, through Heroic".to_string()),
+            _ => (false, "Store", "not found in Steam or Heroic".to_string()),
+        });
+        out.push(match &self.prefix {
+            Some(p) => (true, "Prefix", tilde(p)),
+            None => (false, "Prefix", "not found yet".to_string()),
+        });
+        if self.prefix.is_some() {
+            out.push(match &self.runner {
+                Some(Runner::Protontricks { .. }) => (
+                    true,
+                    "Runs with",
+                    "Proton, through protontricks".to_string(),
+                ),
+                Some(Runner::Wine { wine, .. }) => {
+                    (true, "Runs with", format!("Wine, {}", tilde(wine)))
+                }
+                None => (
+                    false,
+                    "Runs with",
+                    "no Wine found to run it with".to_string(),
+                ),
+            });
+        }
+        let files = if self.linux_build {
+            (
+                false,
+                "the Linux version, which the EAX fix can't work with".to_string(),
+            )
+        } else {
+            let arch = self
+                .arch
+                .map_or("couldn't tell if 32 or 64-bit".to_string(), |a| {
+                    format!("{a}-bit")
+                });
+            let api = match self.engine() {
+                Engine::Dsoal => "DirectSound3D",
+                Engine::OpenAlSoft => "OpenAL",
+            };
+            if self.api_disagrees() {
+                (
+                    false,
+                    format!("{arch}, {api}, but its profile lists a different audio system"),
+                )
+            } else {
+                (true, format!("{arch}, {api}"))
+            }
+        };
+        out.push((files.0, "Game files", files.1));
+        out
+    }
+
     pub fn api_disagrees(&self) -> bool {
         match (&self.profile_api, &self.files_api) {
             (Some(p), Some(e)) => e.api != Api::Both && e.api.name() != p,

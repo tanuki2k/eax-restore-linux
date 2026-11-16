@@ -115,21 +115,37 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
   machine's own winetricks or Wine never runs.
 
 The game panel (`tui/src/panel/`, the user's Optiscaler-Client-style design): Enter on a game
-with a folder opens a page in the right pane, beside the list (`ui::split` gives both; Ctrl-F
-makes it full screen, Ctrl-L puts it under the list; Sound and Setup stack and each setting's
-detail drops to its own row when the pane is narrow; the value list and y/n questions sit over
-the whole body), with its status, every install choice (Sound and Setup
-rows, Enter opens a value list), its game settings as ticks, and buttons. `mod.rs` holds state
-and keys, `view.rs` draws, `run.rs` runs the jobs on a worker thread: steps come back over a
-channel (`Host::step`, which the install and uninstall call where the script prints a phase
-task), questions (closing a launcher, a build with no checksum) open a y/n popup and the answer
-goes back over a second channel. On an installed game Apply lists the changes first and only
+with a folder opens a full-screen page in three columns (`view::draw`). Left: the cover as
+coloured ASCII (`src/cover.rs`: Steam's `librarycache/<AppID>/library_600x900.jpg`, else
+Heroic's `images-cache/<sha256 of art_square>`, else SteamGridDB with
+`EAX_RESTORE_STEAMGRIDDB_KEY`; found and decoded on a thread), the name, store and folder.
+Middle: the choices in numbered boxes in the script's order (`Panel::sections`: audio engine,
+runtimes, speakers, compatibility tweaks, DLL override, then audio and optional settings),
+drawn into an off-screen buffer and scrolled to keep the focus in view; a value from the PC or
+profile shows green with "(detected)" until changed (`Row::detected`). Right: the Status box
+(`Panel::status_lines`, from `Facts::summary`, shared with `eax-restore status`), which types
+itself out on open (`Panel::reveal`; any key finishes it; off in tests and with
+`EAX_RESTORE_NO_ANIMATION`), and the database profile under it; while work runs, the run box.
+The cover column drops under `COVER_FROM` columns, and the right column goes under the middle
+one under `BESIDE_FROM`. Colours all come from `theme.rs`, as the list uses them. `mod.rs`
+holds state and keys, `view.rs` draws, `run.rs` runs the jobs on a worker thread: steps,
+details and warnings come back over a channel (`Host::step`/`detail`/`warning`, which the
+install, uninstall and `ops` call as the script prints its phase tasks and results), questions
+(closing a launcher, a build with no checksum) open a y/n popup and the answer goes back over
+a second channel. The run ends with a `Finish`: a title, numbered next steps
+(`install::next_steps`, shared with the CLI), the settings changed with their follow-ups, and
+every warning recapped. Install shows `Plan::summary` (shared with `eax-restore install`) on
+the confirm screen before it starts. On an installed game Apply lists the changes first and only
 reinstalls for engine, builds, override, VC++, architecture, COM routing, limits or EAX Unified;
 speakers and settings change in place (`engine/ops.rs`, shared with the headless commands).
-`engine/installed.rs`'s `InstalledState` is what the rows start at. The old action menu is
-only for a game with no folder on this PC, and for `EAX_RESTORE_ENGINE=bash`, which keeps
-Enter on it; the page itself covers everything that menu did. Engine code stays prompt-free: read state, take choices, plan,
-apply.
+`engine/installed.rs`'s `InstalledState` is what the rows start at. Enter on a game with no
+folder on this PC opens the folder picker for it (`Picker::game`), and Space there opens the
+page for the folder chosen (Ctrl-A's picker too). A game whose profile has no EAX to restore
+(`Eax::none_to_restore`: `not_implemented`, or `removed_by_patch` without `fix_in_place`, the
+script's `block_if_eax_not_implemented`) opens a page with its profile's reason and only Back,
+with or without a folder (`Panel::without_folder`, from `prepare::none`). The old action menu
+is only for `EAX_RESTORE_ENGINE=bash`. Engine code stays prompt-free: read state, take
+choices, plan, apply.
 
 Headless mode (`tui/src/cli.rs`): `eax-restore status|install|uninstall|speakers|settings|sound-log
 GAME_FOLDER [options]` (`eax-restore --help` lists them) runs the Rust engine with no TUI and

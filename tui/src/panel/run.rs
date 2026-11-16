@@ -6,7 +6,7 @@
 use super::Job;
 use crate::db::Game;
 use crate::engine::builds::{self, Cache, Curl, Got, Pins};
-use crate::engine::host::SystemHost;
+use crate::engine::host::{Event, SystemHost};
 use crate::engine::install::{self, Engine, Override};
 use crate::engine::installed::Installed;
 use crate::engine::launcher::changes;
@@ -22,17 +22,45 @@ use std::time::Duration;
 
 pub enum Msg {
     Step(String),
+    /// One thing the current step did.
+    Detail(String),
+    /// Something that went wrong, or that the player should know.
     Note(String),
     Question(String, String),
-    Done { ok: bool, lines: Vec<String> },
+    Done(Finish),
+}
+
+/// How the work ended, as the script's closing screen: a title, numbered
+/// next steps, the game settings changed (with what the player still has to
+/// do for each), and anything else to say.
+#[derive(Debug, Clone, Default)]
+pub struct Finish {
+    pub ok: bool,
+    pub title: String,
+    pub next: Vec<String>,
+    /// (title, follow-up), the follow-up empty when there's none.
+    pub settings: Vec<(String, String)>,
+    pub lines: Vec<String>,
+}
+
+/// Sends the engine's steps, details and warnings to the page.
+fn sender(tx: Sender<Msg>) -> impl FnMut(Event, &str) {
+    move |e, s| {
+        let s = s.to_string();
+        let _ = tx.send(match e {
+            Event::Step => Msg::Step(s),
+            Event::Detail => Msg::Detail(s),
+            Event::Warning => Msg::Note(s),
+        });
+    }
 }
 
 pub struct RunView {
-    /// Each step, and whether it finished (the last one is still running).
-    pub steps: Vec<String>,
+    /// Each step and what it did; the last one is still running.
+    pub steps: Vec<(String, Vec<String>)>,
     pub notes: Vec<String>,
-    /// Set when the work is over: whether it all went through, and what it did.
-    pub result: Option<(bool, Vec<String>)>,
+    /// Set when the work is over.
+    pub result: Option<Finish>,
     rx: Receiver<Msg>,
     answers: Sender<bool>,
 }
@@ -46,13 +74,35 @@ impl RunView {
     pub fn poll(&mut self) -> Option<(String, String)> {
         while let Ok(m) = self.rx.try_recv() {
             match m {
-                Msg::Step(s) => self.steps.push(s),
+                Msg::Step(s) => self.steps.push((s, Vec::new())),
+                Msg::Detail(d) => match self.steps.last_mut() {
+                    Some((_, details)) => details.push(d),
+                    None => self.steps.push((d, Vec::new())),
+                },
                 Msg::Note(n) => self.notes.push(n),
                 Msg::Question(text, ask) => return Some((text, ask)),
-                Msg::Done { ok, lines } => self.result = Some((ok, lines)),
+                Msg::Done(f) => self.result = Some(f),
             }
         }
         None
+    }
+
+    /// A run that's over, for tests of how it's drawn.
+    #[cfg(test)]
+    pub fn finished_with(
+        steps: Vec<(String, Vec<String>)>,
+        notes: Vec<String>,
+        finish: Finish,
+    ) -> Self {
+        let (_tx, rx) = mpsc::channel();
+        let (answers, _) = mpsc::channel();
+        RunView {
+            steps,
+            notes,
+            result: Some(finish),
+            rx,
+            answers,
+        }
     }
 
     pub fn answer(&mut self, yes: bool) {
@@ -71,12 +121,15 @@ pub fn start(
 ) -> RunView {
     let (tx, rx) = mpsc::channel();
     let (answers, answer_rx) = mpsc::channel();
+    let titles = titles(&jobs);
     std::thread::spawn(move || {
         let mut w = Worker {
             tx: tx.clone(),
             answers: answer_rx,
             home,
             reopen: Vec::new(),
+            next: Vec::new(),
+            settings: Vec::new(),
         };
         let mut lines = Vec::new();
         let mut ok = true;
@@ -91,7 +144,13 @@ pub fn start(
             }
         }
         w.reopen_launchers();
-        let _ = tx.send(Msg::Done { ok, lines });
+        let _ = tx.send(Msg::Done(Finish {
+            ok,
+            title: if ok { titles.0 } else { titles.1 }.to_string(),
+            next: w.next,
+            settings: w.settings,
+            lines,
+        }));
     });
     RunView {
         steps: Vec::new(),
@@ -102,16 +161,34 @@ pub fn start(
     }
 }
 
+/// The finish box's title when it all worked, and when it didn't, from the
+/// first job (an Apply that reinstalls starts with the install).
+fn titles(jobs: &[Job]) -> (&'static str, &'static str) {
+    match jobs.first() {
+        Some(Job::Install { .. }) => ("Installed", "Not fully installed"),
+        Some(Job::Uninstall { .. }) => ("Uninstalled", "Not fully uninstalled"),
+        Some(Job::SoundLog(Some(_))) => ("Sound log on", "Sound log not changed"),
+        Some(Job::SoundLog(None)) => ("Sound log off", "Sound log not changed"),
+        _ => ("Changes applied", "Not all changes applied"),
+    }
+}
+
 struct Worker {
     tx: Sender<Msg>,
     answers: Receiver<bool>,
     home: PathBuf,
     reopen: Vec<(String, Vec<String>)>,
+    /// The finish box's numbered steps and changed settings.
+    next: Vec<String>,
+    settings: Vec<(String, String)>,
 }
 
 impl Worker {
     fn step(&self, s: &str) {
         let _ = self.tx.send(Msg::Step(s.to_string()));
+    }
+    fn detail(&self, s: &str) {
+        let _ = self.tx.send(Msg::Detail(s.to_string()));
     }
     fn note(&self, s: String) {
         let _ = self.tx.send(Msg::Note(s));
@@ -188,7 +265,11 @@ impl Worker {
         let mut net = Curl::default();
         let mut lines = Vec::new();
         match job {
-            Job::Install { plan, revert } => {
+            Job::Install {
+                plan,
+                revert,
+                audio_done,
+            } => {
                 self.step("Getting DSOAL and OpenAL Soft");
                 let pins = Pins::default();
                 let github = builds::Net::reachable(&mut net);
@@ -205,31 +286,31 @@ impl Worker {
                     answers.recv().unwrap_or(false)
                 };
                 if plan.engine == Engine::Dsoal {
-                    if let Got::Failed(_) = builds::ensure_dsoal(
+                    let got = builds::ensure_dsoal(
                         &cache,
                         &mut net,
                         &mut v,
                         plan.dsoal_build,
                         &pins,
                         &mut confirm,
-                    ) {
+                    );
+                    if let Got::Failed(_) = got {
                         return Err(
                             "DSOAL couldn't be downloaded, so nothing was installed.".into()
                         );
                     }
+                    self.detail(&got_text("DSOAL", &got));
                 }
-                if let Got::Failed(_) =
-                    builds::ensure_openal(&cache, &mut net, &v, plan.openal_build, &mut confirm)
-                {
+                let got =
+                    builds::ensure_openal(&cache, &mut net, &v, plan.openal_build, &mut confirm);
+                if let Got::Failed(_) = got {
                     return Err(
                         "OpenAL Soft couldn't be downloaded, so nothing was installed.".into(),
                     );
                 }
+                self.detail(&got_text("OpenAL Soft", &got));
                 let r = {
-                    let tx = self.tx.clone();
-                    let mut on_step = move |s: &str| {
-                        let _ = tx.send(Msg::Step(s.to_string()));
-                    };
+                    let mut on_step = sender(self.tx.clone());
                     let me = std::cell::RefCell::new(&mut *self);
                     let mut close = |t: &Target| {
                         me.borrow_mut().launcher_closed(
@@ -248,39 +329,27 @@ impl Worker {
                         plan.arch
                     ));
                 }
-                lines.push(format!("Copied {} files.", r.copied.len()));
-                if let Some(s) = &r.settings {
-                    lines.extend(s.applied.iter().map(|t| format!("Turned on \"{t}\".")));
-                }
-                match &r.over {
-                    Some(Override::Launcher(_)) | Some(Override::Registry) => {}
-                    _ => {
-                        let value = format!("{}=n,b", plan.engine.primary_dll());
-                        lines.push("Set the DLL override yourself:".into());
-                        if facts.store == Some(crate::engine::identify::Store::Steam) {
-                            lines.push(format!(
-                                "  Steam launch options: WINEDLLOVERRIDES=\"{value}\" %command%"
-                            ));
-                        } else {
-                            lines.push(format!(
-                                "  Heroic environment variable: WINEDLLOVERRIDES = {value}"
-                            ));
-                        }
-                    }
-                }
                 if !revert.is_empty() {
                     let report = self.with_host(facts, game, &cache, |h| {
                         ops::change_settings(facts, game, &revert, &[], h)
                     });
-                    lines.extend(settings_lines(report)?);
+                    report.map_err(|e| e.to_string())?;
+                }
+                let over = r.over.clone().unwrap_or(Override::Manual);
+                let steam = facts.store == Some(crate::engine::identify::Store::Steam);
+                self.next = install::next_steps(&plan, &over, &name, steam, audio_done);
+                if let Some(s) = &r.settings {
+                    self.settings = s
+                        .applied
+                        .iter()
+                        .map(|t| (t.clone(), follow_up(game, t)))
+                        .collect();
                 }
                 if !r.failures.is_empty() {
-                    lines.extend(r.failures.iter().map(|f| format!("Couldn't write {f}.")));
                     return Err(format!(
-                        "The EAX fix isn't fully installed, so {name} may run without it."
+                        "The EAX fix isn't fully installed, so {name} may run without it or fail to start. Fix what's listed under Warnings, then install again, or uninstall to remove what was put in."
                     ));
                 }
-                lines.push(format!("The EAX fix is installed. Launch {name} and turn on EAX in its sound options if it has one."));
             }
             Job::Speakers(new) => {
                 let Some(inst) = inst else {
@@ -291,11 +360,18 @@ impl Worker {
                         ops::change_speakers(facts, game, inst, new, untested, h)
                     })
                     .map_err(|e| e.to_string())?;
-                for f in &failed {
-                    lines.push(format!("Couldn't write {}.", f.display()));
-                }
                 if let Some(r) = report {
-                    lines.extend(settings_lines(Ok(r))?);
+                    self.settings.extend(
+                        r.applied
+                            .applied
+                            .iter()
+                            .map(|t| (t.clone(), follow_up(game, t))),
+                    );
+                }
+                if !failed.is_empty() {
+                    return Err(format!(
+                        "{name}'s speaker setup wasn't fully changed. See Warnings."
+                    ));
                 }
                 lines.push(format!(
                     "{name} is now set up for {}.",
@@ -303,10 +379,23 @@ impl Worker {
                 ));
             }
             Job::Settings { revert, plan } => {
-                let report = self.with_host(facts, game, &cache, |h| {
-                    ops::change_settings(facts, game, &revert, &plan, h)
-                });
-                lines.extend(settings_lines(report)?);
+                let report = self
+                    .with_host(facts, game, &cache, |h| {
+                        ops::change_settings(facts, game, &revert, &plan, h)
+                    })
+                    .map_err(|e| e.to_string())?;
+                self.settings.extend(
+                    report
+                        .applied
+                        .applied
+                        .iter()
+                        .map(|t| (t.clone(), follow_up(game, t))),
+                );
+                if !report.applied.failed.is_empty() {
+                    return Err(format!(
+                        "Some of {name}'s settings weren't changed. See Warnings."
+                    ));
+                }
             }
             Job::SoundLog(level) => {
                 let Some(t) = facts.launcher.clone() else {
@@ -346,10 +435,7 @@ impl Worker {
                     .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
                     .unwrap_or_default();
                 let r = {
-                    let tx = self.tx.clone();
-                    let mut on_step = move |s: &str| {
-                        let _ = tx.send(Msg::Step(s.to_string()));
-                    };
+                    let mut on_step = sender(self.tx.clone());
                     let me = std::cell::RefCell::new(&mut *self);
                     let mut close = |t: &Target| {
                         me.borrow_mut().launcher_closed(
@@ -362,27 +448,10 @@ impl Worker {
                     let mut h = host(facts, game, &mut net, &mut close, &mut on_step, &cache);
                     uninstall::execute(&survey, &choices, &mut h, &when)
                 };
-                lines.extend(r.restored.iter().map(|p| {
-                    format!(
-                        "Put back the original {}.",
-                        p.file_name().unwrap_or_default().to_string_lossy()
-                    )
-                }));
-                lines.extend(
-                    r.settings_restored
-                        .iter()
-                        .map(|t| format!("Put back \"{t}\".")),
-                );
-                lines.extend(r.not_removed.iter().map(|p| {
-                    format!(
-                        "Couldn't remove {}, so it's still listed as part of the EAX fix.",
-                        p.display()
-                    )
-                }));
                 if r.fully_uninstalled {
                     lines.push(format!("The EAX fix is removed from {name}."));
                 } else {
-                    lines.push(format!("Some of the EAX fix is still in {name}, listed above. Uninstall again to try those once more."));
+                    return Err(format!("Some of the EAX fix is still in {name}, listed under Warnings. Uninstall again to try those once more."));
                 }
             }
         }
@@ -397,35 +466,37 @@ impl Worker {
         f: impl FnOnce(&mut SystemHost) -> T,
     ) -> T {
         let mut net = Curl::default();
-        let tx = self.tx.clone();
-        let mut on_step = move |s: &str| {
-            let _ = tx.send(Msg::Step(s.to_string()));
-        };
+        let mut on_step = sender(self.tx.clone());
         let mut never = |_: &Target| true;
         let mut h = host(facts, game, &mut net, &mut never, &mut on_step, cache);
         f(&mut h)
     }
 }
 
-fn settings_lines(
-    r: anyhow::Result<crate::engine::apply::UpdateReport>,
-) -> Result<Vec<String>, String> {
-    let r = r.map_err(|e| e.to_string())?;
-    let mut out = Vec::new();
-    out.extend(r.restored.iter().map(|t| format!("Put back \"{t}\".")));
-    out.extend(
-        r.applied
-            .applied
-            .iter()
-            .map(|t| format!("Turned on \"{t}\".")),
-    );
-    out.extend(
-        r.applied
-            .failed
-            .iter()
-            .map(|f| format!("Couldn't write {}.", f.display())),
-    );
-    Ok(out)
+/// A changed setting's follow-up from the game's profile ("Don't forget to
+/// set your AV receiver…"), or empty.
+fn follow_up(game: Option<&Game>, title: &str) -> String {
+    game.into_iter()
+        .flat_map(|g| {
+            g.game_config
+                .audio_settings
+                .iter()
+                .chain(&g.game_config.optional_settings)
+        })
+        .find(|s| s.title == title)
+        .and_then(|s| s.follow_up.clone())
+        .unwrap_or_default()
+}
+
+/// What happened to a download, as a line under "Getting DSOAL and OpenAL Soft".
+fn got_text(what: &str, got: &Got) -> String {
+    match got {
+        Got::UpToDate => format!("{what} is up to date"),
+        Got::Downloaded => format!("Downloaded {what}"),
+        Got::Cached => format!("GitHub can't be reached, so using the {what} downloaded earlier"),
+        Got::KeptOld => format!("The download failed, so using the {what} downloaded earlier"),
+        Got::Failed(_) => format!("{what} couldn't be downloaded"),
+    }
 }
 
 fn host<'a>(
@@ -433,7 +504,7 @@ fn host<'a>(
     game: Option<&Game>,
     net: &'a mut Curl,
     close: &'a mut dyn FnMut(&Target) -> bool,
-    on_step: &'a mut dyn FnMut(&str),
+    on_step: &'a mut dyn FnMut(Event, &str),
     cache: &Cache,
 ) -> SystemHost<'a> {
     SystemHost {

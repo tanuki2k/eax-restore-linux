@@ -134,6 +134,13 @@ pub fn change_speakers(
         .filter(|f| new.write_alsoft(f).is_err())
         .cloned()
         .collect();
+    for f in &inst.alsoft_files {
+        if failed.contains(f) {
+            host.warning(&format!("Couldn't write {}.", f.display()));
+        } else {
+            host.detail("Updated alsoft.ini");
+        }
+    }
     let Some(g) = game else {
         return Ok((failed, None));
     };
@@ -167,11 +174,21 @@ pub fn change_settings(
     host: &mut dyn Host,
 ) -> Result<UpdateReport> {
     host.step("Changing the game's settings");
-    apply::update_in_manifest(
+    let r = apply::update_in_manifest(
         &super::manifest::path_in(&facts.game_dir),
         revert,
         plan,
         &crash_markers(game),
         host,
-    )
+    )?;
+    for t in &r.restored {
+        host.detail(&format!("Undid \"{t}\""));
+    }
+    for t in &r.applied.applied {
+        host.detail(&format!("Turned on \"{t}\""));
+    }
+    for f in &r.applied.failed {
+        host.warning(&format!("Couldn't write {}.", f.display()));
+    }
+    Ok(r)
 }

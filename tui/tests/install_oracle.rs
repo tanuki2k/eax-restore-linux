@@ -112,6 +112,8 @@ fn make(kind: &Kind, dir: &Path, installs: &[&str]) -> World {
 /// is off (the curl stub).
 struct FakeHost {
     net: Curl,
+    /// Every step, detail ("  " in front) and warning ("! ") reported.
+    said: Vec<String>,
 }
 
 impl Host for FakeHost {
@@ -120,6 +122,15 @@ impl Host for FakeHost {
     }
     fn registry_quiet(&mut self) -> bool {
         true
+    }
+    fn step(&mut self, what: &str) {
+        self.said.push(what.to_string());
+    }
+    fn detail(&mut self, what: &str) {
+        self.said.push(format!("  {what}"));
+    }
+    fn warning(&mut self, what: &str) {
+        self.said.push(format!("! {what}"));
     }
 }
 
@@ -261,7 +272,7 @@ fn compare(kind: Kind) {
     let b = make(&kind, &tmp.path().join("rust"), &before);
 
     static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
-    let report = {
+    let (report, said) = {
         let _g = LOCK.lock().unwrap_or_else(|e| e.into_inner());
         std::env::set_var("STUB_PREFIX", &b.prefix);
         std::env::set_var("STUB_LOG", tmp.path().join("rust/stub.log"));
@@ -276,6 +287,7 @@ fn compare(kind: Kind) {
             net: Curl {
                 program: repo_root().join("tests/fixtures/bin/curl"),
             },
+            said: Vec::new(),
         };
         let p = if kind.gathered {
             let pt = vec![repo_root()
@@ -286,13 +298,45 @@ fn compare(kind: Kind) {
         } else {
             plan(&kind, &b)
         };
-        install::execute(
+        let report = install::execute(
             &p,
             &Cache::new(&b.home),
             &Installer::for_branch("main"),
             &mut host,
-        )
+        );
+        (report, host.said)
     };
+    // Each step says what it did under it: the primary DLL into the game's
+    // folder, alsoft.ini, and where the override went. Nothing went wrong.
+    let copying = said
+        .iter()
+        .position(|s| s == "Copying the files into the game's folder")
+        .unwrap_or_else(|| panic!("{}: {said:#?}", kind.name));
+    let under: Vec<&String> = said[copying + 1..]
+        .iter()
+        .take_while(|s| s.starts_with("  "))
+        .collect();
+    assert!(
+        under.iter().any(|s| s.contains(" to the game folder")),
+        "{}: {said:#?}",
+        kind.name
+    );
+    assert!(
+        said.iter()
+            .any(|s| s.starts_with("  Wrote alsoft.ini in the game folder")),
+        "{}: {said:#?}",
+        kind.name
+    );
+    assert!(
+        said.iter().any(|s| s.starts_with("  DLL override")),
+        "{}: {said:#?}",
+        kind.name
+    );
+    assert!(
+        !said.iter().any(|s| s.starts_with("! Couldn't")),
+        "{}: {said:#?}",
+        kind.name
+    );
     assert!(
         report.failures.is_empty() && !report.no_sources,
         "{}: {report:#?}",
