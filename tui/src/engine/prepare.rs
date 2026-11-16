@@ -86,31 +86,6 @@ pub fn fallback_wine(home: &Path) -> Option<PathBuf> {
 
 /// Looks at the game folder (its exe folder) and everything around it.
 /// `protontricks` is how to run it, for a Steam game's prefix.
-/// Facts for a game with no folder on this PC: nothing detected, only what
-/// its profile says.
-pub fn none(game: Option<&Game>) -> Facts {
-    Facts {
-        game_dir: PathBuf::new(),
-        install_root: PathBuf::new(),
-        identified: None,
-        store: None,
-        id: String::new(),
-        heroic: None,
-        prefix: None,
-        runner: None,
-        linux_build: false,
-        exe_folders: Vec::new(),
-        extra_dirs: Vec::new(),
-        profile_api: game.map(|g| g.eax.api.clone()).filter(|a| !a.is_empty()),
-        files_api: None,
-        arch: None,
-        companions: Vec::new(),
-        launcher: None,
-        vcrun_present: false,
-        wants_eax_unified: false,
-    }
-}
-
 pub fn gather(game_dir: &Path, game: Option<&Game>, home: &Path, protontricks: &[String]) -> Facts {
     let identified = identify_game_dir(game_dir, home);
     let install_root = game_install_root(

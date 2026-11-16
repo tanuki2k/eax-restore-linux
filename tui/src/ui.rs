@@ -44,9 +44,54 @@ pub fn draw(f: &mut Frame, app: &App) {
     if let Some(p) = &app.picker {
         draw_picker(f, p, body);
     }
+    if let Some((title, lines)) = &app.notice {
+        draw_notice(f, title, lines, body);
+    }
     if app.help {
         draw_help(f, app, body);
     }
+}
+
+/// The pop-up for a game with no EAX: the first paragraph in yellow, the
+/// profile's own words under it, then an OK button. Sized to its text.
+fn draw_notice(f: &mut Frame, title: &str, paras: &[String], area: Rect) {
+    let w = area.width.min(64);
+    let text_w = usize::from(w.saturating_sub(6)).max(10);
+    let mut lines: Vec<Line> = Vec::new();
+    for (i, para) in paras.iter().enumerate() {
+        if i > 0 {
+            lines.push(Line::from(""));
+        }
+        let style = if i == 0 { theme::label() } else { Style::new() };
+        lines.extend(
+            wrap(para, text_w, "")
+                .into_iter()
+                .map(|l| Line::from(Span::styled(l, style))),
+        );
+    }
+    lines.push(Line::from(""));
+    lines.push(
+        Line::from(Span::styled(
+            "[ OK ]",
+            Style::new()
+                .fg(theme::SELECT_TEXT)
+                .bg(theme::SELECT_BAR)
+                .add_modifier(Modifier::BOLD),
+        ))
+        .centered(),
+    );
+    let h = (lines.len() as u16 + 4).min(area.height);
+    let popup = Rect::new(
+        area.x + (area.width - w) / 2,
+        area.y + (area.height - h) / 2,
+        w,
+        h,
+    );
+    f.render_widget(Clear, popup);
+    f.render_widget(
+        Paragraph::new(lines).block(boxed(title).padding(MARGIN)),
+        popup,
+    );
 }
 
 /// A rounded box in the old browser's colours, its title centred in the top edge.
@@ -549,7 +594,9 @@ fn draw_help(f: &mut Frame, app: &App, area: Rect) {
 
 /// The key bar: each key in cyan, what it does after it.
 fn bar_items(app: &App) -> Vec<(&'static str, &'static str)> {
-    if app.help {
+    if app.notice.is_some() {
+        vec![("Enter", "close")]
+    } else if app.help {
         vec![("↑/↓", "scroll"), ("Esc or F1", "close")]
     } else if let Some(p) = &app.panel {
         crate::panel::view::keys(p)
@@ -880,19 +927,44 @@ mod tests {
     }
 
     #[test]
-    fn enter_on_a_game_with_no_eax_opens_its_page_without_a_folder() {
+    fn enter_on_a_game_with_no_eax_shows_a_pop_up_saying_why() {
         let home = tempfile::tempdir().unwrap();
-        let mut app = App::new(entries(
+        let mut games = entries(
             r#"{"games":[{"id":"bg","name":"Baldur's Gate: Enhanced Edition",
               "eax":{"status":"not_implemented","problem":"It has no EAX."}}]}"#,
-        ));
+        );
+        let mut app = App::new(games.clone());
         app.set_home(home.path().to_path_buf());
         app.use_panel = true;
         press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
-        assert!(app.picker.is_none() && app.menu.is_none());
-        let p = app.panel.as_ref().expect("the page");
-        assert!(!p.on_this_pc);
-        assert_eq!(p.problem.as_deref(), Some("It has no EAX."));
+        assert!(app.panel.is_none() && app.picker.is_none() && app.menu.is_none());
+        let s = screen(&app, 120, 40);
+        assert!(s.contains(" Baldur's Gate: Enhanced Edition "), "{s}");
+        assert!(s.contains("Baldur's Gate: Enhanced Edition has no EAX, so there's"));
+        assert!(s.contains("nothing to install."));
+        assert!(s.contains("It has no EAX."));
+        assert!(s.contains("[ OK ]"));
+        assert!(s.contains("Search"), "the list stays under it");
+        // Other keys do nothing; Esc closes it.
+        press(&mut app, ratatui::crossterm::event::KeyCode::Down);
+        assert!(app.notice.is_some());
+        press(&mut app, ratatui::crossterm::event::KeyCode::Esc);
+        assert!(app.notice.is_none());
+        assert!(!app.quit);
+
+        // Found on this PC too: the same pop-up, not the page.
+        let dir = home.path().join("Games/BGEE");
+        std::fs::create_dir_all(&dir).unwrap();
+        games[0].status = Status::OnThisPc;
+        games[0].path = Some(dir);
+        let mut app = App::new(games);
+        app.set_home(home.path().to_path_buf());
+        app.use_panel = true;
+        press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
+        assert!(app.panel.is_none());
+        assert!(app.notice.is_some());
+        press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
+        assert!(app.notice.is_none());
     }
 
     #[test]

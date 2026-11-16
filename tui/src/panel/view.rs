@@ -746,7 +746,6 @@ pub fn banner_lines(p: &Panel) -> Vec<Line<'static>> {
     let dim = Style::new().fg(theme::LABEL);
     let yellow = theme::label();
     let install = match (&p.installed, &p.problem) {
-        (None, _) if p.no_eax() => dot(dim, "Not installed".into()),
         (Some(i), _) => dot(
             theme::green(),
             format!(
@@ -1163,7 +1162,6 @@ fn help_text(p: &Panel) -> String {
             Button::SoundLog if p.sound_log_on => "Stops writing openal.log the next time the game runs.".into(),
             Button::SoundLog => "Writes openal.log in the game's folder the next time it runs, for working out a sound problem.".into(),
             Button::CheckAgain => "Looks at the game's folder and prefix again.".into(),
-            Button::Back if matches!(p.screen, Screen::Main) => "Back to the list.".into(),
             _ => String::new(),
         },
         None => String::new(),

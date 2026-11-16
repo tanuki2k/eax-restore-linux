@@ -276,9 +276,6 @@ pub struct Panel {
     /// Where the focused choice's field was last drawn, so its list opens
     /// under it like a dropdown.
     pub field: std::cell::Cell<Option<ratatui::layout::Rect>>,
-    /// False for a page opened without a folder (a game with no EAX that
-    /// isn't on this PC).
-    pub on_this_pc: bool,
     pub(crate) home: PathBuf,
     untested: bool,
 }
@@ -302,56 +299,14 @@ impl Panel {
         let pt = crate::cli::protontricks();
         let facts = prepare::gather(dir, game.as_ref(), home, &pt);
         let installed = Installed::read(&facts.game_dir, home);
-        let wanted = Wanted {
-            store: facts.store,
-            id: facts.id.clone(),
-            name: String::new(),
-        };
-        Self::with_facts(name, facts, installed, game, wanted, true, home)
-    }
-
-    /// The page of a game with no folder on this PC, which needs none: one the
-    /// profile says has no EAX. Only the profile shows; nothing is detected.
-    pub fn without_folder(name: &str, game: Option<Game>, home: &Path) -> Self {
-        let facts = prepare::none(game.as_ref());
-        // The cover by whichever store the profile lists.
-        let wanted = match game.as_ref().map(|g| &g.stores) {
-            Some(s) if s.steam.is_some() => Wanted {
-                store: Some(crate::engine::identify::Store::Steam),
-                id: s
-                    .steam
-                    .as_ref()
-                    .map(|x| x.id.to_string())
-                    .unwrap_or_default(),
-                name: String::new(),
-            },
-            Some(s) if s.gog.is_some() => Wanted {
-                store: Some(crate::engine::identify::Store::Gog),
-                id: s.gog.as_ref().map(|x| x.id.to_string()).unwrap_or_default(),
-                name: String::new(),
-            },
-            _ => Wanted {
-                store: None,
-                id: String::new(),
-                name: String::new(),
-            },
-        };
-        Self::with_facts(name, facts, None, game, wanted, false, home)
-    }
-
-    fn with_facts(
-        name: &str,
-        facts: Facts,
-        installed: Option<Installed>,
-        game: Option<Game>,
-        mut wanted: Wanted,
-        on_this_pc: bool,
-        home: &Path,
-    ) -> Self {
         let name = game
             .as_ref()
             .map_or_else(|| name.to_string(), |g| g.name.clone());
-        wanted.name = name.clone();
+        let wanted = Wanted {
+            store: facts.store,
+            id: facts.id.clone(),
+            name: name.clone(),
+        };
         let cover_rx = Some(cover::spawn(home.to_path_buf(), wanted));
         let animate = !cfg!(test)
             && std::env::var("EAX_RESTORE_NO_ANIMATION").map_or(true, |v| v.is_empty() || v == "0");
@@ -377,7 +332,6 @@ impl Panel {
             cover: None,
             info_scroll: 0,
             field: std::cell::Cell::new(None),
-            on_this_pc,
             home: home.to_path_buf(),
             untested: ops::untested_from_env(),
         };
@@ -390,9 +344,6 @@ impl Panel {
     pub fn status_lines(&self) -> Vec<StatusLine> {
         let f = &self.facts;
         let line = |ok, label, value: String| StatusLine { ok, label, value };
-        if !self.on_this_pc {
-            return vec![line(true, "Folder", "not found on this PC".into())];
-        }
         let mut out = vec![line(
             true,
             "Folder",
@@ -443,31 +394,9 @@ impl Panel {
         self.running() || self.revealing() || self.cover_rx.is_some()
     }
 
-    /// The profile says there's no EAX to restore, so the page offers nothing
-    /// to install.
-    pub fn no_eax(&self) -> bool {
-        self.game.as_ref().is_some_and(|g| g.eax.none_to_restore())
-    }
-
     fn build(&mut self) {
         let f = &self.facts;
         let name = &self.name;
-        if let Some(g) = self.game.as_ref().filter(|g| g.eax.none_to_restore()) {
-            let mut text = if g.eax.problem.is_empty() {
-                format!("{name} never had EAX, so there's nothing to restore.")
-            } else {
-                g.eax.problem.clone()
-            };
-            if !g.eax.fix.is_empty() {
-                text.push_str("\n\n");
-                text.push_str(&g.eax.fix);
-            }
-            self.problem = Some(text);
-            self.sections.clear();
-            self.fixes.clear();
-            self.focus = 0;
-            return;
-        }
         self.problem = if f.linux_build && self.installed.is_none() {
             Some(format!("{name} is installed as its Linux version, which the EAX fix can't work with. Switch it to the Windows version in its launcher, then check again."))
         } else if f.prefix.is_none() && self.installed.is_none() {
@@ -822,7 +751,6 @@ impl Panel {
             Screen::Confirm { .. } => vec![Button::Confirm, Button::Back],
             Screen::Uninstall(_) => vec![Button::Confirm, Button::Back],
             Screen::Run(_) => vec![Button::Back],
-            Screen::Main if self.no_eax() => vec![Button::Back],
             Screen::Main if self.problem.is_some() => vec![Button::CheckAgain],
             Screen::Main if self.installed.is_some() => {
                 let mut b = vec![Button::Apply, Button::Uninstall];
@@ -1079,9 +1007,7 @@ impl Panel {
             }
             Button::CheckAgain => self.reload(),
             Button::Back => {
-                if matches!(self.screen, Screen::Main) {
-                    self.closed = true;
-                } else if matches!(self.screen, Screen::Run(_)) {
+                if matches!(self.screen, Screen::Run(_)) {
                     self.reload();
                 } else {
                     self.screen = Screen::Main;
@@ -1855,44 +1781,6 @@ mod tests {
     }
 
     #[test]
-    fn a_game_with_no_eax_explains_why_and_offers_nothing_to_install() {
-        let tmp = tempfile::tempdir().unwrap();
-        let home = tmp.path().join("home");
-        let game = steam_game(&home);
-        let g = profile(
-            r#"{"status":"not_implemented","problem":"This is the Enhanced Edition, and it has no EAX."}"#,
-        );
-        let mut p = Panel::open("Test Game", &game, Some(g.clone()), &home);
-        assert_eq!(
-            p.problem.as_deref(),
-            Some("This is the Enhanced Edition, and it has no EAX.")
-        );
-        assert!(p.sections.is_empty() && p.fixes.is_empty());
-        assert_eq!(p.buttons(), [Button::Back]);
-        let rows = screen(&p, 160, 50);
-        assert!(rows
-            .iter()
-            .any(|r| r.contains("This version of Test Game EE has no EAX")));
-        assert!(!rows.iter().any(|r| r.contains("[ Install ]")));
-        p.handle_key(key(KeyCode::Enter));
-        assert!(p.closed, "Back closes the page");
-
-        // Not on this PC: the same page, with no folder and nothing detected.
-        let p = Panel::without_folder("Test Game EE", Some(g), &home);
-        assert_eq!(
-            p.status_lines(),
-            [StatusLine {
-                ok: true,
-                label: "Folder",
-                value: "not found on this PC".into()
-            }]
-        );
-        assert_eq!(p.buttons(), [Button::Back]);
-        let rows = screen(&p, 160, 50);
-        assert!(rows.iter().any(|r| r.contains("● Not installed")));
-    }
-
-    #[test]
     fn a_patch_that_removed_eax_with_a_fix_in_place_still_installs() {
         let tmp = tempfile::tempdir().unwrap();
         let home = tmp.path().join("home");
@@ -1901,7 +1789,6 @@ mod tests {
         let mut p = Panel::open("Test Game", &game, Some(g), &home);
         p.facts.prefix = Some(home.join(".local/share/Steam/steamapps/compatdata/424242/pfx"));
         p.build();
-        assert!(!p.no_eax());
         assert!(p.problem.is_none());
         assert_eq!(p.buttons(), [Button::Install]);
     }

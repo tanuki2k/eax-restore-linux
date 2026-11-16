@@ -142,8 +142,8 @@ speakers and settings change in place (`engine/ops.rs`, shared with the headless
 folder on this PC opens the folder picker for it (`Picker::game`), and Space there opens the
 page for the folder chosen (Ctrl-A's picker too). A game whose profile has no EAX to restore
 (`Eax::none_to_restore`: `not_implemented`, or `removed_by_patch` without `fix_in_place`, the
-script's `block_if_eax_not_implemented`) opens a page with its profile's reason and only Back,
-with or without a folder (`Panel::without_folder`, from `prepare::none`). The old action menu
+script's `block_if_eax_not_implemented`) opens no page: a pop-up over the list (`App::notice`,
+`ui::draw_notice`) says why, with the profile's own problem and fix text. The old action menu
 is only for `EAX_RESTORE_ENGINE=bash`. Engine code stays prompt-free: read state, take
 choices, plan, apply.
 

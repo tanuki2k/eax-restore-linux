@@ -88,6 +88,8 @@ pub struct App {
     pub rescan: bool,
     /// The right pane takes the whole screen (Ctrl-F).
     pub zoom: bool,
+    /// The pop-up for a game with no EAX: its name, then what to say.
+    pub notice: Option<(String, Vec<String>)>,
     /// The F1 key list is open.
     pub help: bool,
     pub help_scroll: u16,
@@ -130,6 +132,7 @@ impl App {
             use_panel: false,
             rescan: false,
             zoom: false,
+            notice: None,
             help: false,
             help_scroll: 0,
             help_max: std::cell::Cell::new(0),
@@ -344,10 +347,21 @@ impl App {
         }
         let Some(e) = self.current() else { return };
         let (name, game, path) = (e.name.clone(), e.game.clone(), e.path.clone());
-        if let Some(dir) = path {
+        if let Some(g) = game.as_ref().filter(|g| g.eax.none_to_restore()) {
+            // Nothing to choose, so a pop-up says why instead of a page.
+            let mut lines = vec![format!(
+                "{} has no EAX, so there's nothing to install.",
+                g.name
+            )];
+            lines.extend(
+                [&g.eax.problem, &g.eax.fix]
+                    .into_iter()
+                    .filter(|t| !t.is_empty())
+                    .cloned(),
+            );
+            self.notice = Some((g.name.clone(), lines));
+        } else if let Some(dir) = path {
             self.panel = Some(crate::panel::Panel::open(&name, &dir, game, &self.home));
-        } else if game.as_ref().is_some_and(|g| g.eax.none_to_restore()) {
-            self.panel = Some(crate::panel::Panel::without_folder(&name, game, &self.home));
         } else {
             let mut picker = Picker::new(picker::start_dir(&self.home), self.home.clone());
             picker.game = game;
@@ -423,6 +437,12 @@ impl App {
 
     fn handle_key_inner(&mut self, key: KeyEvent) {
         self.message.clear();
+        if self.notice.is_some() {
+            if matches!(key.code, KeyCode::Enter | KeyCode::Esc) {
+                self.notice = None;
+            }
+            return;
+        }
         if self.picker.is_some() {
             return self.handle_picker_key(key);
         }
