@@ -136,8 +136,6 @@ fn main() -> Result<()> {
 
     // init() also installs a panic hook that puts the terminal back.
     let mut terminal = ratatui::init();
-    // Asked before any key is read, since the terminal answers on stdin.
-    app.graphics = eax_restore::cover::graphics();
     let result = run(
         &mut terminal,
         &mut app,
@@ -161,7 +159,7 @@ fn run(
     while !app.quit {
         terminal.draw(|f| ui::draw(f, app))?;
         // While something on the page moves by itself (the work's progress,
-        // the Status box typing, a cover on its way), redraw between keys:
+        // the Status box typing, the build lists on their way), redraw between keys:
         // quickly while it types, so it reads as typing.
         let wait = app
             .panel

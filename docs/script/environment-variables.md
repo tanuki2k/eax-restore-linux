@@ -35,9 +35,7 @@ EAX_RESTORE_SKIP_PREFLIGHT=1 EAX_RESTORE_SKIP_UPDATE_CHECK=1 ./eax-restore-linux
 
 | Variable | What it does |
 | --- | --- |
-| `EAX_RESTORE_STEAMGRIDDB_KEY=your-key` | Gets a game's cover from SteamGridDB when neither Steam nor Heroic has one on your PC. The key is your own SteamGridDB API key, from the API page in your account's preferences. Covers it downloads are kept in `~/.cache/eax-restore-linux/covers/`. |
 | `EAX_RESTORE_NO_ANIMATION=1` | Shows a game's page all at once, without typing out its Status box first. |
-| `EAX_RESTORE_COVER_PROTOCOL=sixel` | With **Cover art** set to **Full colour** (F2), the TUI asks your terminal how it shows pictures and uses that. This picks one instead: `kitty`, `sixel` or `iterm2`. `blocks` never shows a picture and draws the cover in blocks of solid colour. |
 
 ## For scripting
 

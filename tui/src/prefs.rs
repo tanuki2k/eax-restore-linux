@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
 /// A build choice as the settings screen saves it: an option's key from
-/// `build_choice` ("rolling", "numbered", "tested", or a version). Files from
-/// before the build lists said "stable" (the tested build) or "latest" (the
+/// `build_choice` ("rolling", "numbered", or a version). Older files said
+/// "stable" or "tested", which now read as Latest numbered, or "latest" (the
 /// rolling one).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(from = "String", into = "String")]
@@ -15,7 +15,7 @@ pub struct BuildPref(pub String);
 
 impl Default for BuildPref {
     fn default() -> Self {
-        BuildPref(crate::build_choice::TESTED.into())
+        BuildPref(crate::build_choice::NUMBERED.into())
     }
 }
 
@@ -23,7 +23,7 @@ impl From<String> for BuildPref {
     fn from(s: String) -> Self {
         use crate::build_choice::{NUMBERED, ROLLING, TESTED};
         match s.as_str() {
-            "stable" | TESTED => BuildPref(TESTED.into()),
+            "stable" | TESTED => BuildPref(NUMBERED.into()),
             "latest" | ROLLING => BuildPref(ROLLING.into()),
             NUMBERED => BuildPref(NUMBERED.into()),
             v if crate::engine::builds::safe_name(v) => BuildPref(s),
@@ -57,16 +57,6 @@ pub enum VcPref {
     UseIfThere,
     InstallIfMissing,
     LeaveAlone,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum CoverStyle {
-    /// Coloured letters.
-    #[default]
-    Letters,
-    /// Half-block cells, two pixels each, no letters.
-    Colour,
 }
 
 /// The speaker setups, in `panel::speaker_choices()`'s order. Saved by name so
@@ -112,7 +102,6 @@ pub struct Prefs {
     pub over: OverridePref,
     pub vcrun: VcPref,
     pub speakers: SpeakerPref,
-    pub cover: CoverStyle,
 }
 
 /// `$XDG_CONFIG_HOME`, else `~/.config`.
@@ -177,7 +166,6 @@ mod tests {
             over: OverridePref::Manual,
             vcrun: VcPref::InstallIfMissing,
             speakers: SpeakerPref::Surround51,
-            cover: CoverStyle::Colour,
         };
         p.save_to(&file).unwrap();
         assert_eq!(Prefs::load_from(&file), p);
@@ -185,12 +173,16 @@ mod tests {
         std::fs::write(&file, "{ not json").unwrap();
         assert_eq!(Prefs::load_from(&file), Prefs::default());
 
-        // A file from before the build lists: stable was the tested build,
-        // latest the rolling one.
+        // A file from before: stable and tested read as Latest numbered,
+        // latest as the rolling one.
         std::fs::write(&file, r#"{"dsoal_build":"latest","openal_build":"stable"}"#).unwrap();
         let old = Prefs::load_from(&file);
         assert_eq!(old.dsoal_build.0, "rolling");
-        assert_eq!(old.openal_build.0, "tested");
+        assert_eq!(old.openal_build.0, "numbered");
+
+        // A setting this version doesn't have any more (the cover art) is skipped.
+        std::fs::write(&file, r#"{"speakers":"quad","cover":"colour"}"#).unwrap();
+        assert_eq!(Prefs::load_from(&file).speakers, SpeakerPref::Quad);
 
         // A file from an older version, missing settings, keeps the ones it has.
         std::fs::write(&file, r#"{"speakers":"quad"}"#).unwrap();

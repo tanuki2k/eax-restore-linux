@@ -1,7 +1,7 @@
 //! The DSOAL and OpenAL Soft build choices, as the game page and the settings
 //! screen list them: two that always fetch the newest build when it installs,
-//! the tested one, then every numbered build kcat has published, newest first.
-//! Each option has a key ("rolling", "numbered", "tested", or the version
+//! then every numbered build kcat has published, newest first.
+//! Each option has a key ("rolling", "numbered", or the version
 //! itself) that stays the same when the list is filled in from GitHub.
 
 use crate::engine::builds::{self, Build, Cache, Catalog, Net, Pins};
@@ -16,6 +16,7 @@ pub enum Comp {
 
 pub const ROLLING: &str = "rolling";
 pub const NUMBERED: &str = "numbered";
+/// No longer offered; a saved "tested" reads as Latest numbered.
 pub const TESTED: &str = "tested";
 /// Only on an installed game: leave its files as they are.
 pub const KEEP: &str = "keep";
@@ -76,7 +77,6 @@ fn with_version(name: &str, version: &str) -> String {
 /// listed even when the catalog doesn't have it (a saved default, before the
 /// list has arrived or while offline).
 pub fn options(comp: Comp, info: Option<&BuildInfo>, also: Option<&str>) -> Vec<BuildOpt> {
-    let pins = Pins::default();
     let opt = |key: &str, label: String, help: String| BuildOpt {
         key: key.to_string(),
         label,
@@ -99,11 +99,6 @@ pub fn options(comp: Comp, info: Option<&BuildInfo>, also: Option<&str>) -> Vec<
                 ),
                 "The highest-numbered DSOAL build at the time you install.".into(),
             ),
-            opt(
-                TESTED,
-                with_version("Tested", &pins.dsoal_rev),
-                "The DSOAL build this project has tested.".into(),
-            ),
         ],
         Comp::Openal => vec![
             opt(
@@ -115,11 +110,6 @@ pub fn options(comp: Comp, info: Option<&BuildInfo>, also: Option<&str>) -> Vec<
                 NUMBERED,
                 with_version("Latest numbered", &i.openal_numbered),
                 "The newest numbered OpenAL Soft release at the time you install.".into(),
-            ),
-            opt(
-                TESTED,
-                with_version("Tested", &pins.openal_tag),
-                "The OpenAL Soft release this project has tested.".into(),
             ),
         ],
     };
@@ -182,7 +172,7 @@ pub fn keep_option(comp: Comp, installed: Option<&str>) -> BuildOpt {
 
 /// What an option's key installs. "Keep" with a version recorded installs
 /// that version again if something else needs a reinstall; without one, the
-/// tested build.
+/// newest numbered one.
 pub fn to_build(comp: Comp, key: &str, installed: Option<&str>) -> Build {
     match (comp, key) {
         (_, ROLLING) => Build::Latest,
@@ -191,7 +181,7 @@ pub fn to_build(comp: Comp, key: &str, installed: Option<&str>) -> Build {
         (Comp::Openal, TESTED) => Build::Exact(Pins::default().openal_tag),
         (_, KEEP) => match installed.filter(|v| builds::safe_name(v)) {
             Some(v) => Build::Exact(v.to_string()),
-            None => to_build(comp, TESTED, None),
+            None => Build::Numbered,
         },
         (_, v) => Build::Exact(v.to_string()),
     }
@@ -218,7 +208,7 @@ mod tests {
     }
 
     #[test]
-    fn the_latest_two_then_tested_then_every_build_newest_first() {
+    fn the_latest_two_then_every_build_newest_first() {
         let info = info();
         let labels = |c| -> Vec<String> {
             options(c, Some(&info), None)
@@ -231,7 +221,6 @@ mod tests {
             [
                 "Latest rolling (r697)",
                 "Latest numbered (r697)",
-                "Tested (r693)",
                 "r697",
                 "r696"
             ]
@@ -241,17 +230,16 @@ mod tests {
             [
                 "Latest rolling (1.25.2, 2026-11-15)",
                 "Latest numbered (1.25.2)",
-                "Tested (1.25.2)",
                 "1.25.2"
             ]
         );
-        // Before the list arrives: the three that need no list, plus a saved
+        // Before the list arrives: the two that need no list, plus a saved
         // version so the choice isn't lost.
         let keys: Vec<String> = options(Comp::Dsoal, None, Some("r650"))
             .into_iter()
             .map(|o| o.key)
             .collect();
-        assert_eq!(keys, [ROLLING, NUMBERED, TESTED, "r650"]);
+        assert_eq!(keys, [ROLLING, NUMBERED, "r650"]);
     }
 
     #[test]
@@ -271,10 +259,10 @@ mod tests {
             to_build(Comp::Dsoal, KEEP, Some("r690")),
             Build::Exact("r690".into())
         );
-        // A rolling label isn't a version to fetch again: the tested one.
+        // A rolling label isn't a version to fetch again: the newest numbered.
         assert_eq!(
             to_build(Comp::Openal, KEEP, Some("1.25.2 (2026-11-15)")),
-            to_build(Comp::Openal, TESTED, None)
+            Build::Numbered
         );
     }
 }

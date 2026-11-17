@@ -218,6 +218,46 @@ pub fn folder_names_audio_api(dir: &Path) -> bool {
 /// each with the exe to show for it. `exe_hint` is the profile's exe name:
 /// when it's there, its shallowest folder comes first, since it was checked
 /// against a real install.
+/// The folder the game's exe is in, and that exe's name. `dir` itself when it
+/// holds the profile's exe (`exe_hint`), or any .exe when there's no hint;
+/// else the best of [`exe_candidates`] under it, as the script moves
+/// `GAME_DIR` to the exe's folder after a library scan; else `dir` with no
+/// exe. A library hands over the install's top folder, and the game's exe
+/// can be folders below it (BioShock's is in Builds/Release).
+pub fn exe_folder(dir: &Path, exe_hint: &str) -> (PathBuf, Option<String>) {
+    let exes: Vec<String> = files_at(dir, 1, 1, &|p| has_ext(p, "exe"))
+        .into_iter()
+        .map(|(_, p)| file_name_of(&p))
+        .collect();
+    let hint = exe_hint.to_lowercase();
+    if !hint.is_empty() {
+        if let Some(e) = exes.iter().find(|e| e.to_lowercase() == hint) {
+            return (dir.to_path_buf(), Some(e.clone()));
+        }
+    }
+    let cands = exe_candidates(dir, exe_hint);
+    if let Some((d, e)) = cands
+        .iter()
+        .find(|(_, e)| !hint.is_empty() && e.to_lowercase() == hint)
+    {
+        return (d.clone(), Some(e.clone()));
+    }
+    if let Some((d, e)) = cands.iter().find(|(d, _)| d == dir) {
+        return (d.clone(), Some(e.clone()));
+    }
+    if let Some(e) = exes
+        .iter()
+        .find(|e| !exe_is_junk(&dir.join(e)))
+        .or(exes.first())
+    {
+        return (dir.to_path_buf(), Some(e.clone()));
+    }
+    match cands.into_iter().next() {
+        Some((d, e)) => (d, Some(e)),
+        None => (dir.to_path_buf(), None),
+    }
+}
+
 pub fn exe_candidates(root: &Path, exe_hint: &str) -> Vec<(PathBuf, String)> {
     let mut cands: Vec<(PathBuf, String)> = Vec::new();
     let has = |c: &Vec<(PathBuf, String)>, d: &Path| c.iter().any(|(x, _)| x == d);

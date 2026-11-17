@@ -31,6 +31,11 @@ pub struct Facts {
     pub runner: Option<Runner>,
     /// A native Linux build, which this can't fix.
     pub linux_build: bool,
+    /// The game's exe in `game_dir`, when there is one: the profile's, else
+    /// the one that looks most like the game's.
+    pub exe: Option<String>,
+    /// The exe the game's profile names; empty without a profile.
+    pub exe_hint: String,
     /// Other folders the game's exe might be in, best first.
     pub exe_folders: Vec<(PathBuf, String)>,
     pub extra_dirs: Vec<PathBuf>,
@@ -105,6 +110,8 @@ pub fn gather(game_dir: &Path, game: Option<&Game>, home: &Path, protontricks: &
         prefix: None,
         runner: None,
         linux_build: detect::install_is_linux_build(&install_root),
+        exe: None,
+        exe_hint: String::new(),
         exe_folders: Vec::new(),
         extra_dirs: Vec::new(),
         profile_api: None,
@@ -117,6 +124,9 @@ pub fn gather(game_dir: &Path, game: Option<&Game>, home: &Path, protontricks: &
     };
     let exe = game.map_or("", |g| g.exe.as_str());
     f.exe_folders = detect::exe_candidates(&install_root, exe);
+    let (found_in, found) = detect::exe_folder(game_dir, exe);
+    f.exe = found.filter(|_| found_in == game_dir);
+    f.exe_hint = exe.to_string();
 
     if steam {
         let app_id = identified
@@ -319,10 +329,16 @@ impl Facts {
                 Engine::Dsoal => "DirectSound3D",
                 Engine::OpenAlSoft => "OpenAL",
             };
-            if self.api_disagrees() {
+            if let (true, Some(e)) = (self.api_disagrees(), &self.files_api) {
+                // As the script says it: what the files point to, and that
+                // the profile's answer is the one used.
+                let (other, file) = match e.api {
+                    Api::OpenAl => ("OpenAL", &e.openal_file),
+                    _ => ("DirectSound3D", &e.ds_file),
+                };
                 (
                     false,
-                    format!("{arch}, {api}, but its profile lists a different audio system"),
+                    format!("{arch}, {api}, as its profile says, but {file} points to {other}."),
                 )
             } else {
                 (true, format!("{arch}, {api}"))

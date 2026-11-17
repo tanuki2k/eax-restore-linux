@@ -99,9 +99,6 @@ pub struct App {
     pub picker: Option<Picker>,
     /// The F2 settings screen, while it is open.
     pub prefs: Option<crate::prefs_screen::PrefsScreen>,
-    /// How this terminal shows pictures, for the game page's cover; None
-    /// when it can only show text.
-    pub graphics: Option<ratatui_image::picker::Picker>,
     pub(crate) home: PathBuf,
     pub launch: Option<Launch>,
     /// Shown on the key bar's row until the next key.
@@ -143,7 +140,6 @@ impl App {
             help_max: std::cell::Cell::new(0),
             picker: None,
             prefs: None,
-            graphics: None,
             home: PathBuf::from("/"),
             launch: None,
             message: String::new(),
@@ -382,9 +378,7 @@ impl App {
         dir: &std::path::Path,
         game: Option<crate::db::Game>,
     ) -> crate::panel::Panel {
-        let mut p = crate::panel::Panel::open(name, dir, game, &self.home);
-        p.graphics = self.graphics.clone();
-        p
+        crate::panel::Panel::open(name, dir, game, &self.home)
     }
 
     fn open_action_menu(&mut self) {

@@ -5,7 +5,6 @@ pub mod actions;
 pub mod app;
 pub mod build_choice;
 pub mod cli;
-pub mod cover;
 pub mod db;
 pub mod engine;
 pub mod fetch;

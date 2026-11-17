@@ -1,9 +1,9 @@
-//! The F2 settings screen: the player's defaults for new installs, and how
-//! covers are drawn. Every change is saved as soon as it's made.
+//! The F2 settings screen: the player's defaults for new installs. Every
+//! change is saved as soon as it's made.
 
 use crate::build_choice::{BuildInfo, Comp};
 use crate::panel::Opt;
-use crate::prefs::{BuildPref, CoverStyle, OverridePref, Prefs, SpeakerPref, VcPref};
+use crate::prefs::{BuildPref, OverridePref, Prefs, SpeakerPref, VcPref};
 use crate::theme;
 use crate::ui::{boxed, gutter, MARGIN};
 use ratatui::crossterm::event::{KeyCode, KeyEvent};
@@ -22,16 +22,14 @@ pub enum Field {
     Override,
     Speakers,
     Vcrun,
-    Cover,
 }
 
-pub const FIELDS: [Field; 6] = [
+pub const FIELDS: [Field; 5] = [
     Field::DsoalBuild,
     Field::OpenalBuild,
     Field::Override,
     Field::Speakers,
     Field::Vcrun,
-    Field::Cover,
 ];
 
 const RESET_TEXT: &str = "Every setting on this screen goes back to how it came.";
@@ -71,7 +69,6 @@ impl Field {
             Field::Override => "DLL override",
             Field::Speakers => "Speakers",
             Field::Vcrun => "VC++ runtime",
-            Field::Cover => "Cover art",
         }
     }
 
@@ -108,13 +105,6 @@ impl Field {
                 ),
                 ("Leave it alone", "Doesn't touch the VC++ runtime."),
             ]),
-            Field::Cover => opts(&[
-                ("Coloured letters", "Draws the cover with coloured letters."),
-                (
-                    "Full colour",
-                    "Shows the cover as a picture when your terminal can, and in blocks of solid colour when it can't.",
-                ),
-            ]),
         }
     }
 
@@ -139,7 +129,6 @@ impl Field {
                 VcPref::InstallIfMissing => 1,
                 VcPref::LeaveAlone => 2,
             },
-            Field::Cover => usize::from(p.cover == CoverStyle::Colour),
         }
     }
 
@@ -169,13 +158,6 @@ impl Field {
                     VcPref::LeaveAlone,
                 ][i.min(2)];
             }
-            Field::Cover => {
-                p.cover = if i == 1 {
-                    CoverStyle::Colour
-                } else {
-                    CoverStyle::Letters
-                };
-            }
         }
     }
 }
@@ -188,6 +170,8 @@ pub struct PrefsScreen {
     pub focus: usize,
     /// The open list of the focused row's options, and its highlight.
     pub list: Option<usize>,
+    /// The first line of that list that shows, when it's too long to fit.
+    list_top: std::cell::Cell<usize>,
     /// The reset's yes/no question is showing.
     pub asking: bool,
     /// Why the last save failed.
@@ -216,6 +200,7 @@ impl PrefsScreen {
             path,
             focus: 0,
             list: None,
+            list_top: std::cell::Cell::new(0),
             asking: false,
             error: None,
             closed: false,
@@ -273,6 +258,10 @@ impl PrefsScreen {
             match key.code {
                 KeyCode::Up => self.list = Some(sel.saturating_sub(1)),
                 KeyCode::Down => self.list = Some((sel + 1).min(len - 1)),
+                KeyCode::PageUp => self.list = Some(sel.saturating_sub(5)),
+                KeyCode::PageDown => self.list = Some((sel + 5).min(len - 1)),
+                KeyCode::Home => self.list = Some(0),
+                KeyCode::End => self.list = Some(len - 1),
                 KeyCode::Esc => self.list = None,
                 KeyCode::Enter => {
                     self.list = None;
@@ -293,7 +282,10 @@ impl PrefsScreen {
             KeyCode::Home => self.focus = 0,
             KeyCode::End => self.focus = FIELDS.len(),
             KeyCode::Enter => match FIELDS.get(self.focus) {
-                Some(f) => self.list = Some(f.get(&self.prefs, self.build_info.as_ref())),
+                Some(f) => {
+                    self.list_top.set(0);
+                    self.list = Some(f.get(&self.prefs, self.build_info.as_ref()));
+                }
                 None => self.asking = true,
             },
             _ => {}
@@ -438,10 +430,10 @@ impl PrefsScreen {
                 f,
                 field.title(),
                 &field.options(&self.prefs, self.build_info.as_ref()),
-                field.get(&self.prefs, self.build_info.as_ref()),
-                sel,
+                (field.get(&self.prefs, self.build_info.as_ref()), sel),
                 self.field.get(),
                 area,
+                &self.list_top,
             );
         }
         if self.asking {
@@ -489,15 +481,15 @@ mod tests {
                 assert_eq!(field.get(&p, None), i, "{field:?} option {i}");
             }
         }
-        // The shipped defaults: the tested builds (after the two Latest
+        // The shipped defaults: Latest numbered builds (after Latest rolling
         // options), the first of the rest, and stereo that detects.
         let p = Prefs::default();
         let firsts: Vec<usize> = FIELDS.iter().map(|f| f.get(&p, None)).collect();
-        assert_eq!(firsts, [2, 2, 0, SpeakerPref::Auto.index(), 0, 0]);
+        assert_eq!(firsts, [1, 1, 0, SpeakerPref::Auto.index(), 0]);
     }
 
     #[test]
-    fn shows_six_rows_and_a_reset_and_saves_each_change() {
+    fn shows_five_rows_and_a_reset_and_saves_each_change() {
         let tmp = tempfile::tempdir().unwrap();
         let file = tmp.path().join("eax-restore-linux/tui.json");
         let mut s = PrefsScreen::new(Prefs::default(), Some(file.clone()));
@@ -508,16 +500,16 @@ mod tests {
         assert!(text.contains("[ Reset to defaults ]"));
         assert!(text.contains("defaults for new installs"));
 
-        // Latest numbered for DSOAL: picked from its dropdown and saved at once.
+        // Latest rolling for DSOAL: picked from its dropdown and saved at once.
         s.handle_key(key(KeyCode::Enter));
         assert!(screen(&s).contains("─ DSOAL build ─"), "{}", screen(&s));
         s.handle_key(key(KeyCode::Up));
         s.handle_key(key(KeyCode::Enter));
-        let numbered = BuildPref("numbered".into());
-        assert_eq!(s.prefs.dsoal_build, numbered);
-        assert_eq!(Prefs::load_from(&file).dsoal_build, numbered);
+        let rolling = BuildPref("rolling".into());
+        assert_eq!(s.prefs.dsoal_build, rolling);
+        assert_eq!(Prefs::load_from(&file).dsoal_build, rolling);
 
-        // The list from GitHub adds every build under the three.
+        // The list from GitHub adds every build under the two.
         s.build_info = Some(crate::build_choice::BuildInfo {
             catalog: crate::engine::builds::Catalog {
                 dsoal: vec!["r697".into(), "r696".into()],
@@ -535,7 +527,7 @@ mod tests {
         s.handle_key(key(KeyCode::Enter));
         assert!(screen(&s).contains(RESET_ASK));
         s.handle_key(key(KeyCode::Char('n')));
-        assert_eq!(s.prefs.dsoal_build, numbered);
+        assert_eq!(s.prefs.dsoal_build, rolling);
         s.handle_key(key(KeyCode::Enter));
         s.handle_key(key(KeyCode::Char('y')));
         assert_eq!(s.prefs, Prefs::default());

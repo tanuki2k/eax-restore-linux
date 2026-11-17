@@ -115,15 +115,14 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
   machine's own winetricks or Wine never runs.
 
 The game panel (`tui/src/panel/`, the user's Optiscaler-Client-style design): Enter on a game
-with a folder opens a full-screen page in three columns (`view::draw`). Left: the cover as
-coloured ASCII, or with the Full colour setting a real picture (`ratatui-image`; `cover::graphics` asks the terminal once at start-up, `EAX_RESTORE_COVER_PROTOCOL` overrides; left out while a pop-up is open) or half-block colour cells where the terminal can't (`src/cover.rs`: Steam's `librarycache/<AppID>/library_600x900.jpg`, else
-Heroic's `images-cache/<sha256 of art_square>`, else SteamGridDB with
-`EAX_RESTORE_STEAMGRIDDB_KEY`; found and decoded on a thread), the name, store and folder.
-Middle: the choices in numbered boxes in the script's order (`Panel::sections`: audio engine,
+with a folder opens a full-screen page in two columns (`view::draw`), on the folder holding
+the profile's exe (`detect::exe_folder`, as the script moves `GAME_DIR` after a library scan
+and as the headless CLI does: a library gives the install's top folder, and BioShock's exe is
+in Builds/Release). Left: the choices in numbered boxes in the script's order (`Panel::sections`: audio engine,
 runtimes, speakers, compatibility tweaks, DLL override, then audio and optional settings),
 drawn into an off-screen buffer and scrolled to keep the focus in view; a value from the PC or
 profile shows green with "(detected)" until changed (`Row::detected`). DSOAL and OpenAL Soft
-each have a build row (`src/build_choice.rs`: Latest rolling, Latest numbered, Tested, then
+each have a build row (`src/build_choice.rs`: Latest rolling, Latest numbered (the default), then
 every numbered build from `builds::catalog`, looked up on a thread; `Row::keys` keeps the
 choice when the list arrives); the DSOAL one is hidden while the engine is OpenAL Soft alone
 (`Panel::place_dsoal_row`). `builds::Build` has `Numbered` (resolved to the newest at install
@@ -135,14 +134,15 @@ descriptions (`view::draw_dropdown`). Above the choices: the EAX fix box (whethe
 itself out on open (`Panel::reveal`; any key finishes it; off in tests and with
 `EAX_RESTORE_NO_ANIMATION`). Right: the database profile; while work runs, the run box.
 F2 opens the settings screen (`src/prefs_screen.rs`): the player's defaults for a new install
-(DSOAL and OpenAL Soft builds, DLL override, speakers, VC++ runtime) and the cover style, saved on
+(DSOAL and OpenAL Soft builds, DLL override, speakers, VC++ runtime) saved on
 every change to `$XDG_CONFIG_HOME/eax-restore-linux/tui.json`; a pop-up sized like F1's help via `ui::centred_popup` (`src/prefs.rs`; a missing or bad
 file gives the shipped defaults, and "Reset to defaults" puts them back). `Panel` starts a game
 without the fix on them; an installed game opens on what it has. Tests never load the real file.
 The list marks a game with the fix with a green ✓ (magenta when it isn't in the database) and
 greys out the names of games not on this PC (`ui::marker`, `ui::game_line`).
-The cover column drops under `COVER_FROM` columns, and the right column goes under the middle
-one under `BESIDE_FROM`. Colours all come from `theme.rs`, as the list uses them. `mod.rs`
+The right column goes under the left one under `BESIDE_FROM`. Dropdowns are `view::LIST_W` wide
+and scroll (`view::list_window`, PgUp/PgDn/Home/End) when longer than the screen. The Status
+box's first line is the game's exe (`Facts::exe`), flagged when the profile's exe isn't there. Colours all come from `theme.rs`, as the list uses them. `mod.rs`
 holds state and keys, `view.rs` draws, `run.rs` runs the jobs on a worker thread: steps,
 details and warnings come back over a channel (`Host::step`/`detail`/`warning`, which the
 install, uninstall and `ops` call as the script prints its phase tasks and results), questions

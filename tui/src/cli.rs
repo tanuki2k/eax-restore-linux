@@ -191,28 +191,19 @@ fn find_game<'a>(db: &'a Database, store: Option<Store>, id: &str) -> Option<&'a
     })
 }
 
-/// The game folder as given, or the exe folder found under it when it holds
-/// no .exe itself (an install root).
+/// The game folder as given, or the exe folder found under it (an install's
+/// top folder), said when it moves.
 fn exe_folder(dir: &Path, exe_hint: &str, home: &Path) -> Result<PathBuf> {
-    let has_exe = std::fs::read_dir(dir)?.flatten().any(|e| {
-        e.file_name()
-            .to_string_lossy()
-            .to_lowercase()
-            .ends_with(".exe")
-    });
-    if has_exe {
-        return Ok(dir.to_path_buf());
+    std::fs::read_dir(dir)?;
+    let (d, exe) = detect::exe_folder(dir, exe_hint);
+    if d != dir {
+        say(format!(
+            "Using {}, the folder {} is in.",
+            library::tilde(&d, home),
+            exe.unwrap_or_default()
+        ));
     }
-    match detect::exe_candidates(dir, exe_hint).into_iter().next() {
-        Some((d, exe)) => {
-            say(format!(
-                "Using {}, the folder {exe} is in.",
-                library::tilde(&d, home)
-            ));
-            Ok(d)
-        }
-        None => Ok(dir.to_path_buf()),
-    }
+    Ok(d)
 }
 
 /// The facts, looked at twice: once to find the game, then with its profile.

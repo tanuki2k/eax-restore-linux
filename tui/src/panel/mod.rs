@@ -5,7 +5,6 @@
 pub mod run;
 pub mod view;
 
-use crate::cover::{self, Pixels, Wanted};
 use crate::db::Game;
 use crate::engine::apply::RevertGroup;
 use crate::engine::game_settings::{Category, Fix, Purpose, Status};
@@ -262,6 +261,8 @@ pub struct Panel {
     pub focus: usize,
     /// The open list of the focused row's values, and its highlight.
     pub list: Option<usize>,
+    /// The first line of that list that shows, when it's too long to fit.
+    pub list_top: std::cell::Cell<usize>,
     pub screen: Screen,
     pub question: Option<Question>,
     pub sound_log_on: bool,
@@ -272,19 +273,6 @@ pub struct Panel {
     /// When the Status box started typing itself out; None once it's shown
     /// in full (or with EAX_RESTORE_NO_ANIMATION).
     pub reveal: Option<Instant>,
-    /// The cover, while it's being found and decoded, then once it's here.
-    cover_rx: Option<Receiver<Option<cover::Cover>>>,
-    pub cover: Option<Pixels>,
-    /// The cover as a picture, for a terminal that can show one.
-    pub picture: Option<image::DynamicImage>,
-    /// How this terminal shows pictures (None: it can't), from the app.
-    pub graphics: Option<ratatui_image::picker::Picker>,
-    /// The picture, scaled and encoded for the terminal; kept between frames
-    /// so it's only done again when the column changes size.
-    pub(crate) picture_state: std::cell::RefCell<Option<ratatui_image::protocol::StatefulProtocol>>,
-    /// Something is drawn over the page (the F1 help), so the picture is left
-    /// out: some terminals draw pictures on top of text.
-    pub covered: std::cell::Cell<bool>,
     /// How far the right column's game profile is scrolled.
     pub info_scroll: u16,
     /// Where the focused choice's field was last drawn, so its list opens
@@ -320,17 +308,15 @@ impl Panel {
     /// commands do.
     pub fn open(name: &str, dir: &Path, game: Option<Game>, home: &Path) -> Self {
         let pt = crate::cli::protontricks();
-        let facts = prepare::gather(dir, game.as_ref(), home, &pt);
+        // A library hands over the install's top folder; the game's files
+        // go next to its exe, which can be folders below it.
+        let (dir, _) =
+            crate::engine::detect::exe_folder(dir, game.as_ref().map_or("", |g| g.exe.as_str()));
+        let facts = prepare::gather(&dir, game.as_ref(), home, &pt);
         let installed = Installed::read(&facts.game_dir, home);
         let name = game
             .as_ref()
             .map_or_else(|| name.to_string(), |g| g.name.clone());
-        let wanted = Wanted {
-            store: facts.store,
-            id: facts.id.clone(),
-            name: name.clone(),
-        };
-        let cover_rx = Some(cover::spawn(home.to_path_buf(), wanted));
         let animate = !cfg!(test)
             && std::env::var("EAX_RESTORE_NO_ANIMATION").map_or(true, |v| v.is_empty() || v == "0");
         let mut p = Panel {
@@ -345,18 +331,13 @@ impl Panel {
             ticked_before: HashSet::new(),
             focus: 0,
             list: None,
+            list_top: std::cell::Cell::new(0),
             screen: Screen::Main,
             question: None,
             sound_log_on: false,
             closed: false,
             changed_disk: false,
             reveal: animate.then(Instant::now),
-            cover_rx,
-            cover: None,
-            picture: None,
-            graphics: None,
-            picture_state: std::cell::RefCell::new(None),
-            covered: std::cell::Cell::new(false),
             info_scroll: 0,
             field: std::cell::Cell::new(None),
             home: home.to_path_buf(),
@@ -381,11 +362,17 @@ impl Panel {
     pub fn status_lines(&self) -> Vec<StatusLine> {
         let f = &self.facts;
         let line = |ok, label, value: String| StatusLine { ok, label, value };
-        let mut out = vec![line(
-            true,
-            "Folder",
-            crate::library::tilde(&f.game_dir, &self.home),
-        )];
+        let folder = crate::library::tilde(&f.game_dir, &self.home);
+        let wanted = &f.exe_hint;
+        let mut out = vec![match &f.exe {
+            Some(e) if wanted.is_empty() || e.eq_ignore_ascii_case(wanted) => line(
+                true,
+                "Game",
+                crate::library::tilde(&f.game_dir.join(e), &self.home),
+            ),
+            _ if !wanted.is_empty() => line(false, "Game", format!("{wanted} isn't in {folder}")),
+            _ => line(false, "Game", format!("Couldn't find an .exe in {folder}")),
+        }];
         if self.installed.is_some() {
             out.push(line(true, "Installed", view::status_line(self)));
         }
@@ -426,9 +413,9 @@ impl Panel {
     }
 
     /// Something on the page moves by itself: the work's progress, the
-    /// Status box typing, or a cover still on its way.
+    /// Status box typing, or the build lists still on their way.
     pub fn animating(&self) -> bool {
-        self.running() || self.revealing() || self.cover_rx.is_some() || self.builds_rx.is_some()
+        self.running() || self.revealing() || self.builds_rx.is_some()
     }
 
     fn build(&mut self) {
@@ -1054,6 +1041,10 @@ impl Panel {
         match key.code {
             KeyCode::Up => self.list = Some(sel.saturating_sub(1)),
             KeyCode::Down => self.list = Some((sel + 1).min(len.saturating_sub(1))),
+            KeyCode::PageUp => self.list = Some(sel.saturating_sub(5)),
+            KeyCode::PageDown => self.list = Some((sel + 5).min(len.saturating_sub(1))),
+            KeyCode::Home => self.list = Some(0),
+            KeyCode::End => self.list = Some(len.saturating_sub(1)),
             KeyCode::Esc => self.list = None,
             KeyCode::Enter => {
                 let speakers_before = self.speakers();
@@ -1110,7 +1101,10 @@ impl Panel {
     fn press(&mut self) {
         let Some(item) = self.focused() else { return };
         match item {
-            Item::Choice(s, r) => self.list = Some(self.choice(s, r).chosen),
+            Item::Choice(s, r) => {
+                self.list_top.set(0);
+                self.list = Some(self.choice(s, r).chosen);
+            }
             Item::Setting(i) => self.toggle(i),
             Item::Button(b) => self.button(b),
         }
@@ -1245,12 +1239,13 @@ impl Panel {
             Engine::Dsoal
         };
         // Keeping the installed build reinstalls the same version when
-        // something else needs a reinstall, or the tested one if it's unknown.
+        // something else needs a reinstall, or the newest numbered one if
+        // it's unknown.
         let (had_dsoal, had_openal) = self.installed_versions();
         let build = |r: Option<&Row>, comp, had: Option<&str>| {
             let key = r
                 .and_then(|r| r.keys.get(r.chosen))
-                .map_or(crate::build_choice::TESTED, String::as_str);
+                .map_or(crate::build_choice::NUMBERED, String::as_str);
             crate::build_choice::to_build(comp, key, had)
         };
         plan.dsoal_build = build(
@@ -1417,19 +1412,6 @@ impl Panel {
                     self.set_build_info(info);
                 }
                 Err(std::sync::mpsc::TryRecvError::Disconnected) => self.builds_rx = None,
-                Err(std::sync::mpsc::TryRecvError::Empty) => {}
-            }
-        }
-        if let Some(rx) = &self.cover_rx {
-            match rx.try_recv() {
-                Ok(c) => {
-                    (self.cover, self.picture) = match c {
-                        Some(c) => (Some(c.pixels), Some(c.picture)),
-                        None => (None, None),
-                    };
-                    self.cover_rx = None;
-                }
-                Err(std::sync::mpsc::TryRecvError::Disconnected) => self.cover_rx = None,
                 Err(std::sync::mpsc::TryRecvError::Empty) => {}
             }
         }
@@ -1604,14 +1586,14 @@ mod tests {
         assert!(matches!(jobs[..], [Job::Speakers(_)]));
 
         // Each build is its own choice: the rolling DSOAL (after Keep) leaves
-        // OpenAL Soft as it is, which with no version recorded is the tested one.
+        // OpenAL Soft as it is, which with no version recorded is the newest
+        // numbered one.
         pick(&mut p, RowKind::DsoalBuild, 1);
         let (_, jobs) = p.changes();
         assert!(matches!(
             &jobs[..],
             [Job::Install { plan, .. }]
-                if plan.dsoal_build == Build::Latest
-                    && plan.openal_build == Build::Exact(crate::engine::builds::Pins::default().openal_tag)
+                if plan.dsoal_build == Build::Latest && plan.openal_build == Build::Numbered
         ));
     }
 
@@ -1669,32 +1651,21 @@ mod tests {
     }
 
     #[test]
-    fn three_columns_when_wide_then_two_then_one_under_another() {
+    fn two_columns_when_wide_then_one_under_another() {
         let tmp = tempfile::tempdir().unwrap();
         let p = ready(&tmp.path().join("home"));
 
+        // The choices from the left edge, the profile beside them.
         let rows = screen(&p, 160, 50);
         let title = row_of(&rows, "Test Game ─ Steam");
-        assert!(
-            col_of(&rows[title], "Test Game") > 30,
-            "{}",
-            rows.join("\n")
-        );
-        assert!(
-            rows.iter().any(|r| r.starts_with("│ Test Game")),
-            "the name under the cover"
-        );
+        assert!(rows[title].starts_with('╭'), "{}", rows.join("\n"));
         let profile = row_of(&rows, " Game profile ");
         assert!(col_of(&rows[profile], " Game profile ") > 110);
-        assert!(rows.iter().any(|r| r.contains("[OK] Folder")));
+        assert!(rows.iter().any(|r| r.contains("[OK] Game")));
         assert!(rows.iter().any(|r| r.contains(" Game profile ")));
         assert!(rows.iter().any(|r| r.contains("[ Install ]")));
 
         let rows = screen(&p, 120, 50);
-        assert!(
-            !rows.iter().any(|r| r.starts_with("│ Test Game")),
-            "no cover column"
-        );
         let profile = row_of(&rows, " Game profile ");
         assert!(col_of(&rows[profile], " Game profile ") > 70);
 
@@ -1713,7 +1684,7 @@ mod tests {
         let mut p = ready(&home);
         let lines = p.status_lines();
         let labels: Vec<&str> = lines.iter().map(|l| l.label).collect();
-        assert_eq!(labels[0], "Folder");
+        assert_eq!(labels[0], "Game");
         assert!(lines[0].value.starts_with("~/"), "{:?}", lines[0]);
         let store = lines.iter().find(|l| l.label == "Store").unwrap();
         assert_eq!(store.value, "Steam (AppID 424242)");
@@ -2006,12 +1977,117 @@ mod tests {
     }
 
     #[test]
-    fn the_build_lists_fill_in_and_keep_whats_chosen() {
-        use crate::build_choice::{BuildInfo, NUMBERED};
+    fn a_page_opened_on_the_install_folder_moves_to_the_exes_folder() {
+        // BioShock: the library gives the install's top folder, the exe is in
+        // Builds/Release and names "openal32.dll" in lower case, and a
+        // launcher DLL beside the top folder only mentions DirectSound.
+        let tmp = tempfile::tempdir().unwrap();
+        let home = tmp.path().join("home");
+        let top = steam_game(&home);
+        std::fs::remove_file(top.join("game.exe")).unwrap();
+        touch(&top.join("Redist/dxsetup.dll"), "DirectSound dsound.dll");
+        let release = top.join("Builds/Release");
+        std::fs::create_dir_all(&release).unwrap();
+        let pe = Path::new(env!("CARGO_MANIFEST_DIR")).join("../tests/fixtures/pe32.exe");
+        let mut exe = std::fs::read(pe).unwrap();
+        exe.extend_from_slice(b"openal32.dll\0dsound.dll\0");
+        std::fs::write(release.join("Bioshock.exe"), exe).unwrap();
+        let game = profile(r#"{"api":"openal","versions":["4.0"]}"#);
+        let game = crate::db::Game {
+            exe: "Bioshock.exe".into(),
+            ..game
+        };
+        let p = Panel::open("BioShock", &top, Some(game), &home);
+        assert_eq!(p.facts.game_dir, release);
+        let lines = p.status_lines();
+        assert_eq!(lines[0].label, "Game");
+        assert!(
+            lines[0].value.ends_with("Builds/Release/Bioshock.exe"),
+            "{}",
+            lines[0].value
+        );
+        // The exe names both, so the files agree with the profile's OpenAL.
+        let files = lines.iter().find(|l| l.label == "Game files").unwrap();
+        assert!(files.ok, "{}", files.value);
+        assert_eq!(files.value, "32-bit, OpenAL");
+    }
+
+    #[test]
+    fn when_the_files_disagree_the_status_says_which_says_what() {
         let tmp = tempfile::tempdir().unwrap();
         let mut p = ready(&tmp.path().join("home"));
-        pick(&mut p, RowKind::DsoalBuild, 1);
-        assert_eq!(p.row(RowKind::DsoalBuild).unwrap().keys[1], NUMBERED);
+        p.facts.profile_api = Some("openal".into());
+        p.facts.files_api = Some(crate::engine::detect::ApiEvidence {
+            api: crate::engine::detect::Api::DirectSound3d,
+            ds_file: "Galaxy.dll".into(),
+            openal_file: String::new(),
+        });
+        let files = p
+            .status_lines()
+            .into_iter()
+            .find(|l| l.label == "Game files")
+            .unwrap();
+        assert!(!files.ok);
+        assert_eq!(
+            files.value,
+            "32-bit, OpenAL, as its profile says, but Galaxy.dll points to DirectSound3D."
+        );
+    }
+
+    #[test]
+    fn a_long_list_scrolls_to_keep_the_highlight_on_screen() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut p = ready(&tmp.path().join("home"));
+        let revs: Vec<String> = (660..=697).rev().map(|n| format!("r{n}")).collect();
+        p.set_build_info(crate::build_choice::BuildInfo {
+            catalog: crate::engine::builds::Catalog {
+                dsoal: revs,
+                openal: Vec::new(),
+            },
+            ..crate::build_choice::BuildInfo::default()
+        });
+        pick_focus(&mut p, RowKind::DsoalBuild);
+        p.handle_key(key(KeyCode::Enter));
+        let list = open_list(&p, "DSOAL build");
+        let rows = screen(&p, 160, 50);
+        // No taller than the screen, with a scroll bar inside its right edge.
+        assert!(list.len() < 50, "{}", rows.join("\n"));
+        assert!(list.iter().any(|r| r.contains("Latest rolling")));
+        assert!(
+            list.iter().any(|r| r.ends_with("││")),
+            "{}",
+            list.join("\n")
+        );
+
+        // End: the last build in full, the first options scrolled away.
+        p.handle_key(key(KeyCode::End));
+        let list = open_list(&p, "DSOAL build");
+        assert!(
+            list.iter()
+                .any(|r| r.contains("Always installs DSOAL r660.")),
+            "{}",
+            list.join("\n")
+        );
+        assert!(!list.iter().any(|r| r.contains("Latest rolling")));
+        // PgUp moves five builds up and the window follows.
+        p.handle_key(key(KeyCode::PageUp));
+        let list = open_list(&p, "DSOAL build");
+        assert!(
+            list.iter().any(|r| r.contains("r665")),
+            "{}",
+            list.join("\n")
+        );
+        p.handle_key(key(KeyCode::Enter));
+        assert_eq!(p.plan().dsoal_build, Build::Exact("r665".into()));
+    }
+
+    #[test]
+    fn the_build_lists_fill_in_and_keep_whats_chosen() {
+        use crate::build_choice::{BuildInfo, ROLLING};
+        let tmp = tempfile::tempdir().unwrap();
+        let mut p = ready(&tmp.path().join("home"));
+        pick(&mut p, RowKind::DsoalBuild, 0);
+        assert_eq!(p.row(RowKind::DsoalBuild).unwrap().keys[0], ROLLING);
         p.set_build_info(BuildInfo {
             catalog: crate::engine::builds::Catalog {
                 dsoal: vec!["r697".into(), "r690".into()],
@@ -2027,43 +2103,16 @@ mod tests {
             [
                 "Latest rolling (r697)",
                 "Latest numbered (r697)",
-                "Tested (r693)",
                 "r697",
                 "r690"
             ]
         );
-        // Still on Latest numbered, still a change from the tested default.
-        assert_eq!(r.value(), "Latest numbered (r697)");
+        // Still on Latest rolling, still a change from the default.
+        assert_eq!(r.value(), "Latest rolling (r697)");
         assert!(r.changed());
         // An exact build goes to the install as that version.
-        pick(&mut p, RowKind::DsoalBuild, 4);
+        pick(&mut p, RowKind::DsoalBuild, 3);
         assert_eq!(p.plan().dsoal_build, Build::Exact("r690".into()));
-    }
-
-    #[test]
-    fn full_colour_draws_a_picture_where_the_terminal_can_and_blocks_where_it_cant() {
-        let tmp = tempfile::tempdir().unwrap();
-        let mut p = ready(&tmp.path().join("home"));
-        p.prefs.cover = crate::prefs::CoverStyle::Colour;
-        p.cover = Some(Pixels {
-            w: 2,
-            h: 3,
-            rgb: vec![[200, 30, 30]; 6],
-        });
-        p.picture = Some(image::DynamicImage::new_rgb8(60, 90));
-        // No picture support: solid colour blocks.
-        let rows = screen(&p, 160, 50);
-        assert!(rows.iter().any(|r| r.contains('▀')), "{}", rows.join("\n"));
-        // With it (the halfblocks protocol stands in for a real one here),
-        // the picture takes the cover's place without a crash, and stays out
-        // while a dropdown is open.
-        p.graphics = Some(ratatui_image::picker::Picker::halfblocks());
-        let _ = screen(&p, 160, 50);
-        assert!(p.picture_state.borrow().is_some());
-        pick_focus(&mut p, RowKind::Speakers);
-        p.handle_key(key(KeyCode::Enter));
-        let rows = screen(&p, 160, 50);
-        assert!(rows.iter().any(|r| r.contains('▀')), "{}", rows.join("\n"));
     }
 
     #[test]
@@ -2077,7 +2126,6 @@ mod tests {
             over: OverridePref::Manual,
             vcrun: VcPref::InstallIfMissing,
             speakers: SpeakerPref::Surround51,
-            ..Prefs::default()
         };
         p.build();
         let plan = p.plan();

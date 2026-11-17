@@ -9,7 +9,7 @@ use ratatui::text::{Line, Span};
 const ROWS: &[(&str, &str)] = &[
     ("", "The basics"),
     ("F1", "Show or hide this help."),
-    ("F2", "Opens Settings, where you choose your defaults for new installs (the builds, the DLL override, speakers and the VC++ runtime) and how covers are drawn. They're kept for next time."),
+    ("F2", "Opens Settings, where you choose your defaults for new installs (the builds, the DLL override, speakers and the VC++ runtime). They're kept for next time."),
     ("Type", "Search the game names: any part of a name, words in any order."),
     ("↑/↓", "Move through the list; PgUp/PgDn ten at a time."),
     ("Enter", "Open the game's page, where you can install or uninstall the EAX fix and change its sound and game settings. If the game wasn't found on this PC, it asks for its folder first."),

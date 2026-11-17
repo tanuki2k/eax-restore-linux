@@ -26,7 +26,6 @@ pub fn draw(f: &mut Frame, app: &App) {
         Layout::vertical([Constraint::Min(3), Constraint::Length(bar_height)]).areas(screen);
     draw_bar(f, app, bar);
     if let Some(p) = &app.panel {
-        p.covered.set(app.help);
         crate::panel::view::draw(f, p, body);
         if app.help {
             draw_help(f, app, body);
@@ -513,7 +512,7 @@ fn thumb(track: usize, viewport: usize, total: usize, top: usize) -> Option<(usi
 /// The old browser's scroll bar: a `│` in the border's grey in the column just
 /// inside the right border, on the rows where the thumb is and nowhere else (no
 /// track). Drawn only when there is something to scroll.
-fn scroll_bar(f: &mut Frame, area: Rect, viewport: usize, total: usize, top: usize) {
+pub(crate) fn scroll_bar(f: &mut Frame, area: Rect, viewport: usize, total: usize, top: usize) {
     let inside = Block::bordered().inner(area);
     let Some((start, len)) = thumb(usize::from(inside.height), viewport, total, top) else {
         return;
@@ -937,7 +936,7 @@ mod tests {
         assert_eq!((left, right), (help_l, help_r), "{}", rows.join("\n"));
         // Fitted to its text: the focused row's help, a margin row, the border.
         assert!(
-            rows[bottom - 2].contains("The DSOAL build this project has tested."),
+            rows[bottom - 2].contains("The highest-numbered DSOAL build at the time you install."),
             "{}",
             rows.join("\n")
         );

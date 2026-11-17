@@ -1,9 +1,8 @@
-//! Draws the game page in three columns, like Optiscaler-Client: the cover
-//! and the game's name on the left, its choices in numbered boxes in the
-//! middle (in the order the script asks them) under the EAX fix box and a
-//! Status box that types itself out like a boot, and the game's profile on the
-//! right. While work runs, the right column shows its progress and then how it
-//! ended.
+//! Draws the game page in two columns, like Optiscaler-Client: on the left
+//! the game's choices in numbered boxes (in the order the script asks them)
+//! under the EAX fix box and a Status box that types itself out like a boot,
+//! and the game's profile on the right. While work runs, the right column
+//! shows its progress and then how it ended.
 
 use super::{Button, Item, Panel, Row, Screen};
 use crate::engine::game_settings::{Category, Fix, Status};
@@ -19,11 +18,8 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Clear, Paragraph, Widget, Wrap};
 use ratatui::Frame;
 
-/// From this width the cover gets a column of its own.
-pub const COVER_FROM: u16 = 150;
 /// From this width the right column sits beside the choices, not under them.
 pub const BESIDE_FROM: u16 = 100;
-const COVER_W: u16 = 30;
 const RIGHT_W: u16 = 50;
 /// Status box: the badge, then the label column.
 const BADGE_W: usize = 5;
@@ -56,21 +52,12 @@ fn wrap(text: &str, width: usize) -> Vec<String> {
 /// Draws the page over `area`, the whole body.
 pub fn draw(f: &mut Frame, p: &Panel, area: Rect) {
     f.render_widget(Clear, area);
-    let (cover, rest) = if area.width >= COVER_FROM {
-        let [c, r] =
-            Layout::horizontal([Constraint::Length(COVER_W), Constraint::Min(0)]).areas(area);
-        (Some(c), r)
-    } else {
-        (None, area)
-    };
+    let rest = area;
     let [middle, right] = if area.width >= BESIDE_FROM {
         Layout::horizontal([Constraint::Min(0), Constraint::Length(RIGHT_W)]).areas(rest)
     } else {
         Layout::vertical([Constraint::Percentage(55), Constraint::Percentage(45)]).areas(rest)
     };
-    if let Some(c) = cover {
-        draw_cover(f, p, c);
-    }
     draw_middle(f, p, middle);
     draw_right(f, p, right);
     if p.list.is_some() {
@@ -78,100 +65,6 @@ pub fn draw(f: &mut Frame, p: &Panel, area: Rect) {
     }
     if let Some(q) = &p.question {
         draw_question(f, &q.text, &q.ask, area);
-    }
-}
-
-/// The left column: the cover as coloured ASCII, then the game's name, its
-/// store, and at the bottom its folder.
-fn draw_cover(f: &mut Frame, p: &Panel, area: Rect) {
-    let block = plain();
-    let inner = block.inner(area);
-    f.render_widget(block, area);
-    let w = usize::from(inner.width.saturating_sub(2)).max(1);
-    let mut below: Vec<Line> = wrap(&p.name, w)
-        .into_iter()
-        .map(|l| Line::from(Span::styled(format!(" {l}"), theme::white())))
-        .collect();
-    if let Some(store) = store_name(p) {
-        below.push(Line::from(Span::styled(
-            format!(" {store}"),
-            theme::green(),
-        )));
-    }
-    let folder: Vec<Line> = wrap(&crate::library::tilde(&p.facts.game_dir, &p.home), w)
-        .into_iter()
-        .map(|l| Line::from(Span::styled(format!(" {l}"), theme::dim())))
-        .collect();
-    let art_rows = inner
-        .height
-        .saturating_sub((below.len() + folder.len() + 2) as u16);
-    let shown = draw_picture(
-        f,
-        p,
-        Rect {
-            height: art_rows,
-            ..inner
-        },
-    );
-    let mut lines = match (&p.cover, shown) {
-        (_, Some(rows)) => vec![Line::from(""); usize::from(rows)],
-        (Some(px), None) => {
-            let draw = match p.prefs.cover {
-                crate::prefs::CoverStyle::Letters => crate::cover::ascii,
-                crate::prefs::CoverStyle::Colour => crate::cover::blocks,
-            };
-            draw(px, inner.width, art_rows, crate::cover::truecolor())
-        }
-        (None, None) => Vec::new(),
-    };
-    lines.push(Line::from(""));
-    lines.extend(below);
-    let top = Rect {
-        height: inner.height.saturating_sub(folder.len() as u16),
-        ..inner
-    };
-    f.render_widget(Paragraph::new(lines), top);
-    let bottom = Rect {
-        y: inner.y + inner.height.saturating_sub(folder.len() as u16),
-        height: (folder.len() as u16).min(inner.height),
-        ..inner
-    };
-    f.render_widget(Paragraph::new(folder), bottom);
-}
-
-/// The cover as a real picture, when Full colour is chosen, the terminal can
-/// show one, and nothing is open over the page (some terminals draw pictures
-/// over text, which would hide a pop-up). Centred across `area`, as tall as
-/// it fits with its shape kept. The rows it took, or None to draw it in
-/// characters instead.
-fn draw_picture(f: &mut Frame, p: &Panel, area: Rect) -> Option<u16> {
-    let picker = p.graphics.as_ref()?;
-    let picture = p.picture.as_ref()?;
-    let popup_open = p.list.is_some() || p.question.is_some() || p.covered.get();
-    if p.prefs.cover != crate::prefs::CoverStyle::Colour || popup_open || area.height == 0 {
-        return None;
-    }
-    let size = (picture.width(), picture.height());
-    let font = picker.font_size();
-    let mut rows = area.height;
-    let mut cols = crate::cover::picture_cols(size, font, rows);
-    while cols > area.width && rows > 1 {
-        rows -= 1;
-        cols = crate::cover::picture_cols(size, font, rows);
-    }
-    let cols = cols.min(area.width);
-    let at = Rect::new(area.x + (area.width - cols) / 2, area.y, cols, rows);
-    let mut state = p.picture_state.borrow_mut();
-    let state = state.get_or_insert_with(|| picker.new_resize_protocol(picture.clone()));
-    f.render_stateful_widget(ratatui_image::StatefulImage::default(), at, state);
-    Some(rows)
-}
-
-fn store_name(p: &Panel) -> Option<&'static str> {
-    match p.facts.store {
-        Some(Store::Steam) => Some("Steam"),
-        Some(Store::Gog) => Some("GOG, through Heroic"),
-        None => None,
     }
 }
 
@@ -1247,11 +1140,32 @@ fn draw_list(f: &mut Frame, p: &Panel, area: Rect) {
         f,
         row.title,
         &row.options,
-        row.chosen,
-        sel,
+        (row.chosen, sel),
         p.field.get(),
         area,
+        &p.list_top,
     );
+}
+
+/// Rows kept between the highlighted option and the edge of a scrolling list.
+const LIST_SCROLL_OFF: usize = 2;
+
+/// The first line of a list's window: where it was (`top`), moved only as far
+/// as it takes to show all of the highlighted option's lines (`first` to
+/// `last`) with a little room either side, within the list's `total` lines.
+pub fn list_window(top: usize, first: usize, last: usize, viewport: usize, total: usize) -> usize {
+    if total <= viewport {
+        return 0;
+    }
+    let room = LIST_SCROLL_OFF.min(viewport.saturating_sub(last - first + 1) / 2);
+    let mut top = top.min(total - viewport);
+    if first < top + room {
+        top = first.saturating_sub(room);
+    }
+    if last + room >= top + viewport {
+        top = (last + room + 1).saturating_sub(viewport);
+    }
+    top.min(total - viewport)
 }
 
 /// A list of options in a pop-up `LIST_W` wide, under `field` like a
@@ -1261,18 +1175,19 @@ pub fn draw_dropdown(
     f: &mut Frame,
     title: &str,
     options: &[super::Opt],
-    chosen: usize,
-    sel: usize,
+    (chosen, sel): (usize, usize),
     field: Option<Rect>,
     area: Rect,
+    top: &std::cell::Cell<usize>,
 ) {
     let w = LIST_W.min(area.width);
     // Inside the border and the margin, after the gutter and the mark.
     let text_w = usize::from(w.saturating_sub(2 + 4))
         .saturating_sub(4)
         .max(1);
-    let lines = list_lines(options, chosen, sel, text_w);
-    let h = lines.len() as u16 + 4;
+    let (lines, spans) = list_lines_and_spans(options, chosen, sel, text_w);
+    // As tall as its lines, or the screen; a longer list scrolls.
+    let h = (lines.len() as u16 + 4).min(area.height);
     // Under its field, like a dropdown: above it when there's no room below,
     // in the middle when the field isn't on screen.
     let r = match field {
@@ -1290,11 +1205,39 @@ pub fn draw_dropdown(
         }
         None => popup(area, w, h),
     };
+    let viewport = usize::from(r.height.saturating_sub(4)).max(1);
+    let total = lines.len();
+    let (first, last) = spans.get(sel).copied().unwrap_or((0, 0));
+    let at = list_window(top.get(), first, last, viewport, total);
+    top.set(at);
     f.render_widget(Clear, r);
     f.render_widget(
-        Paragraph::new(lines).block(boxed(title).padding(crate::ui::MARGIN)),
+        Paragraph::new(lines)
+            .scroll((u16::try_from(at).unwrap_or(u16::MAX), 0))
+            .block(boxed(title).padding(crate::ui::MARGIN)),
         r,
     );
+    crate::ui::scroll_bar(f, r, viewport, total, at);
+}
+
+/// [`list_lines`], and each option's first and last line among them.
+pub fn list_lines_and_spans(
+    options: &[super::Opt],
+    chosen: usize,
+    sel: usize,
+    text_w: usize,
+) -> (Vec<Line<'static>>, Vec<(usize, usize)>) {
+    let mut lines = Vec::new();
+    let mut spans = Vec::new();
+    for (i, o) in options.iter().enumerate() {
+        if i > 0 {
+            lines.push(Line::from(""));
+        }
+        let one = option_lines(o, i == chosen, i == sel, text_w);
+        spans.push((lines.len(), lines.len() + one.len().max(1) - 1));
+        lines.extend(one);
+    }
+    (lines, spans)
 }
 
 /// A setting's options for its pop-up: each label with its description
@@ -1306,39 +1249,39 @@ pub fn list_lines(
     sel: usize,
     text_w: usize,
 ) -> Vec<Line<'static>> {
+    list_lines_and_spans(options, chosen, sel, text_w).0
+}
+
+/// One option: its label (marked when it's the one chosen), then its
+/// description, wrapped at `text_w`.
+fn option_lines(o: &super::Opt, chosen: bool, on: bool, text_w: usize) -> Vec<Line<'static>> {
+    let bg = if on {
+        Style::new().bg(theme::SELECT_BG)
+    } else {
+        Style::new()
+    };
+    let mark = if chosen { "• " } else { "  " };
     let mut lines = Vec::new();
-    for (i, o) in options.iter().enumerate() {
-        if i > 0 {
-            lines.push(Line::from(""));
-        }
-        let on = i == sel;
-        let bg = if on {
-            Style::new().bg(theme::SELECT_BG)
-        } else {
-            Style::new()
-        };
-        let mark = if i == chosen { "• " } else { "  " };
-        for (j, l) in wrap(&o.label, text_w).into_iter().enumerate() {
+    for (j, l) in wrap(&o.label, text_w).into_iter().enumerate() {
+        lines.push(
+            Line::from(vec![
+                gutter(on),
+                Span::raw(if j == 0 { mark } else { "  " }),
+                Span::styled(l, theme::white()),
+            ])
+            .style(bg),
+        );
+    }
+    if !o.help.is_empty() {
+        for l in wrap(&o.help, text_w) {
             lines.push(
                 Line::from(vec![
                     gutter(on),
-                    Span::raw(if j == 0 { mark } else { "  " }),
-                    Span::styled(l, theme::white()),
+                    Span::raw("  "),
+                    Span::styled(l, theme::dim()),
                 ])
                 .style(bg),
             );
-        }
-        if !o.help.is_empty() {
-            for l in wrap(&o.help, text_w) {
-                lines.push(
-                    Line::from(vec![
-                        gutter(on),
-                        Span::raw("  "),
-                        Span::styled(l, theme::dim()),
-                    ])
-                    .style(bg),
-                );
-            }
         }
     }
     lines
@@ -1394,6 +1337,21 @@ fn short_path(p: &Panel, path: &std::path::Path) -> String {
 mod tests {
     use super::super::run::{Finish, RunView};
     use super::*;
+
+    #[test]
+    fn a_list_window_moves_only_as_far_as_the_highlight_needs() {
+        // 100 lines, 20 showing, two rows of room kept either side.
+        assert_eq!(list_window(0, 0, 1, 20, 100), 0);
+        // Within the window: it stays.
+        assert_eq!(list_window(0, 10, 11, 20, 100), 0);
+        // Near the bottom edge: just enough to show it with its room.
+        assert_eq!(list_window(0, 18, 19, 20, 100), 2);
+        // Back up near the top: the window follows.
+        assert_eq!(list_window(30, 30, 31, 20, 100), 28);
+        // The end of the list, and a list that fits.
+        assert_eq!(list_window(0, 98, 99, 20, 100), 80);
+        assert_eq!(list_window(5, 3, 4, 20, 10), 0);
+    }
 
     fn text(lines: &[Line]) -> Vec<String> {
         lines
