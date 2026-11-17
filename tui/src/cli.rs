@@ -60,7 +60,8 @@ Options for every command:
 
 Install options (the defaults are the script's):
   --engine dsoal|openal-soft   --arch 32|64
-  --builds stable|latest       --dsoal-build stable|latest   --openal-build stable|latest
+  --builds stable|latest       --dsoal-build BUILD   --openal-build BUILD
+               (BUILD is stable, latest, rolling, numbered, tested, or a version such as r690 or 1.24.3)
   --speakers SETUP             --hrtf on|off
   --override launcher|registry|manual
   --vcrun install|skip         --com   --advanced-limits
@@ -400,11 +401,29 @@ fn kept_text(why: config::Reverted) -> &'static str {
     }
 }
 
-fn build_from(v: &str) -> Result<Build> {
+/// `--dsoal-build` / `--openal-build`: `stable` and `latest` as the script
+/// means them, `rolling` (latest), `numbered` (the newest numbered build when
+/// it installs), `tested`, or one version.
+fn build_from(v: &str, openal: bool) -> Result<Build> {
+    let version = if openal {
+        v.split('.').count() >= 2
+            && v.split('.')
+                .all(|p| !p.is_empty() && p.bytes().all(|b| b.is_ascii_digit()))
+    } else {
+        v.strip_prefix('r')
+            .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
+    };
     match v {
         "stable" => Ok(Build::Stable),
-        "latest" => Ok(Build::Latest),
-        other => bail!("\"{other}\" isn't a build — use stable or latest."),
+        "latest" | "rolling" => Ok(Build::Latest),
+        "numbered" => Ok(Build::Numbered),
+        "tested" if openal => Ok(Build::Exact(builds::Pins::default().openal_tag)),
+        "tested" => Ok(Build::Stable),
+        _ if version => Ok(Build::Exact(v.to_string())),
+        other => bail!(
+            "\"{other}\" isn't a build — use stable, latest, rolling, numbered, tested or a version like {}.",
+            if openal { "1.24.3" } else { "r690" }
+        ),
     }
 }
 
@@ -614,14 +633,14 @@ fn install(
         };
     }
     if let Some(b) = args.get("--builds") {
-        plan.dsoal_build = build_from(b)?;
-        plan.openal_build = build_from(b)?;
+        plan.dsoal_build = build_from(b, false)?;
+        plan.openal_build = build_from(b, true)?;
     }
     if let Some(b) = args.get("--dsoal-build") {
-        plan.dsoal_build = build_from(b)?;
+        plan.dsoal_build = build_from(b, false)?;
     }
     if let Some(b) = args.get("--openal-build") {
-        plan.openal_build = build_from(b)?;
+        plan.openal_build = build_from(b, true)?;
     }
     let hrtf = match args.get("--hrtf") {
         None | Some("on") => true,
@@ -719,12 +738,15 @@ fn install(
         }
         allow
     };
+    // "The newest numbered build" becomes the one that is newest now.
+    plan.dsoal_build = builds::resolve_dsoal(plan.dsoal_build, &cache, &mut net, &versions);
+    plan.openal_build = builds::resolve_openal(plan.openal_build);
     if plan.engine == Engine::Dsoal {
         let got = builds::ensure_dsoal(
             &cache,
             &mut net,
             &mut versions,
-            plan.dsoal_build,
+            plan.dsoal_build.clone(),
             &pins,
             &mut confirm_unverified,
         );
@@ -736,11 +758,13 @@ fn install(
         &cache,
         &mut net,
         &versions,
-        plan.openal_build,
+        plan.openal_build.clone(),
         &mut confirm_unverified,
     ) {
         bail!("{}", why_text("OpenAL Soft", &why));
     }
+    plan.dsoal_version = builds::dsoal_version(&plan.dsoal_build, &versions, &pins);
+    plan.openal_version = builds::openal_version(&plan.openal_build, &versions);
 
     let mut close = |t: &Target| launchers.closed(t);
     let mut steps = print_step;

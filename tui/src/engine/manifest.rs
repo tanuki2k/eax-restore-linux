@@ -346,6 +346,40 @@ pub fn start(manifest: &Path, keep_previous: bool) -> Result<Option<PathBuf>> {
     Ok(prev)
 }
 
+// ---- Build versions ---------------------------------------------------------
+
+const DSOAL_LINE: &str = "# DSOAL: ";
+const OPENAL_LINE: &str = "# OpenAL Soft: ";
+
+/// The comment lines that record which builds an install put in. Every reader
+/// skips `#` lines, so older versions read these manifests as before.
+pub fn version_lines(engine: super::install::Engine, dsoal: &str, openal: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let clean = |v: &str| v.replace(['\n', '\r'], " ");
+    if engine == super::install::Engine::Dsoal && !dsoal.is_empty() {
+        out.push(format!("{DSOAL_LINE}{}", clean(dsoal)));
+    }
+    if !openal.is_empty() {
+        out.push(format!("{OPENAL_LINE}{}", clean(openal)));
+    }
+    out
+}
+
+/// The DSOAL and OpenAL Soft versions a manifest records, if it does.
+pub fn recorded_versions(manifest: &Path) -> (Option<String>, Option<String>) {
+    let data = std::fs::read(manifest).unwrap_or_default();
+    let mut found = (None, None);
+    for line in lines(&data) {
+        let line = String::from_utf8_lossy(line);
+        if let Some(v) = line.strip_prefix(DSOAL_LINE) {
+            found.0 = Some(v.trim().to_string()).filter(|v| !v.is_empty());
+        } else if let Some(v) = line.strip_prefix(OPENAL_LINE) {
+            found.1 = Some(v.trim().to_string()).filter(|v| !v.is_empty());
+        }
+    }
+    found
+}
+
 pub fn append(manifest: &Path, line: &[u8]) -> Result<()> {
     use std::io::Write;
     let mut file = std::fs::OpenOptions::new()
@@ -383,6 +417,33 @@ pub fn forget(manifest: &Path, gone: &[Vec<u8>]) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn the_builds_an_install_put_in_are_recorded_as_comments() {
+        let tmp = tempfile::tempdir().unwrap();
+        let m = tmp.path().join(FILE_NAME);
+        use crate::engine::install::Engine;
+        start(&m, false).unwrap();
+        for l in version_lines(Engine::Dsoal, "r693", "1.25.2") {
+            append(&m, l.as_bytes()).unwrap();
+        }
+        assert_eq!(
+            std::fs::read_to_string(&m).unwrap(),
+            format!("{HEADER}\n# DSOAL: r693\n# OpenAL Soft: 1.25.2\n")
+        );
+        assert_eq!(
+            recorded_versions(&m),
+            (Some("r693".into()), Some("1.25.2".into()))
+        );
+        // OpenAL Soft on its own records no DSOAL; an old manifest records neither.
+        assert_eq!(
+            version_lines(Engine::OpenAlSoft, "r693", "1.25.2"),
+            ["# OpenAL Soft: 1.25.2"]
+        );
+        start(&m, false).unwrap();
+        assert_eq!(recorded_versions(&m), (None, None));
+    }
+
     use super::*;
 
     fn touch(path: &Path) {

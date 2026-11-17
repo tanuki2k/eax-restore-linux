@@ -21,6 +21,11 @@ pub const SELECT_TEXT: Color = Color::Indexed(254);
 pub const SELECT_MATCH: Color = Color::Indexed(151);
 /// Matched letters in the other rows.
 pub const MATCH: Color = Color::Indexed(108);
+/// A game's name in the list: bright when it's on this PC, grey when it isn't.
+/// The grey is a shade lighter on the selected row's dark background.
+pub const ON_PC: Color = Color::Indexed(252);
+pub const NOT_ON_PC: Color = Color::Indexed(242);
+pub const NOT_ON_PC_SELECTED: Color = Color::Indexed(246);
 
 // The script prints these as bold + a plain colour (`\033[1;33m`), which a
 // terminal draws in the bright shade of that colour. ratatui's `Color::Yellow`

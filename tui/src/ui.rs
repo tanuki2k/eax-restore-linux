@@ -26,6 +26,7 @@ pub fn draw(f: &mut Frame, app: &App) {
         Layout::vertical([Constraint::Min(3), Constraint::Length(bar_height)]).areas(screen);
     draw_bar(f, app, bar);
     if let Some(p) = &app.panel {
+        p.covered.set(app.help);
         crate::panel::view::draw(f, p, body);
         if app.help {
             draw_help(f, app, body);
@@ -43,6 +44,9 @@ pub fn draw(f: &mut Frame, app: &App) {
     }
     if let Some(p) = &app.picker {
         draw_picker(f, p, body);
+    }
+    if let Some(s) = &app.prefs {
+        s.draw(f, body);
     }
     if let Some((title, lines)) = &app.notice {
         draw_notice(f, title, lines, body);
@@ -193,7 +197,7 @@ fn draw_search(f: &mut Frame, app: &App, area: Rect) {
         Span::styled(count, Style::new().fg(theme::COUNT)),
     ]);
     f.render_widget(Paragraph::new(line).block(block), area);
-    if app.menu.is_none() && app.picker.is_none() && !app.help {
+    if app.menu.is_none() && app.picker.is_none() && !app.help && app.prefs.is_none() {
         f.set_cursor_position((inner.x + u16::try_from(used).unwrap_or(0), inner.y));
     }
 }
@@ -373,17 +377,25 @@ fn window_offset(
 /// A row: its mark, then the name with the letters the search matched lit.
 fn game_line(app: &App, e: &Entry, selected: bool) -> Line<'static> {
     let (mark, colour) = marker(e.status);
+    let here = e.status != Status::NotOnThisPc;
     let (base, hit) = if selected {
         (
             Style::new()
-                .fg(theme::SELECT_TEXT)
+                .fg(if here {
+                    theme::SELECT_TEXT
+                } else {
+                    theme::NOT_ON_PC_SELECTED
+                })
                 .add_modifier(Modifier::BOLD),
             Style::new()
                 .fg(theme::SELECT_MATCH)
                 .add_modifier(Modifier::BOLD),
         )
     } else {
-        (Style::new(), Style::new().fg(theme::MATCH))
+        (
+            Style::new().fg(if here { theme::ON_PC } else { theme::NOT_ON_PC }),
+            Style::new().fg(theme::MATCH),
+        )
     };
     let matched: HashSet<u32> = app.match_indices(&e.name).into_iter().collect();
     let mut spans = vec![
@@ -483,7 +495,7 @@ fn is_blank(line: &Line) -> bool {
 
 /// The space inside a scrolling box's border: a row above and below the text and
 /// two columns either side (a row is about twice as tall as a column is wide).
-const MARGIN: Padding = Padding::new(2, 2, 1, 1);
+pub(crate) const MARGIN: Padding = Padding::new(2, 2, 1, 1);
 
 /// Where the scroll bar's thumb is on a track `track` rows tall, as (first row,
 /// length), or None when everything is in view. `viewport` rows of `total` are
@@ -563,24 +575,33 @@ fn scrolling(
     scroll_bar(f, area, viewport, total, usize::from(top));
 }
 
-/// The F1 key list, over whatever is on screen.
-fn draw_help(f: &mut Frame, app: &App, area: Rect) {
-    let w = area.width.min(90);
-    // Inside the border and the margin.
-    let lines = help::lines(usize::from(w.saturating_sub(6)));
-    // As tall as the text plus the margin and border, or as tall as the screen
-    // allows with a row to spare above and below; a shorter screen scrolls.
-    let text_rows = lines.iter().skip_while(|l| is_blank(l)).count();
+/// The width of the F1 help and the F2 settings pop-ups.
+pub(crate) const POPUP_W: u16 = 90;
+
+/// A pop-up `POPUP_W` wide, as tall as `text_rows` plus the margin and border,
+/// or as tall as the screen allows with a row to spare above and below (a
+/// shorter screen scrolls), centred in `area`.
+pub(crate) fn centred_popup(area: Rect, text_rows: usize) -> Rect {
+    let w = POPUP_W.min(area.width);
     let h = u16::try_from(text_rows + 4)
         .unwrap_or(u16::MAX)
         .min(area.height.saturating_sub(2).max(3))
         .min(area.height);
-    let popup = Rect::new(
+    Rect::new(
         area.x + (area.width - w) / 2,
         area.y + (area.height - h) / 2,
         w,
         h,
-    );
+    )
+}
+
+/// The F1 key list, over whatever is on screen.
+fn draw_help(f: &mut Frame, app: &App, area: Rect) {
+    let w = POPUP_W.min(area.width);
+    // Inside the border and the margin.
+    let lines = help::lines(usize::from(w.saturating_sub(6)));
+    let text_rows = lines.iter().skip_while(|l| is_blank(l)).count();
+    let popup = centred_popup(area, text_rows);
     f.render_widget(Clear, popup);
     scrolling(
         f,
@@ -598,6 +619,8 @@ fn bar_items(app: &App) -> Vec<(&'static str, &'static str)> {
         vec![("Enter", "close")]
     } else if app.help {
         vec![("↑/↓", "scroll"), ("Esc or F1", "close")]
+    } else if let Some(s) = &app.prefs {
+        s.keys()
     } else if let Some(p) = &app.panel {
         crate::panel::view::keys(p)
     } else if app.picker.is_some() {
@@ -636,6 +659,7 @@ fn bar_items(app: &App) -> Vec<(&'static str, &'static str)> {
             ("←/→", "Profile/Settings"),
             ("Ctrl-A", "add game"),
             ("F1", "help"),
+            ("F2", "settings"),
             ("Esc", "quit"),
         ]
     }
@@ -820,14 +844,16 @@ fn draw_menu(f: &mut Frame, menu: &crate::app::Menu, title: &str, area: Rect) {
     );
 }
 
-/// Plain ASCII so the column lines up in every terminal; the profile pane spells
-/// the status out.
+/// The list's mark for a game: a tick once the fix is in (magenta when it was
+/// put in by hand), nothing otherwise. `✓` is one column wide in the usual
+/// terminal fonts, so the names stay lined up. The profile pane spells the
+/// status out.
 pub(crate) fn marker(s: Status) -> (&'static str, Color) {
     match s {
-        Status::Installed => ("+", Color::Green),
-        Status::OnThisPc => ("o", Color::Cyan),
+        Status::Installed => ("✓", Color::Green),
+        Status::OnThisPc => (" ", Color::Cyan),
         Status::NotOnThisPc => (" ", Color::Reset),
-        Status::Manual => ("*", Color::Magenta),
+        Status::Manual => ("✓", Color::Magenta),
     }
 }
 
@@ -848,6 +874,75 @@ mod tests {
             .map(|y| (0..w).map(|x| buf[(x, y)].symbol()).collect::<String>())
             .collect::<Vec<_>>()
             .join("\n")
+    }
+
+    #[test]
+    fn the_list_ticks_installed_games_and_greys_out_ones_not_on_this_pc() {
+        let mut games = entries(
+            r#"{"games":[{"id":"a","name":"Alpha","stores":{},"eax":{"api":"directsound3d"}},
+            {"id":"b","name":"Bravo","stores":{},"eax":{"api":"directsound3d"}},
+            {"id":"c","name":"Charlie","stores":{},"eax":{"api":"directsound3d"}}]}"#,
+        );
+        games[0].status = Status::Installed;
+        games[1].status = Status::OnThisPc;
+        games[2].status = Status::NotOnThisPc;
+        let app = App::new(games);
+        let mut t = Terminal::new(TestBackend::new(100, 30)).unwrap();
+        t.draw(|f| draw(f, &app)).unwrap();
+        let buf = t.backend().buffer().clone();
+        let find = |name: &str| {
+            (0..30u16)
+                .find_map(|y| {
+                    // The list is the left-hand box; the pane beside it names the game too.
+                    let row: String = (0..40u16).map(|x| buf[(x, y)].symbol()).collect();
+                    row.find(name)
+                        .map(|i| (row[..i].chars().count() as u16, y, row))
+                })
+                .unwrap()
+        };
+        let (x, y, row) = find("Alpha");
+        assert!(row.contains("✓ Alpha"), "{row}");
+        assert_eq!(buf[(x - 2, y)].fg, Color::Green);
+        let (_, _, row) = find("Bravo");
+        assert!(!row.contains('✓'), "{row}");
+        // Alpha is selected; the other two show their own shade.
+        let (x, y, _) = find("Bravo");
+        assert_eq!(buf[(x, y)].fg, theme::ON_PC);
+        let (x, y, _) = find("Charlie");
+        assert_eq!(buf[(x, y)].fg, theme::NOT_ON_PC);
+    }
+
+    #[test]
+    fn settings_are_a_pop_up_as_wide_as_the_help_over_the_list() {
+        use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+        let edges = |app: &App, title: &str| {
+            let rows: Vec<String> = screen(app, 120, 40).lines().map(String::from).collect();
+            let top = rows
+                .iter()
+                .position(|r| r.contains(&format!(" {title} ")))
+                .unwrap();
+            let left = rows[top].chars().position(|c| c == '╭').unwrap();
+            let right = rows[top].chars().position(|c| c == '╮').unwrap();
+            let bottom = (top..rows.len())
+                .find(|&y| rows[y].chars().nth(left) == Some('╰'))
+                .unwrap();
+            (rows, top, left, right, bottom)
+        };
+        let mut app = App::new(entries(WITH_SETTINGS));
+        app.handle_key(KeyEvent::new(KeyCode::F(1), KeyModifiers::NONE));
+        let (_, _, help_l, help_r, _) = edges(&app, "Help");
+        app.handle_key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
+        app.handle_key(KeyEvent::new(KeyCode::F(2), KeyModifiers::NONE));
+        let (rows, top, left, right, bottom) = edges(&app, "Settings");
+        assert_eq!((left, right), (help_l, help_r), "{}", rows.join("\n"));
+        // Fitted to its text: the focused row's help, a margin row, the border.
+        assert!(
+            rows[bottom - 2].contains("The DSOAL build this project has tested."),
+            "{}",
+            rows.join("\n")
+        );
+        // The list is still showing around it.
+        assert!(rows[..top].iter().any(|r| r.contains(" Games ")));
     }
 
     fn entries(json: &str) -> Vec<Entry> {
@@ -1000,7 +1095,7 @@ mod tests {
         assert!(s.contains("1/1"));
         assert!(s.contains("Show: All games"));
         assert!(s.contains("Ctrl-E Audio: Any audio"));
-        assert!(s.contains("+ Alpha Centauri"));
+        assert!(s.contains("✓ Alpha Centauri"));
         assert!(s.contains("System details:"));
         assert!(s.contains("Status:") && s.contains("DSOAL installed"));
         assert!(s.contains("Platform:") && s.contains("Steam"));
@@ -1020,7 +1115,7 @@ mod tests {
             engine: None,
         };
         let s = screen(&App::new(vec![manual]), 120, 14);
-        assert!(s.contains("* Obscure"));
+        assert!(s.contains("✓ Obscure"));
         assert!(s.contains("no profile for Obscure."));
     }
 
@@ -1585,7 +1680,15 @@ mod tests {
         assert_eq!(first[0], games_top + 1, "starts at the top of the list");
         press(&mut app, ratatui::crossterm::event::KeyCode::End);
         let last = thumb_rows(&app, 100, 24, 48);
-        assert_eq!(*last.last().unwrap(), 21, "the bottom of the list");
+        let g = grid(&app, 100, 24);
+        let bottom = (usize::from(games_top)..24)
+            .find(|&y| g[y][0] == '╰')
+            .unwrap();
+        assert_eq!(
+            usize::from(*last.last().unwrap()),
+            bottom - 1,
+            "the bottom of the list"
+        );
         // A short list needs none.
         let few = App::new(entries(WITH_SETTINGS));
         assert!(thumb_rows(&few, 100, 24, 48).is_empty());
@@ -1682,8 +1785,12 @@ mod tests {
         let buf = drawn(app, w, h);
         let g = grid(app, w, h);
         let games_top = row_of(&screen(app, w, h), " Games ");
-        // Inside the box: after its top border, before the bottom one.
-        let inside = games_top + 1..usize::from(h) - 2;
+        // Inside the box: after its top border, before the bottom one (the key
+        // bar under it can take more than one row).
+        let bottom = (games_top + 1..usize::from(h))
+            .find(|&y| g[y][0] == '╰')
+            .unwrap();
+        let inside = games_top + 1..bottom;
         let first = row_text(&g[inside.start][3..48]).trim().to_string();
         let lit = inside
             .clone()

@@ -227,6 +227,8 @@ impl Facts {
             engine: self.engine(),
             dsoal_build: Build::Stable,
             openal_build: Build::Stable,
+            dsoal_version: String::new(),
+            openal_version: String::new(),
             speakers: Speakers::stereo(Listening::Auto, true),
             alsoft_overrides: Vec::new(),
             advanced_limits: false,

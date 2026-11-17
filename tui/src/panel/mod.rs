@@ -8,7 +8,6 @@ pub mod view;
 use crate::cover::{self, Pixels, Wanted};
 use crate::db::Game;
 use crate::engine::apply::RevertGroup;
-use crate::engine::builds::Build;
 use crate::engine::game_settings::{Category, Fix, Purpose, Status};
 use crate::engine::install::{Engine, Override, Plan, Vcrun};
 use crate::engine::installed::{Installed, OverrideKind};
@@ -34,7 +33,8 @@ pub struct Opt {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RowKind {
     Engine,
-    Builds,
+    DsoalBuild,
+    OpenalBuild,
     Speakers,
     /// The profile's alsoft.ini values.
     Profile,
@@ -57,6 +57,9 @@ pub struct Row {
     /// The opening value came from this PC or the game's profile, not a
     /// default; shown as "(detected)" until it's changed.
     pub detected: bool,
+    /// A key per option, for rows whose options can change while the page
+    /// is open (the build lists); empty for the others.
+    pub keys: Vec<String>,
 }
 
 /// One numbered box of choices, in the order the script asks them.
@@ -81,6 +84,7 @@ impl Row {
             chosen,
             original: chosen,
             detected: false,
+            keys: Vec::new(),
         }
     }
     fn detected(mut self, yes: bool) -> Self {
@@ -269,8 +273,18 @@ pub struct Panel {
     /// in full (or with EAX_RESTORE_NO_ANIMATION).
     pub reveal: Option<Instant>,
     /// The cover, while it's being found and decoded, then once it's here.
-    cover_rx: Option<Receiver<Option<Pixels>>>,
+    cover_rx: Option<Receiver<Option<cover::Cover>>>,
     pub cover: Option<Pixels>,
+    /// The cover as a picture, for a terminal that can show one.
+    pub picture: Option<image::DynamicImage>,
+    /// How this terminal shows pictures (None: it can't), from the app.
+    pub graphics: Option<ratatui_image::picker::Picker>,
+    /// The picture, scaled and encoded for the terminal; kept between frames
+    /// so it's only done again when the column changes size.
+    pub(crate) picture_state: std::cell::RefCell<Option<ratatui_image::protocol::StatefulProtocol>>,
+    /// Something is drawn over the page (the F1 help), so the picture is left
+    /// out: some terminals draw pictures on top of text.
+    pub covered: std::cell::Cell<bool>,
     /// How far the right column's game profile is scrolled.
     pub info_scroll: u16,
     /// Where the focused choice's field was last drawn, so its list opens
@@ -278,6 +292,15 @@ pub struct Panel {
     pub field: std::cell::Cell<Option<ratatui::layout::Rect>>,
     pub(crate) home: PathBuf,
     untested: bool,
+    /// The player's defaults for a new install, from the settings screen.
+    pub prefs: crate::prefs::Prefs,
+    /// The build lists and the versions the "Latest" options stand for,
+    /// while they're looked up, then once they're here.
+    builds_rx: Option<Receiver<crate::build_choice::BuildInfo>>,
+    pub build_info: Option<crate::build_choice::BuildInfo>,
+    /// The DSOAL build row while the audio engine is OpenAL Soft on its own,
+    /// which doesn't use DSOAL; it comes back as it was if DSOAL is chosen.
+    dsoal_row: Option<Row>,
 }
 
 /// One line of the Status box: fine, or a problem worth a look.
@@ -330,10 +353,24 @@ impl Panel {
             reveal: animate.then(Instant::now),
             cover_rx,
             cover: None,
+            picture: None,
+            graphics: None,
+            picture_state: std::cell::RefCell::new(None),
+            covered: std::cell::Cell::new(false),
             info_scroll: 0,
             field: std::cell::Cell::new(None),
             home: home.to_path_buf(),
             untested: ops::untested_from_env(),
+            // Tests start from the shipped defaults, whatever this PC saved.
+            prefs: if cfg!(test) {
+                crate::prefs::Prefs::default()
+            } else {
+                crate::prefs::Prefs::load()
+            },
+            dsoal_row: None,
+            // Tests fill the lists in themselves rather than ask GitHub.
+            builds_rx: (!cfg!(test)).then(|| crate::build_choice::spawn(home.to_path_buf())),
+            build_info: None,
         };
         p.build();
         p
@@ -391,7 +428,7 @@ impl Panel {
     /// Something on the page moves by itself: the work's progress, the
     /// Status box typing, or a cover still on its way.
     pub fn animating(&self) -> bool {
-        self.running() || self.revealing() || self.cover_rx.is_some()
+        self.running() || self.revealing() || self.cover_rx.is_some() || self.builds_rx.is_some()
     }
 
     fn build(&mut self) {
@@ -425,33 +462,33 @@ impl Panel {
             usize::from(engine == Engine::OpenAlSoft),
         )
         .detected(installed || f.profile_api.is_some() || f.files_api.is_some())];
-        let builds = if self.installed.is_some() {
-            vec![
-                (
-                    "Keep the installed ones",
-                    "Leaves the files in the game as they are.",
-                ),
-                ("Stable", "The tested builds of DSOAL and OpenAL Soft."),
-                (
-                    "Latest",
-                    "The newest builds, which may not have been tested yet.",
-                ),
-            ]
-        } else {
-            vec![
-                ("Stable", "The tested builds of DSOAL and OpenAL Soft."),
-                (
-                    "Latest",
-                    "The newest builds, which may not have been tested yet.",
-                ),
-            ]
+        let prefs = self.prefs.clone();
+        let start = |pref: &crate::prefs::BuildPref| {
+            if installed {
+                crate::build_choice::KEEP.to_string()
+            } else {
+                pref.0.clone()
+            }
         };
-        sound.push(Row::new(RowKind::Builds, "Builds", builds, 0).detected(installed));
+        let (dsoal_at, openal_at) = (start(&prefs.dsoal_build), start(&prefs.openal_build));
+        let mut d = Row::new(RowKind::DsoalBuild, "DSOAL build", Vec::new(), 0).detected(installed);
+        let mut o =
+            Row::new(RowKind::OpenalBuild, "OpenAL Soft build", Vec::new(), 0).detected(installed);
+        self.fill_build_row(&mut d, &dsoal_at, &dsoal_at);
+        self.fill_build_row(&mut o, &openal_at, &openal_at);
+        sound.push(d);
+        sound.push(o);
         let current = self
             .installed
             .as_ref()
             .and_then(Installed::speakers)
-            .unwrap_or(plan.speakers);
+            .unwrap_or_else(|| {
+                if installed {
+                    plan.speakers
+                } else {
+                    speaker_choices()[prefs.speakers.index()].2
+                }
+            });
         let mut sp: Vec<(String, String)> = speaker_choices()
             .into_iter()
             .map(|(l, h, _)| (l.to_string(), h.to_string()))
@@ -523,10 +560,17 @@ impl Panel {
             Some(OverrideKind::Launcher) if has_launcher => 0,
             Some(OverrideKind::Registry) => usize::from(has_launcher),
             Some(OverrideKind::Manual) => usize::from(has_launcher) + 1,
-            _ => match plan.over {
+            _ if installed => match plan.over {
                 Override::Launcher(_) => 0,
                 Override::Registry => usize::from(has_launcher),
                 Override::Manual => usize::from(has_launcher) + 1,
+            },
+            // A new install starts on the player's default; launch options
+            // fall back to the registry when there's no launcher to use.
+            _ => match prefs.over {
+                crate::prefs::OverridePref::LaunchOptions => 0,
+                crate::prefs::OverridePref::Registry => usize::from(has_launcher),
+                crate::prefs::OverridePref::Manual => usize::from(has_launcher) + 1,
             },
         };
         // Where the override goes is the page's choice, not something read
@@ -548,7 +592,7 @@ impl Panel {
                     ),
                     ("Leave it alone", "Doesn't touch the VC++ runtime."),
                 ],
-                0,
+                usize::from(!installed && prefs.vcrun == crate::prefs::VcPref::LeaveAlone),
             )
             .detected(true)
         } else {
@@ -565,7 +609,7 @@ impl Panel {
                         "Installs Microsoft's VC++ 2022 runtime into the prefix.",
                     ),
                 ],
-                0,
+                usize::from(!installed && prefs.vcrun == crate::prefs::VcPref::InstallIfMissing),
             )
         };
         setup.push(vc);
@@ -650,7 +694,8 @@ impl Panel {
                 title: "Audio engine",
                 rows: take(&[
                     RowKind::Engine,
-                    RowKind::Builds,
+                    RowKind::DsoalBuild,
+                    RowKind::OpenalBuild,
                     RowKind::Arch,
                     RowKind::Profile,
                 ]),
@@ -680,8 +725,111 @@ impl Panel {
             .launcher
             .as_ref()
             .is_some_and(|t| changes::log_state(t).on());
+        self.dsoal_row = None;
+        self.place_dsoal_row();
         self.survey_settings(true);
         self.focus = 0;
+    }
+
+    /// The DSOAL and OpenAL Soft versions the game has now, when its install
+    /// recorded them.
+    pub fn installed_versions(&self) -> (Option<String>, Option<String>) {
+        self.installed.as_ref().map_or((None, None), |i| {
+            (
+                i.state.dsoal_version.clone(),
+                i.state.openal_version.clone(),
+            )
+        })
+    }
+
+    /// Sets a build row's options from what's known now, keeping the one
+    /// chosen (`chosen`) and the one it opened on (`original`) by key.
+    fn fill_build_row(&self, row: &mut Row, chosen: &str, original: &str) {
+        use crate::build_choice::{self as bc, Comp};
+        let comp = if row.kind == RowKind::DsoalBuild {
+            Comp::Dsoal
+        } else {
+            Comp::Openal
+        };
+        let (had_dsoal, had_openal) = self.installed_versions();
+        let had = if comp == Comp::Dsoal {
+            had_dsoal
+        } else {
+            had_openal
+        };
+        let saved = [chosen, original]
+            .into_iter()
+            .find(|k| ![bc::KEEP, bc::ROLLING, bc::NUMBERED, bc::TESTED].contains(k));
+        let mut opts = bc::options(comp, self.build_info.as_ref(), saved);
+        if self.installed.is_some() {
+            opts.insert(0, bc::keep_option(comp, had.as_deref()));
+        }
+        let at = |key: &str| opts.iter().position(|o| o.key == key).unwrap_or(0);
+        row.chosen = at(chosen);
+        row.original = at(original);
+        row.keys = opts.iter().map(|o| o.key.clone()).collect();
+        row.options = opts
+            .into_iter()
+            .map(|o| Opt {
+                label: o.label,
+                help: o.help,
+            })
+            .collect();
+    }
+
+    /// The build lists have arrived: fill both build rows in again, keeping
+    /// what's chosen.
+    pub fn set_build_info(&mut self, info: crate::build_choice::BuildInfo) {
+        self.build_info = Some(info);
+        let key = |r: &Row, i: usize| r.keys.get(i).cloned().unwrap_or_default();
+        let mut rows: Vec<Row> = Vec::new();
+        for kind in [RowKind::DsoalBuild, RowKind::OpenalBuild] {
+            if let Some(r) = self.row(kind) {
+                rows.push(r.clone());
+            }
+        }
+        if let Some(r) = &self.dsoal_row {
+            rows.push(r.clone());
+        }
+        for mut r in rows {
+            let (c, o) = (key(&r, r.chosen), key(&r, r.original));
+            self.fill_build_row(&mut r, &c, &o);
+            let kind = r.kind;
+            if let Some(stash) = self.dsoal_row.as_mut().filter(|s| s.kind == kind) {
+                *stash = r;
+            } else if let Some(slot) = self
+                .sections
+                .iter_mut()
+                .flat_map(|s| s.rows.iter_mut())
+                .find(|x| x.kind == kind)
+            {
+                *slot = r;
+            }
+        }
+    }
+
+    /// Shows the DSOAL build row only while the audio engine uses DSOAL. It
+    /// sits under the engine row, which keeps the focus where it is.
+    fn place_dsoal_row(&mut self) {
+        let dsoal = self.row(RowKind::Engine).is_none_or(|r| r.chosen == 0);
+        let Some(sec) = self
+            .sections
+            .iter_mut()
+            .find(|s| s.rows.iter().any(|r| r.kind == RowKind::Engine))
+        else {
+            return;
+        };
+        let at = sec.rows.iter().position(|r| r.kind == RowKind::DsoalBuild);
+        match (dsoal, at) {
+            (false, Some(i)) => self.dsoal_row = Some(sec.rows.remove(i)),
+            (true, None) => {
+                if let Some(r) = self.dsoal_row.take() {
+                    let engine = sec.rows.iter().position(|r| r.kind == RowKind::Engine);
+                    sec.rows.insert(engine.map_or(0, |e| e + 1), r);
+                }
+            }
+            _ => {}
+        }
     }
 
     pub fn speakers(&self) -> Speakers {
@@ -913,6 +1061,7 @@ impl Panel {
                     r.chosen = sel;
                 }
                 self.list = None;
+                self.place_dsoal_row();
                 if self.speakers() != speakers_before {
                     // The settings tied to a speaker layout follow it.
                     let ticked = self.ticked.clone();
@@ -1095,13 +1244,25 @@ impl Panel {
         } else {
             Engine::Dsoal
         };
-        let installed = self.installed.is_some();
-        let build = match (installed, pick(RowKind::Builds)) {
-            (true, 2) | (false, 1) => Build::Latest,
-            _ => Build::Stable,
+        // Keeping the installed build reinstalls the same version when
+        // something else needs a reinstall, or the tested one if it's unknown.
+        let (had_dsoal, had_openal) = self.installed_versions();
+        let build = |r: Option<&Row>, comp, had: Option<&str>| {
+            let key = r
+                .and_then(|r| r.keys.get(r.chosen))
+                .map_or(crate::build_choice::TESTED, String::as_str);
+            crate::build_choice::to_build(comp, key, had)
         };
-        plan.dsoal_build = build;
-        plan.openal_build = build;
+        plan.dsoal_build = build(
+            self.row(RowKind::DsoalBuild).or(self.dsoal_row.as_ref()),
+            crate::build_choice::Comp::Dsoal,
+            had_dsoal.as_deref(),
+        );
+        plan.openal_build = build(
+            self.row(RowKind::OpenalBuild),
+            crate::build_choice::Comp::Openal,
+            had_openal.as_deref(),
+        );
         plan.speakers = self.speakers();
         plan.alsoft_overrides = match (&self.game, self.row(RowKind::Profile)) {
             (Some(g), Some(r)) if r.chosen == 0 => ops::alsoft_values(g, self.untested),
@@ -1137,7 +1298,8 @@ impl Panel {
         let mut jobs = Vec::new();
         let reinstall_rows = [
             RowKind::Engine,
-            RowKind::Builds,
+            RowKind::DsoalBuild,
+            RowKind::OpenalBuild,
             RowKind::Override,
             RowKind::Arch,
             RowKind::Com,
@@ -1248,10 +1410,23 @@ impl Panel {
     /// Called often while work runs: takes the worker's messages, and opens
     /// its questions.
     pub fn tick(&mut self) {
+        if let Some(rx) = &self.builds_rx {
+            match rx.try_recv() {
+                Ok(info) => {
+                    self.builds_rx = None;
+                    self.set_build_info(info);
+                }
+                Err(std::sync::mpsc::TryRecvError::Disconnected) => self.builds_rx = None,
+                Err(std::sync::mpsc::TryRecvError::Empty) => {}
+            }
+        }
         if let Some(rx) = &self.cover_rx {
             match rx.try_recv() {
-                Ok(px) => {
-                    self.cover = px;
+                Ok(c) => {
+                    (self.cover, self.picture) = match c {
+                        Some(c) => (Some(c.pixels), Some(c.picture)),
+                        None => (None, None),
+                    };
                     self.cover_rx = None;
                 }
                 Err(std::sync::mpsc::TryRecvError::Disconnected) => self.cover_rx = None,
@@ -1277,6 +1452,7 @@ impl Panel {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::engine::builds::Build;
     use crate::theme;
     use ratatui::crossterm::event::KeyModifiers;
 
@@ -1367,6 +1543,40 @@ mod tests {
     }
 
     #[test]
+    fn an_installed_game_names_its_builds_and_keeps_them() {
+        let tmp = tempfile::tempdir().unwrap();
+        let home = tmp.path().join("home");
+        let game = steam_game(&home);
+        touch(&game.join("dsound.dll"), "x");
+        touch(
+            &game.join(crate::engine::manifest::FILE_NAME),
+            &format!(
+                "{}\n# DSOAL: r690\n# OpenAL Soft: 1.24.3\n{g}/dsound.dll\n",
+                crate::engine::manifest::HEADER,
+                g = game.display()
+            ),
+        );
+        let mut p = Panel::open("Test Game", &game, None, &home);
+        let banner: String = view::banner_lines(&p)[0]
+            .spans
+            .iter()
+            .map(|s| s.content.as_ref())
+            .collect();
+        assert_eq!(banner, " ● DSOAL r690 and OpenAL Soft 1.24.3 are installed");
+        let keep = p.row(RowKind::DsoalBuild).unwrap();
+        assert_eq!(keep.value(), "Keep the installed one");
+        assert_eq!(
+            keep.options[0].help,
+            "Keeps DSOAL r690, which is in the game now."
+        );
+        // A reinstall for another reason puts the same versions back.
+        pick(&mut p, RowKind::Arch, 1);
+        let plan = p.plan();
+        assert_eq!(plan.dsoal_build, Build::Exact("r690".into()));
+        assert_eq!(plan.openal_build, Build::Exact("1.24.3".into()));
+    }
+
+    #[test]
     fn apply_on_an_installed_game_reinstalls_only_for_install_choices() {
         let tmp = tempfile::tempdir().unwrap();
         let home = tmp.path().join("home");
@@ -1393,11 +1603,16 @@ mod tests {
         assert_eq!(lines.len(), 1);
         assert!(matches!(jobs[..], [Job::Speakers(_)]));
 
-        pick(&mut p, RowKind::Builds, 2);
+        // Each build is its own choice: the rolling DSOAL (after Keep) leaves
+        // OpenAL Soft as it is, which with no version recorded is the tested one.
+        pick(&mut p, RowKind::DsoalBuild, 1);
         let (_, jobs) = p.changes();
-        assert!(
-            matches!(&jobs[..], [Job::Install { plan, .. }] if plan.dsoal_build == Build::Latest)
-        );
+        assert!(matches!(
+            &jobs[..],
+            [Job::Install { plan, .. }]
+                if plan.dsoal_build == Build::Latest
+                    && plan.openal_build == Build::Exact(crate::engine::builds::Pins::default().openal_tag)
+        ));
     }
 
     fn screen(p: &Panel, w: u16, h: u16) -> Vec<String> {
@@ -1469,8 +1684,8 @@ mod tests {
             rows.iter().any(|r| r.starts_with("│ Test Game")),
             "the name under the cover"
         );
-        let status = row_of(&rows, " Status ");
-        assert!(col_of(&rows[status], " Status ") > 110);
+        let profile = row_of(&rows, " Game profile ");
+        assert!(col_of(&rows[profile], " Game profile ") > 110);
         assert!(rows.iter().any(|r| r.contains("[OK] Folder")));
         assert!(rows.iter().any(|r| r.contains(" Game profile ")));
         assert!(rows.iter().any(|r| r.contains("[ Install ]")));
@@ -1480,13 +1695,13 @@ mod tests {
             !rows.iter().any(|r| r.starts_with("│ Test Game")),
             "no cover column"
         );
-        let status = row_of(&rows, " Status ");
-        assert!(col_of(&rows[status], " Status ") > 70);
+        let profile = row_of(&rows, " Game profile ");
+        assert!(col_of(&rows[profile], " Game profile ") > 70);
 
         let rows = screen(&p, 90, 60);
-        let status = row_of(&rows, " Status ");
+        let profile = row_of(&rows, " Game profile ");
         assert!(
-            status > row_of(&rows, "1. Audio engine"),
+            profile > row_of(&rows, "1. Audio engine"),
             "under the choices"
         );
     }
@@ -1521,14 +1736,15 @@ mod tests {
         // The test game's .exe is 32-bit, so the architecture was detected;
         // the builds are a default.
         assert!(p.row(RowKind::Arch).unwrap().shows_detected());
-        assert!(!p.row(RowKind::Builds).unwrap().shows_detected());
+        assert!(!p.row(RowKind::DsoalBuild).unwrap().shows_detected());
+        assert!(!p.row(RowKind::OpenalBuild).unwrap().shows_detected());
         let rows = screen(&p, 160, 50);
         let arch = &rows[row_of(&rows, "Architecture")];
         assert!(
             arch.contains("[ 32-bit") && arch.contains("▾ ] (detected)"),
             "{arch}"
         );
-        assert!(!rows[row_of(&rows, "Builds")].contains("(detected)"));
+        assert!(!rows[row_of(&rows, "DSOAL build")].contains("(detected)"));
 
         // Where the override goes is the page's choice, never "detected".
         assert!(!p.row(RowKind::Override).unwrap().shows_detected());
@@ -1699,7 +1915,7 @@ mod tests {
     }
 
     #[test]
-    fn the_banner_says_whether_its_installed_and_compatible() {
+    fn the_banner_says_whether_its_installed() {
         let tmp = tempfile::tempdir().unwrap();
         let mut p = ready(&tmp.path().join("home"));
         let text = |p: &Panel| -> Vec<String> {
@@ -1708,26 +1924,7 @@ mod tests {
                 .map(|l| l.spans.iter().map(|s| s.content.as_ref()).collect())
                 .collect()
         };
-        assert_eq!(
-            text(&p),
-            [
-                " ● Not installed",
-                " ● Not in the game database, so compatibility isn't known"
-            ]
-        );
-        p.game = Some(
-            crate::db::Database::parse(
-                r#"{"games":[{"id":"t","name":"Test Game","stores":{"steam":{"id":424242}},
-                  "eax":{"api":"openal","versions":["4.0","5.0"]}}]}"#,
-            )
-            .unwrap()
-            .games
-            .remove(0),
-        );
-        assert_eq!(
-            text(&p)[1],
-            " ● Compatible with EAX 4.0 and 5.0, restored with OpenAL Soft"
-        );
+        assert_eq!(text(&p), [" ● Not installed"]);
         p.facts.prefix = None;
         p.build();
         assert_eq!(
@@ -1736,6 +1933,17 @@ mod tests {
         );
         let rows = screen(&p, 160, 50);
         assert!(rows.iter().any(|r| r.contains(" EAX fix ")));
+        // The Status box sits right under the EAX fix box, in the same column.
+        let eax = row_of(&rows, " EAX fix ");
+        let status = row_of(&rows, " Status ");
+        assert_eq!(status, eax + 3, "{}", rows.join("\n"));
+        assert_eq!(
+            col_of(&rows[status], "╭"),
+            col_of(&rows[eax], "╭"),
+            "{}",
+            rows.join("\n")
+        );
+        assert!(!rows.iter().any(|r| r.contains("ompatib")));
     }
 
     #[test]
@@ -1743,31 +1951,229 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let mut p = ready(&tmp.path().join("home"));
         let rows = screen(&p, 160, 50);
-        let chevrons: Vec<usize> = ["Audio engine  ", "Builds", "Architecture", "COM routing"]
-            .iter()
-            .map(|name| {
-                let r = &rows[row_of(&rows, name)];
-                assert!(r.contains("[ "), "{r}");
-                col_of(r, "▾")
-            })
-            .collect();
+        let chevrons: Vec<usize> = [
+            "Audio engine  ",
+            "DSOAL build",
+            "OpenAL Soft build",
+            "Architecture",
+            "COM routing",
+        ]
+        .iter()
+        .map(|name| {
+            let r = &rows[row_of(&rows, name)];
+            assert!(r.contains("[ "), "{r}");
+            col_of(r, "▾")
+        })
+        .collect();
         assert!(
             chevrons.windows(2).all(|w| w[0] == w[1]),
             "{}",
             rows.join("\n")
         );
 
-        // Enter on Builds: its list's top border is the row under the field.
-        pick_focus(&mut p, RowKind::Builds);
+        // Enter on a build: its list's top border is the row under the field.
+        pick_focus(&mut p, RowKind::OpenalBuild);
         p.handle_key(key(KeyCode::Enter));
         let rows = screen(&p, 160, 50);
-        let builds = row_of(&rows, "Builds  ");
+        let builds = row_of(&rows, "OpenAL Soft build  ");
         let top = &rows[builds + 1];
         assert!(
-            top.contains("╭") && top.contains(" Builds "),
+            top.contains("╭") && top.contains(" OpenAL Soft build "),
             "{}",
             rows.join("\n")
         );
+    }
+
+    #[test]
+    fn the_dsoal_build_is_only_offered_while_the_engine_uses_dsoal() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut p = ready(&tmp.path().join("home"));
+        pick(&mut p, RowKind::DsoalBuild, 0);
+        pick_focus(&mut p, RowKind::Engine);
+        p.list = Some(1);
+        p.handle_key(key(KeyCode::Enter));
+        assert!(p.row(RowKind::DsoalBuild).is_none());
+        assert!(p.row(RowKind::OpenalBuild).is_some());
+        // Back to DSOAL: the row returns under the engine, as it was left.
+        p.list = Some(0);
+        p.handle_key(key(KeyCode::Enter));
+        let sound: Vec<RowKind> = p.sections[0].rows.iter().map(|r| r.kind).collect();
+        assert_eq!(
+            sound[..3],
+            [RowKind::Engine, RowKind::DsoalBuild, RowKind::OpenalBuild]
+        );
+        assert_eq!(p.plan().dsoal_build, Build::Latest);
+    }
+
+    #[test]
+    fn the_build_lists_fill_in_and_keep_whats_chosen() {
+        use crate::build_choice::{BuildInfo, NUMBERED};
+        let tmp = tempfile::tempdir().unwrap();
+        let mut p = ready(&tmp.path().join("home"));
+        pick(&mut p, RowKind::DsoalBuild, 1);
+        assert_eq!(p.row(RowKind::DsoalBuild).unwrap().keys[1], NUMBERED);
+        p.set_build_info(BuildInfo {
+            catalog: crate::engine::builds::Catalog {
+                dsoal: vec!["r697".into(), "r690".into()],
+                openal: Vec::new(),
+            },
+            dsoal_rolling: "r697".into(),
+            ..BuildInfo::default()
+        });
+        let r = p.row(RowKind::DsoalBuild).unwrap();
+        let labels: Vec<&str> = r.options.iter().map(|o| o.label.as_str()).collect();
+        assert_eq!(
+            labels,
+            [
+                "Latest rolling (r697)",
+                "Latest numbered (r697)",
+                "Tested (r693)",
+                "r697",
+                "r690"
+            ]
+        );
+        // Still on Latest numbered, still a change from the tested default.
+        assert_eq!(r.value(), "Latest numbered (r697)");
+        assert!(r.changed());
+        // An exact build goes to the install as that version.
+        pick(&mut p, RowKind::DsoalBuild, 4);
+        assert_eq!(p.plan().dsoal_build, Build::Exact("r690".into()));
+    }
+
+    #[test]
+    fn full_colour_draws_a_picture_where_the_terminal_can_and_blocks_where_it_cant() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut p = ready(&tmp.path().join("home"));
+        p.prefs.cover = crate::prefs::CoverStyle::Colour;
+        p.cover = Some(Pixels {
+            w: 2,
+            h: 3,
+            rgb: vec![[200, 30, 30]; 6],
+        });
+        p.picture = Some(image::DynamicImage::new_rgb8(60, 90));
+        // No picture support: solid colour blocks.
+        let rows = screen(&p, 160, 50);
+        assert!(rows.iter().any(|r| r.contains('▀')), "{}", rows.join("\n"));
+        // With it (the halfblocks protocol stands in for a real one here),
+        // the picture takes the cover's place without a crash, and stays out
+        // while a dropdown is open.
+        p.graphics = Some(ratatui_image::picker::Picker::halfblocks());
+        let _ = screen(&p, 160, 50);
+        assert!(p.picture_state.borrow().is_some());
+        pick_focus(&mut p, RowKind::Speakers);
+        p.handle_key(key(KeyCode::Enter));
+        let rows = screen(&p, 160, 50);
+        assert!(rows.iter().any(|r| r.contains('▀')), "{}", rows.join("\n"));
+    }
+
+    #[test]
+    fn a_new_install_starts_on_the_saved_defaults() {
+        use crate::prefs::{BuildPref, OverridePref, Prefs, SpeakerPref, VcPref};
+        let tmp = tempfile::tempdir().unwrap();
+        let mut p = ready(&tmp.path().join("home"));
+        p.prefs = Prefs {
+            dsoal_build: BuildPref("rolling".into()),
+            openal_build: BuildPref("1.24.3".into()),
+            over: OverridePref::Manual,
+            vcrun: VcPref::InstallIfMissing,
+            speakers: SpeakerPref::Surround51,
+            ..Prefs::default()
+        };
+        p.build();
+        let plan = p.plan();
+        assert_eq!(plan.dsoal_build, Build::Latest);
+        // A saved version is listed even before the list arrives.
+        assert_eq!(plan.openal_build, Build::Exact("1.24.3".into()));
+        assert_eq!(plan.over, Override::Manual);
+        assert_eq!(plan.vcrun, Vcrun::Install);
+        assert_eq!(plan.speakers, Speakers::surround(Layout::Surround51));
+        // They're where the page starts, not changes the player made.
+        assert!(!p.rows().any(Row::changed));
+
+        // Launch options with no launcher to put them in: the registry.
+        p.prefs.over = OverridePref::LaunchOptions;
+        p.facts.launcher = None;
+        p.build();
+        assert_eq!(p.plan().over, Override::Registry);
+    }
+
+    #[test]
+    fn each_vc_default_picks_its_choice_with_the_runtime_there_or_not() {
+        use crate::prefs::VcPref;
+        let tmp = tempfile::tempdir().unwrap();
+        let mut p = ready(&tmp.path().join("home"));
+        for (pref, present, want) in [
+            (VcPref::UseIfThere, false, Vcrun::Skip),
+            (VcPref::UseIfThere, true, Vcrun::OverridesOnly),
+            (VcPref::InstallIfMissing, false, Vcrun::Install),
+            (VcPref::InstallIfMissing, true, Vcrun::OverridesOnly),
+            (VcPref::LeaveAlone, false, Vcrun::Skip),
+            (VcPref::LeaveAlone, true, Vcrun::Skip),
+        ] {
+            p.prefs.vcrun = pref;
+            p.facts.vcrun_present = present;
+            p.build();
+            assert_eq!(p.plan().vcrun, want, "{pref:?}, present: {present}");
+        }
+    }
+
+    /// The open pop-up's rows, from its top border to its bottom one, cut to
+    /// its own columns.
+    fn open_list(p: &Panel, title: &str) -> Vec<String> {
+        let rows = screen(p, 160, 50);
+        let top = rows
+            .iter()
+            .position(|r| {
+                r.contains(&format!("╭─ {title} ")) || r.contains(&format!("─ {title} ─"))
+            })
+            .unwrap_or_else(|| panic!("{}", rows.join("\n")));
+        let left = rows[top].chars().position(|c| c == '╭').unwrap();
+        let width = rows[top].chars().skip(left).position(|c| c == '╮').unwrap() + 1;
+        rows[top..]
+            .iter()
+            .map(|r| r.chars().skip(left).take(width).collect::<String>())
+            .take_while(|r| !r.starts_with('╰'))
+            .collect()
+    }
+
+    #[test]
+    fn setting_pop_ups_are_one_width_with_room_around_their_text() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut p = ready(&tmp.path().join("home"));
+        let mut widths = Vec::new();
+        for (kind, title) in [
+            (RowKind::Speakers, "Speakers"),
+            (RowKind::Arch, "Architecture"),
+        ] {
+            pick_focus(&mut p, kind);
+            p.handle_key(key(KeyCode::Enter));
+            let list = open_list(&p, title);
+            widths.push(list[0].chars().count());
+            // A blank margin row under the top border, and nothing in the two
+            // columns inside the side borders.
+            assert_eq!(list[1].trim_matches('│').trim(), "", "{}", list.join("\n"));
+            for r in &list[1..] {
+                let inside: Vec<char> = r.chars().collect();
+                assert_eq!(&inside[1..3], [' ', ' '], "{}", list.join("\n"));
+            }
+            p.handle_key(key(KeyCode::Esc));
+        }
+        assert_eq!(widths, [usize::from(view::LIST_W); 2]);
+
+        // Options sit apart: a blank row before each label after the first, and
+        // a description too long for one row wraps instead of widening the box.
+        pick_focus(&mut p, RowKind::Speakers);
+        p.handle_key(key(KeyCode::Enter));
+        let list = open_list(&p, "Speakers");
+        let second = list
+            .iter()
+            .position(|r| r.contains("Headphones, without 3D"))
+            .unwrap();
+        assert_eq!(list[second - 1].trim_matches('│').trim(), "");
+        let mut row = p.row(RowKind::Speakers).unwrap().clone();
+        row.options[0].help = "word ".repeat(40);
+        let lines = view::list_lines(&row.options, row.chosen, 0, 40);
+        assert!(lines.iter().take_while(|l| !l.spans.is_empty()).count() > 3);
     }
 
     fn profile(eax: &str) -> crate::db::Game {

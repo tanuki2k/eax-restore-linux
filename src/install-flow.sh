@@ -135,6 +135,9 @@
     DEPLOY_FAILURES=0
 
     start_manifest "$INSTALL_MANIFEST" keep_previous
+    # Which builds went in, as comments every reader skips; the TUI shows them.
+    [ "$ENGINE_CHOICE" == "1" ] && [ -n "$DSOAL_SELECTED_LABEL" ] && echo "# DSOAL: ${DSOAL_SELECTED_LABEL//$'\n'/ }" >> "$INSTALL_MANIFEST"
+    [ -n "$OAL_SELECTED_LABEL" ] && echo "# OpenAL Soft: ${OAL_SELECTED_LABEL//$'\n'/ }" >> "$INSTALL_MANIFEST"
     [ ${#PREV_STATE_LINES[@]} -gt 0 ] && printf '%s\n' "${PREV_STATE_LINES[@]}" >> "$INSTALL_MANIFEST"
     # "VCRUN:OVERRIDES" when only the overrides were set and the runtime was
     # there already, so uninstall doesn't say this script installed it.

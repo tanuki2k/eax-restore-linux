@@ -9,6 +9,7 @@ use ratatui::text::{Line, Span};
 const ROWS: &[(&str, &str)] = &[
     ("", "The basics"),
     ("F1", "Show or hide this help."),
+    ("F2", "Opens Settings, where you choose your defaults for new installs (the builds, the DLL override, speakers and the VC++ runtime) and how covers are drawn. They're kept for next time."),
     ("Type", "Search the game names: any part of a name, words in any order."),
     ("↑/↓", "Move through the list; PgUp/PgDn ten at a time."),
     ("Enter", "Open the game's page, where you can install or uninstall the EAX fix and change its sound and game settings. If the game wasn't found on this PC, it asks for its folder first."),
@@ -43,10 +44,10 @@ const ROWS: &[(&str, &str)] = &[
     ("Ctrl-L", "Put the right pane under the list instead of beside it, and back. It moves by itself when the window gets narrow or wide."),
     ("Ctrl-U", "Clear the search. Backspace deletes a letter."),
     ("", "The marks in the list"),
-    ("+", "The fix is installed."),
-    ("o", "The game is on this PC, without the fix."),
-    ("*", "The fix is installed, but the game isn't in the game database."),
-    ("(blank)", "The game isn't on this PC."),
+    ("✓", "The fix is installed."),
+    ("Magenta ✓", "The fix is installed, but the game isn't in the game database."),
+    ("Bright name", "The game is on this PC."),
+    ("Grey name", "The game isn't on this PC."),
 ];
 
 /// The key column, as the old browser's `browse_help` set it: a space, the key
@@ -98,6 +99,7 @@ mod tests {
             "F1",
             "Enter",
             "Tab",
+            "F2",
             "Ctrl-S",
             "Ctrl-E",
             "Ctrl-T",
@@ -117,11 +119,8 @@ mod tests {
     fn the_list_marks_are_explained() {
         let t = text(&lines(80));
         let row = |key: &str, text: &str| format!(" {key:<13} {text}");
-        assert!(t.contains(&row("+", "The fix is installed.")));
-        assert!(t.contains(&row(
-            "*",
-            "The fix is installed, but the game isn't in the game database."
-        )));
+        assert!(t.contains(&row("✓", "The fix is installed.")));
+        assert!(t.contains(&row("Grey name", "The game isn't on this PC.")));
     }
 
     #[test]

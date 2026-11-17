@@ -136,6 +136,8 @@ fn main() -> Result<()> {
 
     // init() also installs a panic hook that puts the terminal back.
     let mut terminal = ratatui::init();
+    // Asked before any key is read, since the terminal answers on stdin.
+    app.graphics = eax_restore::cover::graphics();
     let result = run(
         &mut terminal,
         &mut app,
@@ -161,13 +163,17 @@ fn run(
         // While something on the page moves by itself (the work's progress,
         // the Status box typing, a cover on its way), redraw between keys:
         // quickly while it types, so it reads as typing.
-        let wait = app.panel.as_ref().and_then(|p| {
-            if p.revealing() {
-                Some(25)
-            } else {
-                p.animating().then_some(150)
-            }
-        });
+        let wait = app
+            .panel
+            .as_ref()
+            .and_then(|p| {
+                if p.revealing() {
+                    Some(25)
+                } else {
+                    p.animating().then_some(150)
+                }
+            })
+            .or_else(|| app.prefs.as_ref().filter(|s| s.waiting()).map(|_| 150));
         let key_waiting = match wait {
             None => true,
             Some(ms) => event::poll(std::time::Duration::from_millis(ms))?,
@@ -181,6 +187,9 @@ fn run(
         }
         if let Some(p) = app.panel.as_mut() {
             p.tick();
+        }
+        if let Some(s) = app.prefs.as_mut() {
+            s.tick();
         }
         if app.rescan && app.panel.is_none() {
             app.rescan = false;

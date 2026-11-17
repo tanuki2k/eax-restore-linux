@@ -97,6 +97,11 @@ pub struct App {
     pub help_max: std::cell::Cell<u16>,
     /// The "Add a game" folder picker, while it is open.
     pub picker: Option<Picker>,
+    /// The F2 settings screen, while it is open.
+    pub prefs: Option<crate::prefs_screen::PrefsScreen>,
+    /// How this terminal shows pictures, for the game page's cover; None
+    /// when it can only show text.
+    pub graphics: Option<ratatui_image::picker::Picker>,
     pub(crate) home: PathBuf,
     pub launch: Option<Launch>,
     /// Shown on the key bar's row until the next key.
@@ -137,6 +142,8 @@ impl App {
             help_scroll: 0,
             help_max: std::cell::Cell::new(0),
             picker: None,
+            prefs: None,
+            graphics: None,
             home: PathBuf::from("/"),
             launch: None,
             message: String::new(),
@@ -277,7 +284,7 @@ impl App {
                     .map(|n| n.to_string_lossy().into_owned())
                     .unwrap_or_default();
                 self.picker = None;
-                self.panel = Some(crate::panel::Panel::open(&name, &dir, game, &self.home));
+                self.panel = Some(self.open_panel(&name, &dir, game));
             }
             KeyCode::Char(' ') => {
                 let env = vec![
@@ -361,12 +368,23 @@ impl App {
             );
             self.notice = Some((g.name.clone(), lines));
         } else if let Some(dir) = path {
-            self.panel = Some(crate::panel::Panel::open(&name, &dir, game, &self.home));
+            self.panel = Some(self.open_panel(&name, &dir, game));
         } else {
             let mut picker = Picker::new(picker::start_dir(&self.home), self.home.clone());
             picker.game = game;
             self.picker = Some(picker);
         }
+    }
+
+    fn open_panel(
+        &self,
+        name: &str,
+        dir: &std::path::Path,
+        game: Option<crate::db::Game>,
+    ) -> crate::panel::Panel {
+        let mut p = crate::panel::Panel::open(name, dir, game, &self.home);
+        p.graphics = self.graphics.clone();
+        p
     }
 
     fn open_action_menu(&mut self) {
@@ -376,6 +394,21 @@ impl App {
                 selected: 0,
             });
         }
+    }
+
+    /// The settings screen, on what's saved. Tests never read or write the
+    /// player's own file.
+    fn open_prefs(&mut self) {
+        let (prefs, path) = if cfg!(test) {
+            (crate::prefs::Prefs::default(), None)
+        } else {
+            (crate::prefs::Prefs::load(), crate::prefs::path())
+        };
+        let mut screen = crate::prefs_screen::PrefsScreen::new(prefs, path);
+        if !cfg!(test) {
+            screen = screen.with_build_lookup(self.home.clone());
+        }
+        self.prefs = Some(screen);
     }
 
     fn open_help(&mut self) {
@@ -446,6 +479,13 @@ impl App {
         if self.picker.is_some() {
             return self.handle_picker_key(key);
         }
+        if let Some(s) = self.prefs.as_mut() {
+            s.handle_key(key);
+            if s.closed {
+                self.prefs = None;
+            }
+            return;
+        }
         if self.menu.is_some() {
             return self.handle_menu_key(key);
         }
@@ -489,6 +529,7 @@ impl App {
             }
             KeyCode::Enter => self.open_menu(),
             KeyCode::F(1) => self.open_help(),
+            KeyCode::F(2) => self.open_prefs(),
             KeyCode::Char('l') if ctrl => self.swap_layout(),
             KeyCode::Char('f') if ctrl => self.zoom = self.current().is_some(),
             KeyCode::Tab => {
@@ -528,6 +569,18 @@ impl App {
 mod tests {
     use super::*;
     use crate::db::Database;
+
+    #[test]
+    fn f2_opens_the_settings_and_esc_comes_back_to_the_list() {
+        let mut a = app();
+        a.handle_key(key(KeyCode::F(2)));
+        assert!(a.prefs.is_some());
+        // Typing there doesn't reach the search.
+        a.handle_key(key(KeyCode::Char('x')));
+        assert!(a.query.is_empty());
+        a.handle_key(key(KeyCode::Esc));
+        assert!(a.prefs.is_none() && !a.quit);
+    }
 
     fn app() -> App {
         let db = Database::parse(

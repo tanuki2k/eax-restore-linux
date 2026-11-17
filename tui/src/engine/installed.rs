@@ -44,8 +44,7 @@ pub enum OverrideKind {
     Manual,
 }
 
-/// What an install chose. The DSOAL and OpenAL Soft builds aren't recorded,
-/// so they aren't here.
+/// What an install chose.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InstalledState {
     pub engine: Engine,
@@ -58,6 +57,10 @@ pub struct InstalledState {
     pub eax_unified: bool,
     /// The generated alsoft.ini has the advanced tweaks.
     pub advanced_limits: bool,
+    /// The DSOAL and OpenAL Soft versions it put in (`r693`, `1.25.2`), when
+    /// its manifest records them; older installs don't.
+    pub dsoal_version: Option<String>,
+    pub openal_version: Option<String>,
 }
 
 /// DSOAL leaves a dsound.dll in the game's folder; OpenAL Soft alone leaves only
@@ -126,6 +129,8 @@ fn state_from(lines: &[&[u8]], game_dir: &Path, alsoft: Option<&PathBuf>) -> Ins
         advanced_limits: alsoft.is_some_and(|f| {
             std::fs::read_to_string(f).is_ok_and(|t| t.contains("(Advanced Tweaks)"))
         }),
+        dsoal_version: None,
+        openal_version: None,
     }
 }
 
@@ -193,6 +198,7 @@ impl Installed {
                 && files::file_is_ours(Path::new(OsStr::from_bytes(l))))
             .then(|| PathBuf::from(OsStr::from_bytes(&l[..at])))
         });
+        let versions = manifest::recorded_versions(&manifest_path);
         Some(Installed {
             game_dir: game_dir.to_path_buf(),
             manifest: manifest_path,
@@ -200,7 +206,11 @@ impl Installed {
             install_root,
             prefix,
             settings: recorded_settings(&data),
-            state: state_from(&lines, game_dir, alsoft_files.first()),
+            state: {
+                let mut st = state_from(&lines, game_dir, alsoft_files.first());
+                (st.dsoal_version, st.openal_version) = versions;
+                st
+            },
             alsoft_files,
         })
     }
@@ -294,6 +304,8 @@ mod tests {
                 com_routing: false,
                 eax_unified: false,
                 advanced_limits: false,
+                dsoal_version: None,
+                openal_version: None,
             }
         );
         let titles: Vec<_> = i

@@ -285,12 +285,16 @@ impl Worker {
                     ));
                     answers.recv().unwrap_or(false)
                 };
+                let mut plan = plan;
+                plan.dsoal_build =
+                    builds::resolve_dsoal(plan.dsoal_build.clone(), &cache, &mut net, &v);
+                plan.openal_build = builds::resolve_openal(plan.openal_build.clone());
                 if plan.engine == Engine::Dsoal {
                     let got = builds::ensure_dsoal(
                         &cache,
                         &mut net,
                         &mut v,
-                        plan.dsoal_build,
+                        plan.dsoal_build.clone(),
                         &pins,
                         &mut confirm,
                     );
@@ -301,14 +305,21 @@ impl Worker {
                     }
                     self.detail(&got_text("DSOAL", &got));
                 }
-                let got =
-                    builds::ensure_openal(&cache, &mut net, &v, plan.openal_build, &mut confirm);
+                let got = builds::ensure_openal(
+                    &cache,
+                    &mut net,
+                    &v,
+                    plan.openal_build.clone(),
+                    &mut confirm,
+                );
                 if let Got::Failed(_) = got {
                     return Err(
                         "OpenAL Soft couldn't be downloaded, so nothing was installed.".into(),
                     );
                 }
                 self.detail(&got_text("OpenAL Soft", &got));
+                plan.dsoal_version = builds::dsoal_version(&plan.dsoal_build, &v, &pins);
+                plan.openal_version = builds::openal_version(&plan.openal_build, &v);
                 let r = {
                     let mut on_step = sender(self.tx.clone());
                     let me = std::cell::RefCell::new(&mut *self);

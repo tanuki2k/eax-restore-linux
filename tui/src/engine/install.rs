@@ -91,6 +91,10 @@ pub struct Plan {
     pub engine: Engine,
     pub dsoal_build: Build,
     pub openal_build: Build,
+    /// The versions those builds stand for (`r693`, `1.25.2`), recorded in
+    /// the manifest as comments; empty when not known.
+    pub dsoal_version: String,
+    pub openal_version: String,
     pub speakers: Speakers,
     /// The profile's alsoft.ini values the player accepted: (section, key, value).
     pub alsoft_overrides: Vec<(String, String, String)>,
@@ -142,17 +146,17 @@ fn sources(plan: &Plan, cache: &Cache) -> Option<Vec<(PathBuf, String)>> {
     let arch = if plan.arch == 64 { "Win64" } else { "Win32" };
     let list = match plan.engine {
         Engine::OpenAlSoft => vec![(
-            openal_source_dll(cache, plan.openal_build, arch),
+            openal_source_dll(cache, &plan.openal_build, arch),
             "OpenAL32.dll".to_string(),
         )],
         Engine::Dsoal => {
-            let dsound = dsoal_source_dir(cache, plan.dsoal_build, arch)
+            let dsound = dsoal_source_dir(cache, &plan.dsoal_build, arch)
                 .map(|d| d.join("dsound.dll"))
                 .unwrap_or_else(|| PathBuf::from("/dsound.dll"));
             vec![
                 (dsound, "dsound.dll".to_string()),
                 (
-                    openal_source_dll(cache, plan.openal_build, arch),
+                    openal_source_dll(cache, &plan.openal_build, arch),
                     "dsoal-aldrv.dll".to_string(),
                 ),
             ]
@@ -625,6 +629,9 @@ pub fn execute(plan: &Plan, cache: &Cache, eax: &Installer, host: &mut dyn Insta
 
     let prev = read_previous(&m);
     let prev_manifest = manifest::start(&m, true).ok().flatten();
+    for line in manifest::version_lines(plan.engine, &plan.dsoal_version, &plan.openal_version) {
+        append(&m, line.as_bytes());
+    }
     for line in &prev.state {
         append(&m, line);
     }

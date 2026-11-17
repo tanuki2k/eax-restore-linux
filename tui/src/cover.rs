@@ -190,8 +190,24 @@ pub fn find(home: &Path, w: &Wanted, key: Option<&str>) -> Option<PathBuf> {
     local.or_else(|| key.and_then(|k| steamgriddb_cover(home, k, w)))
 }
 
+/// The size a cover is kept at to be shown as a picture: Steam's own cover
+/// file is 600×900.
+const PICTURE_W: u32 = 600;
+const PICTURE_H: u32 = 900;
+
+/// A cover: small, for the letters and the blocks, and as a picture for a
+/// terminal that can show one.
+pub struct Cover {
+    pub pixels: Pixels,
+    pub picture: image::DynamicImage,
+}
+
 /// Decodes a JPEG or PNG and shrinks it to at most 160×240.
 pub fn load(path: &Path) -> Option<Pixels> {
+    load_cover(path).map(|c| c.pixels)
+}
+
+fn load_cover(path: &Path) -> Option<Cover> {
     let img = image::ImageReader::open(path)
         .ok()?
         .with_guessed_format()
@@ -199,23 +215,60 @@ pub fn load(path: &Path) -> Option<Pixels> {
         .decode()
         .ok()?;
     let small = img.thumbnail(KEEP_W, KEEP_H).to_rgb8();
-    Some(Pixels {
-        w: small.width(),
-        h: small.height(),
-        rgb: small.pixels().map(|p| p.0).collect(),
+    Some(Cover {
+        pixels: Pixels {
+            w: small.width(),
+            h: small.height(),
+            rgb: small.pixels().map(|p| p.0).collect(),
+        },
+        picture: img.thumbnail(PICTURE_W, PICTURE_H),
     })
+}
+
+/// How this terminal can show a picture, asked once at start-up, before
+/// any key is read: kitty's graphics, sixel or iTerm2's. None when it can
+/// only show text, or when `EAX_RESTORE_COVER_PROTOCOL=blocks`.
+/// `EAX_RESTORE_COVER_PROTOCOL=kitty|sixel|iterm2` picks one instead of the
+/// one the terminal answered with.
+pub fn graphics() -> Option<ratatui_image::picker::Picker> {
+    use ratatui_image::picker::{Picker, ProtocolType};
+    let forced = std::env::var("EAX_RESTORE_COVER_PROTOCOL").unwrap_or_default();
+    if forced == "blocks" {
+        return None;
+    }
+    let mut picker = Picker::from_query_stdio().ok()?;
+    match forced.as_str() {
+        "kitty" => picker.set_protocol_type(ProtocolType::Kitty),
+        "sixel" => picker.set_protocol_type(ProtocolType::Sixel),
+        "iterm2" => picker.set_protocol_type(ProtocolType::Iterm2),
+        _ => {}
+    }
+    (picker.protocol_type() != ProtocolType::Halfblocks).then_some(picker)
+}
+
+/// How many columns a picture `rows` rows tall takes with its shape kept,
+/// for a font whose cells are `font` pixels.
+pub fn picture_cols(picture: (u32, u32), font: (u16, u16), rows: u16) -> u16 {
+    let (w, h) = picture;
+    let (fw, fh) = (u32::from(font.0.max(1)), u32::from(font.1.max(1)));
+    if h == 0 {
+        return 0;
+    }
+    let px_h = u32::from(rows) * fh;
+    let px_w = px_h * w / h;
+    u16::try_from(px_w.div_ceil(fw)).unwrap_or(u16::MAX)
 }
 
 /// Finds and decodes the cover on a thread of its own; the answer arrives
 /// on the channel (None when there's no cover).
-pub fn spawn(home: PathBuf, wanted: Wanted) -> Receiver<Option<Pixels>> {
+pub fn spawn(home: PathBuf, wanted: Wanted) -> Receiver<Option<Cover>> {
     let (tx, rx) = mpsc::channel();
     std::thread::spawn(move || {
         let key = std::env::var("EAX_RESTORE_STEAMGRIDDB_KEY")
             .ok()
             .filter(|k| !k.trim().is_empty());
-        let pixels = find(&home, &wanted, key.as_deref()).and_then(|p| load(&p));
-        let _ = tx.send(pixels);
+        let cover = find(&home, &wanted, key.as_deref()).and_then(|p| load_cover(&p));
+        let _ = tx.send(cover);
     });
     rx
 }
@@ -309,6 +362,69 @@ pub fn ascii(p: &Pixels, cols: u16, rows: u16, true_colour: bool) -> Vec<Line<'s
     out
 }
 
+/// The average colour of a box of pixels, `[x0, x1)` × `[y0, y1)`.
+fn average(p: &Pixels, x0: u32, x1: u32, y0: u32, y1: u32) -> [u8; 3] {
+    let mut sum = [0u32; 3];
+    let mut n = 0u32;
+    for yy in y0..y1.min(p.h) {
+        for xx in x0..x1.min(p.w) {
+            let px = p.rgb[(yy * p.w + xx) as usize];
+            for i in 0..3 {
+                sum[i] += u32::from(px[i]);
+            }
+            n += 1;
+        }
+    }
+    let n = n.max(1);
+    [(sum[0] / n) as u8, (sum[1] / n) as u8, (sum[2] / n) as u8]
+}
+
+/// The cover in full colour: each cell is an upper half block, coloured with
+/// the top pixel and backed by the bottom one, so a cell shows two pixels and
+/// no letters. Sized and centred as `ascii` does it.
+pub fn blocks(p: &Pixels, cols: u16, rows: u16, true_colour: bool) -> Vec<Line<'static>> {
+    if p.w == 0 || p.h == 0 || cols == 0 || rows == 0 {
+        return Vec::new();
+    }
+    let (pw, ph) = (f64::from(p.w), f64::from(p.h));
+    let mut c = f64::from(cols);
+    let mut r = c * ph / pw / 2.0;
+    if r > f64::from(rows) {
+        r = f64::from(rows);
+        c = r * 2.0 * pw / ph;
+    }
+    let (c, r) = (c.round().max(1.0) as u32, r.round().max(1.0) as u32);
+    let pad = " ".repeat(usize::from(cols).saturating_sub(c as usize) / 2);
+    let colour = |rgb: [u8; 3]| {
+        if true_colour {
+            Color::Rgb(rgb[0], rgb[1], rgb[2])
+        } else {
+            nearest_256(rgb)
+        }
+    };
+    // Twice as many pixel rows as text rows.
+    let pr = r * 2;
+    let span_of =
+        |i: u32, n: u32, len: u32| (i * len / n, ((i + 1) * len / n).max(i * len / n + 1));
+    (0..r)
+        .map(|y| {
+            let (t0, t1) = span_of(2 * y, pr, p.h);
+            let (b0, b1) = span_of(2 * y + 1, pr, p.h);
+            let mut spans = vec![Span::raw(pad.clone())];
+            for x in 0..c {
+                let (x0, x1) = span_of(x, c, p.w);
+                let top = average(p, x0, x1, t0, t1);
+                let bottom = average(p, x0, x1, b0, b1);
+                spans.push(Span::styled(
+                    "▀",
+                    Style::new().fg(colour(top)).bg(colour(bottom)),
+                ));
+            }
+            Line::from(spans)
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -334,6 +450,39 @@ mod tests {
         assert_eq!(white.style.fg, Some(Color::Rgb(255, 255, 255)));
         let lines = ascii(&p, 4, 2, false);
         assert_eq!(lines[0].spans[3].style.fg, Some(Color::Indexed(231)));
+    }
+
+    #[test]
+    fn full_colour_shows_two_pixels_a_cell_and_no_letters() {
+        // Red above blue, one column: one cell, red on top, blue below.
+        let p = Pixels {
+            w: 1,
+            h: 2,
+            rgb: vec![[255, 0, 0], [0, 0, 255]],
+        };
+        let lines = blocks(&p, 1, 1, true);
+        assert_eq!(text(&lines), ["▀"]);
+        let cell = &lines[0].spans[1];
+        assert_eq!(cell.style.fg, Some(Color::Rgb(255, 0, 0)));
+        assert_eq!(cell.style.bg, Some(Color::Rgb(0, 0, 255)));
+        // The same shape as the letters version, so the column looks the same.
+        let p = Pixels {
+            w: 20,
+            h: 30,
+            rgb: vec![[128, 128, 128]; 600],
+        };
+        assert_eq!(
+            blocks(&p, 20, 40, true).len(),
+            ascii(&p, 20, 40, true).len()
+        );
+    }
+
+    #[test]
+    fn a_picture_keeps_its_shape_in_the_terminals_cells() {
+        // A 600×900 cover, 30 rows of 20-pixel cells: 600 pixels tall, so 400
+        // wide, which is 40 cells of 10 pixels.
+        assert_eq!(picture_cols((600, 900), (10, 20), 30), 40);
+        assert_eq!(picture_cols((600, 0), (10, 20), 30), 0);
     }
 
     #[test]

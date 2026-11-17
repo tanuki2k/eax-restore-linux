@@ -1,8 +1,9 @@
 //! Draws the game page in three columns, like Optiscaler-Client: the cover
 //! and the game's name on the left, its choices in numbered boxes in the
-//! middle (in the order the script asks them), and on the right a Status box
-//! that types itself out like a boot, with the game's profile under it. While
-//! work runs, the right column shows its progress and then how it ended.
+//! middle (in the order the script asks them) under the EAX fix box and a
+//! Status box that types itself out like a boot, and the game's profile on the
+//! right. While work runs, the right column shows its progress and then how it
+//! ended.
 
 use super::{Button, Item, Panel, Row, Screen};
 use crate::engine::game_settings::{Category, Fix, Status};
@@ -20,7 +21,7 @@ use ratatui::Frame;
 
 /// From this width the cover gets a column of its own.
 pub const COVER_FROM: u16 = 150;
-/// From this width the Status column sits beside the choices, not under them.
+/// From this width the right column sits beside the choices, not under them.
 pub const BESIDE_FROM: u16 = 100;
 const COVER_W: u16 = 30;
 const RIGHT_W: u16 = 50;
@@ -104,9 +105,24 @@ fn draw_cover(f: &mut Frame, p: &Panel, area: Rect) {
     let art_rows = inner
         .height
         .saturating_sub((below.len() + folder.len() + 2) as u16);
-    let mut lines = match &p.cover {
-        Some(px) => crate::cover::ascii(px, inner.width, art_rows, crate::cover::truecolor()),
-        None => Vec::new(),
+    let shown = draw_picture(
+        f,
+        p,
+        Rect {
+            height: art_rows,
+            ..inner
+        },
+    );
+    let mut lines = match (&p.cover, shown) {
+        (_, Some(rows)) => vec![Line::from(""); usize::from(rows)],
+        (Some(px), None) => {
+            let draw = match p.prefs.cover {
+                crate::prefs::CoverStyle::Letters => crate::cover::ascii,
+                crate::prefs::CoverStyle::Colour => crate::cover::blocks,
+            };
+            draw(px, inner.width, art_rows, crate::cover::truecolor())
+        }
+        (None, None) => Vec::new(),
     };
     lines.push(Line::from(""));
     lines.extend(below);
@@ -123,6 +139,34 @@ fn draw_cover(f: &mut Frame, p: &Panel, area: Rect) {
     f.render_widget(Paragraph::new(folder), bottom);
 }
 
+/// The cover as a real picture, when Full colour is chosen, the terminal can
+/// show one, and nothing is open over the page (some terminals draw pictures
+/// over text, which would hide a pop-up). Centred across `area`, as tall as
+/// it fits with its shape kept. The rows it took, or None to draw it in
+/// characters instead.
+fn draw_picture(f: &mut Frame, p: &Panel, area: Rect) -> Option<u16> {
+    let picker = p.graphics.as_ref()?;
+    let picture = p.picture.as_ref()?;
+    let popup_open = p.list.is_some() || p.question.is_some() || p.covered.get();
+    if p.prefs.cover != crate::prefs::CoverStyle::Colour || popup_open || area.height == 0 {
+        return None;
+    }
+    let size = (picture.width(), picture.height());
+    let font = picker.font_size();
+    let mut rows = area.height;
+    let mut cols = crate::cover::picture_cols(size, font, rows);
+    while cols > area.width && rows > 1 {
+        rows -= 1;
+        cols = crate::cover::picture_cols(size, font, rows);
+    }
+    let cols = cols.min(area.width);
+    let at = Rect::new(area.x + (area.width - cols) / 2, area.y, cols, rows);
+    let mut state = p.picture_state.borrow_mut();
+    let state = state.get_or_insert_with(|| picker.new_resize_protocol(picture.clone()));
+    f.render_stateful_widget(ratatui_image::StatefulImage::default(), at, state);
+    Some(rows)
+}
+
 fn store_name(p: &Panel) -> Option<&'static str> {
     match p.facts.store {
         Some(Store::Steam) => Some("Steam"),
@@ -131,18 +175,32 @@ fn store_name(p: &Panel) -> Option<&'static str> {
     }
 }
 
-/// The middle column: the choices (or the confirm and uninstall screens), a
-/// line of help for what has focus, and the buttons.
+/// The middle column: the EAX fix and Status boxes, the choices (or the
+/// confirm and uninstall screens), a line of help for what has focus, and the
+/// buttons.
 fn draw_middle(f: &mut Frame, p: &Panel, area: Rect) {
     let block = boxed_line(title(p));
     let inner = block.inner(area);
     f.render_widget(block, area);
     p.field.set(None);
-    let [banner, inner] =
-        Layout::vertical([Constraint::Length(4), Constraint::Min(0)]).areas(inner);
+    // The Status box is as tall as all its lines will be, so it doesn't grow
+    // while it types itself out.
+    let status_w = usize::from(inner.width.saturating_sub(2));
+    let status_h = (status_box_lines_all(&p.status_lines(), status_w).len() as u16 + 2)
+        .min(inner.height.saturating_sub(3));
+    let [banner, status, inner] = Layout::vertical([
+        Constraint::Length(3),
+        Constraint::Length(status_h),
+        Constraint::Min(0),
+    ])
+    .areas(inner);
     f.render_widget(
         Paragraph::new(banner_lines(p)).block(boxed("EAX fix")),
         banner,
+    );
+    f.render_widget(
+        Paragraph::new(status_box_lines(p, status_w)).block(boxed("Status")),
+        status,
     );
     // Nothing to choose until the Status box has finished typing.
     if p.revealing() {
@@ -586,17 +644,12 @@ fn draw_choices(f: &mut Frame, p: &Panel, area: Rect) {
 }
 
 /// The right column: the work's progress while it runs (and how it ended),
-/// else the Status box with the game's profile under it.
+/// else the game's profile.
 fn draw_right(f: &mut Frame, p: &Panel, area: Rect) {
     if let Screen::Run(r) = &p.screen {
         return draw_run(f, p, r, area);
     }
-    let status = status_box_lines(p, usize::from(area.width.saturating_sub(2)));
-    let full = p.status_lines();
-    let full_rows = status_box_lines_all(&full, usize::from(area.width.saturating_sub(2))).len();
-    let h = (full_rows as u16 + 2).min(area.height);
-    let [top, rest] = Layout::vertical([Constraint::Length(h), Constraint::Min(0)]).areas(area);
-    f.render_widget(Paragraph::new(status).block(boxed("Status")), top);
+    let rest = area;
     if p.revealing() || rest.height < 3 {
         return;
     }
@@ -732,8 +785,8 @@ fn title(p: &Panel) -> Line<'static> {
     Line::from(parts)
 }
 
-/// The banner's two lines, like Optiscaler-Client's status and compatibility:
-/// whether the fix is in, and what the game's profile says about EAX.
+/// The banner's line: whether the fix is in. The game's profile says what it
+/// knows about EAX.
 pub fn banner_lines(p: &Panel) -> Vec<Line<'static>> {
     let dot = |style: Style, text: String| {
         Line::from(vec![
@@ -746,16 +799,24 @@ pub fn banner_lines(p: &Panel) -> Vec<Line<'static>> {
     let dim = Style::new().fg(theme::LABEL);
     let yellow = theme::label();
     let install = match (&p.installed, &p.problem) {
-        (Some(i), _) => dot(
-            theme::green(),
-            format!(
-                "Installed: {}",
+        (Some(i), _) => {
+            // With the versions when the install recorded them.
+            let named = |name: &str, v: &Option<String>| match v {
+                Some(v) => format!("{name} {v}"),
+                None => name.to_string(),
+            };
+            let oal = named("OpenAL Soft", &i.state.openal_version);
+            dot(
+                theme::green(),
                 match i.state.engine {
-                    Engine::Dsoal => "DSOAL with OpenAL Soft",
-                    Engine::OpenAlSoft => "OpenAL Soft",
-                }
-            ),
-        ),
+                    Engine::Dsoal => format!(
+                        "{} and {oal} are installed",
+                        named("DSOAL", &i.state.dsoal_version)
+                    ),
+                    Engine::OpenAlSoft => format!("{oal} is installed"),
+                },
+            )
+        }
         (None, Some(_)) if p.facts.linux_build => dot(
             yellow,
             format!(
@@ -769,47 +830,7 @@ pub fn banner_lines(p: &Panel) -> Vec<Line<'static>> {
         ),
         (None, None) => dot(dim, "Not installed".into()),
     };
-    let compat = match &p.game {
-        None => dot(
-            dim,
-            "Not in the game database, so compatibility isn't known".into(),
-        ),
-        Some(g) => match g.eax.status.as_str() {
-            "built_in" => dot(
-                theme::green(),
-                "Already has EAX, so this adds a newer OpenAL Soft and speaker settings".into(),
-            ),
-            "not_implemented" => dot(yellow, format!("This version of {} has no EAX", p.name)),
-            "removed_by_patch" => dot(yellow, "EAX was removed by a later patch".into()),
-            _ => {
-                let store = match p.facts.store {
-                    Some(Store::Steam) => g.stores.steam.as_ref(),
-                    Some(Store::Gog) => g.stores.gog.as_ref(),
-                    None => None,
-                };
-                let api = store.map_or(g.eax.api.as_str(), |s| crate::profile::api_of(g, s));
-                let with = if api == "openal" {
-                    "OpenAL Soft"
-                } else {
-                    "DSOAL + OpenAL Soft"
-                };
-                let text = if g.eax.versions.is_empty() {
-                    format!("Compatible, restored with {with}")
-                } else {
-                    let v = &g.eax.versions;
-                    let list = match v.split_last() {
-                        Some((last, rest)) if !rest.is_empty() => {
-                            format!("{} and {last}", rest.join(", "))
-                        }
-                        _ => v.join(""),
-                    };
-                    format!("Compatible with EAX {list}, restored with {with}")
-                };
-                dot(theme::green(), text)
-            }
-        },
-    };
-    vec![install, compat]
+    vec![install]
 }
 
 /// One line about what's installed now.
@@ -1210,6 +1231,10 @@ fn popup(area: Rect, w: u16, h: u16) -> Rect {
     )
 }
 
+/// Every setting's pop-up is this wide, whatever its text, so they all look
+/// alike; long descriptions wrap instead of widening the box.
+pub const LIST_W: u16 = 60;
+
 fn draw_list(f: &mut Frame, p: &Panel, area: Rect) {
     let (Some(sel), Some(item)) = (p.list, p.focused()) else {
         return;
@@ -1218,46 +1243,40 @@ fn draw_list(f: &mut Frame, p: &Panel, area: Rect) {
         Item::Choice(si, ri) => p.choice(si, ri),
         _ => return,
     };
-    let w = row
-        .options
-        .iter()
-        .map(|o| o.label.chars().count().max(o.help.chars().count()))
-        .max()
-        .unwrap_or(20)
-        .max(row.title.len())
-        + 8;
-    let mut lines = Vec::new();
-    for (i, o) in row.options.iter().enumerate() {
-        let on = i == sel;
-        let bg = if on {
-            Style::new().bg(theme::SELECT_BG)
-        } else {
-            Style::new()
-        };
-        let mark = if i == row.chosen { "• " } else { "  " };
-        lines.push(
-            Line::from(vec![
-                gutter(on),
-                Span::raw(mark),
-                Span::styled(o.label.clone(), theme::white()),
-            ])
-            .style(bg),
-        );
-        lines.push(
-            Line::from(vec![
-                gutter(on),
-                Span::raw("  "),
-                Span::styled(o.help.clone(), theme::dim()),
-            ])
-            .style(bg),
-        );
-    }
-    let h = lines.len() as u16 + 2;
+    draw_dropdown(
+        f,
+        row.title,
+        &row.options,
+        row.chosen,
+        sel,
+        p.field.get(),
+        area,
+    );
+}
+
+/// A list of options in a pop-up `LIST_W` wide, under `field` like a
+/// dropdown (above it when there's no room below), or in the middle of `area`
+/// when there's no field on screen.
+pub fn draw_dropdown(
+    f: &mut Frame,
+    title: &str,
+    options: &[super::Opt],
+    chosen: usize,
+    sel: usize,
+    field: Option<Rect>,
+    area: Rect,
+) {
+    let w = LIST_W.min(area.width);
+    // Inside the border and the margin, after the gutter and the mark.
+    let text_w = usize::from(w.saturating_sub(2 + 4))
+        .saturating_sub(4)
+        .max(1);
+    let lines = list_lines(options, chosen, sel, text_w);
+    let h = lines.len() as u16 + 4;
     // Under its field, like a dropdown: above it when there's no room below,
     // in the middle when the field isn't on screen.
-    let r = match p.field.get() {
+    let r = match field {
         Some(field) => {
-            let w = (w as u16).max(field.width).min(area.width);
             let x = field.x.min(area.x + area.width - w);
             let below = field.y + 1;
             let y = if below + h <= area.y + area.height {
@@ -1269,13 +1288,63 @@ fn draw_list(f: &mut Frame, p: &Panel, area: Rect) {
             };
             Rect::new(x, y, w, h.min(area.height))
         }
-        None => popup(area, w as u16, h),
+        None => popup(area, w, h),
     };
     f.render_widget(Clear, r);
-    f.render_widget(Paragraph::new(lines).block(boxed(row.title)), r);
+    f.render_widget(
+        Paragraph::new(lines).block(boxed(title).padding(crate::ui::MARGIN)),
+        r,
+    );
 }
 
-fn draw_question(f: &mut Frame, text: &str, ask: &str, area: Rect) {
+/// A setting's options for its pop-up: each label with its description
+/// wrapped under it, a blank row between options, the highlighted one on a
+/// dark background.
+pub fn list_lines(
+    options: &[super::Opt],
+    chosen: usize,
+    sel: usize,
+    text_w: usize,
+) -> Vec<Line<'static>> {
+    let mut lines = Vec::new();
+    for (i, o) in options.iter().enumerate() {
+        if i > 0 {
+            lines.push(Line::from(""));
+        }
+        let on = i == sel;
+        let bg = if on {
+            Style::new().bg(theme::SELECT_BG)
+        } else {
+            Style::new()
+        };
+        let mark = if i == chosen { "• " } else { "  " };
+        for (j, l) in wrap(&o.label, text_w).into_iter().enumerate() {
+            lines.push(
+                Line::from(vec![
+                    gutter(on),
+                    Span::raw(if j == 0 { mark } else { "  " }),
+                    Span::styled(l, theme::white()),
+                ])
+                .style(bg),
+            );
+        }
+        if !o.help.is_empty() {
+            for l in wrap(&o.help, text_w) {
+                lines.push(
+                    Line::from(vec![
+                        gutter(on),
+                        Span::raw("  "),
+                        Span::styled(l, theme::dim()),
+                    ])
+                    .style(bg),
+                );
+            }
+        }
+    }
+    lines
+}
+
+pub(crate) fn draw_question(f: &mut Frame, text: &str, ask: &str, area: Rect) {
     let w = (text.chars().count().max(ask.chars().count()) + 6).min(70) as u16;
     let lines = vec![
         Line::from(text.to_string()),

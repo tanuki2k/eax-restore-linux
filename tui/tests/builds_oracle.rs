@@ -6,6 +6,22 @@
 //! must match.
 
 use eax_restore::engine::builds::{self, Build, Cache, Curl, Pins};
+
+/// The two builds the script knows, as a `Copy` stand-in for [`Build`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum B {
+    Stable,
+    Latest,
+}
+
+impl B {
+    fn build(self) -> Build {
+        match self {
+            B::Stable => Build::Stable,
+            B::Latest => Build::Latest,
+        }
+    }
+}
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -265,6 +281,7 @@ fn serve(root: &Path, g: Github) -> Pins {
         dsoal_rev: "r693".into(),
         dsoal_url: PIN_URL.into(),
         dsoal_sha256: sha(&pinned),
+        openal_tag: "1.25.2".into(),
     }
 }
 
@@ -273,20 +290,20 @@ fn serve(root: &Path, g: Github) -> Pins {
 struct Case {
     name: &'static str,
     github: Github,
-    dsoal: Build,
-    oal: Build,
+    dsoal: B,
+    oal: B,
     /// The answer to "install it without a checksum?".
     accept_unverified: bool,
     /// Runs first, with everything published and correct, to fill the cache.
-    seed: Option<(Build, Build)>,
+    seed: Option<(B, B)>,
     /// A wrong pinned SHA256.
     bad_pin: bool,
 }
 
-fn build_name(b: Build) -> &'static str {
+fn build_name(b: B) -> &'static str {
     match b {
-        Build::Stable => "stable",
-        Build::Latest => "latest",
+        B::Stable => "stable",
+        B::Latest => "latest",
     }
 }
 
@@ -348,8 +365,8 @@ fn run_bash(
     root: &Path,
     pins: &Pins,
     c: &Case,
-    d: Build,
-    o: Build,
+    d: B,
+    o: B,
     offline: bool,
 ) {
     std::fs::create_dir_all(home).unwrap();
@@ -389,14 +406,7 @@ fn run_bash(
 }
 
 /// The Rust side; returns (labels, dsoal usable, openal usable).
-fn run_rust(
-    home: &Path,
-    stub: &Path,
-    pins: &Pins,
-    c: &Case,
-    d: Build,
-    o: Build,
-) -> (String, bool, bool) {
+fn run_rust(home: &Path, stub: &Path, pins: &Pins, c: &Case, d: B, o: B) -> (String, bool, bool) {
     let cache = Cache::new(home);
     let mut net = Curl {
         program: stub.to_path_buf(),
@@ -409,8 +419,8 @@ fn run_rust(
     );
     let answer = c.accept_unverified;
     let mut confirm = |_: &str| answer;
-    let dg = builds::ensure_dsoal(&cache, &mut net, &mut v, d, pins, &mut confirm);
-    let og = builds::ensure_openal(&cache, &mut net, &v, o, &mut confirm);
+    let dg = builds::ensure_dsoal(&cache, &mut net, &mut v, d.build(), pins, &mut confirm);
+    let og = builds::ensure_openal(&cache, &mut net, &v, o.build(), &mut confirm);
     (labels, dg.usable(), og.usable())
 }
 
@@ -501,8 +511,8 @@ fn case(name: &'static str) -> Case {
     Case {
         name,
         github: Github::default(),
-        dsoal: Build::Latest,
-        oal: Build::Latest,
+        dsoal: B::Latest,
+        oal: B::Latest,
         accept_unverified: false,
         seed: None,
         bad_pin: false,
@@ -513,8 +523,8 @@ fn case(name: &'static str) -> Case {
 fn first_downloads() {
     compare(case("latest, nothing cached"));
     compare(Case {
-        dsoal: Build::Stable,
-        oal: Build::Stable,
+        dsoal: B::Stable,
+        oal: B::Stable,
         ..case("stable, nothing cached")
     });
 }
@@ -522,13 +532,13 @@ fn first_downloads() {
 #[test]
 fn up_to_date_downloads_nothing() {
     compare(Case {
-        seed: Some((Build::Latest, Build::Latest)),
+        seed: Some((B::Latest, B::Latest)),
         ..case("latest, cached")
     });
     compare(Case {
-        dsoal: Build::Stable,
-        oal: Build::Stable,
-        seed: Some((Build::Stable, Build::Stable)),
+        dsoal: B::Stable,
+        oal: B::Stable,
+        seed: Some((B::Stable, B::Stable)),
         ..case("stable, cached")
     });
 }
@@ -545,7 +555,7 @@ fn latest_master_missing_follows_the_archive() {
     });
     compare(Case {
         github: g,
-        seed: Some((Build::Latest, Build::Latest)),
+        seed: Some((B::Latest, B::Latest)),
         ..case("archive over latest-master")
     });
 }
@@ -562,11 +572,11 @@ fn bad_checksums_are_refused() {
     });
     compare(Case {
         github: g,
-        seed: Some((Build::Stable, Build::Latest)),
+        seed: Some((B::Stable, B::Latest)),
         ..case("wrong digests, old cache kept")
     });
     compare(Case {
-        dsoal: Build::Stable,
+        dsoal: B::Stable,
         bad_pin: true,
         ..case("wrong pinned checksum")
     });
@@ -601,14 +611,14 @@ fn offline_uses_the_cache() {
     });
     compare(Case {
         github: g,
-        seed: Some((Build::Latest, Build::Stable)),
+        seed: Some((B::Latest, B::Stable)),
         ..case("offline, cached")
     });
     compare(Case {
         github: g,
-        dsoal: Build::Stable,
-        oal: Build::Stable,
-        seed: Some((Build::Latest, Build::Stable)),
+        dsoal: B::Stable,
+        oal: B::Stable,
+        seed: Some((B::Latest, B::Stable)),
         ..case("offline, the other build cached")
     });
 }
@@ -627,7 +637,7 @@ fn corrupt_and_nested_zips() {
             corrupt: true,
             ..Github::default()
         },
-        seed: Some((Build::Latest, Build::Latest)),
+        seed: Some((B::Latest, B::Latest)),
         ..case("not zips, old cache kept")
     });
     compare(Case {
@@ -678,13 +688,13 @@ fn source_folders_match() {
         .map(str::to_string)
         .collect();
     let mut rust = Vec::new();
-    for b in [Build::Stable, Build::Latest] {
+    for b in [B::Stable, B::Latest] {
         for a in ["Win32", "Win64"] {
             rust.push(format!(
                 "{}|{}",
-                builds::dsoal_source_dir(&cache, b, a)
+                builds::dsoal_source_dir(&cache, &b.build(), a)
                     .map_or(String::new(), |p| p.display().to_string()),
-                builds::openal_source_dll(&cache, b, a).display()
+                builds::openal_source_dll(&cache, &b.build(), a).display()
             ));
         }
     }

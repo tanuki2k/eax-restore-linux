@@ -3,6 +3,7 @@
 
 pub mod actions;
 pub mod app;
+pub mod build_choice;
 pub mod cli;
 pub mod cover;
 pub mod db;
@@ -14,6 +15,8 @@ pub mod help;
 pub mod library;
 pub mod panel;
 pub mod picker;
+pub mod prefs;
+pub mod prefs_screen;
 pub mod profile;
 pub mod runner;
 pub mod settings;

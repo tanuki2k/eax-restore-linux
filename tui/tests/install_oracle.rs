@@ -209,6 +209,9 @@ fn plan(kind: &Kind, w: &World) -> Plan {
         engine: Engine::Dsoal,
         dsoal_build: Build::Stable,
         openal_build: Build::Stable,
+        // What the script records for the fake builds the tests serve.
+        dsoal_version: "r693".into(),
+        openal_version: "test".into(),
         speakers,
         alsoft_overrides: Vec::new(),
         advanced_limits: false,
@@ -294,7 +297,11 @@ fn compare(kind: Kind) {
                 .join("tests/fixtures/bin/protontricks")
                 .display()
                 .to_string()];
-            prepare::gather(&b.game, None, &b.home, &pt).default_plan()
+            let mut p = prepare::gather(&b.game, None, &b.home, &pt).default_plan();
+            // The caller fills these in once the builds are fetched.
+            p.dsoal_version = "r693".into();
+            p.openal_version = "test".into();
+            p
         } else {
             plan(&kind, &b)
         };

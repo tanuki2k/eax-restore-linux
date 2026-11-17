@@ -9,6 +9,12 @@
 //! - OpenAL Soft stable: the newest tagged release.
 //! - OpenAL Soft latest: its rolling "latest" pre-release.
 //!
+//! The TUI also offers any numbered build kcat has published ([`Build::Exact`]:
+//! a DSOAL archive revision or an OpenAL Soft release), the newest numbered
+//! one at install time ([`Build::Numbered`]), and a tested OpenAL Soft
+//! release ([`Pins::openal_tag`]). Each exact build has a cache folder of its
+//! own, so switching between them doesn't download them again.
+//!
 //! A build is fetched only when it's missing or out of date (a marker file
 //! records what's cached), checked (zip test, then the pinned SHA256 or the
 //! digest GitHub publishes), and swapped in only once it unpacked, so a
@@ -27,6 +33,8 @@ pub struct Pins {
     pub dsoal_rev: String,
     pub dsoal_url: String,
     pub dsoal_sha256: String,
+    /// The OpenAL Soft release last tested; moved forward with `dsoal_rev`.
+    pub openal_tag: String,
 }
 
 impl Default for Pins {
@@ -37,6 +45,7 @@ impl Default for Pins {
             dsoal_url: "https://github.com/kcat/dsoal/releases/download/archive/DSOAL_r693.zip"
                 .into(),
             dsoal_sha256: "5abe990ff5692fa070d549a8c28df2435842c5d3f586a59b0da5281bc1cb6605".into(),
+            openal_tag: "1.25.2".into(),
         }
     }
 }
@@ -50,6 +59,8 @@ pub const DSOAL_ARCHIVE_API_URL: &str =
 pub const OPENAL_LATEST_RELEASE_URL: &str = "https://github.com/kcat/openal-soft/releases/latest";
 pub const OPENAL_PRERELEASE_API_URL: &str =
     "https://api.github.com/repos/kcat/openal-soft/releases/tags/latest";
+pub const OPENAL_RELEASES_API_URL: &str =
+    "https://api.github.com/repos/kcat/openal-soft/releases?per_page=100";
 pub const GITHUB_PROBE_URL: &str = "https://api.github.com";
 
 /// The cache folders, under `~/.local/share/eax-restore-linux`.
@@ -82,6 +93,50 @@ impl Cache {
     pub fn openal_prerelease(&self) -> PathBuf {
         self.openal().join("prerelease")
     }
+    /// An archived DSOAL revision picked by number: `dsoal/builds/r690`.
+    pub fn dsoal_build(&self, rev: &str) -> PathBuf {
+        self.dsoal().join("builds").join(rev)
+    }
+    /// An OpenAL Soft release picked by number: `openal-soft/builds/1.24.3`.
+    pub fn openal_build(&self, tag: &str) -> PathBuf {
+        self.openal().join("builds").join(tag)
+    }
+}
+
+/// A build name that is safe as a folder name: letters, digits, `.`, `-`,
+/// `_`, and not `.` or `..`.
+pub fn safe_name(name: &str) -> bool {
+    !name.is_empty()
+        && name != "."
+        && name != ".."
+        && name
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b"._-".contains(&b))
+}
+
+/// The builds of one component kept in its `builds` folder, newest first.
+fn cached_builds(dir: &Path) -> Vec<String> {
+    let mut out: Vec<String> = std::fs::read_dir(dir)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter(|e| cached(&e.path()))
+        .filter_map(|e| e.file_name().to_str().map(String::from))
+        .filter(|n| safe_name(n))
+        .collect();
+    out.sort_by(|a, b| version_order(b, a));
+    out
+}
+
+/// Orders `r690` < `r697` and `1.9.0` < `1.24.3` by their numbers.
+pub fn version_order(a: &str, b: &str) -> std::cmp::Ordering {
+    let nums = |s: &str| -> Vec<u64> {
+        s.split(|c: char| !c.is_ascii_digit())
+            .filter(|p| !p.is_empty())
+            .filter_map(|p| p.parse().ok())
+            .collect()
+    };
+    nums(a).cmp(&nums(b)).then_with(|| a.cmp(b))
 }
 
 /// A folder that exists and isn't empty.
@@ -373,6 +428,115 @@ pub fn newest_archive_dsoal(net: &mut dyn Net) -> Option<Archive> {
         .filter(|a| !a.rev.is_empty() && !a.url.is_empty())
 }
 
+/// Every `DSOAL_r<N>.zip` in kcat's "archive" release, newest first.
+pub fn dsoal_archive(net: &mut dyn Net) -> Vec<Archive> {
+    let json = net.get(DSOAL_ARCHIVE_API_URL);
+    archive_list(&json)
+}
+
+fn archive_list(json: &str) -> Vec<Archive> {
+    let Ok(v) = serde_json::from_str::<Value>(json) else {
+        return Vec::new();
+    };
+    let mut out: Vec<(u64, Archive)> = v
+        .get("assets")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|a| {
+            let name = a.get("name")?.as_str()?;
+            let n = name.strip_prefix("DSOAL_r")?.strip_suffix(".zip")?;
+            let rev: u64 = n
+                .parse()
+                .ok()
+                .filter(|_| n.bytes().all(|b| b.is_ascii_digit()))?;
+            let digest = a.get("digest").and_then(Value::as_str).unwrap_or("");
+            Some((
+                rev,
+                Archive {
+                    rev: format!("r{rev}"),
+                    url: a.get("browser_download_url")?.as_str()?.to_string(),
+                    digest: digest.strip_prefix("sha256:").unwrap_or(digest).to_string(),
+                },
+            ))
+        })
+        .collect();
+    out.sort_by_key(|(rev, _)| std::cmp::Reverse(*rev));
+    out.dedup_by_key(|(rev, _)| *rev);
+    out.into_iter().map(|(_, a)| a).collect()
+}
+
+/// One numbered OpenAL Soft release with a Windows build.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Release {
+    pub tag: String,
+    /// `2026-05-12`.
+    pub date: String,
+}
+
+/// kcat's numbered OpenAL Soft releases that have an
+/// `openal-soft-<tag>-bin.zip`, newest first.
+pub fn openal_releases(net: &mut dyn Net) -> Vec<Release> {
+    release_list(&net.get(OPENAL_RELEASES_API_URL))
+}
+
+fn release_list(json: &str) -> Vec<Release> {
+    let Ok(Value::Array(list)) = serde_json::from_str::<Value>(json) else {
+        return Vec::new();
+    };
+    let mut out: Vec<Release> = list
+        .iter()
+        .filter(|r| r.get("prerelease").and_then(Value::as_bool) != Some(true))
+        .filter_map(|r| {
+            let tag = r.get("tag_name")?.as_str()?.to_string();
+            let asset = format!("openal-soft-{tag}-bin.zip");
+            let has = r
+                .get("assets")?
+                .as_array()?
+                .iter()
+                .any(|a| a.get("name").and_then(Value::as_str) == Some(asset.as_str()));
+            let date = r
+                .get("published_at")
+                .and_then(Value::as_str)
+                .and_then(|d| d.get(..10))
+                .unwrap_or("")
+                .to_string();
+            (has && safe_name(&tag)).then_some(Release { tag, date })
+        })
+        .collect();
+    out.sort_by(|a, b| version_order(&b.tag, &a.tag));
+    out
+}
+
+/// Every build a choice can offer: what kcat has published, or with no
+/// network, what's cached. Newest first.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Catalog {
+    pub dsoal: Vec<String>,
+    pub openal: Vec<Release>,
+}
+
+pub fn catalog(cache: &Cache, net: &mut dyn Net, github: bool) -> Catalog {
+    let mut c = Catalog::default();
+    if github {
+        c.dsoal = dsoal_archive(net).into_iter().map(|a| a.rev).collect();
+        c.openal = openal_releases(net);
+    }
+    if c.dsoal.is_empty() {
+        c.dsoal = cached_builds(&cache.dsoal().join("builds"));
+    }
+    if c.openal.is_empty() {
+        c.openal = cached_builds(&cache.openal().join("builds"))
+            .into_iter()
+            .map(|tag| Release {
+                tag,
+                date: String::new(),
+            })
+            .collect();
+    }
+    c
+}
+
 /// What's available this run, looked up without downloading anything: the
 /// labels a build choice shows (empty when it can't be had: offline and not
 /// cached), and what the downloads need from the release pages.
@@ -488,10 +652,66 @@ pub fn lookup(cache: &Cache, net: &mut dyn Net, github: bool, pins: &Pins) -> Ve
     v
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Which build of a component. For DSOAL, `Stable` is the pinned tested
+/// revision and `Latest` kcat's latest-master; for OpenAL Soft, `Stable` is
+/// the newest numbered release and `Latest` the rolling pre-release.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Build {
     Stable,
     Latest,
+    /// The newest numbered build when it installs: DSOAL's newest archived
+    /// revision; for OpenAL Soft, the same as `Stable`.
+    Numbered,
+    /// One numbered build: `r690`, or `1.24.3`.
+    Exact(String),
+}
+
+/// `Numbered` turned into the build it means right now, so the install knows
+/// which folder to copy from. DSOAL's is its newest archived revision (the
+/// newest cached one offline); OpenAL Soft's is `Stable`.
+pub fn resolve_dsoal(build: Build, cache: &Cache, net: &mut dyn Net, v: &Versions) -> Build {
+    if build != Build::Numbered {
+        return build;
+    }
+    let newest = if v.github {
+        dsoal_archive(net).into_iter().next().map(|a| a.rev)
+    } else {
+        None
+    };
+    newest
+        .or_else(|| {
+            cached_builds(&cache.dsoal().join("builds"))
+                .into_iter()
+                .next()
+        })
+        .map_or(Build::Numbered, Build::Exact)
+}
+
+pub fn resolve_openal(build: Build) -> Build {
+    if build == Build::Numbered {
+        Build::Stable
+    } else {
+        build
+    }
+}
+
+/// The version a build stands for, for the record: `r693`, `1.25.2`, or a
+/// rolling build's label. Empty when it isn't known.
+pub fn dsoal_version(build: &Build, v: &Versions, pins: &Pins) -> String {
+    match build {
+        Build::Stable => pins.dsoal_rev.clone(),
+        Build::Latest => v.dsoal_latest.clone(),
+        Build::Numbered => String::new(),
+        Build::Exact(rev) => rev.clone(),
+    }
+}
+
+pub fn openal_version(build: &Build, v: &Versions) -> String {
+    match build {
+        Build::Stable | Build::Numbered => v.oal_stable.clone(),
+        Build::Latest => v.oal_latest.clone(),
+        Build::Exact(tag) => tag.clone(),
+    }
 }
 
 /// What getting a build came to.
@@ -554,6 +774,20 @@ pub fn ensure_dsoal(
 ) -> Got {
     let share = cache.dsoal();
     let _ = std::fs::create_dir_all(&share);
+    let build = match build {
+        // The pinned revision has its own folder and checksum already.
+        Build::Exact(rev) if rev == pins.dsoal_rev => Build::Stable,
+        Build::Exact(rev) => return ensure_dsoal_exact(cache, net, v, &rev, confirm),
+        // Not resolved: there was no archived build to be had.
+        Build::Numbered => {
+            return Got::Failed(if v.github {
+                Why::NotPublished
+            } else {
+                Why::Offline
+            })
+        }
+        b => b,
+    };
     if build == Build::Stable {
         if cached(&cache.dsoal_pinned()) {
             return Got::UpToDate;
@@ -646,6 +880,86 @@ pub fn ensure_dsoal(
     }
 }
 
+/// One archived DSOAL revision, into `dsoal/builds/<rev>`.
+fn ensure_dsoal_exact(
+    cache: &Cache,
+    net: &mut dyn Net,
+    v: &Versions,
+    rev: &str,
+    confirm: &mut dyn FnMut(&str) -> bool,
+) -> Got {
+    if !safe_name(rev) {
+        return Got::Failed(Why::NotPublished);
+    }
+    let dir = cache.dsoal_build(rev);
+    if cached(&dir) {
+        return Got::UpToDate;
+    }
+    if !v.github {
+        return Got::Failed(Why::Offline);
+    }
+    let Some(a) = dsoal_archive(net).into_iter().find(|a| a.rev == rev) else {
+        return Got::Failed(Why::NotPublished);
+    };
+    let _ = std::fs::create_dir_all(dir.parent().unwrap_or(&dir));
+    let zip = cache.dsoal().join(format!("{rev}.zip"));
+    let label = format!("kcat archived DSOAL [{rev}]");
+    let why = match fetch_checked(net, &a.url, &zip, |_| a.digest.clone(), &label, confirm) {
+        Ok(()) if unpack_dsoal_zip(&zip, &dir) => {
+            let _ = std::fs::remove_file(&zip);
+            return Got::Downloaded;
+        }
+        Ok(()) => Why::Unpack,
+        Err(why) => why,
+    };
+    let _ = std::fs::remove_file(&zip);
+    let _ = std::fs::remove_dir_all(&dir);
+    Got::Failed(why)
+}
+
+/// One numbered OpenAL Soft release, into `openal-soft/builds/<tag>`.
+fn ensure_openal_exact(
+    cache: &Cache,
+    net: &mut dyn Net,
+    v: &Versions,
+    tag: &str,
+    confirm: &mut dyn FnMut(&str) -> bool,
+) -> Got {
+    if !safe_name(tag) {
+        return Got::Failed(Why::NotPublished);
+    }
+    let dir = cache.openal_build(tag);
+    if cached(&dir) {
+        return Got::UpToDate;
+    }
+    if !v.github {
+        return Got::Failed(Why::Offline);
+    }
+    let _ = std::fs::create_dir_all(dir.parent().unwrap_or(&dir));
+    let asset = format!("openal-soft-{tag}-bin.zip");
+    let url = format!("https://github.com/kcat/openal-soft/releases/download/{tag}/{asset}");
+    let zip = cache.openal().join(format!("{tag}.zip"));
+    let label = format!("kcat OpenAL Soft [{tag}]");
+    let api = format!("https://api.github.com/repos/kcat/openal-soft/releases/tags/{tag}");
+    let why = match fetch_checked(
+        net,
+        &url,
+        &zip,
+        |n| asset_digest(&n.get(&api), &asset),
+        &label,
+        confirm,
+    ) {
+        Ok(()) if extract_zip_into(&zip, &dir) => {
+            let _ = std::fs::remove_file(&zip);
+            return Got::Downloaded;
+        }
+        Ok(()) => Why::Unpack,
+        Err(why) => why,
+    };
+    let _ = std::fs::remove_file(&zip);
+    Got::Failed(why)
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct PrereleaseAsset {
     url: String,
@@ -692,6 +1006,10 @@ pub fn ensure_openal(
 ) -> Got {
     let share = cache.openal();
     let _ = std::fs::create_dir_all(&share);
+    let build = match resolve_openal(build) {
+        Build::Exact(tag) => return ensure_openal_exact(cache, net, v, &tag, confirm),
+        b => b,
+    };
     if build == Build::Stable {
         let marker = share.join("updated_at.txt");
         let local = read_marker(&marker);
@@ -825,10 +1143,13 @@ fn find_dirs(root: &Path, tail: &[&str]) -> Vec<PathBuf> {
 /// Where the chosen DSOAL build's DLLs for an architecture (`Win32` /
 /// `Win64`) are: the zip has DSOAL/<Arch> and DSOAL+HRTF/<Arch>, and the
 /// plain one is preferred.
-pub fn dsoal_source_dir(cache: &Cache, build: Build, arch: &str) -> Option<PathBuf> {
+pub fn dsoal_source_dir(cache: &Cache, build: &Build, arch: &str) -> Option<PathBuf> {
     let root = match build {
         Build::Stable => cache.dsoal_pinned(),
         Build::Latest => cache.dsoal_official(),
+        Build::Numbered => return None,
+        Build::Exact(rev) if safe_name(rev) => cache.dsoal_build(rev),
+        Build::Exact(_) => return None,
     };
     find_dirs(&root, &["DSOAL", arch])
         .into_iter()
@@ -837,17 +1158,18 @@ pub fn dsoal_source_dir(cache: &Cache, build: Build, arch: &str) -> Option<PathB
 }
 
 /// The OpenAL Soft DLL to deploy for an architecture.
-pub fn openal_source_dll(cache: &Cache, build: Build, arch: &str) -> PathBuf {
-    match build {
-        Build::Latest => cache.openal_prerelease().join(arch).join("OpenAL32.dll"),
-        Build::Stable => {
-            let dir = find_dirs(&cache.openal_official(), &["bin", arch])
-                .into_iter()
-                .next()
-                .unwrap_or_default();
-            PathBuf::from(format!("{}/soft_oal.dll", dir.display()))
-        }
-    }
+pub fn openal_source_dll(cache: &Cache, build: &Build, arch: &str) -> PathBuf {
+    let release = match build {
+        Build::Latest => return cache.openal_prerelease().join(arch).join("OpenAL32.dll"),
+        Build::Stable | Build::Numbered => cache.openal_official(),
+        Build::Exact(tag) if safe_name(tag) => cache.openal_build(tag),
+        Build::Exact(_) => return PathBuf::from("/soft_oal.dll"),
+    };
+    let dir = find_dirs(&release, &["bin", arch])
+        .into_iter()
+        .next()
+        .unwrap_or_default();
+    PathBuf::from(format!("{}/soft_oal.dll", dir.display()))
 }
 
 #[cfg(test)]
@@ -870,6 +1192,158 @@ mod tests {
         assert_eq!(asset_digest(json, "DSOAL.zip"), "abc");
         assert_eq!(asset_digest(json, "nope"), "");
         assert_eq!(asset_digest("not json", "x"), "");
+    }
+
+    /// A network with canned pages and nothing to download.
+    struct Pages(Vec<(&'static str, String)>);
+
+    impl Net for Pages {
+        fn reachable(&mut self) -> bool {
+            true
+        }
+        fn get(&mut self, url: &str) -> String {
+            self.0
+                .iter()
+                .find(|(u, _)| *u == url)
+                .map(|(_, b)| b.clone())
+                .unwrap_or_default()
+        }
+        fn location(&mut self, _: &str) -> String {
+            String::new()
+        }
+        fn download(&mut self, _: &str, _: &Path) -> bool {
+            false
+        }
+    }
+
+    const ARCHIVE: &str = r#"{"assets":[
+        {"name":"DSOAL_r690.zip","browser_download_url":"https://x/DSOAL_r690.zip","digest":"sha256:aa"},
+        {"name":"DSOAL_r697.zip","browser_download_url":"https://x/DSOAL_r697.zip","digest":"sha256:bb"},
+        {"name":"DSOAL_r9.zip","browser_download_url":"https://x/DSOAL_r9.zip"},
+        {"name":"notes.txt","browser_download_url":"https://x/notes.txt"}]}"#;
+
+    const RELEASES: &str = r#"[
+        {"tag_name":"latest","prerelease":true,"published_at":"2026-11-15T00:00:00Z",
+         "assets":[{"name":"OpenALSoft.zip"}]},
+        {"tag_name":"1.24.3","prerelease":false,"published_at":"2025-03-30T00:00:00Z",
+         "assets":[{"name":"openal-soft-1.24.3-bin.zip"}]},
+        {"tag_name":"1.25.0","prerelease":false,"published_at":"2025-12-22T00:00:00Z","assets":[]},
+        {"tag_name":"1.25.2","prerelease":false,"published_at":"2026-05-12T00:00:00Z",
+         "assets":[{"name":"openal-soft-1.25.2-bin.zip"}]},
+        {"tag_name":"../evil","prerelease":false,"published_at":"2026-05-12T00:00:00Z",
+         "assets":[{"name":"openal-soft-../evil-bin.zip"}]}]"#;
+
+    #[test]
+    fn the_build_lists_are_newest_first_and_only_what_can_be_installed() {
+        let revs: Vec<String> = archive_list(ARCHIVE).into_iter().map(|a| a.rev).collect();
+        assert_eq!(revs, ["r697", "r690", "r9"]);
+        assert_eq!(archive_list(ARCHIVE)[0].digest, "bb");
+        // No pre-release, no release without a Windows build, no unsafe name.
+        let tags: Vec<String> = release_list(RELEASES).into_iter().map(|r| r.tag).collect();
+        assert_eq!(tags, ["1.25.2", "1.24.3"]);
+        assert_eq!(release_list(RELEASES)[0].date, "2026-05-12");
+        assert!(release_list("not json").is_empty());
+        assert_eq!(version_order("1.9.0", "1.24.3"), std::cmp::Ordering::Less);
+    }
+
+    #[test]
+    fn the_catalog_comes_from_github_or_else_the_cache() {
+        let tmp = tempfile::tempdir().unwrap();
+        let cache = Cache::new(tmp.path());
+        let mut net = Pages(vec![
+            (DSOAL_ARCHIVE_API_URL, ARCHIVE.into()),
+            (OPENAL_RELEASES_API_URL, RELEASES.into()),
+        ]);
+        let c = catalog(&cache, &mut net, true);
+        assert_eq!(c.dsoal, ["r697", "r690", "r9"]);
+        assert_eq!(c.openal.len(), 2);
+
+        // Offline: only what was downloaded before.
+        for dir in [cache.dsoal_build("r690"), cache.openal_build("1.23.1")] {
+            std::fs::create_dir_all(&dir).unwrap();
+            std::fs::write(dir.join("f"), "x").unwrap();
+        }
+        let c = catalog(&cache, &mut Pages(Vec::new()), false);
+        assert_eq!(c.dsoal, ["r690"]);
+        assert_eq!(c.openal[0].tag, "1.23.1");
+    }
+
+    #[test]
+    fn numbered_means_the_newest_now_and_an_exact_build_uses_its_own_folder() {
+        let tmp = tempfile::tempdir().unwrap();
+        let cache = Cache::new(tmp.path());
+        let mut net = Pages(vec![(DSOAL_ARCHIVE_API_URL, ARCHIVE.into())]);
+        let online = Versions {
+            github: true,
+            ..Versions::default()
+        };
+        assert_eq!(
+            resolve_dsoal(Build::Numbered, &cache, &mut net, &online),
+            Build::Exact("r697".into())
+        );
+        assert_eq!(resolve_openal(Build::Numbered), Build::Stable);
+        assert_eq!(
+            resolve_dsoal(Build::Latest, &cache, &mut net, &online),
+            Build::Latest
+        );
+
+        // A cached exact build is used as it is, and found where it's copied from.
+        let dir = cache.dsoal_build("r690").join("DSOAL/Win32");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("dsound.dll"), "x").unwrap();
+        let mut no = |_: &str| false;
+        let exact = Build::Exact("r690".into());
+        let mut v = online.clone();
+        assert_eq!(
+            ensure_dsoal(
+                &cache,
+                &mut net,
+                &mut v,
+                exact.clone(),
+                &Pins::default(),
+                &mut no
+            ),
+            Got::UpToDate
+        );
+        assert_eq!(dsoal_source_dir(&cache, &exact, "Win32"), Some(dir));
+        let oal = Build::Exact("1.24.3".into());
+        assert!(openal_source_dll(&cache, &oal, "Win32").ends_with("soft_oal.dll"));
+        // Offline with nothing cached, or a build kcat never published.
+        let offline = Versions::default();
+        assert_eq!(
+            ensure_openal(&cache, &mut net, &offline, oal, &mut no),
+            Got::Failed(Why::Offline)
+        );
+        assert_eq!(
+            ensure_dsoal(
+                &cache,
+                &mut net,
+                &mut v,
+                Build::Exact("r1".into()),
+                &Pins::default(),
+                &mut no
+            ),
+            Got::Failed(Why::NotPublished)
+        );
+        // A name that would leave the cache is never used as a folder.
+        assert_eq!(
+            ensure_dsoal(
+                &cache,
+                &mut net,
+                &mut v,
+                Build::Exact("../x".into()),
+                &Pins::default(),
+                &mut no
+            ),
+            Got::Failed(Why::NotPublished)
+        );
+        // The versions recorded for an install.
+        let pins = Pins::default();
+        assert_eq!(dsoal_version(&Build::Stable, &v, &pins), "r693");
+        assert_eq!(
+            dsoal_version(&Build::Exact("r690".into()), &v, &pins),
+            "r690"
+        );
     }
 
     #[test]
