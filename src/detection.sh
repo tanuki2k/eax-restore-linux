@@ -1273,8 +1273,9 @@ detect_api_from_binary() {
     # that only mentions the API, except that the profile's exe wins with
     # either: TRON 2.0's Lithtech.exe only mentions DirectSound, but it is the
     # game, while the Bink video DLL beside it names dsound.dll. The profile's
-    # exe, when given, goes first of all: the locale sort put Quake4Ded.exe (the dedicated server) ahead
-    # of Quake4.exe. "both" is common (an engine with more than
+    # exe, when given, goes first of all: the sort put Quake4Ded.exe (the dedicated server) ahead
+    # of Quake4.exe. Files are sorted byte by byte (LC_ALL=C), so the file shown
+    # is the same in every locale, and the same as the TUI's. "both" is common (an engine with more than
     # one backend) and the caller treats it as a low-confidence DirectSound3D
     # guess, not a confirmation. On a reinstall, this script's own
     # previously-deployed dsound.dll/dsoal-aldrv.dll/OpenAL32.dll would
@@ -1334,7 +1335,7 @@ detect_api_from_binary() {
                     openal_main="${openal_named:-$openal_mentioned}"
                 fi
             done < <(if [ "$depth$ext" == "0exe" ]; then printf '%s\0' "$main_exe"
-                else find "$dir" -mindepth "$depth" -maxdepth "$depth" -type f -iname "*.$ext" -print0 2>/dev/null | sort -z; fi)
+                else find "$dir" -mindepth "$depth" -maxdepth "$depth" -type f -iname "*.$ext" -print0 2>/dev/null | LC_ALL=C sort -z; fi)
         done
     done
 

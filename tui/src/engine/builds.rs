@@ -393,6 +393,8 @@ pub struct Archive {
     pub url: String,
     /// GitHub's SHA256 for it; empty when it has none.
     pub digest: String,
+    /// When it was published, `2026-11-17`; empty when GitHub doesn't say.
+    pub date: String,
 }
 
 /// The newest `DSOAL_r<N>.zip` in kcat's "archive" release.
@@ -416,6 +418,12 @@ pub fn newest_archive_dsoal(net: &mut dyn Net) -> Option<Archive> {
                     rev: format!("r{rev}"),
                     url: a.get("browser_download_url")?.as_str()?.to_string(),
                     digest: digest.strip_prefix("sha256:").unwrap_or(digest).to_string(),
+                    date: a
+                        .get("updated_at")
+                        .and_then(Value::as_str)
+                        .and_then(|d| d.get(..10))
+                        .unwrap_or("")
+                        .to_string(),
                 },
             ))
         })
@@ -457,6 +465,12 @@ fn archive_list(json: &str) -> Vec<Archive> {
                     rev: format!("r{rev}"),
                     url: a.get("browser_download_url")?.as_str()?.to_string(),
                     digest: digest.strip_prefix("sha256:").unwrap_or(digest).to_string(),
+                    date: a
+                        .get("updated_at")
+                        .and_then(Value::as_str)
+                        .and_then(|d| d.get(..10))
+                        .unwrap_or("")
+                        .to_string(),
                 },
             ))
         })
@@ -472,6 +486,16 @@ pub struct Release {
     pub tag: String,
     /// `2026-05-12`.
     pub date: String,
+}
+
+/// A build with no date known, as the cache lists them.
+impl From<&str> for Release {
+    fn from(tag: &str) -> Self {
+        Release {
+            tag: tag.to_string(),
+            date: String::new(),
+        }
+    }
 }
 
 /// kcat's numbered OpenAL Soft releases that have an
@@ -512,18 +536,31 @@ fn release_list(json: &str) -> Vec<Release> {
 /// network, what's cached. Newest first.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Catalog {
-    pub dsoal: Vec<String>,
+    /// `tag` is the revision, `r697`.
+    pub dsoal: Vec<Release>,
     pub openal: Vec<Release>,
 }
 
 pub fn catalog(cache: &Cache, net: &mut dyn Net, github: bool) -> Catalog {
     let mut c = Catalog::default();
     if github {
-        c.dsoal = dsoal_archive(net).into_iter().map(|a| a.rev).collect();
+        c.dsoal = dsoal_archive(net)
+            .into_iter()
+            .map(|a| Release {
+                tag: a.rev,
+                date: a.date,
+            })
+            .collect();
         c.openal = openal_releases(net);
     }
     if c.dsoal.is_empty() {
-        c.dsoal = cached_builds(&cache.dsoal().join("builds"));
+        c.dsoal = cached_builds(&cache.dsoal().join("builds"))
+            .into_iter()
+            .map(|tag| Release {
+                tag,
+                date: String::new(),
+            })
+            .collect();
     }
     if c.openal.is_empty() {
         c.openal = cached_builds(&cache.openal().join("builds"))
@@ -1218,7 +1255,7 @@ mod tests {
 
     const ARCHIVE: &str = r#"{"assets":[
         {"name":"DSOAL_r690.zip","browser_download_url":"https://x/DSOAL_r690.zip","digest":"sha256:aa"},
-        {"name":"DSOAL_r697.zip","browser_download_url":"https://x/DSOAL_r697.zip","digest":"sha256:bb"},
+        {"name":"DSOAL_r697.zip","browser_download_url":"https://x/DSOAL_r697.zip","digest":"sha256:bb","updated_at":"2026-11-17T06:34:27Z"},
         {"name":"DSOAL_r9.zip","browser_download_url":"https://x/DSOAL_r9.zip"},
         {"name":"notes.txt","browser_download_url":"https://x/notes.txt"}]}"#;
 
@@ -1238,6 +1275,8 @@ mod tests {
         let revs: Vec<String> = archive_list(ARCHIVE).into_iter().map(|a| a.rev).collect();
         assert_eq!(revs, ["r697", "r690", "r9"]);
         assert_eq!(archive_list(ARCHIVE)[0].digest, "bb");
+        assert_eq!(archive_list(ARCHIVE)[0].date, "2026-11-17");
+        assert_eq!(archive_list(ARCHIVE)[1].date, "");
         // No pre-release, no release without a Windows build, no unsafe name.
         let tags: Vec<String> = release_list(RELEASES).into_iter().map(|r| r.tag).collect();
         assert_eq!(tags, ["1.25.2", "1.24.3"]);
@@ -1255,7 +1294,8 @@ mod tests {
             (OPENAL_RELEASES_API_URL, RELEASES.into()),
         ]);
         let c = catalog(&cache, &mut net, true);
-        assert_eq!(c.dsoal, ["r697", "r690", "r9"]);
+        let revs: Vec<&str> = c.dsoal.iter().map(|r| r.tag.as_str()).collect();
+        assert_eq!(revs, ["r697", "r690", "r9"]);
         assert_eq!(c.openal.len(), 2);
 
         // Offline: only what was downloaded before.
@@ -1264,7 +1304,8 @@ mod tests {
             std::fs::write(dir.join("f"), "x").unwrap();
         }
         let c = catalog(&cache, &mut Pages(Vec::new()), false);
-        assert_eq!(c.dsoal, ["r690"]);
+        assert_eq!(c.dsoal[0].tag, "r690");
+        assert!(c.dsoal[0].date.is_empty());
         assert_eq!(c.openal[0].tag, "1.23.1");
     }
 

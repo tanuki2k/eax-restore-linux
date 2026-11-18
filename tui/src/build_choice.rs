@@ -95,7 +95,7 @@ pub fn options(comp: Comp, info: Option<&BuildInfo>, also: Option<&str>) -> Vec<
                 NUMBERED,
                 with_version(
                     "Latest numbered",
-                    i.catalog.dsoal.first().map_or("", String::as_str),
+                    i.catalog.dsoal.first().map_or("", |r| r.tag.as_str()),
                 ),
                 "The highest-numbered DSOAL build at the time you install.".into(),
             ),
@@ -113,41 +113,28 @@ pub fn options(comp: Comp, info: Option<&BuildInfo>, also: Option<&str>) -> Vec<
             ),
         ],
     };
-    let listed: Vec<(String, String)> = match comp {
-        Comp::Dsoal => i
-            .catalog
-            .dsoal
-            .iter()
-            .map(|r| (r.clone(), format!("Always installs DSOAL {r}.")))
-            .collect(),
-        Comp::Openal => i
-            .catalog
-            .openal
-            .iter()
-            .map(|r| {
-                let help = if r.date.is_empty() {
-                    format!("Always installs OpenAL Soft {}.", r.tag)
-                } else {
-                    format!("OpenAL Soft {}, released on {}.", r.tag, r.date)
-                };
-                (r.tag.clone(), help)
-            })
-            .collect(),
+    // Each numbered build: its name and version, and under it when it came out.
+    let name = match comp {
+        Comp::Dsoal => "DSOAL",
+        Comp::Openal => "OpenAL Soft",
     };
-    for (version, help) in listed {
-        out.push(opt(&version, version.clone(), help));
+    let released = |date: &str| {
+        if date.is_empty() {
+            String::new()
+        } else {
+            format!("Released on {date}.")
+        }
+    };
+    let listed = match comp {
+        Comp::Dsoal => &i.catalog.dsoal,
+        Comp::Openal => &i.catalog.openal,
+    };
+    for r in listed {
+        out.push(opt(&r.tag, format!("{name} {}", r.tag), released(&r.date)));
     }
     if let Some(v) = also.filter(|v| builds::safe_name(v)) {
         if !out.iter().any(|o| o.key == v) {
-            let name = match comp {
-                Comp::Dsoal => "DSOAL",
-                Comp::Openal => "OpenAL Soft",
-            };
-            out.push(opt(
-                v,
-                v.to_string(),
-                format!("Always installs {name} {v}."),
-            ));
+            out.push(opt(v, format!("{name} {v}"), String::new()));
         }
     }
     out
@@ -195,7 +182,13 @@ mod tests {
     fn info() -> BuildInfo {
         BuildInfo {
             catalog: Catalog {
-                dsoal: vec!["r697".into(), "r696".into()],
+                dsoal: vec![
+                    Release {
+                        tag: "r697".into(),
+                        date: "2026-11-17".into(),
+                    },
+                    "r696".into(),
+                ],
                 openal: vec![Release {
                     tag: "1.25.2".into(),
                     date: "2026-05-12".into(),
@@ -221,8 +214,8 @@ mod tests {
             [
                 "Latest rolling (r697)",
                 "Latest numbered (r697)",
-                "r697",
-                "r696"
+                "DSOAL r697",
+                "DSOAL r696"
             ]
         );
         assert_eq!(
@@ -230,8 +223,19 @@ mod tests {
             [
                 "Latest rolling (1.25.2, 2026-11-15)",
                 "Latest numbered (1.25.2)",
-                "1.25.2"
+                "OpenAL Soft 1.25.2"
             ]
+        );
+        // Under each: when it came out, or nothing when that isn't known.
+        let helps: Vec<String> = options(Comp::Dsoal, Some(&info), None)
+            .into_iter()
+            .skip(2)
+            .map(|o| o.help)
+            .collect();
+        assert_eq!(helps, ["Released on 2026-11-17.", ""]);
+        assert_eq!(
+            options(Comp::Openal, Some(&info), None)[2].help,
+            "Released on 2026-05-12."
         );
         // Before the list arrives: the two that need no list, plus a saved
         // version so the choice isn't lost.

@@ -229,6 +229,26 @@ fn installs(root: &Path) -> Vec<(PathBuf, &'static str)> {
             ),
             "Lithtech.exe",
         ),
+        // BioShock names "openal32.dll" in lower case (the script's 260a578).
+        (
+            g(
+                "Lower Case",
+                &[("Game.exe", "openal32.dll"), ("sound.dll", "DirectSound")],
+            ),
+            "Game.exe",
+        ),
+        // BioShock's layout: the library gives the top folder, and the exe is
+        // two folders below it, beside a redistributable naming dsound.dll.
+        (
+            g(
+                "BioShock Layout",
+                &[
+                    ("Redist/dxsetup.dll", "dsound.dll"),
+                    ("Builds/Release/Bioshock.exe", "openal32.dll and dsound.dll"),
+                ],
+            ),
+            "Bioshock.exe",
+        ),
         (g("Empty", &[]), ""),
         (
             g(
@@ -296,6 +316,16 @@ fn exe_folders_and_api_match() {
         rust.push_str(".\n");
         assert_eq!(b, rust, "{}", dir.display());
     }
+    // The page and the headless install both move to the exe's folder.
+    let (top, hint) = list
+        .iter()
+        .find(|(d, _)| d.ends_with("BioShock Layout"))
+        .unwrap();
+    let (dir, exe) = detect::exe_folder(top, hint);
+    assert_eq!(dir, top.join("Builds/Release"));
+    assert_eq!(exe.as_deref(), Some("Bioshock.exe"));
+    let e = detect::detect_api(&dir, hint).unwrap();
+    assert_eq!(e.api.name(), "both");
 }
 
 const DB: &str = r#"{"games":[{"id":"g","name":"Doom","exe":"Doom3.exe","stores":{

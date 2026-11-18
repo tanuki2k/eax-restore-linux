@@ -341,7 +341,18 @@ impl Facts {
                     format!("{arch}, {api}, as its profile says, but {file} points to {other}."),
                 )
             } else {
-                (true, format!("{arch}, {api}"))
+                // As the script's "Can't tell from the files": not a
+                // problem, but the answer rests on the profile alone.
+                // With no profile either, it's a guess, as the script's own
+                // "almost every classic EAX title uses DirectSound3D".
+                match (&self.files_api, &self.profile_api) {
+                    (None, Some(_)) => (true, format!("{arch}, {api} (per its profile)")),
+                    (None, None) => (
+                        false,
+                        format!("{arch}, {api} (a guess). Its files don't mention OpenAL or DirectSound3D."),
+                    ),
+                    _ => (true, format!("{arch}, {api}")),
+                }
             }
         };
         out.push((files.0, "Game files", files.1));

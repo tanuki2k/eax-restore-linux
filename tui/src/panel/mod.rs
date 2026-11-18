@@ -2041,7 +2041,13 @@ mod tests {
         let revs: Vec<String> = (660..=697).rev().map(|n| format!("r{n}")).collect();
         p.set_build_info(crate::build_choice::BuildInfo {
             catalog: crate::engine::builds::Catalog {
-                dsoal: revs,
+                dsoal: revs
+                    .iter()
+                    .map(|r| crate::engine::builds::Release {
+                        tag: r.clone(),
+                        date: "2026-01-01".into(),
+                    })
+                    .collect(),
                 openal: Vec::new(),
             },
             ..crate::build_choice::BuildInfo::default()
@@ -2062,9 +2068,13 @@ mod tests {
         // End: the last build in full, the first options scrolled away.
         p.handle_key(key(KeyCode::End));
         let list = open_list(&p, "DSOAL build");
+        // The last build in full: its name, then when it came out.
+        let at = list
+            .iter()
+            .position(|r| r.contains("DSOAL r660"))
+            .unwrap_or_else(|| panic!("{}", list.join("\n")));
         assert!(
-            list.iter()
-                .any(|r| r.contains("Always installs DSOAL r660.")),
+            list[at + 1].contains("Released on 2026-01-01."),
             "{}",
             list.join("\n")
         );
@@ -2079,6 +2089,33 @@ mod tests {
         );
         p.handle_key(key(KeyCode::Enter));
         assert_eq!(p.plan().dsoal_build, Build::Exact("r665".into()));
+    }
+
+    #[test]
+    fn when_the_files_dont_say_the_status_says_so_without_a_warning() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut p = ready(&tmp.path().join("home"));
+        p.facts.profile_api = Some("openal".into());
+        p.facts.files_api = None;
+        let files = p
+            .status_lines()
+            .into_iter()
+            .find(|l| l.label == "Game files")
+            .unwrap();
+        assert!(files.ok);
+        assert_eq!(files.value, "32-bit, OpenAL (per its profile)");
+        // With no profile either, it's a guess, and flagged.
+        p.facts.profile_api = None;
+        let files = p
+            .status_lines()
+            .into_iter()
+            .find(|l| l.label == "Game files")
+            .unwrap();
+        assert!(!files.ok);
+        assert_eq!(
+            files.value,
+            "32-bit, DirectSound3D (a guess). Its files don't mention OpenAL or DirectSound3D."
+        );
     }
 
     #[test]
@@ -2103,8 +2140,8 @@ mod tests {
             [
                 "Latest rolling (r697)",
                 "Latest numbered (r697)",
-                "r697",
-                "r690"
+                "DSOAL r697",
+                "DSOAL r690"
             ]
         );
         // Still on Latest rolling, still a change from the default.
