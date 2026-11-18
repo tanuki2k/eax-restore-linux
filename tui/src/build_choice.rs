@@ -23,7 +23,8 @@ pub const KEEP: &str = "keep";
 
 /// What GitHub (or, offline, the cache) says is there: the builds to list,
 /// and the versions the "Latest" options stand for right now.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
 pub struct BuildInfo {
     pub catalog: Catalog,
     /// latest-master's revision, e.g. `r697`.
@@ -32,23 +33,101 @@ pub struct BuildInfo {
     pub openal_rolling: String,
     /// The newest numbered OpenAL Soft release, e.g. `1.25.2`.
     pub openal_numbered: String,
+    /// When it was read from GitHub, in seconds since 1970.
+    pub fetched_at: u64,
+    /// GitHub couldn't be read and nothing was saved: the lists hold only
+    /// builds already downloaded.
+    #[serde(skip)]
+    pub offline: bool,
+}
+
+/// How long a saved lookup is used before GitHub is asked again. GitHub
+/// answers 60 API requests an hour from a machine that isn't logged in, and
+/// a lookup takes about five, so asking on every page open ran out quickly.
+pub const FRESH_SECS: u64 = 60 * 60;
+
+/// Where the last lookup is kept, beside the downloaded builds.
+pub fn saved_path(home: &std::path::Path) -> PathBuf {
+    Cache::new(home).root.join("build-lists.json")
+}
+
+fn now() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs())
+}
+
+fn load_saved(home: &std::path::Path) -> Option<BuildInfo> {
+    let text = std::fs::read_to_string(saved_path(home)).ok()?;
+    serde_json::from_str(&text).ok()
+}
+
+fn save(home: &std::path::Path, info: &BuildInfo) {
+    let path = saved_path(home);
+    if let Some(dir) = path.parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    if let Ok(text) = serde_json::to_string_pretty(info) {
+        let tmp = path.with_extension("json.tmp");
+        if std::fs::write(&tmp, text).is_ok() {
+            let _ = std::fs::rename(&tmp, &path);
+        }
+    }
+}
+
+/// The build lists: the saved lookup while it's under an hour old, else a
+/// fresh one from GitHub (saved for next time), else the saved one however
+/// old, else only the builds already downloaded.
+pub fn load(home: &std::path::Path, net: &mut dyn Net, at: u64) -> BuildInfo {
+    let saved = load_saved(home);
+    if let Some(s) = saved
+        .as_ref()
+        .filter(|s| at.saturating_sub(s.fetched_at) < FRESH_SECS)
+    {
+        return s.clone();
+    }
+    let cache = Cache::new(home);
+    if net.reachable() {
+        let dsoal: Vec<builds::Release> = builds::dsoal_archive(net)
+            .into_iter()
+            .map(|a| builds::Release {
+                tag: a.rev,
+                date: a.date,
+            })
+            .collect();
+        let openal = builds::openal_releases(net);
+        // Both lists back means GitHub answered; a refusal (its hourly limit)
+        // or no network gives empty ones, which aren't worth saving.
+        if !dsoal.is_empty() && !openal.is_empty() {
+            let v = builds::lookup(&cache, net, true, &Pins::default());
+            let info = BuildInfo {
+                catalog: Catalog { dsoal, openal },
+                dsoal_rolling: v.dsoal_latest,
+                openal_rolling: v.oal_latest,
+                openal_numbered: v.oal_stable,
+                fetched_at: at,
+                offline: false,
+            };
+            save(home, &info);
+            return info;
+        }
+    }
+    if let Some(s) = saved {
+        return s;
+    }
+    BuildInfo {
+        catalog: builds::catalog(&cache, net, false),
+        offline: true,
+        ..BuildInfo::default()
+    }
 }
 
 /// Looks it all up on a thread of its own, without downloading any build.
 pub fn spawn(home: PathBuf) -> Receiver<BuildInfo> {
     let (tx, rx) = mpsc::channel();
     std::thread::spawn(move || {
-        let cache = Cache::new(&home);
         let mut net = builds::Curl::default();
-        let github = net.reachable();
-        let v = builds::lookup(&cache, &mut net, github, &Pins::default());
-        let catalog = builds::catalog(&cache, &mut net, github);
-        let _ = tx.send(BuildInfo {
-            catalog,
-            dsoal_rolling: v.dsoal_latest,
-            openal_rolling: v.oal_latest,
-            openal_numbered: v.oal_stable,
-        });
+        let _ = tx.send(load(&home, &mut net, now()));
     });
     rx
 }
@@ -113,6 +192,13 @@ pub fn options(comp: Comp, info: Option<&BuildInfo>, also: Option<&str>) -> Vec<
             ),
         ],
     };
+    if i.offline {
+        // Nothing from GitHub and nothing saved: say why the list is short.
+        for o in &mut out {
+            o.help
+                .push_str(" Couldn't reach GitHub, so only downloaded builds are listed.");
+        }
+    }
     // Each numbered build: its name and version, and under it when it came out.
     let name = match comp {
         Comp::Dsoal => "DSOAL",
@@ -197,6 +283,7 @@ mod tests {
             dsoal_rolling: "r697".into(),
             openal_rolling: "1.25.2 (2026-11-15)".into(),
             openal_numbered: "1.25.2".into(),
+            ..BuildInfo::default()
         }
     }
 
@@ -244,6 +331,81 @@ mod tests {
             .map(|o| o.key)
             .collect();
         assert_eq!(keys, [ROLLING, NUMBERED, "r650"]);
+    }
+
+    /// A network that answers from canned pages, counts the requests, and
+    /// downloads nothing.
+    struct Net2 {
+        pages: Vec<(&'static str, String)>,
+        asked: usize,
+    }
+
+    impl Net for Net2 {
+        fn reachable(&mut self) -> bool {
+            true
+        }
+        fn get(&mut self, url: &str) -> String {
+            self.asked += 1;
+            self.pages
+                .iter()
+                .find(|(u, _)| *u == url)
+                .map(|(_, b)| b.clone())
+                .unwrap_or_default()
+        }
+        fn location(&mut self, _: &str) -> String {
+            String::new()
+        }
+        fn download(&mut self, _: &str, _: &std::path::Path) -> bool {
+            false
+        }
+    }
+
+    fn github() -> Net2 {
+        Net2 {
+            pages: vec![
+                (
+                    builds::DSOAL_ARCHIVE_API_URL,
+                    r#"{"assets":[{"name":"DSOAL_r697.zip","browser_download_url":"u","updated_at":"2026-11-17T00:00:00Z"}]}"#.into(),
+                ),
+                (
+                    builds::OPENAL_RELEASES_API_URL,
+                    r#"[{"tag_name":"1.25.2","prerelease":false,"published_at":"2026-05-12T00:00:00Z","assets":[{"name":"openal-soft-1.25.2-bin.zip"}]}]"#.into(),
+                ),
+            ],
+            asked: 0,
+        }
+    }
+
+    #[test]
+    fn the_lists_are_asked_for_once_an_hour_and_kept_when_github_refuses() {
+        let tmp = tempfile::tempdir().unwrap();
+        let home = tmp.path();
+        // First look: from GitHub, and saved.
+        let mut net = github();
+        let first = load(home, &mut net, 1_000);
+        assert_eq!(first.catalog.dsoal[0].tag, "r697");
+        assert!(net.asked > 0 && saved_path(home).is_file());
+
+        // Within the hour: the saved lists, without asking GitHub.
+        let mut net = github();
+        assert_eq!(load(home, &mut net, 1_000 + FRESH_SECS - 1), first);
+        assert_eq!(net.asked, 0);
+
+        // Later, with GitHub refusing (empty answers): still the saved lists.
+        let mut refused = Net2 {
+            pages: Vec::new(),
+            asked: 0,
+        };
+        let later = load(home, &mut refused, 1_000 + FRESH_SECS * 3);
+        assert_eq!(later.catalog, first.catalog);
+        assert!(!later.offline);
+
+        // Nothing saved and GitHub refusing: the downloaded builds, said so.
+        let empty = tempfile::tempdir().unwrap();
+        let none = load(empty.path(), &mut refused, 0);
+        assert!(none.offline && none.catalog.dsoal.is_empty());
+        let help = &options(Comp::Dsoal, Some(&none), None)[0].help;
+        assert!(help.ends_with("Couldn't reach GitHub, so only downloaded builds are listed."));
     }
 
     #[test]

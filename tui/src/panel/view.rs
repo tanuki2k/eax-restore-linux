@@ -20,10 +20,11 @@ use ratatui::Frame;
 
 /// From this width the right column sits beside the choices, not under them.
 pub const BESIDE_FROM: u16 = 100;
-const RIGHT_W: u16 = 50;
-/// Status box: the badge, then the label column.
-const BADGE_W: usize = 5;
-const LABEL_W: usize = 12;
+/// The choices' column; the console takes the rest.
+pub const LEFT_W: u16 = 64;
+/// A console line: the badge, then the label column.
+const BADGE_W: usize = 7;
+const LABEL_W: usize = 10;
 
 /// Words wrapped at `width`; a word longer than that is cut across lines
 /// rather than run off the edge. A path is cut by character only, so a space
@@ -54,7 +55,7 @@ pub fn draw(f: &mut Frame, p: &Panel, area: Rect) {
     f.render_widget(Clear, area);
     let rest = area;
     let [middle, right] = if area.width >= BESIDE_FROM {
-        Layout::horizontal([Constraint::Min(0), Constraint::Length(RIGHT_W)]).areas(rest)
+        Layout::horizontal([Constraint::Length(LEFT_W), Constraint::Min(0)]).areas(rest)
     } else {
         Layout::vertical([Constraint::Percentage(55), Constraint::Percentage(45)]).areas(rest)
     };
@@ -76,26 +77,13 @@ fn draw_middle(f: &mut Frame, p: &Panel, area: Rect) {
     let inner = block.inner(area);
     f.render_widget(block, area);
     p.field.set(None);
-    // The Status box is as tall as all its lines will be, so it doesn't grow
-    // while it types itself out.
-    let status_w = usize::from(inner.width.saturating_sub(2));
-    let status_h = (status_box_lines_all(&p.status_lines(), status_w).len() as u16 + 2)
-        .min(inner.height.saturating_sub(3));
-    let [banner, status, inner] = Layout::vertical([
-        Constraint::Length(3),
-        Constraint::Length(status_h),
-        Constraint::Min(0),
-    ])
-    .areas(inner);
+    let [banner, inner] =
+        Layout::vertical([Constraint::Length(3), Constraint::Min(0)]).areas(inner);
     f.render_widget(
-        Paragraph::new(banner_lines(p)).block(boxed("EAX fix")),
+        Paragraph::new(banner_lines(p)).block(boxed("Status")),
         banner,
     );
-    f.render_widget(
-        Paragraph::new(status_box_lines(p, status_w)).block(boxed("Status")),
-        status,
-    );
-    // Nothing to choose until the Status box has finished typing.
+    // Nothing to choose until the console has finished its preflight.
     if p.revealing() {
         return;
     }
@@ -539,40 +527,60 @@ fn draw_choices(f: &mut Frame, p: &Panel, area: Rect) {
 /// The right column: the work's progress while it runs (and how it ended),
 /// else the game's profile.
 fn draw_right(f: &mut Frame, p: &Panel, area: Rect) {
+    let width = usize::from(area.width.saturating_sub(2));
+    let mut text = vec![Line::from(Span::styled(
+        format!(" Preflight: {}", p.name),
+        theme::white(),
+    ))];
+    text.extend(status_box_lines(p, width));
+    if !p.revealing() {
+        let verdict = p.preflight_verdict();
+        let style = if verdict == "Not ready." {
+            theme::label()
+        } else {
+            theme::green()
+        };
+        text.push(Line::from(Span::styled(format!(" {verdict}"), style)));
+    }
+    let mut follow = false;
     if let Screen::Run(r) = &p.screen {
-        return draw_run(f, p, r, area);
+        text.push(Line::from(""));
+        let (heading, style) = match &r.result {
+            None => ("Working".to_string(), theme::white()),
+            Some(fin) if fin.ok => (fin.title.clone(), theme::green()),
+            Some(fin) => (fin.title.clone(), theme::label()),
+        };
+        text.push(Line::from(Span::styled(format!(" {heading}"), style)));
+        text.extend(run_lines(r, width));
+        follow = !r.finished();
     }
-    let rest = area;
-    if p.revealing() || rest.height < 3 {
-        return;
-    }
-    let w = usize::from(rest.width.saturating_sub(4)).max(10);
-    let lines = match &p.game {
-        Some(g) => crate::profile::database_lines(g, w),
-        None => vec![Line::from(Span::styled(
-            format!(" The game database has no profile for {}.", p.name),
-            theme::dim(),
-        ))],
-    };
-    let max = rows_of(&lines, rest.width.saturating_sub(2)).saturating_sub(rest.height - 2);
+    let shown = area.height.saturating_sub(2);
+    let rows = rows_of(&text, area.width.saturating_sub(2));
+    let max = rows.saturating_sub(shown);
+    // While work runs its end stays in view; otherwise PgUp/PgDn scroll.
+    let skip = if follow { max } else { p.info_scroll.min(max) };
     f.render_widget(
-        Paragraph::new(lines)
+        Paragraph::new(text)
             .wrap(Wrap { trim: false })
-            .scroll((p.info_scroll.min(max), 0))
-            .block(boxed("Game profile")),
-        rest,
+            .scroll((skip, 0))
+            .block(boxed("Console")),
+        area,
     );
 }
 
-/// One Status line: a green `[OK]` or yellow `[!!]`, the label, then the
-/// value, wrapped under its own column.
+/// One console line: the badge, the label, then the value, wrapped under
+/// its own column.
 fn status_line_rows(l: &super::StatusLine, width: usize) -> Vec<Line<'static>> {
+    use super::Check;
     let value_w = width.saturating_sub(1 + BADGE_W + LABEL_W).max(8);
     let pad = " ".repeat(1 + BADGE_W + LABEL_W);
-    let (badge, style) = if l.ok {
-        ("[OK] ", theme::green())
-    } else {
-        ("[!!] ", theme::label())
+    let style = match l.level {
+        Check::Ok => theme::green(),
+        Check::Warn => theme::label(),
+        Check::Fail => Style::new()
+            .fg(Color::LightRed)
+            .add_modifier(Modifier::BOLD),
+        Check::Unknown => theme::dim(),
     };
     wrap(&l.value, value_w)
         .into_iter()
@@ -581,7 +589,7 @@ fn status_line_rows(l: &super::StatusLine, width: usize) -> Vec<Line<'static>> {
             if i == 0 {
                 Line::from(vec![
                     Span::raw(" "),
-                    Span::styled(badge, style),
+                    Span::styled(format!("{} ", l.level.badge()), style),
                     Span::styled(
                         format!("{:LABEL_W$}", l.label),
                         Style::new().fg(theme::FILTER_LABEL),
@@ -602,7 +610,7 @@ fn status_box_lines_all(lines: &[super::StatusLine], width: usize) -> Vec<Line<'
         .collect()
 }
 
-/// The Status box as it stands: every line, or while it types itself out,
+/// The preflight as it stands: every line, or while it types itself out,
 /// the lines done so far, the one being typed, and a blinking cursor.
 fn status_box_lines(p: &Panel, width: usize) -> Vec<Line<'static>> {
     let all = p.status_lines();
@@ -872,36 +880,6 @@ fn uninstall_lines(p: &Panel, u: &super::UninstallView) -> Vec<Line<'static>> {
 }
 
 const SPINNER: [&str; 4] = ["|", "/", "-", "\\"];
-
-/// The work's box in the right column. While it runs, its end stays in view;
-/// once it's over, PgUp/PgDn scroll it.
-fn draw_run(f: &mut Frame, p: &Panel, r: &super::run::RunView, area: Rect) {
-    let width = usize::from(area.width.saturating_sub(2));
-    let text = run_lines(r, width);
-    let shown = area.height.saturating_sub(2);
-    let rows = rows_of(&text, area.width.saturating_sub(2));
-    let max = rows.saturating_sub(shown);
-    let (title, style) = match &r.result {
-        None => ("Working".to_string(), Style::new().fg(theme::LABEL)),
-        Some(fin) if fin.ok => (fin.title.clone(), theme::green()),
-        Some(fin) => (fin.title.clone(), theme::label()),
-    };
-    let skip = if r.finished() {
-        p.info_scroll.min(max)
-    } else {
-        max
-    };
-    f.render_widget(
-        Paragraph::new(text)
-            .wrap(Wrap { trim: false })
-            .scroll((skip, 0))
-            .block(boxed_line(Line::from(Span::styled(
-                format!(" {title} "),
-                style,
-            )))),
-        area,
-    );
-}
 
 /// Each step with a tick (the running one with a spinner) and what it did
 /// under it. Once it's over the details fold away and the finish follows:

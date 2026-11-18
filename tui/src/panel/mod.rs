@@ -8,6 +8,7 @@ pub mod view;
 use crate::db::Game;
 use crate::engine::apply::RevertGroup;
 use crate::engine::game_settings::{Category, Fix, Purpose, Status};
+use crate::engine::identify::Store;
 use crate::engine::install::{Engine, Override, Plan, Vcrun};
 use crate::engine::installed::{Installed, OverrideKind};
 use crate::engine::launcher::changes::{self, LogLevel};
@@ -294,9 +295,30 @@ pub struct Panel {
 /// One line of the Status box: fine, or a problem worth a look.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StatusLine {
-    pub ok: bool,
+    pub level: Check,
     pub label: &'static str,
     pub value: String,
+}
+
+/// How a preflight line came out: matches the profile (or is simply there),
+/// worth a look, stops the install, or nothing to check it against.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Check {
+    Ok,
+    Warn,
+    Fail,
+    Unknown,
+}
+
+impl Check {
+    pub fn badge(self) -> &'static str {
+        match self {
+            Check::Ok => "[ OK ]",
+            Check::Warn => "[WARN]",
+            Check::Fail => "[FAIL]",
+            Check::Unknown => "[ -- ]",
+        }
+    }
 }
 
 /// The pause before each Status line and the time per character it types.
@@ -361,25 +383,123 @@ impl Panel {
     /// found around it. A line that isn't `ok` is a problem the page knows of.
     pub fn status_lines(&self) -> Vec<StatusLine> {
         let f = &self.facts;
-        let line = |ok, label, value: String| StatusLine { ok, label, value };
-        let folder = crate::library::tilde(&f.game_dir, &self.home);
+        let line = |level, label, value: String| StatusLine {
+            level,
+            label,
+            value,
+        };
+        // Full paths, with ~ for the home folder.
+        let tilde = |p: &Path| crate::library::tilde(p, &self.home);
+        let mut out = Vec::new();
+
         let wanted = &f.exe_hint;
-        let mut out = vec![match &f.exe {
-            Some(e) if wanted.is_empty() || e.eq_ignore_ascii_case(wanted) => line(
-                true,
-                "Game",
-                crate::library::tilde(&f.game_dir.join(e), &self.home),
-            ),
-            _ if !wanted.is_empty() => line(false, "Game", format!("{wanted} isn't in {folder}")),
-            _ => line(false, "Game", format!("Couldn't find an .exe in {folder}")),
-        }];
-        if self.installed.is_some() {
-            out.push(line(true, "Installed", view::status_line(self)));
+        out.push(match &f.exe {
+            Some(e) if wanted.is_empty() || e.eq_ignore_ascii_case(wanted) => {
+                line(Check::Ok, "Exe", e.clone())
+            }
+            _ if !wanted.is_empty() => line(Check::Fail, "Exe", format!("{wanted} not found")),
+            _ => line(Check::Fail, "Exe", "no .exe found".into()),
+        });
+        out.push(line(Check::Ok, "Location", tilde(&f.game_dir)));
+
+        match (f.store, &f.heroic) {
+            (Some(Store::Steam), _) => {
+                out.push(line(Check::Ok, "Store", "Steam".into()));
+                out.push(line(Check::Ok, "ID", f.id.clone()));
+            }
+            (Some(Store::Gog), _) | (_, Some(_)) => {
+                out.push(line(Check::Ok, "Store", "GOG, through Heroic".into()));
+                if !f.id.is_empty() {
+                    out.push(line(Check::Ok, "ID", f.id.clone()));
+                }
+            }
+            _ => out.push(line(Check::Warn, "Store", "not in Steam or Heroic".into())),
         }
-        for (ok, label, value) in f.summary(&self.home) {
-            out.push(line(ok, label, value));
+
+        let api = |e: Engine| match e {
+            Engine::Dsoal => "DirectSound3D",
+            Engine::OpenAlSoft => "OpenAL",
+        };
+        let using = api(f.engine());
+        out.push(match (&f.profile_api, &f.files_api) {
+            (Some(_), Some(e)) if f.api_disagrees() => {
+                let found = match e.api {
+                    crate::engine::detect::Api::OpenAl => "OpenAL",
+                    _ => "DirectSound3D",
+                };
+                line(
+                    Check::Warn,
+                    "Audio",
+                    format!("files say {found}, profile says {using}"),
+                )
+            }
+            (_, Some(e)) => {
+                let file = match f.engine() {
+                    Engine::OpenAlSoft if !e.openal_file.is_empty() => &e.openal_file,
+                    _ if !e.ds_file.is_empty() => &e.ds_file,
+                    _ => &e.openal_file,
+                };
+                let file = Path::new(file)
+                    .file_name()
+                    .map_or(String::new(), |n| n.to_string_lossy().into_owned());
+                line(Check::Ok, "Audio", format!("{using} ({file})"))
+            }
+            (Some(_), None) => line(Check::Ok, "Audio", format!("{using} (profile)")),
+            (None, None) => line(Check::Unknown, "Audio", format!("unknown, using {using}")),
+        });
+
+        out.push(match (f.linux_build, f.arch) {
+            (true, _) => line(
+                Check::Fail,
+                "Arch",
+                "Linux version: needs the Windows one".into(),
+            ),
+            (false, Some(a)) => line(Check::Ok, "Arch", format!("{a}-bit")),
+            (false, None) => line(Check::Unknown, "Arch", "unknown, using 32-bit".into()),
+        });
+
+        out.push(match &f.prefix {
+            Some(p) => line(Check::Ok, "Prefix", tilde(p)),
+            None => line(Check::Fail, "Prefix", "none yet: run the game once".into()),
+        });
+        if f.prefix.is_some() {
+            out.push(match &f.runner {
+                Some(crate::engine::wine::Runner::Protontricks { .. }) => {
+                    line(Check::Ok, "Wine", "Proton".into())
+                }
+                Some(crate::engine::wine::Runner::Wine { .. }) => {
+                    line(Check::Ok, "Wine", "plain Wine".into())
+                }
+                None => line(Check::Fail, "Wine", "none found".into()),
+            });
+        }
+
+        // A config file its settings change that the game hasn't made yet.
+        let mut missing: Vec<&str> = self
+            .fixes
+            .iter()
+            .filter_map(|x| x.missing_file.as_deref())
+            .collect();
+        missing.dedup();
+        for file in missing {
+            out.push(line(
+                Check::Warn,
+                "Config",
+                format!("no {file} yet: run the game once"),
+            ));
         }
         out
+    }
+
+    /// The console's last preflight line: what happens next.
+    pub fn preflight_verdict(&self) -> &'static str {
+        if self.problem.is_some() || self.status_lines().iter().any(|l| l.level == Check::Fail) {
+            "Not ready."
+        } else if self.installed.is_some() {
+            "Already installed."
+        } else {
+            "Ready to install."
+        }
     }
 
     /// How long each Status line takes to type out, in order.
@@ -1655,40 +1775,63 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let p = ready(&tmp.path().join("home"));
 
-        // The choices from the left edge, the profile beside them.
+        // The choices on the left, a fixed width; the console takes the rest.
         let rows = screen(&p, 160, 50);
         let title = row_of(&rows, "Test Game ─ Steam");
         assert!(rows[title].starts_with('╭'), "{}", rows.join("\n"));
-        let profile = row_of(&rows, " Game profile ");
-        assert!(col_of(&rows[profile], " Game profile ") > 110);
-        assert!(rows.iter().any(|r| r.contains("[OK] Game")));
-        assert!(rows.iter().any(|r| r.contains(" Game profile ")));
+        let console = row_of(&rows, " Console ");
+        assert_eq!(
+            rows[console]
+                .chars()
+                .collect::<Vec<_>>()
+                .iter()
+                .rposition(|c| *c == '╭'),
+            Some(usize::from(view::LEFT_W))
+        );
+        assert!(rows.iter().any(|r| r.contains("Preflight: Test Game")));
+        assert!(rows.iter().any(|r| r.contains("[ OK ] Exe")));
+        assert!(rows.iter().any(|r| r.contains("Ready to install.")));
         assert!(rows.iter().any(|r| r.contains("[ Install ]")));
 
-        let rows = screen(&p, 120, 50);
-        let profile = row_of(&rows, " Game profile ");
-        assert!(col_of(&rows[profile], " Game profile ") > 70);
-
         let rows = screen(&p, 90, 60);
-        let profile = row_of(&rows, " Game profile ");
         assert!(
-            profile > row_of(&rows, "1. Audio engine"),
+            row_of(&rows, " Console ") > row_of(&rows, "1. Audio engine"),
             "under the choices"
         );
     }
 
     #[test]
-    fn the_status_box_says_what_was_found_and_flags_problems() {
+    fn the_preflight_lists_what_was_found_and_flags_problems() {
         let tmp = tempfile::tempdir().unwrap();
         let home = tmp.path().join("home");
         let mut p = ready(&home);
         let lines = p.status_lines();
-        let labels: Vec<&str> = lines.iter().map(|l| l.label).collect();
-        assert_eq!(labels[0], "Game");
-        assert!(lines[0].value.starts_with("~/"), "{:?}", lines[0]);
-        let store = lines.iter().find(|l| l.label == "Store").unwrap();
-        assert_eq!(store.value, "Steam (AppID 424242)");
-        assert!(lines.iter().all(|l| l.label != "Installed"));
+        let got: Vec<(&str, &str, Check)> = lines
+            .iter()
+            .map(|l| (l.label, l.value.as_str(), l.level))
+            .collect();
+        assert_eq!(
+            got,
+            [
+                ("Exe", "game.exe", Check::Ok),
+                (
+                    "Location",
+                    "~/.local/share/Steam/steamapps/common/Test Game",
+                    Check::Ok
+                ),
+                ("Store", "Steam", Check::Ok),
+                ("ID", "424242", Check::Ok),
+                ("Audio", "unknown, using DirectSound3D", Check::Unknown),
+                ("Arch", "32-bit", Check::Ok),
+                (
+                    "Prefix",
+                    "~/.local/share/Steam/steamapps/compatdata/424242/pfx",
+                    Check::Ok
+                ),
+                ("Wine", "Proton", Check::Ok),
+            ]
+        );
+        assert_eq!(p.preflight_verdict(), "Ready to install.");
 
         p.facts.prefix = None;
         let prefix = p
@@ -1696,8 +1839,9 @@ mod tests {
             .into_iter()
             .find(|l| l.label == "Prefix")
             .unwrap();
-        assert!(!prefix.ok);
-        assert_eq!(prefix.value, "not found yet");
+        assert_eq!(prefix.level, Check::Fail);
+        assert_eq!(prefix.value, "none yet: run the game once");
+        assert_eq!(p.preflight_verdict(), "Not ready.");
     }
 
     #[test]
@@ -1902,18 +2046,16 @@ mod tests {
             text(&p)[0],
             " ● Can't install yet, because Test Game has no Wine prefix"
         );
+        // The Status card is the left column's first box; no Game profile.
         let rows = screen(&p, 160, 50);
-        assert!(rows.iter().any(|r| r.contains(" EAX fix ")));
-        // The Status box sits right under the EAX fix box, in the same column.
-        let eax = row_of(&rows, " EAX fix ");
         let status = row_of(&rows, " Status ");
-        assert_eq!(status, eax + 3, "{}", rows.join("\n"));
         assert_eq!(
-            col_of(&rows[status], "╭"),
-            col_of(&rows[eax], "╭"),
+            status,
+            row_of(&rows, "Test Game ─ Steam") + 1,
             "{}",
             rows.join("\n")
         );
+        assert!(!rows.iter().any(|r| r.contains("Game profile")));
         assert!(!rows.iter().any(|r| r.contains("ompatib")));
     }
 
@@ -2000,16 +2142,19 @@ mod tests {
         let p = Panel::open("BioShock", &top, Some(game), &home);
         assert_eq!(p.facts.game_dir, release);
         let lines = p.status_lines();
-        assert_eq!(lines[0].label, "Game");
+        assert_eq!(lines[0].label, "Exe");
+        assert_eq!(lines[0].value, "Bioshock.exe");
         assert!(
-            lines[0].value.ends_with("Builds/Release/Bioshock.exe"),
+            lines[1].value.ends_with("Test Game/Builds/Release"),
             "{}",
-            lines[0].value
+            lines[1].value
         );
         // The exe names both, so the files agree with the profile's OpenAL.
-        let files = lines.iter().find(|l| l.label == "Game files").unwrap();
-        assert!(files.ok, "{}", files.value);
-        assert_eq!(files.value, "32-bit, OpenAL");
+        let audio = lines.iter().find(|l| l.label == "Audio").unwrap();
+        assert_eq!(
+            (audio.level, audio.value.as_str()),
+            (Check::Ok, "OpenAL (Bioshock.exe)")
+        );
     }
 
     #[test]
@@ -2022,16 +2167,13 @@ mod tests {
             ds_file: "Galaxy.dll".into(),
             openal_file: String::new(),
         });
-        let files = p
+        let audio = p
             .status_lines()
             .into_iter()
-            .find(|l| l.label == "Game files")
+            .find(|l| l.label == "Audio")
             .unwrap();
-        assert!(!files.ok);
-        assert_eq!(
-            files.value,
-            "32-bit, OpenAL, as its profile says, but Galaxy.dll points to DirectSound3D."
-        );
+        assert_eq!(audio.level, Check::Warn);
+        assert_eq!(audio.value, "files say DirectSound3D, profile says OpenAL");
     }
 
     #[test]
@@ -2092,30 +2234,67 @@ mod tests {
     }
 
     #[test]
-    fn when_the_files_dont_say_the_status_says_so_without_a_warning() {
+    fn when_the_files_dont_say_the_preflight_leans_on_the_profile() {
         let tmp = tempfile::tempdir().unwrap();
         let mut p = ready(&tmp.path().join("home"));
+        let audio = |p: &Panel| {
+            p.status_lines()
+                .into_iter()
+                .find(|l| l.label == "Audio")
+                .map(|l| (l.level, l.value))
+                .unwrap()
+        };
         p.facts.profile_api = Some("openal".into());
         p.facts.files_api = None;
-        let files = p
-            .status_lines()
-            .into_iter()
-            .find(|l| l.label == "Game files")
-            .unwrap();
-        assert!(files.ok);
-        assert_eq!(files.value, "32-bit, OpenAL (per its profile)");
-        // With no profile either, it's a guess, and flagged.
+        assert_eq!(audio(&p), (Check::Ok, "OpenAL (profile)".to_string()));
+        // With no profile either, it's a guess.
         p.facts.profile_api = None;
-        let files = p
+        assert_eq!(
+            audio(&p),
+            (Check::Unknown, "unknown, using DirectSound3D".to_string())
+        );
+    }
+
+    #[test]
+    fn a_config_file_the_game_hasnt_made_yet_is_a_warning() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut p = ready(&tmp.path().join("home"));
+        p.fixes = vec![fix("Enable EAX", Status::Missing, &["s_useEAXReverb"])];
+        let config = p
             .status_lines()
             .into_iter()
-            .find(|l| l.label == "Game files")
+            .find(|l| l.label == "Config")
             .unwrap();
-        assert!(!files.ok);
-        assert_eq!(
-            files.value,
-            "32-bit, DirectSound3D (a guess). Its files don't mention OpenAL or DirectSound3D."
-        );
+        assert_eq!(config.level, Check::Warn);
+        assert_eq!(config.value, "no Quake4Config.cfg yet: run the game once");
+        // A warning isn't a failure: still ready.
+        assert_eq!(p.preflight_verdict(), "Ready to install.");
+    }
+
+    #[test]
+    fn the_console_carries_on_from_the_preflight_into_the_run() {
+        use super::run::{Finish, RunView};
+        let tmp = tempfile::tempdir().unwrap();
+        let mut p = ready(&tmp.path().join("home"));
+        p.screen = Screen::Run(RunView::finished_with(
+            vec![(
+                "Copying the files into the game's folder".into(),
+                Vec::new(),
+            )],
+            Vec::new(),
+            Finish {
+                ok: true,
+                title: "Installed".into(),
+                next: Vec::new(),
+                settings: Vec::new(),
+                lines: Vec::new(),
+            },
+        ));
+        let rows = screen(&p, 160, 50);
+        let pre = row_of(&rows, "Preflight: Test Game");
+        let done = row_of(&rows, " Installed");
+        let step = row_of(&rows, "Copying the files");
+        assert!(pre < done && done < step, "{}", rows.join("\n"));
     }
 
     #[test]

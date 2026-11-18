@@ -481,7 +481,7 @@ fn archive_list(json: &str) -> Vec<Archive> {
 }
 
 /// One numbered OpenAL Soft release with a Windows build.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Release {
     pub tag: String,
     /// `2026-05-12`.
@@ -534,7 +534,7 @@ fn release_list(json: &str) -> Vec<Release> {
 
 /// Every build a choice can offer: what kcat has published, or with no
 /// network, what's cached. Newest first.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Catalog {
     /// `tag` is the revision, `r697`.
     pub dsoal: Vec<Release>,
