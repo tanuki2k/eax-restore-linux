@@ -39,9 +39,8 @@ edit the eleven config formats (`ini`, `ini_braces`, `set_commands`, `key_value`
 ## Branches
 
 `dev` takes new work; `main` is stable and only takes fixes and game data that
-went through `dev` first. Every push to `dev` publishes the rolling `dev`
-prerelease. A tag named `dev` exists, so push with
-`refs/heads/dev:refs/heads/dev`.
+went through `dev` first. Every push to `dev` publishes the rolling
+prerelease on the `nightly` tag.
 
 ## Conventions that apply to most changes
 
