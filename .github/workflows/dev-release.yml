@@ -15,7 +15,7 @@ concurrency:
 jobs:
   dev-release:
     runs-on: ubuntu-latest
-    # A manual run from another branch would move the rolling dev tag and
+    # A manual run from another branch would move the rolling nightly tag and
     # replace the asset the dev update channel installs.
     if: github.ref == 'refs/heads/dev'
     steps:
@@ -62,13 +62,13 @@ jobs:
         run: |
           title="Dev build ${STAMP_VERSION} (${STAMP_DATE})"
           notes="Automated build from the \`dev\` branch. **Not a stable release.** The startup banner reads \`v${STAMP_VERSION}  (${STAMP_DATE})\`. Stable users: use the Latest release instead."
-          if gh release view dev >/dev/null 2>&1; then
-            git tag -f dev
-            git push -f origin refs/tags/dev
-            gh release edit dev --prerelease --title "$title" --notes "$notes"
-            gh release upload dev dist/eax-restore-linux.sh dist/eax-restore-linux.sh.sha256 --clobber
+          if gh release view nightly >/dev/null 2>&1; then
+            git tag -f nightly
+            git push -f origin refs/tags/nightly
+            gh release edit nightly --prerelease --title "$title" --notes "$notes"
+            gh release upload nightly dist/eax-restore-linux.sh dist/eax-restore-linux.sh.sha256 --clobber
           else
-            gh release create dev --prerelease --target "$GITHUB_SHA" \
+            gh release create nightly --prerelease --target "$GITHUB_SHA" \
               --title "$title" --notes "$notes" \
               dist/eax-restore-linux.sh dist/eax-restore-linux.sh.sha256
           fi
@@ -79,7 +79,7 @@ jobs:
         run: |
           latest=$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" -q .tag_name)
           echo "Latest release is: $latest"
-          [ "$latest" != "dev" ] || { echo "::error::dev became the Latest release"; exit 1; }
+          [ "$latest" != "nightly" ] || { echo "::error::nightly became the Latest release"; exit 1; }
 
   # The TUI binary goes on the same rolling prerelease once the script is
   # published. It is its own job so a problem with the Rust build can't hold
@@ -138,4 +138,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release upload dev dist/eax-restore-linux-tui-x86_64 dist/eax-restore-linux-tui-x86_64.sha256 --clobber
+          gh release upload nightly dist/eax-restore-linux-tui-x86_64 dist/eax-restore-linux-tui-x86_64.sha256 --clobber

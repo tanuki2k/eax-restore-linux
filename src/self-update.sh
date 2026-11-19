@@ -40,7 +40,7 @@ script_update_available() {
             "https://api.github.com/repos/$SELF_UPDATE_REPO/compare/$sha...dev" 2>/dev/null \
             | grep -q '"status": *"ahead"' || return 1
         SELF_UPDATE_VERSION="the newest dev build"
-        SELF_UPDATE_URL="https://github.com/$SELF_UPDATE_REPO/releases/download/dev/eax-restore-linux.sh"
+        SELF_UPDATE_URL="https://github.com/$SELF_UPDATE_REPO/releases/download/nightly/eax-restore-linux.sh"
         return 0
     fi
     tag="$(curl -sIL -o /dev/null --max-time 5 -w '%{url_effective}' \

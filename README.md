@@ -6,7 +6,7 @@
 
 [![Latest release](https://img.shields.io/github/v/release/tanuki2k/eax-restore-linux?label=release)](https://github.com/tanuki2k/eax-restore-linux/releases/latest)
 [![License: MIT](https://img.shields.io/github/license/tanuki2k/eax-restore-linux)](LICENSE)
-[![Dev build](https://img.shields.io/badge/dev%20build-pre--release-orange)](https://github.com/tanuki2k/eax-restore-linux/releases/tag/dev)
+[![Dev build](https://img.shields.io/badge/dev%20build-pre--release-orange)](https://github.com/tanuki2k/eax-restore-linux/releases/tag/nightly)
 
 [What it does](#what-it-does) · [Install](#install) · [Steam Deck](#steam-deck) · [Uninstall](#uninstall) · [Docs](#documentation)
 
@@ -65,7 +65,7 @@ sha256sum -c eax-restore-linux.sh.sha256
 </details>
 
 > [!NOTE]
-> Every change on the `dev` branch is published as a pre-release you can try at `https://github.com/tanuki2k/eax-restore-linux/releases/download/dev/eax-restore-linux.sh`. Its startup banner shows a `-dev` version with the build date and commit. It's unstable and unsupported, and the `.desktop` launcher below only ever fetches the stable release.
+> Every change on the `dev` branch is published as a pre-release you can try at `https://github.com/tanuki2k/eax-restore-linux/releases/download/nightly/eax-restore-linux.sh`. Its startup banner shows a `-dev` version with the build date and commit. It's unstable and unsupported, and the `.desktop` launcher below only ever fetches the stable release.
 
 ## Steam Deck
 

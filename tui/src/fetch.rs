@@ -23,7 +23,7 @@ pub const CHANNEL: &str = match option_env!("EAX_RESTORE_CHANNEL") {
 
 pub fn script_url(channel: &str) -> String {
     if channel == "dev" {
-        format!("https://github.com/{REPO}/releases/download/dev/{NAME}")
+        format!("https://github.com/{REPO}/releases/download/nightly/{NAME}")
     } else {
         format!("https://github.com/{REPO}/releases/latest/download/{NAME}")
     }
@@ -237,7 +237,7 @@ mod tests {
 
     #[test]
     fn each_channel_has_its_own_url_and_cache_folder() {
-        assert!(script_url("dev").ends_with("/releases/download/dev/eax-restore-linux.sh"));
+        assert!(script_url("dev").ends_with("/releases/download/nightly/eax-restore-linux.sh"));
         assert!(script_url("stable").ends_with("/releases/latest/download/eax-restore-linux.sh"));
         let a = cache_path(Path::new("/d"), "dev");
         assert_eq!(

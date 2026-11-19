@@ -29,7 +29,7 @@ Every push to `dev` (and manual `workflow_dispatch`) instead auto-publishes a ro
 **`dev` prerelease** via `.github/workflows/dev-release.yml`: `build.sh` itself
 stamps the version `<base>-dev` (base from `src/globals.sh`, triggered by
 `GITHUB_REF_NAME=dev`) and puts the commit date + short SHA in the date field, then
-the workflow updates the single `dev`-tagged release in place
+the workflow updates the single `nightly`-tagged release (named so it can't be confused with the `dev` branch) in place
 with `dist/eax-restore-linux.sh` and its `.sha256` attached, but only after `bash -n`,
 `shellcheck --severity=error`, the bats suites, the profiler's Python tests and
 `jq empty game-database.json` pass. It's marked `--prerelease` so
