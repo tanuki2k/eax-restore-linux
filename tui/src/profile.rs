@@ -109,7 +109,8 @@ struct Row {
 enum Value {
     /// Lines that are already as they should be.
     Lines(Vec<Vec<Span<'static>>>),
-    /// Text that may be long, wrapped to what is left of the line.
+    /// A path that may be long, wrapped to what is left of the line and
+    /// broken after a `/` when a part is too long for it.
     Text(String, Style),
 }
 
@@ -154,10 +155,12 @@ fn detail_lines(items: Vec<Item>, width: usize) -> Vec<Line<'static>> {
             Item::Row(r) => {
                 let lines = match r.value {
                     Value::Lines(l) => l,
-                    Value::Text(t, style) => wrap(&t, width.saturating_sub(lead).max(8), "")
-                        .into_iter()
-                        .map(|l| vec![Span::styled(l, style)])
-                        .collect(),
+                    Value::Text(t, style) => {
+                        crate::settings::wrap_path(&t, width.saturating_sub(lead).max(8), "")
+                            .into_iter()
+                            .map(|l| vec![Span::styled(l, style)])
+                            .collect()
+                    }
                 };
                 for (i, value) in lines.into_iter().enumerate() {
                     let mut spans = if i == 0 {
@@ -946,6 +949,24 @@ mod tests {
         assert_eq!(release_date("2000-06-23"), "23 June 2000");
         assert_eq!(release_date("2000-06"), "June 2000");
         assert_eq!(release_date("2000"), "2000");
+    }
+
+    #[test]
+    fn a_long_location_wraps_at_its_slashes() {
+        let rows = vec![Item::Row(Row {
+            label: "Location",
+            value: Value::Text(
+                "~/.local/share/Steam/steamapps/common/Some Game With A Long Name/Binaries/Win32"
+                    .into(),
+                theme::dim(),
+            ),
+        })];
+        let t = text(&detail_lines(rows, 40));
+        for line in t.lines() {
+            assert!(line.chars().count() <= 40, "too wide: {line:?}\n{t}");
+        }
+        assert!(t.starts_with(" -> Location: ~/.local/share/Steam/"), "{t}");
+        assert!(t.contains("\n              steamapps/common/Some"), "{t}");
     }
 
     #[test]

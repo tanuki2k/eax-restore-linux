@@ -9,14 +9,49 @@ use ratatui::style::Stylize;
 use ratatui::text::{Line, Span};
 use serde_json::Value;
 
+/// A word longer than a line (a path, mostly) in pieces that fit: each
+/// ends after a `/` when there's one to break at, else at the edge.
+fn split_long(word: &str, room: usize) -> Vec<String> {
+    let mut pieces = Vec::new();
+    let mut rest: Vec<char> = word.chars().collect();
+    while rest.len() > room {
+        let cut = rest[..room]
+            .iter()
+            .rposition(|&c| c == '/')
+            .filter(|&at| at > 0)
+            .map_or(room, |at| at + 1);
+        pieces.push(rest.drain(..cut).collect());
+    }
+    pieces.push(rest.into_iter().collect());
+    pieces
+}
+
 /// Splits `text` into lines of at most `width` characters, each starting with
 /// `indent`. A line break the writer meant is kept, and a blank line stays one.
+/// A word is never split, so one longer than the line runs past it.
 pub fn wrap(text: &str, width: usize, indent: &str) -> Vec<String> {
+    wrap_with(text, width, indent, false)
+}
+
+/// [`wrap`] for a path: a word too long for the line is broken, after a `/`
+/// where it can be, so the path stays inside its pane.
+pub fn wrap_path(text: &str, width: usize, indent: &str) -> Vec<String> {
+    wrap_with(text, width, indent, true)
+}
+
+fn wrap_with(text: &str, width: usize, indent: &str, break_long: bool) -> Vec<String> {
     let room = width.saturating_sub(indent.chars().count()).max(8);
     let mut out = Vec::new();
     for para in text.split('\n') {
         let mut line = String::new();
-        for word in para.split_whitespace() {
+        let words = para.split_whitespace().flat_map(|w| {
+            if break_long && w.chars().count() > room {
+                split_long(w, room)
+            } else {
+                vec![w.to_string()]
+            }
+        });
+        for word in words {
             let would_be =
                 line.chars().count() + usize::from(!line.is_empty()) + word.chars().count();
             if !line.is_empty() && would_be > room {
@@ -26,7 +61,7 @@ pub fn wrap(text: &str, width: usize, indent: &str) -> Vec<String> {
             if !line.is_empty() {
                 line.push(' ');
             }
-            line.push_str(word);
+            line.push_str(&word);
         }
         out.push(if line.is_empty() {
             String::new()
