@@ -34,6 +34,7 @@ pub const FIELDS: [Field; 5] = [
 
 const RESET_TEXT: &str = "Every setting on this screen goes back to how it came.";
 const RESET_ASK: &str = "Reset all settings to their defaults?";
+const RESET_HELP: &str = "Puts every setting back to how it came.";
 
 fn opts(list: &[(&str, &str)]) -> Vec<Opt> {
     list.iter()
@@ -174,11 +175,11 @@ pub struct PrefsScreen {
     list_top: std::cell::Cell<usize>,
     /// The reset's yes/no question is showing.
     pub asking: bool,
+    /// Yes is the reset question's highlighted button, rather than No.
+    yes: bool,
     /// Why the last save failed.
     pub error: Option<String>,
     pub closed: bool,
-    /// Where the focused row's field was last drawn, for its dropdown.
-    field: std::cell::Cell<Option<Rect>>,
     /// The build lists, while they're looked up, then once they're here.
     builds_rx: Option<std::sync::mpsc::Receiver<BuildInfo>>,
     pub build_info: Option<BuildInfo>,
@@ -202,9 +203,9 @@ impl PrefsScreen {
             list: None,
             list_top: std::cell::Cell::new(0),
             asking: false,
+            yes: true,
             error: None,
             closed: false,
-            field: std::cell::Cell::new(None),
             builds_rx: None,
             build_info: None,
         }
@@ -241,14 +242,12 @@ impl PrefsScreen {
 
     pub fn handle_key(&mut self, key: KeyEvent) {
         if self.asking {
-            match key.code {
-                KeyCode::Char('y' | 'Y') => {
-                    self.asking = false;
+            if let Some(reset) = crate::panel::view::question_key(key.code, &mut self.yes) {
+                self.asking = false;
+                if reset {
                     self.prefs = Prefs::default();
                     self.save();
                 }
-                KeyCode::Char('n' | 'N') | KeyCode::Esc => self.asking = false,
-                _ => {}
             }
             return;
         }
@@ -286,7 +285,10 @@ impl PrefsScreen {
                     self.list_top.set(0);
                     self.list = Some(f.get(&self.prefs, self.build_info.as_ref()));
                 }
-                None => self.asking = true,
+                None => {
+                    self.asking = true;
+                    self.yes = true;
+                }
             },
             _ => {}
         }
@@ -294,7 +296,7 @@ impl PrefsScreen {
 
     pub fn keys(&self) -> Vec<(&'static str, &'static str)> {
         if self.asking {
-            vec![("y", "reset"), ("n", "keep them")]
+            crate::panel::view::QUESTION_KEYS.to_vec()
         } else if self.list.is_some() {
             vec![("↑/↓", "choose"), ("Enter", "pick"), ("Esc", "keep it")]
         } else {
@@ -328,9 +330,6 @@ impl PrefsScreen {
             .max()
             .unwrap_or(10)
             .min(width.saturating_sub(title_w + 8).max(6));
-        // The focused row's line and the field's width, placed once the
-        // pop-up's position is known.
-        let mut field_at = None;
         for (i, field) in FIELDS.iter().enumerate() {
             let sel = self.focus == i;
             let info = self.build_info.as_ref();
@@ -353,9 +352,6 @@ impl PrefsScreen {
             };
             let frame = Style::new().fg(theme::LABEL);
             let name = format!("{:<title_w$}", field.title());
-            if sel {
-                field_at = Some(lines.len() as u16);
-            }
             lines.push(
                 Line::from(vec![
                     gutter(sel),
@@ -392,20 +388,31 @@ impl PrefsScreen {
         ]));
         lines.push(Line::from(""));
         // What the focused row's value means, or what Reset does.
+        let info = self.build_info.as_ref();
         let help = match FIELDS.get(self.focus) {
-            Some(field) => {
-                let info = self.build_info.as_ref();
-                field.options(&self.prefs, info)[field.get(&self.prefs, info)]
-                    .help
-                    .clone()
-            }
-            None => "Puts every setting back to how it came.".into(),
+            Some(field) => field.options(&self.prefs, info)[field.get(&self.prefs, info)]
+                .help
+                .clone(),
+            None => RESET_HELP.into(),
         };
+        let help = crate::settings::wrap(&help, width, "");
+        // Room for the longest help any row can show, so the pop-up keeps
+        // one height as the focus moves between one- and two-line ones.
+        let tallest = FIELDS
+            .iter()
+            .flat_map(|f| f.options(&self.prefs, info))
+            .map(|o| o.help)
+            .chain([RESET_HELP.to_string()])
+            .map(|h| crate::settings::wrap(&h, width, "").len())
+            .max()
+            .unwrap_or(0)
+            .max(2);
+        let pad = tallest.saturating_sub(help.len());
         lines.extend(
-            crate::settings::wrap(&help, width, "")
-                .into_iter()
+            help.into_iter()
                 .map(|l| Line::from(Span::styled(l, theme::dim()))),
         );
+        lines.extend(std::iter::repeat_n(Line::from(""), pad));
         if let Some(e) = &self.error {
             lines.push(Line::from(""));
             lines.push(Line::from(Span::styled(e.clone(), theme::label())));
@@ -416,14 +423,6 @@ impl PrefsScreen {
         let inner = block.inner(popup);
         f.render_widget(block, popup);
         f.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }), inner);
-        self.field.set(field_at.map(|row| {
-            Rect::new(
-                inner.x + 2 + title_w as u16,
-                inner.y + row,
-                (field_w + 6) as u16,
-                1,
-            )
-        }));
 
         if let (Some(sel), Some(field)) = (self.list, FIELDS.get(self.focus)) {
             crate::panel::view::draw_dropdown(
@@ -431,13 +430,12 @@ impl PrefsScreen {
                 field.title(),
                 &field.options(&self.prefs, self.build_info.as_ref()),
                 (field.get(&self.prefs, self.build_info.as_ref()), sel),
-                self.field.get(),
                 area,
                 &self.list_top,
             );
         }
         if self.asking {
-            crate::panel::view::draw_question(f, RESET_TEXT, RESET_ASK, area);
+            crate::panel::view::draw_question(f, RESET_TEXT, RESET_ASK, self.yes, area);
         }
     }
 }
@@ -473,6 +471,17 @@ mod tests {
     }
 
     #[test]
+    fn the_pop_up_keeps_one_height_whichever_row_has_focus() {
+        let mut s = PrefsScreen::new(Prefs::default(), None);
+        let height = |s: &PrefsScreen| screen(s).lines().filter(|l| !l.trim().is_empty()).count();
+        let first = height(&s);
+        for _ in 0..FIELDS.len() {
+            s.handle_key(key(KeyCode::Down));
+            assert_eq!(height(&s), first, "{}", screen(&s));
+        }
+    }
+
+    #[test]
     fn every_field_round_trips_each_option() {
         for field in FIELDS {
             for i in 0..field.options(&Prefs::default(), None).len() {
@@ -481,11 +490,11 @@ mod tests {
                 assert_eq!(field.get(&p, None), i, "{field:?} option {i}");
             }
         }
-        // The shipped defaults: Latest numbered builds (after Latest rolling
-        // options), the first of the rest, and stereo that detects.
+        // The shipped defaults: Latest builds, the first of the rest, and
+        // stereo that detects.
         let p = Prefs::default();
         let firsts: Vec<usize> = FIELDS.iter().map(|f| f.get(&p, None)).collect();
-        assert_eq!(firsts, [1, 1, 0, SpeakerPref::Auto.index(), 0]);
+        assert_eq!(firsts, [0, 0, 0, SpeakerPref::Auto.index(), 0]);
     }
 
     #[test]
@@ -500,16 +509,7 @@ mod tests {
         assert!(text.contains("[ Reset to defaults ]"));
         assert!(text.contains("defaults for new installs"));
 
-        // Latest rolling for DSOAL: picked from its dropdown and saved at once.
-        s.handle_key(key(KeyCode::Enter));
-        assert!(screen(&s).contains("─ DSOAL build ─"), "{}", screen(&s));
-        s.handle_key(key(KeyCode::Up));
-        s.handle_key(key(KeyCode::Enter));
-        let rolling = BuildPref("rolling".into());
-        assert_eq!(s.prefs.dsoal_build, rolling);
-        assert_eq!(Prefs::load_from(&file).dsoal_build, rolling);
-
-        // The list from GitHub adds every build under the two.
+        // The list from GitHub adds every build under Latest.
         s.build_info = Some(crate::build_choice::BuildInfo {
             catalog: crate::engine::builds::Catalog {
                 dsoal: vec!["r697".into(), "r696".into()],
@@ -517,17 +517,31 @@ mod tests {
             },
             ..Default::default()
         });
+
+        // DSOAL r696: picked from its dropdown and saved at once.
         s.handle_key(key(KeyCode::Enter));
+        assert!(screen(&s).contains("─ DSOAL build ─"), "{}", screen(&s));
         assert!(screen(&s).contains("r696"), "{}", screen(&s));
-        s.handle_key(key(KeyCode::End));
-        s.handle_key(key(KeyCode::Esc));
+        s.handle_key(key(KeyCode::Down));
+        s.handle_key(key(KeyCode::Down));
+        s.handle_key(key(KeyCode::Enter));
+        let r696 = BuildPref("r696".into());
+        assert_eq!(s.prefs.dsoal_build, r696);
+        assert_eq!(Prefs::load_from(&file).dsoal_build, r696);
 
         // Reset asks first; n keeps them, y puts the shipped ones back.
         s.handle_key(key(KeyCode::End));
         s.handle_key(key(KeyCode::Enter));
         assert!(screen(&s).contains(RESET_ASK));
+        assert!(screen(&s).contains("[ Yes ]  [ No ]"));
         s.handle_key(key(KeyCode::Char('n')));
-        assert_eq!(s.prefs.dsoal_build, rolling);
+        assert_eq!(s.prefs.dsoal_build, r696);
+        // Or No pressed with the arrows and Enter.
+        s.handle_key(key(KeyCode::Enter));
+        s.handle_key(key(KeyCode::Left));
+        s.handle_key(key(KeyCode::Enter));
+        assert!(!s.asking);
+        assert_eq!(s.prefs.dsoal_build, r696);
         s.handle_key(key(KeyCode::Enter));
         s.handle_key(key(KeyCode::Char('y')));
         assert_eq!(s.prefs, Prefs::default());

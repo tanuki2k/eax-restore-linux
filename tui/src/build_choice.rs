@@ -1,8 +1,9 @@
 //! The DSOAL and OpenAL Soft build choices, as the game page and the settings
-//! screen list them: two that always fetch the newest build when it installs,
-//! then every numbered build kcat has published, newest first.
-//! Each option has a key ("rolling", "numbered", or the version
-//! itself) that stays the same when the list is filled in from GitHub.
+//! screen list them: "Latest", which fetches whatever is newest when the
+//! install runs, then every numbered build kcat has published, newest first,
+//! each of which installs exactly that build. Each option has a key
+//! ("numbered", or the version itself) that stays the same when the list is
+//! filled in from GitHub.
 
 use crate::engine::builds::{self, Build, Cache, Catalog, Net, Pins};
 use std::path::PathBuf;
@@ -14,25 +15,20 @@ pub enum Comp {
     Openal,
 }
 
+/// No longer offered (kcat's untested rolling builds); a saved "rolling"
+/// reads as Latest.
 pub const ROLLING: &str = "rolling";
 pub const NUMBERED: &str = "numbered";
-/// No longer offered; a saved "tested" reads as Latest numbered.
+/// No longer offered; a saved "tested" reads as Latest.
 pub const TESTED: &str = "tested";
 /// Only on an installed game: leave its files as they are.
 pub const KEEP: &str = "keep";
 
-/// What GitHub (or, offline, the cache) says is there: the builds to list,
-/// and the versions the "Latest" options stand for right now.
+/// What GitHub (or, offline, the cache) says is there: the builds to list.
 #[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(default)]
 pub struct BuildInfo {
     pub catalog: Catalog,
-    /// latest-master's revision, e.g. `r697`.
-    pub dsoal_rolling: String,
-    /// The pre-release's version and date, e.g. `1.25.2 (2026-11-15)`.
-    pub openal_rolling: String,
-    /// The newest numbered OpenAL Soft release, e.g. `1.25.2`.
-    pub openal_numbered: String,
     /// When it was read from GitHub, in seconds since 1970.
     pub fetched_at: u64,
     /// GitHub couldn't be read and nothing was saved: the lists hold only
@@ -99,12 +95,8 @@ pub fn load(home: &std::path::Path, net: &mut dyn Net, at: u64) -> BuildInfo {
         // Both lists back means GitHub answered; a refusal (its hourly limit)
         // or no network gives empty ones, which aren't worth saving.
         if !dsoal.is_empty() && !openal.is_empty() {
-            let v = builds::lookup(&cache, net, true, &Pins::default());
             let info = BuildInfo {
                 catalog: Catalog { dsoal, openal },
-                dsoal_rolling: v.dsoal_latest,
-                openal_rolling: v.oal_latest,
-                openal_numbered: v.oal_stable,
                 fetched_at: at,
                 offline: false,
             };
@@ -140,18 +132,6 @@ pub struct BuildOpt {
     pub help: String,
 }
 
-fn with_version(name: &str, version: &str) -> String {
-    if version.is_empty() || version == "cached" {
-        return name.to_string();
-    }
-    // "1.25.2 (2026-11-15)" reads as "1.25.2, 2026-11-15" inside brackets.
-    let version = match version.strip_suffix(')').and_then(|v| v.split_once(" (")) {
-        Some((v, date)) => format!("{v}, {date}"),
-        None => version.to_string(),
-    };
-    format!("{name} ({version})")
-}
-
 /// The options for one component, in order. `also` is a version that must be
 /// listed even when the catalog doesn't have it (a saved default, before the
 /// list has arrived or while offline).
@@ -163,35 +143,15 @@ pub fn options(comp: Comp, info: Option<&BuildInfo>, also: Option<&str>) -> Vec<
     };
     let empty = BuildInfo::default();
     let i = info.unwrap_or(&empty);
-    let mut out = match comp {
-        Comp::Dsoal => vec![
-            opt(
-                ROLLING,
-                with_version("Latest rolling", &i.dsoal_rolling),
-                "kcat's newest DSOAL build, fetched when you install. It may not have been tested yet.".into(),
-            ),
-            opt(
-                NUMBERED,
-                with_version(
-                    "Latest numbered",
-                    i.catalog.dsoal.first().map_or("", |r| r.tag.as_str()),
-                ),
-                "The highest-numbered DSOAL build at the time you install.".into(),
-            ),
-        ],
-        Comp::Openal => vec![
-            opt(
-                ROLLING,
-                with_version("Latest rolling", &i.openal_rolling),
-                "kcat's newest OpenAL Soft build, fetched when you install. It may not have been tested yet.".into(),
-            ),
-            opt(
-                NUMBERED,
-                with_version("Latest numbered", &i.openal_numbered),
-                "The newest numbered OpenAL Soft release at the time you install.".into(),
-            ),
-        ],
-    };
+    let mut out = vec![opt(
+        NUMBERED,
+        "Latest".into(),
+        match comp {
+            Comp::Dsoal => "The newest DSOAL build at the time you install.",
+            Comp::Openal => "The newest OpenAL Soft build at the time you install.",
+        }
+        .into(),
+    )];
     if i.offline {
         // Nothing from GitHub and nothing saved: say why the list is short.
         for o in &mut out {
@@ -248,8 +208,7 @@ pub fn keep_option(comp: Comp, installed: Option<&str>) -> BuildOpt {
 /// newest numbered one.
 pub fn to_build(comp: Comp, key: &str, installed: Option<&str>) -> Build {
     match (comp, key) {
-        (_, ROLLING) => Build::Latest,
-        (_, NUMBERED) => Build::Numbered,
+        (_, ROLLING | NUMBERED) => Build::Numbered,
         (Comp::Dsoal, TESTED) => Build::Stable,
         (Comp::Openal, TESTED) => Build::Exact(Pins::default().openal_tag),
         (_, KEEP) => match installed.filter(|v| builds::safe_name(v)) {
@@ -280,15 +239,12 @@ mod tests {
                     date: "2026-05-12".into(),
                 }],
             },
-            dsoal_rolling: "r697".into(),
-            openal_rolling: "1.25.2 (2026-11-15)".into(),
-            openal_numbered: "1.25.2".into(),
             ..BuildInfo::default()
         }
     }
 
     #[test]
-    fn the_latest_two_then_every_build_newest_first() {
+    fn latest_then_every_build_newest_first() {
         let info = info();
         let labels = |c| -> Vec<String> {
             options(c, Some(&info), None)
@@ -296,41 +252,26 @@ mod tests {
                 .map(|o| o.label)
                 .collect()
         };
-        assert_eq!(
-            labels(Comp::Dsoal),
-            [
-                "Latest rolling (r697)",
-                "Latest numbered (r697)",
-                "DSOAL r697",
-                "DSOAL r696"
-            ]
-        );
-        assert_eq!(
-            labels(Comp::Openal),
-            [
-                "Latest rolling (1.25.2, 2026-11-15)",
-                "Latest numbered (1.25.2)",
-                "OpenAL Soft 1.25.2"
-            ]
-        );
+        assert_eq!(labels(Comp::Dsoal), ["Latest", "DSOAL r697", "DSOAL r696"]);
+        assert_eq!(labels(Comp::Openal), ["Latest", "OpenAL Soft 1.25.2"]);
         // Under each: when it came out, or nothing when that isn't known.
         let helps: Vec<String> = options(Comp::Dsoal, Some(&info), None)
             .into_iter()
-            .skip(2)
+            .skip(1)
             .map(|o| o.help)
             .collect();
         assert_eq!(helps, ["Released on 2026-11-17.", ""]);
         assert_eq!(
-            options(Comp::Openal, Some(&info), None)[2].help,
+            options(Comp::Openal, Some(&info), None)[1].help,
             "Released on 2026-05-12."
         );
-        // Before the list arrives: the two that need no list, plus a saved
+        // Before the list arrives: Latest, which needs no list, plus a saved
         // version so the choice isn't lost.
         let keys: Vec<String> = options(Comp::Dsoal, None, Some("r650"))
             .into_iter()
             .map(|o| o.key)
             .collect();
-        assert_eq!(keys, [ROLLING, NUMBERED, "r650"]);
+        assert_eq!(keys, [NUMBERED, "r650"]);
     }
 
     /// A network that answers from canned pages, counts the requests, and
@@ -410,7 +351,7 @@ mod tests {
 
     #[test]
     fn each_key_installs_its_build() {
-        assert_eq!(to_build(Comp::Dsoal, ROLLING, None), Build::Latest);
+        assert_eq!(to_build(Comp::Dsoal, ROLLING, None), Build::Numbered);
         assert_eq!(to_build(Comp::Dsoal, NUMBERED, None), Build::Numbered);
         assert_eq!(to_build(Comp::Dsoal, TESTED, None), Build::Stable);
         assert_eq!(

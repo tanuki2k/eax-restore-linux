@@ -237,6 +237,8 @@ pub enum Screen {
 pub struct Question {
     pub text: String,
     pub ask: String,
+    /// Yes is the highlighted button, rather than No.
+    pub yes: bool,
     /// Where the answer goes: the worker, or the panel itself.
     pub to: Asker,
 }
@@ -276,9 +278,6 @@ pub struct Panel {
     pub reveal: Option<Instant>,
     /// How far the right column's game profile is scrolled.
     pub info_scroll: u16,
-    /// Where the focused choice's field was last drawn, so its list opens
-    /// under it like a dropdown.
-    pub field: std::cell::Cell<Option<ratatui::layout::Rect>>,
     pub(crate) home: PathBuf,
     untested: bool,
     /// The player's defaults for a new install, from the settings screen.
@@ -361,7 +360,6 @@ impl Panel {
             changed_disk: false,
             reveal: animate.then(Instant::now),
             info_scroll: 0,
-            field: std::cell::Cell::new(None),
             home: home.to_path_buf(),
             untested: ops::untested_from_env(),
             // Tests start from the shipped defaults, whatever this PC saved.
@@ -1138,6 +1136,7 @@ impl Panel {
                     self.question = Some(Question {
                         text: "Your changes for this game haven't been applied.".into(),
                         ask: "Leave without applying them?".into(),
+                        yes: true,
                         to: Asker::Leave,
                     });
                 } else {
@@ -1196,10 +1195,11 @@ impl Panel {
     }
 
     fn answer_key(&mut self, key: KeyEvent) {
-        let answer = match key.code {
-            KeyCode::Char('y') | KeyCode::Char('Y') | KeyCode::Enter => true,
-            KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Esc => false,
-            _ => return,
+        let Some(q) = self.question.as_mut() else {
+            return;
+        };
+        let Some(answer) = view::question_key(key.code, &mut q.yes) else {
+            return;
         };
         let Some(q) = self.question.take() else {
             return;
@@ -1540,6 +1540,7 @@ impl Panel {
                 self.question = Some(Question {
                     text,
                     ask,
+                    yes: true,
                     to: Asker::Worker,
                 });
             }
@@ -1634,11 +1635,30 @@ mod tests {
         assert_eq!(plan.arch, 64);
         assert!(p.dirty());
 
-        // Leaving with choices made asks first; "no" stays.
+        // Leaving with choices made asks first, with Yes and No buttons;
+        // "no" stays.
         p.handle_key(key(KeyCode::Esc));
         assert!(p.question.is_some());
+        let rows = screen(&p, 160, 50);
+        assert!(
+            rows.iter().any(|r| r.contains("[ Yes ]  [ No ]")),
+            "{}",
+            rows.join("\n")
+        );
         p.handle_key(key(KeyCode::Char('n')));
         assert!(!p.closed);
+        // The arrows move to No, and Enter presses it.
+        p.handle_key(key(KeyCode::Esc));
+        p.handle_key(key(KeyCode::Right));
+        assert!(p.question.as_ref().is_some_and(|q| !q.yes));
+        p.handle_key(key(KeyCode::Enter));
+        assert!(p.question.is_none() && !p.closed);
+        // Enter on Yes, highlighted to start with, leaves.
+        p.handle_key(key(KeyCode::Esc));
+        p.handle_key(key(KeyCode::Enter));
+        assert!(p.closed);
+        // y still answers straight away.
+        p.closed = false;
         p.handle_key(key(KeyCode::Esc));
         p.handle_key(key(KeyCode::Char('y')));
         assert!(p.closed);
@@ -1705,7 +1725,7 @@ mod tests {
         assert_eq!(lines.len(), 1);
         assert!(matches!(jobs[..], [Job::Speakers(_)]));
 
-        // Each build is its own choice: the rolling DSOAL (after Keep) leaves
+        // Each build is its own choice: Latest DSOAL (after Keep) leaves
         // OpenAL Soft as it is, which with no version recorded is the newest
         // numbered one.
         pick(&mut p, RowKind::DsoalBuild, 1);
@@ -1713,7 +1733,7 @@ mod tests {
         assert!(matches!(
             &jobs[..],
             [Job::Install { plan, .. }]
-                if plan.dsoal_build == Build::Latest && plan.openal_build == Build::Numbered
+                if plan.dsoal_build == Build::Numbered && plan.openal_build == Build::Numbered
         ));
     }
 
@@ -2060,7 +2080,7 @@ mod tests {
     }
 
     #[test]
-    fn choices_are_dropdowns_that_open_under_their_row() {
+    fn choices_are_dropdowns_that_open_in_the_middle() {
         let tmp = tempfile::tempdir().unwrap();
         let mut p = ready(&tmp.path().join("home"));
         let rows = screen(&p, 160, 50);
@@ -2084,14 +2104,22 @@ mod tests {
             rows.join("\n")
         );
 
-        // Enter on a build: its list's top border is the row under the field.
+        // Enter on a build: its list opens in the middle of the screen,
+        // not under the field.
         pick_focus(&mut p, RowKind::OpenalBuild);
         p.handle_key(key(KeyCode::Enter));
         let rows = screen(&p, 160, 50);
-        let builds = row_of(&rows, "OpenAL Soft build  ");
-        let top = &rows[builds + 1];
-        assert!(
-            top.contains("╭") && top.contains(" OpenAL Soft build "),
+        let top = row_of(&rows, " OpenAL Soft build ─");
+        let list = open_list(&p, "OpenAL Soft build");
+        let height = list.len() + 1;
+        assert_eq!(top, (50 - height) / 2, "{}", rows.join("\n"));
+        let title = rows[top].find(" OpenAL Soft build ").unwrap();
+        let left = rows[top][..title]
+            .rfind('╭')
+            .map(|b| rows[top][..b].chars().count());
+        assert_eq!(
+            left,
+            Some((160 - usize::from(view::LIST_W)) / 2),
             "{}",
             rows.join("\n")
         );
@@ -2115,7 +2143,7 @@ mod tests {
             sound[..3],
             [RowKind::Engine, RowKind::DsoalBuild, RowKind::OpenalBuild]
         );
-        assert_eq!(p.plan().dsoal_build, Build::Latest);
+        assert_eq!(p.plan().dsoal_build, Build::Numbered);
     }
 
     #[test]
@@ -2200,7 +2228,7 @@ mod tests {
         let rows = screen(&p, 160, 50);
         // No taller than the screen, with a scroll bar inside its right edge.
         assert!(list.len() < 50, "{}", rows.join("\n"));
-        assert!(list.iter().any(|r| r.contains("Latest rolling")));
+        assert!(list.iter().any(|r| r.contains("Latest")));
         assert!(
             list.iter().any(|r| r.ends_with("││")),
             "{}",
@@ -2220,7 +2248,7 @@ mod tests {
             "{}",
             list.join("\n")
         );
-        assert!(!list.iter().any(|r| r.contains("Latest rolling")));
+        assert!(!list.iter().any(|r| r.contains("Latest")));
         // PgUp moves five builds up and the window follows.
         p.handle_key(key(KeyCode::PageUp));
         let list = open_list(&p, "DSOAL build");
@@ -2299,36 +2327,39 @@ mod tests {
 
     #[test]
     fn the_build_lists_fill_in_and_keep_whats_chosen() {
-        use crate::build_choice::{BuildInfo, ROLLING};
+        use crate::build_choice::{BuildInfo, NUMBERED};
         let tmp = tempfile::tempdir().unwrap();
         let mut p = ready(&tmp.path().join("home"));
-        pick(&mut p, RowKind::DsoalBuild, 0);
-        assert_eq!(p.row(RowKind::DsoalBuild).unwrap().keys[0], ROLLING);
+        assert_eq!(p.row(RowKind::DsoalBuild).unwrap().keys, [NUMBERED]);
         p.set_build_info(BuildInfo {
             catalog: crate::engine::builds::Catalog {
                 dsoal: vec!["r697".into(), "r690".into()],
                 openal: Vec::new(),
             },
-            dsoal_rolling: "r697".into(),
+            ..BuildInfo::default()
+        });
+        pick(&mut p, RowKind::DsoalBuild, 2);
+        let labels: Vec<String> = p
+            .row(RowKind::DsoalBuild)
+            .unwrap()
+            .options
+            .iter()
+            .map(|o| o.label.clone())
+            .collect();
+        assert_eq!(labels, ["Latest", "DSOAL r697", "DSOAL r690"]);
+        // An exact build goes to the install as that version.
+        assert_eq!(p.plan().dsoal_build, Build::Exact("r690".into()));
+        // A newer list keeps r690 chosen, still a change from the default.
+        p.set_build_info(BuildInfo {
+            catalog: crate::engine::builds::Catalog {
+                dsoal: vec!["r698".into(), "r697".into(), "r690".into()],
+                openal: Vec::new(),
+            },
             ..BuildInfo::default()
         });
         let r = p.row(RowKind::DsoalBuild).unwrap();
-        let labels: Vec<&str> = r.options.iter().map(|o| o.label.as_str()).collect();
-        assert_eq!(
-            labels,
-            [
-                "Latest rolling (r697)",
-                "Latest numbered (r697)",
-                "DSOAL r697",
-                "DSOAL r690"
-            ]
-        );
-        // Still on Latest rolling, still a change from the default.
-        assert_eq!(r.value(), "Latest rolling (r697)");
+        assert_eq!(r.value(), "DSOAL r690");
         assert!(r.changed());
-        // An exact build goes to the install as that version.
-        pick(&mut p, RowKind::DsoalBuild, 3);
-        assert_eq!(p.plan().dsoal_build, Build::Exact("r690".into()));
     }
 
     #[test]
@@ -2345,7 +2376,8 @@ mod tests {
         };
         p.build();
         let plan = p.plan();
-        assert_eq!(plan.dsoal_build, Build::Latest);
+        // A saved "rolling" from before reads as Latest.
+        assert_eq!(plan.dsoal_build, Build::Numbered);
         // A saved version is listed even before the list arrives.
         assert_eq!(plan.openal_build, Build::Exact("1.24.3".into()));
         assert_eq!(plan.over, Override::Manual);
@@ -2391,8 +2423,17 @@ mod tests {
                 r.contains(&format!("╭─ {title} ")) || r.contains(&format!("─ {title} ─"))
             })
             .unwrap_or_else(|| panic!("{}", rows.join("\n")));
-        let left = rows[top].chars().position(|c| c == '╭').unwrap();
-        let width = rows[top].chars().skip(left).position(|c| c == '╮').unwrap() + 1;
+        // The list's own corner: the last one before its title, since a
+        // full-height list shares its top row with the page's border.
+        let chars: Vec<char> = rows[top].chars().collect();
+        let at = chars
+            .iter()
+            .collect::<String>()
+            .find(&format!(" {title} "))
+            .map(|b| rows[top][..b].chars().count())
+            .unwrap();
+        let left = chars[..at].iter().rposition(|&c| c == '╭').unwrap();
+        let width = chars[left..].iter().position(|&c| c == '╮').unwrap() + 1;
         rows[top..]
             .iter()
             .map(|r| r.chars().skip(left).take(width).collect::<String>())

@@ -6,9 +6,9 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
 /// A build choice as the settings screen saves it: an option's key from
-/// `build_choice` ("rolling", "numbered", or a version). Older files said
-/// "stable" or "tested", which now read as Latest numbered, or "latest" (the
-/// rolling one).
+/// `build_choice` ("numbered", which the list calls Latest, or a version).
+/// Older files said "stable", "tested", "latest" or "rolling", which all
+/// read as Latest now.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(from = "String", into = "String")]
 pub struct BuildPref(pub String);
@@ -23,9 +23,7 @@ impl From<String> for BuildPref {
     fn from(s: String) -> Self {
         use crate::build_choice::{NUMBERED, ROLLING, TESTED};
         match s.as_str() {
-            "stable" | TESTED => BuildPref(NUMBERED.into()),
-            "latest" | ROLLING => BuildPref(ROLLING.into()),
-            NUMBERED => BuildPref(NUMBERED.into()),
+            "stable" | TESTED | "latest" | ROLLING | NUMBERED => BuildPref(NUMBERED.into()),
             v if crate::engine::builds::safe_name(v) => BuildPref(s),
             _ => BuildPref::default(),
         }
@@ -173,11 +171,11 @@ mod tests {
         std::fs::write(&file, "{ not json").unwrap();
         assert_eq!(Prefs::load_from(&file), Prefs::default());
 
-        // A file from before: stable and tested read as Latest numbered,
-        // latest as the rolling one.
+        // A file from before: stable, tested, latest and rolling all read
+        // as Latest.
         std::fs::write(&file, r#"{"dsoal_build":"latest","openal_build":"stable"}"#).unwrap();
         let old = Prefs::load_from(&file);
-        assert_eq!(old.dsoal_build.0, "rolling");
+        assert_eq!(old.dsoal_build.0, "numbered");
         assert_eq!(old.openal_build.0, "numbered");
 
         // A setting this version doesn't have any more (the cover art) is skipped.

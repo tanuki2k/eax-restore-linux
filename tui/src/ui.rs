@@ -934,9 +934,10 @@ mod tests {
         app.handle_key(KeyEvent::new(KeyCode::F(2), KeyModifiers::NONE));
         let (rows, top, left, right, bottom) = edges(&app, "Settings");
         assert_eq!((left, right), (help_l, help_r), "{}", rows.join("\n"));
-        // Fitted to its text: the focused row's help, a margin row, the border.
+        // Fitted to its text: the focused row's help, room under it for the
+        // longest help, a margin row, the border.
         assert!(
-            rows[bottom - 2].contains("The highest-numbered DSOAL build at the time you install."),
+            rows[bottom - 3].contains("The newest DSOAL build at the time you install."),
             "{}",
             rows.join("\n")
         );

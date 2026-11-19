@@ -12,6 +12,7 @@ use crate::engine::installed::OverrideKind;
 use crate::theme;
 use crate::ui::{boxed, boxed_line, gutter};
 use ratatui::buffer::Buffer;
+use ratatui::crossterm::event::KeyCode;
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
@@ -65,7 +66,7 @@ pub fn draw(f: &mut Frame, p: &Panel, area: Rect) {
         draw_list(f, p, area);
     }
     if let Some(q) = &p.question {
-        draw_question(f, &q.text, &q.ask, area);
+        draw_question(f, &q.text, &q.ask, q.yes, area);
     }
 }
 
@@ -76,7 +77,6 @@ fn draw_middle(f: &mut Frame, p: &Panel, area: Rect) {
     let block = boxed_line(title(p));
     let inner = block.inner(area);
     f.render_widget(block, area);
-    p.field.set(None);
     let [banner, inner] =
         Layout::vertical([Constraint::Length(3), Constraint::Min(0)]).areas(inner);
     f.render_widget(
@@ -486,19 +486,6 @@ fn draw_choices(f: &mut Frame, p: &Panel, area: Rect) {
         None if matches!(p.focused(), Some(Item::Button(_))) => total.saturating_sub(area.height),
         None => 0,
     };
-    if let (Some(fy), Some(Item::Choice(..))) = (focus_y, p.focused()) {
-        if fy >= top && fy < top + area.height {
-            let (title_w, field_w) = field_geometry(p, usize::from(area.width));
-            // Past the box's border and the gutter, then the row's name.
-            let x = area.x + 1 + 2 + title_w as u16;
-            p.field.set(Some(Rect::new(
-                x,
-                area.y + fy - top,
-                (field_w as u16 + 6).min(area.width.saturating_sub(x - area.x)),
-                1,
-            )));
-        }
-    }
     let buf = f.buffer_mut();
     for row in 0..area.height.min(total.saturating_sub(top)) {
         for col in 0..area.width {
@@ -1063,7 +1050,7 @@ fn help_text(p: &Panel) -> String {
 /// The page's keys, for the browser's key bar.
 pub fn keys(p: &Panel) -> Vec<(&'static str, &'static str)> {
     if p.question.is_some() {
-        vec![("y", "yes"), ("n", "no")]
+        QUESTION_KEYS.to_vec()
     } else if p.list.is_some() {
         vec![("↑/↓", "move"), ("Enter", "pick"), ("Esc", "keep")]
     } else if p.running() {
@@ -1119,7 +1106,6 @@ fn draw_list(f: &mut Frame, p: &Panel, area: Rect) {
         row.title,
         &row.options,
         (row.chosen, sel),
-        p.field.get(),
         area,
         &p.list_top,
     );
@@ -1154,7 +1140,6 @@ pub fn draw_dropdown(
     title: &str,
     options: &[super::Opt],
     (chosen, sel): (usize, usize),
-    field: Option<Rect>,
     area: Rect,
     top: &std::cell::Cell<usize>,
 ) {
@@ -1166,23 +1151,8 @@ pub fn draw_dropdown(
     let (lines, spans) = list_lines_and_spans(options, chosen, sel, text_w);
     // As tall as its lines, or the screen; a longer list scrolls.
     let h = (lines.len() as u16 + 4).min(area.height);
-    // Under its field, like a dropdown: above it when there's no room below,
-    // in the middle when the field isn't on screen.
-    let r = match field {
-        Some(field) => {
-            let x = field.x.min(area.x + area.width - w);
-            let below = field.y + 1;
-            let y = if below + h <= area.y + area.height {
-                below
-            } else if field.y >= area.y + h {
-                field.y - h
-            } else {
-                area.y + area.height.saturating_sub(h)
-            };
-            Rect::new(x, y, w, h.min(area.height))
-        }
-        None => popup(area, w, h),
-    };
+    // Always in the middle of the screen, wherever its field is.
+    let r = popup(area, w, h);
     let viewport = usize::from(r.height.saturating_sub(4)).max(1);
     let total = lines.len();
     let (first, last) = spans.get(sel).copied().unwrap_or((0, 0));
@@ -1265,18 +1235,30 @@ fn option_lines(o: &super::Opt, chosen: bool, on: bool, text_w: usize) -> Vec<Li
     lines
 }
 
-pub(crate) fn draw_question(f: &mut Frame, text: &str, ask: &str, area: Rect) {
+/// A yes/no question in a pop-up, with Yes and No buttons; `yes` is the
+/// highlighted one.
+pub(crate) fn draw_question(f: &mut Frame, text: &str, ask: &str, yes: bool, area: Rect) {
     let w = (text.chars().count().max(ask.chars().count()) + 6).min(70) as u16;
+    let button = |label: &str, sel: bool| {
+        let style = if sel {
+            Style::new()
+                .fg(theme::SELECT_TEXT)
+                .bg(theme::SELECT_BAR)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::new().fg(theme::LABEL)
+        };
+        Span::styled(format!("[ {label} ]"), style)
+    };
     let lines = vec![
         Line::from(text.to_string()),
         Line::from(""),
         Line::from(Span::styled(ask.to_string(), theme::white())),
         Line::from(""),
         Line::from(vec![
-            Span::styled("y", theme::key()),
-            Span::raw(" yes   "),
-            Span::styled("n", theme::key()),
-            Span::raw(" no"),
+            button("Yes", yes),
+            Span::raw("  "),
+            button("No", !yes),
         ])
         .centered(),
     ];
@@ -1294,6 +1276,30 @@ pub(crate) fn draw_question(f: &mut Frame, text: &str, ask: &str, area: Rect) {
         r,
     );
 }
+
+/// A key pressed while a yes/no question shows: the arrows and Tab move
+/// between Yes and No, Enter presses the highlighted one, and y, n and Esc
+/// answer straight away. `None` while there's no answer yet.
+pub(crate) fn question_key(code: KeyCode, yes: &mut bool) -> Option<bool> {
+    match code {
+        KeyCode::Char('y' | 'Y') => Some(true),
+        KeyCode::Char('n' | 'N') | KeyCode::Esc => Some(false),
+        KeyCode::Enter => Some(*yes),
+        KeyCode::Left | KeyCode::Right | KeyCode::Tab | KeyCode::BackTab => {
+            *yes = !*yes;
+            None
+        }
+        _ => None,
+    }
+}
+
+/// The key bar while a yes/no question shows.
+pub(crate) const QUESTION_KEYS: [(&str, &str); 4] = [
+    ("←/→", "move"),
+    ("Enter", "press"),
+    ("y", "yes"),
+    ("n", "no"),
+];
 
 /// A path inside the game's folder or its prefix, from there.
 fn short_path(p: &Panel, path: &std::path::Path) -> String {
