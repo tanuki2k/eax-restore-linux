@@ -215,3 +215,28 @@ make_heroic() {
     [ "$status" -ne 0 ]
     [ "$(cat "$F")" == "not json" ]
 }
+
+# ---- from the script audits --------------------------------------------------
+
+@test "merge_dll_override: dsound.dll and dsound are the same rule" {
+    [ "$(merge_dll_override 'dsound.dll=n;foo=b' dsound)" == "foo=b;dsound=n,b" ]
+    [ "$(merge_dll_override 'DSOUND=n,b' dsound)" == "dsound=n,b" ]
+    [ "$(merge_dll_override 'a.dll,dsound.dll=n' dsound)" == "a.dll=n;dsound=n,b" ]
+}
+
+@test "launch options: an & in the options or log path is kept as typed" {
+    run launch_options_with_override 'WINEDLLOVERRIDES="d3d9=n" MY=a&b %command%' dsound
+    [[ "$output" == *'MY=a&b %command%' ]]
+    [[ "$output" != *'WINEDLLOVERRIDES="d3d9=n" '* ]]
+    run launch_options_with_dsoal_log 'FOO=1 %command% -x' 4 'Z:/g/Rock & Roll/dsoal.log'
+    [ "$output" == 'FOO=1 DSOAL_LOGLEVEL=4 DSOAL_LOGFILE="Z:/g/Rock & Roll/dsoal.log" %command% -x' ]
+}
+
+@test "vdf launch options: \\n and \\t escapes survive a read and write" {
+    f="$BATS_TEST_TMPDIR/localconfig.vdf"
+    printf '%s\n' '"UserLocalConfigStore"' '{' '	"Software"' '	{' '		"Valve"' '		{' '			"Steam"' '			{' '				"apps"' '				{' '					"7"' '					{' '						"LaunchOptions"		"a\tb\\c"' '					}' '				}' '			}' '		}' '	}' '}' > "$f"
+    v="$(vdf_get_launch_options "$f" 7)"
+    [ "$v" == $'a\tb\\c' ]
+    vdf_set_launch_options "$f" 7 "$v"
+    grep -qF '"a\tb\\c"' "$f"
+}

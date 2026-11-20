@@ -12,6 +12,6 @@
      `bash -n dist/eax-restore-linux.sh` alone is not sufficient for behavioral changes. -->
 
 - [ ] Ran `./build.sh && bash -n dist/eax-restore-linux.sh` (syntax check)
-- [ ] Ran `bats tests/unit tests/integration`
+- [ ] Ran `tests/run.sh`
 - [ ] If `data/` changed: ran `tools/format-game-database.sh --check` and `tools/build-game-database.sh --check`
 - [ ] Tested against a real game install

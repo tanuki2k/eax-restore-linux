@@ -57,3 +57,18 @@ setup() {
     [ "$(cat "$dir/run.sh")" == "echo old" ]
     [ -z "$(ls -A "$dir" | grep eax-restore-update)" ]
 }
+
+# ---- through a symlink -------------------------------------------------------
+
+@test "install_script_update: a symlinked script stays a symlink and the target is updated" {
+    local dir="$BATS_TEST_TMPDIR/u"; mkdir -p "$dir/real" "$dir/bin"
+    printf '#!/bin/bash\necho new\n' > "$dir/new.sh"
+    printf 'echo old\n' > "$dir/real/run.sh"; chmod 750 "$dir/real/run.sh"
+    ln -s "$dir/real/run.sh" "$dir/bin/run.sh"
+    ( cd "$dir" && sha256sum new.sh > new.sh.sha256 )
+    curl() { cat "$dir/new.sh.sha256"; }
+    fetch_with_progress() { cp "$dir/new.sh" "$2"; }
+    install_script_update "http://x/new.sh" "$dir/bin/run.sh"
+    [ -L "$dir/bin/run.sh" ]
+    grep -q "echo new" "$dir/real/run.sh"
+}

@@ -6,7 +6,7 @@ load ../helpers
 
 setup() {
     load_script_functions
-    source "$REPO_ROOT/src/detection.sh"
+    load_src detection
     GAME="$BATS_TEST_TMPDIR/Stalker Test"
     mkdir -p "$GAME/bin"
 }

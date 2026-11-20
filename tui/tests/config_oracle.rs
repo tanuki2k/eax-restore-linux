@@ -392,10 +392,9 @@ fn bats_scenarios(file: &str) -> Vec<Scenario> {
 fn the_bats_tests_cases_match() {
     let mut scenarios = Vec::new();
     for file in [
-        "config-keys.bats",
-        "audit-tier2.bats",
-        "apply-game-settings.bats",
-        "gadb-and-registry.bats",
+        "game-config-keys.bats",
+        "game-config-apply.bats",
+        "game-config-binary-registry.bats",
     ] {
         scenarios.extend(bats_scenarios(file));
     }

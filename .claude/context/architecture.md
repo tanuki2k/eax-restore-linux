@@ -81,12 +81,16 @@ launcher).
   name, rewrites the links to match, and adds the profile editor's README as `profile-editor`.
   Page file names must stay unique across the folders. To see what it makes, run
   `tools/build-wiki.py docs tools/profiler/README.md /tmp/wiki`.
-- **Tests:** `./build.sh && bats tests/unit tests/integration` (needs `bats`;
+- **Tests:** `./build.sh && tests/run.sh` (needs `bats`; with GNU `parallel` it runs
+  them with `--jobs $(nproc)`, about 10 s instead of a minute;
   `.github/workflows/test.yml` runs them plus `bash -n`, `shellcheck --severity=error`
   over `dist/`, `build.sh` and `tools/`, and the profiler's Python tests,
   `cd tools/profiler && python3 -m unittest discover -s tests`). `tests/unit/` sources
-  `src/*.sh` directly and covers the config editors (every format, binary_switches, registry),
-  launch-option/VDF/Heroic editing, `parse_selection` and the speaker round trip.
+  `src/*.sh` directly, one file per src file it tests (`<src>.bats`, or `<src>-<topic>.bats`
+  where one src file has several, e.g. `game-config-keys.bats`); put a new test in the file
+  for the function's src file. `tests/helpers.bash` has `load_src`, `use_temp_home` and
+  `write_db` for setups. `tui/tests/config_oracle.rs` replays the `write_file "$F" '…'`
+  cases of three `game-config-*.bats` files through the Rust editors, so keep that shape.
   `tests/integration/` runs the built script against a fake Steam world in a temp
   `$HOME` (`env.bash`: fake library, prefix, caches, PE stubs; `tests/fixtures/bin`
   stubs `protontricks` (its `regedit` import is applied to `user.reg` by

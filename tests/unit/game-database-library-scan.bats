@@ -6,13 +6,11 @@ load ../helpers
 
 setup() {
     load_script_functions
-    source "$REPO_ROOT/src/detection.sh"
-    source "$REPO_ROOT/src/game-database.sh"
-    export HOME="$BATS_TEST_TMPDIR/home"
+    load_src detection game-database
+    use_temp_home
     STEAM="$HOME/.local/share/Steam"
     mkdir -p "$STEAM/steamapps/common"
-    GAME_DATABASE_FILE="$BATS_TEST_TMPDIR/db.json"
-    cat > "$GAME_DATABASE_FILE" <<'JSON'
+    write_db <<'JSON'
 {"schema_version":3,"games":[
  {"id":"zeta","name":"Zeta Quest","stores":{"steam":{"id":300},"gog":{"id":9003}}},
  {"id":"alpha","name":"alpha trek","stores":{"steam":{"id":100}}},

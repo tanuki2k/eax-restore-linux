@@ -6,9 +6,8 @@ load ../helpers
 
 setup() {
     load_script_functions
-    source "$REPO_ROOT/src/game-database.sh"
-    GAME_DATABASE_FILE="$BATS_TEST_TMPDIR/db.json"
-    cat > "$GAME_DATABASE_FILE" <<'JSON'
+    load_src game-database
+    write_db <<'JSON'
 {"schema_version":3,"games":[
  {"id":"alpha","name":"Alpha","stores":{"steam":{"id":1}},"eax":{"api":"directsound3d"}},
  {"id":"beta","name":"Beta","stores":{"steam":{"id":2}},"eax":{"api":"openal"},"tested":false},

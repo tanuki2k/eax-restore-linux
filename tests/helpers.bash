@@ -11,6 +11,29 @@ load_script_functions() {
     done
 }
 
+# Usage: load_src <name>...
+# Sources src/<name>.sh for each name, after load_script_functions.
+load_src() {
+    local f
+    # shellcheck disable=SC1090
+    for f in "$@"; do
+        source "$REPO_ROOT/src/$f.sh"
+    done
+}
+
+# A fresh HOME in the test's own folder, so nothing reads or writes the real one.
+use_temp_home() {
+    export HOME="$BATS_TEST_TMPDIR/home"
+    mkdir -p "$HOME"
+}
+
+# Usage: write_db <<'JSON' ... JSON
+# Writes the game database from stdin and points GAME_DATABASE_FILE at it.
+write_db() {
+    GAME_DATABASE_FILE="$BATS_TEST_TMPDIR/db.json"
+    cat > "$GAME_DATABASE_FILE"
+}
+
 # Usage: write_file <path> <text...>
 # Writes the text with printf '%b', so \r and \n escapes work.
 write_file() {

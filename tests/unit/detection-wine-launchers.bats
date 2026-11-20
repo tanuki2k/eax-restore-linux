@@ -8,11 +8,9 @@ load ../helpers
 
 setup() {
     load_script_functions
-    source "$REPO_ROOT/src/detection.sh"
-    source "$REPO_ROOT/src/game-database.sh"
-    export HOME="$BATS_TEST_TMPDIR/home"
+    load_src detection game-database
+    use_temp_home
     unset XDG_DATA_HOME XDG_CONFIG_HOME
-    mkdir -p "$HOME"
     log_cmd() { :; }
 }
 

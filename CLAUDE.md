@@ -26,7 +26,8 @@ edit the eleven config formats (`ini`, `ini_braces`, `set_commands`, `key_value`
 
 - Build: `./build.sh` · syntax: `bash -n dist/eax-restore-linux.sh` ·
   lint: `shellcheck dist/eax-restore-linux.sh`
-- Tests: `./build.sh && bats tests/unit tests/integration`; profiler:
+- Tests: `./build.sh && tests/run.sh` (parallel when GNU `parallel` is
+  installed); profiler:
   `cd tools/profiler && python3 -m unittest discover -s tests`.
   **Add a test with each bug fix.**
 - Rust (`tui/`): `cd tui && cargo fmt --check && cargo clippy --locked

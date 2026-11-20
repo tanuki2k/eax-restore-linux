@@ -8,7 +8,7 @@ load ../helpers
 
 setup() {
     load_script_functions
-    source "$REPO_ROOT/src/game-database.sh"
+    load_src game-database
     GAME_DATABASE_FILE="$REPO_ROOT/tests/fixtures/game-database.json"
     DUMP="$BATS_TEST_TMPDIR/dump.sh"
     { declare -p GREEN YELLOW CYAN WHITE BOLD DIM NOTE NC GAME_DATABASE_FILE SCRIPT_VERSION; declare -f; } > "$DUMP"

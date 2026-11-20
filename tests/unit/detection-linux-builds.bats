@@ -8,9 +8,7 @@ load ../helpers
 
 setup() {
     load_script_functions
-    source "$REPO_ROOT/src/detection.sh"
-    source "$REPO_ROOT/src/game-database.sh"
-    source "$REPO_ROOT/src/cache.sh"
+    load_src detection game-database cache
     ROOT="$BATS_TEST_TMPDIR/steamapps/common/Test Game"
     mkdir -p "$ROOT"
     GAME_NAME="Test Game"

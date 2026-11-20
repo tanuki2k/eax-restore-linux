@@ -32,7 +32,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install bats and shellcheck
-        run: sudo apt-get update && sudo apt-get install -y bats shellcheck
+        run: sudo apt-get update && sudo apt-get install -y bats parallel shellcheck
 
       - name: Install runtime tools the script expects
         run: sudo apt-get install -y jq unzip file python3-jsonschema
@@ -47,7 +47,7 @@ jobs:
         run: shellcheck --severity=error dist/eax-restore-linux.sh build.sh tools/*.sh tools/profiler/*.sh tools/profiler/eax-profiler
 
       - name: Tests
-        run: bats tests/unit tests/integration
+        run: tests/run.sh
 
       - name: Profiler tests
         run: cd tools/profiler && python3 -m unittest discover -s tests

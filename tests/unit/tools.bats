@@ -1,12 +1,17 @@
 #!/usr/bin/env bats
+# The repo's build tools: the wiki build, build.sh and the game database build.
+
+load ../helpers
+
+setup() {
+    ROOT="$REPO_ROOT"
+    OUT="$BATS_TEST_TMPDIR/wiki"
+}
+
+# ---- tools/build-wiki.py -----------------------------------------------------
 # The wiki ignores folders, so tools/build-wiki.py flattens docs/ into one folder
 # of pages and rewrites the links between them. A link that still names a folder
 # or ends in .md opens the raw file on the wiki instead of the page.
-
-setup() {
-    ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
-    OUT="$BATS_TEST_TMPDIR/wiki"
-}
 
 @test "every docs page and the editor guide become a flat wiki page" {
     "$ROOT/tools/build-wiki.py" "$ROOT/docs" "$ROOT/tools/profiler/README.md" "$OUT"
@@ -59,4 +64,26 @@ PY
     echo "# editor" > "$BATS_TEST_TMPDIR/editor.md"
     "$ROOT/tools/build-wiki.py" "$BATS_TEST_TMPDIR/docs" "$BATS_TEST_TMPDIR/editor.md" "$OUT"
     [ "$(cat "$OUT/p.md")" == '[a](https://example.com/x.md) [b](#top) [c](other#part)' ]
+}
+
+# ---- build.sh and build-game-database ----------------------------------------
+
+@test "build-game-database: a file that isn't valid JSON fails the build" {
+    local w="$BATS_TEST_TMPDIR/repo"
+    mkdir -p "$w/tools" "$w/data/games/tested" "$w/data/games/untested" "$w/data/drafts"
+    cp "$REPO_ROOT"/tools/*.sh "$REPO_ROOT"/tools/*.jq "$w/tools/" 2>/dev/null || cp -r "$REPO_ROOT"/tools/. "$w/tools/"
+    echo '{ not json' > "$w/data/games/tested/broken.json"
+    run "$w/tools/build-game-database.sh"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *broken.json* ]]
+    [ ! -e "$w/game-database.json" ]
+}
+
+@test "build.sh: a src file missing from COMPONENTS stops the build" {
+    local w="$BATS_TEST_TMPDIR/b"; mkdir -p "$w"
+    cp -r "$REPO_ROOT/src" "$REPO_ROOT/build.sh" "$w/"
+    echo '# stray' > "$w/src/not-listed.sh"
+    run "$w/build.sh"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"not-listed.sh"* ]]
 }

@@ -7,9 +7,8 @@ load ../helpers
 
 setup() {
     load_script_functions
-    source "$REPO_ROOT/src/game-database.sh"
-    GAME_DATABASE_FILE="$BATS_TEST_TMPDIR/db.json"
-    cat > "$GAME_DATABASE_FILE" <<'JSON'
+    load_src game-database
+    write_db <<'JSON'
 {"games":[{"id":"g","name":"G","stores":{"steam":{"id":1}},"game_config":{
   "files":{"a.ini":{"format":"ini","locations":["game:a.ini"]}},
   "audio_settings":[

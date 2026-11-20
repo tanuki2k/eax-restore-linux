@@ -6,7 +6,7 @@ load ../helpers
 
 setup() {
     load_script_functions
-    source "$REPO_ROOT/src/game-database.sh"
+    load_src game-database
     GAME_DATABASE_FILE="$BATS_TEST_TMPDIR/game-database.json"
     jq '(.games[] | select(.stores.steam.id == 424242)) |=
             (.notes = "First line of the notes.\n\nSecond paragraph."

@@ -139,3 +139,12 @@ REG
     [ "$(config_get_key "$F" registry 'Software\Wow6432Node\Creative Labs\Test' Name)" == "__ABSENT__" ]
     [ "$(config_get_key "$F" registry 'Software\Wow6432Node\Creative Labs\Test' Speakers)" == "2" ]
 }
+
+# ---- registry strings --------------------------------------------------------
+
+@test "wine registry strings are escaped when written" {
+    f="$BATS_TEST_TMPDIR/user.reg"
+    printf '%s\n' 'WINE REGISTRY Version 2' '' '[Software\\Test] 1' '"Name"="x"' > "$f"
+    _wine_reg_set "$f" 'Software\Test' Name 'a"b\c'
+    grep -qF '"Name"="a\"b\\c"' "$f"
+}

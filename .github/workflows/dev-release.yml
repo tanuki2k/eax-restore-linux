@@ -43,13 +43,13 @@ jobs:
       # The rolling dev asset is what the dev update channel installs, so a
       # build that fails its tests must not replace it.
       - name: Install test tools
-        run: sudo apt-get update && sudo apt-get install -y bats shellcheck jq unzip file python3-jsonschema
+        run: sudo apt-get update && sudo apt-get install -y bats parallel shellcheck jq unzip file python3-jsonschema
 
       - name: Shellcheck
         run: shellcheck --severity=error dist/eax-restore-linux.sh build.sh tools/*.sh tools/profiler/*.sh tools/profiler/eax-profiler
 
       - name: Tests
-        run: bats tests/unit tests/integration && (cd tools/profiler && python3 -m unittest discover -s tests)
+        run: tests/run.sh && (cd tools/profiler && python3 -m unittest discover -s tests)
 
       - name: Validate the game database
         run: jq empty game-database.json && tools/build-game-database.sh --check && tools/format-game-database.sh --check

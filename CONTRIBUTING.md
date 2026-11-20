@@ -22,7 +22,7 @@ Open an issue and describe what you were trying to do. If it only matters for on
 1. Fork the repo, branch from `dev` and open your pull request against `dev`. `dev` is where everything is developed. `main` is the stable branch the releases come from, and it only gets fixes and game data that have been through `dev` first.
 2. Keep each PR to one fix or feature. Unrelated changes bundled together are hard to review.
 3. Test on a real game install when you can. The script has a lot of branches that depend on the environment (Steam or Heroic, 32 or 64-bit, Proton or native Wine), and a syntax check won't catch them.
-4. Run `./build.sh && bash -n dist/eax-restore-linux.sh && bats tests/unit tests/integration`, after installing `bats`. CI also runs shellcheck and the profiler's Python tests. If you touched `data/`, `tools/` or `game-database.json`, it runs the game database checks as well. A bug fix should come with a test.
+4. Run `./build.sh && bash -n dist/eax-restore-linux.sh && tests/run.sh`, after installing `bats` (and GNU `parallel`, which runs them several at a time). CI also runs shellcheck and the profiler's Python tests. If you touched `data/`, `tools/` or `game-database.json`, it runs the game database checks as well. A bug fix should come with a test.
 5. Say in the PR description what you tested.
 
 ## Adding or fixing a game
