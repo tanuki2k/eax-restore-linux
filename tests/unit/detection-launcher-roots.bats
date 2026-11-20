@@ -18,6 +18,13 @@ setup() {
     [ "$output" == $'/g/one\t111\n/g/two\t222' ]
 }
 
+@test "use_temp_home: XDG folders set outside the test don't apply to the fake home" {
+    export XDG_CONFIG_HOME=/elsewhere/config XDG_DATA_HOME=/elsewhere/data
+    use_temp_home
+    [ "$(xdg_home config)" == "$HOME/.config" ]
+    [ "$(xdg_home data)" == "$HOME/.local/share" ]
+}
+
 @test "heroic_installed_jsons: finds installed.json in native and Flatpak Heroic" {
     mkdir -p "$HOME/.config/heroic/gog_store" "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic/gog_store"
     : > "$HOME/.config/heroic/gog_store/installed.json"

@@ -22,8 +22,11 @@ load_src() {
 }
 
 # A fresh HOME in the test's own folder, so nothing reads or writes the real one.
+# The XDG folders go back to their defaults under it: CI sets them to the
+# runner's own, which the fake launchers aren't in.
 use_temp_home() {
     export HOME="$BATS_TEST_TMPDIR/home"
+    unset XDG_CONFIG_HOME XDG_DATA_HOME
     mkdir -p "$HOME"
 }
 

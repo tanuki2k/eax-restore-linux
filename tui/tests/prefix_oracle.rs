@@ -74,6 +74,10 @@ fn bash(script: &str, dir: &Path, env: &[(&str, String)]) -> String {
         .arg(dir)
         .env("REPO", repo_root())
         .env("HOME", dir)
+        // The engine only reads these for the real home, so a fake one gets
+        // the default folders on both sides.
+        .env_remove("XDG_DATA_HOME")
+        .env_remove("XDG_CONFIG_HOME")
         .env(
             "PATH",
             format!("{}:{}", stubs().display(), std::env::var("PATH").unwrap()),

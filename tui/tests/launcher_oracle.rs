@@ -30,6 +30,10 @@ fn bash(script: &str, dir: &Path, home: &Path) -> String {
         .arg(dir)
         .env("SRC", repo_root().join("src"))
         .env("HOME", home)
+        // The engine only reads these for the real home, so a fake one gets
+        // the default folders on both sides.
+        .env_remove("XDG_DATA_HOME")
+        .env_remove("XDG_CONFIG_HOME")
         .env("LC_ALL", "C.UTF-8")
         .env("EAX_RESTORE_NO_LOG", "1")
         .stdin(std::process::Stdio::null())

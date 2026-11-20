@@ -27,6 +27,10 @@ fn bash(script: &str, dir: &Path) -> String {
         .arg(dir)
         .env("SRC", repo_root().join("src"))
         .env("HOME", dir)
+        // The engine only reads these for the real home, so a fake one gets
+        // the default folders on both sides.
+        .env_remove("XDG_DATA_HOME")
+        .env_remove("XDG_CONFIG_HOME")
         .env("LC_ALL", "C.UTF-8")
         .output()
         .expect("bash runs");

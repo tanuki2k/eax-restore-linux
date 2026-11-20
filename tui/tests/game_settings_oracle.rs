@@ -38,6 +38,10 @@ fn bash(script: &str, dir: &Path, env: &[(&str, String)]) -> String {
         .arg(dir)
         .env("SRC", repo_root().join("src"))
         .env("HOME", &home)
+        // The engine only reads these for the real home, so a fake one gets
+        // the default folders on both sides.
+        .env_remove("XDG_DATA_HOME")
+        .env_remove("XDG_CONFIG_HOME")
         .env("USER", "player")
         .env("LC_ALL", "C.UTF-8")
         .envs(env.iter().map(|(k, v)| (*k, v.as_str())))

@@ -5,6 +5,9 @@
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 [ "$#" -gt 0 ] || set -- tests/unit tests/integration
+# CI sets these to the runner's own folders. Point them nowhere here too, so a
+# test that doesn't give itself a fake HOME fails here as it would there.
+export XDG_CONFIG_HOME=/nonexistent/xdg-config XDG_DATA_HOME=/nonexistent/xdg-data
 if command -v parallel >/dev/null; then
     exec bats --jobs "$(nproc)" "$@"
 fi
