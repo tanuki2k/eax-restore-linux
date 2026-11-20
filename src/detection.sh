@@ -844,6 +844,28 @@ faugus_runner_wine() {
     proton_wine_for "$runner"
 }
 
+# Usage: bottles_runner_wine <Bottles data folder> <runner> <arch>
+# The wine binary of a bottle's runner, as Bottles picks it: a sys-* runner
+# is the system's wine, a Proton build (it has toolmanifest.vdf) has it in
+# dist/ or files/, any other runner in bin/, and a win64 bottle uses wine64
+# when the runner has one.
+bottles_runner_wine() {
+    local root="$1" runner="$2" arch="${3:-win64}" dir wine
+    [ -n "$runner" ] || return 0
+    if [[ "$runner" == sys-* ]]; then
+        command -v wine 2>/dev/null
+        return 0
+    fi
+    dir="$root/runners/$runner"
+    wine="$dir/bin/wine"
+    if [ -f "$dir/toolmanifest.vdf" ]; then
+        if [ -d "$dir/dist" ]; then wine="$dir/dist/bin/wine"; else wine="$dir/files/bin/wine"; fi
+    fi
+    [ "$arch" == "win64" ] && [ -e "${wine}64" ] && wine="${wine}64"
+    [ -x "$wine" ] && printf '%s\n' "$wine"
+    return 0
+}
+
 # Usage: bottles_roots
 # Each Bottles data folder present (runners/ and bottles/ live in it):
 # native, then Flatpak.
@@ -885,6 +907,63 @@ lutris_path() {
     printf '%s\n' "$p"
 }
 
+# Usage: lutris_conf_value <config dir> <data dir> <key>
+# A [lutris] setting from lutris.conf (pga_path, runner_dir).
+lutris_conf_value() {
+    awk -v key="$3" '/^\[/ { s = ($0 ~ /^\[lutris\][ \t\r]*$/); next }
+        s { line = $0; sub(/^[ \t]+/, "", line)
+            if (tolower(substr(line, 1, length(key))) == key) {
+                rest = substr(line, length(key) + 1); sub(/^[ \t]+/, "", rest)
+                if (rest ~ /^[=:]/) { v = substr(rest, 2); gsub(/^[ \t]+|[ \t\r]+$/, "", v); print v; exit }
+            } }' "$1/lutris.conf" "$2/lutris.conf" 2>/dev/null | head -n 1
+}
+
+# Usage: lutris_wine_for <version> <Lutris wine folder> [custom wine path]
+# The wine binary of a Lutris Wine version, as Lutris picks it: none set (or
+# "ge-proton") is the newest GE-Proton, "system" and "System wine-x" the
+# system's, "custom" the custom path, a Proton build (a folder holding a
+# proton file, in Lutris's Wine folder, compatibilitytools.d or a Steam
+# library) its dist/ or files/, else <wine folder>/<version>. A version that
+# isn't there falls back to the newest GE-Proton, as Lutris does.
+lutris_wine_for() {
+    local version="${1:-ge-proton}" wine_dir="$2" custom="$3" base d f lib
+    case "$version" in
+        ge-proton) proton_wine_for "GE-Proton"; return 0 ;;
+        system) command -v wine 2>/dev/null; return 0 ;;
+        "System wine-"*) f="/usr/lib/${version#System }/bin/wine"; [ -x "$f" ] && printf '%s\n' "$f"; return 0 ;;
+        custom) [ -x "$custom" ] && printf '%s\n' "$custom"; return 0 ;;
+    esac
+    if [[ "$version" != */* ]]; then
+        local -a bases=("$wine_dir")
+        while IFS=$'\t' read -r _ base; do bases+=("$base/compatibilitytools.d"); done < <(steam_roots)
+        bases+=("$HOME/.local/share/Steam/compatibilitytools.d")
+        while IFS= read -r lib; do bases+=("$lib/common" "$lib"); done < <(steam_library_dirs 2>/dev/null)
+        for base in "${bases[@]}"; do
+            for d in "$base/$version" "$base/$version-$(uname -m)"; do
+                [ -f "$d/proton" ] || continue
+                for f in "$d/dist/bin/wine" "$d/files/bin/wine"; do
+                    [ -e "$f" ] && { printf '%s\n' "$f"; return 0; }
+                done
+            done
+        done
+        [ -x "$wine_dir/$version/bin/wine" ] && { printf '%s\n' "$wine_dir/$version/bin/wine"; return 0; }
+    fi
+    proton_wine_for "GE-Proton"
+}
+
+# Usage: lutris_find_prefix <exe>
+# The prefix above a game's exe, for a game with none set: the first folder
+# up from it that is a prefix (drive_c and user.reg), or has one in prefix/
+# or pfx/, as Lutris looks for it.
+lutris_find_prefix() {
+    local d="$1" p
+    while d="$(dirname "$d")"; [ -n "$d" ] && [ "$d" != "/" ]; do
+        for p in "$d" "$d/prefix" "$d/pfx"; do
+            [ -d "$p/drive_c" ] && [ -e "$p/user.reg" ] && { printf '%s\n' "$p"; return 0; }
+        done
+    done
+}
+
 # Usage: lutris_slug_title <configpath>
 # A title from a game's YAML file name ("deus-ex-1700000000" -> "Deus Ex"),
 # for when Lutris's database can't be read.
@@ -895,7 +974,7 @@ lutris_slug_title() {
 }
 
 _bottles_records() {
-    local root bottles_dir custom conf bottle kind f1 f2 f3 f4 runner="" custom_path="" bpath="" prefix wine title
+    local root bottles_dir custom conf bottle kind f1 f2 f3 f4 runner="" custom_path="" bpath="" arch="" env="" prefix wine title
     while IFS= read -r root; do
         bottles_dir="$root/bottles"
         custom="$(awk "$YAML_AWK_UNQUOTE"'index($0, "custom_bottles_path:") == 1 { print yaml_unquote(substr($0, 21)); exit }' "$root/data.yml" 2>/dev/null)"
@@ -905,8 +984,8 @@ _bottles_records() {
             bottle="$(dirname "$conf")"
             # The bottle's own settings come last, after its programs.
             local -a programs=()
-            while IFS=$'\x1f' read -r kind f1 f2 f3; do
-                if [ "$kind" == "B" ]; then runner="$f1"; custom_path="$f2"; bpath="$f3"
+            while IFS=$'\x1f' read -r kind f1 f2 f3 f4; do
+                if [ "$kind" == "B" ]; then runner="$f1"; custom_path="$f2"; bpath="$f3"; IFS=$'\x1e' read -r arch env <<< "$f4"
                 else programs+=("$f1"$'\x1f'"$f2"$'\x1f'"$f3"); fi
             done < <(awk "$YAML_AWK_UNQUOTE"'
                 function flush() { if (inprog) print "P\037" pname "\037" ppath "\037" premoved; inprog = 0 }
@@ -915,6 +994,8 @@ _bottles_records() {
                     if (index($0, "Runner:") == 1) runner = yaml_unquote(substr($0, 8))
                     if (index($0, "Path:") == 1) bpath = yaml_unquote(substr($0, 6))
                     if (index($0, "Custom_Path:") == 1) custom = yaml_unquote(substr($0, 13))
+                    if (index($0, "Arch:") == 1) arch = yaml_unquote(substr($0, 6))
+                    if (index($0, "Environment:") == 1) env = yaml_unquote(substr($0, 13))
                     next
                 }
                 sec != "External_Programs" { next }
@@ -922,13 +1003,15 @@ _bottles_records() {
                 index($0, "    name:") == 1 { pname = yaml_unquote(substr($0, 10)) }
                 index($0, "    path:") == 1 { ppath = yaml_unquote(substr($0, 10)) }
                 index($0, "    removed:") == 1 { premoved = yaml_unquote(substr($0, 13)) }
-                END { flush(); print "B\037" runner "\037" custom "\037" bpath }' "$conf" 2>/dev/null)
+                END { flush(); print "B\037" runner "\037" custom "\037" bpath "\037" arch "\036" env }' "$conf" 2>/dev/null)
+            # A Steam bottle is a Steam game's own Proton prefix, which the
+            # Steam route handles.
+            [ "$env" == "Steam" ] && continue
+            # Custom_Path is true (or, in newer files, any non-empty text)
+            # when the bottle lives at Path rather than in this folder.
             prefix="$bottle"
-            [ "$custom_path" == "true" ] && [[ "$bpath" == /* ]] && prefix="$bpath"
-            wine=""
-            if [ -n "$runner" ] && [[ "$runner" != sys-* ]] && [ -x "$root/runners/$runner/bin/wine" ]; then
-                wine="$root/runners/$runner/bin/wine"
-            fi
+            case "$custom_path" in ""|false|False|FALSE) ;; *) [[ "$bpath" == /* ]] && prefix="$bpath" ;; esac
+            wine="$(bottles_runner_wine "$root" "$runner" "$arch")"
             for f4 in "${programs[@]}"; do
                 IFS=$'\x1f' read -r title f2 f3 <<< "$f4"
                 [ "$f3" == "true" ] && continue
@@ -991,26 +1074,27 @@ _lutris_record() {
     exe="$(lutris_path "$(yaml_value "$yml" game exe)" "$dir")"
     [[ "${exe,,}" == *.exe ]] && [ -f "$exe" ] || return 0
     prefix="$(lutris_path "$(yaml_value "$yml" game prefix)" "$dir")"
-    # The game's own Wine version, else the one set for every Wine game.
+    [ -n "$prefix" ] || prefix="$(lutris_find_prefix "$exe")"
+    # The game's own Wine version (and custom path), else the ones set for
+    # every Wine game.
+    local custom
     version="$(yaml_value "$yml" wine version)"
+    custom="$(yaml_value "$yml" wine custom_wine_path)"
     for y in "$cfg/runners/wine.yml" "$data/runners/wine.yml"; do
-        [ -n "$version" ] && break
-        version="$(yaml_value "$y" wine version)"
+        [ -n "$version" ] || version="$(yaml_value "$y" wine version)"
+        [ -n "$custom" ] || custom="$(yaml_value "$y" wine custom_wine_path)"
     done
-    if [ -n "$version" ] && [[ "$version" != */* ]] && [ -x "$data/runners/wine/$version/bin/wine" ]; then
-        wine="$data/runners/wine/$version/bin/wine"
-    fi
+    wine="$(lutris_wine_for "$version" "$runner_dir/wine" "$(lutris_path "$custom")")"
     printf 'Lutris\x1f%s\x1f%s\x1f%s\x1f%s\n' "${title:-$cp}" "$exe" "$prefix" "$wine"
 }
 
 _lutris_records() {
-    local cfg data pga yml cp title dir
+    local cfg data pga yml cp title dir runner_dir
     while IFS=$'\t' read -r cfg data; do
-        pga="$(awk '/^\[/ { s = ($0 ~ /^\[lutris\][ \t\r]*$/); next }
-            s && match($0, /^[ \t]*[Pp][Gg][Aa]_[Pp][Aa][Tt][Hh][ \t]*[=:]/) { v = substr($0, RLENGTH + 1); gsub(/^[ \t]+|[ \t\r]+$/, "", v); print v; exit }' \
-            "$cfg/lutris.conf" "$data/lutris.conf" 2>/dev/null | head -n 1)"
-        pga="$(lutris_path "$pga")"
+        pga="$(lutris_path "$(lutris_conf_value "$cfg" "$data" pga_path)")"
         [ -n "$pga" ] || pga="$data/pga.db"
+        runner_dir="$(lutris_path "$(lutris_conf_value "$cfg" "$data" runner_dir)")"
+        [ -n "$runner_dir" ] || runner_dir="$data/runners"
         if command -v sqlite3 >/dev/null 2>&1 && [ -f "$pga" ]; then
             # Read-only: a running Lutris keeps the file open.
             while IFS=$'\x1f' read -r title cp dir; do

@@ -266,6 +266,7 @@ fn bottle(root: &Path, conf: &Path, out: &mut Vec<LauncherGame>) {
         return;
     };
     let (mut runner, mut custom, mut bpath) = (String::new(), String::new(), String::new());
+    let (mut arch, mut env) = (String::new(), String::new());
     // (name, path, removed)
     let mut programs: Vec<(String, String, String)> = Vec::new();
     let mut current: Option<(String, String, String)> = None;
@@ -282,6 +283,12 @@ fn bottle(root: &Path, conf: &Path, out: &mut Vec<LauncherGame>) {
             }
             if let Some(v) = line.strip_prefix("Custom_Path:") {
                 custom = unquote(v);
+            }
+            if let Some(v) = line.strip_prefix("Arch:") {
+                arch = unquote(v);
+            }
+            if let Some(v) = line.strip_prefix("Environment:") {
+                env = unquote(v);
             }
             continue;
         }
@@ -306,15 +313,21 @@ fn bottle(root: &Path, conf: &Path, out: &mut Vec<LauncherGame>) {
         }
     }
     programs.extend(current.take());
+    // A Steam bottle is a Steam game's own Proton prefix, which the Steam
+    // route handles.
+    if env == "Steam" {
+        return;
+    }
+    // Custom_Path is true (or, in newer files, any non-empty text) when the
+    // bottle lives at Path rather than in this folder.
     let folder = conf.parent().unwrap_or(conf).to_path_buf();
-    let prefix = if custom == "true" && bpath.starts_with('/') {
+    let custom_on = !matches!(custom.as_str(), "" | "false" | "False" | "FALSE");
+    let prefix = if custom_on && bpath.starts_with('/') {
         PathBuf::from(&bpath)
     } else {
         folder
     };
-    let wine = Some(root.join("runners").join(&runner).join("bin/wine")).filter(|w| {
-        !runner.is_empty() && !runner.starts_with("sys-") && super::wine::is_executable(w)
-    });
+    let wine = bottles_runner_wine(root, &runner, &arch);
     for (name, path, removed) in programs {
         let exe = PathBuf::from(&path);
         if removed == "true" || !is_exe(&exe) {
@@ -336,6 +349,42 @@ fn bottle(root: &Path, conf: &Path, out: &mut Vec<LauncherGame>) {
             wine: wine.clone(),
         });
     }
+}
+
+/// `wine` on PATH, as `command -v wine` finds it.
+fn system_wine() -> Option<PathBuf> {
+    let path = std::env::var_os("PATH")?;
+    std::env::split_paths(&path)
+        .map(|d| d.join("wine"))
+        .find(|p| super::wine::is_executable(p))
+}
+
+/// The wine binary of a bottle's runner, as Bottles picks it
+/// (`bottles_runner_wine`): a sys-* runner is the system's wine, a Proton
+/// build (it has toolmanifest.vdf) has it in dist/ or files/, any other
+/// runner in bin/, and a win64 bottle uses wine64 when the runner has one.
+pub fn bottles_runner_wine(root: &Path, runner: &str, arch: &str) -> Option<PathBuf> {
+    if runner.is_empty() {
+        return None;
+    }
+    if runner.starts_with("sys-") {
+        return system_wine();
+    }
+    let dir = root.join("runners").join(runner);
+    let mut wine = dir.join("bin/wine");
+    if dir.join("toolmanifest.vdf").is_file() {
+        wine = if dir.join("dist").is_dir() {
+            dir.join("dist/bin/wine")
+        } else {
+            dir.join("files/bin/wine")
+        };
+    }
+    let arch = if arch.is_empty() { "win64" } else { arch };
+    let wine64 = PathBuf::from(format!("{}64", wine.display()));
+    if arch == "win64" && wine64.exists() {
+        wine = wine64;
+    }
+    super::wine::is_executable(&wine).then_some(wine)
 }
 
 // ---- Faugus -----------------------------------------------------------------
@@ -523,9 +572,9 @@ pub fn lutris_slug_title(slug: &str) -> String {
     }
 }
 
-/// `pga_path` from the `[lutris]` section of lutris.conf (the config
-/// folder's, then the data folder's, read as one, like awk over both).
-fn pga_path(cfg: &Path, data: &Path) -> String {
+/// A `[lutris]` setting from lutris.conf (the config folder's, then the data
+/// folder's, read as one, like awk over both): `lutris_conf_value`.
+fn lutris_conf_value(cfg: &Path, data: &Path, key: &str) -> String {
     let mut inside = false;
     for f in [cfg.join("lutris.conf"), data.join("lutris.conf")] {
         let Ok(text) = std::fs::read_to_string(f) else {
@@ -540,8 +589,9 @@ fn pga_path(cfg: &Path, data: &Path) -> String {
                 continue;
             }
             let l = line.trim_start_matches([' ', '\t']);
-            if l.len() >= 8 && l[..8].eq_ignore_ascii_case("pga_path") {
-                let rest = l[8..].trim_start_matches([' ', '\t']);
+            let n = key.len();
+            if l.len() >= n && l.is_char_boundary(n) && l[..n].eq_ignore_ascii_case(key) {
+                let rest = l[n..].trim_start_matches([' ', '\t']);
                 if let Some(v) = rest.strip_prefix(['=', ':']) {
                     return v.trim_matches([' ', '\t', '\r']).to_string();
                 }
@@ -551,10 +601,91 @@ fn pga_path(cfg: &Path, data: &Path) -> String {
     String::new()
 }
 
+/// The wine binary of a Lutris Wine version, as Lutris picks it
+/// (`lutris_wine_for`): none set (or "ge-proton") is the newest GE-Proton,
+/// "system" and "System wine-x" the system's, "custom" the custom path, a
+/// Proton build (a folder with a proton file, in Lutris's Wine folder,
+/// compatibilitytools.d or a Steam library) its dist/ or files/, else
+/// `<wine_dir>/<version>`. A missing version falls back to the newest
+/// GE-Proton, as Lutris does.
+pub fn lutris_wine_for(
+    home: &Path,
+    version: &str,
+    wine_dir: &Path,
+    custom: Option<&Path>,
+) -> Option<PathBuf> {
+    let version = if version.is_empty() {
+        "ge-proton"
+    } else {
+        version
+    };
+    match version {
+        "ge-proton" => return proton_wine_for(home, "GE-Proton"),
+        "system" => return system_wine(),
+        "custom" => {
+            return custom
+                .filter(|c| super::wine::is_executable(c))
+                .map(Path::to_path_buf)
+        }
+        _ => {}
+    }
+    if let Some(name) = version.strip_prefix("System wine-") {
+        let f = PathBuf::from(format!("/usr/lib/wine-{name}/bin/wine"));
+        return super::wine::is_executable(&f).then_some(f);
+    }
+    if !version.contains('/') {
+        let mut bases = vec![wine_dir.to_path_buf()];
+        bases.extend(
+            steam_roots(home)
+                .iter()
+                .map(|r| r.join("compatibilitytools.d")),
+        );
+        bases.push(home.join(".local/share/Steam/compatibilitytools.d"));
+        for lib in crate::library::steam_library_dirs(home) {
+            bases.push(lib.join("common"));
+            bases.push(lib);
+        }
+        let arch_name = format!("{version}-{}", std::env::consts::ARCH);
+        for base in &bases {
+            for d in [base.join(version), base.join(&arch_name)] {
+                if !d.join("proton").is_file() {
+                    continue;
+                }
+                if let Some(f) = ["dist/bin/wine", "files/bin/wine"]
+                    .iter()
+                    .map(|f| d.join(f))
+                    .find(|f| f.exists())
+                {
+                    return Some(f);
+                }
+            }
+        }
+        let own = wine_dir.join(version).join("bin/wine");
+        if super::wine::is_executable(&own) {
+            return Some(own);
+        }
+    }
+    proton_wine_for(home, "GE-Proton")
+}
+
+/// The prefix above a game's exe, for a game with none set: the first folder
+/// up from it that is a prefix (drive_c and user.reg), or has one in prefix/
+/// or pfx/ (`lutris_find_prefix`).
+pub fn lutris_find_prefix(exe: &Path) -> Option<PathBuf> {
+    let is_prefix = |p: &Path| p.join("drive_c").is_dir() && p.join("user.reg").exists();
+    exe.ancestors()
+        .skip(1)
+        .take_while(|d| !d.as_os_str().is_empty() && *d != Path::new("/"))
+        .flat_map(|d| [d.to_path_buf(), d.join("prefix"), d.join("pfx")])
+        .find(|p| is_prefix(p))
+}
+
+#[allow(clippy::too_many_arguments)]
 fn lutris_record(
     home: &Path,
     cfg: &Path,
     data: &Path,
+    runner_dir: &Path,
     title: &str,
     cp: &str,
     dir: &str,
@@ -577,16 +708,22 @@ fn lutris_record(
     if !is_exe(&exe) {
         return;
     }
-    let prefix = lutris_path(&yaml_value(&yml, "game", "prefix"), dir, home);
+    let prefix = lutris_path(&yaml_value(&yml, "game", "prefix"), dir, home)
+        .or_else(|| lutris_find_prefix(&exe));
+    // The game's own Wine version (and custom path), else the ones set for
+    // every Wine game.
     let mut version = yaml_value(&yml, "wine", "version");
+    let mut custom = yaml_value(&yml, "wine", "custom_wine_path");
     for y in [cfg.join("runners/wine.yml"), data.join("runners/wine.yml")] {
-        if !version.is_empty() {
-            break;
+        if version.is_empty() {
+            version = yaml_value(&y, "wine", "version");
         }
-        version = yaml_value(&y, "wine", "version");
+        if custom.is_empty() {
+            custom = yaml_value(&y, "wine", "custom_wine_path");
+        }
     }
-    let wine = Some(data.join("runners/wine").join(&version).join("bin/wine"))
-        .filter(|w| !version.is_empty() && !version.contains('/') && super::wine::is_executable(w));
+    let custom = lutris_path(&custom, "", home);
+    let wine = lutris_wine_for(home, &version, &runner_dir.join("wine"), custom.as_deref());
     out.push(LauncherGame {
         launcher: "Lutris",
         title: if title.is_empty() { cp } else { title }.to_string(),
@@ -598,8 +735,10 @@ fn lutris_record(
 
 fn lutris(home: &Path, out: &mut Vec<LauncherGame>) {
     for (cfg, data) in lutris_installs(home) {
-        let pga =
-            lutris_path(&pga_path(&cfg, &data), "", home).unwrap_or_else(|| data.join("pga.db"));
+        let pga = lutris_path(&lutris_conf_value(&cfg, &data, "pga_path"), "", home)
+            .unwrap_or_else(|| data.join("pga.db"));
+        let runner_dir = lutris_path(&lutris_conf_value(&cfg, &data, "runner_dir"), "", home)
+            .unwrap_or_else(|| data.join("runners"));
         let rows = if pga.is_file() {
             // Read-only: a running Lutris keeps the file open.
             Command::new("sqlite3")
@@ -623,7 +762,7 @@ fn lutris(home: &Path, out: &mut Vec<LauncherGame>) {
                         f.next().unwrap_or(""),
                         f.next().unwrap_or(""),
                     );
-                    lutris_record(home, &cfg, &data, t, c, d, out);
+                    lutris_record(home, &cfg, &data, &runner_dir, t, c, d, out);
                 }
             }
             // No database, or no sqlite3 to read it: the YAML files alone,
@@ -647,7 +786,16 @@ fn lutris(home: &Path, out: &mut Vec<LauncherGame>) {
                         if !seen.insert(cp.clone()) {
                             continue;
                         }
-                        lutris_record(home, &cfg, &data, &lutris_slug_title(&cp), &cp, "", out);
+                        lutris_record(
+                            home,
+                            &cfg,
+                            &data,
+                            &runner_dir,
+                            &lutris_slug_title(&cp),
+                            &cp,
+                            "",
+                            out,
+                        );
                     }
                 }
             }
@@ -836,6 +984,67 @@ mod tests {
         assert_eq!(r("Proton-CachyOS"), Some(system));
         assert_eq!(r(&h.join("my-proton").display().to_string()), Some(own));
         assert_eq!(r("Missing"), None);
+    }
+
+    fn fake_wine(p: &Path) -> PathBuf {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+        std::fs::write(p, "#!/bin/sh\n").unwrap();
+        std::fs::set_permissions(p, std::fs::Permissions::from_mode(0o755)).unwrap();
+        p.to_path_buf()
+    }
+
+    #[test]
+    fn lutris_versions_resolve_the_way_lutris_resolves_them() {
+        let t = tempfile::tempdir().unwrap();
+        let h = t.path();
+        std::fs::create_dir_all(h.join(".local/share/Steam/steamapps")).unwrap();
+        let tools = h.join(".local/share/Steam/compatibilitytools.d");
+        fake_wine(&tools.join("GE-Proton9-20/files/bin/wine"));
+        let ge = fake_wine(&tools.join("GE-Proton10-1/files/bin/wine"));
+        let custom_proton = fake_wine(&tools.join("Proton-Custom/files/bin/wine"));
+        std::fs::write(tools.join("Proton-Custom/proton"), "").unwrap();
+        let wd = h.join(".local/share/lutris/runners/wine");
+        let own = fake_wine(&wd.join("lutris-7/bin/wine"));
+        let mine = fake_wine(&h.join("mywine/bin/wine"));
+        let r = |v: &str| lutris_wine_for(h, v, &wd, Some(&mine));
+        assert_eq!(r(""), Some(ge.clone()));
+        assert_eq!(r("ge-proton"), Some(ge.clone()));
+        assert_eq!(r("custom"), Some(mine.clone()));
+        assert_eq!(r("Proton-Custom"), Some(custom_proton));
+        assert_eq!(r("lutris-7"), Some(own));
+        assert_eq!(r("lutris-gone"), Some(ge));
+    }
+
+    #[test]
+    fn bottles_runners_resolve_the_way_bottles_resolves_them() {
+        let t = tempfile::tempdir().unwrap();
+        let root = t.path();
+        let soda = fake_wine(&root.join("runners/soda-9/bin/wine"));
+        let px = root.join("runners/proton-x");
+        std::fs::create_dir_all(&px).unwrap();
+        std::fs::write(px.join("toolmanifest.vdf"), "").unwrap();
+        fake_wine(&px.join("files/bin/wine"));
+        let dist = fake_wine(&px.join("dist/bin/wine"));
+        let dist64 = fake_wine(&px.join("dist/bin/wine64"));
+        assert_eq!(bottles_runner_wine(root, "soda-9", "win64"), Some(soda));
+        assert_eq!(bottles_runner_wine(root, "proton-x", ""), Some(dist64));
+        assert_eq!(bottles_runner_wine(root, "proton-x", "win32"), Some(dist));
+        assert_eq!(bottles_runner_wine(root, "gone", "win64"), None);
+        assert_eq!(bottles_runner_wine(root, "", "win64"), None);
+    }
+
+    #[test]
+    fn a_lutris_prefix_is_found_above_the_exe() {
+        let t = tempfile::tempdir().unwrap();
+        let g = t.path().join("Game");
+        std::fs::create_dir_all(g.join("pfx/drive_c")).unwrap();
+        std::fs::write(g.join("pfx/user.reg"), "").unwrap();
+        assert_eq!(
+            lutris_find_prefix(&g.join("bin/x/game.exe")),
+            Some(g.join("pfx"))
+        );
+        assert_eq!(lutris_find_prefix(&t.path().join("Other/game.exe")), None);
     }
 
     #[test]

@@ -102,7 +102,7 @@ faugus_game() {
     printf 'game:\n  exe: "%s"\n' "$HOME/Games/Thief2/thief2.exe" > "$HOME/.local/share/lutris/games/thief-ii-the-metal-age-1800.yml"
     mkdir -p "$BATS_TEST_TMPDIR/bin"
     local f
-    for f in awk sed jq basename dirname cat sort tail cut head tr; do ln -s "$(command -v "$f")" "$BATS_TEST_TMPDIR/bin/$f"; done
+    for f in awk sed jq basename dirname cat sort tail cut head tr uname realpath readlink; do ln -s "$(command -v "$f")" "$BATS_TEST_TMPDIR/bin/$f"; done
     PATH="$BATS_TEST_TMPDIR/bin" run _lutris_records
     [ "${output//$'\x1f'/|}" == "Lutris|Thief Ii The Metal Age|$HOME/Games/Thief2/thief2.exe||$HOME/.local/share/lutris/runners/wine/wine-ge-8/bin/wine" ]
 }
@@ -236,4 +236,52 @@ JSON
     printf 'default-prefix="~/Prefixes"\ndefault-runner="GE-Proton9-20"\n' > "$HOME/.config/faugus-launcher/config.ini"
     run _faugus_records
     [[ "${output//$'\x1f'/|}" == *"|Play Space Quest V|$HOME/Games/Sq5/Play Space Quest V.exe|$HOME/Prefixes/default|$HOME/.local/share/Steam/compatibilitytools.d/GE-Proton9-20/files/bin/wine"* ]]
+}
+
+@test "Lutris Wine versions resolve the way Lutris resolves them" {
+    local tools="$HOME/.local/share/Steam/compatibilitytools.d" wd="$HOME/.local/share/lutris/runners/wine"
+    mkdir -p "$HOME/.local/share/Steam/steamapps" "$BATS_TEST_TMPDIR/bin"
+    runner "$tools/GE-Proton9-20/files/bin/wine"
+    runner "$tools/GE-Proton10-1/files/bin/wine"
+    runner "$tools/Proton-Custom/files/bin/wine"; : > "$tools/Proton-Custom/proton"
+    runner "$wd/lutris-7/bin/wine"
+    runner "$BATS_TEST_TMPDIR/bin/wine"
+    runner "$BATS_TEST_TMPDIR/mywine/bin/wine"
+    run lutris_wine_for "" "$wd"
+    [ "$output" == "$tools/GE-Proton10-1/files/bin/wine" ]
+    run lutris_wine_for "ge-proton" "$wd"
+    [ "$output" == "$tools/GE-Proton10-1/files/bin/wine" ]
+    PATH="$BATS_TEST_TMPDIR/bin:$PATH" run lutris_wine_for "system" "$wd"
+    [ "$output" == "$BATS_TEST_TMPDIR/bin/wine" ]
+    run lutris_wine_for "custom" "$wd" "$BATS_TEST_TMPDIR/mywine/bin/wine"
+    [ "$output" == "$BATS_TEST_TMPDIR/mywine/bin/wine" ]
+    run lutris_wine_for "Proton-Custom" "$wd"
+    [ "$output" == "$tools/Proton-Custom/files/bin/wine" ]
+    run lutris_wine_for "lutris-7" "$wd"
+    [ "$output" == "$wd/lutris-7/bin/wine" ]
+    # Not installed: Lutris falls back to its default, the newest GE-Proton.
+    run lutris_wine_for "lutris-gone" "$wd"
+    [ "$output" == "$tools/GE-Proton10-1/files/bin/wine" ]
+}
+
+@test "lutris.conf's runner_dir moves Lutris's Wine builds" {
+    lutris_game
+    mkdir -p "$HOME/.config/lutris"
+    printf '[lutris]\nrunner_dir = ~/Runners\n' > "$HOME/.config/lutris/lutris.conf"
+    runner "$HOME/Runners/wine/wine-ge-8/bin/wine"
+    run _lutris_records
+    [[ "${output//$'\x1f'/|}" == *"|$HOME/Runners/wine/wine-ge-8/bin/wine" ]]
+}
+
+@test "Bottles: sys- runners use the system Wine, Custom_Path may be text, and Steam bottles are left out" {
+    bottles_game
+    local yml="$HOME/.local/share/bottles/bottles/Gaming/bottle.yml"
+    mkdir -p "$BATS_TEST_TMPDIR/bin" "$BATS_TEST_TMPDIR/Elsewhere"
+    runner "$BATS_TEST_TMPDIR/bin/wine"
+    sed -i "s|^Runner: soda-9|Runner: sys-wine-9.0\nCustom_Path: '$BATS_TEST_TMPDIR/Elsewhere'\nPath: $BATS_TEST_TMPDIR/Elsewhere|" "$yml"
+    PATH="$BATS_TEST_TMPDIR/bin:$PATH" run _bottles_records
+    [ "${output//$'\x1f'/|}" == "Bottles|Thief: Gold|$HOME/Games/Thief/THIEF.EXE|$BATS_TEST_TMPDIR/Elsewhere|$BATS_TEST_TMPDIR/bin/wine" ]
+    printf 'Environment: Steam\n' >> "$yml"
+    run _bottles_records
+    [ -z "$output" ]
 }

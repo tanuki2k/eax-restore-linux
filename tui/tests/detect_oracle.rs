@@ -543,6 +543,24 @@ fn launcher_world(h: &Path) {
     wine(".local/share/Steam/compatibilitytools.d/GE-Proton9-20/files/bin/wine");
     wine(".local/share/Steam/compatibilitytools.d/GE-Proton10-1/files/bin/wine");
     std::fs::create_dir_all(h.join(".local/share/Steam/steamapps")).unwrap();
+    // A Proton build Lutris can name, a game whose prefix sits above it, and
+    // a Proton runner in Bottles with dist/ and files/ (dist wins) and wine64.
+    put(
+        &h.join(".local/share/Steam/compatibilitytools.d/GE-Proton10-1/proton"),
+        "",
+    );
+    exe("Games/RuneL/Game/rune.exe");
+    put(&h.join("Games/RuneL/pfx/user.reg"), "");
+    std::fs::create_dir_all(h.join("Games/RuneL/pfx/drive_c")).unwrap();
+    exe("Games/Bott2/b.exe");
+    std::fs::create_dir_all(h.join("Elsewhere/Bott2/drive_c")).unwrap();
+    put(
+        &h.join(".local/share/bottles/runners/proton-x/toolmanifest.vdf"),
+        "",
+    );
+    wine(".local/share/bottles/runners/proton-x/files/bin/wine");
+    wine(".local/share/bottles/runners/proton-x/dist/bin/wine");
+    wine(".local/share/bottles/runners/proton-x/dist/bin/wine64");
     put(
         &h.join(".local/share/lutris/games/deus-ex-1700.yml"),
         "game:\n  exe: System/DeusEx.exe  # the game\n  prefix: ~/pfx/deus\nwine:\n  dxvk: true\n",
@@ -555,6 +573,28 @@ fn launcher_world(h: &Path) {
         ),
     );
     put(
+        &h.join(".local/share/lutris/games/rune-l.yml"),
+        &format!(
+            "game:\n  exe: '{}'\nwine:\n  version: GE-Proton10-1\n",
+            h.join("Games/RuneL/Game/rune.exe").display()
+        ),
+    );
+    put(
+        &h.join(".local/share/bottles/bottles/Proton/bottle.yml"),
+        &format!(
+            "Arch: win64\nCustom_Path: true\nExternal_Programs:\n  p1:\n    name: B2\n    path: {}\nName: Proton\nPath: {}\nRunner: proton-x\n",
+            h.join("Games/Bott2/b.exe").display(),
+            h.join("Elsewhere/Bott2").display()
+        ),
+    );
+    put(
+        &h.join(".local/share/bottles/bottles/SteamOne/bottle.yml"),
+        &format!(
+            "Environment: Steam\nExternal_Programs:\n  s1:\n    name: S\n    path: {}\nRunner: proton-x\n",
+            h.join("Games/Bott2/b.exe").display()
+        ),
+    );
+    put(
         &h.join(".config/lutris/runners/wine.yml"),
         "wine:\n  version: wine-ge-8\n",
     );
@@ -564,7 +604,8 @@ fn launcher_world(h: &Path) {
         .arg(
             "CREATE TABLE games (id INTEGER PRIMARY KEY, name TEXT, slug TEXT, runner TEXT, directory TEXT, installed INTEGER, configpath TEXT);
              INSERT INTO games VALUES (1, 'Deus Ex: GOTY', 'deus-ex', 'wine', '~/Games/Deus Ex', 1, 'deus-ex-1700');
-             INSERT INTO games VALUES (2, 'Gone', 'gone', 'wine', '~/Games/Gone', 0, 'gone-1');",
+             INSERT INTO games VALUES (2, 'Gone', 'gone', 'wine', '~/Games/Gone', 0, 'gone-1');
+             INSERT INTO games VALUES (3, 'Rune (Lutris)', 'rune', 'wine', '', 1, 'rune-l');",
         )
         .status()
         .unwrap()
@@ -658,7 +699,29 @@ fn wine_launchers_match() {
     assert_eq!(parts[0], records_text(&list));
     // pga.db decides which Lutris games there are: Thief II's YAML file
     // alone doesn't count while sqlite3 can read it.
-    assert_eq!(list.len(), 4, "{}", parts[0]);
+    assert_eq!(list.len(), 6, "{}", parts[0]);
+    let p = |rel: &str| h.join(rel).display().to_string();
+    assert!(
+        parts[0].contains(&format!(
+            "Lutris|Rune (Lutris)|{}|{}|{}",
+            p("Games/RuneL/Game/rune.exe"),
+            p("Games/RuneL/pfx"),
+            p(".local/share/Steam/compatibilitytools.d/GE-Proton10-1/files/bin/wine")
+        )),
+        "{}",
+        parts[0]
+    );
+    assert!(
+        parts[0].contains(&format!(
+            "Bottles|B2|{}|{}|{}",
+            p("Games/Bott2/b.exe"),
+            p("Elsewhere/Bott2"),
+            p(".local/share/bottles/runners/proton-x/dist/bin/wine64")
+        )),
+        "{}",
+        parts[0]
+    );
+    assert!(!parts[0].contains("|S|"), "{}", parts[0]);
     assert!(
         parts[0].contains("|Play Space Quest V|")
             && parts[0].contains("Proton-CachyOS Latest/files/bin/wine"),
@@ -732,9 +795,12 @@ fn wine_launchers_match() {
     // path counts, Deus Ex's relative one has no folder to go under.
     std::fs::remove_file(h.join(".local/share/lutris/pga.db")).unwrap();
     let out = bash("_lutris_records | tr '\\037' '|'", h, &[]);
-    let rust = records_text(&wine_launchers::records(h)[..1]);
-    assert_eq!(out, rust);
-    assert!(out.starts_with("Lutris|Thief Ii The Metal Age|"), "{out}");
+    let lutris: Vec<_> = wine_launchers::records(h)
+        .into_iter()
+        .filter(|g| g.launcher == "Lutris")
+        .collect();
+    assert_eq!(out, records_text(&lutris));
+    assert!(out.contains("Lutris|Thief Ii The Metal Age|"), "{out}");
 
     // An older Faugus's config.ini, quotes and ~ included.
     std::fs::remove_file(h.join(".config/faugus-launcher/config.json")).unwrap();
