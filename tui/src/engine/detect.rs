@@ -668,7 +668,7 @@ pub fn companion_apps(
             let name = acf_value(&t, "name")
                 .filter(|n| !n.is_empty())
                 .unwrap_or_else(|| format!("AppID {id}"));
-            let prefix = wine::steam_prefix_for_appid(protontricks, &id);
+            let prefix = wine::steam_prefix_for_appid(protontricks, &id, game_dir);
             Some(CompanionApp {
                 app_id: id,
                 name,

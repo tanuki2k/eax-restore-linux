@@ -405,7 +405,7 @@ fn openal_runtime_and_prefix_lookup_match() {
         assert_eq!(steam.install_openal_runtime(), Some(0));
         assert_eq!(heroic.install_openal_runtime(), Some(0));
         heroic.wait_for_wineserver();
-        let found = wine::steam_prefix_for_appid(&pt, "42");
+        let found = wine::steam_prefix_for_appid(&pt, "42", &r);
         std::env::set_var("PATH", path);
         found
     });
@@ -522,4 +522,54 @@ fn exe_bitness_counts_match() {
     let (a32, a64) = wine::count_exe_bitness(&g);
     assert_eq!(out.trim(), format!("{a32} {a64}"));
     assert_eq!(wine::detect_architecture(&g), Some(64));
+}
+
+/// A Steam prefix in compatdata beside the game, as Proton makes it, is found
+/// without asking protontricks, by the script and the engine alike; a game
+/// whose library has none falls back to protontricks.
+#[test]
+fn compatdata_prefix_is_found_without_protontricks() {
+    let tmp = tempfile::tempdir().unwrap();
+    let t = tmp.path();
+    let (b, r) = (t.join("b"), t.join("r"));
+    for side in [&b, &r] {
+        std::fs::create_dir_all(side.join("lib/steamapps/common/G/bin")).unwrap();
+        make_prefix(&side.join("lib/steamapps/compatdata/42/pfx"));
+        make_prefix(&side.join("pfx"));
+    }
+    let out = bash(
+        "GAME_DIR=\"$1/lib/steamapps/common/G/bin\"\n\
+         steam_prefix_for_appid 42; echo \"[$?]\"\n\
+         steam_prefix_for_appid 7; echo \"[$?]\"",
+        &b,
+        &[
+            ("STUB_PREFIX", b.join("pfx").display().to_string()),
+            ("STUB_LOG", b.join("stub.log").display().to_string()),
+        ],
+    );
+    let pt = vec![stubs().join("protontricks").display().to_string()];
+    let game = r.join("lib/steamapps/common/G/bin");
+    let (found, missing) = with_env(&r, || {
+        (
+            wine::steam_prefix_for_appid(&pt, "42", &game),
+            wine::steam_prefix_for_appid(&pt, "7", &game),
+        )
+    });
+    let show = |p: Option<PathBuf>| match p {
+        Some(p) => format!("{}\n[0]\n", p.display()),
+        None => "[1]\n".to_string(),
+    };
+    let rust = show(found) + &show(missing);
+    let b_out = out.replace(&b.display().to_string(), "<dir>");
+    assert_eq!(b_out, rust.replace(&r.display().to_string(), "<dir>"));
+    assert!(
+        b_out.starts_with("<dir>/lib/steamapps/compatdata/42/pfx\n[0]\n<dir>/pfx\n"),
+        "{b_out}"
+    );
+    // protontricks ran only for the app with no compatdata prefix.
+    for side in [&b, &r] {
+        let log = std::fs::read_to_string(side.join("stub.log")).unwrap();
+        assert_eq!(log.lines().count(), 1, "{log}");
+        assert!(log.ends_with(" 7\n"), "{log}");
+    }
 }

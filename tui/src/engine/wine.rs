@@ -317,9 +317,30 @@ pub fn is_executable(p: &Path) -> bool {
     std::fs::metadata(p).is_ok_and(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
 }
 
-/// A Steam app's Proton prefix as protontricks reports it, or `None` when it
-/// has none yet (never launched) or protontricks can't see it.
-pub fn steam_prefix_for_appid(protontricks: &[String], app_id: &str) -> Option<PathBuf> {
+/// A Steam app's Proton prefix, or `None` when it has none yet (never
+/// launched) or protontricks can't see it. Steam keeps it in compatdata in the
+/// game's own library, so that's looked at first; protontricks, which starts
+/// Python and reads all of Steam's app data to print one path, is only asked
+/// when it isn't there.
+pub fn steam_prefix_for_appid(
+    protontricks: &[String],
+    app_id: &str,
+    game_dir: &Path,
+) -> Option<PathBuf> {
+    steam_compatdata_prefix(game_dir, app_id)
+        .or_else(|| steam_prefix_from_protontricks(protontricks, app_id))
+}
+
+/// `<library>/steamapps/compatdata/<app_id>/pfx` for the library `game_dir`
+/// is in, when Proton has made it.
+fn steam_compatdata_prefix(game_dir: &Path, app_id: &str) -> Option<PathBuf> {
+    let text = game_dir.to_str()?;
+    let at = text.find("/steamapps/common/")?;
+    let p = PathBuf::from(format!("{}/steamapps/compatdata/{app_id}/pfx", &text[..at]));
+    p.join("drive_c").is_dir().then_some(p)
+}
+
+fn steam_prefix_from_protontricks(protontricks: &[String], app_id: &str) -> Option<PathBuf> {
     let out = Command::new(&protontricks[0])
         .args(&protontricks[1..])
         .arg("-c")
@@ -502,5 +523,26 @@ pub fn detect_architecture(game_dir: &Path) -> Option<u8> {
         std::cmp::Ordering::Greater => Some(64),
         std::cmp::Ordering::Less => Some(32),
         std::cmp::Ordering::Equal => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_steam_prefix_in_the_games_library_needs_no_protontricks() {
+        let tmp = tempfile::tempdir().unwrap();
+        let lib = tmp.path().join("Games/SteamLibrary/steamapps");
+        let game = lib.join("common/Quake 4");
+        std::fs::create_dir_all(&game).unwrap();
+        // A command that can't run: only the folder can answer.
+        let none = vec![tmp.path().join("no-protontricks").display().to_string()];
+        assert_eq!(steam_prefix_for_appid(&none, "2210", &game), None);
+        let pfx = lib.join("compatdata/2210/pfx");
+        std::fs::create_dir_all(pfx.join("drive_c")).unwrap();
+        assert_eq!(steam_prefix_for_appid(&none, "2210", &game), Some(pfx));
+        // Outside a Steam library there's nothing to look in.
+        assert_eq!(steam_prefix_for_appid(&none, "2210", tmp.path()), None);
     }
 }

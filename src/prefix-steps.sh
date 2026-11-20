@@ -23,11 +23,17 @@ steam_acf_name() {
 }
 
 # Usage: steam_prefix_for_appid <appid>
-# The app's Proton prefix as protontricks reports it, or nothing when it has
-# none yet (never launched) or protontricks can't see it. protontricks rather
-# than compatdata/<id>/pfx directly, since every later step goes through it.
+# The app's Proton prefix, or nothing when it has none yet (never launched) or
+# protontricks can't see it. Steam keeps it in compatdata in the game's own
+# library (GAME_DIR's), so that's looked at first; protontricks, which starts
+# Python and reads all of Steam's app data to print one path, is only asked
+# when it isn't there.
 steam_prefix_for_appid() {
     local prefix
+    if [[ "${GAME_DIR:-}" == */steamapps/common/* ]]; then
+        prefix="${GAME_DIR%%/steamapps/common/*}/steamapps/compatdata/$1/pfx"
+        [ -d "$prefix/drive_c" ] && { echo "$prefix"; return 0; }
+    fi
     log_cmd "protontricks -c 'echo \$WINEPREFIX' $1"
     # $WINEPREFIX is for protontricks' own shell; the log is only appended to.
     # shellcheck disable=SC2016,SC2094

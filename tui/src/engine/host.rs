@@ -100,7 +100,9 @@ impl UninstallHost for SystemHost<'_> {
     /// A companion app's own prefix (DOOM 3's Resurrection of Evil): gone
     /// with the app when Steam deleted it, so there's then nothing to do.
     fn clean_companion(&mut self, c: &Companion, remove_vcrun: bool) {
-        let Some(path) = wine::steam_prefix_for_appid(&self.protontricks, &c.app_id) else {
+        let Some(path) =
+            wine::steam_prefix_for_appid(&self.protontricks, &c.app_id, &self.game_dir)
+        else {
             return;
         };
         let p = Prefix {

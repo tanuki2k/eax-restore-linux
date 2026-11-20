@@ -140,7 +140,7 @@ pub fn gather(game_dir: &Path, game: Option<&Game>, home: &Path, protontricks: &
         if !app_id.is_empty() {
             f.store = Some(Store::Steam);
             f.id = app_id.clone();
-            f.prefix = wine::steam_prefix_for_appid(protontricks, &app_id);
+            f.prefix = wine::steam_prefix_for_appid(protontricks, &app_id, game_dir);
             f.runner = Some(Runner::Protontricks {
                 cmd: protontricks.to_vec(),
                 app_id: app_id.clone(),

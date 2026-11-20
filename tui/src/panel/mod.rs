@@ -1584,11 +1584,17 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let home = tmp.path().join("home");
         let game = steam_game(&home);
-        let mut p = Panel::open("Test Game", &game, None, &home);
-        // Steam's prefix is found through protontricks, which isn't here.
+        // Before the game's first run Proton hasn't made its prefix.
+        let pfx = home.join(".local/share/Steam/steamapps/compatdata/424242/pfx");
+        let away = pfx.with_extension("away");
+        std::fs::rename(&pfx, &away).unwrap();
+        let p = Panel::open("Test Game", &game, None, &home);
         assert!(p.problem.is_some());
         assert_eq!(p.buttons(), [Button::CheckAgain]);
-        p.facts.prefix = Some(home.join(".local/share/Steam/steamapps/compatdata/424242/pfx"));
+        // Once it has, it's found in compatdata, with no protontricks needed.
+        std::fs::rename(&away, &pfx).unwrap();
+        let mut p = Panel::open("Test Game", &game, None, &home);
+        assert_eq!(p.facts.prefix.as_deref(), Some(pfx.as_path()));
         p.build();
         assert!(p.problem.is_none(), "{:?}", p.problem);
         assert_eq!(p.buttons(), [Button::Install]);
