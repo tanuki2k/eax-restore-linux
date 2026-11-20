@@ -801,9 +801,47 @@ proton_wine_for() {
         pick="$(for d in "${found[@]}"; do printf '%s\t%s\n' "$(basename "$d")" "$d"; done | LC_ALL=C sort -t$'\t' -k1,1V | tail -n 1 | cut -f2-)"
     fi
     [ -n "$pick" ] || return 0
-    for b in "$pick/files/bin/wine" "$pick/dist/bin/wine"; do
+    proton_dir_wine "$pick"
+}
+
+# Usage: proton_dir_wine <Proton build folder>
+# Its wine binary (files/bin, or dist/bin in older builds), if there is one.
+proton_dir_wine() {
+    local b
+    for b in "$1/files/bin/wine" "$1/dist/bin/wine"; do
         [ -x "$b" ] && { printf '%s\n' "$b"; return 0; }
     done
+}
+
+# Usage: faugus_runner_wine <runner> <default runner>
+# The wine binary of a Faugus game's runner, chosen as Faugus does: "Default"
+# is config.json's default-runner, an empty one (from before Faugus filled it
+# in) the newest UMU-Proton build, "Proton-CachyOS (System)" the build in the
+# system's steam/compatibilitytools.d, a folder path that folder, and any
+# other name a build in a compatibilitytools.d folder.
+faugus_runner_wine() {
+    local runner="$1" default_runner="$2" dir
+    [ "$runner" == "Proton-CachyOS" ] && runner="Proton-CachyOS (System)"
+    if [ -z "$runner" ]; then
+        dir="$(proton_wine_for "UMU-Proton-")"
+        [ -n "$dir" ] && { printf '%s\n' "$dir"; return 0; }
+        runner="$default_runner"
+    fi
+    [ "$runner" == "Default" ] && runner="$default_runner"
+    if [ "$runner" == "Proton-CachyOS (System)" ]; then
+        local IFS=:
+        for dir in ${XDG_DATA_DIRS:-/usr/local/share:/usr/share}; do
+            [ -d "$dir/steam/compatibilitytools.d/proton-cachyos-slr" ] || continue
+            proton_dir_wine "$dir/steam/compatibilitytools.d/proton-cachyos-slr"
+            return 0
+        done
+        return 0
+    fi
+    if [[ "$runner" == /* ]]; then
+        [ -d "$runner" ] && proton_dir_wine "$runner"
+        return 0
+    fi
+    proton_wine_for "$runner"
 }
 
 # Usage: bottles_roots
@@ -903,14 +941,38 @@ _bottles_records() {
 }
 
 _faugus_records() {
-    local f title exe prefix runner gameid
-    for f in "$(xdg_home config)/faugus-launcher/games.json" \
-        "$HOME/.var/app/io.github.Faugus.faugus-launcher/config/faugus-launcher/games.json"; do
+    local pair data cfg f title exe prefix runner gameid default_runner default_prefix
+    for pair in "$(xdg_home data)/faugus-launcher"$'\t'"$(xdg_home config)/faugus-launcher" \
+        "$HOME/.var/app/io.github.Faugus.faugus-launcher/data/faugus-launcher"$'\t'"$HOME/.var/app/io.github.Faugus.faugus-launcher/config/faugus-launcher"; do
+        IFS=$'\t' read -r data cfg <<< "$pair"
+        # The game list is in Faugus's data folder; older versions kept it
+        # beside their settings.
+        f="$data/games.json"
+        [ -f "$f" ] || f="$cfg/games.json"
         [ -f "$f" ] || continue
+        # Faugus's settings: config.json, or config.ini (key=value) in older
+        # versions, with Faugus's own defaults when neither says.
+        default_runner="$(jq -r '."default-runner" // empty | strings' "$cfg/config.json" 2>/dev/null)"
+        default_prefix="$(jq -r '."default-prefix" // empty | strings' "$cfg/config.json" 2>/dev/null)"
+        if [ ! -f "$cfg/config.json" ] && [ -f "$cfg/config.ini" ]; then
+            default_runner="$(sed -n 's/^[[:space:]]*default-runner[[:space:]]*=[[:space:]]*//p' "$cfg/config.ini" | head -n 1)"
+            default_prefix="$(sed -n 's/^[[:space:]]*default-prefix[[:space:]]*=[[:space:]]*//p' "$cfg/config.ini" | head -n 1)"
+        fi
+        default_runner="${default_runner//\"/}"; default_prefix="${default_prefix//\"/}"
+        default_runner="${default_runner%$'\r'}"; default_prefix="${default_prefix%$'\r'}"
+        [ -n "$default_runner" ] || default_runner="Proton-CachyOS Latest"
+        [ -n "$default_prefix" ] || default_prefix="$HOME/Faugus"
+        default_prefix="$(lutris_path "$default_prefix")"
         while IFS=$'\x1f' read -r title exe prefix runner gameid; do
             [[ "${exe,,}" == *.exe ]] && [ -f "$exe" ] || continue
             [ -n "$title" ] || title="$gameid"
-            printf 'Faugus\x1f%s\x1f%s\x1f%s\x1f%s\n' "$title" "$exe" "$prefix" "$(proton_wine_for "$runner")"
+            # No prefix of its own: Faugus runs it in default-prefix/default,
+            # on the default runner.
+            if [ -z "$prefix" ]; then
+                prefix="${default_prefix:+${default_prefix%/}/default}"
+                runner="Default"
+            fi
+            printf 'Faugus\x1f%s\x1f%s\x1f%s\x1f%s\n' "$title" "$exe" "$prefix" "$(faugus_runner_wine "$runner" "$default_runner")"
         done < <(jq -r '.[]? | objects
             | [.title, .path, .prefix, .runner, .gameid] | map(if type == "string" then gsub("^\\s+|\\s+$"; "") else "" end)
             | select(.[3] != "Linux-Native" and (.[3] | ascii_downcase) != "steam") | join("\u001f")' "$f" 2>/dev/null)

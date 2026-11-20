@@ -56,14 +56,17 @@ YML
 }
 
 faugus_game() {
-    local tools="$HOME/.local/share/Steam/compatibilitytools.d"
-    mkdir -p "$HOME/Games/Rune/System" "$HOME/.config/faugus-launcher"
-    : > "$HOME/Games/Rune/System/Rune.exe"
+    local tools="$HOME/.local/share/Steam/compatibilitytools.d" list="$HOME/.local/share/faugus-launcher"
+    mkdir -p "$HOME/Games/Rune/System" "$HOME/Games/Sq5" "$list" "$HOME/.config/faugus-launcher"
+    : > "$HOME/Games/Rune/System/Rune.exe"; : > "$HOME/Games/Sq5/Play Space Quest V.exe"
     runner "$tools/GE-Proton9-20/files/bin/wine"
     runner "$tools/GE-Proton10-1/files/bin/wine"
+    runner "$tools/Proton-CachyOS Latest/files/bin/wine"
+    printf '{"default-prefix": "%s/Faugus", "default-runner": "Proton-CachyOS Latest"}' "$HOME" > "$HOME/.config/faugus-launcher/config.json"
     printf '[{"gameid":"rune","title":"Rune","path":"%s","prefix":"%s/Faugus/rune","runner":"GE-Proton"},
+             {"gameid":"play-space-quest-v","title":"Play Space Quest V","path":"%s","prefix":"","runner":"Default"},
              {"gameid":"tux","title":"Tux","path":"%s","runner":"Linux-Native"}]' \
-        "$HOME/Games/Rune/System/Rune.exe" "$HOME" "$HOME/Games/Rune/System/Rune.exe" > "$HOME/.config/faugus-launcher/games.json"
+        "$HOME/Games/Rune/System/Rune.exe" "$HOME" "$HOME/Games/Sq5/Play Space Quest V.exe" "$HOME/Games/Rune/System/Rune.exe" > "$list/games.json"
 }
 
 @test "Snap Steam is one of the Steam installs" {
@@ -88,7 +91,8 @@ faugus_game() {
     [ "${output//$'\x1f'/|}" == "$(printf '%s\n' \
         "Lutris|Deus Ex: GOTY|$HOME/Games/Deus Ex/System/DeusEx.exe|$HOME/pfx/deus|$HOME/.local/share/lutris/runners/wine/wine-ge-8/bin/wine" \
         "Bottles|Thief: Gold|$HOME/Games/Thief/THIEF.EXE|$HOME/.local/share/bottles/bottles/Gaming|$HOME/.local/share/bottles/runners/soda-9/bin/wine" \
-        "Faugus|Rune|$HOME/Games/Rune/System/Rune.exe|$HOME/Faugus/rune|$tools/GE-Proton10-1/files/bin/wine")" ]
+        "Faugus|Rune|$HOME/Games/Rune/System/Rune.exe|$HOME/Faugus/rune|$tools/GE-Proton10-1/files/bin/wine" \
+        "Faugus|Play Space Quest V|$HOME/Games/Sq5/Play Space Quest V.exe|$HOME/Faugus/default|$tools/Proton-CachyOS Latest/files/bin/wine")" ]
 }
 
 @test "without sqlite3, Lutris games come from their YAML files alone" {
@@ -197,4 +201,39 @@ JSON
     printf 'FILE: x\n' > "$HOME/Games/Deus Ex/System/.eax-restore-manifest.txt"
     run find_installed_game_dirs
     [ "$output" == "$HOME/Games/Deus Ex/System" ]
+}
+
+@test "an older Faugus that kept games.json beside config.json is still read" {
+    faugus_game
+    mv "$HOME/.local/share/faugus-launcher/games.json" "$HOME/.config/faugus-launcher/games.json"
+    run _faugus_records
+    [ "$(printf '%s\n' "$output" | wc -l)" -eq 2 ]
+}
+
+@test "Faugus runners resolve the way Faugus resolves them" {
+    local tools="$HOME/.local/share/Steam/compatibilitytools.d" sys="$BATS_TEST_TMPDIR/share"
+    mkdir -p "$HOME/.local/share/Steam/steamapps"
+    runner "$tools/UMU-Proton-9.0-3/files/bin/wine"
+    runner "$tools/UMU-Proton-10.0-1/files/bin/wine"
+    runner "$tools/Proton-CachyOS Latest/files/bin/wine"
+    runner "$sys/steam/compatibilitytools.d/proton-cachyos-slr/files/bin/wine"
+    runner "$BATS_TEST_TMPDIR/my-proton/files/bin/wine"
+    run faugus_runner_wine "" "Proton-CachyOS Latest"
+    [ "$output" == "$tools/UMU-Proton-10.0-1/files/bin/wine" ]
+    run faugus_runner_wine "Default" "Proton-CachyOS Latest"
+    [ "$output" == "$tools/Proton-CachyOS Latest/files/bin/wine" ]
+    XDG_DATA_DIRS="/nowhere:$sys" run faugus_runner_wine "Proton-CachyOS" "x"
+    [ "$output" == "$sys/steam/compatibilitytools.d/proton-cachyos-slr/files/bin/wine" ]
+    run faugus_runner_wine "$BATS_TEST_TMPDIR/my-proton" "x"
+    [ "$output" == "$BATS_TEST_TMPDIR/my-proton/files/bin/wine" ]
+    run faugus_runner_wine "Missing" "x"
+    [ -z "$output" ]
+}
+
+@test "an older Faugus's config.ini gives the default runner and prefix" {
+    faugus_game
+    rm "$HOME/.config/faugus-launcher/config.json"
+    printf 'default-prefix="~/Prefixes"\ndefault-runner="GE-Proton9-20"\n' > "$HOME/.config/faugus-launcher/config.ini"
+    run _faugus_records
+    [[ "${output//$'\x1f'/|}" == *"|Play Space Quest V|$HOME/Games/Sq5/Play Space Quest V.exe|$HOME/Prefixes/default|$HOME/.local/share/Steam/compatibilitytools.d/GE-Proton9-20/files/bin/wine"* ]]
 }

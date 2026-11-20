@@ -577,11 +577,19 @@ fn launcher_world(h: &Path) {
             thief = h.join("Games/Thief/THIEF.EXE").display()
         ),
     );
+    wine(".local/share/Steam/compatibilitytools.d/Proton-CachyOS Latest/files/bin/wine");
+    exe("Games/Sq5/Play Space Quest V.exe");
     put(
-        &h.join(".config/faugus-launcher/games.json"),
+        &h.join(".config/faugus-launcher/config.json"),
+        &serde_json::json!({"default-prefix": h.join("Faugus"), "default-runner": "Proton-CachyOS Latest"}).to_string(),
+    );
+    put(
+        &h.join(".local/share/faugus-launcher/games.json"),
         &serde_json::json!([
             {"gameid": "rune", "title": " Rune ", "path": h.join("Games/Rune/System/Rune.exe"),
              "prefix": h.join("Faugus/rune"), "runner": "GE-Proton"},
+            {"gameid": "play-space-quest-v", "title": "Play Space Quest V", "path": h.join("Games/Sq5/Play Space Quest V.exe"),
+             "prefix": "", "runner": "Default"},
             {"gameid": "tux", "title": "Tux", "path": h.join("Games/Rune/System/Rune.exe"), "runner": "Linux-Native"}
         ])
         .to_string(),
@@ -641,10 +649,22 @@ fn wine_launchers_match() {
     assert_eq!(parts.len(), 5, "{out}");
 
     let list = wine_launchers::records(h);
+    // No prefix of its own: Faugus's default-prefix/default.
+    assert!(
+        parts[0].contains(&format!("|{}|", h.join("Faugus/default").display())),
+        "{}",
+        parts[0]
+    );
     assert_eq!(parts[0], records_text(&list));
     // pga.db decides which Lutris games there are: Thief II's YAML file
     // alone doesn't count while sqlite3 can read it.
-    assert_eq!(list.len(), 3, "{}", parts[0]);
+    assert_eq!(list.len(), 4, "{}", parts[0]);
+    assert!(
+        parts[0].contains("|Play Space Quest V|")
+            && parts[0].contains("Proton-CachyOS Latest/files/bin/wine"),
+        "{}",
+        parts[0]
+    );
 
     let mut rust = String::new();
     for r in ["Games/Pk", "Games/Deus Ex", "Games/Rune", "Games/None"] {
@@ -715,4 +735,22 @@ fn wine_launchers_match() {
     let rust = records_text(&wine_launchers::records(h)[..1]);
     assert_eq!(out, rust);
     assert!(out.starts_with("Lutris|Thief Ii The Metal Age|"), "{out}");
+
+    // An older Faugus's config.ini, quotes and ~ included.
+    std::fs::remove_file(h.join(".config/faugus-launcher/config.json")).unwrap();
+    put(
+        &h.join(".config/faugus-launcher/config.ini"),
+        "default-prefix=\"~/Prefixes\"\ndefault-runner = \"GE-Proton9-20\"\n",
+    );
+    let out = bash("_faugus_records | tr '\\037' '|'", h, &[]);
+    let faugus: Vec<_> = wine_launchers::records(h)
+        .into_iter()
+        .filter(|g| g.launcher == "Faugus")
+        .collect();
+    assert_eq!(out, records_text(&faugus));
+    assert!(
+        out.contains(&format!("|{}|", h.join("Prefixes/default").display())),
+        "{out}"
+    );
+    assert!(out.contains("GE-Proton9-20/files/bin/wine"), "{out}");
 }

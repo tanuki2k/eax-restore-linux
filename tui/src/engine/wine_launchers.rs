@@ -159,11 +159,61 @@ pub fn proton_wine_for(home: &Path, name: &str) -> Option<PathBuf> {
             .into_iter()
             .max_by(|a, b| version_cmp(&file_name(a), &file_name(b)));
     }
-    let pick = pick?;
+    proton_dir_wine(&pick?)
+}
+
+/// A Proton build's wine binary (files/bin, or dist/bin in older builds).
+pub fn proton_dir_wine(dir: &Path) -> Option<PathBuf> {
     ["files/bin/wine", "dist/bin/wine"]
         .iter()
-        .map(|b| pick.join(b))
+        .map(|b| dir.join(b))
         .find(|b| super::wine::is_executable(b))
+}
+
+/// The wine binary of a Faugus game's runner, chosen as Faugus does
+/// (`faugus_runner_wine`): "Default" is the default runner, an empty one the
+/// newest UMU-Proton build, "Proton-CachyOS (System)" the build in a system
+/// data folder's steam/compatibilitytools.d (`data_dirs`, from
+/// `$XDG_DATA_DIRS`), a folder path that folder, any other name a build in a
+/// compatibilitytools.d folder.
+pub fn faugus_runner_wine(
+    home: &Path,
+    runner: &str,
+    default_runner: &str,
+    data_dirs: &str,
+) -> Option<PathBuf> {
+    let mut runner = if runner == "Proton-CachyOS" {
+        "Proton-CachyOS (System)"
+    } else {
+        runner
+    };
+    if runner.is_empty() {
+        if let Some(w) = proton_wine_for(home, "UMU-Proton-") {
+            return Some(w);
+        }
+        runner = default_runner;
+    }
+    if runner == "Default" {
+        runner = default_runner;
+    }
+    if runner == "Proton-CachyOS (System)" {
+        let dirs = if data_dirs.is_empty() {
+            "/usr/local/share:/usr/share"
+        } else {
+            data_dirs
+        };
+        return dirs
+            .split(':')
+            .map(|d| Path::new(d).join("steam/compatibilitytools.d/proton-cachyos-slr"))
+            .find(|d| d.is_dir())
+            .and_then(|d| proton_dir_wine(&d));
+    }
+    if runner.starts_with('/') {
+        return Some(Path::new(runner))
+            .filter(|d| d.is_dir())
+            .and_then(proton_dir_wine);
+    }
+    proton_wine_for(home, runner)
 }
 
 fn file_name(p: &Path) -> String {
@@ -291,16 +341,30 @@ fn bottle(root: &Path, conf: &Path, out: &mut Vec<LauncherGame>) {
 // ---- Faugus -----------------------------------------------------------------
 
 fn faugus(home: &Path, out: &mut Vec<LauncherGame>) {
-    for f in [
-        xdg_home(home, false).join("faugus-launcher/games.json"),
-        home.join(".var/app/io.github.Faugus.faugus-launcher/config/faugus-launcher/games.json"),
+    let data_dirs = std::env::var("XDG_DATA_DIRS").unwrap_or_default();
+    let flatpak = home.join(".var/app/io.github.Faugus.faugus-launcher");
+    for (data, cfg) in [
+        (
+            xdg_home(home, true).join("faugus-launcher"),
+            xdg_home(home, false).join("faugus-launcher"),
+        ),
+        (
+            flatpak.join("data/faugus-launcher"),
+            flatpak.join("config/faugus-launcher"),
+        ),
     ] {
+        // The game list is in Faugus's data folder; older versions kept it
+        // beside their settings.
+        let f = Some(data.join("games.json"))
+            .filter(|f| f.is_file())
+            .unwrap_or_else(|| cfg.join("games.json"));
         let Some(list) = std::fs::read_to_string(&f)
             .ok()
             .and_then(|t| serde_json::from_str::<Value>(&t).ok())
         else {
             continue;
         };
+        let (default_runner, default_prefix) = faugus_defaults(home, &cfg);
         let games: Vec<&Value> = match &list {
             Value::Array(a) => a.iter().collect(),
             Value::Object(o) => o.values().collect(),
@@ -311,7 +375,7 @@ fn faugus(home: &Path, out: &mut Vec<LauncherGame>) {
                 Some(Value::String(s)) => s.trim().to_string(),
                 _ => String::new(),
             };
-            let runner = text("runner");
+            let mut runner = text("runner");
             if runner == "Linux-Native" || runner.eq_ignore_ascii_case("steam") {
                 continue;
             }
@@ -319,20 +383,69 @@ fn faugus(home: &Path, out: &mut Vec<LauncherGame>) {
             if !is_exe(&exe) {
                 continue;
             }
+            let gameid = text("gameid");
             let mut title = text("title");
             if title.is_empty() {
-                title = text("gameid");
+                title = gameid.clone();
             }
-            let prefix = text("prefix");
+            // No prefix of its own: Faugus runs it in default-prefix/default,
+            // on the default runner.
+            let mut prefix = text("prefix");
+            if prefix.is_empty() {
+                if !default_prefix.is_empty() {
+                    let base = default_prefix.strip_suffix('/').unwrap_or(&default_prefix);
+                    prefix = format!("{base}/default");
+                }
+                runner = "Default".into();
+            }
             out.push(LauncherGame {
                 launcher: "Faugus",
                 title,
                 exe,
                 prefix: (!prefix.is_empty()).then(|| PathBuf::from(prefix)),
-                wine: proton_wine_for(home, &runner),
+                wine: faugus_runner_wine(home, &runner, &default_runner, &data_dirs),
             });
         }
     }
+}
+
+/// Faugus's default runner and prefix folder: config.json, or config.ini
+/// (key=value) in older versions, else Faugus's own defaults.
+fn faugus_defaults(home: &Path, cfg: &Path) -> (String, String) {
+    let (mut runner, mut prefix) = (String::new(), String::new());
+    if let Ok(t) = std::fs::read_to_string(cfg.join("config.json")) {
+        if let Ok(v) = serde_json::from_str::<Value>(&t) {
+            let get = |k: &str| match v.get(k) {
+                Some(Value::String(s)) => s.clone(),
+                _ => String::new(),
+            };
+            runner = get("default-runner");
+            prefix = get("default-prefix");
+        }
+    } else if let Ok(t) = std::fs::read_to_string(cfg.join("config.ini")) {
+        let value = |key: &str| {
+            t.lines()
+                .find_map(|l| {
+                    let (k, v) = l.split_once('=')?;
+                    (k.trim() == key).then(|| v.trim_start().to_string())
+                })
+                .unwrap_or_default()
+        };
+        runner = value("default-runner");
+        prefix = value("default-prefix");
+    }
+    let clean = |s: String| s.replace('"', "").trim_end_matches('\r').to_string();
+    let (mut runner, mut prefix) = (clean(runner), clean(prefix));
+    if runner.is_empty() {
+        runner = "Proton-CachyOS Latest".into();
+    }
+    if prefix.is_empty() {
+        prefix = home.join("Faugus").display().to_string();
+    }
+    let prefix = lutris_path(&prefix, "", home)
+        .map(|p| p.display().to_string())
+        .unwrap_or_default();
+    (runner, prefix)
 }
 
 // ---- Lutris -----------------------------------------------------------------
@@ -695,6 +808,34 @@ mod tests {
             Ordering::Greater
         );
         assert_eq!(version_cmp("GE-Proton9-2", "GE-Proton9-20"), Ordering::Less);
+    }
+
+    #[test]
+    fn faugus_runners_resolve_the_way_faugus_resolves_them() {
+        let t = tempfile::tempdir().unwrap();
+        let h = t.path();
+        let wine = |rel: &str| {
+            let p = h.join(rel).join("files/bin/wine");
+            std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+            std::fs::write(&p, "#!/bin/sh\n").unwrap();
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&p, std::fs::Permissions::from_mode(0o755)).unwrap();
+            p
+        };
+        std::fs::create_dir_all(h.join(".local/share/Steam/steamapps")).unwrap();
+        let tools = ".local/share/Steam/compatibilitytools.d";
+        wine(&format!("{tools}/UMU-Proton-9.0-3"));
+        let umu = wine(&format!("{tools}/UMU-Proton-10.0-1"));
+        let cachy = wine(&format!("{tools}/Proton-CachyOS Latest"));
+        let system = wine("share/steam/compatibilitytools.d/proton-cachyos-slr");
+        let own = wine("my-proton");
+        let data_dirs = format!("/nowhere:{}", h.join("share").display());
+        let r = |runner: &str| faugus_runner_wine(h, runner, "Proton-CachyOS Latest", &data_dirs);
+        assert_eq!(r(""), Some(umu));
+        assert_eq!(r("Default"), Some(cachy));
+        assert_eq!(r("Proton-CachyOS"), Some(system));
+        assert_eq!(r(&h.join("my-proton").display().to_string()), Some(own));
+        assert_eq!(r("Missing"), None);
     }
 
     #[test]
