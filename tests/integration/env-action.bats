@@ -75,7 +75,7 @@ uninstall_rest() { uninstall_answers "$BATS_TEST_TMPDIR/full"; tail -n +3 "$BATS
     export EAX_RESTORE_UNTESTED=1
     answers "$BATS_TEST_TMPDIR/in" ""
     EAX_RESTORE_ACTION=install EAX_RESTORE_GAME="steam:5" run_script "$BATS_TEST_TMPDIR/in"
-    plain | grep -q "Other Game isn't in your Steam or Heroic libraries" || { tail -20 "$OUT"; false; }
+    plain | grep -q "Other Game isn't in any of your game libraries" || { tail -20 "$OUT"; false; }
     plain | grep -q "Games with a profile in your libraries"
 }
 
@@ -85,7 +85,7 @@ uninstall_rest() { uninstall_answers "$BATS_TEST_TMPDIR/full"; tail -n +3 "$BATS
     export EAX_RESTORE_UNTESTED=1
     answers "$BATS_TEST_TMPDIR/in" ""
     EAX_RESTORE_ACTION=install EAX_RESTORE_GAME="steam:1" run_script "$BATS_TEST_TMPDIR/in"
-    plain | grep -q "That game isn't in your Steam or Heroic libraries"
+    plain | grep -q "That game isn't in any of your game libraries"
     plain | grep -q "Games with a profile in your libraries"
 }
 

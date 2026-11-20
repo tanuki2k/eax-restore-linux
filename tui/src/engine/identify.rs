@@ -87,8 +87,8 @@ fn json_text(v: &Value, key: &str) -> String {
     }
 }
 
-/// Every installed.json under a Heroic config folder (native, then Flatpak).
-pub fn heroic_installed_jsons(home: &Path) -> Vec<PathBuf> {
+/// Every installed.json under one Heroic config folder, in name order.
+pub fn installed_jsons_under(root: &Path) -> Vec<PathBuf> {
     fn walk(dir: &Path, out: &mut Vec<PathBuf>) {
         let Ok(entries) = std::fs::read_dir(dir) else {
             return;
@@ -105,13 +105,16 @@ pub fn heroic_installed_jsons(home: &Path) -> Vec<PathBuf> {
         }
     }
     let mut out = Vec::new();
-    for root in [
-        ".config/heroic",
-        ".var/app/com.heroicgameslauncher.hgl/config/heroic",
-    ] {
-        walk(&home.join(root), &mut out);
-    }
+    walk(root, &mut out);
     out
+}
+
+/// Every installed.json under a Heroic config folder (native, then Flatpak).
+pub fn heroic_installed_jsons(home: &Path) -> Vec<PathBuf> {
+    super::roots::heroic_dirs(home)
+        .iter()
+        .flat_map(|r| installed_jsons_under(r))
+        .collect()
 }
 
 /// Heroic's appName for the install at `dir`: its own record wins over the

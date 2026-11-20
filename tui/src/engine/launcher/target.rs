@@ -83,26 +83,10 @@ impl Held {
     }
 }
 
-/// Every Steam install present, native first, then Flatpak (its current
-/// and older data layouts), each resolved through links.
+/// Every Steam install present: native, Flatpak, then Snap, each resolved
+/// through links.
 pub fn steam_roots(home: &Path) -> Vec<PathBuf> {
-    let mut out = Vec::new();
-    for group in [
-        [".local/share/Steam", ".steam/steam"],
-        [
-            ".var/app/com.valvesoftware.Steam/.local/share/Steam",
-            ".var/app/com.valvesoftware.Steam/data/Steam",
-        ],
-    ] {
-        if let Some(d) = group
-            .iter()
-            .map(|d| home.join(d))
-            .find(|d| d.join("steamapps").is_dir())
-        {
-            out.push(std::fs::canonicalize(&d).unwrap_or(d));
-        }
-    }
-    out
+    crate::engine::roots::steam_roots(home)
 }
 
 /// The localconfig.vdf (across Steam installs and accounts) that has a

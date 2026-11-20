@@ -192,8 +192,13 @@ UNINSTALL_VCRUN="n"
 # Heroic GamesConfig file + app name). LAUNCHER_LINES / LAUNCHER_LINES_KEPT are
 # uninstall's LAUNCHER: manifest lines and the ones left in place.
 OVERRIDE_METHOD=""
-# "proton" or "wine", from the Heroic game's own settings (empty when unknown).
+# "proton" or "wine", from the Heroic, Lutris, Bottles or Faugus game's own
+# settings (empty when unknown).
 HEROIC_RUNNER_TYPE=""
+# The Lutris, Bottles or Faugus game the prefix step found (detection.sh's
+# _env_find_wine_launcher_prefix): the launcher's name and its Wine binary.
+WINE_LAUNCHER=""
+WINE_LAUNCHER_WINE=""
 OVERRIDE_LAUNCHER=""
 OVERRIDE_FILE=""
 OVERRIDE_ID=""

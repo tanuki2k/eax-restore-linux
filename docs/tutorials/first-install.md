@@ -27,7 +27,7 @@ The script first checks that your tools are there: `curl`, `unzip`, `file`, `gre
 
 ## 3. Pick your game
 
-The main menu asks what you want to do. Press `S` to scan your Steam and Heroic libraries, and the script lists the games it recognises. Pick yours by number. If it isn't listed, press `M` and type the path to the folder that holds the game's `.exe`. The script then guesses the audio API from the game's files, and asks you if it can't tell.
+The main menu asks what you want to do. Press `S` to scan your game libraries (Steam, Heroic, Lutris, Bottles and Faugus), and the script lists the games it recognises. Pick yours by number. If it isn't listed, press `M` and type the path to the folder that holds the game's `.exe`. The script then guesses the audio API from the game's files, and asks you if it can't tell.
 
 For a game in the database, the script prints its profile before it asks anything else. It shows which EAX versions the game supports, which audio API it uses, and anything you should know about it. Read it, because it tells you what the install is going to do. [Library scanning](../script/library-scanning.md) explains what the profile contains.
 

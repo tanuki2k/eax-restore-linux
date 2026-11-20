@@ -18,9 +18,11 @@
 #   release) or Latest (DSOAL's newest build + OpenAL Soft's pre-release),
 #   or each separately; only the builds picked are downloaded.
 #
-# * Smart Detection: Opt-in auto-detection for Steam AppIDs and Heroic Wine
-#   prefixes, plus an opt-in library scan that finds games with a profile already
-#   installed via Steam or Heroic and lets you pick one instead of browsing.
+# * Smart Detection: Opt-in auto-detection for Steam AppIDs and the Wine
+#   prefixes of Heroic, Lutris, Bottles and Faugus games, plus an opt-in
+#   library scan that finds games with a profile already installed via Steam
+#   (native, Flatpak or Snap), Heroic, Lutris, Bottles or Faugus and lets you
+#   pick one instead of browsing.
 #
 # * Proton Detection: Identifies Proton runners even within Heroic environments.
 #

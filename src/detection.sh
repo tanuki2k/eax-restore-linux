@@ -330,13 +330,16 @@ gui_picker_available() {
 steam_roots() {
     # Usage: steam_roots
     # Prints "label<TAB>dir" for each Steam install present — native first,
-    # then Flatpak (its current and older data layouts).
+    # then Flatpak (its current and older data layouts), then Snap.
     local d
     for d in "$HOME/.local/share/Steam" "$HOME/.steam/steam"; do
         if [ -d "$d/steamapps" ]; then printf 'native\t%s\n' "$(realpath -m "$d")"; break; fi
     done
     for d in "$HOME/.var/app/com.valvesoftware.Steam/.local/share/Steam" "$HOME/.var/app/com.valvesoftware.Steam/data/Steam"; do
         if [ -d "$d/steamapps" ]; then printf 'flatpak\t%s\n' "$(realpath -m "$d")"; break; fi
+    done
+    for d in "$HOME/snap/steam/common/.local/share/Steam" "$HOME/snap/steam/common/.steam/steam"; do
+        if [ -d "$d/steamapps" ]; then printf 'snap\t%s\n' "$(realpath -m "$d")"; break; fi
     done
     return 0
 }
@@ -388,7 +391,9 @@ heroic_roots() {
     # Prints "label<TAB>dir" for each Heroic config folder present — native
     # first, then Flatpak. Both can exist side by side, each with its own
     # library and GamesConfig, so every lookup walks both.
-    [ -d "$HOME/.config/heroic" ] && printf 'native\t%s\n' "$HOME/.config/heroic"
+    local native
+    native="$(xdg_home config)/heroic"
+    [ -d "$native" ] && printf 'native\t%s\n' "$native"
     [ -d "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic" ] && printf 'flatpak\t%s\n' "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic"
     return 0
 }
@@ -749,6 +754,264 @@ find_heroic_install_path() {
     done | head -n 1
 }
 
+# ---- Wine launchers: Lutris, Bottles and Faugus -----------------------------
+# Each records the Windows games it runs with their exe, prefix and Wine
+# build. None of them keeps a settings file this script edits for the DLL
+# override, so their games get it in the prefix's registry, written with the
+# launcher's own Wine build (resolve_heroic_runner).
+
+# One YAML scalar as these launchers write it: plain, 'single' or "double"
+# quoted. Prepended to the awk programs below.
+YAML_AWK_UNQUOTE='
+function yaml_unquote(v,   n, q) {
+    sub(/^[ \t]+/, "", v); sub(/[ \t\r]+$/, "", v)
+    n = length(v); q = substr(v, 1, 1)
+    if (n >= 2 && q == "\047" && substr(v, n, 1) == "\047") { v = substr(v, 2, n - 2); gsub(/\047\047/, "\047", v); return v }
+    if (n >= 2 && q == "\"" && substr(v, n, 1) == "\"") { v = substr(v, 2, n - 2); gsub(/\\"/, "\"", v); return v }
+    sub(/[ \t]+#.*$/, "", v)
+    if (v == "~" || v == "null") v = ""
+    return v
+}'
+
+# Usage: yaml_value <file> <section> <key>
+# The value of a key one level under a top-level section ("game:" then
+# "  exe: ..."). Empty when either is missing.
+yaml_value() {
+    [ -f "$1" ] || return 0
+    awk -v sec="$2" -v key="$3" "$YAML_AWK_UNQUOTE"'
+        /^[^ \t#]/ { insec = (index($0, sec ":") == 1); next }
+        insec && index($0, "  " key ":") == 1 { print yaml_unquote(substr($0, length(key) + 4)); exit }' "$1" 2>/dev/null
+}
+
+# Usage: proton_wine_for <name>
+# The wine binary of the Proton build called <name> in a compatibilitytools.d
+# folder. A name without its version ("GE-Proton", as Faugus writes the
+# newest) takes the newest build whose folder name starts with it.
+proton_wine_for() {
+    local name="$1" base d pick="" b
+    [ -n "$name" ] || return 0
+    local -a bases=() found=()
+    while IFS=$'\t' read -r _ base; do bases+=("$base/compatibilitytools.d"); done < <(steam_roots)
+    bases+=("$HOME/.local/share/Steam/compatibilitytools.d")
+    for base in "${bases[@]}"; do
+        [ -d "$base/$name" ] && { pick="$base/$name"; break; }
+        for d in "$base/$name"*/; do [ -d "$d" ] && found+=("${d%/}"); done
+    done
+    if [ -z "$pick" ] && [ ${#found[@]} -gt 0 ]; then
+        pick="$(for d in "${found[@]}"; do printf '%s\t%s\n' "$(basename "$d")" "$d"; done | LC_ALL=C sort -t$'\t' -k1,1V | tail -n 1 | cut -f2-)"
+    fi
+    [ -n "$pick" ] || return 0
+    for b in "$pick/files/bin/wine" "$pick/dist/bin/wine"; do
+        [ -x "$b" ] && { printf '%s\n' "$b"; return 0; }
+    done
+}
+
+# Usage: bottles_roots
+# Each Bottles data folder present (runners/ and bottles/ live in it):
+# native, then Flatpak.
+bottles_roots() {
+    local d
+    for d in "$(xdg_home data)/bottles" "$HOME/.var/app/com.usebottles.bottles/data/bottles"; do
+        [ -d "$d" ] && printf '%s\n' "$d"
+    done
+    return 0
+}
+
+# Usage: lutris_installs
+# "config dir<TAB>data dir" per Lutris install: native, then Flatpak. Lutris
+# keeps its YAML files in ~/.config/lutris when that folder exists, else in
+# its data folder, so both are searched, the config folder first.
+lutris_installs() {
+    local cfg data pair
+    for pair in "$(xdg_home config)/lutris"$'\t'"$(xdg_home data)/lutris" \
+        "$HOME/.var/app/net.lutris.Lutris/config/lutris"$'\t'"$HOME/.var/app/net.lutris.Lutris/data/lutris"; do
+        IFS=$'\t' read -r cfg data <<< "$pair"
+        [ -d "$cfg" ] || [ -d "$data" ] || continue
+        printf '%s\t%s\n' "$cfg" "$data"
+    done
+}
+
+# Usage: lutris_path <path> [game folder]
+# A path from Lutris's files: ~ is the home folder, and a relative path is
+# under the game's folder (empty when there's none to put it under).
+lutris_path() {
+    local p="$1" dir="$2"
+    [ -n "$p" ] || return 0
+    [ "$p" == "~" ] && p="$HOME"
+    [[ "$p" == \~/* ]] && p="$HOME/${p#\~/}"
+    [[ "$dir" == \~/* ]] && dir="$HOME/${dir#\~/}"
+    if [[ "$p" != /* ]]; then
+        [[ "$dir" == /* ]] || return 0
+        p="${dir%/}/$p"
+    fi
+    printf '%s\n' "$p"
+}
+
+# Usage: lutris_slug_title <configpath>
+# A title from a game's YAML file name ("deus-ex-1700000000" -> "Deus Ex"),
+# for when Lutris's database can't be read.
+lutris_slug_title() {
+    local t
+    t="$(printf '%s\n' "$1" | sed -E 's/-[0-9]+$//' | awk -F- '{ o = ""; for (i = 1; i <= NF; i++) if ($i != "") o = o (o == "" ? "" : " ") toupper(substr($i, 1, 1)) substr($i, 2); print o }')"
+    printf '%s\n' "${t:-$1}"
+}
+
+_bottles_records() {
+    local root bottles_dir custom conf bottle kind f1 f2 f3 f4 runner="" custom_path="" bpath="" prefix wine title
+    while IFS= read -r root; do
+        bottles_dir="$root/bottles"
+        custom="$(awk "$YAML_AWK_UNQUOTE"'index($0, "custom_bottles_path:") == 1 { print yaml_unquote(substr($0, 21)); exit }' "$root/data.yml" 2>/dev/null)"
+        [[ "$custom" == /* ]] && [ -d "$custom" ] && bottles_dir="$custom"
+        for conf in "$bottles_dir"/*/bottle.yml; do
+            [ -f "$conf" ] || continue
+            bottle="$(dirname "$conf")"
+            # The bottle's own settings come last, after its programs.
+            local -a programs=()
+            while IFS=$'\x1f' read -r kind f1 f2 f3; do
+                if [ "$kind" == "B" ]; then runner="$f1"; custom_path="$f2"; bpath="$f3"
+                else programs+=("$f1"$'\x1f'"$f2"$'\x1f'"$f3"); fi
+            done < <(awk "$YAML_AWK_UNQUOTE"'
+                function flush() { if (inprog) print "P\037" pname "\037" ppath "\037" premoved; inprog = 0 }
+                /^[^ \t#]/ {
+                    flush(); sec = $0; sub(/:.*/, "", sec)
+                    if (index($0, "Runner:") == 1) runner = yaml_unquote(substr($0, 8))
+                    if (index($0, "Path:") == 1) bpath = yaml_unquote(substr($0, 6))
+                    if (index($0, "Custom_Path:") == 1) custom = yaml_unquote(substr($0, 13))
+                    next
+                }
+                sec != "External_Programs" { next }
+                /^  [^ ]/ { flush(); inprog = 1; pname = ""; ppath = ""; premoved = ""; next }
+                index($0, "    name:") == 1 { pname = yaml_unquote(substr($0, 10)) }
+                index($0, "    path:") == 1 { ppath = yaml_unquote(substr($0, 10)) }
+                index($0, "    removed:") == 1 { premoved = yaml_unquote(substr($0, 13)) }
+                END { flush(); print "B\037" runner "\037" custom "\037" bpath }' "$conf" 2>/dev/null)
+            prefix="$bottle"
+            [ "$custom_path" == "true" ] && [[ "$bpath" == /* ]] && prefix="$bpath"
+            wine=""
+            if [ -n "$runner" ] && [[ "$runner" != sys-* ]] && [ -x "$root/runners/$runner/bin/wine" ]; then
+                wine="$root/runners/$runner/bin/wine"
+            fi
+            for f4 in "${programs[@]}"; do
+                IFS=$'\x1f' read -r title f2 f3 <<< "$f4"
+                [ "$f3" == "true" ] && continue
+                [[ "${f2,,}" == *.exe ]] && [ -f "$f2" ] || continue
+                [ -n "$title" ] || title="$(basename "$f2")"; title="${title%.[eE][xX][eE]}"
+                printf 'Bottles\x1f%s\x1f%s\x1f%s\x1f%s\n' "$title" "$f2" "$prefix" "$wine"
+            done
+        done
+    done < <(bottles_roots)
+}
+
+_faugus_records() {
+    local f title exe prefix runner gameid
+    for f in "$(xdg_home config)/faugus-launcher/games.json" \
+        "$HOME/.var/app/io.github.Faugus.faugus-launcher/config/faugus-launcher/games.json"; do
+        [ -f "$f" ] || continue
+        while IFS=$'\x1f' read -r title exe prefix runner gameid; do
+            [[ "${exe,,}" == *.exe ]] && [ -f "$exe" ] || continue
+            [ -n "$title" ] || title="$gameid"
+            printf 'Faugus\x1f%s\x1f%s\x1f%s\x1f%s\n' "$title" "$exe" "$prefix" "$(proton_wine_for "$runner")"
+        done < <(jq -r '.[]? | objects
+            | [.title, .path, .prefix, .runner, .gameid] | map(if type == "string" then gsub("^\\s+|\\s+$"; "") else "" end)
+            | select(.[3] != "Linux-Native" and (.[3] | ascii_downcase) != "steam") | join("\u001f")' "$f" 2>/dev/null)
+    done
+}
+
+# One Lutris game, from its database row (or its YAML file's name). Uses
+# _lutris_records' cfg and data, so it only runs from there.
+_lutris_record() {
+    local title="$1" cp="$2" dir="$3" yml="" y exe prefix version="" wine=""
+    [ -n "$cp" ] && [[ "$cp" != */* ]] && [ "$cp" != "." ] && [ "$cp" != ".." ] || return 0
+    for y in "$cfg/games/$cp.yml" "$data/games/$cp.yml"; do
+        [ -f "$y" ] && { yml="$y"; break; }
+    done
+    [ -n "$yml" ] || return 0
+    exe="$(lutris_path "$(yaml_value "$yml" game exe)" "$dir")"
+    [[ "${exe,,}" == *.exe ]] && [ -f "$exe" ] || return 0
+    prefix="$(lutris_path "$(yaml_value "$yml" game prefix)" "$dir")"
+    # The game's own Wine version, else the one set for every Wine game.
+    version="$(yaml_value "$yml" wine version)"
+    for y in "$cfg/runners/wine.yml" "$data/runners/wine.yml"; do
+        [ -n "$version" ] && break
+        version="$(yaml_value "$y" wine version)"
+    done
+    if [ -n "$version" ] && [[ "$version" != */* ]] && [ -x "$data/runners/wine/$version/bin/wine" ]; then
+        wine="$data/runners/wine/$version/bin/wine"
+    fi
+    printf 'Lutris\x1f%s\x1f%s\x1f%s\x1f%s\n' "${title:-$cp}" "$exe" "$prefix" "$wine"
+}
+
+_lutris_records() {
+    local cfg data pga yml cp title dir
+    while IFS=$'\t' read -r cfg data; do
+        pga="$(awk '/^\[/ { s = ($0 ~ /^\[lutris\][ \t\r]*$/); next }
+            s && match($0, /^[ \t]*[Pp][Gg][Aa]_[Pp][Aa][Tt][Hh][ \t]*[=:]/) { v = substr($0, RLENGTH + 1); gsub(/^[ \t]+|[ \t\r]+$/, "", v); print v; exit }' \
+            "$cfg/lutris.conf" "$data/lutris.conf" 2>/dev/null | head -n 1)"
+        pga="$(lutris_path "$pga")"
+        [ -n "$pga" ] || pga="$data/pga.db"
+        if command -v sqlite3 >/dev/null 2>&1 && [ -f "$pga" ]; then
+            # Read-only: a running Lutris keeps the file open.
+            while IFS=$'\x1f' read -r title cp dir; do
+                _lutris_record "$title" "$cp" "$dir"
+            done < <(sqlite3 -readonly -separator $'\x1f' "$pga" \
+                "SELECT name, configpath, directory FROM games WHERE runner = 'wine' AND installed = 1 ORDER BY id" 2>/dev/null)
+        else
+            # No database to read: the YAML files alone, without the game
+            # folder a relative exe path needs.
+            local -A seen=()
+            for yml in "$cfg"/games/*.yml "$data"/games/*.yml; do
+                [ -f "$yml" ] || continue
+                cp="$(basename "$yml" .yml)"
+                [ -n "${seen[$cp]:-}" ] && continue
+                seen[$cp]=1
+                _lutris_record "$(lutris_slug_title "$cp")" "$cp" ""
+            done
+        fi
+    done < <(lutris_installs)
+}
+
+# Usage: wine_launcher_records
+# One \x1f-separated line per Windows game Lutris, Bottles or Faugus runs
+# whose exe exists:
+#   launcher (Lutris|Bottles|Faugus), title, exe, prefix, wine
+# The prefix may not exist yet, and wine is empty when the launcher's Wine
+# build isn't found.
+wine_launcher_records() {
+    _lutris_records
+    _bottles_records
+    _faugus_records
+}
+
+# Usage: launcher_exe_for_root <install folder>
+# The exe a launcher starts for the game installed there: Heroic's
+# "executable" for a store game (relative to its install folder) or a game
+# added by hand, else the exe Lutris, Bottles or Faugus runs from that folder
+# or one under it. Prints the first that exists, if any.
+launcher_exe_for_root() {
+    local root="${1%/}" conf exe
+    [ -n "$root" ] || return 0
+    while IFS=$'\t' read -r _ conf; do
+        while IFS= read -r exe; do
+            [ -n "$exe" ] || continue
+            [[ "$exe" == /* ]] || exe="$root/$exe"
+            [ -f "$exe" ] && { printf '%s\n' "$exe"; return 0; }
+        done < <(
+            find "$conf" -type f -name installed.json -print0 2>/dev/null \
+                | xargs -r -0 jq -r --arg p "$root" '.. | objects
+                    | select(((.install_path // .installPath // "") | tostring | rtrimstr("/")) == $p)
+                    | .executable // empty | strings' 2>/dev/null
+            jq -r --arg p "$root" '.games[]? | objects
+                | select(((.folder_name // "") | tostring | rtrimstr("/")) == $p)
+                | [.. | objects | .executable? | strings] | last // empty' "$conf/sideload_apps/library.json" 2>/dev/null
+        )
+    done < <(heroic_roots)
+    while IFS=$'\x1f' read -r _ _ exe _ _; do
+        [ "$(dirname "$exe")" == "$root" ] || [[ "$exe" == "$root"/* ]] || continue
+        printf '%s\n' "$exe"
+        return 0
+    done < <(wine_launcher_records)
+}
+
 # Usage: identify_game_dir <dir>
 # Which game is installed in <dir> (or a folder of it), from the install
 # itself: Steam's appmanifest for a folder under steamapps/common, or a GOG
@@ -883,6 +1146,22 @@ print_linux_build_note() {
 # it's nested.
 EXE_JUNK_RE='^(unins(t(all)?)?[0-9]*|vc_?redist.*|(dx|directx)?setup|dxsetup|dxwebsetup|dx[0-9]+ger|dx[0-9]+ntger|dotnetfx.*|ndp[0-9].*|windowsdesktop-runtime.*|oalinst|physx.*|easyanticheat.*|eac_?setup.*|eaclauncher|be(service|daisy|launcher|_ex)[a-z0-9_]*|battleye.*|unitycrashhandler.*|crashreport(er|client)?|crash_?handler|crashpad_handler|bugsplat.*|epiconlineservices(installer)?|epicwebhelper.*|rockstar-games-launcher|social-club-setup|tagesclient.*|vulkanrt.*installer.*|gamingrepair(tool)?|registrationreminder|overlayinjector|cleanup|touchup|driverversionchecker|layerschecker|supporttool|dowser|iscopyfiles|detectionui.*|eax[0-9]*unified_redist.*|reg|.*updatelauncher|adb?e?rdr.*|ue3?redist.*|unrealfrontend|unrealconsole|uescriptprofiler|cookersync|testapp|.*oshelper)\.exe$'
 
+# Folders that only ever hold redistributables, installers, anti-cheat setup
+# or crash reporters, and are never searched for the game's exe. Unlike
+# "Launcher" or "bin" above, no game keeps its exe in one of these.
+EXE_JUNK_DIRS='_?_?commonredist|_?redist|redistributables?|__installer|installers?|directx|dotnetfx|dotnet|vcredist|prerequisites|easyanticheat|battleye|crashreporter|crashpad|__macosx|__support'
+
+# Usage: _exe_find <root> <min level> <max level> <name glob>
+# "level<TAB>path" for each file matching the glob below <root> (its own
+# files are level 1), never looking inside an EXE_JUNK_DIRS folder. Sorted
+# shallowest first, then by path, so every machine lists them alike.
+_exe_find() {
+    find "$1" -regextype posix-extended -mindepth 1 -maxdepth "$3" \
+        \( -type d -iregex ".*/($EXE_JUNK_DIRS)" -prune \) -o \
+        \( -type f -iname "$4" -printf '%d\t%p\n' \) 2>/dev/null \
+        | awk -F'\t' -v min="$2" '$1 >= min' | LC_ALL=C sort -t$'\t' -k1,1n -k2,2
+}
+
 # Usage: _exe_is_junk <exe path>
 # True for an installer or utility .exe by its own name (EXE_JUNK_RE).
 _exe_is_junk() {
@@ -918,10 +1197,22 @@ _exe_collect_candidates() {
     # every machine, and every reinstall, picks the same folder.
     if [ -n "$exe_hint" ]; then
         local hint_exe
-        hint_exe="$(find "$root" -maxdepth 4 -type f -iname "$(find_glob_escape "$exe_hint")" -printf '%d\t%p\n' 2>/dev/null | LC_ALL=C sort -t$'\t' -k1,1n -k2,2 | head -n 1 | cut -f2-)"
+        hint_exe="$(_exe_find "$root" 1 4 "$(find_glob_escape "$exe_hint")" | head -n 1 | cut -f2-)"
         if [ -n "$hint_exe" ]; then
             cand_dirs+=("$(dirname "$hint_exe")")
             cand_exe_name["$(dirname "$hint_exe")"]="$(basename "$hint_exe")"
+        fi
+    fi
+
+    # Then the exe the game's launcher starts (resolve_exe_folder looks it up
+    # with launcher_exe_for_root): what the player actually runs. It isn't
+    # kept first like the database's pick, since a launcher can point at a
+    # setup or launcher program, which the audio ranking below moves down.
+    if [ -n "${launcher_exe:-}" ] && [ -f "$launcher_exe" ] && ! _exe_is_junk "$launcher_exe"; then
+        d="$(dirname "$launcher_exe")"
+        if [ -z "${cand_exe_name[$d]:-}" ]; then
+            cand_dirs+=("$d")
+            cand_exe_name["$d"]="$(basename "$launcher_exe")"
         fi
     fi
 
@@ -959,7 +1250,7 @@ _exe_collect_candidates() {
     # Theory's System/ vs Utils/Detection/. This is only the tiebreak within
     # each tier below; name-matched folders still come first.
     local all_exes=()
-    while IFS= read -r f; do all_exes+=("$f"); done < <(find "$root" -mindepth 2 -maxdepth 4 -type f -iname "*.exe" -printf '%d\t%p\n' 2>/dev/null | sort -t$'\t' -k1,1n -k2,2 | cut -f2-)
+    while IFS= read -r f; do all_exes+=("$f"); done < <(_exe_find "$root" 2 4 "*.exe" | cut -f2-)
 
     local candidates=()
     for f in "${all_exes[@]}"; do
@@ -1176,6 +1467,8 @@ resolve_exe_folder() {
     # filename about to be treated as the game's executable).
     local -a cand_dirs=()
     local -A cand_exe_name=()
+    local launcher_exe
+    launcher_exe="$(launcher_exe_for_root "$root")"
     _exe_collect_candidates
 
     if [ ${#cand_dirs[@]} -eq 0 ]; then
@@ -1820,6 +2113,11 @@ _env_find_heroic_prefix() {
             <<< "$(detect_heroic_prefix_verbose "$GAME_DIR" 2>/dev/null)"
     fi
     HEROIC_EXPECTED_PREFIX="$DETECTED_PREFIX"
+    WINE_LAUNCHER=""; WINE_LAUNCHER_WINE=""
+    # Not in Heroic's library: Lutris, Bottles or Faugus may run it instead.
+    if [ -z "$DETECTED_PREFIX" ] && [ -z "$HEROIC_GAME_ID" ]; then
+        _env_find_wine_launcher_prefix
+    fi
     # Found from the game folder, not the prefix, so it's kept whichever
     # prefix is used: a typed one still gets the game's profile, its EAX
     # check and its settings.
@@ -1831,6 +2129,36 @@ _env_find_heroic_prefix() {
             if confirm "Use this detected prefix?"; then
                 PREFIX_PATH="$DETECTED_PREFIX"
             fi
+        fi
+    fi
+}
+
+# Non-Steam, not in Heroic: the Lutris, Bottles or Faugus entry whose exe is
+# in the game folder (or a folder of it, or one under it). Its prefix is
+# offered like Heroic's, and resolve_heroic_runner uses its Wine build. A
+# prefix that doesn't exist yet is still offered: the check after it says to
+# launch the game once.
+_env_find_wine_launcher_prefix() {
+    local launcher title exe prefix wine dir hit=""
+    WINE_LAUNCHER=""; WINE_LAUNCHER_WINE=""
+    while IFS=$'\x1f' read -r launcher title exe prefix wine; do
+        dir="$(dirname "$exe")"
+        if [ "${GAME_DIR%/}" == "$dir" ] || [[ "$GAME_DIR" == "$dir"/* ]] || [[ "$dir" == "${GAME_DIR%/}"/* ]]; then
+            hit=1; break
+        fi
+    done < <(wine_launcher_records)
+    if [ -z "$hit" ]; then
+        log_cmd "wine launchers: $GAME_DIR isn't in Lutris, Bottles or Faugus"
+        return 0
+    fi
+    WINE_LAUNCHER="$launcher"; WINE_LAUNCHER_WINE="$wine"
+    log_cmd "wine launchers: $GAME_DIR is $launcher's \"$title\" (prefix ${prefix:-none}, wine ${wine:-not found})"
+    [ "$attempt_auto_detect" -eq 1 ] || return 0
+    print_status "Found in $launcher: ${BOLD}$title${NC}" ""
+    if [ -n "$prefix" ]; then
+        print_detected "Detected Prefix" "$prefix"
+        if confirm "Use this detected prefix?"; then
+            PREFIX_PATH="$prefix"
         fi
     fi
 }
@@ -1892,8 +2220,8 @@ detect_game_environment() {
     APPID=""
     PREFIX_PATH=""
 
-    print_paragraph "This step works out whether Steam or Heroic runs ${GAME_NAME:-the game}, and which" \
-        "Wine or Proton prefix it uses."
+    print_paragraph "This step works out which launcher runs ${GAME_NAME:-the game}, and which Wine" \
+        "or Proton prefix it uses."
 
     local attempt_auto_detect=1
     confirm "Find ${GAME_NAME:-the game}'s prefix automatically?" || attempt_auto_detect=0
@@ -1907,7 +2235,7 @@ detect_game_environment() {
         _env_verify_steam_prefix
     else
         LAUNCHER_TYPE="2"
-        print_result "Non-Steam installation detected (Heroic/GOG, or a manually created Wine prefix)!" "$GREEN"
+        print_result "Non-Steam installation detected (Heroic, Lutris, Bottles, Faugus, or a Wine prefix you made yourself)!" "$GREEN"
         _env_find_heroic_prefix
         _env_verify_wine_prefix || return
 
@@ -1917,7 +2245,7 @@ detect_game_environment() {
         # settings of the prefix just confirmed rather than guessing, and
         # any other Wine would reintroduce the mismatch this fixes.
         if [ -n "$PREFIX_PATH" ]; then
-            print_task "Checking which Wine version Heroic uses for this game"
+            print_task "Checking which Wine version ${WINE_LAUNCHER:-Heroic} uses for ${GAME_NAME:-this game}"
             resolve_heroic_runner
         fi
     fi
@@ -1935,6 +2263,10 @@ resolve_heroic_runner() {
     # drive_c at the prefix root (pfx is a symlink to "."), so Proton's own
     # files/bin/wine can run against PREFIX_PATH directly.
     local json="" runner_type runner_bin runner_name dir wine_bin="" server_bin=""
+    if [ -z "$HEROIC_GAME_ID" ] && [ -n "${WINE_LAUNCHER:-}" ]; then
+        _wine_launcher_runner
+        return
+    fi
     # The game's own settings first (when it was found in Heroic's library
     # and they name a Wine version), else whichever entry claims this prefix.
     if [ -n "$HEROIC_GAME_ID" ] && [ -n "$HEROIC_ROOT" ] && grep -q '"wineVersion"' "$HEROIC_ROOT/GamesConfig/$HEROIC_GAME_ID.json" 2>/dev/null; then
@@ -1984,6 +2316,28 @@ resolve_heroic_runner() {
         print_warning_arrow "No Heroic settings were found for this prefix, so $WINE_CMD will be used." \
             "If ${GAME_NAME:-the game} runs on Proton or a different Wine build, EAX may not show up in-game."
     fi
+    return 1
+}
+
+# Usage: _wine_launcher_runner   (from resolve_heroic_runner)
+# Points WINE_CMD/WINESERVER_CMD at the Wine build Lutris, Bottles or Faugus
+# runs the game with (WINE_LAUNCHER_WINE), for the same reason as Heroic's.
+_wine_launcher_runner() {
+    local wine="${WINE_LAUNCHER_WINE:-}" d name
+    if [ -n "$wine" ] && [ -x "$wine" ]; then
+        d="$(dirname "$(dirname "$wine")")"
+        case "$(basename "$d")" in files|dist) d="$(dirname "$d")"; HEROIC_RUNNER_TYPE="proton" ;; *) HEROIC_RUNNER_TYPE="wine" ;; esac
+        name="$(basename "$d")"
+        WINE_CMD="$wine"
+        WINESERVER_CMD=""
+        [ -x "$(dirname "$wine")/wineserver" ] && WINESERVER_CMD="$(dirname "$wine")/wineserver"
+        log_cmd "wine launchers: $WINE_LAUNCHER's Wine build $WINE_CMD"
+        print_status "Using the same Wine version $WINE_LAUNCHER launches ${GAME_NAME:-this game} with: $name" "$GREEN"
+        return 0
+    fi
+    WINESERVER_CMD=""
+    print_warning_arrow "Couldn't find the Wine version $WINE_LAUNCHER runs ${GAME_NAME:-this game} with, so ${WINE_CMD:-no Wine binary} will be used instead." \
+        "If EAX doesn't show up in ${GAME_NAME:-the game}, that's the likely cause."
     return 1
 }
 

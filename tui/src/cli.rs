@@ -195,7 +195,8 @@ fn find_game<'a>(db: &'a Database, store: Option<Store>, id: &str) -> Option<&'a
 /// top folder), said when it moves.
 fn exe_folder(dir: &Path, exe_hint: &str, home: &Path) -> Result<PathBuf> {
     std::fs::read_dir(dir)?;
-    let (d, exe) = detect::exe_folder(dir, exe_hint);
+    let launcher_exe = crate::engine::wine_launchers::launcher_exe_for_root(home, dir);
+    let (d, exe) = detect::exe_folder_with(dir, exe_hint, launcher_exe.as_deref());
     if d != dir {
         say(format!(
             "Using {}, the folder {} is in.",
@@ -367,9 +368,12 @@ fn why_text(what: &str, why: &builds::Why) -> String {
     }
 }
 
-/// "Steam" or "Heroic", for a game whose launcher has no settings yet.
+/// "Steam", "Heroic", "Lutris", "Bottles" or "Faugus", for a game whose
+/// launcher has no settings yet.
 fn launcher_label(facts: &Facts) -> &'static str {
-    if facts.store == Some(Store::Steam)
+    if let Some(w) = &facts.wine_launcher {
+        w.launcher
+    } else if facts.store == Some(Store::Steam)
         || facts
             .game_dir
             .to_string_lossy()

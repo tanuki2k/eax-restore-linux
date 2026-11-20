@@ -16,13 +16,15 @@ pub enum StoreKind {
     Gog,
 }
 
-/// A database game found installed by its store.
+/// A database game found installed by its store, or by a Wine launcher.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Found {
     pub store: StoreKind,
     pub id: String,
     /// The store's install folder (the manifest may sit in a subfolder).
     pub path: PathBuf,
+    /// "Lutris", "Bottles" or "Faugus" when one of them runs it.
+    pub via: Option<&'static str>,
 }
 
 fn canon(p: &Path) -> PathBuf {
@@ -47,24 +49,9 @@ fn vdf_values(text: &str, key: &str) -> Vec<String> {
         .collect()
 }
 
-/// Steam installs present: the native one, then Flatpak's (each with two
-/// layouts, first that exists wins).
+/// Steam installs present: native, Flatpak, then Snap.
 fn steam_roots(home: &Path) -> Vec<PathBuf> {
-    let sets: [&[&str]; 2] = [
-        &[".local/share/Steam", ".steam/steam"],
-        &[
-            ".var/app/com.valvesoftware.Steam/.local/share/Steam",
-            ".var/app/com.valvesoftware.Steam/data/Steam",
-        ],
-    ];
-    sets.iter()
-        .filter_map(|set| {
-            set.iter()
-                .map(|p| home.join(p))
-                .find(|d| d.join("steamapps").is_dir())
-        })
-        .map(|d| canon(&d))
-        .collect()
+    crate::engine::roots::steam_roots(home)
 }
 
 /// A path for display, with the home folder as `~`. A home of `/` (the app's
@@ -130,12 +117,19 @@ pub fn scan_steam(home: &Path, ids: &HashSet<u64>) -> Vec<Found> {
             let Some(installdir) = vdf_values(&text, "installdir").into_iter().next() else {
                 continue;
             };
+            // StateFlags bit 4 is "fully installed"; a game still
+            // downloading lacks it, one with an update pending keeps it.
+            let partial = vdf_values(&text, "StateFlags")
+                .first()
+                .and_then(|f| f.parse::<u64>().ok())
+                .is_some_and(|f| f & 4 == 0);
             let path = lib.join("common").join(installdir);
-            if path.is_dir() {
+            if path.is_dir() && !partial {
                 out.push(Found {
                     store: StoreKind::Steam,
                     id: id.to_string(),
                     path,
+                    via: None,
                 });
             }
         }
@@ -145,14 +139,10 @@ pub fn scan_steam(home: &Path, ids: &HashSet<u64>) -> Vec<Found> {
 }
 
 pub fn heroic_roots(home: &Path) -> Vec<PathBuf> {
-    [
-        ".config/heroic",
-        ".var/app/com.heroicgameslauncher.hgl/config/heroic",
-    ]
-    .iter()
-    .map(|p| home.join(p))
-    .filter(|d| d.is_dir())
-    .collect()
+    crate::engine::roots::heroic_dirs(home)
+        .into_iter()
+        .filter(|d| d.is_dir())
+        .collect()
 }
 
 /// Files called `name` below `root`, at most `max_depth` levels down (the root's
@@ -211,6 +201,7 @@ pub fn scan_heroic(home: &Path, gog_ids: &HashSet<String>) -> Vec<Found> {
                         store: StoreKind::Gog,
                         id: app,
                         path,
+                        via: None,
                     });
                 }
             }
@@ -218,6 +209,44 @@ pub fn scan_heroic(home: &Path, gog_ids: &HashSet<String>) -> Vec<Found> {
     }
     out.sort_by(|a, b| a.id.cmp(&b.id).then(a.path.cmp(&b.path)));
     out.dedup();
+    out
+}
+
+/// Database games Lutris, Bottles or Faugus run: by the GOG install's own
+/// goggame-<id>.info when the database knows that ID, else by the exe name
+/// (`exe_ids`: lowercased exe to the store and ID, GOG's when the game has
+/// both). A port of the script's `_scan_wine_launcher_games`.
+pub fn scan_wine_launchers(
+    home: &Path,
+    gog_ids: &HashSet<String>,
+    exe_ids: &std::collections::HashMap<String, (StoreKind, String)>,
+) -> Vec<Found> {
+    let mut out = Vec::new();
+    for g in crate::engine::wine_launchers::records(home) {
+        let dir = g.exe.parent().unwrap_or(&g.exe).to_path_buf();
+        let gog = crate::engine::identify::identify_game_dir(&dir, home)
+            .filter(|i| i.store == crate::engine::identify::Store::Gog && gog_ids.contains(&i.id));
+        let (store, id, path) = match gog {
+            Some(i) => (StoreKind::Gog, i.id, i.root),
+            None => {
+                let exe = g
+                    .exe
+                    .file_name()
+                    .map(|n| n.to_string_lossy().to_lowercase())
+                    .unwrap_or_default();
+                let Some((store, id)) = exe_ids.get(&exe) else {
+                    continue;
+                };
+                (*store, id.clone(), dir)
+            }
+        };
+        out.push(Found {
+            store,
+            id,
+            path,
+            via: Some(g.launcher),
+        });
+    }
     out
 }
 
@@ -289,6 +318,12 @@ fn manifest_dirs_on_disk(home: &Path) -> BTreeSet<PathBuf> {
     for folder in heroic_game_folders(home) {
         if folder.is_dir() {
             manifests.extend(find_files(&folder, MANIFEST_NAME, 5));
+        }
+    }
+    // Near each exe Lutris, Bottles and Faugus run.
+    for g in crate::engine::wine_launchers::records(home) {
+        if let Some(dir) = g.exe.parent() {
+            manifests.extend(find_files(dir, MANIFEST_NAME, 3));
         }
     }
     manifests
@@ -422,7 +457,8 @@ pub(crate) mod tests {
             [Found {
                 store: StoreKind::Gog,
                 id: "555".into(),
-                path: game
+                path: game,
+                via: None,
             }]
         );
         assert!(scan_heroic(w.home.path(), &["556".to_string()].into()).is_empty());
@@ -513,5 +549,67 @@ pub(crate) mod tests {
             &format!("{}\n", alpha.display()),
         );
         assert_eq!(live_manifest_dirs(w.home.path(), &w.state_file()).len(), 1);
+    }
+
+    #[test]
+    fn a_steam_game_still_downloading_is_not_found() {
+        let w = World::new();
+        w.steam_game(".local/share/Steam", 10, "Alpha");
+        w.steam_game(".local/share/Steam", 20, "Beta");
+        // 1026: downloading, not fully installed; 6: installed, update pending.
+        for (id, flags) in [(10, 1026), (20, 6)] {
+            let f = w.p(&format!(
+                ".local/share/Steam/steamapps/appmanifest_{id}.acf"
+            ));
+            let t = fs::read_to_string(&f).unwrap();
+            fs::write(
+                &f,
+                t.replace("\n}", &format!("\n\t\"StateFlags\"\t\t\"{flags}\"\n}}")),
+            )
+            .unwrap();
+        }
+        let ids: Vec<String> = scan_steam(w.home.path(), &[10, 20].into())
+            .into_iter()
+            .map(|f| f.id)
+            .collect();
+        assert_eq!(ids, ["20"]);
+    }
+
+    #[test]
+    fn a_game_lutris_runs_is_found_by_its_exe_or_its_gog_id() {
+        let w = World::new();
+        w.write("Games/Rune/System/Rune.exe", "");
+        w.write("Games/Thief/THIEF.EXE", "");
+        w.write("Games/Thief/goggame-77.info", "{\"gameId\":\"77\"}");
+        w.write("Games/Other/other.exe", "");
+        for (slug, exe) in [
+            ("rune", "Games/Rune/System/Rune.exe"),
+            ("thief", "Games/Thief/THIEF.EXE"),
+            ("other", "Games/Other/other.exe"),
+        ] {
+            w.write(
+                &format!(".local/share/lutris/games/{slug}.yml"),
+                &format!("game:\n  exe: {}\n", w.p(exe).display()),
+            );
+        }
+        let exe_ids = [("rune.exe".to_string(), (StoreKind::Steam, "5".to_string()))].into();
+        let found = scan_wine_launchers(w.home.path(), &["77".to_string()].into(), &exe_ids);
+        assert_eq!(
+            found,
+            [
+                Found {
+                    store: StoreKind::Steam,
+                    id: "5".into(),
+                    path: w.p("Games/Rune/System"),
+                    via: Some("Lutris"),
+                },
+                Found {
+                    store: StoreKind::Gog,
+                    id: "77".into(),
+                    path: w.p("Games/Thief"),
+                    via: Some("Lutris"),
+                },
+            ]
+        );
     }
 }

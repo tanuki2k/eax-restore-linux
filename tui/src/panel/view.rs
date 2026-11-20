@@ -658,10 +658,11 @@ fn plain() -> ratatui::widgets::Block<'static> {
 }
 
 fn title(p: &Panel) -> Line<'static> {
-    let store = match p.facts.store {
-        Some(Store::Steam) => "Steam",
-        Some(Store::Gog) => "Heroic",
-        None => "",
+    let store = match (&p.facts.wine_launcher, p.facts.store) {
+        (Some(w), _) => w.launcher,
+        (None, Some(Store::Steam)) => "Steam",
+        (None, Some(Store::Gog)) => "Heroic",
+        (None, None) => "",
     };
     let mut parts = vec![Span::styled(format!(" {} ", p.name), theme::white())];
     if !store.is_empty() {

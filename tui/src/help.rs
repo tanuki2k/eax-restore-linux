@@ -20,7 +20,7 @@ const ROWS: &[(&str, &str)] = &[
     ("", "Filters"),
     (
         "Tab",
-        "Show: All games → Games on this PC → EAX fix installed. Games on this PC are the ones found in your Steam or Heroic libraries, plus any you added yourself.",
+        "Show: All games → Games on this PC → EAX fix installed. Games on this PC are the ones found in your Steam, Heroic, Lutris, Bottles or Faugus libraries, plus any you added yourself.",
     ),
     (
         "Ctrl-S",

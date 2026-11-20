@@ -40,6 +40,8 @@ pub struct Entry {
     /// None for a manual game the database doesn't list.
     pub game: Option<Game>,
     pub store: Option<StoreKind>,
+    /// "Lutris", "Bottles" or "Faugus" when one of them runs this copy.
+    pub via: Option<&'static str>,
     /// The game's folder: the install's folder when installed, else the store's.
     pub path: Option<PathBuf>,
     /// What a live install in `path` put there; None when nothing is installed.
@@ -53,6 +55,7 @@ impl Entry {
             status: Status::NotOnThisPc,
             game: Some(game),
             store: None,
+            via: None,
             path: None,
             engine: None,
         }
@@ -139,9 +142,21 @@ pub fn build(db: &Database, home: &Path, state_file: &Path) -> Vec<Entry> {
         .iter()
         .filter_map(|g| g.stores.gog.as_ref().map(|s| s.id.to_string()))
         .collect();
+    // Lowercased exe name to the store and ID the script's scan matches a
+    // Wine launcher's game by: GOG's when the game has both.
+    let mut exe_ids: std::collections::HashMap<String, (StoreKind, String)> = Default::default();
+    for g in db.games.iter().filter(|g| !g.exe.is_empty()) {
+        let key = match (&g.stores.gog, &g.stores.steam) {
+            (Some(s), _) => (StoreKind::Gog, s.id.to_string()),
+            (None, Some(s)) => (StoreKind::Steam, s.id.to_string()),
+            (None, None) => continue,
+        };
+        exe_ids.entry(g.exe.to_lowercase()).or_insert(key);
+    }
     // Steam's copies first, so they are listed before a GOG copy of the same game.
     let mut found = library::scan_steam(home, &steam_ids);
     found.extend(library::scan_heroic(home, &gog_ids));
+    found.extend(library::scan_wine_launchers(home, &gog_ids, &exe_ids));
     let live = library::live_manifest_dirs(home, state_file);
     let heroic = library::heroic_game_folders(home);
 
@@ -162,6 +177,7 @@ pub fn build(db: &Database, home: &Path, state_file: &Path) -> Vec<Entry> {
         for f in copies {
             let mut e = Entry::database_only(g.clone());
             e.store = Some(f.store);
+            e.via = f.via;
             e.path = Some(f.path.clone());
             e.status = Status::OnThisPc;
             for d in live.iter().filter(|d| d.starts_with(&f.path)) {
@@ -210,6 +226,7 @@ pub fn build(db: &Database, home: &Path, state_file: &Path) -> Vec<Entry> {
                 status: Status::Manual,
                 game: None,
                 store: None,
+                via: None,
                 path: Some(dir.clone()),
                 engine: engine_in(dir),
             }),

@@ -1111,6 +1111,7 @@ mod tests {
             status: Status::Manual,
             game: None,
             store: None,
+            via: None,
             path: Some(PathBuf::from("/g/Obscure")),
             engine: None,
         };
@@ -1258,6 +1259,7 @@ mod tests {
             status: Status::Manual,
             game: None,
             store: None,
+            via: None,
             path: None,
             engine: None,
         };

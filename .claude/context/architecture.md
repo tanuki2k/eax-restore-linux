@@ -155,6 +155,14 @@ their execution order in the assembled script):
    builds log to their own subfolder).
 7. **`detection.sh`** — Steam AppID / Heroic prefix / architecture detection,
    `get_game_directory`, `detect_game_environment`, `select_architecture`, etc.
+   `steam_roots` covers native, Flatpak and Snap Steam; `heroic_roots` follows
+   `xdg_home` (in `common.sh`). `wine_launcher_records` lists the Windows games
+   Lutris (`pga.db` through `sqlite3`, else its YAML alone), Bottles and Faugus
+   run, with exe, prefix and Wine build; the prefix step uses it for a game
+   Heroic doesn't know (`_env_find_wine_launcher_prefix`, `_wine_launcher_runner`),
+   and those games get the registry override. `launcher_exe_for_root` (Heroic's
+   `executable`, or a Wine launcher's exe) ranks right after the database's exe
+   in `_exe_collect_candidates`, and `_exe_find` never searches `EXE_JUNK_DIRS`.
 8. **`game-database.sh`** — the `game-database.json` helpers:
    `ensure_game_database`, `scan_game_libraries`, `show_game_details_block`
    (the install's GAME PROFILE: sets `PROFILE_API`/`PROFILE_PATCHES` and the

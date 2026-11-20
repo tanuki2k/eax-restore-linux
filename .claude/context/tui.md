@@ -113,6 +113,14 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
   end to end by `install_oracle.rs`, which installs with a detected plan too. Every
   oracle test puts `tests/fixtures/bin` first on PATH for the Rust side as well, so the
   machine's own winetricks or Wine never runs.
+  `engine/roots.rs` is the one list of Steam (native, Flatpak, Snap) and Heroic
+  folders (`xdg_home` reads `XDG_*` only for the real home, so tests get the
+  defaults). `engine/wine_launchers.rs` is `wine_launcher_records`,
+  `launcher_exe_for_root` and the prefix step's lookup for Lutris, Bottles and
+  Faugus (it runs `sqlite3` as the script does); `prepare::gather` uses it when
+  Heroic doesn't know the game, `library::scan_wine_launchers` lists them with
+  `Found::via`, and such a copy goes to the script by folder. Checked by
+  `detect_oracle.rs`'s `wine_launchers_match`.
 
 The game panel (`tui/src/panel/`, the user's Optiscaler-Client-style design): Enter on a game
 with a folder opens a full-screen page in two columns (`view::draw`), on the folder holding

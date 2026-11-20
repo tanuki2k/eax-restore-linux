@@ -6,6 +6,7 @@
 
 use eax_restore::db::Database;
 use eax_restore::engine::detect::{self, PrefixSource};
+use eax_restore::engine::wine_launchers;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -33,6 +34,10 @@ fn bash(script: &str, dir: &Path, env: &[(&str, String)]) -> String {
         .env("LC_ALL", "C")
         .env("TERM", "dumb")
         .env("EAX_RESTORE_NO_LOG", "1")
+        // The engine only reads these for the real home, so a fake one gets
+        // the default folders on both sides.
+        .env_remove("XDG_DATA_HOME")
+        .env_remove("XDG_CONFIG_HOME")
         .envs(env.iter().map(|(k, v)| (*k, v.as_str())))
         .stdin(std::process::Stdio::null())
         .output()
@@ -513,4 +518,201 @@ fn heroic_prefixes_match() {
         })
         .collect();
     assert_eq!(out, rust);
+}
+
+/// A fake home with a game in each Wine launcher, a Heroic GOG game whose
+/// recorded exe is a tool, and junk folders.
+fn launcher_world(h: &Path) {
+    let exe = |p: &str| put(&h.join(p), "");
+    let wine = |p: &str| {
+        put(&h.join(p), "#!/bin/sh\n");
+        std::fs::set_permissions(h.join(p), std::fs::Permissions::from_mode(0o755)).unwrap();
+    };
+    exe("Games/Deus Ex/System/DeusEx.exe");
+    exe("Games/Deus Ex/Help/Readme.exe");
+    exe("Games/Thief/THIEF.EXE");
+    exe("Games/Rune/System/Rune.exe");
+    exe("Games/Thief2/thief2.exe");
+    exe("Games/Pk/Bin/Painkiller.exe");
+    exe("Games/Pk/Data/Editor.exe");
+    exe("Games/Pk/_CommonRedist/pk/pk.exe");
+    exe("Games/Pk/Redist/DirectX/dxsetup.exe");
+    wine(".local/share/lutris/runners/wine/wine-ge-8/bin/wine");
+    wine(".local/share/bottles/runners/soda-9/bin/wine");
+    wine(".local/share/bottles/runners/soda-9/bin/wineserver");
+    wine(".local/share/Steam/compatibilitytools.d/GE-Proton9-20/files/bin/wine");
+    wine(".local/share/Steam/compatibilitytools.d/GE-Proton10-1/files/bin/wine");
+    std::fs::create_dir_all(h.join(".local/share/Steam/steamapps")).unwrap();
+    put(
+        &h.join(".local/share/lutris/games/deus-ex-1700.yml"),
+        "game:\n  exe: System/DeusEx.exe  # the game\n  prefix: ~/pfx/deus\nwine:\n  dxvk: true\n",
+    );
+    put(
+        &h.join(".local/share/lutris/games/thief-ii-the-metal-age-1800.yml"),
+        &format!(
+            "game:\n  exe: \"{}\"\n",
+            h.join("Games/Thief2/thief2.exe").display()
+        ),
+    );
+    put(
+        &h.join(".config/lutris/runners/wine.yml"),
+        "wine:\n  version: wine-ge-8\n",
+    );
+    let pga = h.join(".local/share/lutris/pga.db");
+    let ok = Command::new("sqlite3")
+        .arg(&pga)
+        .arg(
+            "CREATE TABLE games (id INTEGER PRIMARY KEY, name TEXT, slug TEXT, runner TEXT, directory TEXT, installed INTEGER, configpath TEXT);
+             INSERT INTO games VALUES (1, 'Deus Ex: GOTY', 'deus-ex', 'wine', '~/Games/Deus Ex', 1, 'deus-ex-1700');
+             INSERT INTO games VALUES (2, 'Gone', 'gone', 'wine', '~/Games/Gone', 0, 'gone-1');",
+        )
+        .status()
+        .unwrap()
+        .success();
+    assert!(ok, "sqlite3 made the fake pga.db");
+    put(
+        &h.join(".local/share/bottles/bottles/Gaming/bottle.yml"),
+        &format!(
+            "Arch: win64\nExternal_Programs:\n  a1:\n    executable: THIEF.EXE\n    name: 'Thief: Gold'\n    path: {thief}\n  c3:\n    name: Old\n    path: {thief}\n    removed: true\nName: Gaming\nRunner: soda-9\n",
+            thief = h.join("Games/Thief/THIEF.EXE").display()
+        ),
+    );
+    put(
+        &h.join(".config/faugus-launcher/games.json"),
+        &serde_json::json!([
+            {"gameid": "rune", "title": " Rune ", "path": h.join("Games/Rune/System/Rune.exe"),
+             "prefix": h.join("Faugus/rune"), "runner": "GE-Proton"},
+            {"gameid": "tux", "title": "Tux", "path": h.join("Games/Rune/System/Rune.exe"), "runner": "Linux-Native"}
+        ])
+        .to_string(),
+    );
+    put(
+        &h.join(".config/heroic/gog_store/installed.json"),
+        &serde_json::json!({"installed": [
+            {"appName": "1", "install_path": format!("{}/", h.join("Games/Pk").display()), "executable": "Data/Editor.exe"}
+        ]})
+        .to_string(),
+    );
+}
+
+fn records_text(list: &[wine_launchers::LauncherGame]) -> String {
+    let p = |o: &Option<PathBuf>| {
+        o.as_ref()
+            .map(|p| p.display().to_string())
+            .unwrap_or_default()
+    };
+    list.iter()
+        .map(|g| {
+            format!(
+                "{}|{}|{}|{}|{}\n",
+                g.launcher,
+                g.title,
+                g.exe.display(),
+                p(&g.prefix),
+                p(&g.wine)
+            )
+        })
+        .collect()
+}
+
+#[test]
+fn wine_launchers_match() {
+    let tmp = tempfile::tempdir().unwrap();
+    let h = tmp.path();
+    launcher_world(h);
+    let script = "wine_launcher_records | tr '\\037' '|'\n\
+         echo --\n\
+         for r in \"$HOME/Games/Pk\" \"$HOME/Games/Deus Ex\" \"$HOME/Games/Rune\" \"$HOME/Games/None\"; do printf '%s\\n' \"$(launcher_exe_for_root \"$r\")\"; done\n\
+         echo --\n\
+         for d in \"$HOME/Games/Thief\" \"$HOME/Games/Deus Ex\" \"$HOME/Games/Rune/System/sub\" \"$HOME/Games/Other\"; do\n\
+           WINE_LAUNCHER=''; PREFIX_PATH=''; GAME_DIR=\"$d\"; attempt_auto_detect=0; _env_find_wine_launcher_prefix\n\
+           echo \"$WINE_LAUNCHER|$WINE_LAUNCHER_WINE\"; done\n\
+         echo --\n\
+         for n in GE-Proton GE-Proton9-20 Missing ''; do printf '%s\\n' \"$(proton_wine_for \"$n\")\"; done\n\
+         echo --\n\
+         cands() { local root=\"$1\" exe_hint=\"$2\" launcher_exe=\"$3\" root_norm; root_norm=\"$(normalize_game_name \"$(basename \"$root\")\")\"\n\
+           local -a cand_dirs=(); local -A cand_exe_name=(); _exe_collect_candidates\n\
+           for d in \"${cand_dirs[@]}\"; do printf '%s|%s\\n' \"$d\" \"${cand_exe_name[$d]}\"; done; }\n\
+         cands \"$HOME/Games/Pk\" '' \"$(launcher_exe_for_root \"$HOME/Games/Pk\")\"; echo .\n\
+         cands \"$HOME/Games/Pk\" 'pk.exe' ''; echo .\n\
+         cands \"$HOME/Games/Deus Ex\" '' \"$(launcher_exe_for_root \"$HOME/Games/Deus Ex\")\"; echo .\n";
+    let out = bash(script, h, &[]);
+    let parts: Vec<&str> = out.split("--\n").collect();
+    assert_eq!(parts.len(), 5, "{out}");
+
+    let list = wine_launchers::records(h);
+    assert_eq!(parts[0], records_text(&list));
+    // pga.db decides which Lutris games there are: Thief II's YAML file
+    // alone doesn't count while sqlite3 can read it.
+    assert_eq!(list.len(), 3, "{}", parts[0]);
+
+    let mut rust = String::new();
+    for r in ["Games/Pk", "Games/Deus Ex", "Games/Rune", "Games/None"] {
+        let e = wine_launchers::launcher_exe_for_root(h, &h.join(r));
+        rust.push_str(&format!(
+            "{}\n",
+            e.map(|p| p.display().to_string()).unwrap_or_default()
+        ));
+    }
+    assert_eq!(parts[1], rust);
+
+    let mut rust = String::new();
+    for d in [
+        "Games/Thief",
+        "Games/Deus Ex",
+        "Games/Rune/System/sub",
+        "Games/Other",
+    ] {
+        let g = wine_launchers::for_dir(h, &h.join(d));
+        rust.push_str(&format!(
+            "{}|{}\n",
+            g.as_ref().map_or("", |g| g.launcher),
+            g.and_then(|g| g.wine)
+                .map(|w| w.display().to_string())
+                .unwrap_or_default()
+        ));
+    }
+    assert_eq!(parts[2], rust);
+
+    let mut rust = String::new();
+    for n in ["GE-Proton", "GE-Proton9-20", "Missing", ""] {
+        rust.push_str(&format!(
+            "{}\n",
+            wine_launchers::proton_wine_for(h, n)
+                .map(|p| p.display().to_string())
+                .unwrap_or_default()
+        ));
+    }
+    assert_eq!(parts[3], rust);
+
+    let mut rust = String::new();
+    for (root, hint, launcher) in [
+        ("Games/Pk", "", true),
+        ("Games/Pk", "pk.exe", false),
+        ("Games/Deus Ex", "", true),
+    ] {
+        let root = h.join(root);
+        let le = launcher
+            .then(|| wine_launchers::launcher_exe_for_root(h, &root))
+            .flatten();
+        for (d, name) in detect::exe_candidates_with(&root, hint, le.as_deref()) {
+            rust.push_str(&format!("{}|{name}\n", d.display()));
+        }
+        rust.push_str(".\n");
+    }
+    assert_eq!(parts[4], rust);
+    // The junk folders' exes are never offered, and the launcher's pick leads.
+    assert!(!parts[4].contains("_CommonRedist") && !parts[4].contains("dxsetup"));
+    assert!(parts[4].starts_with(&format!(
+        "{}|Editor.exe\n",
+        h.join("Games/Pk/Data").display()
+    )));
+
+    // Without pga.db both read the YAML files alone: Thief II's absolute
+    // path counts, Deus Ex's relative one has no folder to go under.
+    std::fs::remove_file(h.join(".local/share/lutris/pga.db")).unwrap();
+    let out = bash("_lutris_records | tr '\\037' '|'", h, &[]);
+    let rust = records_text(&wine_launchers::records(h)[..1]);
+    assert_eq!(out, rust);
+    assert!(out.starts_with("Lutris|Thief Ii The Metal Age|"), "{out}");
 }

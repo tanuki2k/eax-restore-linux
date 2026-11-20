@@ -24,11 +24,12 @@ write_log_header() {
     local distro heroic_kind steam_kind
     distro=$(. /etc/os-release 2>/dev/null && echo "${PRETTY_NAME:-$NAME}")
     heroic_kind=""
-    [ -d "$HOME/.config/heroic" ] && heroic_kind="native"
+    [ -d "$(xdg_home config)/heroic" ] && heroic_kind="native"
     [ -d "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic" ] && heroic_kind="${heroic_kind:+$heroic_kind + }flatpak"
     steam_kind=""
     { [ -d "$HOME/.steam/steam" ] || [ -d "$HOME/.local/share/Steam" ]; } && steam_kind="native"
     [ -d "$HOME/.var/app/com.valvesoftware.Steam" ] && steam_kind="${steam_kind:+$steam_kind + }flatpak"
+    [ -d "$HOME/snap/steam/common" ] && steam_kind="${steam_kind:+$steam_kind + }snap"
     {
         echo "=== eax-restore-linux run log ==="
         echo "Script version:  $SCRIPT_VERSION ($SCRIPT_DATE)"

@@ -673,11 +673,16 @@ fn system_rows(e: &Entry, home: &Path) -> Vec<Item> {
             )],
         ),
     ];
-    if let Some(k) = e.store {
-        items.push(row(
-            "Platform",
-            vec![Span::styled(label_of(k), theme::green())],
-        ));
+    // A copy Lutris, Bottles or Faugus runs is named after the launcher; a
+    // Steam profile matched by its exe there isn't a Steam install.
+    let platform = match (e.via, e.store) {
+        (Some(via), Some(StoreKind::Gog)) => Some(format!("GOG, through {via}")),
+        (Some(via), _) => Some(via.to_string()),
+        (None, Some(k)) => Some(label_of(k).to_string()),
+        (None, None) => None,
+    };
+    if let Some(p) = platform {
+        items.push(row("Platform", vec![Span::styled(p, theme::green())]));
     }
     if let Some(p) = &e.path {
         items.push(Item::Row(Row {
@@ -864,6 +869,15 @@ mod tests {
         assert!(t.contains("\nSystem details:\n -> Status:            OpenAL Soft installed\n"));
         assert!(t.contains(" -> Platform:          Steam\n"));
         assert!(t.contains(" -> Location:          /lib/Quake 4\n"));
+        e.via = Some("Lutris");
+        let t = text(&lines(&e, 70, Path::new("/home/me")));
+        assert!(t.contains(" -> Platform:          Lutris\n"), "{t}");
+        e.store = Some(StoreKind::Gog);
+        let t = text(&lines(&e, 70, Path::new("/home/me")));
+        assert!(
+            t.contains(" -> Platform:          GOG, through Lutris\n"),
+            "{t}"
+        );
     }
 
     fn status_of(e: &Entry) -> String {
@@ -909,6 +923,7 @@ mod tests {
             status: Status::Manual,
             game: None,
             store: None,
+            via: None,
             path: Some("/g/Obscure".into()),
             engine: Some(Engine::OpenAlSoft),
         };
@@ -935,6 +950,7 @@ mod tests {
             status: Status::Manual,
             game: None,
             store: None,
+            via: None,
             path: Some("/g/Obscure".into()),
             engine: None,
         };

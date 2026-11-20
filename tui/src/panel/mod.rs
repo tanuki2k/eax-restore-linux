@@ -331,8 +331,12 @@ impl Panel {
         let pt = crate::cli::protontricks();
         // A library hands over the install's top folder; the game's files
         // go next to its exe, which can be folders below it.
-        let (dir, _) =
-            crate::engine::detect::exe_folder(dir, game.as_ref().map_or("", |g| g.exe.as_str()));
+        let launcher_exe = crate::engine::wine_launchers::launcher_exe_for_root(home, dir);
+        let (dir, _) = crate::engine::detect::exe_folder_with(
+            dir,
+            game.as_ref().map_or("", |g| g.exe.as_str()),
+            launcher_exe.as_deref(),
+        );
         let facts = prepare::gather(&dir, game.as_ref(), home, &pt);
         let installed = Installed::read(&facts.game_dir, home);
         let name = game
@@ -405,13 +409,24 @@ impl Panel {
                 out.push(line(Check::Ok, "Store", "Steam".into()));
                 out.push(line(Check::Ok, "ID", f.id.clone()));
             }
+            _ if f.wine_launcher.is_some() => {
+                let via = f.wine_launcher.as_ref().map_or("", |w| w.launcher);
+                let store = match f.store {
+                    Some(Store::Gog) => format!("GOG, through {via}"),
+                    _ => via.to_string(),
+                };
+                out.push(line(Check::Ok, "Store", store));
+                if !f.id.is_empty() {
+                    out.push(line(Check::Ok, "ID", f.id.clone()));
+                }
+            }
             (Some(Store::Gog), _) | (_, Some(_)) => {
                 out.push(line(Check::Ok, "Store", "GOG, through Heroic".into()));
                 if !f.id.is_empty() {
                     out.push(line(Check::Ok, "ID", f.id.clone()));
                 }
             }
-            _ => out.push(line(Check::Warn, "Store", "not in Steam or Heroic".into())),
+            _ => out.push(line(Check::Warn, "Store", "not in a launcher".into())),
         }
 
         let api = |e: Engine| match e {

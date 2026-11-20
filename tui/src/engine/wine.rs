@@ -339,7 +339,7 @@ pub fn steam_prefix_for_appid(protontricks: &[String], app_id: &str) -> Option<P
 }
 
 /// The Wine build Heroic runs a game with, from its GamesConfig file.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct HeroicRunner {
     /// `wine` or `proton`, as Heroic records it.
     pub kind: String,
@@ -362,11 +362,8 @@ pub fn heroic_configs_for_prefix(home: &Path, prefix: &Path) -> Vec<PathBuf> {
         format!("\"winePrefix\": \"{p}/\""),
     ];
     let mut out = Vec::new();
-    for root in [
-        ".config/heroic",
-        ".var/app/com.heroicgameslauncher.hgl/config/heroic",
-    ] {
-        let Ok(entries) = std::fs::read_dir(home.join(root).join("GamesConfig")) else {
+    for root in super::roots::heroic_dirs(home) {
+        let Ok(entries) = std::fs::read_dir(root.join("GamesConfig")) else {
             continue;
         };
         let mut files: Vec<PathBuf> = entries

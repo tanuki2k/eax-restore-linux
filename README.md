@@ -46,7 +46,7 @@ chmod +x eax-restore-linux.sh
 ./eax-restore-linux.sh
 ```
 
-The main menu lets you scan your Steam and Heroic libraries for the game, browse to its folder, or type the path. It also has uninstall and a Tools menu.
+The main menu lets you scan your Steam, Heroic, Lutris, Bottles and Faugus libraries for the game, browse to its folder, or type the path. It also has uninstall and a Tools menu.
 
 An install has four phases. The first three only ask questions: which game, which audio files and speakers, and which of the game's own settings to change. Nothing on your system changes until you answer the final "Proceed?". [How it works](docs/script/how-it-works.md) goes through each step.
 

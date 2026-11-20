@@ -1,8 +1,20 @@
 # Library scanning and the game database
 
-When you start an install, the script can scan your Steam and Heroic libraries for games it recognises. You pick one from the list instead of hunting for its folder.
+When you start an install, the script can scan your game libraries for games it recognises. You pick one from the list instead of hunting for its folder.
 
 What it recognises comes from the [game database](../database/database-overview.md), a community-maintained list the script downloads on every run.
+
+## Where it looks
+
+* Steam, native, Flatpak or Snap, in every library folder it knows about. A game that's still downloading shows up once Steam has finished installing it.
+* Heroic, native or Flatpak, for GOG and Epic games and the ones you added yourself.
+* Lutris, Bottles and Faugus, native or Flatpak, for the Windows games they run. The list says which launcher has the game, for example "(Lutris)".
+
+Steam and Heroic games are matched by their store IDs. For the other three, the script reads the GOG ID from the game's own folder when it's a GOG install, and otherwise matches the `.exe` the launcher starts against the one the database names.
+
+The script also takes the Wine prefix and the Wine version from the launcher, so the DLL override is written with the same Wine the game runs on. Lutris, Bottles and Faugus have no launch options the script edits, so for their games the override goes in the prefix's registry.
+
+Lutris keeps its game list in a small database. The script reads it with `sqlite3` if that's installed. Without it, a Lutris game whose `.exe` path is relative to the game's folder can't be found, and you'll need to type its path.
 
 ## What a game's entry gives you
 
@@ -35,7 +47,7 @@ If that doesn't settle it, or you skip it, the script asks you to choose between
 
 ## Retail and CD copies
 
-The scanner can't see games that aren't in Steam or Heroic, because there's no library to read. A retail copy of Half-Life from a disc, running in a Wine prefix you set up yourself, is an example. The install still handles it. Point the script at the folder with the game's `.exe` and give it the prefix path when it asks.
+The scanner can't see a game that no launcher knows about, because there's no library to read. A retail copy of Half-Life from a disc, running in a Wine prefix you set up yourself, is an example. Adding it to Lutris, Bottles or Faugus is enough for the scan to find it. Otherwise the install still handles it. Point the script at the folder with the game's `.exe` and give it the prefix path when it asks.
 
 ## Adding or fixing a game
 

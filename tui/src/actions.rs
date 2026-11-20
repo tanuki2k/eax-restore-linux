@@ -67,7 +67,12 @@ pub fn available(e: &Entry) -> Vec<Action> {
 }
 
 /// `steam:2210` / `gog:1207658936`, for an install of a game found in a library.
+/// A copy Lutris, Bottles or Faugus runs goes by its folder instead, since the
+/// same ID can belong to a Heroic copy too.
 fn store_game(e: &Entry) -> Option<String> {
+    if e.via.is_some() {
+        return None;
+    }
     let g = e.game.as_ref()?;
     match e.store? {
         StoreKind::Steam => Some(format!("steam:{}", g.stores.steam.as_ref()?.id)),
@@ -224,5 +229,14 @@ mod tests {
             assert_eq!(get(&env, "EAX_RESTORE_GAME_DIR"), Some("/lib/Alpha/bin"));
             assert_eq!(get(&env, "EAX_RESTORE_GAME"), None);
         }
+    }
+
+    #[test]
+    fn a_copy_a_wine_launcher_runs_goes_to_the_script_by_its_folder() {
+        let mut e = entry(Status::OnThisPc, Some(StoreKind::Gog), Some("/g/Thief"));
+        e.via = Some("Lutris");
+        let env = script_env(&e, Action::Install);
+        assert_eq!(get(&env, "EAX_RESTORE_GAME"), None);
+        assert_eq!(get(&env, "EAX_RESTORE_GAME_DIR"), Some("/g/Thief"));
     }
 }

@@ -21,6 +21,20 @@ use std::sync::OnceLock;
 /// Installers and utilities, by their own file name (lowercased).
 const EXE_JUNK: &str = r"^(unins(t(all)?)?[0-9]*|vc_?redist.*|(dx|directx)?setup|dxsetup|dxwebsetup|dx[0-9]+ger|dx[0-9]+ntger|dotnetfx.*|ndp[0-9].*|windowsdesktop-runtime.*|oalinst|physx.*|easyanticheat.*|eac_?setup.*|eaclauncher|be(service|daisy|launcher|_ex)[a-z0-9_]*|battleye.*|unitycrashhandler.*|crashreport(er|client)?|crash_?handler|crashpad_handler|bugsplat.*|epiconlineservices(installer)?|epicwebhelper.*|rockstar-games-launcher|social-club-setup|tagesclient.*|vulkanrt.*installer.*|gamingrepair(tool)?|registrationreminder|overlayinjector|cleanup|touchup|driverversionchecker|layerschecker|supporttool|dowser|iscopyfiles|detectionui.*|eax[0-9]*unified_redist.*|reg|.*updatelauncher|adb?e?rdr.*|ue3?redist.*|unrealfrontend|unrealconsole|uescriptprofiler|cookersync|testapp|.*oshelper)\.exe$";
 
+/// Folders that only hold redistributables, installers, anti-cheat setup or
+/// crash reporters, never searched for the exe (`EXE_JUNK_DIRS`).
+const EXE_JUNK_DIRS: &str = r"(?i)^(_?_?commonredist|_?redist|redistributables?|__installer|installers?|directx|dotnetfx|dotnet|vcredist|prerequisites|easyanticheat|battleye|crashreporter|crashpad|__macosx|__support)$";
+
+fn junk_dir_re() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| Regex::new(EXE_JUNK_DIRS).expect("the junk folder pattern compiles"))
+}
+
+/// True for a folder the exe search skips.
+fn junk_dir(p: &Path) -> bool {
+    junk_dir_re().is_match(&file_name_of(p))
+}
+
 fn junk_re() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
     RE.get_or_init(|| Regex::new(EXE_JUNK).expect("the junk pattern compiles"))
@@ -95,14 +109,24 @@ fn files_at(
     max: usize,
     keep: &dyn Fn(&Path) -> bool,
 ) -> Vec<(usize, PathBuf)> {
-    fn walk(
-        dir: &Path,
-        level: usize,
+    files_below(root, min, max, keep, &|_| false)
+}
+
+/// [`files_at`] without looking inside the folders `skip` picks.
+fn files_below(
+    root: &Path,
+    min: usize,
+    max: usize,
+    keep: &dyn Fn(&Path) -> bool,
+    skip: &dyn Fn(&Path) -> bool,
+) -> Vec<(usize, PathBuf)> {
+    struct Walk<'a> {
         min: usize,
         max: usize,
-        keep: &dyn Fn(&Path) -> bool,
-        out: &mut Vec<(usize, PathBuf)>,
-    ) {
+        keep: &'a dyn Fn(&Path) -> bool,
+        skip: &'a dyn Fn(&Path) -> bool,
+    }
+    fn walk(w: &Walk, dir: &Path, level: usize, out: &mut Vec<(usize, PathBuf)>) {
         let Ok(entries) = std::fs::read_dir(dir) else {
             return;
         };
@@ -110,16 +134,22 @@ fn files_at(
             let Ok(t) = e.file_type() else { continue };
             let p = e.path();
             if t.is_file() {
-                if level >= min && keep(&p) {
+                if level >= w.min && (w.keep)(&p) {
                     out.push((level, p));
                 }
-            } else if t.is_dir() && level < max {
-                walk(&p, level + 1, min, max, keep, out);
+            } else if t.is_dir() && level < w.max && !(w.skip)(&p) {
+                walk(w, &p, level + 1, out);
             }
         }
     }
     let mut out = Vec::new();
-    walk(root, 1, min, max, keep, &mut out);
+    let w = Walk {
+        min,
+        max,
+        keep,
+        skip,
+    };
+    walk(&w, root, 1, &mut out);
     out
 }
 
@@ -225,6 +255,17 @@ pub fn folder_names_audio_api(dir: &Path) -> bool {
 /// exe. A library hands over the install's top folder, and the game's exe
 /// can be folders below it (BioShock's is in Builds/Release).
 pub fn exe_folder(dir: &Path, exe_hint: &str) -> (PathBuf, Option<String>) {
+    exe_folder_with(dir, exe_hint, None)
+}
+
+/// [`exe_folder`], ranking the exe the game's launcher starts
+/// ([`launcher_exe_for_root`](super::wine_launchers::launcher_exe_for_root))
+/// right after the profile's.
+pub fn exe_folder_with(
+    dir: &Path,
+    exe_hint: &str,
+    launcher_exe: Option<&Path>,
+) -> (PathBuf, Option<String>) {
     let exes: Vec<String> = files_at(dir, 1, 1, &|p| has_ext(p, "exe"))
         .into_iter()
         .map(|(_, p)| file_name_of(&p))
@@ -235,7 +276,7 @@ pub fn exe_folder(dir: &Path, exe_hint: &str) -> (PathBuf, Option<String>) {
             return (dir.to_path_buf(), Some(e.clone()));
         }
     }
-    let cands = exe_candidates(dir, exe_hint);
+    let cands = exe_candidates_with(dir, exe_hint, launcher_exe);
     if let Some((d, e)) = cands
         .iter()
         .find(|(_, e)| !hint.is_empty() && e.to_lowercase() == hint)
@@ -259,6 +300,18 @@ pub fn exe_folder(dir: &Path, exe_hint: &str) -> (PathBuf, Option<String>) {
 }
 
 pub fn exe_candidates(root: &Path, exe_hint: &str) -> Vec<(PathBuf, String)> {
+    exe_candidates_with(root, exe_hint, None)
+}
+
+/// [`exe_candidates`] with the exe the game's launcher starts, which comes
+/// right after the profile's. Unlike the profile's it isn't kept first: a
+/// launcher can point at a setup or launcher program, which the audio
+/// ranking moves down.
+pub fn exe_candidates_with(
+    root: &Path,
+    exe_hint: &str,
+    launcher_exe: Option<&Path>,
+) -> Vec<(PathBuf, String)> {
     let mut cands: Vec<(PathBuf, String)> = Vec::new();
     let has = |c: &Vec<(PathBuf, String)>, d: &Path| c.iter().any(|(x, _)| x == d);
     let root_norm = normalize_game_name(&file_name_of(root));
@@ -266,12 +319,22 @@ pub fn exe_candidates(root: &Path, exe_hint: &str) -> Vec<(PathBuf, String)> {
     let mut hinted = false;
     if !exe_hint.is_empty() {
         let hint = exe_hint.to_lowercase();
-        let found = by_level(files_at(root, 1, 4, &|p| {
-            file_name_of(p).to_lowercase() == hint
-        }));
+        let found = by_level(files_below(
+            root,
+            1,
+            4,
+            &|p| file_name_of(p).to_lowercase() == hint,
+            &junk_dir,
+        ));
         if let Some(f) = found.first() {
             cands.push((f.parent().unwrap().to_path_buf(), file_name_of(f)));
             hinted = true;
+        }
+    }
+    if let Some(exe) = launcher_exe.filter(|e| e.is_file() && !exe_is_junk(e)) {
+        let d = exe.parent().unwrap_or(root).to_path_buf();
+        if !has(&cands, &d) {
+            cands.push((d, file_name_of(exe)));
         }
     }
 
@@ -300,7 +363,7 @@ pub fn exe_candidates(root: &Path, exe_hint: &str) -> Vec<(PathBuf, String)> {
 
     // Nested folders, shallowest first, the ones whose exe resembles the
     // root's name ahead of the rest.
-    let all = by_level(files_at(root, 2, 4, &|p| has_ext(p, "exe")));
+    let all = by_level(files_below(root, 2, 4, &|p| has_ext(p, "exe"), &junk_dir));
     let mut chosen: Vec<PathBuf> = all.iter().filter(|f| !exe_is_junk(f)).cloned().collect();
     if chosen.is_empty() && cands.is_empty() {
         chosen = all;
@@ -854,11 +917,7 @@ fn heroic_prefix(
 pub fn heroic_game(game_dir: &Path, home: &Path) -> Option<HeroicGame> {
     let target = game_dir.to_string_lossy().into_owned();
     let mut found: Vec<HeroicGame> = Vec::new();
-    for rel in [
-        ".config/heroic",
-        ".var/app/com.heroicgameslauncher.hgl/config/heroic",
-    ] {
-        let root = home.join(rel);
+    for root in super::roots::heroic_dirs(home) {
         if !root.is_dir() {
             continue;
         }

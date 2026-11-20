@@ -12,6 +12,7 @@ use super::launcher::target::Target;
 use super::speakers::{Listening, Speakers};
 use super::vcrun;
 use super::wine::{self, Prefix, Runner};
+use super::wine_launchers::{self, LauncherGame};
 use crate::db::Game;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -27,6 +28,8 @@ pub struct Facts {
     pub store: Option<Store>,
     pub id: String,
     pub heroic: Option<HeroicGame>,
+    /// The Lutris, Bottles or Faugus game, for one Heroic doesn't know.
+    pub wine_launcher: Option<LauncherGame>,
     pub prefix: Option<PathBuf>,
     pub runner: Option<Runner>,
     /// A native Linux build, which this can't fix.
@@ -64,10 +67,7 @@ pub fn fallback_wine(home: &Path) -> Option<PathBuf> {
             return Some(w);
         }
     }
-    for root in [
-        ".config/heroic",
-        ".var/app/com.heroicgameslauncher.hgl/config/heroic",
-    ] {
+    for root in super::roots::heroic_dirs(home) {
         fn walk(dir: &Path) -> Option<PathBuf> {
             for e in std::fs::read_dir(dir).ok()?.flatten() {
                 let p = e.path();
@@ -82,7 +82,7 @@ pub fn fallback_wine(home: &Path) -> Option<PathBuf> {
             }
             None
         }
-        if let Some(w) = walk(&home.join(root).join("tools")) {
+        if let Some(w) = walk(&root.join("tools")) {
             return Some(w);
         }
     }
@@ -107,6 +107,7 @@ pub fn gather(game_dir: &Path, game: Option<&Game>, home: &Path, protontricks: &
         store: None,
         id: String::new(),
         heroic: None,
+        wine_launcher: None,
         prefix: None,
         runner: None,
         linux_build: detect::install_is_linux_build(&install_root),
@@ -123,8 +124,9 @@ pub fn gather(game_dir: &Path, game: Option<&Game>, home: &Path, protontricks: &
         wants_eax_unified: false,
     };
     let exe = game.map_or("", |g| g.exe.as_str());
-    f.exe_folders = detect::exe_candidates(&install_root, exe);
-    let (found_in, found) = detect::exe_folder(game_dir, exe);
+    let launcher_exe = wine_launchers::launcher_exe_for_root(home, &install_root);
+    f.exe_folders = detect::exe_candidates_with(&install_root, exe, launcher_exe.as_deref());
+    let (found_in, found) = detect::exe_folder_with(game_dir, exe, launcher_exe.as_deref());
     f.exe = found.filter(|_| found_in == game_dir);
     f.exe_hint = exe.to_string();
 
@@ -150,6 +152,26 @@ pub fn gather(game_dir: &Path, game: Option<&Game>, home: &Path, protontricks: &
         }
     } else {
         f.heroic = detect::heroic_game(game_dir, home);
+        // Not in Heroic's library: Lutris, Bottles or Faugus may run it, and
+        // then its DLL override goes in the registry (no launcher target).
+        if f.heroic.is_none() {
+            f.wine_launcher = wine_launchers::for_dir(home, game_dir);
+        }
+        if let Some(w) = &f.wine_launcher {
+            f.prefix = w.prefix.clone();
+            let gog = identified
+                .as_ref()
+                .filter(|i| i.store == Store::Gog)
+                .map(|i| i.id.clone())
+                .or_else(|| {
+                    game.and_then(|g| g.stores.gog.as_ref())
+                        .map(|s| s.id.to_string())
+                });
+            if let Some(id) = gog {
+                f.store = Some(Store::Gog);
+                f.id = id;
+            }
+        }
         if let Some(h) = &f.heroic {
             f.prefix = h.prefix.clone();
             if !h.gog_app.is_empty() {
@@ -159,14 +181,25 @@ pub fn gather(game_dir: &Path, game: Option<&Game>, home: &Path, protontricks: &
             f.launcher = Target::heroic(&h.root, &h.id);
         }
         let prefix = f.prefix.clone().unwrap_or_default();
-        let runner = wine::heroic_runner_config(
-            home,
-            f.heroic.as_ref().map(|h| h.root.as_path()),
-            f.heroic.as_ref().map(|h| h.id.as_str()),
-            &prefix,
-        )
-        .as_deref()
-        .and_then(wine::heroic_runner);
+        let runner = if let Some(w) = &f.wine_launcher {
+            w.wine.clone().map(|wine| {
+                let server = wine.with_file_name("wineserver");
+                wine::HeroicRunner {
+                    wineserver: wine::is_executable(&server).then_some(server),
+                    wine: Some(wine),
+                    ..Default::default()
+                }
+            })
+        } else {
+            wine::heroic_runner_config(
+                home,
+                f.heroic.as_ref().map(|h| h.root.as_path()),
+                f.heroic.as_ref().map(|h| h.id.as_str()),
+                &prefix,
+            )
+            .as_deref()
+            .and_then(wine::heroic_runner)
+        };
         let wine_bin = runner
             .as_ref()
             .and_then(|r| r.wine.clone())

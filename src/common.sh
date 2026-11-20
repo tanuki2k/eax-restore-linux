@@ -247,3 +247,17 @@ install_packages() {
         *) print_error "please install these manually: $*"; return 1 ;;
     esac
 }
+
+# Usage: xdg_home <data|config>
+# $XDG_DATA_HOME or $XDG_CONFIG_HOME, else its default under $HOME. A relative
+# value is ignored, as the XDG spec says. Heroic, Lutris, Bottles and Faugus
+# keep their files there; Steam doesn't follow it.
+xdg_home() {
+    local v
+    if [ "$1" == "data" ]; then
+        v="${XDG_DATA_HOME:-}"; [[ "$v" == /* ]] || v="$HOME/.local/share"
+    else
+        v="${XDG_CONFIG_HOME:-}"; [[ "$v" == /* ]] || v="$HOME/.config"
+    fi
+    printf '%s\n' "${v%/}"
+}

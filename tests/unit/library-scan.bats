@@ -56,3 +56,15 @@ acf() { # appid name installdir
     [ "$status" -eq 1 ]
     [ ! -e "$BATS_TEST_TMPDIR/listed" ]
 }
+
+@test "a Steam game that isn't fully installed is not listed" {
+    acf 100 "Alpha Trek" "Alpha"; mkdir -p "$STEAM/steamapps/common/Alpha"
+    acf 200 "Middle Earth" "Middle"; mkdir -p "$STEAM/steamapps/common/Middle"
+    # 1026 = update required + downloading, without "fully installed" (4);
+    # 6 = installed with an update pending, which stays listed.
+    sed -i 's/^}$/\t"StateFlags"\t\t"1026"\n}/' "$STEAM/steamapps/appmanifest_100.acf"
+    sed -i 's/^}$/\t"StateFlags"\t\t"6"\n}/' "$STEAM/steamapps/appmanifest_200.acf"
+    run scan_game_libraries
+    [ "$status" -eq 1 ]
+    [ "$(cat "$BATS_TEST_TMPDIR/listed")" == "$(printf '%s\n' 'Middle Earth' -- '(Steam)')" ]
+}

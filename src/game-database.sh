@@ -168,9 +168,10 @@ steam_library_dirs() {
 
 # Usage: find_installed_game_dirs
 # Every game folder holding this script's live install, found on disk: under
-# each Steam library's steamapps/common, and under every Heroic game folder —
+# each Steam library's steamapps/common, under every Heroic game folder —
 # its default install folder plus the GOG, Epic and sideloaded installs it
-# records (native and Flatpak). One folder per line.
+# records (native and Flatpak) — and near each exe Lutris, Bottles and Faugus
+# run. One folder per line.
 find_installed_game_dirs() {
     local lib conf m
     {
@@ -187,6 +188,9 @@ find_installed_game_dirs() {
                 [ -d "$lib" ] && find "$lib" -maxdepth 5 -name .eax-restore-manifest.txt 2>/dev/null
             done
         done < <(heroic_roots)
+        while IFS=$'\x1f' read -r _ _ lib _ _; do
+            find "$(dirname "$lib")" -maxdepth 3 -name .eax-restore-manifest.txt 2>/dev/null
+        done < <(wine_launcher_records)
     } | while IFS= read -r m; do
         m="$(dirname "$m")"
         manifest_is_live "$m" && printf '%s\n' "$m"
@@ -506,7 +510,7 @@ if [ ${#steam_names[@]} -gt 0 ]; then
     while IFS= read -r lib; do libs+=("$lib"); done < <(steam_library_dirs)
     print_status "Checking ${#libs[@]} Steam library folder(s)..." ""
 
-    local acf appid installdir name meta_name
+    local acf appid installdir flags name meta_name
     for lib in "${libs[@]}"; do
         for acf in "$lib"/appmanifest_*.acf; do
             [ -f "$acf" ] || continue
@@ -514,6 +518,11 @@ if [ ${#steam_names[@]} -gt 0 ]; then
             [[ -v steam_names[$appid] ]] || continue
             installdir=$(acf_value "$acf" installdir)
             [ -n "$installdir" ] && [ -d "$lib/common/$installdir" ] || continue
+            # StateFlags bit 4 is "fully installed"; without it the game is
+            # still downloading or was never finished. An update in progress
+            # keeps the bit, so those games stay listed.
+            flags=$(acf_value "$acf" StateFlags)
+            [[ "$flags" =~ ^[0-9]+$ ]] && (( (flags & 4) == 0 )) && continue
             name="${steam_names[$appid]}"
             [ -z "$name" ] && name="AppID $appid"
             meta_name=$(acf_value "$acf" name)
@@ -523,6 +532,7 @@ if [ ${#steam_names[@]} -gt 0 ]; then
             paths+=("$lib/common/$installdir")
             stores+=("steam")
             ids+=("$appid")
+            vias+=("")
         done
     done
 fi
@@ -550,9 +560,47 @@ if [ ${#gog_names[@]} -gt 0 ]; then
             paths+=("$install_path")
             stores+=("gog")
             ids+=("$app_name")
+            vias+=("")
         done < <(heroic_installed_records "$json_file")
     done <<< "$installed_jsons"
 fi
+}
+
+# Database games that Lutris, Bottles or Faugus run: by the GOG install's own
+# goggame-<id>.info when it has one, else by the database's exe name. vias[]
+# gets the launcher's name.
+_scan_wine_launcher_games() {
+    local records
+    records="$(wine_launcher_records)"
+    [ -n "$records" ] || return 0
+    print_status "Checking the games in Lutris, Bottles and Faugus..." ""
+    # Lowercased exe name -> store and ID, the GOG one when the game has both.
+    local -A exe_ids=()
+    local e st i
+    while IFS=$'\x1f' read -r e st i; do
+        [[ -v exe_ids[$e] ]] || exe_ids[$e]="$st"$'\x1f'"$i"
+    done < <(jq -r '.games[] | select((.exe // "") != "")
+        | (if .stores.gog.id != null then ["gog", .stores.gog.id] elif .stores.steam.id != null then ["steam", .stores.steam.id] else empty end) as $s
+        | [(.exe | ascii_downcase), $s[0], ($s[1] | tostring)] | join("\u001f")' "$GAME_DATABASE_FILE" 2>/dev/null)
+    local launcher title exe prefix wine store id path name lower
+    while IFS=$'\x1f' read -r launcher title exe prefix wine; do
+        [ -n "$exe" ] || continue
+        store=""; id=""; path="$(dirname "$exe")"
+        if identify_game_dir "$path" && [ "$GAME_ID_STORE" == "gog" ] && [[ -v gog_names[$GAME_ID] ]]; then
+            store="gog"; id="$GAME_ID"; path="$GAME_ID_ROOT"
+        else
+            lower="$(basename "$exe")"; lower="${lower,,}"
+            [[ -v exe_ids[$lower] ]] || continue
+            IFS=$'\x1f' read -r store id <<< "${exe_ids[$lower]}"
+        fi
+        if [ "$store" == "gog" ]; then name="${gog_names[$id]:-}"; else name="${steam_names[$id]:-}"; fi
+        names+=("${name:-$title}")
+        meta_names+=("${title:-$name}")
+        paths+=("$path")
+        stores+=("$store")
+        ids+=("$id")
+        vias+=("$launcher")
+    done <<< "$records"
 }
 
 # Puts the lists in display-name order.
@@ -561,16 +609,16 @@ _scan_sort_by_name() {
     # with Heroic tacked on after, which means nothing to someone scanning
     # the list by eye -- sort by display name instead, Steam before GOG for
     # a title owned on both.
-    local i order=() s_names=() s_meta=() s_paths=() s_stores=() s_ids=()
+    local i order=() s_names=() s_meta=() s_paths=() s_stores=() s_ids=() s_vias=()
     while IFS= read -r i; do order+=("$i"); done < <(
         for i in "${!names[@]}"; do printf '%s\t%s\t%d\n' "${names[$i]}" "${stores[$i]}" "$i"; done \
             | sort -f -t$'\t' -k1,1 -k2,2r | cut -f3)
     for i in "${order[@]}"; do
         s_names+=("${names[$i]}"); s_meta+=("${meta_names[$i]}"); s_paths+=("${paths[$i]}")
-        s_stores+=("${stores[$i]}"); s_ids+=("${ids[$i]}")
+        s_stores+=("${stores[$i]}"); s_ids+=("${ids[$i]}"); s_vias+=("${vias[$i]}")
     done
     names=("${s_names[@]}"); meta_names=("${s_meta[@]}"); paths=("${s_paths[@]}")
-    stores=("${s_stores[@]}"); ids=("${s_ids[@]}")
+    stores=("${s_stores[@]}"); ids=("${s_ids[@]}"); vias=("${s_vias[@]}")
 }
 
 # Shows the list (or takes EAX_RESTORE_GAME's pick) and sets choice, 1-based.
@@ -580,7 +628,8 @@ _scan_pick_game() {
     # path instead, or go back (SCAN_NEXT tells get_game_directory which).
     PAGED_LABELS=("${names[@]}"); PAGED_DETAILS=()
     for i in "${!stores[@]}"; do
-        if [ "${stores[$i]}" == "gog" ]; then PAGED_DETAILS+=("(GOG)"); else PAGED_DETAILS+=("(Steam)"); fi
+        if [ -n "${vias[$i]}" ]; then PAGED_DETAILS+=("(${vias[$i]})")
+        elif [ "${stores[$i]}" == "gog" ]; then PAGED_DETAILS+=("(GOG)"); else PAGED_DETAILS+=("(Steam)"); fi
     done
     local -a extra=("m|[M]anually type the game path")
     [ -n "$MAIN_MENU_SHOWN" ] && extra+=("|" "r|[R]eturn to the $(return_menu_label)")
@@ -593,7 +642,7 @@ _scan_pick_game() {
         if [ -z "$preset_choice" ]; then
             local missing_name
             missing_name=$(gdb_field "${preset_game#*:}" "${preset_game%%:*}" '.name // empty')
-            print_note "${missing_name:-That game} isn't in your Steam or Heroic libraries, so here are the games that are."
+            print_note "${missing_name:-That game} isn't in any of your game libraries, so here are the games that are."
         fi
     fi
     if [ -n "$preset_choice" ]; then
@@ -634,14 +683,16 @@ _scan_open_pick() {
     resolve_exe_folder "${paths[$idx]}" "$beta_branch" "$exe_name" "${stores[$idx]}" || return 1
     GAME_INSTALL_ROOT="${paths[$idx]}"
 
-    [ "${stores[$idx]}" == "steam" ] && SCANNED_APPID="${ids[$idx]}"
+    # A Steam profile matched in Lutris, Bottles or Faugus isn't a Steam
+    # install, so there's no Steam AppID to hand on.
+    [ "${stores[$idx]}" == "steam" ] && [ -z "${vias[$idx]}" ] && SCANNED_APPID="${ids[$idx]}"
     return 0
 }
 
 scan_game_libraries() {
     # Usage: scan_game_libraries
-    # Opt-in alternative to browsing/typing a path: scans Steam and Heroic
-    # libraries for games present in game-database.json, lists the
+    # Opt-in alternative to browsing/typing a path: scans Steam, Heroic,
+    # Lutris, Bottles and Faugus for games present in game-database.json, lists the
     # matches, and resolves the pick's actual .exe folder (via
     # resolve_exe_folder) into GAME_DIR. Also sets SCANNED_APPID so
     # detect_game_environment's Steam branch can skip its own redundant
@@ -670,7 +721,7 @@ scan_game_libraries() {
         return 1
     fi
 
-    print_task "Scanning Steam and Heroic libraries for games with a profile"
+    print_task "Scanning your game libraries for games with a profile"
 
     # names[] is the curated game-database.json display name, used only for
     # the pick-list menu below. meta_names[] is the name as reported by the
@@ -678,7 +729,9 @@ scan_game_libraries() {
     # GOG/Heroic install folder itself) — sourced the same way appid/gog_id
     # already are, independent of the JSON — and becomes GAME_NAME once a
     # pick is made, for use in prompts that need the actual game's name.
-    local names=() meta_names=() paths=() stores=() ids=()
+    # vias[] names the launcher (Lutris, Bottles or Faugus) when it isn't the
+    # store's own.
+    local names=() meta_names=() paths=() stores=() ids=() vias=()
 
     # Both stores' id -> display name maps come from one jq run each, so the
     # loops in the steps below test membership and fetch the name without a
@@ -687,9 +740,10 @@ scan_game_libraries() {
     _scan_load_db_names
     _scan_steam_games
     _scan_heroic_games
+    _scan_wine_launcher_games
 
     if [ ${#names[@]} -eq 0 ]; then
-        print_warning "No games from the game database were found in your Steam or Heroic libraries."
+        print_warning "No games from the game database were found in your Steam, Heroic, Lutris, Bottles or Faugus libraries."
         print_note "your games may still have EAX even if the game database doesn't list them" \
             "yet — choose [M] to type a game's path yourself."
         return 1
