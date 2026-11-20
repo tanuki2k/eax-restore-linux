@@ -1454,8 +1454,7 @@
       "eax": {
         "api": "directsound3d"
       },
-      "notes": "Turn on 'Creative EAX' in the game's Audio Settings (per the Vogons Wiki).",
-      "tested": false
+      "notes": "Turn on 'Creative EAX' in the game's Audio Settings (per the Vogons Wiki)."
     },
     {
       "id": "fear",
@@ -2443,10 +2442,14 @@
     },
     {
       "id": "mafia",
-      "name": "Mafia",
+      "name": "Mafia (Classic)",
       "description": "Mafia is a singleplayer third-person action-adventure game and the first in the Mafia series.",
       "released": "2002-08-29",
+      "exe": "Game.exe",
       "stores": {
+        "steam": {
+          "id": 40990
+        },
         "gog": {
           "id": 1595659240
         }
@@ -2465,6 +2468,26 @@
         ]
       },
       "tested": false
+    },
+    {
+      "id": "mafia-definitive-edition",
+      "name": "Mafia: Definitive Edition",
+      "description": "Mafia: Definitive Edition is a singleplayer third-person action-adventure game, a remake of 2002's Mafia.",
+      "released": "2020-09-25",
+      "stores": {
+        "steam": {
+          "id": 1030840
+        },
+        "gog": {
+          "id": 1993581340
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "status": "not_implemented",
+        "problem": "This is the 2020 remake, not the original 2002 Mafia, and it has no EAX."
+      },
+      "notes": "The original 2002 Mafia, sold on GOG as 'Mafia Classic', supports EAX."
     },
     {
       "id": "max-payne-2-the-fall-of-max-payne",
@@ -2496,6 +2519,7 @@
       "name": "Medal of Honor: Allied Assault",
       "description": "Medal of Honor: Allied Assault is a singleplayer and multiplayer first-person shooter game and the third in the Medal of Honor series.",
       "released": "2002-01-22",
+      "exe": "MOHAA.exe",
       "stores": {
         "gog": {
           "id": 1207659126,
@@ -2504,11 +2528,13 @@
       },
       "eax": {
         "api": "directsound3d",
+        "sound_system": "miles",
         "versions": [
           "1.0",
           "2.0"
         ]
       },
+      "notes": "Medal of Honor: Allied Assault GOG release ships only the software Miles provider, so EAX can't be turned on without adding the missing provider files.",
       "tested": false
     },
     {
