@@ -34,7 +34,7 @@ const ROWS: &[(&str, &str)] = &[
     ("Enter", "Open a choice's list (Enter picks, Esc keeps it as it was), or press a button."),
     ("Space", "Tick or untick a game setting."),
     ("Esc", "Back to the list. If you changed something and didn't apply it, it asks first."),
-    ("PgUp/PgDn", "Scroll the console: the checks, and how the work went."),
+    ("PgUp/PgDn", "Scroll through what an install or uninstall did, once it's finished."),
     ("", "Colours on a game's page"),
     ("Green", "A value marked (detected) was worked out from your PC or the game's profile."),
     ("Yellow", "A value you've changed and haven't applied yet."),

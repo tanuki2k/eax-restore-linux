@@ -25,17 +25,18 @@ pub fn draw(f: &mut Frame, app: &App) {
     let [body, bar] =
         Layout::vertical([Constraint::Min(3), Constraint::Length(bar_height)]).areas(screen);
     draw_bar(f, app, bar);
+    if app.zoom {
+        draw_pane(f, app, body, true);
+    } else {
+        draw_body(f, app, body);
+    }
+    // A game's page is a pop-up: the list stays in sight round it.
     if let Some(p) = &app.panel {
         crate::panel::view::draw(f, p, body);
         if app.help {
             draw_help(f, app, body);
         }
         return;
-    }
-    if app.zoom {
-        draw_pane(f, app, body, true);
-    } else {
-        draw_body(f, app, body);
     }
     // Popups sit over the body and leave the key bar showing.
     if let (Some(menu), Some(e)) = (&app.menu, app.current()) {
@@ -973,12 +974,20 @@ mod tests {
 
     /// The row and column of the page's top-left corner: the `╭` in front of
     /// its title.
+    /// The page's top-left corner: the Status box sits just inside it.
     fn page_corner(app: &App, w: u16, h: u16) -> (usize, usize) {
         let s = screen(app, w, h);
-        let y = s.lines().position(|l| l.contains(" Quake 4 ")).unwrap();
+        let y = s.lines().position(|l| l.contains(" Status ")).unwrap();
         let line: Vec<char> = s.lines().nth(y).unwrap().chars().collect();
-        let x = line.iter().position(|c| *c == '╭').unwrap();
-        (y, x)
+        let x = line.iter().rposition(|c| *c == '╭').unwrap();
+        (y - 1, x - 1)
+    }
+
+    /// Where the page's pop-up should sit on a `w` by `h` screen.
+    fn page_spot(app: &App, w: u16, h: u16) -> (usize, usize) {
+        let body = Rect::new(0, 0, w, h - bar_rows(app, w));
+        let r = crate::panel::view::page_area(app.panel.as_ref().unwrap(), body);
+        (usize::from(r.y), usize::from(r.x))
     }
 
     #[test]
@@ -1063,17 +1072,19 @@ mod tests {
     }
 
     #[test]
-    fn a_games_page_takes_the_whole_screen_and_esc_goes_back() {
+    fn a_games_page_is_a_pop_up_over_the_list_and_esc_goes_back() {
         let (_home, mut app) = app_with_a_page_open(120);
         let s = screen(&app, 120, 40);
-        assert!(!s.contains(" Search "), "{s}");
-        assert_eq!(page_corner(&app, 120, 40), (0, 0));
+        assert!(s.contains(" Search "), "the list shows round it: {s}");
+        let spot = page_spot(&app, 120, 40);
+        assert_eq!(page_corner(&app, 120, 40), spot);
+        assert_eq!(spot.1, usize::from((120 - crate::panel::view::LEFT_W) / 2));
         assert!(s.contains(" Status "));
         // Ctrl-L and Ctrl-F are the list's; the page ignores them.
         ctrl_key(&mut app, 'l');
         ctrl_key(&mut app, 'f');
         assert!(app.panel.is_some());
-        assert_eq!(page_corner(&app, 120, 40), (0, 0));
+        assert_eq!(page_corner(&app, 120, 40), spot);
 
         press(&mut app, ratatui::crossterm::event::KeyCode::Esc);
         assert!(app.panel.is_none());

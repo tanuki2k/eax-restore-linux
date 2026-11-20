@@ -123,11 +123,14 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
   `detect_oracle.rs`'s `wine_launchers_match`.
 
 The game panel (`tui/src/panel/`, the user's Optiscaler-Client-style design): Enter on a game
-with a folder opens a full-screen page in two columns (`view::draw`), on the folder holding
+with a folder opens its page, one column `view::LEFT_W` wide in a pop-up over the games list
+(`view::draw`, `view::page_area`: as tall as its content, never shrinking going from the
+choices to a run, so the list shows round it), on the folder holding
 the profile's exe (`detect::exe_folder`, as the script moves `GAME_DIR` after a library scan
 and as the headless CLI does: a library gives the install's top folder, and BioShock's exe is
-in Builds/Release). Left (`view::LEFT_W` wide): the Status card (whether the fix is installed,
-`view::banner_lines`), then the choices in numbered boxes in the script's order (`Panel::sections`: audio engine,
+in Builds/Release). The Status card (whether the fix is installed, `view::banner_lines`,
+then each preflight check that came out Warn or Fail, `view::status_card_lines`; the ones that
+came out fine aren't shown), then the choices in numbered boxes in the script's order (`Panel::sections`: audio engine,
 runtimes, speakers, compatibility tweaks, DLL override, then audio and optional settings),
 drawn into an off-screen buffer and scrolled to keep the focus in view; a value from the PC or
 profile shows green with "(detected)" until changed (`Row::detected`). DSOAL and OpenAL Soft
@@ -141,13 +144,11 @@ choice when the list arrives); the DSOAL one is hidden while the engine is OpenA
 time) and `Exact(version)` (cached in `dsoal/builds/<rev>`, `openal-soft/builds/<tag>`); installs
 record the versions as `# DSOAL:` / `# OpenAL Soft:` manifest comments (the script too), shown
 on the Status card. Setting dropdowns are all `view::LIST_W` wide and wrap their
-descriptions (`view::draw_dropdown`). Right, the rest of the width: the Console
-(`view::draw_right`), a terminal-style log: the preflight (`Panel::status_lines`, `Check`
+descriptions (`view::draw_dropdown`). The preflight (`Panel::status_lines`, `Check`
 Ok/Warn/Fail/Unknown badges: exe, store, audio API from the profile vs. the files, arch, prefix,
-Wine, config files the settings need; `Panel::preflight_verdict`), typed out on open
-(`Panel::reveal`; any key finishes it; off in tests and with `EAX_RESTORE_NO_ANIMATION`), then a
-run's steps and its finish under it; PgUp/PgDn scroll it once the work is over. Console lines are
-deliberately terse, not the script's full sentences. The game's database profile isn't on this
+Wine, config files the settings need) is terse badge lines, not the script's full sentences.
+There's no Console any more: a run's steps and its finish take the choices' place
+(`view::draw_run`), following the end while it runs; PgUp/PgDn scroll it once the work is over. The game's database profile isn't on this
 page (it's in the games list's right pane); `Facts::summary` still serves `eax-restore status`.
 F2 opens the settings screen (`src/prefs_screen.rs`): the player's defaults for a new install
 (DSOAL and OpenAL Soft builds, DLL override, speakers, VC++ runtime) saved on
@@ -156,7 +157,7 @@ file gives the shipped defaults, and "Reset to defaults" puts them back). `Panel
 without the fix on them; an installed game opens on what it has. Tests never load the real file.
 The list marks a game with the fix with a green ✓ (magenta when it isn't in the database) and
 greys out the names of games not on this PC (`ui::marker`, `ui::game_line`).
-The Console goes under the choices under `BESIDE_FROM`. Dropdowns are `view::LIST_W` wide
+Dropdowns are `view::LIST_W` wide
 and scroll (`view::list_window`, PgUp/PgDn/Home/End) when longer than the screen. The
 preflight's first line is the game's exe (`Facts::exe`), a FAIL when the profile's exe isn't there. Colours all come from `theme.rs`, as the list uses them. `mod.rs`
 holds state and keys, `view.rs` draws, `run.rs` runs the jobs on a worker thread: steps,

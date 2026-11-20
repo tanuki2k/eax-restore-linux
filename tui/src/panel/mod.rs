@@ -21,7 +21,6 @@ use ratatui::crossterm::event::{KeyCode, KeyEvent};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::Receiver;
-use std::time::{Duration, Instant};
 
 /// One value a row can take, and a sentence about it.
 #[derive(Debug, Clone)]
@@ -273,10 +272,7 @@ pub struct Panel {
     pub closed: bool,
     /// Something was changed on disk, so the game list needs reading again.
     pub changed_disk: bool,
-    /// When the Status box started typing itself out; None once it's shown
-    /// in full (or with EAX_RESTORE_NO_ANIMATION).
-    pub reveal: Option<Instant>,
-    /// How far the right column's game profile is scrolled.
+    /// How far a finished run's log is scrolled.
     pub info_scroll: u16,
     pub(crate) home: PathBuf,
     untested: bool,
@@ -320,10 +316,6 @@ impl Check {
     }
 }
 
-/// The pause before each Status line and the time per character it types.
-const LINE_PAUSE_MS: u64 = 60;
-const CHAR_MS: u64 = 3;
-
 impl Panel {
     /// Looks at the game folder and everything around it, as the headless
     /// commands do.
@@ -342,8 +334,6 @@ impl Panel {
         let name = game
             .as_ref()
             .map_or_else(|| name.to_string(), |g| g.name.clone());
-        let animate = !cfg!(test)
-            && std::env::var("EAX_RESTORE_NO_ANIMATION").map_or(true, |v| v.is_empty() || v == "0");
         let mut p = Panel {
             name,
             facts,
@@ -362,7 +352,6 @@ impl Panel {
             sound_log_on: false,
             closed: false,
             changed_disk: false,
-            reveal: animate.then(Instant::now),
             info_scroll: 0,
             home: home.to_path_buf(),
             untested: ops::untested_from_env(),
@@ -515,40 +504,10 @@ impl Panel {
         }
     }
 
-    /// How long each Status line takes to type out, in order.
-    fn reveal_times(&self) -> Vec<Duration> {
-        self.status_lines()
-            .iter()
-            .map(|l| {
-                let chars = (l.label.chars().count() + l.value.chars().count()) as u64;
-                Duration::from_millis(LINE_PAUSE_MS + CHAR_MS * chars)
-            })
-            .collect()
-    }
-
-    /// While the Status box is still typing: how many lines are done, and how
-    /// many characters of the next one show. None once it's all shown.
-    pub fn revealed(&self) -> Option<(usize, usize)> {
-        let start = self.reveal?;
-        let mut t = start.elapsed();
-        for (i, d) in self.reveal_times().into_iter().enumerate() {
-            if t < d {
-                let typed = t.saturating_sub(Duration::from_millis(LINE_PAUSE_MS));
-                return Some((i, (typed.as_millis() / u128::from(CHAR_MS)) as usize));
-            }
-            t -= d;
-        }
-        None
-    }
-
-    pub fn revealing(&self) -> bool {
-        self.revealed().is_some()
-    }
-
-    /// Something on the page moves by itself: the work's progress, the
-    /// Status box typing, or the build lists still on their way.
+    /// Something on the page moves by itself: the work's progress, or the
+    /// build lists still on their way.
     pub fn animating(&self) -> bool {
-        self.running() || self.revealing() || self.builds_rx.is_some()
+        self.running() || self.builds_rx.is_some()
     }
 
     fn build(&mut self) {
@@ -1075,12 +1034,6 @@ impl Panel {
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) {
-        // A key while the Status box types itself out only finishes it, so a
-        // stray Enter doesn't press anything.
-        if self.revealing() {
-            self.reveal = None;
-            return;
-        }
         if self.question.is_some() {
             return self.answer_key(key);
         }
@@ -1806,33 +1759,35 @@ mod tests {
     }
 
     #[test]
-    fn two_columns_when_wide_then_one_under_another() {
+    fn one_column_in_a_pop_up_with_only_the_checks_that_need_a_look() {
         let tmp = tempfile::tempdir().unwrap();
-        let p = ready(&tmp.path().join("home"));
+        let mut p = ready(&tmp.path().join("home"));
 
-        // The choices on the left, a fixed width; the console takes the rest.
         let rows = screen(&p, 160, 50);
         let title = row_of(&rows, "Test Game ─ Steam");
-        assert!(rows[title].starts_with('╭'), "{}", rows.join("\n"));
-        let console = row_of(&rows, " Console ");
-        assert_eq!(
-            rows[console]
-                .chars()
-                .collect::<Vec<_>>()
-                .iter()
-                .rposition(|c| *c == '╭'),
-            Some(usize::from(view::LEFT_W))
-        );
-        assert!(rows.iter().any(|r| r.contains("Preflight: Test Game")));
-        assert!(rows.iter().any(|r| r.contains("[ OK ] Exe")));
-        assert!(rows.iter().any(|r| r.contains("Ready to install.")));
+        let left = (160 - usize::from(view::LEFT_W)) / 2;
+        let corner: Vec<char> = rows[title].chars().collect();
+        assert_eq!(corner[left], '╭', "{}", rows.join("\n"));
+        assert_eq!(corner[left + usize::from(view::LEFT_W) - 1], '╮');
+        assert!(!rows.iter().any(|r| r.contains("Console")));
         assert!(rows.iter().any(|r| r.contains("[ Install ]")));
+        // Every check came out fine, so the Status box has only its one line.
+        assert!(!rows.iter().any(|r| r.contains("[ OK ]")));
+        assert!(!rows
+            .iter()
+            .any(|r| r.contains("[WARN]") || r.contains("[FAIL]")));
 
-        let rows = screen(&p, 90, 60);
+        // A problem shows in the Status box, above the choices.
+        p.facts.store = None;
+        p.build();
+        let rows = screen(&p, 160, 50);
+        let warn = row_of(&rows, "[WARN] Store");
         assert!(
-            row_of(&rows, " Console ") > row_of(&rows, "1. Audio engine"),
-            "under the choices"
+            warn < row_of(&rows, "1. Audio engine"),
+            "{}",
+            rows.join("\n")
         );
+        assert!(!rows.iter().any(|r| r.contains("[ OK ]")));
     }
 
     #[test]
@@ -1956,34 +1911,6 @@ mod tests {
         assert_eq!(p.buttons(), [Button::Confirm, Button::Back]);
         p.handle_key(key(KeyCode::Esc));
         assert!(matches!(p.screen, Screen::Main));
-    }
-
-    #[test]
-    fn the_status_box_types_itself_out_and_a_key_skips_it() {
-        let tmp = tempfile::tempdir().unwrap();
-        let mut p = ready(&tmp.path().join("home"));
-        assert!(!p.revealing(), "tests open with it shown");
-        p.reveal = Some(Instant::now() - Duration::from_millis(LINE_PAUSE_MS + 20));
-        let (done, chars) = p.revealed().unwrap();
-        assert_eq!(done, 0);
-        assert!(chars > 0);
-        let rows = screen(&p, 160, 50);
-        assert!(
-            !rows.iter().any(|r| r.contains("[ Install ]")),
-            "no buttons yet"
-        );
-        assert!(
-            !rows.iter().any(|r| r.contains("[OK]")),
-            "no line finished yet"
-        );
-
-        // A key finishes it and does nothing else.
-        let focus = p.focus;
-        p.handle_key(key(KeyCode::Enter));
-        assert!(!p.revealing());
-        assert!(matches!(p.screen, Screen::Main));
-        assert_eq!(p.focus, focus);
-        assert!(p.list.is_none());
     }
 
     fn fix(title: &str, status: Status, keys: &[&str]) -> Fix {
@@ -2315,7 +2242,7 @@ mod tests {
     }
 
     #[test]
-    fn the_console_carries_on_from_the_preflight_into_the_run() {
+    fn a_run_takes_the_choices_place() {
         use super::run::{Finish, RunView};
         let tmp = tempfile::tempdir().unwrap();
         let mut p = ready(&tmp.path().join("home"));
@@ -2334,10 +2261,12 @@ mod tests {
             },
         ));
         let rows = screen(&p, 160, 50);
-        let pre = row_of(&rows, "Preflight: Test Game");
-        let done = row_of(&rows, " Installed");
+        let status = row_of(&rows, " Status ");
+        let done = row_of(&rows, " Installed ");
         let step = row_of(&rows, "Copying the files");
-        assert!(pre < done && done < step, "{}", rows.join("\n"));
+        assert!(status < done && done < step, "{}", rows.join("\n"));
+        assert!(!rows.iter().any(|r| r.contains("1. Audio engine")));
+        assert!(rows.iter().any(|r| r.contains("[ Back to the game ]")));
     }
 
     #[test]

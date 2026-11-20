@@ -159,18 +159,11 @@ fn run(
     while !app.quit {
         terminal.draw(|f| ui::draw(f, app))?;
         // While something on the page moves by itself (the work's progress,
-        // the Status box typing, the build lists on their way), redraw between keys:
-        // quickly while it types, so it reads as typing.
+        // the build lists on their way), redraw between keys.
         let wait = app
             .panel
             .as_ref()
-            .and_then(|p| {
-                if p.revealing() {
-                    Some(25)
-                } else {
-                    p.animating().then_some(150)
-                }
-            })
+            .and_then(|p| p.animating().then_some(150))
             .or_else(|| app.prefs.as_ref().filter(|s| s.waiting()).map(|_| 150));
         let key_waiting = match wait {
             None => true,

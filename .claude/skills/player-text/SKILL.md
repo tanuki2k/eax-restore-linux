@@ -36,16 +36,16 @@ list: every new or changed string, after the copy-editor pass, as plain text
 with sample values filled in (not a diff). The user reviews the wording there
 rather than finding it while testing.
 
-## The TUI's console is the exception
+## The TUI's preflight checks are the exception
 
-The game page's Console in the TUI (the preflight checks and the install log)
-is terminal-style on purpose, and the user agreed it doesn't follow the
-full-sentence rules below. Its lines are a badge (`[ OK ]`, `[WARN]`,
+The preflight checks on the TUI's game page (shown in its Status card when one
+needs a look) and the install log are terminal-style on purpose, and the user
+agreed they don't follow the full-sentence rules below. A check's line is a badge (`[ OK ]`, `[WARN]`,
 `[FAIL]`, `[ -- ]`), a short label, and only what was found: "Steam 7670",
 "OpenAL (Bioshock.exe)". An OK line says nothing more, since OK already means
 it matched. Only a problem gets words, kept to what clashes or what to do:
 "files say DirectSound3D, profile says OpenAL", "no Bioshock.ini yet: run
-the game once". Brief the copy-editor to judge console lines as short,
+the game once". Brief the copy-editor to judge these lines as short,
 consistent and unambiguous, not as sentences. Everything else in the TUI
 (pop-ups, help, settings, the page's choices) still follows the rules below.
 

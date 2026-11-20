@@ -1,8 +1,8 @@
-//! Draws the game page in two columns, like Optiscaler-Client: on the left
-//! the game's choices in numbered boxes (in the order the script asks them)
-//! under the EAX fix box and a Status box that types itself out like a boot,
-//! and the game's profile on the right. While work runs, the right column
-//! shows its progress and then how it ended.
+//! Draws the game page: one column in a pop-up over the games list. The
+//! Status box says whether the fix is in and lists any check that needs a
+//! look, then the game's choices in numbered boxes (in the order the script
+//! asks them). While work runs, its progress and then how it ended take the
+//! choices' place.
 
 use super::{Button, Item, Panel, Row, Screen};
 use crate::engine::game_settings::{Category, Fix, Status};
@@ -19,11 +19,11 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Clear, Paragraph, Widget, Wrap};
 use ratatui::Frame;
 
-/// From this width the right column sits beside the choices, not under them.
-pub const BESIDE_FROM: u16 = 100;
-/// The choices' column; the console takes the rest.
+/// The page's width, border included.
 pub const LEFT_W: u16 = 64;
-/// A console line: the badge, then the label column.
+/// The Status box's tallest, border included, so the choices keep room.
+const STATUS_MAX_H: u16 = 8;
+/// A check's line: the badge, then the label column.
 const BADGE_W: usize = 7;
 const LABEL_W: usize = 10;
 
@@ -51,17 +51,54 @@ fn wrap(text: &str, width: usize) -> Vec<String> {
         .collect()
 }
 
-/// Draws the page over `area`, the whole body.
-pub fn draw(f: &mut Frame, p: &Panel, area: Rect) {
-    f.render_widget(Clear, area);
-    let rest = area;
-    let [middle, right] = if area.width >= BESIDE_FROM {
-        Layout::horizontal([Constraint::Length(LEFT_W), Constraint::Min(0)]).areas(rest)
+/// The page's pop-up: `LEFT_W` wide, centred, as tall as its content but a
+/// row short of the body at top and bottom, so the list shows round it.
+pub fn page_area(p: &Panel, area: Rect) -> Rect {
+    let most = if area.height > 12 {
+        area.height - 2
     } else {
-        Layout::vertical([Constraint::Percentage(55), Constraint::Percentage(45)]).areas(rest)
+        area.height
     };
-    draw_middle(f, p, middle);
-    draw_right(f, p, right);
+    popup(area, LEFT_W, page_rows(p).min(most))
+}
+
+/// The rows the page wants. It never shrinks below what the choices take,
+/// so it keeps its size going from the choices to a run and back.
+fn page_rows(p: &Panel) -> u16 {
+    let inner = LEFT_W.saturating_sub(2);
+    let status = u16::try_from(status_card_lines(p, usize::from(inner.saturating_sub(2))).len())
+        .unwrap_or(u16::MAX)
+        .saturating_add(2)
+        .min(STATUS_MAX_H);
+    let choices: u16 = match &p.problem {
+        Some(problem) => rows_of(&[Line::from(problem.as_str())], inner.saturating_sub(4)) + 4,
+        None => choice_boxes(p, usize::from(inner))
+            .iter()
+            .map(|b| b.lines.len() as u16 + 2)
+            .sum(),
+    };
+    let text_rows = |lines: &[Line]| rows_of(lines, inner.saturating_sub(2)) + 2;
+    let body = match &p.screen {
+        Screen::Main => choices,
+        Screen::Run(r) => choices.max(text_rows(&run_lines(r, usize::from(inner) - 2))),
+        Screen::Confirm {
+            heading,
+            lines,
+            jobs,
+            ..
+        } => choices.max(text_rows(&confirm_lines(heading, lines, jobs.is_empty()))),
+        Screen::Uninstall(u) => choices.max(text_rows(&uninstall_lines(p, u))),
+    };
+    // Borders, the Status box, the body, room for the longest help (three
+    // lines in a box) so moving the focus doesn't resize it, the buttons.
+    2 + status + body + 5 + 1
+}
+
+/// Draws the page as a pop-up over `area`, the whole body.
+pub fn draw(f: &mut Frame, p: &Panel, area: Rect) {
+    let page = page_area(p, area);
+    f.render_widget(Clear, page);
+    draw_middle(f, p, page);
     if p.list.is_some() {
         draw_list(f, p, area);
     }
@@ -77,16 +114,11 @@ fn draw_middle(f: &mut Frame, p: &Panel, area: Rect) {
     let block = boxed_line(title(p));
     let inner = block.inner(area);
     f.render_widget(block, area);
+    let status = status_card_lines(p, usize::from(inner.width.saturating_sub(2)));
+    let status_h = (u16::try_from(status.len()).unwrap_or(u16::MAX) + 2).min(STATUS_MAX_H);
     let [banner, inner] =
-        Layout::vertical([Constraint::Length(3), Constraint::Min(0)]).areas(inner);
-    f.render_widget(
-        Paragraph::new(banner_lines(p)).block(boxed("Status")),
-        banner,
-    );
-    // Nothing to choose until the console has finished its preflight.
-    if p.revealing() {
-        return;
-    }
+        Layout::vertical([Constraint::Length(status_h), Constraint::Min(0)]).areas(inner);
+    f.render_widget(Paragraph::new(status).block(boxed("Status")), banner);
     let help = help_text(p);
     let help_rows = if help.is_empty() {
         0
@@ -100,7 +132,8 @@ fn draw_middle(f: &mut Frame, p: &Panel, area: Rect) {
     ])
     .areas(inner);
     match &p.screen {
-        Screen::Main | Screen::Run(_) => draw_choices(f, p, body),
+        Screen::Main => draw_choices(f, p, body),
+        Screen::Run(r) => draw_run(f, p, r, body),
         Screen::Confirm {
             title,
             heading,
@@ -511,51 +544,36 @@ fn draw_choices(f: &mut Frame, p: &Panel, area: Rect) {
     }
 }
 
-/// The right column: the work's progress while it runs (and how it ended),
-/// else the game's profile.
-fn draw_right(f: &mut Frame, p: &Panel, area: Rect) {
+/// The work's progress while it runs, then how it ended, where the choices
+/// were.
+fn draw_run(f: &mut Frame, p: &Panel, r: &super::run::RunView, area: Rect) {
     let width = usize::from(area.width.saturating_sub(2));
-    let mut text = vec![Line::from(Span::styled(
-        format!(" Preflight: {}", p.name),
-        theme::white(),
-    ))];
-    text.extend(status_box_lines(p, width));
-    if !p.revealing() {
-        let verdict = p.preflight_verdict();
-        let style = if verdict == "Not ready." {
-            theme::label()
-        } else {
-            theme::green()
-        };
-        text.push(Line::from(Span::styled(format!(" {verdict}"), style)));
-    }
-    let mut follow = false;
-    if let Screen::Run(r) = &p.screen {
-        text.push(Line::from(""));
-        let (heading, style) = match &r.result {
-            None => ("Working".to_string(), theme::white()),
-            Some(fin) if fin.ok => (fin.title.clone(), theme::green()),
-            Some(fin) => (fin.title.clone(), theme::label()),
-        };
-        text.push(Line::from(Span::styled(format!(" {heading}"), style)));
-        text.extend(run_lines(r, width));
-        follow = !r.finished();
-    }
+    let (heading, style) = match &r.result {
+        None => ("Working".to_string(), theme::white()),
+        Some(fin) if fin.ok => (fin.title.clone(), theme::green()),
+        Some(fin) => (fin.title.clone(), theme::label()),
+    };
+    let text = run_lines(r, width);
     let shown = area.height.saturating_sub(2);
     let rows = rows_of(&text, area.width.saturating_sub(2));
     let max = rows.saturating_sub(shown);
     // While work runs its end stays in view; otherwise PgUp/PgDn scroll.
-    let skip = if follow { max } else { p.info_scroll.min(max) };
+    let skip = if r.finished() {
+        p.info_scroll.min(max)
+    } else {
+        max
+    };
+    let block = crate::ui::boxed_line(Line::from(Span::styled(format!(" {heading} "), style)));
     f.render_widget(
         Paragraph::new(text)
             .wrap(Wrap { trim: false })
             .scroll((skip, 0))
-            .block(boxed("Console")),
+            .block(block),
         area,
     );
 }
 
-/// One console line: the badge, the label, then the value, wrapped under
+/// One check's line: the badge, the label, then the value, wrapped under
 /// its own column.
 fn status_line_rows(l: &super::StatusLine, width: usize) -> Vec<Line<'static>> {
     use super::Check;
@@ -597,36 +615,17 @@ fn status_box_lines_all(lines: &[super::StatusLine], width: usize) -> Vec<Line<'
         .collect()
 }
 
-/// The preflight as it stands: every line, or while it types itself out,
-/// the lines done so far, the one being typed, and a blinking cursor.
-fn status_box_lines(p: &Panel, width: usize) -> Vec<Line<'static>> {
-    let all = p.status_lines();
-    let Some((done, chars)) = p.revealed() else {
-        return status_box_lines_all(&all, width);
-    };
-    let mut out = status_box_lines_all(&all[..done.min(all.len())], width);
-    let cursor_on = p
-        .reveal
-        .is_some_and(|t| (t.elapsed().as_millis() / 500) % 2 == 0);
-    let cursor = Span::styled(if cursor_on { "█" } else { " " }, theme::white());
-    if let Some(l) = all.get(done) {
-        // The badge comes last, once the line is typed out, as a boot does.
-        let typed: String = format!("{:LABEL_W$}{}", l.label, l.value)
-            .chars()
-            .take(chars)
-            .collect();
-        let label: String = typed.chars().take(LABEL_W).collect();
-        let value: String = typed.chars().skip(LABEL_W).collect();
-        out.push(Line::from(vec![
-            Span::raw(" "),
-            Span::raw(" ".repeat(BADGE_W)),
-            Span::styled(label, Style::new().fg(theme::FILTER_LABEL)),
-            Span::raw(value),
-            cursor,
-        ]));
-    } else {
-        out.push(Line::from(vec![Span::raw(" "), cursor]));
-    }
+/// The Status box: whether the fix is in, then each check that needs a
+/// look. The ones that came out fine aren't listed.
+fn status_card_lines(p: &Panel, width: usize) -> Vec<Line<'static>> {
+    use super::Check;
+    let problems: Vec<super::StatusLine> = p
+        .status_lines()
+        .into_iter()
+        .filter(|l| matches!(l.level, Check::Warn | Check::Fail))
+        .collect();
+    let mut out = banner_lines(p);
+    out.extend(status_box_lines_all(&problems, width));
     out
 }
 
