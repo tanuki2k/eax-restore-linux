@@ -191,6 +191,8 @@
 
         # Each setting carries its description from OpenAL Soft's reference
         # alsoft.ini, so the file explains itself to anyone tweaking it by hand.
+        # hrtf-paths must end with a comma: without it OpenAL Soft searches only
+        # the listed folders and never adds its built-in HRTF, so HRTF stays off.
         {
             cat <<EOF
 $ALSOFT_HEADER
@@ -266,7 +268,7 @@ ${HRTF_MODE_PREFIX}hrtf-mode = $HRTF_MODE
 #  \$XDG_DATA_HOME/openal/hrtf  (defaults to \$HOME/.local/share/openal/hrtf)
 #  \$XDG_DATA_DIRS/openal/hrtf  (defaults to /usr/local/share/openal/hrtf and
 #                               /usr/share/openal/hrtf)
-hrtf-paths = HRTF, OpenAL/HRTF
+hrtf-paths = HRTF, OpenAL/HRTF,
 
 ## period_size:
 #  Sets the update period size, in sample frames. This is the number of frames
