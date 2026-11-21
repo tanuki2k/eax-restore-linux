@@ -48,21 +48,23 @@ pub fn draw(f: &mut Frame, app: &App) {
     if let Some(s) = &app.prefs {
         s.draw(f, body);
     }
-    if let Some((title, lines)) = &app.notice {
-        draw_notice(f, title, lines, body);
+    if let Some(n) = &app.notice {
+        draw_notice(f, n, body);
     }
     if app.help {
         draw_help(f, app, body);
     }
 }
 
-/// The pop-up for a game with no EAX: the first paragraph in yellow, the
-/// profile's own words under it, then an OK button. Sized to its text.
-fn draw_notice(f: &mut Frame, title: &str, paras: &[String], area: Rect) {
+/// The pop-up for a game with no EAX or no prefix yet: the first paragraph
+/// in yellow, the profile's own words under it, then its buttons. Sized to
+/// its text.
+fn draw_notice(f: &mut Frame, n: &crate::app::Notice, area: Rect) {
+    let title = n.title.as_str();
     let w = area.width.min(64);
     let text_w = usize::from(w.saturating_sub(6)).max(10);
     let mut lines: Vec<Line> = Vec::new();
-    for (i, para) in paras.iter().enumerate() {
+    for (i, para) in n.lines.iter().enumerate() {
         if i > 0 {
             lines.push(Line::from(""));
         }
@@ -74,16 +76,27 @@ fn draw_notice(f: &mut Frame, title: &str, paras: &[String], area: Rect) {
         );
     }
     lines.push(Line::from(""));
-    lines.push(
-        Line::from(Span::styled(
-            "[ OK ]",
+    let button = |label: &str, sel: bool| {
+        let style = if sel {
             Style::new()
                 .fg(theme::SELECT_TEXT)
                 .bg(theme::SELECT_BAR)
-                .add_modifier(Modifier::BOLD),
-        ))
-        .centered(),
-    );
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::new().fg(theme::LABEL)
+        };
+        Span::styled(format!("[ {label} ]"), style)
+    };
+    let buttons = if n.retry.is_some() {
+        vec![
+            button("Check again", n.on_retry),
+            Span::raw("  "),
+            button("OK", !n.on_retry),
+        ]
+    } else {
+        vec![button("OK", true)]
+    };
+    lines.push(Line::from(buttons).centered());
     let h = (lines.len() as u16 + 4).min(area.height);
     let popup = Rect::new(
         area.x + (area.width - w) / 2,
@@ -419,6 +432,19 @@ fn game_line(app: &App, e: &Entry, selected: bool) -> Line<'static> {
     if !run.is_empty() {
         spans.push(Span::styled(run, if run_hit { hit } else { base }));
     }
+    // The same game from both stores: two rows of one name, told apart here.
+    if let Some(store) = e.store.filter(|_| app.both_stores.contains(&e.name)) {
+        let label = match store {
+            crate::library::StoreKind::Steam => " [Steam]",
+            crate::library::StoreKind::Gog => " [GOG]",
+        };
+        let colour = if selected {
+            theme::NOT_ON_PC_SELECTED
+        } else {
+            theme::NOT_ON_PC
+        };
+        spans.push(Span::styled(label, Style::new().fg(colour)));
+    }
     Line::from(spans)
 }
 
@@ -615,8 +641,12 @@ fn draw_help(f: &mut Frame, app: &App, area: Rect) {
 
 /// The key bar: each key in cyan, what it does after it.
 fn bar_items(app: &App) -> Vec<(&'static str, &'static str)> {
-    if app.notice.is_some() {
-        vec![("Enter", "close")]
+    if let Some(n) = &app.notice {
+        if n.retry.is_some() {
+            vec![("←/→", "move"), ("Enter", "press"), ("Esc", "close")]
+        } else {
+            vec![("Enter", "close")]
+        }
     } else if app.help {
         vec![("↑/↓", "scroll"), ("Esc or F1", "close")]
     } else if let Some(s) = &app.prefs {
@@ -877,6 +907,29 @@ mod tests {
     }
 
     #[test]
+    fn a_game_on_this_pc_from_both_stores_says_which_store_each_row_is() {
+        let json = r#"{"games":[{"id":"q","name":"Quake 4"},{"id":"a","name":"Alpha"}]}"#;
+        let mut games = entries(json);
+        let mut gog = games[0].clone();
+        games[0].status = Status::OnThisPc;
+        games[0].store = Some(StoreKind::Steam);
+        gog.status = Status::Installed;
+        gog.store = Some(StoreKind::Gog);
+        games[1].status = Status::OnThisPc;
+        games[1].store = Some(StoreKind::Steam);
+        games.push(gog.clone());
+        let s = screen(&App::new(games.clone()), 120, 30);
+        assert!(s.contains("  Quake 4 [Steam]"), "{s}");
+        assert!(s.contains("✓ Quake 4 [GOG]"), "{s}");
+        assert!(!s.contains("Alpha ["), "one store, no label: {s}");
+
+        // Only one copy on this PC: no label.
+        games[2].status = Status::NotOnThisPc;
+        let s = screen(&App::new(games), 120, 30);
+        assert!(!s.contains("Quake 4 ["), "{s}");
+    }
+
+    #[test]
     fn the_list_ticks_installed_games_and_greys_out_ones_not_on_this_pc() {
         let mut games = entries(
             r#"{"games":[{"id":"a","name":"Alpha","stores":{},"eax":{"api":"directsound3d"}},
@@ -938,7 +991,7 @@ mod tests {
         // Fitted to its text: the focused row's help, room under it for the
         // longest help, a margin row, the border.
         assert!(
-            rows[bottom - 3].contains("The newest DSOAL build at the time you install."),
+            rows[bottom - 3].contains("The game list starts with every game."),
             "{}",
             rows.join("\n")
         );
@@ -955,11 +1008,24 @@ mod tests {
             .collect()
     }
 
+    /// A Steam game's folder whose prefix Proton has made, so its page opens.
+    fn steam_folder(home: &std::path::Path, dir: &str, app_id: u32) -> std::path::PathBuf {
+        let lib = home.join("SteamLibrary/steamapps");
+        let game = lib.join("common").join(dir);
+        std::fs::create_dir_all(&game).unwrap();
+        std::fs::create_dir_all(lib.join(format!("compatdata/{app_id}/pfx/drive_c"))).unwrap();
+        std::fs::write(
+            lib.join(format!("appmanifest_{app_id}.acf")),
+            format!("\"AppState\"\n{{\n\t\"appid\"\t\t\"{app_id}\"\n\t\"installdir\"\t\t\"{dir}\"\n}}\n"),
+        )
+        .unwrap();
+        game
+    }
+
     /// Quake 4 with a folder, its page opened with Enter.
     fn app_with_a_page_open(width: u16) -> (tempfile::TempDir, App) {
         let home = tempfile::tempdir().unwrap();
-        let dir = home.path().join("Games/Quake 4");
-        std::fs::create_dir_all(&dir).unwrap();
+        let dir = steam_folder(home.path(), "Quake 4", 2210);
         let mut games = entries(WITH_SETTINGS);
         games[0].status = Status::OnThisPc;
         games[0].path = Some(dir);
@@ -993,8 +1059,7 @@ mod tests {
     #[test]
     fn enter_on_a_game_that_wasnt_found_asks_for_its_folder_then_opens_its_page() {
         let home = tempfile::tempdir().unwrap();
-        let dir = home.path().join("Games/Quake 4");
-        std::fs::create_dir_all(&dir).unwrap();
+        let dir = steam_folder(home.path(), "Quake 4", 2210);
         let mut app = App::new(entries(WITH_SETTINGS));
         app.set_home(home.path().to_path_buf());
         app.use_panel = true;
@@ -1015,8 +1080,7 @@ mod tests {
     #[test]
     fn ctrl_a_then_space_opens_a_page_for_that_folder() {
         let home = tempfile::tempdir().unwrap();
-        let dir = home.path().join("Games/Obscure");
-        std::fs::create_dir_all(&dir).unwrap();
+        let dir = steam_folder(home.path(), "Obscure", 1234);
         let mut app = App::new(entries(WITH_SETTINGS));
         app.set_home(home.path().to_path_buf());
         app.use_panel = true;
@@ -1068,6 +1132,54 @@ mod tests {
         assert!(app.panel.is_none());
         assert!(app.notice.is_some());
         press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
+        assert!(app.notice.is_none());
+    }
+
+    #[test]
+    fn enter_on_a_game_with_no_prefix_yet_shows_a_pop_up_not_its_page() {
+        let home = tempfile::tempdir().unwrap();
+        let dir = steam_folder(home.path(), "Quake 4", 2210);
+        std::fs::remove_dir_all(home.path().join("SteamLibrary/steamapps/compatdata")).unwrap();
+        let mut games = entries(WITH_SETTINGS);
+        games[0].status = Status::OnThisPc;
+        games[0].path = Some(dir);
+        let mut app = App::new(games);
+        app.set_home(home.path().to_path_buf());
+        app.use_panel = true;
+        press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
+        assert!(app.panel.is_none());
+        let s = screen(&app, 120, 40);
+        assert!(s.contains(" Quake 4 "), "{s}");
+        assert!(s.contains("Quake 4 doesn't have a Wine prefix yet."), "{s}");
+        assert!(s.contains("check again."), "{s}");
+        assert!(!s.contains(" Status "), "no Status box: {s}");
+        assert!(s.contains("[ Check again ]  [ OK ]"), "{s}");
+
+        // Check again with still no prefix: the pop-up stays.
+        press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
+        assert!(app.panel.is_none());
+        assert!(app.notice.as_ref().is_some_and(|n| n.retry.is_some()));
+
+        // Once the game has made it, Check again opens the page.
+        std::fs::create_dir_all(
+            home.path()
+                .join("SteamLibrary/steamapps/compatdata/2210/pfx/drive_c"),
+        )
+        .unwrap();
+        press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
+        assert!(app.notice.is_none());
+        assert!(app.panel.is_some());
+
+        // OK, picked with the arrows, closes it; so does Esc.
+        app.panel = None;
+        std::fs::remove_dir_all(home.path().join("SteamLibrary/steamapps/compatdata")).unwrap();
+        press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
+        assert!(app.notice.is_some());
+        press(&mut app, ratatui::crossterm::event::KeyCode::Right);
+        press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
+        assert!(app.notice.is_none() && app.panel.is_none());
+        press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
+        press(&mut app, ratatui::crossterm::event::KeyCode::Esc);
         assert!(app.notice.is_none());
     }
 
@@ -1520,7 +1632,7 @@ mod tests {
         let text = help::lines(84).iter().skip_while(|l| is_blank(l)).count();
         // Border, a margin row, the text, a margin row, border.
         assert!(
-            rows[top + 1 + text].contains("The game isn't on this PC."),
+            rows[top + 1 + text].contains("so each copy names its store."),
             "{:?}",
             rows[top + 1 + text]
         );

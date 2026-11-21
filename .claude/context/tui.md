@@ -158,16 +158,20 @@ and because the page finds a Steam prefix in compatdata without protontricks, th
 checks protontricks sees it (`cli::protontricks_problem`, with the Flatpak `--filesystem` fix).
 The headless `install` makes the same checks and refuses a `none_to_restore` game. A folder picked
 with Ctrl-A is matched to its database game by store ID (`App::open_folder`).
+A game with no EAX, or with no prefix yet and no install, gets a pop-up (`app::Notice`)
+instead of its page; the no-prefix one has Check again, which opens the page once the prefix is there.
 There's no Console any more: a run's steps and its finish take the choices' place
 (`view::draw_run`), following the end while it runs; PgUp/PgDn scroll it once the work is over. The game's database profile isn't on this
 page (it's in the games list's right pane); `Facts::summary` still serves `eax-restore status`.
-F2 opens the settings screen (`src/prefs_screen.rs`): the player's defaults for a new install
-(DSOAL and OpenAL Soft builds, DLL override, speakers, VC++ runtime) saved on
+F2 opens the settings screen (`src/prefs_screen.rs`): the Show and Tested filters the list
+starts on (`App::apply_list_prefs`, at startup and when F2 changes them), then the player's
+defaults for a new install (DSOAL and OpenAL Soft builds, DLL override, speakers, VC++ runtime) saved on
 every change to `$XDG_CONFIG_HOME/eax-restore-linux/tui.json`; a pop-up sized like F1's help via `ui::centred_popup` (`src/prefs.rs`; a missing or bad
 file gives the shipped defaults, and "Reset to defaults" puts them back). `Panel` starts a game
 without the fix on them; an installed game opens on what it has. Tests never load the real file.
 The list marks a game with the fix with a green ✓ (magenta when it isn't in the database) and
-greys out the names of games not on this PC (`ui::marker`, `ui::game_line`).
+greys out the names of games not on this PC (`ui::marker`, `ui::game_line`). A name on this PC
+from both Steam and GOG gets a grey `[Steam]`/`[GOG]` after it (`App::both_stores`).
 Dropdowns are `view::LIST_W` wide
 and scroll (`view::list_window`, PgUp/PgDn/Home/End) when longer than the screen. The
 preflight's first line is the game's exe (`Facts::exe`), a FAIL when the profile's exe isn't there. Colours all come from `theme.rs`, as the list uses them. `mod.rs`

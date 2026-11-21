@@ -255,6 +255,9 @@ pub struct Panel {
     pub installed: Option<Installed>,
     /// A Linux build or a missing prefix: there's nothing to choose yet.
     pub problem: Option<String>,
+    /// The problem is only that the game hasn't made its prefix yet, so the
+    /// list shows a short pop-up instead of the page.
+    pub no_prefix: bool,
     pub sections: Vec<Section>,
     /// Audio settings first, then optional ones, as the page lists them.
     pub fixes: Vec<Fix>,
@@ -340,6 +343,7 @@ impl Panel {
             game,
             installed,
             problem: None,
+            no_prefix: false,
             sections: Vec::new(),
             fixes: Vec::new(),
             ticked: HashSet::new(),
@@ -565,6 +569,7 @@ impl Panel {
     fn build(&mut self) {
         let f = &self.facts;
         let name = &self.name;
+        self.no_prefix = false;
         self.problem = if f.linux_build && self.installed.is_none() {
             Some(format!("{name} is installed as its Linux version, which the EAX fix can't work with. Switch it to the Windows version in its launcher, then check again."))
         } else if let Some(why) = crate::cli::unwritable_problem(f, &self.home, "check again")
@@ -572,6 +577,7 @@ impl Panel {
         {
             Some(why)
         } else if f.prefix.is_none() && self.installed.is_none() {
+            self.no_prefix = true;
             Some(format!("{name} doesn't have a Wine prefix yet. If you just installed {name}, its launcher creates it the first time it runs. Please launch the game at least once, close it, and check again."))
         } else {
             None
@@ -1657,6 +1663,7 @@ mod tests {
         std::fs::rename(&pfx, &away).unwrap();
         let p = Panel::open("Test Game", &game, None, &home);
         assert!(p.problem.is_some());
+        assert!(p.no_prefix);
         assert_eq!(p.buttons(), [Button::CheckAgain]);
         // Once it has, it's found in compatdata, with no protontricks needed.
         std::fs::rename(&away, &pfx).unwrap();
@@ -1664,6 +1671,7 @@ mod tests {
         assert_eq!(p.facts.prefix.as_deref(), Some(pfx.as_path()));
         p.build();
         assert!(p.problem.is_none(), "{:?}", p.problem);
+        assert!(!p.no_prefix);
         assert_eq!(p.buttons(), [Button::Install]);
         let default = p.facts.default_plan();
         assert_eq!(p.plan().speakers, default.speakers);
@@ -1737,6 +1745,28 @@ mod tests {
         let plan = p.plan();
         assert_eq!(plan.dsoal_build, Build::Exact("r690".into()));
         assert_eq!(plan.openal_build, Build::Exact("1.24.3".into()));
+    }
+
+    #[test]
+    fn an_installed_game_whose_prefix_is_gone_still_opens_its_page() {
+        let tmp = tempfile::tempdir().unwrap();
+        let home = tmp.path().join("home");
+        let game = steam_game(&home);
+        touch(&game.join("dsound.dll"), "x");
+        touch(
+            &game.join(crate::engine::manifest::FILE_NAME),
+            &format!(
+                "{}\n{}/dsound.dll\n",
+                crate::engine::manifest::HEADER,
+                game.display()
+            ),
+        );
+        std::fs::remove_dir_all(home.join(".local/share/Steam/steamapps/compatdata/424242"))
+            .unwrap();
+        let p = Panel::open("Test Game", &game, None, &home);
+        assert!(p.installed.is_some());
+        assert!(p.facts.prefix.is_none());
+        assert!(!p.no_prefix, "uninstall stays reachable");
     }
 
     #[test]
@@ -2390,6 +2420,7 @@ mod tests {
             over: OverridePref::Manual,
             vcrun: VcPref::InstallIfMissing,
             speakers: SpeakerPref::Surround51,
+            ..Prefs::default()
         };
         p.build();
         let plan = p.plan();

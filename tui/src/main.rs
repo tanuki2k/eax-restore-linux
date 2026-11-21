@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use eax_restore::engine::config;
-use eax_restore::{app, cli, db, fetch, games, library, profile, runner, settings, ui};
+use eax_restore::{app, cli, db, fetch, games, library, prefs, profile, runner, settings, ui};
 use ratatui::crossterm::event::{self, Event, KeyEventKind};
 use std::io::Write;
 use std::path::PathBuf;
@@ -129,6 +129,7 @@ fn main() -> Result<()> {
 
     let mut app = app::App::new(entries);
     app.set_home(home.clone());
+    app.apply_list_prefs(&prefs::Prefs::load());
     app.use_panel = std::env::var("EAX_RESTORE_ENGINE").map_or(true, |v| v != "bash");
     if let Ok((width, _)) = ratatui::crossterm::terminal::size() {
         app.resize(width);

@@ -92,9 +92,31 @@ impl SpeakerPref {
     }
 }
 
+/// Which games the list shows when the TUI starts (Tab's filter).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ShowPref {
+    #[default]
+    All,
+    OnThisPc,
+    Installed,
+}
+
+/// Tested or untested games when the TUI starts (Ctrl-T's filter).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum TestedPref {
+    #[default]
+    Any,
+    Tested,
+    Untested,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Prefs {
+    pub show: ShowPref,
+    pub tested: TestedPref,
     pub dsoal_build: BuildPref,
     pub openal_build: BuildPref,
     pub over: OverridePref,
@@ -159,6 +181,8 @@ mod tests {
         assert_eq!(Prefs::load_from(&file), Prefs::default());
 
         let p = Prefs {
+            show: ShowPref::OnThisPc,
+            tested: TestedPref::Untested,
             dsoal_build: BuildPref("r690".into()),
             openal_build: BuildPref("numbered".into()),
             over: OverridePref::Manual,
@@ -187,6 +211,15 @@ mod tests {
         let old = Prefs::load_from(&file);
         assert_eq!(old.speakers, SpeakerPref::Quad);
         assert_eq!(old.over, OverridePref::LaunchOptions);
+        assert_eq!(old.show, ShowPref::All);
+        assert_eq!(old.tested, TestedPref::Any);
+
+        std::fs::write(&file, r#"{"show":"installed","tested":"tested"}"#).unwrap();
+        let p = Prefs::load_from(&file);
+        assert_eq!(
+            (p.show, p.tested),
+            (ShowPref::Installed, TestedPref::Tested)
+        );
     }
 
     #[test]

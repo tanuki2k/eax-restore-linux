@@ -43,6 +43,22 @@ impl Filter {
     }
 }
 
+/// A pop-up in place of a game's page: its name, what to say, and for a
+/// game with no prefix yet, a Check again button that tries the page again.
+pub struct Notice {
+    pub title: String,
+    pub lines: Vec<String>,
+    pub retry: Option<Retry>,
+    /// Check again is the highlighted button, rather than OK.
+    pub on_retry: bool,
+}
+
+/// What Check again opens.
+pub struct Retry {
+    pub dir: PathBuf,
+    pub game: Option<crate::db::Game>,
+}
+
 /// Where the right-hand pane sits.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Layout {
@@ -88,8 +104,8 @@ pub struct App {
     pub rescan: bool,
     /// The right pane takes the whole screen (Ctrl-F).
     pub zoom: bool,
-    /// The pop-up for a game with no EAX: its name, then what to say.
-    pub notice: Option<(String, Vec<String>)>,
+    /// The pop-up for a game with no EAX or no prefix yet.
+    pub notice: Option<Notice>,
     /// The F1 key list is open.
     pub help: bool,
     pub help_scroll: u16,
@@ -105,6 +121,10 @@ pub struct App {
     pub message: String,
     pub filter: Filter,
     pub filters: Filters,
+    /// Names on this PC from both Steam and GOG, whose rows say which store.
+    /// From every game, not just the listed ones, so the label stays put
+    /// whatever the filters hide.
+    pub both_stores: std::collections::HashSet<String>,
     pub pane: Pane,
     /// The first row of the games list that is showing, kept between redraws so the
     /// window only moves when the highlight gets near its edge. Set by `draw`.
@@ -145,6 +165,7 @@ impl App {
             message: String::new(),
             filter: Filter::All,
             filters: Filters::default(),
+            both_stores: Default::default(),
             pane: Pane::Profile,
             list_offset: std::cell::Cell::new(0),
             layout: Layout::Side,
@@ -157,8 +178,50 @@ impl App {
             quit: false,
             matcher: Matcher::default(),
         };
+        app.find_both_stores();
         app.refilter();
         app
+    }
+
+    fn find_both_stores(&mut self) {
+        let mut seen: std::collections::HashMap<&str, crate::library::StoreKind> =
+            Default::default();
+        let mut both = std::collections::HashSet::new();
+        for e in self
+            .games
+            .iter()
+            .filter(|e| e.status != Status::NotOnThisPc)
+        {
+            let Some(store) = e.store else { continue };
+            match seen.get(e.name.as_str()) {
+                Some(s) if *s != store => {
+                    both.insert(e.name.clone());
+                }
+                Some(_) => {}
+                None => {
+                    seen.insert(&e.name, store);
+                }
+            }
+        }
+        self.both_stores = both;
+    }
+
+    /// The Show and Tested filters the player saved on the settings screen.
+    pub fn apply_list_prefs(&mut self, p: &crate::prefs::Prefs) {
+        use crate::filters::TestedFilter;
+        use crate::prefs::{ShowPref, TestedPref};
+        self.filter = match p.show {
+            ShowPref::All => Filter::All,
+            ShowPref::OnThisPc => Filter::OnThisPc,
+            ShowPref::Installed => Filter::Installed,
+        };
+        self.filters.tested = match p.tested {
+            TestedPref::Any => TestedFilter::All,
+            TestedPref::Tested => TestedFilter::Tested,
+            TestedPref::Untested => TestedFilter::Untested,
+        };
+        self.selected = 0;
+        self.refilter();
     }
 
     pub fn set_home(&mut self, home: PathBuf) {
@@ -171,6 +234,7 @@ impl App {
         let keep = self.current().map(|e| (e.name.clone(), e.path.clone()));
         games.sort_by_key(|g| g.name.to_lowercase());
         self.games = games;
+        self.find_both_stores();
         self.refilter();
         if let Some((name, path)) = keep {
             let same = |e: &Entry| e.name == name && e.path == path;
@@ -343,7 +407,8 @@ impl App {
 
     /// Enter on a game: its page. A game that wasn't found on this PC needs
     /// its folder first, so the folder picker asks for it, unless its profile
-    /// says it has no EAX, whose page needs no folder.
+    /// says it has no EAX, whose page needs no folder. A game with no EAX or
+    /// no prefix yet gets a pop-up instead of the page.
     fn open_menu(&mut self) {
         if !self.use_panel {
             return self.open_action_menu();
@@ -353,7 +418,8 @@ impl App {
         if let Some(g) = game.as_ref().filter(|g| g.eax.none_to_restore()) {
             self.no_eax_notice(g);
         } else if let Some(dir) = path {
-            self.panel = Some(self.open_panel(&name, &dir, game));
+            let panel = self.open_panel(&name, &dir, game);
+            self.show_page(panel);
         } else {
             let mut picker = Picker::new(picker::start_dir(&self.home), self.home.clone());
             picker.game = game;
@@ -373,7 +439,12 @@ impl App {
                 .filter(|t| !t.is_empty())
                 .cloned(),
         );
-        self.notice = Some((g.name.clone(), lines));
+        self.notice = Some(Notice {
+            title: g.name.clone(),
+            lines,
+            retry: None,
+            on_retry: false,
+        });
     }
 
     /// The page for a folder picked by hand. Without a game from the list,
@@ -387,7 +458,58 @@ impl App {
         });
         match game {
             Some(g) if g.eax.none_to_restore() => self.no_eax_notice(&g),
-            game => self.panel = Some(self.open_panel(name, dir, game)),
+            game => {
+                let panel = self.open_panel(name, dir, game);
+                self.show_page(panel);
+            }
+        }
+    }
+
+    /// Before the game's first run there's nothing to choose on its page,
+    /// so a pop-up says what's missing instead.
+    fn show_page(&mut self, panel: crate::panel::Panel) {
+        if panel.no_prefix {
+            let line = format!(
+                "{} doesn't have a Wine prefix yet. Please launch the game at least once, close it, and check again.",
+                panel.name
+            );
+            self.notice = Some(Notice {
+                lines: vec![line],
+                retry: Some(Retry {
+                    dir: panel.facts.game_dir.clone(),
+                    game: panel.game.clone(),
+                }),
+                title: panel.name,
+                on_retry: true,
+            });
+        } else {
+            self.notice = None;
+            self.panel = Some(panel);
+        }
+    }
+
+    /// Enter, Esc or the arrows while a pop-up shows. Check again looks for
+    /// the prefix again: the page opens once it's there, else the pop-up stays.
+    fn handle_notice_key(&mut self, key: KeyEvent) {
+        let Some(n) = self.notice.as_mut() else {
+            return;
+        };
+        match key.code {
+            KeyCode::Esc => self.notice = None,
+            KeyCode::Left | KeyCode::Right | KeyCode::Tab | KeyCode::BackTab
+                if n.retry.is_some() =>
+            {
+                n.on_retry = !n.on_retry;
+            }
+            KeyCode::Enter => match n.retry.take().filter(|_| n.on_retry) {
+                Some(r) => {
+                    let name = n.title.clone();
+                    let panel = self.open_panel(&name, &r.dir, r.game);
+                    self.show_page(panel);
+                }
+                None => self.notice = None,
+            },
+            _ => {}
         }
     }
 
@@ -484,17 +606,21 @@ impl App {
     fn handle_key_inner(&mut self, key: KeyEvent) {
         self.message.clear();
         if self.notice.is_some() {
-            if matches!(key.code, KeyCode::Enter | KeyCode::Esc) {
-                self.notice = None;
-            }
-            return;
+            return self.handle_notice_key(key);
         }
         if self.picker.is_some() {
             return self.handle_picker_key(key);
         }
         if let Some(s) = self.prefs.as_mut() {
+            let before = (s.prefs.show, s.prefs.tested);
             s.handle_key(key);
-            if s.closed {
+            // A changed Show or Tested shows at once; a filter picked with
+            // Tab or Ctrl-T stays when only something else changed.
+            if (s.prefs.show, s.prefs.tested) != before {
+                let p = s.prefs.clone();
+                self.apply_list_prefs(&p);
+            }
+            if self.prefs.as_ref().is_some_and(|s| s.closed) {
                 self.prefs = None;
             }
             return;
@@ -593,6 +719,50 @@ mod tests {
         assert!(a.query.is_empty());
         a.handle_key(key(KeyCode::Esc));
         assert!(a.prefs.is_none() && !a.quit);
+    }
+
+    #[test]
+    fn the_saved_show_and_tested_filters_narrow_the_list() {
+        use crate::prefs::{Prefs, ShowPref, TestedPref};
+        let mut a = app();
+        a.games[0].status = Status::Installed; // Alpha Centauri
+        a.games[1].status = Status::Installed; // Alpha Protocol
+        a.games[0].game.as_mut().unwrap().tested = false;
+        a.apply_list_prefs(&Prefs {
+            show: ShowPref::Installed,
+            tested: TestedPref::Tested,
+            ..Prefs::default()
+        });
+        assert!(a.filter == Filter::Installed);
+        assert_eq!(a.current().unwrap().name, "Alpha Protocol");
+        assert_eq!(a.visible.len(), 1);
+    }
+
+    #[test]
+    fn changing_show_in_f2_changes_the_list_but_other_settings_leave_it() {
+        let mut a = app();
+        // A filter picked with Tab stays while F2 changes the speakers.
+        a.handle_key(key(KeyCode::Tab));
+        assert!(a.filter == Filter::OnThisPc);
+        a.handle_key(key(KeyCode::F(2)));
+        for _ in 0..5 {
+            a.handle_key(key(KeyCode::Down)); // to Speakers
+        }
+        a.handle_key(key(KeyCode::Enter));
+        a.handle_key(key(KeyCode::Down));
+        a.handle_key(key(KeyCode::Enter));
+        assert!(a.filter == Filter::OnThisPc);
+
+        // Show set to EAX fix installed shows at once.
+        a.handle_key(key(KeyCode::Home));
+        a.handle_key(key(KeyCode::Enter));
+        a.handle_key(key(KeyCode::Down));
+        a.handle_key(key(KeyCode::Down));
+        a.handle_key(key(KeyCode::Enter));
+        a.handle_key(key(KeyCode::Esc));
+        assert!(a.prefs.is_none());
+        assert!(a.filter == Filter::Installed);
+        assert!(a.visible.is_empty());
     }
 
     fn app() -> App {
@@ -750,6 +920,7 @@ mod tests {
         let steam = home.path().join("Steam/steamapps");
         for (id, dir) in [(11, "Never"), (22, "Has")] {
             std::fs::create_dir_all(steam.join("common").join(dir)).unwrap();
+            std::fs::create_dir_all(steam.join(format!("compatdata/{id}/pfx/drive_c"))).unwrap();
             std::fs::write(
                 steam.join(format!("appmanifest_{id}.acf")),
                 format!("\"AppState\"\n{{\n\t\"appid\"\t\t\"{id}\"\n\t\"installdir\"\t\t\"{dir}\"\n}}\n"),
@@ -761,7 +932,7 @@ mod tests {
         // One with no EAX gets the pop-up, as from the list.
         a.open_folder("Never", &steam.join("common/Never"), None);
         assert!(a.panel.is_none());
-        assert_eq!(a.notice.as_ref().unwrap().0, "Never Had It");
+        assert_eq!(a.notice.as_ref().unwrap().title, "Never Had It");
     }
 
     #[test]

@@ -3,7 +3,7 @@
 
 use crate::build_choice::{BuildInfo, Comp};
 use crate::panel::Opt;
-use crate::prefs::{BuildPref, OverridePref, Prefs, SpeakerPref, VcPref};
+use crate::prefs::{BuildPref, OverridePref, Prefs, ShowPref, SpeakerPref, TestedPref, VcPref};
 use crate::theme;
 use crate::ui::{boxed, gutter, MARGIN};
 use ratatui::crossterm::event::{KeyCode, KeyEvent};
@@ -17,6 +17,8 @@ use std::path::PathBuf;
 /// The rows, in the order they're shown.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Field {
+    Show,
+    Tested,
     DsoalBuild,
     OpenalBuild,
     Override,
@@ -24,7 +26,9 @@ pub enum Field {
     Vcrun,
 }
 
-pub const FIELDS: [Field; 5] = [
+pub const FIELDS: [Field; 7] = [
+    Field::Show,
+    Field::Tested,
     Field::DsoalBuild,
     Field::OpenalBuild,
     Field::Override,
@@ -65,6 +69,8 @@ fn build_opts(comp: Comp, pref: &BuildPref, info: Info) -> Vec<Opt> {
 impl Field {
     pub fn title(self) -> &'static str {
         match self {
+            Field::Show => "Show",
+            Field::Tested => "Tested",
             Field::DsoalBuild => "DSOAL build",
             Field::OpenalBuild => "OpenAL Soft build",
             Field::Override => "DLL override",
@@ -75,6 +81,28 @@ impl Field {
 
     pub fn options(self, p: &Prefs, info: Info) -> Vec<Opt> {
         match self {
+            Field::Show => opts(&[
+                ("All games", "The game list starts with every game."),
+                (
+                    "Games on this PC",
+                    "The game list starts with the games found in your Steam, Heroic, Lutris, Bottles or Faugus libraries, plus any you added yourself.",
+                ),
+                (
+                    "EAX fix installed",
+                    "The game list starts with the games that have the EAX fix.",
+                ),
+            ]),
+            Field::Tested => opts(&[
+                ("Any", "The game list starts with tested and untested games."),
+                (
+                    "Yes",
+                    "The game list starts with the games checked on a real install.",
+                ),
+                (
+                    "Not yet",
+                    "The game list starts with the games not checked on a real install yet.",
+                ),
+            ]),
             Field::DsoalBuild => build_opts(Comp::Dsoal, &p.dsoal_build, info),
             Field::OpenalBuild => build_opts(Comp::Openal, &p.openal_build, info),
             Field::Override => opts(&[
@@ -117,6 +145,16 @@ impl Field {
                 .unwrap_or(0)
         };
         match self {
+            Field::Show => match p.show {
+                ShowPref::All => 0,
+                ShowPref::OnThisPc => 1,
+                ShowPref::Installed => 2,
+            },
+            Field::Tested => match p.tested {
+                TestedPref::Any => 0,
+                TestedPref::Tested => 1,
+                TestedPref::Untested => 2,
+            },
             Field::DsoalBuild => at(Comp::Dsoal, &p.dsoal_build),
             Field::OpenalBuild => at(Comp::Openal, &p.openal_build),
             Field::Override => match p.over {
@@ -140,6 +178,12 @@ impl Field {
                 .map_or_else(BuildPref::default, |o| BuildPref(o.key.clone()))
         };
         match self {
+            Field::Show => {
+                p.show = [ShowPref::All, ShowPref::OnThisPc, ShowPref::Installed][i.min(2)];
+            }
+            Field::Tested => {
+                p.tested = [TestedPref::Any, TestedPref::Tested, TestedPref::Untested][i.min(2)];
+            }
             Field::DsoalBuild => p.dsoal_build = key(Comp::Dsoal, &p.dsoal_build),
             Field::OpenalBuild => p.openal_build = key(Comp::Openal, &p.openal_build),
             Field::Override => {
@@ -308,7 +352,7 @@ impl PrefsScreen {
         // Inside the border and the margin of a pop-up as wide as the help.
         let width = usize::from(crate::ui::POPUP_W.min(area.width).saturating_sub(6)).max(1);
         let mut lines: Vec<Line> = crate::settings::wrap(
-            "These are your defaults for new installs. A game that already has the fix keeps what it has.",
+            "Show and Tested set how the game list starts. The rest are your defaults for new installs, and a game that already has the fix keeps what it has.",
             width,
             "",
         )
@@ -494,11 +538,11 @@ mod tests {
         // stereo that detects.
         let p = Prefs::default();
         let firsts: Vec<usize> = FIELDS.iter().map(|f| f.get(&p, None)).collect();
-        assert_eq!(firsts, [0, 0, 0, SpeakerPref::Auto.index(), 0]);
+        assert_eq!(firsts, [0, 0, 0, 0, 0, SpeakerPref::Auto.index(), 0]);
     }
 
     #[test]
-    fn shows_five_rows_and_a_reset_and_saves_each_change() {
+    fn shows_every_row_and_a_reset_and_saves_each_change() {
         let tmp = tempfile::tempdir().unwrap();
         let file = tmp.path().join("eax-restore-linux/tui.json");
         let mut s = PrefsScreen::new(Prefs::default(), Some(file.clone()));
@@ -507,7 +551,7 @@ mod tests {
             assert!(text.contains(f.title()), "{text}");
         }
         assert!(text.contains("[ Reset to defaults ]"));
-        assert!(text.contains("defaults for new installs"));
+        assert!(text.contains("Show and Tested set how the game list starts."));
 
         // The list from GitHub adds every build under Latest.
         s.build_info = Some(crate::build_choice::BuildInfo {
@@ -518,7 +562,15 @@ mod tests {
             ..Default::default()
         });
 
+        // Show: Games on this PC, saved at once.
+        s.handle_key(key(KeyCode::Enter));
+        s.handle_key(key(KeyCode::Down));
+        s.handle_key(key(KeyCode::Enter));
+        assert_eq!(Prefs::load_from(&file).show, ShowPref::OnThisPc);
+
         // DSOAL r696: picked from its dropdown and saved at once.
+        s.handle_key(key(KeyCode::Down));
+        s.handle_key(key(KeyCode::Down));
         s.handle_key(key(KeyCode::Enter));
         assert!(screen(&s).contains("─ DSOAL build ─"), "{}", screen(&s));
         assert!(screen(&s).contains("r696"), "{}", screen(&s));
