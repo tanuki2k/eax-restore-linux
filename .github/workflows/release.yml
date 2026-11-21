@@ -70,13 +70,26 @@ jobs:
           (cd dist && sha256sum -c eax-restore-linux.sh.sha256)
           echo "Dry run: no release was created."
 
+      # GitHub's generated notes only list pull requests; fixes reach main as
+      # commits, so tools/release-notes.sh adds the commits and the hand-written
+      # .github/release-notes/<tag>.md. A dry run names the release after
+      # SCRIPT_VERSION, since a branch has no tag.
+      - name: Release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$GITHUB_REF_TYPE" == "tag" ]; then name="$GITHUB_REF_NAME"
+          else name="v$(sed -nE 's/^SCRIPT_VERSION="([^"]+)".*/\1/p' src/globals.sh)"; fi
+          tools/release-notes.sh "$name" "$GITHUB_SHA" > "$RUNNER_TEMP/notes.md"
+          cat "$RUNNER_TEMP/notes.md"
+
       - name: Publish
         if: github.ref_type == 'tag' && !inputs.dry_run
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" --latest --verify-tag \
-            --title "$GITHUB_REF_NAME" --generate-notes \
+            --title "$GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/notes.md" \
             dist/eax-restore-linux.sh dist/eax-restore-linux.sh.sha256 eax-restore-linux.desktop
 
       - name: Assert this is the Latest release

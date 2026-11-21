@@ -8,7 +8,12 @@ End users get the script from a **GitHub Release asset**, not the repo directly 
 bump `SCRIPT_VERSION` in `src/globals.sh` (on `dev`), get it onto `main` (the stable,
 LTS-style branch: it takes fixes and game data that went through `dev` first, never
 new features), and push a `vX.Y` tag (or `vX.Y.Z` for a patch, e.g. `v0.29.1`) on the
-`main` commit. `.github/workflows/release.yml` then runs the test suite, refuses a tag
+`main` commit. In the same release commit, add `.github/release-notes/vX.Y[.Z].md`: a
+short "What's new in X.Y.Z" in player terms (new features, fixes, games; see the 0.29.x
+ones), run through humanizer and copy-editor, and shown to the user before pushing.
+`tools/release-notes.sh` builds the notes from it, then GitHub's PR list, or the
+commits since the last `v*` tag when there are no PRs (cherry-picks never show up as
+PRs), then the changelog link. `.github/workflows/release.yml` then runs the test suite, refuses a tag
 that isn't on `main` or doesn't match `SCRIPT_VERSION`, builds (a stable build: no
 `-dev`, `DATA_BRANCH="main"`), writes `eax-restore-linux.sh.sha256` (bare file name, so
 `sha256sum -c` works as in README's "Verifying the download") and creates the release
