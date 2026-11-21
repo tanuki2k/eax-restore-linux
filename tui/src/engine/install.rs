@@ -937,6 +937,17 @@ mod tests {
     }
 
     #[test]
+    fn hrtf_paths_keeps_the_built_in_hrtf() {
+        // Without the trailing comma OpenAL Soft skips its built-in HRTF.
+        let ini = alsoft_ini(&Speakers::default(), false);
+        let line = ini
+            .lines()
+            .find(|l| l.starts_with("hrtf-paths"))
+            .expect("hrtf-paths line");
+        assert!(line.ends_with(','), "{line}");
+    }
+
+    #[test]
     fn with_the_override_written_it_says_just_hit_play() {
         let (_tmp, p) = plan();
         let steam = Override::Launcher(Target {

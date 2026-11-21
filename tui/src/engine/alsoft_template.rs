@@ -77,7 +77,7 @@ stereo-encoding = {STEREO_ENCODING}
 #  $XDG_DATA_HOME/openal/hrtf  (defaults to $HOME/.local/share/openal/hrtf)
 #  $XDG_DATA_DIRS/openal/hrtf  (defaults to /usr/local/share/openal/hrtf and
 #                               /usr/share/openal/hrtf)
-hrtf-paths = HRTF, OpenAL/HRTF
+hrtf-paths = HRTF, OpenAL/HRTF,
 
 ## period_size:
 #  Sets the update period size, in sample frames. This is the number of frames
