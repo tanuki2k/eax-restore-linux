@@ -6,6 +6,7 @@ use super::builds::Build;
 use super::config::paths::game_install_root;
 use super::detect::{self, Api, ApiEvidence, CompanionApp, HeroicGame};
 use super::eax_unified;
+use super::files;
 use super::identify::{identify_game_dir, Identified, Store};
 use super::install::{self, Engine, Override, Plan, Vcrun};
 use super::launcher::target::Target;
@@ -54,6 +55,23 @@ pub struct Facts {
     pub vcrun_present: bool,
     /// The profile asks for EAX Unified, and the game doesn't ship its own.
     pub wants_eax_unified: bool,
+    /// Folders the install writes to that can't be written: the game's,
+    /// its extra exe folders, the prefixes' system32.
+    pub unwritable: Vec<PathBuf>,
+    /// The drive the game folder is on.
+    pub game_mount: Option<files::Mount>,
+    /// The Steam beta branch the game is on; empty for the default build.
+    pub beta_branch: String,
+}
+
+/// An install the script asks about before going ahead (y/N).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EaxCaution {
+    /// EAX already works without the fix.
+    BuiltIn,
+    /// A patch took EAX out of the current build, and the fix is another
+    /// build of the same install (a beta branch) the game isn't on.
+    RemovedByPatch,
 }
 
 /// The Wine to use for a game Heroic doesn't name one for: `wine` on PATH,
@@ -122,6 +140,9 @@ pub fn gather(game_dir: &Path, game: Option<&Game>, home: &Path, protontricks: &
         launcher: None,
         vcrun_present: false,
         wants_eax_unified: false,
+        unwritable: Vec::new(),
+        game_mount: files::mount_of(game_dir),
+        beta_branch: String::new(),
     };
     let exe = game.map_or("", |g| g.exe.as_str());
     let launcher_exe = wine_launchers::launcher_exe_for_root(home, &install_root);
@@ -141,10 +162,17 @@ pub fn gather(game_dir: &Path, game: Option<&Game>, home: &Path, protontricks: &
             f.store = Some(Store::Steam);
             f.id = app_id.clone();
             f.prefix = wine::steam_prefix_for_appid(protontricks, &app_id, game_dir);
-            f.runner = Some(Runner::Protontricks {
+            // No protontricks installed: nothing can run in the prefix.
+            f.runner = (!protontricks.is_empty()).then(|| Runner::Protontricks {
                 cmd: protontricks.to_vec(),
                 app_id: app_id.clone(),
             });
+            let dir = game_dir.to_string_lossy();
+            if let Some((library, _)) = dir.split_once("/steamapps/common/") {
+                f.beta_branch = detect::steam_beta_branch(Path::new(&format!(
+                    "{library}/steamapps/appmanifest_{app_id}.acf"
+                )));
+            }
             f.launcher = Target::steam(home, None, &app_id);
             if let Some(g) = game {
                 f.companions = detect::companion_apps(g, &app_id, game_dir, protontricks);
@@ -233,10 +261,42 @@ pub fn gather(game_dir: &Path, game: Option<&Game>, home: &Path, protontricks: &
     if let (Some(p), Some(arch)) = (&f.prefix, f.arch) {
         f.vcrun_present = vcrun::verify_files(p, arch).is_some_and(|(_, ok)| ok);
     }
+    // check_target_writable's folders, checked before anything changes.
+    let system32 = |p: &Path| p.join("drive_c/windows/system32");
+    let mut dirs = vec![game_dir.to_path_buf()];
+    dirs.extend(f.extra_dirs.iter().cloned());
+    dirs.extend(f.prefix.as_deref().map(system32).filter(|d| d.is_dir()));
+    dirs.extend(
+        f.companions
+            .iter()
+            .filter_map(|c| c.prefix.as_deref())
+            .map(system32),
+    );
+    f.unwritable = dirs.into_iter().filter(|d| !files::writable(d)).collect();
     f
 }
 
 impl Facts {
+    /// What `confirm_continue_if_eax_impossible` asks about for this game.
+    /// (`none_to_restore` games don't get this far.)
+    pub fn eax_caution(&self, game: &Game) -> Option<EaxCaution> {
+        match game.eax.status.as_str() {
+            "built_in" => Some(EaxCaution::BuiltIn),
+            "removed_by_patch" if game.eax.fix_in_place => {
+                let wanted = match self.store {
+                    Some(Store::Steam) => {
+                        game.stores.steam.as_ref().map(|s| s.beta_branch.as_str())
+                    }
+                    _ => None,
+                }
+                .unwrap_or("");
+                let on_it = !wanted.is_empty() && self.beta_branch == wanted;
+                (!on_it).then_some(EaxCaution::RemovedByPatch)
+            }
+            _ => None,
+        }
+    }
+
     /// The engine the audio API calls for: OpenAL Soft alone for an OpenAL
     /// game, DSOAL otherwise (the profile's word first, then the files').
     pub fn engine(&self) -> Engine {

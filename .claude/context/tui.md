@@ -147,6 +147,17 @@ on the Status card. Setting dropdowns are all `view::LIST_W` wide and wrap their
 descriptions (`view::draw_dropdown`). The preflight (`Panel::status_lines`, `Check`
 Ok/Warn/Fail/Unknown badges: exe, store, audio API from the profile vs. the files, arch, prefix,
 Wine, config files the settings need) is terse badge lines, not the script's full sentences.
+It carries the script's checks before install: a fresh install is offered only with no FAIL line
+(`Panel::has_fail`); a prefix counts only with `drive_c` (Heroic and the other launchers name one
+before the first run makes it); the folders the install writes to must be writable
+(`Facts::unwritable`, `files::writable`, the script's NTFS wording in `cli::unwritable_problem`);
+`built_in` and a `removed_by_patch` game off its EAX beta branch (`Facts::eax_caution`) get a WARN
+line and the script's "Install anyway?" on the confirm screen, with Back first. `cli::protontricks()`
+is empty when neither protontricks nor its Flatpak is installed (a Steam game then has no runner),
+and because the page finds a Steam prefix in compatdata without protontricks, the install job first
+checks protontricks sees it (`cli::protontricks_problem`, with the Flatpak `--filesystem` fix).
+The headless `install` makes the same checks and refuses a `none_to_restore` game. A folder picked
+with Ctrl-A is matched to its database game by store ID (`App::open_folder`).
 There's no Console any more: a run's steps and its finish take the choices' place
 (`view::draw_run`), following the end while it runs; PgUp/PgDn scroll it once the work is over. The game's database profile isn't on this
 page (it's in the games list's right pane); `Facts::summary` still serves `eax-restore status`.

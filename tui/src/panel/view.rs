@@ -780,10 +780,10 @@ fn confirm_lines(heading: &str, lines: &[(String, String)], nothing: bool) -> Ve
         ));
         return text;
     }
-    text.push(Line::from(Span::styled(
-        heading.to_string(),
-        theme::white(),
-    )));
+    // A caution goes above the usual heading, a blank line between them.
+    for part in heading.split('\n') {
+        text.push(Line::from(Span::styled(part.to_string(), theme::white())));
+    }
     text.push(Line::from(""));
     let width = lines
         .iter()

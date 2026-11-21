@@ -156,17 +156,130 @@ fn home() -> Result<PathBuf> {
     ))
 }
 
-/// How to run protontricks: the program on PATH, or the Flatpak.
+/// How to run protontricks: the program on PATH, or the Flatpak; empty when
+/// neither is installed. Unit tests get the test stub, whatever this PC has.
 pub fn protontricks() -> Vec<String> {
-    let on_path = std::env::var_os("PATH").is_some_and(|p| {
+    if cfg!(test) {
+        let stub = Path::new(env!("CARGO_MANIFEST_DIR")).join("../tests/fixtures/bin/protontricks");
+        return vec![stub.display().to_string()];
+    }
+    let home = std::env::var_os("HOME")
+        .map(PathBuf::from)
+        .unwrap_or_default();
+    protontricks_in(
+        std::env::var_os("PATH"),
+        &home,
+        Path::new("/var/lib/flatpak"),
+    )
+}
+
+const PROTONTRICKS_FLATPAK: &str = "com.github.Matoking.protontricks";
+
+/// What the script says before its "Install anyway? (y/N)" for a game whose
+/// EAX already works, or that a patch took EAX out of.
+pub fn eax_caution_text(facts: &Facts, game: &Game, name: &str) -> Option<String> {
+    Some(match facts.eax_caution(game)? {
+        prepare::EaxCaution::BuiltIn => format!("{name} already has working EAX reverb through its own OpenAL Soft, so installing is optional: it swaps in a newer OpenAL Soft and adds speaker and headphone settings."),
+        prepare::EaxCaution::RemovedByPatch => {
+            let fix = if game.eax.fix.is_empty() {
+                String::new()
+            } else {
+                format!(" {}", game.eax.fix)
+            };
+            format!("A software update removed EAX from the current build of {name}, so there's nothing to restore on it.{fix}")
+        }
+    })
+}
+
+/// Why a game with nothing to restore gets no install, as the TUI's pop-up
+/// says it: the database's own problem and fix text.
+pub fn no_eax_text(game: &Game) -> Option<String> {
+    if !game.eax.none_to_restore() {
+        return None;
+    }
+    let mut text = format!("{} has no EAX, so there's nothing to install.", game.name);
+    for t in [&game.eax.problem, &game.eax.fix] {
+        if !t.is_empty() {
+            text.push(' ');
+            text.push_str(t);
+        }
+    }
+    Some(text)
+}
+
+/// A folder the install writes to can't be written, and why, as the
+/// script's `check_target_writable` says it. `again` ends the advice: "check
+/// again" on the page, "try again" here.
+pub fn unwritable_problem(facts: &Facts, home: &Path, again: &str) -> Option<String> {
+    let dir = facts.unwritable.first()?;
+    let why = match crate::engine::files::mount_of(dir) {
+        Some(m) if m.is_ntfs() && m.read_only => {
+            "Windows didn't fully shut down (Fast Startup or hibernation), so Linux mounted this drive read-only.".to_string()
+        }
+        Some(m) if m.is_ntfs() => {
+            "This NTFS drive is mounted without write access for your user.".to_string()
+        }
+        Some(m) if m.read_only => {
+            format!("This drive is mounted read-only. Remount it read-write, then {again}.")
+        }
+        _ => format!("Your user doesn't have permission to write there. Fix the folder's permissions, then {again}."),
+    };
+    Some(format!(
+        "{} can't be written to, so the EAX fix can't be installed. {why}",
+        library::tilde(dir, home)
+    ))
+}
+
+/// Why a Steam game's install can't start: protontricks isn't installed, or
+/// it can't see the game's prefix, which the page finds without it. Checked
+/// when the install starts, before anything is downloaded or changed, as the
+/// script checks it before it changes anything.
+pub fn protontricks_problem(facts: &Facts, name: &str) -> Option<String> {
+    if facts.store != Some(Store::Steam) {
+        return None;
+    }
+    let Some(wine::Runner::Protontricks { cmd, app_id }) = &facts.runner else {
+        return Some(format!("protontricks isn't installed, so nothing was installed. {name} needs it to make changes in its Proton prefix, so install protontricks and try again."));
+    };
+    let prefix = facts.prefix.as_deref()?;
+    if wine::protontricks_sees(cmd, app_id, prefix) {
+        return None;
+    }
+    let mut text =
+        format!("protontricks can't find {name}'s Proton prefix, so nothing was installed.");
+    if cmd.first().is_some_and(|c| c == "flatpak") {
+        let game = facts.game_dir.to_string_lossy();
+        let library = game.split("/steamapps/common/").next().unwrap_or(&game);
+        text.push_str(&format!(" Flatpak protontricks can only see folders it has been given access to, so allow it to read {library} by running the command below, then try again:\n\n  flatpak override --user --filesystem=\"{library}\" {PROTONTRICKS_FLATPAK}"));
+    }
+    Some(text)
+}
+
+/// `protontricks` for a PATH, a home folder and the system Flatpak folder.
+/// The Flatpak is looked for in its install folders, as `flatpak info` would
+/// find it, without starting flatpak for every game page.
+fn protontricks_in(
+    path: Option<std::ffi::OsString>,
+    home: &Path,
+    system_flatpak: &Path,
+) -> Vec<String> {
+    let on_path = path.is_some_and(|p| {
         std::env::split_paths(&p).any(|d| wine::is_executable(&d.join("protontricks")))
     });
+    let flatpak = [
+        home.join(".local/share/flatpak"),
+        system_flatpak.to_path_buf(),
+    ]
+    .iter()
+    .any(|d| d.join("app").join(PROTONTRICKS_FLATPAK).is_dir());
     if on_path {
         vec!["protontricks".into()]
-    } else {
-        ["flatpak", "run", "com.github.Matoking.protontricks"]
+    } else if flatpak {
+        ["flatpak", "run", PROTONTRICKS_FLATPAK]
             .map(String::from)
             .to_vec()
+    } else {
+        Vec::new()
     }
 }
 
@@ -183,8 +296,17 @@ fn load_database(args: &Args) -> Result<Database> {
 }
 
 fn find_game<'a>(db: &'a Database, store: Option<Store>, id: &str) -> Option<&'a Game> {
+    game_by_store(&db.games, store, id)
+}
+
+/// The game a store knows by `id`, among `games`.
+pub fn game_by_store<'a>(
+    games: impl IntoIterator<Item = &'a Game>,
+    store: Option<Store>,
+    id: &str,
+) -> Option<&'a Game> {
     let id: u64 = id.parse().ok()?;
-    db.games.iter().find(|g| match store {
+    games.into_iter().find(|g| match store {
         Some(Store::Steam) => g.stores.steam.as_ref().is_some_and(|s| s.id == id),
         Some(Store::Gog) => g.stores.gog.as_ref().is_some_and(|s| s.id == id),
         None => false,
@@ -256,20 +378,25 @@ fn ask(question: &str) -> Result<Option<String>> {
 }
 
 fn confirm(question: &str, args: &Args) -> Result<bool> {
+    yes_no(question, args, true)
+}
+
+/// A (Y/n) question, or (y/N) when `yes` is false and Enter means no.
+fn yes_no(question: &str, args: &Args, yes: bool) -> Result<bool> {
     if args.on("--yes") {
         return Ok(true);
     }
     if !std::io::stdin().is_terminal() {
         bail!("There's no terminal to ask you on, so nothing was changed. Add --yes to make these changes without being asked.");
     }
-    print!("\n{question} (Y/n) ");
+    print!("\n{question} {} ", if yes { "(Y/n)" } else { "(y/N)" });
     std::io::stdout().flush()?;
     let mut line = String::new();
     std::io::stdin().lock().read_line(&mut line)?;
-    Ok(matches!(
-        line.trim().to_lowercase().as_str(),
-        "" | "y" | "yes"
-    ))
+    Ok(match line.trim().to_lowercase().as_str() {
+        "" => yes,
+        a => matches!(a, "y" | "yes"),
+    })
 }
 
 /// Closes a running launcher before its settings file is changed, when
@@ -609,6 +736,12 @@ fn install(
     if facts.linux_build {
         bail!("{name} is the Linux version, which the EAX fix can't work with. Switch the game to its Windows version in its launcher first.");
     }
+    if let Some(why) = game.and_then(no_eax_text) {
+        bail!("{why}");
+    }
+    if let Some(why) = unwritable_problem(facts, home, "try again") {
+        bail!("{why}");
+    }
     if facts.prefix.is_none() {
         bail!("{name}'s Wine prefix wasn't found. If you just installed {name}, its launcher creates it the first time it runs: launch the game once, close it, and try again.");
     }
@@ -715,9 +848,22 @@ fn install(
             "  Left out:      {t} ({name} hasn't created {file} yet)"
         ));
     }
-    if !confirm("Install it?", args)? {
+    let caution = game.and_then(|g| eax_caution_text(facts, g, &name));
+    if let Some(c) = &caution {
+        say(c.clone());
+    }
+    let go = if caution.is_some() {
+        yes_no("Install anyway?", args, false)?
+    } else {
+        confirm("Install it?", args)?
+    };
+    if !go {
         say("Nothing was changed.");
         return Ok(());
+    }
+
+    if let Some(why) = protontricks_problem(facts, &name) {
+        bail!("{why}");
     }
 
     // The builds, downloaded when missing or out of date.
@@ -1273,4 +1419,102 @@ fn sound_log(
         say(format!("The sound log is off for {name}."));
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::os::unix::fs::PermissionsExt;
+
+    fn script(path: &Path, body: &str) {
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, format!("#!/bin/sh\n{body}\n")).unwrap();
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).unwrap();
+    }
+
+    #[test]
+    fn protontricks_is_the_program_the_flatpak_or_nothing() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (bin, home, system) = (
+            tmp.path().join("bin"),
+            tmp.path().join("home"),
+            tmp.path().join("system"),
+        );
+        std::fs::create_dir_all(&bin).unwrap();
+        let path = || Some(bin.clone().into_os_string());
+        assert!(protontricks_in(path(), &home, &system).is_empty());
+        std::fs::create_dir_all(system.join("app").join(PROTONTRICKS_FLATPAK)).unwrap();
+        assert_eq!(
+            protontricks_in(path(), &home, &system)[..2],
+            ["flatpak", "run"]
+        );
+        script(&bin.join("protontricks"), "exit 0");
+        assert_eq!(protontricks_in(path(), &home, &system), ["protontricks"]);
+    }
+
+    /// A Steam game whose prefix is in compatdata.
+    fn steam_facts(home: &Path) -> Facts {
+        let steam = home.join("Steam/steamapps");
+        let game = steam.join("common/Test Game");
+        std::fs::create_dir_all(steam.join("compatdata/424242/pfx/drive_c")).unwrap();
+        std::fs::create_dir_all(&game).unwrap();
+        std::fs::write(
+            steam.join("appmanifest_424242.acf"),
+            "\"AppState\"\n{\n\t\"appid\"\t\t\"424242\"\n\t\"installdir\"\t\t\"Test Game\"\n}\n",
+        )
+        .unwrap();
+        let pt = home.join("pt");
+        script(&pt, "exit 0");
+        let f = prepare::gather(&game, None, home, &[pt.display().to_string()]);
+        assert_eq!(f.store, Some(Store::Steam));
+        f
+    }
+
+    #[test]
+    fn an_install_needs_protontricks_to_see_the_prefix() {
+        let tmp = tempfile::tempdir().unwrap();
+        let home = tmp.path();
+        let mut f = steam_facts(home);
+        let pfx = f.prefix.clone().unwrap();
+        // A protontricks that can't see the library prints no prefix.
+        let why = protontricks_problem(&f, "Test Game").unwrap();
+        assert!(
+            why.starts_with("protontricks can't find Test Game's Proton prefix"),
+            "{why}"
+        );
+        // One that can, can.
+        script(&home.join("pt"), &format!("echo '{}'", pfx.display()));
+        assert_eq!(protontricks_problem(&f, "Test Game"), None);
+        // The Flatpak's way out is the override for this library.
+        if let Some(wine::Runner::Protontricks { cmd, .. }) = &mut f.runner {
+            *cmd = vec!["flatpak".into(), "--no-such-option".into()];
+        }
+        let why = protontricks_problem(&f, "Test Game").unwrap();
+        let library = home.join("Steam");
+        assert!(
+            why.contains(&format!("--filesystem=\"{}\"", library.display())),
+            "{why}"
+        );
+        f.runner = None;
+        let why = protontricks_problem(&f, "Test Game").unwrap();
+        assert!(why.starts_with("protontricks isn't installed"), "{why}");
+    }
+
+    #[test]
+    fn a_game_with_no_eax_gets_no_install() {
+        let db = Database::parse(
+            r#"{"games":[{"id":"a","name":"Never Had It","stores":{"steam":{"id":1}},
+                 "eax":{"status":"not_implemented","problem":"It never had EAX."}},
+               {"id":"b","name":"Fine","stores":{"gog":{"id":2}},"eax":{"status":"supported"}}]}"#,
+        )
+        .unwrap();
+        let none = find_game(&db, Some(Store::Steam), "1").unwrap();
+        assert_eq!(
+            no_eax_text(none).as_deref(),
+            Some("Never Had It has no EAX, so there's nothing to install. It never had EAX.")
+        );
+        let fine = game_by_store(&db.games, Some(Store::Gog), "2").unwrap();
+        assert_eq!(no_eax_text(fine), None);
+        assert!(game_by_store(&db.games, Some(Store::Steam), "2").is_none());
+    }
 }

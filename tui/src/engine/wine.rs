@@ -340,9 +340,22 @@ fn steam_compatdata_prefix(game_dir: &Path, app_id: &str) -> Option<PathBuf> {
     p.join("drive_c").is_dir().then_some(p)
 }
 
+/// protontricks reports `prefix` as `app_id`'s. The prefix can be found in
+/// compatdata without it, but every Wine step for a Steam game runs through
+/// it, so a Flatpak protontricks that hasn't been given the library can't
+/// change anything there.
+pub fn protontricks_sees(protontricks: &[String], app_id: &str, prefix: &Path) -> bool {
+    let same = |a: &Path, b: &Path| match (a.canonicalize(), b.canonicalize()) {
+        (Ok(a), Ok(b)) => a == b,
+        _ => a == b,
+    };
+    steam_prefix_from_protontricks(protontricks, app_id).is_some_and(|p| same(&p, prefix))
+}
+
 fn steam_prefix_from_protontricks(protontricks: &[String], app_id: &str) -> Option<PathBuf> {
-    let out = Command::new(&protontricks[0])
-        .args(&protontricks[1..])
+    let (program, args) = protontricks.split_first()?;
+    let out = Command::new(program)
+        .args(args)
         .arg("-c")
         .arg("echo $WINEPREFIX")
         .arg(app_id)

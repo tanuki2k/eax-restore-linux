@@ -257,8 +257,140 @@ pub fn write_through_temp(target: &Path, data: &[u8]) -> Result<()> {
     written
 }
 
+/// The drive a folder is on, as `/proc/self/mounts` lists it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Mount {
+    /// The filesystem: ext4, btrfs, ntfs3, or ntfs for ntfs-3g.
+    pub fs: String,
+    pub read_only: bool,
+}
+
+impl Mount {
+    pub fn is_ntfs(&self) -> bool {
+        self.fs.starts_with("ntfs")
+    }
+}
+
+/// `target_fs_type` and the mount's options: the mount that holds `dir`.
+pub fn mount_of(dir: &Path) -> Option<Mount> {
+    let text = std::fs::read_to_string("/proc/self/mounts").ok()?;
+    let dir = dir.canonicalize().ok()?;
+    let mut m = mount_in(&text, &dir)?;
+    // ntfs-3g (and exFAT through FUSE) shows up as plain fuseblk, so the
+    // block device says what it really is.
+    if m.fs == "fuseblk" {
+        let source = text
+            .lines()
+            .find(|l| l.split(' ').nth(1).map(unescape).as_deref() == Some(&m.mount_point))
+            .and_then(|l| l.split(' ').next())
+            .unwrap_or_default()
+            .to_string();
+        let out = std::process::Command::new("lsblk")
+            .args(["-no", "FSTYPE", &source])
+            .stderr(std::process::Stdio::null())
+            .output();
+        if let Some(fs) = out.ok().and_then(|o| {
+            String::from_utf8_lossy(&o.stdout)
+                .lines()
+                .next()
+                .map(|l| l.trim().to_string())
+                .filter(|l| !l.is_empty())
+        }) {
+            m.fs = fs;
+        }
+    }
+    Some(Mount {
+        fs: m.fs,
+        read_only: m.read_only,
+    })
+}
+
+struct Found {
+    fs: String,
+    read_only: bool,
+    mount_point: String,
+}
+
+/// The longest mount point `dir` is under, from mounts-file text.
+fn mount_in(text: &str, dir: &Path) -> Option<Found> {
+    let mut best: Option<Found> = None;
+    for line in text.lines() {
+        let mut f = line.split(' ');
+        let (Some(_), Some(at), Some(fs), Some(opts)) = (f.next(), f.next(), f.next(), f.next())
+        else {
+            continue;
+        };
+        let at = unescape(at);
+        if !dir.starts_with(&at) {
+            continue;
+        }
+        if best
+            .as_ref()
+            .is_some_and(|b| b.mount_point.len() > at.len())
+        {
+            continue;
+        }
+        best = Some(Found {
+            fs: fs.to_string(),
+            read_only: opts.split(',').any(|o| o == "ro"),
+            mount_point: at,
+        });
+    }
+    best
+}
+
+/// A mounts-file field, with its octal escapes (`\040` for a space) undone.
+fn unescape(field: &str) -> String {
+    let b = field.as_bytes();
+    let mut out = Vec::with_capacity(b.len());
+    let mut i = 0;
+    while i < b.len() {
+        if b[i] == b'\\'
+            && i + 3 < b.len()
+            && b[i + 1..i + 4].iter().all(|c| (b'0'..=b'7').contains(c))
+        {
+            out.push((b[i + 1] - b'0') * 64 + (b[i + 2] - b'0') * 8 + (b[i + 3] - b'0'));
+            i += 4;
+        } else {
+            out.push(b[i]);
+            i += 1;
+        }
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
+/// `check_target_writable`'s probe: a file can be made and removed in `dir`.
+pub fn writable(dir: &Path) -> bool {
+    let probe = dir.join(format!(".eax-restore-write-test.{}", std::process::id()));
+    std::fs::File::create(&probe).is_ok() && std::fs::remove_file(&probe).is_ok()
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_folder_s_mount_is_the_longest_one_it_is_under() {
+        let text = "/dev/a / ext4 rw,relatime 0 0\n/dev/b /mnt/Win\\040Games ntfs3 ro,noatime 0 0\n/dev/c /mnt btrfs rw 0 0\n";
+        let m = super::mount_in(text, std::path::Path::new("/mnt/Win Games/Steam")).unwrap();
+        assert_eq!((m.fs.as_str(), m.read_only), ("ntfs3", true));
+        let m = super::mount_in(text, std::path::Path::new("/mnt/other")).unwrap();
+        assert_eq!((m.fs.as_str(), m.read_only), ("btrfs", false));
+        let m = super::mount_in(text, std::path::Path::new("/home/me")).unwrap();
+        assert_eq!(m.fs, "ext4");
+    }
+
+    #[test]
+    fn a_read_only_folder_is_not_writable() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        assert!(super::writable(tmp.path()));
+        std::fs::set_permissions(tmp.path(), std::fs::Permissions::from_mode(0o555)).unwrap();
+        // root writes anywhere, so there's nothing to check then.
+        if !super::writable(tmp.path()) {
+            assert_eq!(std::fs::read_dir(tmp.path()).unwrap().count(), 0);
+        }
+        std::fs::set_permissions(tmp.path(), std::fs::Permissions::from_mode(0o755)).unwrap();
+    }
+
     use super::*;
 
     #[test]

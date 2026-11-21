@@ -138,7 +138,8 @@ pub fn start(
                 Ok(l) => lines.extend(l),
                 Err(e) => {
                     ok = false;
-                    lines.push(e);
+                    // One line each, so a command in it isn't run into the text.
+                    lines.extend(e.lines().map(String::from));
                     break;
                 }
             }
@@ -270,6 +271,9 @@ impl Worker {
                 revert,
                 audio_done,
             } => {
+                if let Some(why) = crate::cli::protontricks_problem(facts, &name) {
+                    return Err(why);
+                }
                 self.step("Getting DSOAL and OpenAL Soft");
                 let pins = Pins::default();
                 let github = builds::Net::reachable(&mut net);

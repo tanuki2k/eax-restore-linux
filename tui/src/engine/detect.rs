@@ -592,6 +592,22 @@ pub fn detect_api(game_dir: &Path, exe_hint: &str) -> Option<ApiEvidence> {
 
 // ---- Steam ------------------------------------------------------------------
 
+/// The Steam beta branch an appmanifest has (`detect_steam_beta_branch`):
+/// MountedConfig's BetaKey, the branch installed, else UserConfig's, the
+/// one picked; empty for none.
+pub fn steam_beta_branch(acf: &Path) -> String {
+    let Ok(text) = std::fs::read_to_string(acf) else {
+        return String::new();
+    };
+    let in_block = |block: &str| {
+        let at = text.find(&format!("\"{block}\""))?;
+        super::identify::acf_value(&text[at..], "BetaKey")
+    };
+    in_block("MountedConfig")
+        .or_else(|| in_block("UserConfig"))
+        .unwrap_or_default()
+}
+
 /// The AppID whose appmanifest names this game folder's top-level folder
 /// under steamapps/common (ignoring case), from the first manifest that does.
 pub fn steam_appid_for_dir(game_dir: &Path) -> Option<String> {

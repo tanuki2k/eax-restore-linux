@@ -280,7 +280,7 @@ impl App {
                     .map(|n| n.to_string_lossy().into_owned())
                     .unwrap_or_default();
                 self.picker = None;
-                self.panel = Some(self.open_panel(&name, &dir, game));
+                self.open_folder(&name, &dir, game);
             }
             KeyCode::Char(' ') => {
                 let env = vec![
@@ -351,24 +351,43 @@ impl App {
         let Some(e) = self.current() else { return };
         let (name, game, path) = (e.name.clone(), e.game.clone(), e.path.clone());
         if let Some(g) = game.as_ref().filter(|g| g.eax.none_to_restore()) {
-            // Nothing to choose, so a pop-up says why instead of a page.
-            let mut lines = vec![format!(
-                "{} has no EAX, so there's nothing to install.",
-                g.name
-            )];
-            lines.extend(
-                [&g.eax.problem, &g.eax.fix]
-                    .into_iter()
-                    .filter(|t| !t.is_empty())
-                    .cloned(),
-            );
-            self.notice = Some((g.name.clone(), lines));
+            self.no_eax_notice(g);
         } else if let Some(dir) = path {
             self.panel = Some(self.open_panel(&name, &dir, game));
         } else {
             let mut picker = Picker::new(picker::start_dir(&self.home), self.home.clone());
             picker.game = game;
             self.picker = Some(picker);
+        }
+    }
+
+    /// A game with no EAX to restore opens no page: a pop-up says why.
+    fn no_eax_notice(&mut self, g: &crate::db::Game) {
+        let mut lines = vec![format!(
+            "{} has no EAX, so there's nothing to install.",
+            g.name
+        )];
+        lines.extend(
+            [&g.eax.problem, &g.eax.fix]
+                .into_iter()
+                .filter(|t| !t.is_empty())
+                .cloned(),
+        );
+        self.notice = Some((g.name.clone(), lines));
+    }
+
+    /// The page for a folder picked by hand. Without a game from the list,
+    /// the folder's store ID finds it in the database, as the script looks
+    /// a hand-typed folder up.
+    fn open_folder(&mut self, name: &str, dir: &std::path::Path, game: Option<crate::db::Game>) {
+        let game = game.or_else(|| {
+            let id = crate::engine::identify::identify_game_dir(dir, &self.home)?;
+            let games = self.games.iter().filter_map(|e| e.game.as_ref());
+            crate::cli::game_by_store(games, Some(id.store), &id.id).cloned()
+        });
+        match game {
+            Some(g) if g.eax.none_to_restore() => self.no_eax_notice(&g),
+            game => self.panel = Some(self.open_panel(name, dir, game)),
         }
     }
 
@@ -716,6 +735,33 @@ mod tests {
         let mut a = app();
         a.set_home(home.path().to_path_buf());
         (home, a)
+    }
+
+    #[test]
+    fn a_folder_picked_by_hand_finds_its_game_in_the_database() {
+        let db = Database::parse(
+            r#"{"games":[{"id":"a","name":"Never Had It","stores":{"steam":{"id":11}},"eax":{"status":"not_implemented"}},
+               {"id":"b","name":"Has It","stores":{"steam":{"id":22}}}]}"#,
+        )
+        .unwrap();
+        let mut a = App::new(db.games.into_iter().map(Entry::database_only).collect());
+        let home = tempfile::tempdir().unwrap();
+        a.set_home(home.path().to_path_buf());
+        let steam = home.path().join("Steam/steamapps");
+        for (id, dir) in [(11, "Never"), (22, "Has")] {
+            std::fs::create_dir_all(steam.join("common").join(dir)).unwrap();
+            std::fs::write(
+                steam.join(format!("appmanifest_{id}.acf")),
+                format!("\"AppState\"\n{{\n\t\"appid\"\t\t\"{id}\"\n\t\"installdir\"\t\t\"{dir}\"\n}}\n"),
+            )
+            .unwrap();
+        }
+        a.open_folder("Has", &steam.join("common/Has"), None);
+        assert_eq!(a.panel.take().unwrap().game.unwrap().name, "Has It");
+        // One with no EAX gets the pop-up, as from the list.
+        a.open_folder("Never", &steam.join("common/Never"), None);
+        assert!(a.panel.is_none());
+        assert_eq!(a.notice.as_ref().unwrap().0, "Never Had It");
     }
 
     #[test]

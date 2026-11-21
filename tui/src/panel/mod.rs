@@ -14,7 +14,7 @@ use crate::engine::installed::{Installed, OverrideKind};
 use crate::engine::launcher::changes::{self, LogLevel};
 use crate::engine::launcher::target::Launcher;
 use crate::engine::ops;
-use crate::engine::prepare::{self, Facts};
+use crate::engine::prepare::{self, EaxCaution, Facts};
 use crate::engine::speakers::{Layout, Listening, Speakers};
 use crate::engine::uninstall::{self, Choices, Location, Surveyed};
 use ratatui::crossterm::event::{KeyCode, KeyEvent};
@@ -450,6 +450,18 @@ impl Panel {
             (None, None) => line(Check::Unknown, "Audio", format!("unknown, using {using}")),
         });
 
+        if let Some(c) = self.game.as_ref().and_then(|g| f.eax_caution(g)) {
+            out.push(line(
+                Check::Warn,
+                "EAX",
+                match c {
+                    EaxCaution::BuiltIn => "already works without the fix",
+                    EaxCaution::RemovedByPatch => "a patch removed it from this build",
+                }
+                .into(),
+            ));
+        }
+
         out.push(match (f.linux_build, f.arch) {
             (true, _) => line(
                 Check::Fail,
@@ -460,7 +472,17 @@ impl Panel {
             (false, None) => line(Check::Unknown, "Arch", "unknown, using 32-bit".into()),
         });
 
+        let shared = f
+            .heroic
+            .as_ref()
+            .is_some_and(|h| h.source == Some(crate::engine::detect::PrefixSource::Shared));
         out.push(match &f.prefix {
+            // Other games run in it too, and get the same DLLs in system32.
+            Some(p) if shared => line(
+                Check::Warn,
+                "Prefix",
+                format!("{}, Heroic's shared one", tilde(p)),
+            ),
             Some(p) => line(Check::Ok, "Prefix", tilde(p)),
             None => line(Check::Fail, "Prefix", "none yet: run the game once".into()),
         });
@@ -472,8 +494,27 @@ impl Panel {
                 Some(crate::engine::wine::Runner::Wine { .. }) => {
                     line(Check::Ok, "Wine", "plain Wine".into())
                 }
+                None if f.store == Some(Store::Steam) => {
+                    line(Check::Fail, "Wine", "protontricks isn't installed".into())
+                }
                 None => line(Check::Fail, "Wine", "none found".into()),
             });
+        }
+
+        // The script leaves a companion app with no prefix as it is.
+        for c in f.companions.iter().filter(|c| c.prefix.is_none()) {
+            out.push(line(
+                Check::Warn,
+                "Also",
+                format!("{} has no prefix yet: run it once", c.name),
+            ));
+        }
+        if f.unwritable.is_empty() && f.game_mount.as_ref().is_some_and(|m| m.is_ntfs()) {
+            out.push(line(
+                Check::Warn,
+                "Drive",
+                "NTFS: a Linux filesystem works better".into(),
+            ));
         }
 
         // A config file its settings change that the game hasn't made yet.
@@ -493,9 +534,20 @@ impl Panel {
         out
     }
 
+    /// The script's "Install anyway? (y/N)" and what it says first.
+    fn eax_caution_text(&self) -> Option<String> {
+        let g = self.game.as_ref()?;
+        crate::cli::eax_caution_text(&self.facts, g, &self.name)
+            .map(|t| format!("{t} Install anyway?"))
+    }
+
+    fn has_fail(&self) -> bool {
+        self.status_lines().iter().any(|l| l.level == Check::Fail)
+    }
+
     /// The console's last preflight line: what happens next.
     pub fn preflight_verdict(&self) -> &'static str {
-        if self.problem.is_some() || self.status_lines().iter().any(|l| l.level == Check::Fail) {
+        if self.problem.is_some() || self.has_fail() {
             "Not ready."
         } else if self.installed.is_some() {
             "Already installed."
@@ -515,6 +567,10 @@ impl Panel {
         let name = &self.name;
         self.problem = if f.linux_build && self.installed.is_none() {
             Some(format!("{name} is installed as its Linux version, which the EAX fix can't work with. Switch it to the Windows version in its launcher, then check again."))
+        } else if let Some(why) = crate::cli::unwritable_problem(f, &self.home, "check again")
+            .filter(|_| self.installed.is_none())
+        {
+            Some(why)
         } else if f.prefix.is_none() && self.installed.is_none() {
             Some(format!("{name} doesn't have a Wine prefix yet. If you just installed {name}, its launcher creates it the first time it runs. Please launch the game at least once, close it, and check again."))
         } else {
@@ -979,6 +1035,11 @@ impl Panel {
             Screen::Uninstall(_) => vec![Button::Confirm, Button::Back],
             Screen::Run(_) => vec![Button::Back],
             Screen::Main if self.problem.is_some() => vec![Button::CheckAgain],
+            // A FAIL in the Status card is something the install can't get
+            // past, as the script stops there before it changes anything.
+            Screen::Main if self.installed.is_none() && self.has_fail() => {
+                vec![Button::CheckAgain]
+            }
             Screen::Main if self.installed.is_some() => {
                 let mut b = vec![Button::Apply, Button::Uninstall];
                 if self.facts.launcher.is_some() {
@@ -1209,9 +1270,14 @@ impl Panel {
                         *value = speakers_label(&plan.speakers);
                     }
                 }
+                let mut heading = format!("Ready to install the EAX fix for {}:", self.name);
+                let caution = self.eax_caution_text();
+                if let Some(c) = &caution {
+                    heading = format!("{c}\n\n{heading}");
+                }
                 self.screen = Screen::Confirm {
                     title: "Install",
-                    heading: format!("Ready to install the EAX fix for {}:", self.name),
+                    heading,
                     lines,
                     jobs: vec![Job::Install {
                         plan: Box::new(plan),
@@ -1219,7 +1285,8 @@ impl Panel {
                         audio_done: self.audio_done(),
                     }],
                 };
-                self.focus = 0;
+                // Back first after a caution, as the script's question is (y/N).
+                self.focus = usize::from(caution.is_some());
             }
             Button::Apply => {
                 let (lines, jobs) = self.changes();
@@ -2464,5 +2531,136 @@ mod tests {
 
     fn row_of(rows: &[String], s: &str) -> usize {
         rows.iter().position(|r| r.contains(s)).unwrap()
+    }
+
+    #[test]
+    fn a_fail_in_the_status_card_stops_a_fresh_install() {
+        let tmp = tempfile::tempdir().unwrap();
+        let home = tmp.path().join("home");
+        let game = steam_game(&home);
+        std::fs::remove_file(game.join("game.exe")).unwrap();
+        let p = Panel::open("Test Game", &game, None, &home);
+        assert!(p.problem.is_none(), "{:?}", p.problem);
+        let exe = p
+            .status_lines()
+            .into_iter()
+            .find(|l| l.label == "Exe")
+            .unwrap();
+        assert_eq!(exe.level, Check::Fail);
+        assert_eq!(p.buttons(), [Button::CheckAgain]);
+        assert_eq!(p.preflight_verdict(), "Not ready.");
+    }
+
+    #[test]
+    fn a_steam_game_without_protontricks_says_so() {
+        let tmp = tempfile::tempdir().unwrap();
+        let home = tmp.path().join("home");
+        let game = steam_game(&home);
+        let mut p = Panel::open("Test Game", &game, None, &home);
+        p.facts.runner = None;
+        let wine = p
+            .status_lines()
+            .into_iter()
+            .find(|l| l.label == "Wine")
+            .unwrap();
+        assert_eq!(
+            (wine.level, wine.value.as_str()),
+            (Check::Fail, "protontricks isn't installed")
+        );
+        assert_eq!(p.buttons(), [Button::CheckAgain]);
+    }
+
+    #[test]
+    fn a_game_folder_that_cant_be_written_stops_the_install() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let home = tmp.path().join("home");
+        let game = steam_game(&home);
+        std::fs::set_permissions(&game, std::fs::Permissions::from_mode(0o555)).unwrap();
+        // root can write anywhere, so there's nothing to see then.
+        if crate::engine::files::writable(&game) {
+            std::fs::set_permissions(&game, std::fs::Permissions::from_mode(0o755)).unwrap();
+            return;
+        }
+        let p = Panel::open("Test Game", &game, None, &home);
+        std::fs::set_permissions(&game, std::fs::Permissions::from_mode(0o755)).unwrap();
+        assert_eq!(p.facts.unwritable, std::slice::from_ref(&game));
+        let why = p.problem.as_deref().unwrap();
+        assert!(why.contains("can't be written to"), "{why}");
+        assert_eq!(p.buttons(), [Button::CheckAgain]);
+    }
+
+    #[test]
+    fn a_game_whose_eax_already_works_asks_before_installing() {
+        let tmp = tempfile::tempdir().unwrap();
+        let home = tmp.path().join("home");
+        let game = steam_game(&home);
+        let g = profile(r#"{"status":"built_in"}"#);
+        let mut p = Panel::open("Test Game", &game, Some(g), &home);
+        let eax = p
+            .status_lines()
+            .into_iter()
+            .find(|l| l.label == "EAX")
+            .unwrap();
+        assert_eq!(eax.level, Check::Warn);
+        assert_eq!(p.buttons(), [Button::Install]);
+        p.button(Button::Install);
+        let Screen::Confirm { heading, .. } = &p.screen else {
+            panic!("no confirm screen")
+        };
+        assert!(heading.contains("already has working EAX"), "{heading}");
+        assert!(heading.contains("Install anyway?"), "{heading}");
+        // Back is first, as the script's question is (y/N).
+        assert_eq!(p.items()[p.focus], Item::Button(Button::Back));
+    }
+
+    #[test]
+    fn a_patched_out_game_on_its_eax_beta_branch_installs_without_asking() {
+        let tmp = tempfile::tempdir().unwrap();
+        let home = tmp.path().join("home");
+        let game = steam_game(&home);
+        let g = crate::db::Database::parse(
+            r#"{"games":[{"id":"t","name":"Test Game","stores":{"steam":{"id":424242,"beta_branch":"legacypc"}},
+              "eax":{"status":"removed_by_patch","fix_in_place":true,"fix":"Roll back."}}]}"#,
+        )
+        .unwrap()
+        .games
+        .remove(0);
+        let p = Panel::open("Test Game", &game, Some(g.clone()), &home);
+        assert_eq!(p.facts.eax_caution(&g), Some(EaxCaution::RemovedByPatch));
+        let acf = home.join(".local/share/Steam/steamapps/appmanifest_424242.acf");
+        let text = std::fs::read_to_string(&acf).unwrap();
+        let text = text.replace(
+            "}\n",
+            "\t\"MountedConfig\"\n\t{\n\t\t\"BetaKey\"\t\t\"legacypc\"\n\t}\n}\n",
+        );
+        std::fs::write(&acf, text).unwrap();
+        let p = Panel::open("Test Game", &game, Some(g.clone()), &home);
+        assert_eq!(p.facts.beta_branch, "legacypc");
+        assert_eq!(p.facts.eax_caution(&g), None);
+    }
+
+    #[test]
+    fn a_companion_app_with_no_prefix_is_named_in_the_status_card() {
+        let tmp = tempfile::tempdir().unwrap();
+        let home = tmp.path().join("home");
+        let game = steam_game(&home);
+        let mut p = Panel::open("Test Game", &game, None, &home);
+        p.facts.companions = vec![crate::engine::detect::CompanionApp {
+            app_id: "9800".into(),
+            name: "Resurrection of Evil".into(),
+            prefix: None,
+        }];
+        let also = p
+            .status_lines()
+            .into_iter()
+            .find(|l| l.label == "Also")
+            .unwrap();
+        assert_eq!(also.level, Check::Warn);
+        assert_eq!(
+            also.value,
+            "Resurrection of Evil has no prefix yet: run it once"
+        );
+        assert_eq!(p.buttons(), [Button::Install]);
     }
 }

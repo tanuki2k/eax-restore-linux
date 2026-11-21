@@ -70,6 +70,9 @@ pub struct Store {
     /// their own (DOOM 3's Resurrection of Evil).
     #[serde(default)]
     pub companion_apps: Vec<Value>,
+    /// The Steam beta branch that keeps EAX, for a build a patch took it out of.
+    #[serde(default)]
+    pub beta_branch: String,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
