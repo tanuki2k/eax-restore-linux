@@ -17,7 +17,10 @@ setup() {
     c() { echo "$1" >> f; git add f; git commit -qm "$1"; }
     c "First"; git tag -a v1.0 -m v1.0
     c "Fix a thing"; git tag nightly
-    c "Add a game"; c "Release v1.0.1"; git tag -a v1.0.1 -m v1.0.1
+    c "Add a feature"
+    mkdir -p data/games; echo '{}' > data/games/g.json; echo '{}' > game-database.json
+    git add data game-database.json; git commit -qm "Add a game"
+    c "Release v1.0.1"; git tag -a v1.0.1 -m v1.0.1
 }
 
 notes() { PATH="$BATS_TEST_TMPDIR/bin:/usr/bin:/bin" bash -c '"$@"' _ "$R/tools/release-notes.sh" "$@"; }
@@ -27,8 +30,10 @@ notes() { PATH="$BATS_TEST_TMPDIR/bin:/usr/bin:/bin" bash -c '"$@"' _ "$R/tools/
     [ "$status" -eq 0 ]
     [[ "$output" == *"## What's Changed"* ]]
     [[ "$output" == *"* Fix a thing ("* ]]
-    [[ "$output" == *"* Add a game ("* ]]
+    [[ "$output" == *"* Add a feature ("* ]]
     [[ "$output" != *"Release v1.0.1"* ]]
+    # game data ships through game-database.json on main, not in a release
+    [[ "$output" != *"Add a game"* ]]
     [[ "$output" != *"* First ("* ]]
     [[ "$output" == *"compare/v1.0...v1.0.1"* ]]
 }

@@ -9,7 +9,8 @@ bump `SCRIPT_VERSION` in `src/globals.sh` (on `dev`), get it onto `main` (the st
 LTS-style branch: it takes fixes and game data that went through `dev` first, never
 new features), and push a `vX.Y` tag (or `vX.Y.Z` for a patch, e.g. `v0.29.1`) on the
 `main` commit. In the same release commit, add `.github/release-notes/vX.Y[.Z].md`: a
-short "What's new in X.Y.Z" in player terms (new features, fixes, games; see the 0.29.x
+short "What's new in X.Y.Z" in player terms (new features and fixes; never game data,
+which reaches players through game-database.json on main, not a release; see the 0.29.x
 ones), run through humanizer and copy-editor, and shown to the user before pushing.
 `tools/release-notes.sh` builds the notes from it, then GitHub's PR list, or the
 commits since the last `v*` tag when there are no PRs (cherry-picks never show up as
