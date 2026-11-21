@@ -4633,6 +4633,32 @@
       "tested": false
     },
     {
+      "id": "titan-quest",
+      "name": "Titan Quest",
+      "description": "Titan Quest is a singleplayer and multiplayer isometric action role-playing game in the Titan Quest series.",
+      "released": "2006-06-26",
+      "stores": {
+        "steam": {
+          "id": 4540,
+          "delisted": true
+        }
+      },
+      "eax": {
+        "api": "directsound3d"
+      },
+      "sources": [
+        {
+          "title": "PCGamingWiki: Titan Quest",
+          "url": "https://www.pcgamingwiki.com/wiki/Titan_Quest"
+        },
+        {
+          "title": "Wikipedia: Titan Quest",
+          "url": "https://en.wikipedia.org/wiki/Titan_Quest"
+        }
+      ],
+      "tested": false
+    },
+    {
       "id": "titan-quest-anniversary-edition",
       "name": "Titan Quest Anniversary Edition",
       "description": "Titan Quest Anniversary Edition is a singleplayer and multiplayer isometric action role-playing game, an updated edition of the first in the Titan Quest series that includes its Immortal Throne expansion.",
