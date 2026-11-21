@@ -249,6 +249,14 @@ pub enum Asker {
     Leave,
 }
 
+/// Why the page gives way to a pop-up: the game hasn't made its Wine prefix
+/// yet, or it's installed as its Linux version.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Gate {
+    NoPrefix,
+    LinuxBuild,
+}
+
 pub struct Panel {
     pub name: String,
     pub facts: Facts,
@@ -256,9 +264,9 @@ pub struct Panel {
     pub installed: Option<Installed>,
     /// A Linux build or a missing prefix: there's nothing to choose yet.
     pub problem: Option<String>,
-    /// The problem is only that the game hasn't made its prefix yet, so the
-    /// list shows a short pop-up instead of the page.
-    pub no_prefix: bool,
+    /// The page has nothing to choose yet, so the list shows a short pop-up
+    /// instead of it.
+    pub gate: Option<Gate>,
     pub sections: Vec<Section>,
     /// Audio settings first, then optional ones, as the page lists them.
     pub fixes: Vec<Fix>,
@@ -344,7 +352,7 @@ impl Panel {
             game,
             installed,
             problem: None,
-            no_prefix: false,
+            gate: None,
             sections: Vec::new(),
             fixes: Vec::new(),
             ticked: HashSet::new(),
@@ -561,6 +569,47 @@ impl Panel {
         }
     }
 
+    /// What the pop-up says in place of the page, a paragraph per line.
+    pub fn gate_lines(&self) -> Option<Vec<String>> {
+        let name = &self.name;
+        Some(match self.gate? {
+            Gate::NoPrefix => vec![format!(
+                "{name} doesn't have a Wine prefix yet. Please launch the game at least once, close it, and check again."
+            )],
+            Gate::LinuxBuild => vec![
+                format!("{name} is installed as its Linux version, and the EAX fix only works on the Windows version."),
+                self.windows_steps(),
+                // The Windows build has never run, so it has no prefix yet either.
+                format!("Then launch {name} once, close it, and check again."),
+            ],
+        })
+    }
+
+    /// The way from a Linux install to the Windows one (`print_linux_build_note`);
+    /// for Psychonauts on Steam, forcing Proton is all it takes.
+    /// A database beta branch wins on Steam: it's the build with EAX, where
+    /// forcing Proton would fetch the current one without it.
+    fn windows_steps(&self) -> String {
+        let name = &self.name;
+        let branch = self
+            .game
+            .as_ref()
+            .and_then(|g| g.stores.steam.as_ref())
+            .map_or("", |s| s.beta_branch.as_str());
+        match self.facts.store {
+            Some(Store::Steam) if !branch.is_empty() => format!(
+                "To get the Windows version, right-click {name} in Steam, open Properties → Betas, pick the '{branch}' branch and let Steam download it."
+            ),
+            Some(Store::Steam) => format!(
+                "To get the Windows version, right-click {name} in Steam, open Properties → Compatibility, tick \"Force the use of a specific Steam Play compatibility tool\", pick a Proton version and let Steam download it."
+            ),
+            Some(Store::Gog) => format!(
+                "To get the Windows version, uninstall {name} in Heroic and install it again with Windows as the platform."
+            ),
+            None => format!("Switch {name} to the Windows version in its launcher."),
+        }
+    }
+
     /// Something on the page moves by itself: the work's progress, or the
     /// build lists still on their way.
     pub fn animating(&self) -> bool {
@@ -570,15 +619,16 @@ impl Panel {
     fn build(&mut self) {
         let f = &self.facts;
         let name = &self.name;
-        self.no_prefix = false;
+        self.gate = None;
         self.problem = if f.linux_build && self.installed.is_none() {
+            self.gate = Some(Gate::LinuxBuild);
             Some(format!("{name} is installed as its Linux version, which the EAX fix can't work with. Switch it to the Windows version in its launcher, then check again."))
         } else if let Some(why) = crate::cli::unwritable_problem(f, &self.home, "check again")
             .filter(|_| self.installed.is_none())
         {
             Some(why)
         } else if f.prefix.is_none() && self.installed.is_none() {
-            self.no_prefix = true;
+            self.gate = Some(Gate::NoPrefix);
             Some(format!("{name} doesn't have a Wine prefix yet. If you just installed {name}, its launcher creates it the first time it runs. Please launch the game at least once, close it, and check again."))
         } else {
             None
@@ -1684,7 +1734,7 @@ mod tests {
         std::fs::rename(&pfx, &away).unwrap();
         let p = Panel::open("Test Game", &game, None, &home);
         assert!(p.problem.is_some());
-        assert!(p.no_prefix);
+        assert_eq!(p.gate, Some(Gate::NoPrefix));
         assert_eq!(p.buttons(), [Button::CheckAgain]);
         // Once it has, it's found in compatdata, with no protontricks needed.
         std::fs::rename(&away, &pfx).unwrap();
@@ -1692,7 +1742,7 @@ mod tests {
         assert_eq!(p.facts.prefix.as_deref(), Some(pfx.as_path()));
         p.build();
         assert!(p.problem.is_none(), "{:?}", p.problem);
-        assert!(!p.no_prefix);
+        assert_eq!(p.gate, None);
         assert_eq!(p.buttons(), [Button::Install]);
         let default = p.facts.default_plan();
         assert_eq!(p.plan().speakers, default.speakers);
@@ -1787,7 +1837,7 @@ mod tests {
         let p = Panel::open("Test Game", &game, None, &home);
         assert!(p.installed.is_some());
         assert!(p.facts.prefix.is_none());
-        assert!(!p.no_prefix, "uninstall stays reachable");
+        assert_eq!(p.gate, None, "uninstall stays reachable");
     }
 
     #[test]
@@ -2680,6 +2730,62 @@ mod tests {
         assert!(heading.contains("Install anyway?"), "{heading}");
         // Back is first, as the script's question is (y/N).
         assert_eq!(p.items()[p.focus], Item::Button(Button::Back));
+    }
+
+    #[test]
+    fn a_linux_version_gives_the_way_to_the_windows_one_for_its_store() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let home = tmp.path().join("home");
+        let game = steam_game(&home);
+        std::fs::remove_file(game.join("game.exe")).unwrap();
+        let elf = game.join("game");
+        touch(&elf, "\x7fELF\x01\x01\x01");
+        std::fs::set_permissions(&elf, std::fs::Permissions::from_mode(0o755)).unwrap();
+        // KOTOR II's case: the database names the beta branch that keeps EAX,
+        // which beats forcing Proton.
+        let g = crate::db::Database::parse(
+            r#"{"games":[{"id":"t","name":"Test Game","stores":{"steam":{"id":424242,"beta_branch":"legacypc"}}}]}"#,
+        )
+        .unwrap()
+        .games
+        .remove(0);
+        let mut p = Panel::open("Test Game", &game, Some(g), &home);
+        assert_eq!(p.gate, Some(Gate::LinuxBuild));
+        let lines = p.gate_lines().unwrap();
+        assert_eq!(lines.len(), 3);
+        assert!(
+            lines[1].contains("Betas") && lines[1].contains("'legacypc'"),
+            "{}",
+            lines[1]
+        );
+        assert!(!lines[1].contains("Compatibility"), "{}", lines[1]);
+        assert_eq!(
+            lines[2],
+            "Then launch Test Game once, close it, and check again."
+        );
+
+        // With no branch in the database, Steam's way is forcing Proton.
+        p.game = None;
+        assert!(p.gate_lines().unwrap()[1].contains("Compatibility"));
+
+        // On GOG, Heroic reinstalls it as Windows.
+        p.facts.store = Some(Store::Gog);
+        assert!(p.gate_lines().unwrap()[1].contains("Heroic"));
+
+        // Installed anyway: the page stays, so uninstall is still reachable.
+        touch(
+            &game.join(crate::engine::manifest::FILE_NAME),
+            &format!(
+                "{}\n{}/dsound.dll\n",
+                crate::engine::manifest::HEADER,
+                game.display()
+            ),
+        );
+        touch(&game.join("dsound.dll"), "x");
+        let p = Panel::open("Test Game", &game, None, &home);
+        assert!(p.installed.is_some());
+        assert_eq!(p.gate, None);
     }
 
     #[test]

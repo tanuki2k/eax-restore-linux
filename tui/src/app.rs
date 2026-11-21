@@ -483,16 +483,12 @@ impl App {
         }
     }
 
-    /// Before the game's first run there's nothing to choose on its page,
-    /// so a pop-up says what's missing instead.
+    /// Before the game's first run, or while it's the Linux version, there's
+    /// nothing to choose on its page, so a pop-up says what's in the way.
     fn show_page(&mut self, panel: crate::panel::Panel) {
-        if panel.no_prefix {
-            let line = format!(
-                "{} doesn't have a Wine prefix yet. Please launch the game at least once, close it, and check again.",
-                panel.name
-            );
+        if let Some(lines) = panel.gate_lines() {
             self.notice = Some(Notice {
-                lines: vec![line],
+                lines,
                 retry: Some(Retry {
                     dir: panel.facts.game_dir.clone(),
                     game: panel.game.clone(),

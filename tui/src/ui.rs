@@ -1136,6 +1136,46 @@ mod tests {
     }
 
     #[test]
+    fn enter_on_a_linux_version_shows_a_pop_up_with_the_way_to_windows() {
+        use std::os::unix::fs::PermissionsExt;
+        let home = tempfile::tempdir().unwrap();
+        let dir = steam_folder(home.path(), "Psychonauts", 3830);
+        // Psychonauts' Linux port: an ELF program and no .exe.
+        let elf = dir.join("Psychonauts");
+        std::fs::write(&elf, b"\x7fELF\x01\x01\x01").unwrap();
+        std::fs::set_permissions(&elf, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let mut games = entries(
+            r#"{"games":[{"id":"p","name":"Psychonauts","stores":{"steam":{"id":3830}}}]}"#,
+        );
+        games[0].status = Status::OnThisPc;
+        games[0].path = Some(dir.clone());
+        let mut app = App::new(games);
+        app.set_home(home.path().to_path_buf());
+        app.use_panel = true;
+        press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
+        assert!(app.panel.is_none());
+        let s = screen(&app, 120, 40);
+        assert!(s.contains(" Psychonauts "), "{s}");
+        assert!(s.contains("installed as its Linux version"), "{s}");
+        assert!(s.contains("Compatibility"), "forcing Proton: {s}");
+        assert!(s.contains("launch Psychonauts once"), "{s}");
+        assert!(!s.contains(" Status "), "no Status box: {s}");
+        assert!(s.contains("[ Check again ]  [ OK ]"), "{s}");
+
+        // Check again while it's still the Linux version: the pop-up stays.
+        press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
+        assert!(app.panel.is_none());
+        assert!(app.notice.as_ref().is_some_and(|n| n.retry.is_some()));
+
+        // Steam swapped in the Windows build and Proton ran it: the page opens.
+        std::fs::remove_file(&elf).unwrap();
+        std::fs::write(dir.join("Psychonauts.exe"), b"MZ").unwrap();
+        press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
+        assert!(app.notice.is_none());
+        assert!(app.panel.is_some());
+    }
+
+    #[test]
     fn enter_on_a_game_with_no_prefix_yet_shows_a_pop_up_not_its_page() {
         let home = tempfile::tempdir().unwrap();
         let dir = steam_folder(home.path(), "Quake 4", 2210);
