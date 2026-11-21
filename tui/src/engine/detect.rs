@@ -745,6 +745,18 @@ fn installed_records(v: &Value, out: &mut Vec<(String, String)>) {
     }
 }
 
+/// The GOG build installed (`detect_gog_build_id`): the `buildId` in the
+/// install's `goggame-<id>.info`, which GOG Galaxy and Heroic rewrite on a
+/// rollback; empty when there's no file or no build in it (some offline
+/// installers).
+pub fn gog_build_id(install_root: &Path, gog_id: &str) -> String {
+    std::fs::read_to_string(install_root.join(format!("goggame-{gog_id}.info")))
+        .ok()
+        .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
+        .and_then(|v| v.get("buildId")?.as_str().map(str::to_string))
+        .unwrap_or_default()
+}
+
 /// The first `"key": "value"` string in a Heroic file, read the way the
 /// script does: Heroic writes one key per line.
 fn json_value(file: &Path, key: &str) -> String {

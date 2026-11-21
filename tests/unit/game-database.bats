@@ -43,3 +43,38 @@ setup() {
     scan_with_spinner "Looking" scan "a b" c
     [ "$SCAN_RESULT" == $'a b\nc' ]
 }
+
+@test "detect_gog_build_id: the buildId GOG records, nothing without one" {
+    local root="$BATS_TEST_TMPDIR/game"
+    mkdir -p "$root"
+    printf '{\n  "buildId": "52315880824487880",\n  "gameId": "100"\n}\n' > "$root/goggame-100.info"
+    [ "$(detect_gog_build_id "$root" 100)" == "52315880824487880" ]
+    echo '{"gameId": "100"}' > "$root/goggame-100.info"
+    [ -z "$(detect_gog_build_id "$root" 100)" ]
+    [ -z "$(detect_gog_build_id "$root" 200)" ]
+}
+
+# KOTOR II on GOG: a player already rolled back to a build the database lists
+# can skip the warning that the current build has no EAX.
+@test "confirm_continue_if_eax_impossible: a GOG install on a rollback build skips the warning" {
+    GAME_DATABASE_FILE="$BATS_TEST_TMPDIR/db.json"
+    echo '{"games":[{"id":"k","name":"Patched Game","stores":{"gog":{"id":100,"rollback_builds":["111","222"],"rollback_steps":"Pick the old version."}},
+        "eax":{"status":"removed_by_patch","fix_in_place":true}}]}' > "$GAME_DATABASE_FILE"
+    ensure_game_database() { return 0; }
+    prompt_restart_or_quit() { echo "BLOCKED"; }
+    confirm() { echo "ASKED: $*"; return 0; }
+    SCRIPT_ACTION=i
+    local root="$BATS_TEST_TMPDIR/game"
+    mkdir -p "$root"
+    echo '{"buildId": "222"}' > "$root/goggame-100.info"
+    run confirm_continue_if_eax_impossible 100 gog "$root"
+    [[ "$output" == *"You're on GOG build 222."* ]]
+    [[ "$output" == *"ASKED: This build keeps EAX intact, so skip the warning that an update removed it?"* ]]
+    [[ "$output" != *"An update removed EAX"* ]]
+
+    echo '{"buildId": "999"}' > "$root/goggame-100.info"
+    run confirm_continue_if_eax_impossible 100 gog "$root"
+    [[ "$output" == *"You're on GOG build 999."* ]]
+    [[ "$output" == *"An update removed EAX from the current build of Patched Game, but you can get it back. Pick the old version."* ]]
+    [[ "$output" == *"ASKED: Continue installing anyway?"* ]]
+}

@@ -338,6 +338,47 @@ const DB: &str = r#"{"games":[{"id":"g","name":"Doom","exe":"Doom3.exe","stores"
            "companion_apps":[9070,"9071",9050,"x"]},
   "gog":{"id":77}}}]}"#;
 
+/// The GOG build an install records (`detect_gog_build_id`), which decides
+/// whether a rolled-back game skips the no-EAX warning.
+#[test]
+fn gog_build_ids_match() {
+    let tmp = tempfile::tempdir().unwrap();
+    let h = tmp.path();
+    let cases = [
+        (
+            "pretty",
+            "{\n  \"buildId\": \"52315880824487880\",\n  \"gameId\": \"100\"\n}\n",
+        ),
+        (
+            "compact",
+            r#"{"gameId":"100","buildId":"50045579929191972"}"#,
+        ),
+        ("no-build", r#"{"gameId":"100","name":"Offline"}"#),
+        ("number", r#"{"buildId":123}"#),
+        ("broken", "not json"),
+    ];
+    for (dir, text) in cases {
+        put(&h.join(dir).join("goggame-100.info"), text);
+    }
+    std::fs::create_dir_all(h.join("no-file")).unwrap();
+    let names: Vec<&str> = cases.iter().map(|(d, _)| *d).chain(["no-file"]).collect();
+    let script = format!(
+        "for d in {}; do echo \"$d=$(detect_gog_build_id \"$1/$d\" 100)\"; done",
+        names.join(" ")
+    );
+    let bash_out = bash(&script, h, &[]);
+    let rust_out: String = names
+        .iter()
+        .map(|d| format!("{d}={}\n", detect::gog_build_id(&h.join(d), "100")))
+        .collect();
+    assert_eq!(rust_out, bash_out);
+    assert!(
+        rust_out.contains("pretty=52315880824487880\n"),
+        "{rust_out}"
+    );
+    assert!(rust_out.contains("no-build=\n"), "{rust_out}");
+}
+
 #[test]
 fn steam_lookups_match() {
     let tmp = tempfile::tempdir().unwrap();

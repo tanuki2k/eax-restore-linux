@@ -64,6 +64,8 @@ pub struct Facts {
     pub game_mount: Option<files::Mount>,
     /// The Steam beta branch the game is on; empty for the default build.
     pub beta_branch: String,
+    /// The GOG build installed (`goggame-<id>.info`); empty when unknown.
+    pub gog_build: String,
 }
 
 /// An install the script asks about before going ahead (y/N).
@@ -151,6 +153,7 @@ pub fn gather(game_dir: &Path, game: Option<&Game>, home: &Path, protontricks: &
         unwritable: Vec::new(),
         game_mount: files::mount_of(game_dir),
         beta_branch: String::new(),
+        gog_build: String::new(),
     };
     let exe = game.map_or("", |g| g.exe.as_str());
     let launcher_exe = wine_launchers::launcher_exe_for_root(home, &install_root);
@@ -245,6 +248,9 @@ pub fn gather(game_dir: &Path, game: Option<&Game>, home: &Path, protontricks: &
             wineserver: runner.as_ref().and_then(|r| r.wineserver.clone()),
         });
     }
+    if f.store == Some(Store::Gog) {
+        f.gog_build = detect::gog_build_id(&install_root, &f.id);
+    }
     // A launcher names the prefix before the game's first run makes it, so a
     // path without drive_c isn't a prefix yet (the script's own check).
     // After the runner lookup, which finds Heroic's settings by that path.
@@ -293,14 +299,17 @@ impl Facts {
         match game.eax.status.as_str() {
             "built_in" => Some(EaxCaution::BuiltIn),
             "removed_by_patch" if game.eax.fix_in_place => {
-                let wanted = match self.store {
-                    Some(Store::Steam) => {
-                        game.stores.steam.as_ref().map(|s| s.beta_branch.as_str())
-                    }
-                    _ => None,
-                }
-                .unwrap_or("");
-                let on_it = !wanted.is_empty() && self.beta_branch == wanted;
+                // Already rolled back: Steam's beta branch, or a GOG build
+                // the database lists.
+                let on_it = match self.store {
+                    Some(Store::Steam) => game.stores.steam.as_ref().is_some_and(|s| {
+                        !s.beta_branch.is_empty() && self.beta_branch == s.beta_branch
+                    }),
+                    Some(Store::Gog) => game.stores.gog.as_ref().is_some_and(|s| {
+                        !self.gog_build.is_empty() && s.rollback_builds.contains(&self.gog_build)
+                    }),
+                    None => false,
+                };
                 (!on_it).then_some(EaxCaution::RemovedByPatch)
             }
             _ => None,
@@ -482,6 +491,60 @@ mod tests {
     fn put(path: &Path, text: &str) {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, text).unwrap();
+    }
+
+    /// KOTOR II on GOG: rolling back to a build the database lists means
+    /// the update's no-EAX warning no longer applies; any other build, or
+    /// one GOG didn't record, keeps it.
+    #[test]
+    fn a_gog_install_already_rolled_back_gets_no_eax_warning() {
+        let tmp = tempfile::tempdir().unwrap();
+        let home = tmp.path();
+        let game = home.join("Games/Heroic/Test Game");
+        put(&game.join("game.exe"), "MZ");
+        put(
+            &home.join(".config/heroic/gog_store/installed.json"),
+            &serde_json::json!({"installed": [
+                {"appName": "100", "install_path": game, "platform": "windows"}
+            ]})
+            .to_string(),
+        );
+        let g = crate::db::Database::parse(
+            r#"{"games":[{"id":"t","name":"Test Game",
+                "stores":{"gog":{"id":100,"rollback_builds":["111","222"]}},
+                "eax":{"status":"removed_by_patch","fix_in_place":true}}]}"#,
+        )
+        .unwrap()
+        .games
+        .remove(0);
+        let info = game.join("goggame-100.info");
+        let caution = |build: Option<&str>| {
+            match build {
+                Some(b) => put(
+                    &info,
+                    &format!("{{\n  \"buildId\": \"{b}\",\n  \"gameId\": \"100\"\n}}"),
+                ),
+                None => put(&info, r#"{"gameId": "100"}"#),
+            }
+            let f = gather(&game, Some(&g), home, &[]);
+            assert_eq!(f.store, Some(Store::Gog));
+            (f.gog_build.clone(), f.eax_caution(&g))
+        };
+        assert_eq!(caution(Some("222")), ("222".into(), None));
+        assert_eq!(
+            caution(Some("999")),
+            ("999".into(), Some(EaxCaution::RemovedByPatch))
+        );
+        assert_eq!(
+            caution(None),
+            (String::new(), Some(EaxCaution::RemovedByPatch))
+        );
+        std::fs::remove_file(&info).unwrap();
+        assert_eq!(
+            detect::gog_build_id(&game, "100"),
+            "",
+            "no file means unknown"
+        );
     }
 
     #[test]

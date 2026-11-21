@@ -16,6 +16,16 @@ pub enum StoreKind {
     Gog,
 }
 
+impl StoreKind {
+    /// The key under a game's `stores` in the database.
+    pub fn key(self) -> &'static str {
+        match self {
+            StoreKind::Steam => "steam",
+            StoreKind::Gog => "gog",
+        }
+    }
+}
+
 /// A database game found installed by its store, or by a Wine launcher.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Found {

@@ -9,7 +9,7 @@ Only three things are required: `name`, `stores` (each store with an `id`) and `
 | Section | Fields | What it holds |
 | --- | --- | --- |
 | [Basics](#basics) | `name`, `description`, `released`, `exe` | Who the game is and how to find it |
-| [`stores`](#stores) | `id`, `delisted`, `api`, `store_details`, `patches`, ... | What's specific to the Steam or GOG listing |
+| [`stores`](#stores) | `id`, `delisted`, `api`, `rollback_steps`, `store_details`, `patches`, ... | What's specific to the Steam or GOG listing |
 | [`eax`](#eax) | `api`, `sound_system`, `versions`, `status`, `problem`, `fix` | How the game does 3D audio |
 | [`install`](#install) | `tweaks`, `alsoft_ini` | What the install does differently |
 | [`game_config`](#game_config) | `files`, `audio_settings`, `optional_settings` | Edits to the game's own config files |
@@ -84,9 +84,21 @@ Thief Gold and Thief II are an example. Their `eax.api` is `"directsound3d"`, bu
 
 ### `stores.*.beta_branch`
 
-Steam only. The exact `BetaKey` name of a beta branch that restores EAX on this store's build (right-click the game, then Properties → Betas). Set it only when `eax.fix` names such a branch.
+Steam only. The exact `BetaKey` name of a beta branch that restores EAX on this store's build (right-click the game, then Properties → Betas). Set it only when the store's rollback steps name such a branch.
 
 With it, the install can tell whether the player's Steam manifest already has the branch selected. Without it, the `removed_by_patch` warning would always show.
+
+### `stores.*.rollback_builds`
+
+GOG only. The build IDs that keep EAX, as the `buildId` in the game folder's `goggame-<id>.info`. GOG Galaxy and Heroic can roll a game back to one of them. List every such build GOG still offers. GOG's builds list for a game is at `https://content-system.gog.com/products/<id>/os/windows/builds?generation=2`.
+
+With it, the install can tell that the player has already rolled back, as `beta_branch` does on Steam. Without it, or when the install's `goggame-<id>.info` has no `buildId`, the `removed_by_patch` warning always shows.
+
+### `stores.*.rollback_steps`
+
+This store's own steps to roll back to a build where EAX works. The profile, the install's warning and the TUI show it in place of [`eax.fix`](#eaxfix) for this store. Set it when the way back differs between stores.
+
+Star Wars: Knights of the Old Republic II is an example. Steam brings EAX back with its `legacypc` beta branch, while GOG keeps the original build as an older version you pick in Heroic. Each store's block has its own `rollback_steps`, and the profile shows them under "Restore on Steam" and "Restore on GOG". The `gog` block's `rollback_builds` lists the original builds, so an install already on one of them skips the warning.
 
 ### `stores.*.extra_exe_folders`
 
@@ -159,7 +171,7 @@ Why the current build is in that state. It appears in the profile's `Status:` bl
 
 ### `eax.fix`
 
-How to get a build where EAX works, such as a Steam beta branch or a retail or CD copy. It applies to the whole game, not to one store. Settings in the game's own config files belong in `game_config`, not here.
+How to get a build where EAX works, such as a retail or CD copy. It applies to the whole game. When the steps differ by store, put them in each store's own [`rollback_steps`](#storesrollback_steps) instead. Settings in the game's own config files belong in `game_config`, not here.
 
 ### `eax.fix_in_place`
 

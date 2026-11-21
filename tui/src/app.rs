@@ -433,8 +433,12 @@ impl App {
         }
         let Some(e) = self.current() else { return };
         let (name, game, path) = (e.name.clone(), e.game.clone(), e.path.clone());
-        if let Some(g) = game.as_ref().filter(|g| g.eax.none_to_restore()) {
-            self.no_eax_notice(g);
+        let store = e.store.map(crate::library::StoreKind::key);
+        if let Some(lines) = game
+            .as_ref()
+            .and_then(|g| crate::cli::no_eax_lines(g, store))
+        {
+            self.no_eax_notice(&name, lines);
         } else if let Some(dir) = path {
             let panel = self.open_panel(&name, &dir, game);
             self.show_page(panel);
@@ -446,19 +450,9 @@ impl App {
     }
 
     /// A game with no EAX to restore opens no page: a pop-up says why.
-    fn no_eax_notice(&mut self, g: &crate::db::Game) {
-        let mut lines = vec![format!(
-            "{} has no EAX, so there's nothing to install.",
-            g.name
-        )];
-        lines.extend(
-            [&g.eax.problem, &g.eax.fix]
-                .into_iter()
-                .filter(|t| !t.is_empty())
-                .cloned(),
-        );
+    fn no_eax_notice(&mut self, title: &str, lines: Vec<String>) {
         self.notice = Some(Notice {
-            title: g.name.clone(),
+            title: title.to_string(),
             lines,
             retry: None,
             on_retry: false,
@@ -469,14 +463,19 @@ impl App {
     /// the folder's store ID finds it in the database, as the script looks
     /// a hand-typed folder up.
     fn open_folder(&mut self, name: &str, dir: &std::path::Path, game: Option<crate::db::Game>) {
+        let id = crate::engine::identify::identify_game_dir(dir, &self.home);
+        let store = id.as_ref().map(|i| i.store.key());
         let game = game.or_else(|| {
-            let id = crate::engine::identify::identify_game_dir(dir, &self.home)?;
+            let id = id.as_ref()?;
             let games = self.games.iter().filter_map(|e| e.game.as_ref());
             crate::cli::game_by_store(games, Some(id.store), &id.id).cloned()
         });
-        match game {
-            Some(g) if g.eax.none_to_restore() => self.no_eax_notice(&g),
-            game => {
+        let no_eax = game
+            .as_ref()
+            .and_then(|g| crate::cli::no_eax_lines(g, store));
+        match (game, no_eax) {
+            (Some(g), Some(lines)) => self.no_eax_notice(&g.name, lines),
+            (game, _) => {
                 let panel = self.open_panel(name, dir, game);
                 self.show_page(panel);
             }

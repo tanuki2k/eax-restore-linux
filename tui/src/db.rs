@@ -73,6 +73,14 @@ pub struct Store {
     /// The Steam beta branch that keeps EAX, for a build a patch took it out of.
     #[serde(default)]
     pub beta_branch: String,
+    /// GOG build IDs (`goggame-<id>.info`'s buildId) that keep EAX: an
+    /// install on one has already rolled back.
+    #[serde(default)]
+    pub rollback_builds: Vec<String>,
+    /// This store's own steps to roll back to a build with EAX, in place of
+    /// `eax.fix`.
+    #[serde(default)]
+    pub rollback_steps: String,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -96,6 +104,26 @@ pub struct Eax {
     /// is (`eax.fix`), so an install goes ahead.
     #[serde(default)]
     pub fix_in_place: bool,
+}
+
+impl Game {
+    /// The block under `stores` for a database store key ("steam", "gog").
+    pub fn store(&self, key: Option<&str>) -> Option<&Store> {
+        match key? {
+            "steam" => self.stores.steam.as_ref(),
+            "gog" => self.stores.gog.as_ref(),
+            _ => None,
+        }
+    }
+
+    /// How to get back to a build with EAX on this store: its own `fix`, else
+    /// the game's. No store (a retail copy) takes the game's.
+    pub fn fix(&self, store: Option<&str>) -> &str {
+        self.store(store)
+            .map(|s| s.rollback_steps.as_str())
+            .filter(|f| !f.is_empty())
+            .unwrap_or(&self.eax.fix)
+    }
 }
 
 impl Eax {

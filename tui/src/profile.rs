@@ -29,6 +29,37 @@ fn key_of(k: StoreKind) -> &'static str {
 }
 
 /// The game's store entries, Steam's first; just `only` when a copy of it is known.
+/// Each store's own `fix`, or the game's: one section headed `one` when
+/// they're all the same, as the community patches, else one per store headed
+/// `per` and the store's name.
+fn fix_sections(
+    out: &mut Vec<Line<'static>>,
+    g: &Game,
+    stores: &[(StoreKind, &Store)],
+    one: &str,
+    per: &str,
+    width: usize,
+) {
+    let fixes: Vec<&str> = if stores.is_empty() {
+        vec![g.eax.fix.as_str()]
+    } else {
+        stores.iter().map(|(k, _)| g.fix(Some(k.key()))).collect()
+    };
+    if fixes.len() <= 1 || (!fixes[0].is_empty() && all_same(&fixes)) {
+        if let Some(f) = fixes.first().filter(|f| !f.is_empty()) {
+            subheading(out, one);
+            prose(out, f, width);
+        }
+    } else {
+        for ((k, _), f) in stores.iter().zip(&fixes) {
+            if !f.is_empty() {
+                subheading(out, &format!("{per} {}", label_of(*k)));
+                prose(out, f, width);
+            }
+        }
+    }
+}
+
 fn stores_of(g: &Game, only: Option<StoreKind>) -> Vec<(StoreKind, &Store)> {
     let all = [
         (StoreKind::Steam, g.stores.steam.as_ref()),
@@ -426,7 +457,11 @@ fn game_lines(
             "supported" => vec![Span::styled(versions, strong_green)],
             "removed_by_patch" => vec![
                 Span::styled(versions, strong_yellow),
-                dim(" (originally supported)"),
+                dim(if g.eax.fix_in_place {
+                    " (restorable)"
+                } else {
+                    " (originally supported)"
+                }),
             ],
             "built_in" => vec![
                 Span::styled(versions, strong_green),
@@ -504,8 +539,8 @@ fn game_lines(
         if g.eax.problem.is_empty() {
             state = "Never implemented in this edition.".into();
         }
-        if status == "removed_by_patch" {
-            state = "Removed by a later patch.".into();
+        if status == "removed_by_patch" && g.eax.problem.is_empty() {
+            state = format!("An update removed EAX from {}.", g.name);
         }
         if status == "built_in" {
             state.clear();
@@ -519,6 +554,11 @@ fn game_lines(
         let text = format!("{state}{problem}{after}");
         subheading(&mut out, "Status");
         prose(&mut out, text.strip_prefix(' ').unwrap_or(&text), width);
+    }
+    // A patch took EAX out: the way back follows straight on, before the
+    // store details and settings.
+    if status == "removed_by_patch" {
+        fix_sections(&mut out, g, &stores, "Restore EAX", "Restore on", width);
     }
     // What the stores share is said once, under both names.
     let details: Vec<&str> = stores
@@ -589,9 +629,15 @@ fn game_lines(
             prose(&mut out, follow, width);
         }
     }
-    if !g.eax.fix.is_empty() {
-        subheading(&mut out, "Additional steps");
-        prose(&mut out, &g.eax.fix, width);
+    if status != "removed_by_patch" {
+        fix_sections(
+            &mut out,
+            g,
+            &stores,
+            "Additional steps",
+            "Additional steps for",
+            width,
+        );
     }
     if !g.notes.is_empty() {
         subheading(&mut out, "Notes");
@@ -758,6 +804,54 @@ mod tests {
             .remove(0)
     }
 
+    /// KOTOR II: Steam's beta branch and GOG's older version are different
+    /// ways back. Each store gets its own Restore section, straight under
+    /// Status, and the row says EAX can come back.
+    #[test]
+    fn a_patched_out_game_says_up_front_how_to_restore_it() {
+        let g = game(
+            r#"{"name":"Patched","stores":{"steam":{"id":1,"rollback_steps":"Pick the old branch.","store_details":"Steam's own text."},
+                "gog":{"id":2,"rollback_steps":"Pick the old version."}},
+              "eax":{"api":"directsound3d","versions":["3.0"],"status":"removed_by_patch","fix_in_place":true,
+                     "problem":"An update took it out."}}"#,
+        );
+        let t = text(&database_lines(&g, 100));
+        assert!(t.contains("3.0 (restorable)"), "{t}");
+        let status = t.find("Status:").unwrap();
+        let steam = t
+            .find("Restore on Steam:\n  Pick the old branch.")
+            .expect(&t);
+        let gog = t
+            .find("Restore on GOG:\n  Pick the old version.")
+            .expect(&t);
+        let details = t.find("Steam details").unwrap();
+        assert!(status < steam && steam < gog && gog < details, "{t}");
+        assert!(!t.contains("Additional steps"), "{t}");
+
+        // A separate retail copy: one shared section, still up front.
+        let g = game(
+            r#"{"name":"Retail","stores":{"steam":{"id":1},"gog":{"id":2}},
+              "eax":{"api":"directsound3d","status":"removed_by_patch","fix":"Use the retail copy."}}"#,
+        );
+        let t = text(&database_lines(&g, 100));
+        assert!(t.contains("(originally supported)"), "{t}");
+        assert!(t.contains("Restore EAX:\n  Use the retail copy."), "{t}");
+        assert!(!t.contains("Restore on"), "{t}");
+        assert_eq!(t.matches("Use the retail copy.").count(), 1, "{t}");
+
+        // A community patch for a game that still has EAX stays where it was.
+        let g = game(
+            r#"{"name":"Modded","stores":{"steam":{"id":1}},
+              "eax":{"api":"directsound3d","fix":"A community patch adds more."}}"#,
+        );
+        let t = text(&database_lines(&g, 100));
+        assert!(
+            t.contains("Additional steps:\n  A community patch adds more."),
+            "{t}"
+        );
+        assert!(!t.contains("Restore"), "{t}");
+    }
+
     fn text(lines: &[Line]) -> String {
         lines
             .iter()
@@ -860,7 +954,14 @@ mod tests {
         );
         let t = text(&game_lines(&removed, None, Vec::new(), 100));
         assert!(t.contains("(originally supported)"));
-        assert!(t.contains("  Removed by a later patch. Patch 1.2 took it out.\n"));
+        // The entry's own text says what happened, so no lead-in repeats it.
+        assert!(t.contains("  Status:\n  Patch 1.2 took it out.\n"), "{t}");
+        let bare = game(r#"{"name":"Half-Life","eax":{"status":"removed_by_patch"}}"#);
+        let t = text(&game_lines(&bare, None, Vec::new(), 100));
+        assert!(
+            t.contains("  Status:\n  An update removed EAX from Half-Life.\n"),
+            "{t}"
+        );
     }
 
     #[test]

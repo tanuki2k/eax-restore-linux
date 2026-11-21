@@ -181,30 +181,38 @@ pub fn eax_caution_text(facts: &Facts, game: &Game, name: &str) -> Option<String
     Some(match facts.eax_caution(game)? {
         prepare::EaxCaution::BuiltIn => format!("{name} already has working EAX reverb through its own OpenAL Soft, so installing is optional: it swaps in a newer OpenAL Soft and adds speaker and headphone settings."),
         prepare::EaxCaution::RemovedByPatch => {
-            let fix = if game.eax.fix.is_empty() {
-                String::new()
-            } else {
-                format!(" {}", game.eax.fix)
+            let fix = match game.fix(facts.store.map(Store::key)) {
+                "" => String::new(),
+                f => format!(" {f}"),
             };
-            format!("A software update removed EAX from the current build of {name}, so there's nothing to restore on it.{fix}")
+            format!("An update removed EAX from the current build of {name}, but you can get it back.{fix}")
         }
     })
 }
 
-/// Why a game with nothing to restore gets no install, as the TUI's pop-up
-/// says it: the database's own problem and fix text.
-pub fn no_eax_text(game: &Game) -> Option<String> {
+/// Why a game with nothing to restore gets no install, a paragraph per line,
+/// as the TUI's pop-up says it: the database's own problem text and this
+/// store's fix.
+pub fn no_eax_lines(game: &Game, store: Option<&str>) -> Option<Vec<String>> {
     if !game.eax.none_to_restore() {
         return None;
     }
-    let mut text = format!("{} has no EAX, so there's nothing to install.", game.name);
-    for t in [&game.eax.problem, &game.eax.fix] {
-        if !t.is_empty() {
-            text.push(' ');
-            text.push_str(t);
-        }
-    }
-    Some(text)
+    let mut lines = vec![format!(
+        "{} has no EAX, so there's nothing to install.",
+        game.name
+    )];
+    lines.extend(
+        [game.eax.problem.as_str(), game.fix(store)]
+            .into_iter()
+            .filter(|t| !t.is_empty())
+            .map(str::to_string),
+    );
+    Some(lines)
+}
+
+/// `no_eax_lines` as one paragraph, for the headless commands.
+pub fn no_eax_text(game: &Game, store: Option<&str>) -> Option<String> {
+    no_eax_lines(game, store).map(|l| l.join(" "))
 }
 
 /// A folder the install writes to can't be written, and why, as the
@@ -736,7 +744,7 @@ fn install(
     if facts.linux_build {
         bail!("{name} is the Linux version, which the EAX fix can't work with. Switch the game to its Windows version in its launcher first.");
     }
-    if let Some(why) = game.and_then(no_eax_text) {
+    if let Some(why) = game.and_then(|g| no_eax_text(g, facts.store.map(Store::key))) {
         bail!("{why}");
     }
     if let Some(why) = unwritable_problem(facts, home, "try again") {
@@ -1510,11 +1518,38 @@ mod tests {
         .unwrap();
         let none = find_game(&db, Some(Store::Steam), "1").unwrap();
         assert_eq!(
-            no_eax_text(none).as_deref(),
+            no_eax_text(none, Some("steam")).as_deref(),
             Some("Never Had It has no EAX, so there's nothing to install. It never had EAX.")
         );
         let fine = game_by_store(&db.games, Some(Store::Gog), "2").unwrap();
-        assert_eq!(no_eax_text(fine), None);
+        assert_eq!(no_eax_text(fine, Some("gog")), None);
         assert!(game_by_store(&db.games, Some(Store::Steam), "2").is_none());
+    }
+
+    /// A store's own fix replaces the game's for that store only; a copy
+    /// from no store (a retail disc) keeps the game's.
+    #[test]
+    fn a_stores_own_fix_wins_for_that_store() {
+        let db = Database::parse(
+            r#"{"games":[{"id":"k","name":"Patched Game",
+                 "stores":{"steam":{"id":1,"rollback_steps":"Switch to the legacypc branch."},"gog":{"id":2}},
+                 "eax":{"status":"removed_by_patch","problem":"A patch took EAX out.","fix":"Use a retail copy."}}]}"#,
+        )
+        .unwrap();
+        let g = &db.games[0];
+        assert_eq!(g.fix(Some("steam")), "Switch to the legacypc branch.");
+        assert_eq!(
+            g.fix(Some("gog")),
+            "Use a retail copy.",
+            "an empty fix falls back"
+        );
+        assert_eq!(g.fix(None), "Use a retail copy.");
+        assert_eq!(
+            no_eax_text(g, Some("steam")).as_deref(),
+            Some("Patched Game has no EAX, so there's nothing to install. A patch took EAX out. Switch to the legacypc branch.")
+        );
+        assert!(no_eax_text(g, Some("gog"))
+            .unwrap()
+            .ends_with("Use a retail copy."));
     }
 }

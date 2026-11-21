@@ -5,16 +5,46 @@
   "released": "2005-02-08",
   "exe": "swkotor2.exe",
   "stores": {
-    "steam": { "id": 208580, "beta_branch": "legacypc" },
-    "gog": { "id": 1421404581 }
+    "steam": {
+      "id": 208580,
+      "beta_branch": "legacypc",
+      "rollback_steps": "Steam beta branch 'legacypc' reverts to the pre-patch build with EAX intact (right-click the game -> Properties -> Betas).",
+      "store_details": "Steam installs Aspyr's 2015 update by default, which has no EAX. The original is on the 'legacypc' beta branch."
+    },
+    "gog": {
+      "id": 1421404581,
+      "rollback_builds": ["52315880824487880", "50045579929191972"],
+      "rollback_steps": "In Heroic, open Modify Installation, then on the Game Version tab tick \"Keep the game at specific version\" and choose Version 1.0b (2019).",
+      "store_details": "GOG's default install is Aspyr's May 2022 update, which has no EAX. The original is the older Version 1.0b from 2019."
+    }
   },
   "eax": {
     "api": "directsound3d",
     "sound_system": "miles",
     "versions": ["1.0", "2.0", "3.0"],
     "status": "removed_by_patch",
-    "problem": "The original release used DirectSound3D, but a later patch replaced it with a newer audio engine that dropped EAX entirely.",
-    "fix": "Steam beta branch 'legacypc' reverts to the pre-patch build with EAX intact (right-click the game -> Properties -> Betas).",
+    "problem": "The original release used DirectSound3D. An update replaced it with a newer audio engine that has no EAX.",
     "fix_in_place": true
-  }
+  },
+  "game_config": {
+    "files": { "swkotor2.ini": { "format": "ini", "locations": ["game_exe:swkotor2.ini"] } },
+    "audio_settings": [
+      {
+        "title": "Enable EAX",
+        "reason": "Automatically enables EAX in KOTOR II's configuration.",
+        "changes": { "swkotor2.ini": { "Sound Options": { "EAX": "3" } } },
+        "tested": true
+      }
+    ]
+  },
+  "sources": [
+    {
+      "title": "Pocket Gamer: Knights of the Old Republic II updated on Steam by team who brought original to mobile",
+      "url": "https://www.pocketgamer.com/articles/066618/knights-of-the-old-republic-ii-updated-on-steam-by-team-who-brought-original-to-mobile/"
+    },
+    {
+      "title": "GOG forum: Patch 1.0b just landed",
+      "url": "https://www.gog.com/forum/star_wars_knights_of_the_old_republic_series/patch_10b_just_landed"
+    }
+  ]
 }

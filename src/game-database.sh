@@ -465,6 +465,17 @@ print_eax_block_error() {
     print_error "There's nothing for this script to restore in ${name:-this game}."
 }
 
+detect_gog_build_id() {
+    # Usage: detect_gog_build_id <install_root> <gog_id>
+    # Echoes the GOG build installed: the buildId in the install's
+    # goggame-<id>.info, which GOG Galaxy and Heroic rewrite on a rollback.
+    # Nothing when there's no file or no build in it (some offline installers).
+    local info="$1/goggame-$2.info"
+    [ -f "$info" ] || return
+    # Only a string counts, as the engine reads it.
+    jq -r '.buildId | strings' "$info" 2>/dev/null
+}
+
 detect_steam_beta_branch() {
     # Usage: detect_steam_beta_branch <acf_file>
     # Echoes the appmanifest's opted-in/mounted Steam beta branch ("BetaKey"),
@@ -961,6 +972,8 @@ _gp_detail_rows() {
     local ver_display="${eax_versions:-Unknown}"
     if [ "$eax_status" == "supported" ]; then
         detail_row "EAX Support" "${GREEN}${BOLD}${ver_display}${NC}"
+    elif [ "$eax_status" == "removed_by_patch" ] && [ "$eax_restorable" == "true" ]; then
+        detail_row "EAX Support" "${YELLOW}${BOLD}${ver_display}${NC} ${DIM}(restorable)${NC}"
     elif [ "$eax_status" == "removed_by_patch" ]; then
         detail_row "EAX Support" "${YELLOW}${BOLD}${ver_display}${NC} ${DIM}(originally supported)${NC}"
     elif [ "$eax_status" == "built_in" ]; then
@@ -1017,7 +1030,7 @@ _gp_status_sections() {
         # for an entry without one.
         local state_line="" after_line=""
         [ -z "$eax_status_details" ] && state_line="Never implemented in this edition."
-        [ "$eax_status" == "removed_by_patch" ] && state_line="Removed by a later patch."
+        [ "$eax_status" == "removed_by_patch" ] && [ -z "$eax_status_details" ] && state_line="An update removed EAX from ${name}."
         if [ "$eax_status" == "built_in" ]; then
             state_line=""
             after_line=" Installing is optional: it swaps in a newer OpenAL Soft and adds speaker and headphone settings."
@@ -1026,6 +1039,9 @@ _gp_status_sections() {
         local status_text="${state_line}${eax_status_details:+ $eax_status_details}${after_line}"
         WRAP_COLOUR="$prose_colour" print_wrapped "${status_text# }"
     fi
+    # A patch took EAX out: the way back follows straight on, before the
+    # store details and settings.
+    [ "$eax_status" == "removed_by_patch" ] && _gp_fix_sections "Restore EAX" "Restore on"
     # Store texts the stores share are shown once, under both their names.
     if [ "$n" -gt 1 ] && [ -n "${details[0]}" ] && _gp_same_for_all details; then
         print_subheading "$(printf '%s and ' "${labels[@]:0:n-1}")${labels[n-1]} details"
@@ -1109,12 +1125,29 @@ _gp_follow_ups() {
     fi
 }
 
-# Additional steps, notes and suggested community patches.
-_gp_closing_sections() {
-    if [ -n "$restore_details" ]; then
-        print_subheading "Additional steps"
-        WRAP_COLOUR="$prose_colour" print_wrapped "$restore_details"
+# Usage: _gp_fix_sections <heading> <per-store heading prefix>
+# Each store's own fix, or the game's: one section when they're all the same,
+# as the community patches, else one per store with the store's name.
+_gp_fix_sections() {
+    local i
+    if [ "$n" -eq 1 ] || { [ -n "${fixes[0]}" ] && _gp_same_for_all fixes; }; then
+        if [ -n "${fixes[0]}" ]; then
+            print_subheading "$1"
+            WRAP_COLOUR="$prose_colour" print_wrapped "${fixes[0]}"
+        fi
+    else
+        for i in "${!stores[@]}"; do
+            [ -n "${fixes[i]}" ] || continue
+            print_subheading "$2 ${labels[i]}"
+            WRAP_COLOUR="$prose_colour" print_wrapped "${fixes[i]}"
+        done
     fi
+}
+
+# Additional steps, notes and suggested community patches. Steps and patches
+# that differ by store get a section each.
+_gp_closing_sections() {
+    [ "$eax_status" == "removed_by_patch" ] || _gp_fix_sections "Additional steps" "Additional steps for"
     if [ -n "$notes" ]; then
         print_subheading "Notes"
         WRAP_COLOUR="$prose_colour" print_wrapped "$notes"
@@ -1165,7 +1198,7 @@ print_game_profile_stores() {
     # follows the fields, and a "Before you play" section after the
     # settings lists gives each setting's follow-up.
     local location="$1"; shift
-    local -a stores=() ids=() labels=() apis=() listings=() id_sources=() details=() patches=() counts=()
+    local -a stores=() ids=() labels=() apis=() listings=() id_sources=() details=() patches=() fixes=() counts=()
     local entry
     for entry in "$@"; do
         stores+=("${entry%%:*}"); ids+=("${entry#*:}")
@@ -1175,12 +1208,12 @@ print_game_profile_stores() {
 
     # Game-level fields: the same for every store entry, so read from the
     # first.
-    local name eax_versions eax_status eax_status_details restore_details eax_unified notes
+    local name eax_versions eax_status eax_status_details eax_restorable eax_unified notes
     local released description untested sound_system
     IFS=$'\x1f' read -r name released description eax_versions eax_status eax_status_details \
-        restore_details eax_unified notes untested sound_system < <(gdb_fields "$id" "$store" \
+        eax_restorable eax_unified notes untested sound_system < <(gdb_fields "$id" "$store" \
         '.name // ""' '.released // ""' '.description // ""' '.eax.versions // [] | join(", ")' \
-        '.eax.status // "supported"' '.eax.problem // ""' '.eax.fix // ""' \
+        '.eax.status // "supported"' '.eax.problem // ""' '.eax.fix_in_place == true' \
         '.install.tweaks // [] | index("eax_unified") != null' '.notes // ""' \
         '(if .tested == false then "1" else "" end)' '.eax.sound_system // ""')
     [ -z "$eax_status" ] && eax_status="supported"
@@ -1193,6 +1226,10 @@ print_game_profile_stores() {
         # The first match's whole text, not its first line: patches can hold
         # a line break between suggestions.
         patches[i]=$(gdb_jq "${ids[i]}" "${stores[i]}" 'entry0 | .stores[$store].patches // empty')
+        # This store's own way back to EAX, else the game's. jq's // keeps an
+        # empty string, so the fallback tests for one.
+        fixes[i]=$(gdb_jq "${ids[i]}" "${stores[i]}" \
+            'entry0 | (.stores[$store].rollback_steps // "") as $f | if $f != "" then $f else (.eax.fix // empty) end')
         counts[i]="$(count_game_settings "${ids[i]}" "${stores[i]}")"
     done
 
@@ -1685,6 +1722,26 @@ _eax_block() {
 # auto-detect in this script (Proton prefix, AppID search): ask first,
 # detect, report the raw result, then a separate confirm before it's
 # allowed to skip the warning.
+# The GOG twin: a build the database lists under rollback_builds is one the
+# player has already rolled back to. Same ask, detect, report, confirm.
+_eax_on_rollback_build() {
+    local id="$1" builds="$2" install_root="$3" detected b
+    [ -n "$builds" ] && [ -n "$install_root" ] || return 1
+    confirm "Check if you've already rolled back to a GOG build that keeps EAX intact?" || return 1
+    detected=$(detect_gog_build_id "$install_root" "$id")
+    if [ -z "$detected" ]; then
+        print_status "GOG didn't record which build is installed." ""
+        return 1
+    fi
+    print_status "You're on GOG build $detected." ""
+    for b in $builds; do
+        [ "$b" == "$detected" ] || continue
+        confirm "This build keeps EAX intact, so skip the warning that an update removed it?"
+        return
+    done
+    return 1
+}
+
 _eax_on_beta_branch() {
     local store="$1" beta_branch="$2" acf_file="$3"
     [ "$store" == "steam" ] && [ -n "$beta_branch" ] && [ -n "$acf_file" ] || return 1
@@ -1693,11 +1750,13 @@ _eax_on_beta_branch() {
     detected=$(detect_steam_beta_branch "$acf_file")
     print_status "Detected beta branch: ${detected:-none}" ""
     [ "$detected" == "$beta_branch" ] || return 1
-    confirm "Skip the EAX-removed warning — this build should already have EAX intact?"
+    confirm "This build keeps EAX intact, so skip the warning that an update removed it?"
 }
 
 confirm_continue_if_eax_impossible() {
-    # Usage: confirm_continue_if_eax_impossible <id> <steam|gog> [acf_file]
+    # Usage: confirm_continue_if_eax_impossible <id> <steam|gog> [acf_file|install_root]
+    # The third argument is Steam's appmanifest or the GOG install's folder,
+    # where each store records the branch or build installed.
     # "built_in" (EAX already works without this script) only asks whether
     # to install anyway. Otherwise eax.status distinguishes two reasons this
     # script has nothing to restore on a build: "removed_by_patch" (a software update stripped EAX/A3D
@@ -1721,10 +1780,11 @@ confirm_continue_if_eax_impossible() {
     [ "$2" == "gog" ] && store="gog"
     local acf_file="$3"
 
-    local status="" workaround="false" beta_branch=""
+    local status="" workaround="false" beta_branch="" rollback_builds=""
     if ensure_game_database; then
-        IFS=$'\x1f' read -r status workaround beta_branch < <(gdb_fields "$1" "$store" \
-            '.eax.status // ""' '.eax.fix_in_place // false' '.stores[$store].beta_branch // ""')
+        IFS=$'\x1f' read -r status workaround beta_branch rollback_builds < <(gdb_fields "$1" "$store" \
+            '.eax.status // ""' '.eax.fix_in_place // false' '.stores[$store].beta_branch // ""' \
+            '.stores[$store].rollback_builds // [] | join(" ")')
         [ -n "$workaround" ] || workaround="false"
     elif [ "$store" != "gog" ] && [ -n "${EAX_IMPOSSIBLE_FALLBACK_STEAM[$1]:-}" ]; then
         # Only ever seeds Half-Life (AppID 70), which has no in-place
@@ -1763,10 +1823,18 @@ confirm_continue_if_eax_impossible() {
         return
     fi
 
-    _eax_on_beta_branch "$store" "$beta_branch" "$acf_file" && return
+    if [ "$store" == "gog" ]; then
+        _eax_on_rollback_build "$1" "$rollback_builds" "$acf_file" && return
+    else
+        _eax_on_beta_branch "$store" "$beta_branch" "$acf_file" && return
+    fi
 
-    print_warning "EAX/A3D support was removed from this build by a software update, so there's" \
-        "nothing for this script to restore on the current default build."
+    # The way back for this store, as the profile's Restore section gives it.
+    local name fix
+    name=$(gdb_field "$1" "$store" .name)
+    fix=$(gdb_jq "$1" "$store" \
+        'entry0 | (.stores[$store].rollback_steps // "") as $f | if $f != "" then $f else (.eax.fix // empty) end')
+    print_warning "An update removed EAX from the current build of ${name:-this game}, but you can get it back.${fix:+ $fix}"
 
     if ! confirm "Continue installing anyway?" N; then
         prompt_restart_or_quit 0
