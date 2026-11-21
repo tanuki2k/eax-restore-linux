@@ -4713,6 +4713,7 @@
       "name": "TimeShift",
       "description": "TimeShift is a singleplayer and multiplayer first-person shooter game.",
       "released": "2007-10-30",
+      "exe": "TimeShift.Exe",
       "stores": {
         "steam": {
           "id": 10130
@@ -4725,6 +4726,36 @@
           "5.0"
         ]
       },
+      "install": {
+        "tweaks": [
+          "limit_cpu_threads"
+        ]
+      },
+      "game_config": {
+        "files": {
+          "user.reg": {
+            "format": "registry",
+            "locations": [
+              "prefix:user.reg"
+            ]
+          }
+        },
+        "optional_settings": [
+          {
+            "title": "Enable Windows XP mode",
+            "reason": "TimeShift's sound engine only looks for EAX when it's running on Windows XP.",
+            "changes": {
+              "user.reg": {
+                "Software\\Wine\\AppDefaults\\TimeShift.Exe": {
+                  "Version": "winxp"
+                }
+              }
+            },
+            "tested": true
+          }
+        ]
+      },
+      "notes": "TimeShift plays most of its 3D sound in software, so the EAX fix may not reach it. This needs further investigation.",
       "tested": false
     },
     {
