@@ -555,11 +555,6 @@ fn game_lines(
         subheading(&mut out, "Status");
         prose(&mut out, text.strip_prefix(' ').unwrap_or(&text), width);
     }
-    // A patch took EAX out: the way back follows straight on, before the
-    // store details and settings.
-    if status == "removed_by_patch" {
-        fix_sections(&mut out, g, &stores, "Restore EAX", "Restore on", width);
-    }
     // What the stores share is said once, under both names.
     let details: Vec<&str> = stores
         .iter()
@@ -576,6 +571,11 @@ fn game_lines(
                 prose(&mut out, d, width);
             }
         }
+    }
+    // A patch took EAX out: after what happened and what each store ships,
+    // the way back, before the settings.
+    if status == "removed_by_patch" {
+        fix_sections(&mut out, g, &stores, "Restore EAX", "Restore on", width);
     }
     if status == "supported" {
         let solution = |api: &str| {
@@ -825,7 +825,7 @@ mod tests {
             .find("Restore on GOG:\n  Pick the old version.")
             .expect(&t);
         let details = t.find("Steam details").unwrap();
-        assert!(status < steam && steam < gog && gog < details, "{t}");
+        assert!(status < details && details < steam && steam < gog, "{t}");
         assert!(!t.contains("Additional steps"), "{t}");
 
         // A separate retail copy: one shared section, still up front.

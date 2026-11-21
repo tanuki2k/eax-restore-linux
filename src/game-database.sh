@@ -1039,9 +1039,6 @@ _gp_status_sections() {
         local status_text="${state_line}${eax_status_details:+ $eax_status_details}${after_line}"
         WRAP_COLOUR="$prose_colour" print_wrapped "${status_text# }"
     fi
-    # A patch took EAX out: the way back follows straight on, before the
-    # store details and settings.
-    [ "$eax_status" == "removed_by_patch" ] && _gp_fix_sections "Restore EAX" "Restore on"
     # Store texts the stores share are shown once, under both their names.
     if [ "$n" -gt 1 ] && [ -n "${details[0]}" ] && _gp_same_for_all details; then
         print_subheading "$(printf '%s and ' "${labels[@]:0:n-1}")${labels[n-1]} details"
@@ -1052,6 +1049,11 @@ _gp_status_sections() {
             print_subheading "${labels[i]} details"
             WRAP_COLOUR="$prose_colour" print_wrapped "${details[i]}"
         done
+    fi
+    # A patch took EAX out: after what happened and what each store ships,
+    # the way back, before the settings.
+    if [ "$eax_status" == "removed_by_patch" ]; then
+        _gp_fix_sections "Restore EAX" "Restore on"
     fi
 }
 
