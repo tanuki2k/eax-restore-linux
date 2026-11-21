@@ -209,6 +209,10 @@ pub fn gather(game_dir: &Path, game: Option<&Game>, home: &Path, protontricks: &
             wineserver: runner.as_ref().and_then(|r| r.wineserver.clone()),
         });
     }
+    // A launcher names the prefix before the game's first run makes it, so a
+    // path without drive_c isn't a prefix yet (the script's own check).
+    // After the runner lookup, which finds Heroic's settings by that path.
+    f.prefix = f.prefix.take().filter(|p| p.join("drive_c").is_dir());
 
     if let Some(g) = game {
         let store = match f.store {
@@ -397,5 +401,48 @@ impl Facts {
             (Some(p), Some(e)) => e.api != Api::Both && e.api.name() != p,
             _ => false,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn put(path: &Path, text: &str) {
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, text).unwrap();
+    }
+
+    #[test]
+    fn a_launcher_prefix_counts_once_the_game_has_made_it() {
+        let tmp = tempfile::tempdir().unwrap();
+        let home = tmp.path();
+        let game = home.join("Games/Heroic/Test Game");
+        put(&game.join("game.exe"), "MZ");
+        let heroic = home.join(".config/heroic");
+        put(
+            &heroic.join("gog_store/installed.json"),
+            &serde_json::json!({"installed": [
+                {"appName": "100", "install_path": game, "platform": "windows"}
+            ]})
+            .to_string(),
+        );
+        // Heroic writes the prefix's path when it installs the game.
+        let pfx = home.join("Games/Heroic/Prefixes/Test Game");
+        put(
+            &heroic.join("GamesConfig/100.json"),
+            &format!(
+                "{{\n  \"100\": {{\n    \"winePrefix\": \"{}\",\n    \"wineVersion\": {{}}\n  }}\n}}",
+                pfx.display()
+            ),
+        );
+        let f = gather(&game, None, home, &[]);
+        assert!(f.heroic.is_some(), "Heroic should know the game");
+        assert_eq!(f.prefix, None);
+
+        // The game's first run makes it.
+        std::fs::create_dir_all(pfx.join("drive_c")).unwrap();
+        let f = gather(&game, None, home, &[]);
+        assert_eq!(f.prefix.as_deref(), Some(pfx.as_path()));
     }
 }
