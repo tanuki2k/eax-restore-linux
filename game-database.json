@@ -4280,7 +4280,7 @@
     },
     {
       "id": "system-shock-2",
-      "name": "System Shock 2",
+      "name": "System Shock 2 (1999)",
       "description": "System Shock 2 is a singleplayer and multiplayer first-person action role-playing, survival horror and immersive sim game and the second in the System Shock series.",
       "released": "1999-08-11",
       "exe": "SS2.exe",
@@ -4288,19 +4288,18 @@
         "steam": {
           "id": 238210,
           "delisted": true,
-          "api": "openal",
-          "store_details": "The classic 1999 build was delisted in October 2025. It comes with the NewDark engine patch pre-installed.",
+          "store_details": "The classic 1999 build was delisted in October 2025. It comes with the NewDark engine pre-installed.",
           "patches": "The System Shock 2 Community Patch (SCP) fixes bugs and polishes the game, and is worth installing alongside EAX."
         },
         "gog": {
           "id": 1207659172,
           "delisted": true,
-          "store_details": "The classic 1999 build was delisted in October 2025. The original build, without the NewDark engine patch.",
+          "store_details": "The classic 1999 build was delisted in October 2025. It comes with the NewDark engine pre-installed.",
           "patches": "The System Shock 2 Community Patch (SCP) fixes bugs and polishes the game, and is worth installing alongside EAX."
         }
       },
       "eax": {
-        "api": "directsound3d",
+        "api": "openal",
         "versions": [
           "1.0"
         ]
@@ -4346,8 +4345,7 @@
           "url": "https://github.com/JarrodDoyle/rogue-patcher/blob/0e355105dd7d520d0364c5f96d03ae7f9d437353/Resources/NewDark/Docs/NewDark/new_config_vars.txt"
         }
       ],
-      "notes": "It comes with NewDark pre-installed, which has its own 'Hardware Acceleration' option in the in-game Audio menu — worth trying if EAX doesn't sound right.",
-      "tested": false
+      "notes": "It comes with NewDark pre-installed, which has its own 'Hardware Acceleration' option in the in-game Audio menu — worth trying if EAX doesn't sound right."
     },
     {
       "id": "system-shock-2-25th-anniversary-remaster",
@@ -4490,10 +4488,10 @@
         "api": "directsound3d",
         "sound_system": "miles",
         "versions": [
+          "3.0",
           "4.0"
         ]
-      },
-      "tested": false
+      }
     },
     {
       "id": "thief-gold",
@@ -4510,7 +4508,11 @@
         "gog": {
           "id": 1207658997,
           "api": "openal",
-          "store_details": "It comes with the NewDark engine patch pre-installed."
+          "extra_exe_folders": [
+            "game_root:Thief Gold",
+            "game_root:Thief The Dark Project"
+          ],
+          "store_details": "GOG sells Thief Gold with the original Thief: The Dark Project, and the game's launcher asks which one to start. Both come with the NewDark engine pre-installed."
         }
       },
       "eax": {
@@ -4524,22 +4526,31 @@
           "cam_ext.cfg": {
             "format": "key_value",
             "locations": [
-              "game_exe:cam_ext.cfg"
+              "game_exe:cam_ext.cfg",
+              "game_root:Thief Gold/cam_ext.cfg",
+              "game_root:Thief The Dark Project/cam_ext.cfg"
             ],
+            "all_locations": true,
             "if_missing": "skip"
           },
           "DARK.CFG": {
             "format": "key_value",
             "locations": [
-              "game_exe:DARK.CFG"
+              "game_exe:DARK.CFG",
+              "game_root:Thief Gold/DARK.CFG",
+              "game_root:Thief The Dark Project/DARK.CFG"
             ],
+            "all_locations": true,
             "if_missing": "skip"
           },
           "dark.cfg": {
             "format": "key_value",
             "locations": [
-              "game_exe:dark.cfg"
+              "game_exe:dark.cfg",
+              "game_root:Thief Gold/dark.cfg",
+              "game_root:Thief The Dark Project/dark.cfg"
             ],
+            "all_locations": true,
             "if_missing": "skip"
           }
         },

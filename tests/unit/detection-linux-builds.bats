@@ -113,3 +113,20 @@ extra_db() { # extra_exe_folders JSON array
     resolve_extra_exe_folders 3730 steam
     [ "${EXTRA_GAME_DIRS[*]}" == "$ROOT/FEARXP" ]
 }
+
+@test "GOG Thief Gold's two side-by-side builds: folders with spaces, each config file edited once" {
+    # GOG installs Thief Gold and The Dark Project in their own folders under
+    # one root. Whichever the scanner picks, the other gets the files too, and
+    # all_locations reaches both cam_ext.cfg copies without editing the picked
+    # one twice (game_exe: and game_root: name the same file).
+    load_src game-config
+    local gold="$ROOT/Thief Gold" tdp="$ROOT/Thief The Dark Project"
+    mkdir -p "$gold" "$tdp"
+    touch "$gold/cam_ext.cfg" "$tdp/cam_ext.cfg"
+    extra_db '["game_root:Thief Gold","game_root:Thief The Dark Project"]'
+    GAME_DIR="$tdp"; GAME_INSTALL_ROOT="$ROOT"
+    resolve_extra_exe_folders 3730 steam
+    [ "${EXTRA_GAME_DIRS[*]}" == "$gold" ]
+    run resolve_config_file "game_exe:cam_ext.cfg|game_root:Thief Gold/cam_ext.cfg|game_root:Thief The Dark Project/cam_ext.cfg" all
+    [ "$output" == "$tdp/cam_ext.cfg"$'\n'"$gold/cam_ext.cfg" ]
+}

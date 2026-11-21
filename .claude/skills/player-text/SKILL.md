@@ -327,6 +327,10 @@ something similar, copy the shape of the "after".
 - Before: `Square Enix removed the Steam version from sale in February 2021 and has said it has no plans to restore it. The GOG release is unaffected.`
 - After: `Square Enix removed it from sale on Steam in February 2021 and has said it has no plans to restore it.`
 
+**`store_details`: NewDark already installed is "the NewDark engine", not "the NewDark engine patch"**
+- Before: `GOG sells Thief Gold together with the original Thief: The Dark Project, and its launcher asks which one to start. Both come with the NewDark engine patch pre-installed.`
+- After: `GOG sells Thief Gold together with the original Thief: The Dark Project, and its launcher asks which one to start. Both come with the NewDark engine pre-installed.`
+
 **`store_details`: say what's sold, not how it's installed**
 - Before: `Comes only with the 'DOOM 3' purchase, together with Resurrection of Evil, which Steam lists as a separate game but installs into this folder and runs from the same exe.`
 - After: `DOOM 3 is sold as a bundle with Resurrection of Evil and DOOM 3: BFG Edition. Steam lists Resurrection of Evil as its own game.`

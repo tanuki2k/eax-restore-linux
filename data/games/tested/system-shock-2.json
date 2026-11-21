@@ -1,6 +1,6 @@
 {
   "$schema": "../../schema.json",
-  "name": "System Shock 2",
+  "name": "System Shock 2 (1999)",
   "description": "System Shock 2 is a singleplayer and multiplayer first-person action role-playing, survival horror and immersive sim game and the second in the System Shock series.",
   "released": "1999-08-11",
   "exe": "SS2.exe",
@@ -8,18 +8,17 @@
     "steam": {
       "id": 238210,
       "delisted": true,
-      "api": "openal",
-      "store_details": "The classic 1999 build was delisted in October 2025. It comes with the NewDark engine patch pre-installed.",
+      "store_details": "The classic 1999 build was delisted in October 2025. It comes with the NewDark engine pre-installed.",
       "patches": "The System Shock 2 Community Patch (SCP) fixes bugs and polishes the game, and is worth installing alongside EAX."
     },
     "gog": {
       "id": 1207659172,
       "delisted": true,
-      "store_details": "The classic 1999 build was delisted in October 2025. The original build, without the NewDark engine patch.",
+      "store_details": "The classic 1999 build was delisted in October 2025. It comes with the NewDark engine pre-installed.",
       "patches": "The System Shock 2 Community Patch (SCP) fixes bugs and polishes the game, and is worth installing alongside EAX."
     }
   },
-  "eax": { "api": "directsound3d", "versions": ["1.0"] },
+  "eax": { "api": "openal", "versions": ["1.0"] },
   "game_config": {
     "files": {
       "cam_ext.cfg": {

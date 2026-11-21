@@ -13,7 +13,8 @@
     "gog": {
       "id": 1207658997,
       "api": "openal",
-      "store_details": "It comes with the NewDark engine patch pre-installed."
+      "extra_exe_folders": ["game_root:Thief Gold", "game_root:Thief The Dark Project"],
+      "store_details": "GOG sells Thief Gold with the original Thief: The Dark Project, and the game's launcher asks which one to start. Both come with the NewDark engine pre-installed."
     }
   },
   "eax": { "api": "directsound3d", "versions": ["1.0"] },
@@ -21,17 +22,32 @@
     "files": {
       "cam_ext.cfg": {
         "format": "key_value",
-        "locations": ["game_exe:cam_ext.cfg"],
+        "locations": [
+          "game_exe:cam_ext.cfg",
+          "game_root:Thief Gold/cam_ext.cfg",
+          "game_root:Thief The Dark Project/cam_ext.cfg"
+        ],
+        "all_locations": true,
         "if_missing": "skip"
       },
       "DARK.CFG": {
         "format": "key_value",
-        "locations": ["game_exe:DARK.CFG"],
+        "locations": [
+          "game_exe:DARK.CFG",
+          "game_root:Thief Gold/DARK.CFG",
+          "game_root:Thief The Dark Project/DARK.CFG"
+        ],
+        "all_locations": true,
         "if_missing": "skip"
       },
       "dark.cfg": {
         "format": "key_value",
-        "locations": ["game_exe:dark.cfg"],
+        "locations": [
+          "game_exe:dark.cfg",
+          "game_root:Thief Gold/dark.cfg",
+          "game_root:Thief The Dark Project/dark.cfg"
+        ],
+        "all_locations": true,
         "if_missing": "skip"
       }
     },
