@@ -16,7 +16,11 @@
         "reason": "Automatically enables EAX in The Wheel of Time's configuration.",
         "changes": {
           "WoT.ini": {
-            "Galaxy.GalaxyAudioSubsystem": { "Use3dHardware": "True", "UseSpatial": "True" }
+            "Galaxy.GalaxyAudioSubsystem": {
+              "UseDirectSound": "True",
+              "Use3dHardware": "True",
+              "UseSpatial": "True"
+            }
           }
         },
         "tested": false
@@ -54,5 +58,6 @@
       "title": "PCGamingWiki: The Wheel of Time",
       "url": "https://www.pcgamingwiki.com/wiki/The_Wheel_of_Time"
     }
-  ]
+  ],
+  "notes": "The Wheel of Time has a problem where certain sounds will loop continuously at a high volume. This will need further investigation."
 }

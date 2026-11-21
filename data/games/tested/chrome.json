@@ -1,5 +1,5 @@
 {
-  "$schema": "../schema.json",
+  "$schema": "../../schema.json",
   "name": "Chrome",
   "description": "Chrome is a singleplayer and multiplayer first-person shooter game and the first in the Chrome series.",
   "released": "2003-06-13",
