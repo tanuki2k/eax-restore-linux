@@ -797,9 +797,37 @@
       "name": "Call of Juarez",
       "description": "Call of Juarez is a singleplayer and multiplayer first-person shooter game and the first in the Call of Juarez series.",
       "released": "2006-09-15",
+      "exe": "CoJ.exe",
       "stores": {
         "steam": {
           "id": 3020
+        }
+      },
+      "eax": {
+        "api": "openal",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified"
+        ]
+      },
+      "tested": false
+    },
+    {
+      "id": "chrome",
+      "name": "Chrome",
+      "description": "Chrome is a singleplayer and multiplayer first-person shooter game and the first in the Chrome series.",
+      "released": "2003-06-13",
+      "stores": {
+        "steam": {
+          "id": 46420,
+          "delisted": true,
+          "id_source": "steamdb_historical"
         }
       },
       "eax": {
@@ -814,8 +842,33 @@
         "tweaks": [
           "eax_unified"
         ]
+      }
+    },
+    {
+      "id": "chrome-specforce",
+      "name": "Chrome: SpecForce",
+      "description": "Chrome: SpecForce is a singleplayer and multiplayer first-person shooter game and the second in the Chrome series.",
+      "released": "2005-06-02",
+      "stores": {
+        "steam": {
+          "id": 46430,
+          "delisted": true,
+          "id_source": "steamdb_historical"
+        }
       },
-      "tested": false
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0"
+        ]
+      },
+      "install": {
+        "tweaks": [
+          "eax_unified"
+        ]
+      }
     },
     {
       "id": "clive-barkers-undying",
@@ -3074,6 +3127,26 @@
       }
     },
     {
+      "id": "project-igi-2-covert-strike",
+      "name": "Project I.G.I.-2: Covert Strike",
+      "description": "Project I.G.I.-2: Covert Strike is a singleplayer and multiplayer first-person tactical shooter game and the second in the I.G.I. series.",
+      "released": "2003-02-21",
+      "stores": {
+        "gog": {
+          "id": 1207658666
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0",
+          "3.0"
+        ]
+      },
+      "tested": false
+    },
+    {
       "id": "psychonauts",
       "name": "Psychonauts",
       "description": "Psychonauts is a singleplayer third-person platform and action-adventure game and the first in the Psychonauts series.",
@@ -3709,6 +3782,26 @@
       }
     },
     {
+      "id": "star-trek-bridge-commander",
+      "name": "Star Trek: Bridge Commander",
+      "description": "Star Trek: Bridge Commander is a singleplayer and multiplayer space combat simulation game in the Star Trek series.",
+      "released": "2002-02-28",
+      "stores": {
+        "gog": {
+          "id": 1478736295
+        }
+      },
+      "eax": {
+        "api": "directsound3d",
+        "versions": [
+          "1.0",
+          "2.0"
+        ]
+      },
+      "notes": "Also supports A3D, per the Vogons Wiki citation for this title.",
+      "tested": false
+    },
+    {
       "id": "star-trek-elite-force-ii",
       "name": "Star Trek: Elite Force II",
       "description": "Star Trek: Elite Force II is a singleplayer and multiplayer first-person shooter game and the second in the Star Trek: Elite Force series.",
@@ -4183,7 +4276,7 @@
           "url": "https://github.com/kcat/openal-soft/issues/1333"
         }
       ],
-      "notes": "With EAX on, the radio chatter at the start of an instant action mission is silent in the Stable build, but the Latest build fixes it."
+      "notes": "With EAX on, the radio chatter at the start of an instant action mission is silent, but the Latest OpenAL Soft build fixes it."
     },
     {
       "id": "system-shock-2",
@@ -4310,6 +4403,7 @@
             "changes": {
               "WoT.ini": {
                 "Galaxy.GalaxyAudioSubsystem": {
+                  "UseDirectSound": "True",
                   "Use3dHardware": "True",
                   "UseSpatial": "True"
                 }
@@ -4375,6 +4469,7 @@
           "url": "https://www.pcgamingwiki.com/wiki/The_Wheel_of_Time"
         }
       ],
+      "notes": "The Wheel of Time has a problem where certain sounds will loop continuously at a high volume. This will need further investigation.",
       "tested": false
     },
     {
@@ -4637,6 +4732,7 @@
       "name": "Titan Quest",
       "description": "Titan Quest is a singleplayer and multiplayer isometric action role-playing game in the Titan Quest series.",
       "released": "2006-06-26",
+      "exe": "Titan Quest.exe",
       "stores": {
         "steam": {
           "id": 4540,
@@ -4644,7 +4740,8 @@
         }
       },
       "eax": {
-        "api": "directsound3d"
+        "api": "directsound3d",
+        "sound_system": "miles"
       },
       "sources": [
         {
@@ -4663,6 +4760,7 @@
       "name": "Titan Quest Anniversary Edition",
       "description": "Titan Quest Anniversary Edition is a singleplayer and multiplayer isometric action role-playing game, an updated edition of the first in the Titan Quest series that includes its Immortal Throne expansion.",
       "released": "2016-08-31",
+      "exe": "TQ.exe",
       "stores": {
         "steam": {
           "id": 475150
@@ -4673,6 +4771,7 @@
       },
       "eax": {
         "api": "directsound3d",
+        "sound_system": "miles",
         "versions": [
           "1.0",
           "2.0",
@@ -4688,6 +4787,7 @@
       "name": "Titan Quest: Immortal Throne",
       "description": "Titan Quest: Immortal Throne is a singleplayer and multiplayer isometric action role-playing expansion for Titan Quest.",
       "released": "2007-03-02",
+      "exe": "Tqit.exe",
       "stores": {
         "steam": {
           "id": 4550,

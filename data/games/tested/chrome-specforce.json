@@ -1,5 +1,5 @@
 {
-  "$schema": "../schema.json",
+  "$schema": "../../schema.json",
   "name": "Chrome: SpecForce",
   "description": "Chrome: SpecForce is a singleplayer and multiplayer first-person shooter game and the second in the Chrome series.",
   "released": "2005-06-02",

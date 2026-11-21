@@ -3,10 +3,11 @@
   "name": "Titan Quest",
   "description": "Titan Quest is a singleplayer and multiplayer isometric action role-playing game in the Titan Quest series.",
   "released": "2006-06-26",
+  "exe": "Titan Quest.exe",
   "stores": {
     "steam": { "id": 4540, "delisted": true }
   },
-  "eax": { "api": "directsound3d" },
+  "eax": { "api": "directsound3d", "sound_system": "miles" },
   "sources": [
     { "title": "PCGamingWiki: Titan Quest", "url": "https://www.pcgamingwiki.com/wiki/Titan_Quest" },
     { "title": "Wikipedia: Titan Quest", "url": "https://en.wikipedia.org/wiki/Titan_Quest" }

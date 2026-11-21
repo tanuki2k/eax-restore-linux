@@ -1,5 +1,5 @@
 {
-  "$schema": "../schema.json",
+  "$schema": "../../schema.json",
   "name": "Star Trek: Bridge Commander",
   "description": "Star Trek: Bridge Commander is a singleplayer and multiplayer space combat simulation game in the Star Trek series.",
   "released": "2002-02-28",
