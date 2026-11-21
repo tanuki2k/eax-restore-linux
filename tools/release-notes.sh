@@ -38,7 +38,10 @@ if [ -z "$generated" ] && [ -n "$prev" ]; then
 fi
 
 if [ -n "$prev" ] && ! grep -q "^## What's Changed" <<< "$generated"; then
-    commits=$(git log --no-merges --format='* %s (%h)' "$prev..$ref" | grep -v '^\* Release v' || true)
+    # Game data isn't part of a release: the script reads game-database.json from
+    # main when it runs, so commits that only touch it are left out.
+    commits=$(git log --no-merges --format='* %s (%h)' "$prev..$ref" -- . ':!data' ':!game-database.json' \
+        | grep -v '^\* Release v' || true)
     if [ -n "$commits" ]; then
         echo "## What's Changed"
         echo "$commits"
