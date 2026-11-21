@@ -125,6 +125,9 @@ pub struct App {
     /// From every game, not just the listed ones, so the label stays put
     /// whatever the filters hide.
     pub both_stores: std::collections::HashSet<String>,
+    /// Each found game's exe, looked up the first time its profile shows,
+    /// since the look walks its folder and the pane redraws all the time.
+    exes: std::cell::RefCell<std::collections::HashMap<PathBuf, Option<crate::profile::FoundExe>>>,
     pub pane: Pane,
     /// The first row of the games list that is showing, kept between redraws so the
     /// window only moves when the highlight gets near its edge. Set by `draw`.
@@ -166,6 +169,7 @@ impl App {
             filter: Filter::All,
             filters: Filters::default(),
             both_stores: Default::default(),
+            exes: Default::default(),
             pane: Pane::Profile,
             list_offset: std::cell::Cell::new(0),
             layout: Layout::Side,
@@ -181,6 +185,19 @@ impl App {
         app.find_both_stores();
         app.refilter();
         app
+    }
+
+    /// The game's exe, for its profile; None when it isn't on this PC.
+    pub fn exe_of(&self, e: &Entry) -> Option<crate::profile::FoundExe> {
+        let dir = e
+            .path
+            .as_ref()
+            .filter(|_| e.status != Status::NotOnThisPc)?;
+        self.exes
+            .borrow_mut()
+            .entry(dir.clone())
+            .or_insert_with(|| crate::profile::find_exe(dir, e))
+            .clone()
     }
 
     fn find_both_stores(&mut self) {
@@ -234,6 +251,7 @@ impl App {
         let keep = self.current().map(|e| (e.name.clone(), e.path.clone()));
         games.sort_by_key(|g| g.name.to_lowercase());
         self.games = games;
+        self.exes.borrow_mut().clear();
         self.find_both_stores();
         self.refilter();
         if let Some((name, path)) = keep {

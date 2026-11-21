@@ -477,7 +477,7 @@ fn draw_pane(f: &mut Frame, app: &App, area: Rect, zoomed: bool) {
         }
     } else {
         match current {
-            Some(e) => profile::lines(e, width, &app.home),
+            Some(e) => profile::lines(e, width, &app.home, app.exe_of(e).as_ref()),
             None => vec![
                 Line::from("No game matches.").dim(),
                 Line::from("Press Ctrl-A to add a game by its folder.").dim(),

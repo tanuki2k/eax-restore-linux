@@ -659,9 +659,13 @@ fn part_name(e: &Entry) -> &'static str {
     }
 }
 
+/// The game's exe: the folder it's in and its name, as `detect::exe_folder`
+/// found it.
+pub type FoundExe = (std::path::PathBuf, String);
+
 /// What this PC says about a game: whether the fix is on it, from which store,
-/// and where.
-fn system_rows(e: &Entry, home: &Path) -> Vec<Item> {
+/// where, and its exe.
+fn system_rows(e: &Entry, home: &Path, exe: Option<&FoundExe>) -> Vec<Item> {
     let (_, colour) = crate::ui::marker(e.status);
     let mut items = vec![
         Item::Heading("System details"),
@@ -689,13 +693,39 @@ fn system_rows(e: &Entry, home: &Path) -> Vec<Item> {
             label: "Location",
             value: Value::Text(crate::library::tilde(p, home), theme::dim()),
         }));
+        if let Some((dir, name)) = exe {
+            items.push(row("EXE", vec![Span::raw(name.clone())]));
+            // From the game's folder down, since Location already says where that is.
+            let below = dir.strip_prefix(p).unwrap_or(dir);
+            let shown = if below.as_os_str().is_empty() {
+                GAME_FOLDER.to_string()
+            } else {
+                format!("{GAME_FOLDER}/{}", below.display())
+            };
+            items.push(Item::Row(Row {
+                label: "EXE path",
+                value: Value::Text(shown, theme::dim()),
+            }));
+        }
     }
     items
 }
 
+/// Stands for the folder in Location at the start of the exe's path.
+const GAME_FOLDER: &str = "[Game folder]";
+
+/// Where `dir`'s exe is, for the profile's Exe rows.
+pub fn find_exe(dir: &Path, e: &Entry) -> Option<FoundExe> {
+    let hint = e.game.as_ref().map_or("", |g| g.exe.as_str());
+    match crate::engine::detect::exe_folder(dir, hint) {
+        (folder, Some(name)) => Some((folder, name)),
+        (_, None) => None,
+    }
+}
+
 /// The pane for a game: the profile from the database, with what this PC says.
-pub fn lines(e: &Entry, width: usize, home: &Path) -> Vec<Line<'static>> {
-    let system = system_rows(e, home);
+pub fn lines(e: &Entry, width: usize, home: &Path, exe: Option<&FoundExe>) -> Vec<Line<'static>> {
+    let system = system_rows(e, home, exe);
     match &e.game {
         Some(g) => game_lines(g, e.store, system, width),
         None => {
@@ -865,15 +895,15 @@ mod tests {
         e.status = Status::Installed;
         e.store = Some(StoreKind::Steam);
         e.path = Some("/lib/Quake 4".into());
-        let t = text(&lines(&e, 70, Path::new("/home/me")));
+        let t = text(&lines(&e, 70, Path::new("/home/me"), None));
         assert!(t.contains("\nSystem details:\n -> Status:            OpenAL Soft installed\n"));
         assert!(t.contains(" -> Platform:          Steam\n"));
         assert!(t.contains(" -> Location:          /lib/Quake 4\n"));
         e.via = Some("Lutris");
-        let t = text(&lines(&e, 70, Path::new("/home/me")));
+        let t = text(&lines(&e, 70, Path::new("/home/me"), None));
         assert!(t.contains(" -> Platform:          Lutris\n"), "{t}");
         e.store = Some(StoreKind::Gog);
-        let t = text(&lines(&e, 70, Path::new("/home/me")));
+        let t = text(&lines(&e, 70, Path::new("/home/me"), None));
         assert!(
             t.contains(" -> Platform:          GOG, through Lutris\n"),
             "{t}"
@@ -881,7 +911,7 @@ mod tests {
     }
 
     fn status_of(e: &Entry) -> String {
-        let t = text(&lines(e, 90, Path::new("/home/me")));
+        let t = text(&lines(e, 90, Path::new("/home/me"), None));
         let line = t.lines().find(|l| l.contains("Status:")).unwrap();
         line.split("Status:").nth(1).unwrap().trim().to_string()
     }
@@ -895,19 +925,13 @@ mod tests {
         thief.status = Status::OnThisPc;
         thief.store = Some(StoreKind::Steam);
         thief.path = Some("/lib/Thief Gold".into());
-        assert_eq!(status_of(&thief), "Game found, DSOAL not installed yet");
+        assert_eq!(status_of(&thief), "Not installed");
         let mut quake = Entry::database_only(game(QUAKE));
         quake.status = Status::OnThisPc;
         quake.store = Some(StoreKind::Gog);
         quake.path = Some("/lib/Quake 4".into());
-        assert_eq!(
-            status_of(&quake),
-            "Game found, OpenAL Soft not installed yet"
-        );
-        assert_eq!(
-            status_of(&Entry::database_only(game(THIEF))),
-            "Game not found on this PC"
-        );
+        assert_eq!(status_of(&quake), "Not installed");
+        assert_eq!(status_of(&Entry::database_only(game(THIEF))), "Not found");
     }
 
     #[test]
@@ -927,7 +951,41 @@ mod tests {
             path: Some("/g/Obscure".into()),
             engine: Some(Engine::OpenAlSoft),
         };
-        assert_eq!(status_of(&manual), "OpenAL Soft installed (manual install)");
+        assert_eq!(status_of(&manual), "OpenAL Soft installed (manual)");
+    }
+
+    #[test]
+    fn the_exe_shows_its_name_and_its_folder_from_the_game_folder_down() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().join("BioShock");
+        let mut e = Entry::database_only(game(THIEF));
+        e.status = Status::OnThisPc;
+        e.store = Some(StoreKind::Steam);
+        e.path = Some(root.clone());
+
+        // No exe anywhere: no Exe rows.
+        std::fs::create_dir_all(&root).unwrap();
+        assert_eq!(find_exe(&root, &e), None);
+        let t = text(&lines(&e, 90, Path::new("/home/me"), None));
+        assert!(!t.contains("EXE"), "{t}");
+
+        // In a subfolder: the path starts at the game folder.
+        let exe = Path::new(env!("CARGO_MANIFEST_DIR")).join("../tests/fixtures/pe32.exe");
+        std::fs::create_dir_all(root.join("Builds/Release")).unwrap();
+        std::fs::copy(&exe, root.join("Builds/Release/BioShock.exe")).unwrap();
+        let found = find_exe(&root, &e).unwrap();
+        assert_eq!(found.1, "BioShock.exe");
+        let t = text(&lines(&e, 90, Path::new("/home/me"), Some(&found)));
+        assert!(t.contains(" -> EXE:               BioShock.exe\n"), "{t}");
+        assert!(
+            t.contains(" -> EXE path:          [Game folder]/Builds/Release\n"),
+            "{t}"
+        );
+
+        // In the game folder itself.
+        let top = (root.clone(), "BioShock.exe".to_string());
+        let t = text(&lines(&e, 90, Path::new("/home/me"), Some(&top)));
+        assert!(t.contains(" -> EXE path:          [Game folder]\n"), "{t}");
     }
 
     #[test]
@@ -936,10 +994,10 @@ mod tests {
         e.status = Status::OnThisPc;
         e.store = Some(StoreKind::Steam);
         e.path = Some("/home/me/.local/share/Steam/steamapps/common/Thief Gold".into());
-        let t = text(&lines(&e, 90, Path::new("/home/me")));
+        let t = text(&lines(&e, 90, Path::new("/home/me"), None));
         assert!(t.contains("Location:          ~/.local/share/Steam/steamapps/common/Thief Gold\n"));
         e.path = Some("/mnt/games/Thief Gold".into());
-        let t = text(&lines(&e, 90, Path::new("/home/me")));
+        let t = text(&lines(&e, 90, Path::new("/home/me"), None));
         assert!(t.contains("Location:          /mnt/games/Thief Gold\n"));
     }
 
@@ -954,7 +1012,7 @@ mod tests {
             path: Some("/g/Obscure".into()),
             engine: None,
         };
-        let t = text(&lines(&e, 60, Path::new("/home/me")));
+        let t = text(&lines(&e, 60, Path::new("/home/me"), None));
         assert!(t.contains("System details:"));
         assert!(t.contains("  The game database has no profile for Obscure."));
         assert!(!t.contains("Game details"));

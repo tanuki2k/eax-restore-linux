@@ -26,9 +26,9 @@ impl Status {
     pub fn label(self, part: &str) -> String {
         match self {
             Status::Installed => format!("{part} installed"),
-            Status::OnThisPc => format!("Game found, {part} not installed yet"),
-            Status::NotOnThisPc => "Game not found on this PC".into(),
-            Status::Manual => format!("{part} installed (manual install)"),
+            Status::OnThisPc => "Not installed".into(),
+            Status::NotOnThisPc => "Not found".into(),
+            Status::Manual => format!("{part} installed (manual)"),
         }
     }
 }
