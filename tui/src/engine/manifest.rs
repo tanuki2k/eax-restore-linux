@@ -199,6 +199,8 @@ pub struct Recorded {
     /// `CONFIG:` lines, format names upgraded.
     pub config: Vec<Vec<u8>>,
     pub launcher: Vec<Vec<u8>>,
+    /// `LAUNCHERENV:` lines: a variable set beside a Heroic override.
+    pub launcher_env: Vec<Vec<u8>>,
     pub companions: Vec<Companion>,
 }
 
@@ -273,6 +275,7 @@ pub fn read(data: &[u8], install_root: &Path) -> Recorded {
             b"EAXUNIFIED" => r.eax_unified = true,
             _ if line.starts_with(b"CONFIG:") => r.config.push(upgrade_config_line(line)),
             _ if line.starts_with(b"LAUNCHER:") => r.launcher.push(line.to_vec()),
+            _ if line.starts_with(b"LAUNCHERENV:") => r.launcher_env.push(line.to_vec()),
             _ => {
                 let entry = line.strip_suffix(b"\r").unwrap_or(line);
                 let path = Path::new(OsStr::from_bytes(entry));

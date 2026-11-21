@@ -55,6 +55,8 @@ pub struct Facts {
     pub vcrun_present: bool,
     /// The profile asks for EAX Unified, and the game doesn't ship its own.
     pub wants_eax_unified: bool,
+    /// The profile flags the CPU thread limit, and this PC has more than 8.
+    pub wants_cpu_limit: bool,
     /// Folders the install writes to that can't be written: the game's,
     /// its extra exe folders, the prefixes' system32.
     pub unwritable: Vec<PathBuf>,
@@ -109,6 +111,11 @@ pub fn fallback_wine(home: &Path) -> Option<PathBuf> {
 
 /// Looks at the game folder (its exe folder) and everything around it.
 /// `protontricks` is how to run it, for a Steam game's prefix.
+/// This PC's logical CPUs, as `nproc` counts them.
+pub fn cpu_threads() -> usize {
+    std::thread::available_parallelism().map_or(1, std::num::NonZeroUsize::get)
+}
+
 pub fn gather(game_dir: &Path, game: Option<&Game>, home: &Path, protontricks: &[String]) -> Facts {
     let identified = identify_game_dir(game_dir, home);
     let install_root = game_install_root(
@@ -140,6 +147,7 @@ pub fn gather(game_dir: &Path, game: Option<&Game>, home: &Path, protontricks: &
         launcher: None,
         vcrun_present: false,
         wants_eax_unified: false,
+        wants_cpu_limit: false,
         unwritable: Vec::new(),
         game_mount: files::mount_of(game_dir),
         beta_branch: String::new(),
@@ -256,6 +264,8 @@ pub fn gather(game_dir: &Path, game: Option<&Game>, home: &Path, protontricks: &
         }
         f.wants_eax_unified = g.install.tweaks.iter().any(|t| t == "eax_unified")
             && !eax_unified::game_ships_eax_dll(game_dir);
+        f.wants_cpu_limit =
+            g.install.tweaks.iter().any(|t| t == "limit_cpu_threads") && cpu_threads() > 8;
     }
     f.files_api = detect::detect_api(game_dir, exe);
     if let (Some(p), Some(arch)) = (&f.prefix, f.arch) {
@@ -347,6 +357,7 @@ impl Facts {
                 Vcrun::Skip
             },
             eax_unified: self.wants_eax_unified,
+            cpu_limit: self.wants_cpu_limit,
             game_settings: Vec::new(),
             crash_markers: HashMap::new(),
             companions: self

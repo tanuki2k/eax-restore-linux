@@ -105,6 +105,9 @@ pub struct Plan {
     pub over: Override,
     pub vcrun: Vcrun,
     pub eax_unified: bool,
+    /// WINE_CPU_TOPOLOGY in the launcher, for a game that breaks on more
+    /// than 8 CPU threads.
+    pub cpu_limit: bool,
     pub game_settings: Vec<PlanRow>,
     /// Crash markers by config file name, from the profile.
     pub crash_markers: HashMap<String, String>,
@@ -138,6 +141,8 @@ pub struct Report {
     pub no_sources: bool,
     /// The launcher couldn't be closed, so its overrides are left to the player.
     pub launcher_left_open: bool,
+    /// The CPU thread limit went in the launcher.
+    pub cpu_limit_set: bool,
 }
 
 /// What to copy into the game and prefix: (source, name), the primary DLL
@@ -232,7 +237,7 @@ fn read_previous(manifest_path: &Path) -> Previous {
         if line.starts_with(b"CONFIG:") {
             p.config.push(manifest::upgrade_config_line(line));
         }
-        if line.starts_with(b"LAUNCHER:") {
+        if line.starts_with(b"LAUNCHER:") || line.starts_with(b"LAUNCHERENV:") {
             p.launcher.push(String::from_utf8_lossy(line).into_owned());
         }
     }
@@ -289,7 +294,13 @@ fn launcher_override(
         return Override::Manual;
     }
     let game_dir = plan.game_dir.display().to_string();
-    let w = changes::write_override(t, plan.engine.primary_dll(), &prev.launcher, &game_dir);
+    let w = changes::write_override(
+        t,
+        plan.engine.primary_dll(),
+        cpu_env(plan),
+        &prev.launcher,
+        &game_dir,
+    );
     let over = match &w {
         Written::Set(line) => {
             append(m, line.as_bytes());
@@ -308,7 +319,32 @@ fn launcher_override(
         Written::NoApp | Written::Unrecordable => Override::Manual,
     };
     r.launcher = Some(w);
+    if plan.cpu_limit && matches!(over, Override::Launcher(_)) {
+        r.cpu_limit_set = match t.launcher {
+            // Went in with the override.
+            Launcher::Steam => true,
+            Launcher::Heroic => match changes::write_env(
+                t,
+                options::CPU_LIMIT_VAR,
+                options::CPU_LIMIT_VALUE,
+                &prev.launcher,
+            ) {
+                Written::Set(line) | Written::Already(Some(line)) => {
+                    append(m, line.as_bytes());
+                    true
+                }
+                Written::Already(None) => true,
+                _ => false,
+            },
+        };
+    }
     over
+}
+
+/// The CPU thread limit, when the plan has it, for Steam's launch options.
+fn cpu_env(plan: &Plan) -> Option<(&'static str, &'static str)> {
+    plan.cpu_limit
+        .then_some((options::CPU_LIMIT_VAR, options::CPU_LIMIT_VALUE))
 }
 
 /// EAX_RESTORE_DSOAL_LOG: the sound logs on at their fullest (DSOAL's at 4
@@ -809,6 +845,7 @@ pub fn execute(plan: &Plan, cache: &Cache, eax: &Installer, host: &mut dyn Insta
                 let w = changes::write_override(
                     ct,
                     primary,
+                    cpu_env(plan),
                     &prev.launcher,
                     &game_dir.display().to_string(),
                 );
@@ -830,6 +867,15 @@ pub fn execute(plan: &Plan, cache: &Cache, eax: &Installer, host: &mut dyn Insta
                 sound_log_on(t, plan);
             }
         }
+    }
+    if plan.cpu_limit && r.cpu_limit_set {
+        host.detail("CPU thread limit added beside it");
+    } else if plan.cpu_limit {
+        host.warning(&format!(
+            "Couldn't add the CPU thread limit, so set it yourself: {}={}",
+            options::CPU_LIMIT_VAR,
+            options::CPU_LIMIT_VALUE
+        ));
     }
     r.over = Some(over);
 

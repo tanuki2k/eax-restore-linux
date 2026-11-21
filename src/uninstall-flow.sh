@@ -50,6 +50,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
     EAX_UNIFIED_INSTALLED="n"
     CONFIG_LINES=()
     LAUNCHER_LINES=()
+    LAUNCHER_ENV_LINES=()
     # Companion apps' prefix changes (lines tagged with their AppID, see
     # prefix-steps.sh), keyed by AppID; COMPANION_* is filled from them below.
     UNINSTALL_COMPANION_IDS=()
@@ -97,6 +98,9 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
                 # The DLL override added to Steam's launch options / Heroic's
                 # environment variables — reverted in step 5.
                 LAUNCHER:*) LAUNCHER_LINES+=("$manifest_entry"); continue ;;
+                # A variable set beside the override in Heroic (the CPU
+                # thread limit) — reverted with it in step 5.
+                LAUNCHERENV:*) LAUNCHER_ENV_LINES+=("$manifest_entry"); continue ;;
             esac
             # Only files the install itself puts down, by absolute path: a
             # manifest sits in a folder anyone can write to, and whatever it
@@ -196,6 +200,11 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         OVERRIDE_LAUNCHER="${f_fields[0]}"; OVERRIDE_ID="${f_fields[2]}"
         print_status "Launcher: a DLL override in $(launcher_override_where)" ""
     done
+    for line in "${LAUNCHER_ENV_LINES[@]}"; do
+        mapfile -t -d $'\t' f_fields < <(printf '%s' "${line#LAUNCHERENV:}")
+        OVERRIDE_LAUNCHER="${f_fields[0]}"; OVERRIDE_ID="${f_fields[2]}"
+        print_status "Launcher: a CPU thread limit in $(launcher_override_where)" ""
+    done
     reg_what=""
     [ "$REG_HAS_COM" == "y" ] && reg_what="COM routing"
     [ "$REG_HAS_OVERRIDE" == "y" ] && reg_what+="${reg_what:+ and }the ${REG_OVERRIDE_DLL:-dsound/openal32} override"
@@ -214,7 +223,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         print_status "Game settings: ${settings_count} changed during install" ""
     fi
 
-    if [ ${#FILES_TO_REMOVE[@]} -eq 0 ] && [ "$REG_HAS_COM" == "n" ] && [ "$REG_HAS_OVERRIDE" == "n" ] && [ "$VCRUN_PRESENT" == "n" ] && [ "$EAX_UNIFIED_INSTALLED" == "n" ] && [ ${#CONFIG_LINES[@]} -eq 0 ] && [ ${#LAUNCHER_LINES[@]} -eq 0 ] \
+    if [ ${#FILES_TO_REMOVE[@]} -eq 0 ] && [ "$REG_HAS_COM" == "n" ] && [ "$REG_HAS_OVERRIDE" == "n" ] && [ "$VCRUN_PRESENT" == "n" ] && [ "$EAX_UNIFIED_INSTALLED" == "n" ] && [ ${#CONFIG_LINES[@]} -eq 0 ] && [ ${#LAUNCHER_LINES[@]} -eq 0 ] && [ ${#LAUNCHER_ENV_LINES[@]} -eq 0 ] \
         && [ ${#COMPANION_IDS[@]} -eq 0 ]; then
         print_status "Nothing from this script was found in the game folder or prefix, so there's nothing to remove." ""
         exit 0
@@ -460,6 +469,8 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         [ "$LAUNCHER_WORK" -eq 1 ] && print_phase_task "Removing the DLL override from the launcher"
         revert_launcher_overrides
     fi
+    revert_launcher_env
+    [ ${#LAUNCHER_ENV_LINES[@]} -gt 0 ] && reopen_launchers
 
     REG_CLEANED="n"
     if [[ "$REMOVE_REG" =~ $YES_RE ]]; then
@@ -518,7 +529,7 @@ if [ "$SCRIPT_ACTION" == "u" ]; then
         while IFS= read -r line; do
             case "$line" in
                 \#*|"") ;;
-                CONFIG:*|LAUNCHER:*) ;;
+                CONFIG:*|LAUNCHER:*|LAUNCHERENV:*) ;;
                 REGISTRY:*$'\t'*|VCRUN$'\t'*|VCRUN:OVERRIDES$'\t'*) extra_left+=("$line") ;;
                 REGISTRY:*) [ "$REG_CLEANED" == "y" ] || core_left+=("$line") ;;
                 VCRUN|VCRUN:OVERRIDES) [ "$UNINSTALL_VCRUN" == "y" ] || extra_left+=("$line") ;;

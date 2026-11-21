@@ -55,6 +55,9 @@ pub struct InstalledState {
     pub vcrun: bool,
     pub com_routing: bool,
     pub eax_unified: bool,
+    /// The CPU thread limit is in the launcher (Steam's recorded launch
+    /// options, or its own Heroic variable).
+    pub cpu_limit: bool,
     /// The generated alsoft.ini has the advanced tweaks.
     pub advanced_limits: bool,
     /// The DSOAL and OpenAL Soft versions it put in (`r693`, `1.25.2`), when
@@ -126,6 +129,12 @@ fn state_from(lines: &[&[u8]], game_dir: &Path, alsoft: Option<&PathBuf>) -> Ins
         vcrun: has(b"VCRUN") || has(b"VCRUN:OVERRIDES"),
         com_routing: has(b"REGISTRY:COM"),
         eax_unified: has(b"EAXUNIFIED"),
+        cpu_limit: lines.iter().any(|l| {
+            l.starts_with(b"LAUNCHERENV:")
+                || (l.starts_with(b"LAUNCHER:")
+                    && l.windows(b"WINE_CPU_TOPOLOGY=".len())
+                        .any(|w| w == b"WINE_CPU_TOPOLOGY="))
+        }),
         advanced_limits: alsoft.is_some_and(|f| {
             std::fs::read_to_string(f).is_ok_and(|t| t.contains("(Advanced Tweaks)"))
         }),
@@ -262,6 +271,19 @@ mod tests {
     }
 
     #[test]
+    fn the_cpu_limit_reads_back_from_either_launcher_record() {
+        let dir = Path::new("/g");
+        let steam: &[u8] = b"LAUNCHER:steam\tf\t1\t__ABSENT__\tWINEDLLOVERRIDES=\"dsound=n,b\" WINE_CPU_TOPOLOGY=8:0,1,2,3,4,5,6,7 %command%";
+        assert!(state_from(&[steam], dir, None).cpu_limit);
+        let heroic: &[u8] =
+            b"LAUNCHERENV:heroic\tf\t1\tWINE_CPU_TOPOLOGY\t__ABSENT__\t8:0,1,2,3,4,5,6,7";
+        assert!(state_from(&[heroic], dir, None).cpu_limit);
+        let plain: &[u8] =
+            b"LAUNCHER:steam\tf\t1\t__ABSENT__\tWINEDLLOVERRIDES=\"dsound=n,b\" %command%";
+        assert!(!state_from(&[plain], dir, None).cpu_limit);
+    }
+
+    #[test]
     fn reads_an_install_and_picks_the_settings_a_new_layout_drops() {
         let tmp = tempfile::tempdir().unwrap();
         let home = tmp.path().join("home");
@@ -303,6 +325,7 @@ mod tests {
                 vcrun: false,
                 com_routing: false,
                 eax_unified: false,
+                cpu_limit: false,
                 advanced_limits: false,
                 dsoal_version: None,
                 openal_version: None,

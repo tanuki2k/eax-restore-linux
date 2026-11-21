@@ -85,7 +85,7 @@
           "description": "Advanced Compatibility Tweaks the script recommends for this game.\nEach is asked as a Yes/No question that defaults to Yes.",
           "type": "array",
           "uniqueItems": true,
-          "items": { "enum": ["eax_unified", "expand_audio_limits", "com_registry_routing"] },
+          "items": { "enum": ["eax_unified", "expand_audio_limits", "com_registry_routing", "limit_cpu_threads"] },
           "default": []
         },
         "alsoft_ini": {

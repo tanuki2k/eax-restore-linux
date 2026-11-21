@@ -99,6 +99,36 @@ setup() {
     [ -z "$(launch_options_log_value "$o" DSOAL FILE)" ]
 }
 
+# ---- launch_options_with_env / without_env (CPU thread limit) -------------
+
+@test "env: added right before %command%, after the override" {
+    [ "$(launch_options_with_env 'WINEDLLOVERRIDES="dsound=n,b" %command% -nointro' WINE_CPU_TOPOLOGY 8:0,1,2,3,4,5,6,7)" \
+        == 'WINEDLLOVERRIDES="dsound=n,b" WINE_CPU_TOPOLOGY=8:0,1,2,3,4,5,6,7 %command% -nointro' ]
+}
+
+@test "env: empty options get %command%, bare arguments move after it" {
+    [ "$(launch_options_with_env "" V 1)" == "V=1 %command%" ]
+    [ "$(launch_options_with_env "-nointro" V 1)" == "V=1 %command% -nointro" ]
+}
+
+@test "env: replaces the variable rather than duplicating it, any quoting" {
+    [ "$(launch_options_with_env 'V=0 %command%' V 1)" == "V=1 %command%" ]
+    [ "$(launch_options_with_env 'A=1 V="x y" %command%' V 1)" == "A=1 V=1 %command%" ]
+    [ "$(launch_options_with_env "V='x' %command%" V 1)" == "V=1 %command%" ]
+}
+
+@test "env: removing leaves the other variables and arguments" {
+    [ "$(launch_options_without_env 'A=1 V=2 %command% -x' V)" == "A=1 %command% -x" ]
+    [ "$(launch_options_without_env 'VV=1 %command%' V)" == "VV=1 %command%" ]
+}
+
+@test "cpu_thread_count: what nproc says" {
+    mkdir -p "$BATS_TEST_TMPDIR/bin"
+    printf '#!/bin/sh\necho 16\n' > "$BATS_TEST_TMPDIR/bin/nproc"; chmod +x "$BATS_TEST_TMPDIR/bin/nproc"
+    PATH="$BATS_TEST_TMPDIR/bin:$PATH" run cpu_thread_count
+    [ "$output" == "16" ]
+}
+
 @test "dsoal log paths: Z: maps back to /, bare names sit in the game folder" {
     GAME_DIR=/games/x
     [ "$(dsoal_log_path_for_wine /games/x)" == "Z:/games/x/dsoal.log" ]

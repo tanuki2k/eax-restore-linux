@@ -219,6 +219,7 @@ fn plan(kind: &Kind, w: &World) -> Plan {
         over,
         vcrun: Vcrun::Skip,
         eax_unified: false,
+        cpu_limit: false,
         game_settings,
         crash_markers: HashMap::new(),
         companions: Vec::new(),

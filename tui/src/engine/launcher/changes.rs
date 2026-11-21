@@ -82,8 +82,17 @@ impl LauncherRecord {
 /// sound-log variables are set aside while the override is merged and put
 /// back after it, since they aren't part of what the manifest records.
 /// `previous` is the last install's `LAUNCHER:` lines; `game_dir` is where
-/// a log with no file of its own goes.
-pub fn write_override(t: &Target, dll: &str, previous: &[String], game_dir: &str) -> Written {
+/// a log with no file of its own goes. `env` is a variable that goes in
+/// Steam's launch options with the override (the CPU thread limit), part of
+/// the recorded value so uninstall puts the old options back; Heroic keeps
+/// each variable apart, through [`write_env`].
+pub fn write_override(
+    t: &Target,
+    dll: &str,
+    env: Option<(&str, &str)>,
+    previous: &[String],
+    game_dir: &str,
+) -> Written {
     let old_held = t.get();
     if old_held == Held::NoApp {
         return Written::NoApp;
@@ -108,7 +117,11 @@ pub fn write_override(t: &Target, dll: &str, previous: &[String], game_dir: &str
             } else {
                 old.as_str()
             };
-            options::with_override(base, dll)
+            let new = options::with_override(base, dll);
+            match env {
+                Some((var, value)) => options::with_env(&new, var, value),
+                None => new,
+            }
         }
         Launcher::Heroic => {
             let base = if old == "__ABSENT__" {
@@ -159,6 +172,105 @@ pub fn write_override(t: &Target, dll: &str, previous: &[String], game_dir: &str
         }
         .to_line(),
     )
+}
+
+/// A manifest `LAUNCHERENV:` line's fields: a variable set beside a Heroic
+/// override.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LauncherEnvRecord {
+    pub launcher: String,
+    pub file: PathBuf,
+    pub id: String,
+    pub var: String,
+    pub old: String,
+    pub new: String,
+}
+
+impl LauncherEnvRecord {
+    pub fn parse(line: &str) -> Option<Self> {
+        let body = line.strip_prefix("LAUNCHERENV:")?;
+        let mut f = body.split('\t');
+        let mut next = || f.next().unwrap_or("").to_string();
+        Some(LauncherEnvRecord {
+            launcher: next(),
+            file: PathBuf::from(next()),
+            id: next(),
+            var: next(),
+            old: next(),
+            new: next(),
+        })
+    }
+
+    pub fn to_line(&self) -> String {
+        format!(
+            "LAUNCHERENV:{}\t{}\t{}\t{}\t{}\t{}",
+            self.launcher,
+            self.file.display(),
+            self.id,
+            self.var,
+            self.old,
+            self.new
+        )
+    }
+}
+
+/// Heroic only: sets `var` beside the override (the script's
+/// `_write_launcher_env`). `previous` is the last install's launcher lines.
+pub fn write_env(t: &Target, var: &str, value: &str, previous: &[String]) -> Written {
+    let old = t.env(var);
+    if old == Held::NoApp {
+        return Written::NoApp;
+    }
+    let old = old.manifest_text();
+    if old == value {
+        let carried = previous.iter().find(|line| {
+            LauncherEnvRecord::parse(line).is_some_and(|r| {
+                r.launcher == t.launcher.key() && r.file == t.file && r.id == t.id && r.var == var
+            })
+        });
+        return Written::Already(carried.cloned());
+    }
+    if old.contains(['\t', '\n', '\r']) {
+        return Written::Unrecordable;
+    }
+    if t.set_env(var, Some(value)).is_err() || t.env(var) != Held::Set(value.to_string()) {
+        return Written::Failed;
+    }
+    Written::Set(
+        LauncherEnvRecord {
+            launcher: t.launcher.key().into(),
+            file: t.file.clone(),
+            id: t.id.clone(),
+            var: var.into(),
+            old,
+            new: value.into(),
+        }
+        .to_line(),
+    )
+}
+
+/// Puts a recorded variable back, only where it still holds what the
+/// install set.
+pub fn revert_env(line: &str) -> Reverted {
+    let Some(r) = LauncherEnvRecord::parse(line) else {
+        return Reverted::NoFile;
+    };
+    if !r.file.is_file() {
+        return Reverted::NoFile;
+    }
+    let t = Target {
+        launcher: Launcher::from_key(&r.launcher).unwrap_or(Launcher::Heroic),
+        file: r.file.clone(),
+        id: r.id.clone(),
+    };
+    if t.env(&r.var) != Held::Set(r.new.clone()) {
+        return Reverted::ChangedSince;
+    }
+    let target = (r.old != "__ABSENT__").then_some(r.old.as_str());
+    if t.set_env(&r.var, target).is_err() {
+        return Reverted::Failed;
+    }
+    Reverted::Restored
 }
 
 /// What putting one `LAUNCHER:` line back came to.

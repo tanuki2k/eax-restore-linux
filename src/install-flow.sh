@@ -128,7 +128,7 @@
             [[ "$line" == /* ]] && { PREV_MANIFEST_FILES["$line"]=1; PREV_FILE_LINES+=("$line"); }
             [[ "$line" == REGISTRY:* || "$line" == VCRUN || "$line" == VCRUN:* || "$line" == VCRUN$'\t'* || "$line" == EAXUNIFIED ]] && PREV_STATE_LINES+=("$line")
             [[ "$line" == CONFIG:* ]] && { upgrade_config_line "$line"; PREV_CONFIG_LINES+=("$UPGRADED_LINE"); }
-            [[ "$line" == LAUNCHER:* ]] && PREV_LAUNCHER_LINES+=("$line")
+            [[ "$line" == LAUNCHER:* || "$line" == LAUNCHERENV:* ]] && PREV_LAUNCHER_LINES+=("$line")
         done < "$INSTALL_MANIFEST"
     fi
 
@@ -400,6 +400,7 @@ EOF
 
     # Step 10's launcher choice: Steam launch options / Heroic environment
     # variables. Drops back to manual instructions if it can't be written.
+    CPU_LIMIT_SET=""
     apply_launcher_override
 
     # Files from the last install that this one didn't write again (another
@@ -463,6 +464,7 @@ EOF
             echo -e "Value: ${CYAN}$OVERRIDE_VALUE${NC}"
         fi
     fi
+    print_cpu_limit_instructions
     # Each block below brings its own leading blank line (the game settings
     # summary, then the run log's box), so none is added here.
     print_game_settings_summary

@@ -112,7 +112,9 @@ fn launch_option_strings_match() {
             "$(launch_options_with_sound_log "$v" "" "" 3 "Z:/g/o.log")" \
             "$(launch_options_log_value "$v" DSOAL LEVEL)" "$(launch_options_log_value "$v" DSOAL FILE)" \
             "$(launch_options_log_value "$v" ALSOFT FILE)" \
-            "$(merge_dll_override "$v" dsound)" "$(GAME_DIR=/g dsoal_log_path_for_linux "$v")"
+            "$(merge_dll_override "$v" dsound)" "$(GAME_DIR=/g dsoal_log_path_for_linux "$v")" \
+            "$(launch_options_with_env "$v" WINE_CPU_TOPOLOGY 8:0,1,2,3,4,5,6,7)" \
+            "$(launch_options_without_env "$v" FOO)"
     "#;
     for (v, b) in inputs.iter().zip(per_input(&inputs, body)) {
         let rust = [
@@ -127,6 +129,8 @@ fn launch_option_strings_match() {
             options::log_value(v, "ALSOFT", "FILE"),
             options::merge_dll_override(v, "dsound"),
             options::log_path_for_linux(v, "/g"),
+            options::with_env(v, "WINE_CPU_TOPOLOGY", "8:0,1,2,3,4,5,6,7"),
+            options::without_env(v, "FOO"),
         ]
         .iter()
         .map(|s| format!("{s}\x1f"))
@@ -426,7 +430,7 @@ fn launcher_changes_match() {
             file: file("rust"),
             id: id.to_string(),
         };
-        let w = changes::write_override(&t, "dsound", &[], &game_dir);
+        let w = changes::write_override(&t, "dsound", None, &[], &game_dir);
         let line = match &w {
             Written::Set(l) => format!("{l}\n"),
             Written::Already(Some(l)) => format!("{l}\n"),
@@ -507,4 +511,83 @@ fn launcher_changes_match() {
         };
         assert_eq!(bak("bash"), bak("rust"), "case {i}: the backup");
     }
+}
+
+/// The CPU thread limit: Steam's goes in with the override and is part of
+/// the recorded value; Heroic's is its own variable on a LAUNCHERENV: line,
+/// and uninstall takes it out. Both sides from the same starting files.
+#[test]
+fn cpu_limit_changes_match() {
+    let tmp = tempfile::tempdir().unwrap();
+    let d = tmp.path();
+    let starts = [
+        ("steam", "111", VDF.to_string()),
+        ("steam", "333", VDF.to_string()),
+        ("heroic", "1207658938", HEROIC.to_string()),
+    ];
+    let mut script = String::from(
+        "wait_for_launcher_closed() { return 0; }\nreopen_launchers() { :; }\n\
+         print_status() { :; }; print_warning_arrow() { :; }; print_error_arrow() { :; }\n\
+         ADVANCED_CPU_LIMIT=y\n",
+    );
+    let mut rust_out = Vec::new();
+    for (i, (launcher, id, text)) in starts.iter().enumerate() {
+        let file = |side: &str| d.join(format!("{side}{i}/cfg"));
+        for side in ["bash", "rust"] {
+            touch(&file(side), text);
+        }
+        script.push_str(&format!(
+            "OVERRIDE_LAUNCHER={launcher} OVERRIDE_FILE=\"$1/bash{i}/cfg\" OVERRIDE_ID={id} APPID={id} GAME_DIR=/g GAME_NAME=G\n\
+             PRIMARY_DLL_NAME=dsound INSTALL_MANIFEST=\"$1/bash{i}/m\"; PREV_LAUNCHER_LINES=(); : > \"$INSTALL_MANIFEST\"\n\
+             _write_launcher_override > /dev/null\n\
+             [ {launcher} == heroic ] && _write_launcher_env WINE_CPU_TOPOLOGY 8:0,1,2,3,4,5,6,7\n\
+             cat \"$INSTALL_MANIFEST\"; echo .\n\
+             LAUNCHER_ENV_LINES=(); mapfile -t LAUNCHER_ENV_LINES < <(grep '^LAUNCHERENV:' \"$INSTALL_MANIFEST\")\n\
+             LAUNCHER_LINES_KEPT=(); revert_launcher_env > /dev/null; echo .\n"
+        ));
+        let t = Target {
+            launcher: Launcher::from_key(launcher).unwrap(),
+            file: file("rust"),
+            id: id.to_string(),
+        };
+        let env = Some((options::CPU_LIMIT_VAR, options::CPU_LIMIT_VALUE));
+        let mut lines = String::new();
+        if let Written::Set(l) | Written::Already(Some(l)) =
+            changes::write_override(&t, "dsound", env, &[], "/g")
+        {
+            lines.push_str(&format!("{l}\n"));
+        }
+        if *launcher == "heroic" {
+            if let Written::Set(l) | Written::Already(Some(l)) =
+                changes::write_env(&t, options::CPU_LIMIT_VAR, options::CPU_LIMIT_VALUE, &[])
+            {
+                lines.push_str(&format!("{l}\n"));
+            }
+        }
+        for l in lines.lines().filter(|l| l.starts_with("LAUNCHERENV:")) {
+            changes::revert_env(l);
+        }
+        rust_out.push(format!(
+            "{}.\n.\n",
+            lines.replace(
+                &d.join(format!("rust{i}")).display().to_string(),
+                &d.join(format!("bash{i}")).display().to_string()
+            )
+        ));
+    }
+    let bash_out = bash(&script, d, d);
+    assert_eq!(bash_out, rust_out.concat());
+    for i in 0..starts.len() {
+        let read = |side: &str| std::fs::read(d.join(format!("{side}{i}/cfg"))).unwrap();
+        assert_eq!(read("bash"), read("rust"), "start {i}");
+    }
+    // Steam: the limit is in the launch options and in the recorded value.
+    let steam = std::fs::read_to_string(d.join("rust0/cfg")).unwrap();
+    assert!(
+        steam.contains("WINE_CPU_TOPOLOGY=8:0,1,2,3,4,5,6,7 %command%"),
+        "{steam}"
+    );
+    // Heroic: the revert took the variable back out.
+    let heroic = std::fs::read_to_string(d.join("rust2/cfg")).unwrap();
+    assert!(!heroic.contains("WINE_CPU_TOPOLOGY"), "{heroic}");
 }

@@ -780,6 +780,7 @@ resolve_recommended_tweaks() {
     EAX_UNIFIED=""
     RECOMMENDED_AUDIO_LIMITS=""
     RECOMMENDED_COM_ROUTING=""
+    RECOMMENDED_CPU_LIMIT=""
     RECOMMENDED_TWEAKS_RESOLVED=1
     [ -z "$1" ] && return
     ensure_game_database || return
@@ -791,6 +792,7 @@ resolve_recommended_tweaks() {
     grep -qx "eax_unified" <<< "$tweaks" && EAX_UNIFIED=1
     grep -qx "expand_audio_limits" <<< "$tweaks" && RECOMMENDED_AUDIO_LIMITS=1
     grep -qx "com_registry_routing" <<< "$tweaks" && RECOMMENDED_COM_ROUTING=1
+    grep -qx "limit_cpu_threads" <<< "$tweaks" && RECOMMENDED_CPU_LIMIT=1
 }
 
 resolve_extra_exe_folders() {

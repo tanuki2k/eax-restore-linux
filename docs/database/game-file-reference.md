@@ -171,13 +171,14 @@ What the install itself does differently for this game.
 
 ### `install.tweaks`
 
-A list drawn from the values below. Each one turns the matching Advanced Compatibility Tweak into a prompt that defaults to yes. For an OpenAL-native install (`eax.api` is `openal`), only `expand_audio_limits` is offered, and the other two are ignored.
+A list drawn from the values below. Each one turns the matching Advanced Compatibility Tweak into a prompt that defaults to yes. For an OpenAL-native install (`eax.api` is `openal`), `eax_unified` and `com_registry_routing` are ignored.
 
 | Value | Use it for |
 | --- | --- |
 | `"eax_unified"` | Games that reach EAX through Creative's `eax.dll` "EAX Unified" shim instead of native DirectSound3D. The install runs Creative's EAX Unified installer in the game's prefix, unless the game's folder already has its own `eax.dll` or `eaxunified.dll`. Uninstall removes it again. |
 | `"expand_audio_limits"` | A game independently verified to need it, like F.E.A.R., whose audio drops out in large firefights. |
 | `"com_registry_routing"` | A game independently verified to need it, like Grand Theft Auto: San Andreas. |
+| `"limit_cpu_threads"` | A game that crashes or hangs on a CPU with more than 8 threads, like TimeShift. Only offered on such a PC. The install adds `WINE_CPU_TOPOLOGY=8:0,1,2,3,4,5,6,7` to the game's Steam launch options or Heroic environment variables, beside the DLL override, and uninstall takes it out again. Anywhere else (the override in the registry or set by hand, or a game run from Lutris, Bottles, Faugus or a plain prefix), the install says what to add by hand. |
 
 ### `install.alsoft_ini`
 

@@ -17,6 +17,11 @@ show_tweak_blurb() {
             echo -e "${WHITE}Forces the engine to handle 256 simultaneous sounds and locks the sample rate to 48kHz."
             echo -e "Fixes audio dropping out in chaotic games (like F.E.A.R. or Thief), but uses more CPU.${NC}"
             ;;
+        cpu)
+            print_result "${BOLD}CPU Thread Limit" "$CYAN"
+            echo -e "${WHITE}${GAME_NAME} crashes or hangs at startup on a CPU with more than 8 threads, and yours has $(cpu_thread_count)."
+            echo -e "This adds a limit of 8 to the launcher's settings, next to the DLL override.${NC}"
+            ;;
         com)
             print_result "${BOLD}COM Registry Routing" "$CYAN"
             echo -e "${WHITE}Explicitly forces the Windows registry to point directly to our custom dsound.dll."
@@ -85,6 +90,7 @@ print_choices_summary() {
     [ "$INSTALL_EAX_UNIFIED" == "y" ] && list+="${list:+$'\n'}Install EAX Unified"
     [ "$ADVANCED_LIMITS" == "y" ] && list+="${list:+$'\n'}Expand audio limits"
     [ "$ADVANCED_COM" == "y" ] && list+="${list:+$'\n'}COM registry routing"
+    [ "$ADVANCED_CPU_LIMIT" == "y" ] && list+="${list:+$'\n'}Limit to 8 CPU threads"
     _choice sound "Advanced tweaks" "${list:-None}"
 
     case "$OVERRIDE_METHOD" in
@@ -345,6 +351,7 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
     INSTALL_EAX_UNIFIED="n"
     ADVANCED_LIMITS="n"
     ADVANCED_COM="n"
+    ADVANCED_CPU_LIMIT="n"
 
     # EAX Unified and COM Registry Routing both target DirectSound3D
     # specifically and have nothing to attach to on a direct OpenAL32.dll
@@ -416,6 +423,16 @@ if [ "$SCRIPT_ACTION" == "i" ]; then
             ADVANCED_COM="n"
         fi
         COM_ROUTING_HANDLED=1
+    fi
+
+    # install.tweaks can flag the CPU thread limit for a game that crashes on
+    # more than 8 threads (e.g. TimeShift). Only asked on a PC that has more,
+    # and never offered unflagged: it changes how the game sees the hardware.
+    if [ -n "$RECOMMENDED_CPU_LIMIT" ] && [ "$(cpu_thread_count)" -gt 8 ]; then
+        show_tweak_blurb cpu
+        if confirm "Limit $GAME_NAME to 8 CPU threads?" Y; then
+            ADVANCED_CPU_LIMIT="y"
+        fi
     fi
 
     if [ "$COM_ROUTING_APPLICABLE" -eq 0 ]; then

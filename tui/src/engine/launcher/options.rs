@@ -142,6 +142,40 @@ pub fn with_override(opts: &str, dll: &str) -> String {
     chomp(out)
 }
 
+/// The limit_cpu_threads tweak: Wine shows the game 8 CPU threads, for an
+/// old engine that crashes or hangs on more.
+pub const CPU_LIMIT_VAR: &str = "WINE_CPU_TOPOLOGY";
+pub const CPU_LIMIT_VALUE: &str = "8:0,1,2,3,4,5,6,7";
+
+/// The launch options with any `var=…` removed (bare, "…" or '…' values),
+/// and the whitespace before it.
+pub fn without_env(opts: &str, var: &str) -> String {
+    let mut opts = opts.to_string();
+    while let Some(f) = find_assignment(&opts, &[var], true) {
+        opts.replace_range(f.start..f.end, "");
+    }
+    chomp(opts.trim_start_matches(is_space).to_string())
+}
+
+/// `var=value` right before %command% (replacing one already there),
+/// adding %command% when missing.
+pub fn with_env(opts: &str, var: &str, value: &str) -> String {
+    let opts = without_env(opts, var);
+    let pair = format!("{var}={value}");
+    let out = if let Some(at) = opts.find("%command%") {
+        format!(
+            "{}{pair} %command%{}",
+            &opts[..at],
+            &opts[at + "%command%".len()..]
+        )
+    } else if blank(&opts) {
+        format!("{pair} %command%")
+    } else {
+        format!("{pair} %command% {opts}")
+    };
+    chomp(out)
+}
+
 const LOG_VARS: [&str; 4] = [
     "DSOAL_LOGLEVEL",
     "DSOAL_LOGFILE",

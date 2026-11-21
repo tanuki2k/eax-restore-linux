@@ -43,6 +43,7 @@ pub enum RowKind {
     Com,
     Limits,
     EaxUnified,
+    CpuLimit,
 }
 
 #[derive(Debug, Clone)]
@@ -801,6 +802,24 @@ impl Panel {
             )
             .detected(installed),
         );
+        let had_cpu_limit = st.as_ref().is_some_and(|s| s.cpu_limit);
+        if f.wants_cpu_limit || had_cpu_limit {
+            setup.push(
+                Row::new(
+                    RowKind::CpuLimit,
+                    "CPU thread limit",
+                    vec![
+                        ("Off", "The game sees all of this PC's CPU threads."),
+                        (
+                            "On",
+                            "The game sees 8 CPU threads. Its profile says it crashes or hangs on more.",
+                        ),
+                    ],
+                    usize::from(if installed { had_cpu_limit } else { f.wants_cpu_limit }),
+                )
+                .detected(true),
+            );
+        }
         if f.wants_eax_unified || st.as_ref().is_some_and(|s| s.eax_unified) {
             setup.push(
                 Row::new(
@@ -851,7 +870,7 @@ impl Panel {
             },
             Section {
                 title: "Compatibility tweaks",
-                rows: take(&[RowKind::Com, RowKind::Limits]),
+                rows: take(&[RowKind::Com, RowKind::Limits, RowKind::CpuLimit]),
             },
             Section {
                 title: "DLL override",
@@ -1442,6 +1461,7 @@ impl Panel {
         plan.com_routing = pick(RowKind::Com) == 1;
         plan.advanced_limits = pick(RowKind::Limits) == 1;
         plan.eax_unified = self.row(RowKind::EaxUnified).is_some_and(|r| r.chosen == 0);
+        plan.cpu_limit = self.row(RowKind::CpuLimit).is_some_and(|r| r.chosen == 1);
         plan.crash_markers = ops::crash_markers(self.game.as_ref());
         let chosen: HashSet<String> = self.ticked.clone();
         plan.game_settings = ops::chosen_rows(&self.fixes, &chosen).0;
@@ -1461,6 +1481,7 @@ impl Panel {
             RowKind::Com,
             RowKind::Limits,
             RowKind::EaxUnified,
+            RowKind::CpuLimit,
             RowKind::Vcrun,
         ];
         let mut reinstall = false;
@@ -1825,6 +1846,22 @@ mod tests {
         p.facts.prefix = Some(home.join(".local/share/Steam/steamapps/compatdata/424242/pfx"));
         p.build();
         p
+    }
+
+    #[test]
+    fn the_cpu_limit_row_shows_only_when_the_profile_flags_it_and_starts_on() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut p = ready(&tmp.path().join("home"));
+        assert!(p.row(RowKind::CpuLimit).is_none());
+        assert!(!p.plan().cpu_limit);
+        p.facts.wants_cpu_limit = true;
+        p.build();
+        let row = p.row(RowKind::CpuLimit).expect("the row");
+        assert_eq!(row.title, "CPU thread limit");
+        assert_eq!(row.chosen, 1, "On for a new install");
+        assert!(p.plan().cpu_limit);
+        pick(&mut p, RowKind::CpuLimit, 0);
+        assert!(!p.plan().cpu_limit);
     }
 
     fn col_of(row: &str, s: &str) -> usize {

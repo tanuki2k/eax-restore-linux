@@ -288,6 +288,41 @@ launch_options_with_log_vars() {
     fi
 }
 
+# The limit_cpu_threads tweak: Wine shows the game 8 CPU threads, for an old
+# engine that crashes or hangs on more. Only offered on a PC with more than 8.
+CPU_LIMIT_VAR="WINE_CPU_TOPOLOGY"
+CPU_LIMIT_VALUE="8:0,1,2,3,4,5,6,7"
+
+# Usage: cpu_thread_count
+cpu_thread_count() { nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1; }
+
+# Usage: launch_options_without_env <Steam launch options> <VAR>
+# The launch options with any <VAR>=… removed (bare, "…" or '…' values).
+launch_options_without_env() {
+    local opts="$1" re
+    re='(^|[[:space:]]+)'"$2"'=("[^"]*"|'"'"'[^'"'"']*'"'"'|[^[:space:]]*)'
+    while [[ "$opts" =~ $re ]]; do
+        opts="${opts/"${BASH_REMATCH[0]}"/}"
+    done
+    echo "${opts#"${opts%%[![:space:]]*}"}"
+}
+
+# Usage: launch_options_with_env <Steam launch options> <VAR> <value>
+# <VAR>=<value> right before %command% (replacing one already there), adding
+# %command% the way launch_options_with_override does when it's missing.
+launch_options_with_env() {
+    local opts var="$2=$3"
+    opts="$(launch_options_without_env "$1" "$2")"
+    if [[ "$opts" == *%command%* ]]; then
+        local before="${opts%%'%command%'*}" after="${opts#*'%command%'}"
+        echo "${before}${var} %command%${after}"
+    elif [ -z "${opts//[[:space:]]/}" ]; then
+        echo "$var %command%"
+    else
+        echo "$var %command% $opts"
+    fi
+}
+
 # Usage: launch_options_with_dsoal_log <Steam launch options> <level> <log file>
 # DSOAL's logging variables only; the other engine's are dropped.
 launch_options_with_dsoal_log() {
@@ -592,7 +627,16 @@ _apply_launcher_override() {
         done
         return 0
     fi
-    _write_launcher_override || OVERRIDE_METHOD="manual"
+    if _write_launcher_override; then
+        # Steam's went in with the override; Heroic keeps each variable apart.
+        if [ "${ADVANCED_CPU_LIMIT:-n}" == "y" ]; then
+            if [ "$OVERRIDE_LAUNCHER" == "steam" ] || _write_launcher_env "$CPU_LIMIT_VAR" "$CPU_LIMIT_VALUE"; then
+                CPU_LIMIT_SET=1
+            fi
+        fi
+    else
+        OVERRIDE_METHOD="manual"
+    fi
     apply_companion_launcher_overrides
 }
 
@@ -675,6 +719,9 @@ _write_launcher_override() {
         al_file="$(launch_options_log_value "$old" ALSOFT FILE)"
         [ -n "$log_level$al_level" ] && old="$(launch_options_without_dsoal_log "$old")"
         new="$(launch_options_with_override "$( [ "$old" == "__ABSENT__" ] || echo "$old")" "$PRIMARY_DLL_NAME")"
+        # Part of the recorded value, so uninstall's "still as installed"
+        # check and its restore of the old launch options cover it too.
+        [ "${ADVANCED_CPU_LIMIT:-n}" == "y" ] && new="$(launch_options_with_env "$new" "$CPU_LIMIT_VAR" "$CPU_LIMIT_VALUE")"
         [ -e "$OVERRIDE_FILE.eax-restore.bak" ] || cp -p "$OVERRIDE_FILE" "$OVERRIDE_FILE.eax-restore.bak" 2>/dev/null
     else
         new="$(merge_dll_override "$( [ "$old" == "__ABSENT__" ] || echo "$old")" "$PRIMARY_DLL_NAME")"
@@ -717,6 +764,89 @@ _write_launcher_override() {
     printf 'LAUNCHER:%s\t%s\t%s\t%s\t%s\n' "$OVERRIDE_LAUNCHER" "$OVERRIDE_FILE" "$OVERRIDE_ID" "$old" "$new" >> "$INSTALL_MANIFEST"
     log_cmd "launcher override: $OVERRIDE_FILE [$OVERRIDE_ID] '$old' -> '$new'"
     print_status "Set: WINEDLLOVERRIDES in $(launcher_override_where)"
+}
+
+# Usage: print_cpu_limit_instructions
+# After the install: when the player said Yes to the CPU thread limit but it
+# couldn't go in the launcher (the override went in the registry or is set by
+# hand, the launcher wasn't closed, or the game runs from a plain Wine prefix,
+# Lutris, Bottles or Faugus), says exactly what to add.
+print_cpu_limit_instructions() {
+    [ "${ADVANCED_CPU_LIMIT:-n}" == "y" ] && [ -z "${CPU_LIMIT_SET:-}" ] || return 0
+    echo ""
+    print_note "${GAME_NAME} still needs its CPU thread limit, and the script couldn't add it for you."
+    if [ "$LAUNCHER_TYPE" == "1" ]; then
+        echo -e "${BOLD}Steam Launch Options${NC} (in front of %command%):"
+        echo -e "${CYAN}${CPU_LIMIT_VAR}=${CPU_LIMIT_VALUE}${NC}"
+    else
+        local where="${WINE_LAUNCHER:-}"
+        [ -n "${HEROIC_APP_NAME:-}" ] && where="Heroic"
+        if [ -n "$where" ]; then
+            echo -e "${BOLD}Environment Variable${NC} (in ${where}'s settings for ${GAME_NAME}):"
+        else
+            echo -e "${BOLD}Environment Variable${NC} (wherever you start ${GAME_NAME} from):"
+        fi
+        echo -e "Name:  ${CYAN}${CPU_LIMIT_VAR}${NC}"
+        echo -e "Value: ${CYAN}${CPU_LIMIT_VALUE}${NC}"
+    fi
+}
+
+# Usage: _write_launcher_env <VAR> <value>
+# Heroic only: sets an environment variable beside the override in the
+# current target and records it as
+#   LAUNCHERENV:heroic\t<file>\t<id>\t<VAR>\t<old value|__ABSENT__>\t<new value>
+# so uninstall can put it back. Returns 1 when it couldn't be set.
+_write_launcher_env() {
+    local var="$1" val="$2" old line
+    local -a f
+    old="$(heroic_get_env "$OVERRIDE_FILE" "$OVERRIDE_ID" "$var")"
+    [ "$old" == "__NOAPP__" ] && return 1
+    if [ "$old" == "$val" ]; then
+        # Set by an earlier install: keep its line, with the value from before.
+        for line in "${PREV_LAUNCHER_LINES[@]}"; do
+            [[ "$line" == LAUNCHERENV:* ]] || continue
+            mapfile -t -d $'\t' f < <(printf '%s' "${line#LAUNCHERENV:}")
+            if [ "${f[0]}" == "heroic" ] && [ "${f[1]}" == "$OVERRIDE_FILE" ] \
+                && [ "${f[2]}" == "$OVERRIDE_ID" ] && [ "${f[3]}" == "$var" ]; then
+                printf '%s\n' "$line" >> "$INSTALL_MANIFEST"
+                break
+            fi
+        done
+        return 0
+    fi
+    [[ "$old" == *[$'\t\n\r']* ]] && return 1
+    if ! heroic_set_env "$OVERRIDE_FILE" "$OVERRIDE_ID" "$var" "$val" \
+        || [ "$(heroic_get_env "$OVERRIDE_FILE" "$OVERRIDE_ID" "$var")" != "$val" ]; then
+        return 1
+    fi
+    printf 'LAUNCHERENV:heroic\t%s\t%s\t%s\t%s\t%s\n' "$OVERRIDE_FILE" "$OVERRIDE_ID" "$var" "$old" "$val" >> "$INSTALL_MANIFEST"
+    log_cmd "launcher env: $OVERRIDE_FILE [$OVERRIDE_ID] $var '$old' -> '$val'"
+}
+
+# Usage: revert_launcher_env
+# Uninstall: puts each LAUNCHERENV: manifest line's variable back, where it
+# still holds what the install set. Lines it couldn't get to are added to
+# LAUNCHER_LINES_KEPT.
+revert_launcher_env() {
+    [ ${#LAUNCHER_ENV_LINES[@]} -gt 0 ] || return 0
+    local line target
+    local -a f
+    for line in "${LAUNCHER_ENV_LINES[@]}"; do
+        mapfile -t -d $'\t' f < <(printf '%s' "${line#LAUNCHERENV:}")
+        OVERRIDE_LAUNCHER="${f[0]}"; OVERRIDE_FILE="${f[1]}"; OVERRIDE_ID="${f[2]}"
+        [ "$OVERRIDE_LAUNCHER" == "heroic" ] && [ -f "$OVERRIDE_FILE" ] || continue
+        if ! wait_for_launcher_closed heroic remove "type 's' to leave it as it is"; then
+            LAUNCHER_LINES_KEPT+=("$line"); continue
+        fi
+        [ "$(heroic_get_env "$OVERRIDE_FILE" "$OVERRIDE_ID" "${f[3]}")" == "${f[5]}" ] || continue
+        target="${f[4]}"
+        [ "$target" == "__ABSENT__" ] && target="__DELETE__"
+        if heroic_set_env "$OVERRIDE_FILE" "$OVERRIDE_ID" "${f[3]}" "$target"; then
+            print_status "Removed the CPU thread limit from $(launcher_override_where)." "$GREEN"
+        else
+            LAUNCHER_LINES_KEPT+=("$line")
+        fi
+    done
 }
 
 # Usage: revert_launcher_overrides

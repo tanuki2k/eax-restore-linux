@@ -125,12 +125,17 @@ GAME_DATABASE_SCHEMA_VERSION=3
 # game profile's install.tweaks array. EAX_UNIFIED,
 # RECOMMENDED_AUDIO_LIMITS, and RECOMMENDED_COM_ROUTING mirror membership of
 # "eax_unified", "expand_audio_limits", and "com_registry_routing"
-# respectively. The Advanced Compatibility Tweaks step reads these to
+# respectively, and RECOMMENDED_CPU_LIMIT "limit_cpu_threads". The Advanced Compatibility Tweaks step reads these to
 # pre-decide the EAX Unified Dummy Files / Expand Audio Limits / COM Registry
 # Routing tweaks with a default-Y prompt instead of the generic default-N one.
 EAX_UNIFIED=""
 RECOMMENDED_AUDIO_LIMITS=""
 RECOMMENDED_COM_ROUTING=""
+RECOMMENDED_CPU_LIMIT=""
+# The CPU thread limit: chosen in the tweaks step ("y"), and set once the
+# install has put it in the launcher (1).
+ADVANCED_CPU_LIMIT="n"
+CPU_LIMIT_SET=""
 # Set (unconditionally, once an id lookup is attempted) by
 # resolve_recommended_tweaks so a caller besides show_game_details_block (i.e.
 # the Advanced Compatibility Tweaks step) can tell "already resolved this run"
@@ -204,6 +209,8 @@ OVERRIDE_FILE=""
 OVERRIDE_ID=""
 LAUNCHER_LINES=()
 LAUNCHER_LINES_KEPT=()
+# Uninstall: the LAUNCHERENV: lines (a variable set beside a Heroic override).
+LAUNCHER_ENV_LINES=()
 # Uninstall: the LAUNCHER: manifest lines whose override the player chose
 # to keep in Phase 1.
 declare -A LAUNCHER_REMOVE_DECLINED=()

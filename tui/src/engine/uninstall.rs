@@ -418,6 +418,34 @@ pub fn execute(s: &Survey, c: &Choices, host: &mut dyn UninstallHost, when: &str
         }
         r.launcher.push((line, outcome));
     }
+    // Variables set beside a Heroic override (the CPU thread limit).
+    for raw in &s.recorded.launcher_env {
+        let line = String::from_utf8_lossy(raw).into_owned();
+        let Some(rec) = changes::LauncherEnvRecord::parse(&line) else {
+            continue;
+        };
+        if !rec.file.is_file() {
+            continue;
+        }
+        let launcher = Launcher::from_key(&rec.launcher).unwrap_or(Launcher::Heroic);
+        let where_ = crate::engine::install::override_where(launcher);
+        let t = Target {
+            launcher,
+            file: rec.file.clone(),
+            id: rec.id.clone(),
+        };
+        if !host.launcher_closed(&t) {
+            r.launcher_left.push(line);
+            continue;
+        }
+        match changes::revert_env(&line) {
+            changes::Reverted::Restored => {
+                host.detail(&format!("Removed the CPU thread limit from {where_}"))
+            }
+            changes::Reverted::Failed => r.launcher_left.push(line),
+            changes::Reverted::ChangedSince | changes::Reverted::NoFile => {}
+        }
+    }
 
     let mut registry_cleaned = false;
     if let Some(work) = s.registry_work(c) {
@@ -532,7 +560,10 @@ fn rewrite_manifest(
         if line.is_empty() || line.starts_with(b"#") {
             continue;
         }
-        if line.starts_with(b"CONFIG:") || line.starts_with(b"LAUNCHER:") {
+        if line.starts_with(b"CONFIG:")
+            || line.starts_with(b"LAUNCHER:")
+            || line.starts_with(b"LAUNCHERENV:")
+        {
             continue;
         }
         if tagged
