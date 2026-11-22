@@ -519,8 +519,9 @@ impl App {
         }
     }
 
-    /// Enter, Esc or the arrows while a pop-up shows. Check again looks for
-    /// the prefix again: the page opens once it's there, else the pop-up stays.
+    /// Enter, Esc or the arrows while a pop-up shows. Check again looks at the
+    /// game again (its prefix, its Windows build, its rolled-back build): the
+    /// page opens once nothing's in the way, else the pop-up stays.
     fn handle_notice_key(&mut self, key: KeyEvent) {
         let Some(n) = self.notice.as_mut() else {
             return;

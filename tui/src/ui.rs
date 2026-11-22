@@ -1128,6 +1128,54 @@ mod tests {
         assert!(app.panel.is_some());
     }
 
+    /// KOTOR II on Steam's default branch: the update has no EAX, so the
+    /// page waits for the beta branch the database names, like the prefix
+    /// pop-up waits for a prefix.
+    #[test]
+    fn enter_on_a_build_that_isnt_rolled_back_shows_a_pop_up_with_the_way_back() {
+        let home = tempfile::tempdir().unwrap();
+        let dir = steam_folder(home.path(), "Patched Game", 4242);
+        std::fs::write(dir.join("game.exe"), b"MZ").unwrap();
+        let mut games = entries(
+            r#"{"games":[{"id":"p","name":"Patched Game",
+              "stores":{"steam":{"id":4242,"beta_branch":"legacypc","rollback_steps":"Switch to the legacypc branch."}},
+              "eax":{"status":"removed_by_patch","fix_in_place":true}}]}"#,
+        );
+        games[0].status = Status::OnThisPc;
+        games[0].store = Some(crate::library::StoreKind::Steam);
+        games[0].path = Some(dir);
+        let mut app = App::new(games);
+        app.set_home(home.path().to_path_buf());
+        press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
+        assert!(app.panel.is_none());
+        let s = screen(&app, 120, 40);
+        assert!(
+            s.contains("The current build of Patched Game has no EAX"),
+            "{s}"
+        );
+        assert!(s.contains("Switch to the legacypc branch."), "{s}");
+        assert!(!s.contains(" Status "), "no Status box: {s}");
+        assert!(s.contains("[ Check again ]  [ OK ]"), "{s}");
+
+        // Still on the default branch: the pop-up stays.
+        press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
+        assert!(app.panel.is_none());
+        assert!(app.notice.as_ref().is_some_and(|n| n.retry.is_some()));
+
+        // Steam has switched to the branch: Check again opens the page.
+        let acf = home
+            .path()
+            .join("SteamLibrary/steamapps/appmanifest_4242.acf");
+        let text = std::fs::read_to_string(&acf).unwrap().replace(
+            "}\n",
+            "\t\"MountedConfig\"\n\t{\n\t\t\"BetaKey\"\t\t\"legacypc\"\n\t}\n}\n",
+        );
+        std::fs::write(&acf, text).unwrap();
+        press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
+        assert!(app.notice.is_none());
+        assert!(app.panel.is_some());
+    }
+
     #[test]
     fn enter_on_a_game_with_no_prefix_yet_shows_a_pop_up_not_its_page() {
         let home = tempfile::tempdir().unwrap();

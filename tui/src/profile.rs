@@ -374,6 +374,19 @@ fn game_lines(
     system: Vec<Item>,
     width: usize,
 ) -> Vec<Line<'static>> {
+    game_lines_on(g, only, system, None, width)
+}
+
+/// `game_lines` for a copy on this PC, which says under Status whether it's
+/// on the build a rollback leads to (`rolled_back`; `None` when its store
+/// can't tell).
+fn game_lines_on(
+    g: &Game,
+    only: Option<StoreKind>,
+    system: Vec<Item>,
+    rolled_back: Option<bool>,
+    width: usize,
+) -> Vec<Line<'static>> {
     let stores = stores_of(g, only);
     let n = stores.len();
     // A game with no store entry still has its own API to show.
@@ -554,6 +567,21 @@ fn game_lines(
         let text = format!("{state}{problem}{after}");
         subheading(&mut out, "Status");
         prose(&mut out, text.strip_prefix(' ').unwrap_or(&text), width);
+        match rolled_back {
+            Some(false) => {
+                out.push(Line::raw(""));
+                strong(
+                    &mut out,
+                    "This copy is still on the update. Roll it back before installing.",
+                    width,
+                );
+            }
+            Some(true) => {
+                out.push(Line::raw(""));
+                prose(&mut out, "This copy is on the original build.", width);
+            }
+            None => {}
+        }
     }
     // What the stores share is said once, under both names.
     let details: Vec<&str> = stores
@@ -770,10 +798,37 @@ pub fn find_exe(dir: &Path, e: &Entry) -> Option<FoundExe> {
 }
 
 /// The pane for a game: the profile from the database, with what this PC says.
+/// Whether this copy is on the build its store's rollback leads to, read the
+/// way the install reads it (Steam's appmanifest, GOG's goggame-<id>.info);
+/// only for a game an update took EAX out of with a way back in place.
+fn rolled_back(e: &Entry, g: &Game) -> Option<bool> {
+    use crate::engine::{detect, identify, prepare};
+    if g.eax.status != "removed_by_patch" || !g.eax.fix_in_place {
+        return None;
+    }
+    let path = e.path.as_deref()?;
+    match e.store? {
+        StoreKind::Steam => {
+            let id = g.stores.steam.as_ref()?.id;
+            let dir = path.to_string_lossy();
+            let (library, _) = dir.split_once("/steamapps/common/")?;
+            let branch = detect::steam_beta_branch(Path::new(&format!(
+                "{library}/steamapps/appmanifest_{id}.acf"
+            )));
+            prepare::on_rollback_build(g, Some(identify::Store::Steam), &branch, "")
+        }
+        StoreKind::Gog => {
+            let id = g.stores.gog.as_ref()?.id;
+            let build = detect::gog_build_id(path, &id.to_string());
+            prepare::on_rollback_build(g, Some(identify::Store::Gog), "", &build)
+        }
+    }
+}
+
 pub fn lines(e: &Entry, width: usize, home: &Path, exe: Option<&FoundExe>) -> Vec<Line<'static>> {
     let system = system_rows(e, home, exe);
     match &e.game {
-        Some(g) => game_lines(g, e.store, system, width),
+        Some(g) => game_lines_on(g, e.store, system, rolled_back(e, g), width),
         None => {
             let mut out = detail_lines(system, width);
             out.push(Line::raw(""));
@@ -850,6 +905,44 @@ mod tests {
             "{t}"
         );
         assert!(!t.contains("Restore"), "{t}");
+    }
+
+    /// A copy on this PC says under Status whether it's on the build the
+    /// rollback leads to, read from the store's own record of it.
+    #[test]
+    fn a_copy_on_this_pc_says_whether_its_rolled_back() {
+        let tmp = tempfile::tempdir().unwrap();
+        let lib = tmp.path().join("SteamLibrary/steamapps");
+        let dir = lib.join("common/Patched");
+        std::fs::create_dir_all(&dir).unwrap();
+        let acf = lib.join("appmanifest_4242.acf");
+        std::fs::write(&acf, "\"AppState\"\n{\n\t\"appid\"\t\t\"4242\"\n}\n").unwrap();
+        let g = game(
+            r#"{"name":"Patched","stores":{"steam":{"id":4242,"beta_branch":"legacypc","rollback_steps":"Pick the branch."}},
+              "eax":{"api":"directsound3d","status":"removed_by_patch","fix_in_place":true,"problem":"An update took it out."}}"#,
+        );
+        let mut e = Entry::database_only(g);
+        e.status = Status::OnThisPc;
+        e.store = Some(StoreKind::Steam);
+        e.path = Some(dir);
+        let t = text(&lines(&e, 100, tmp.path(), None));
+        assert!(
+            t.contains("This copy is still on the update. Roll it back before installing."),
+            "{t}"
+        );
+
+        std::fs::write(
+            &acf,
+            "\"AppState\"\n{\n\t\"MountedConfig\"\n\t{\n\t\t\"BetaKey\"\t\t\"legacypc\"\n\t}\n}\n",
+        )
+        .unwrap();
+        let t = text(&lines(&e, 100, tmp.path(), None));
+        assert!(t.contains("This copy is on the original build."), "{t}");
+        assert!(!t.contains("still on the update"), "{t}");
+
+        // Not on this PC: nothing about a copy.
+        let t = text(&database_lines(e.game.as_ref().unwrap(), 100));
+        assert!(!t.contains("This copy"), "{t}");
     }
 
     fn text(lines: &[Line]) -> String {

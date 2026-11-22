@@ -259,6 +259,9 @@ pub enum Asker {
 pub enum Gate {
     NoPrefix,
     LinuxBuild,
+    /// On a build an update took EAX out of, which the store says isn't the
+    /// rolled-back one.
+    NotRolledBack,
 }
 
 pub struct Panel {
@@ -468,15 +471,12 @@ impl Panel {
         });
 
         if let Some(c) = self.game.as_ref().and_then(|g| f.eax_caution(g)) {
-            out.push(line(
-                Check::Warn,
-                "EAX",
-                match c {
-                    EaxCaution::BuiltIn => "already works without the fix",
-                    EaxCaution::RemovedByPatch => "a patch removed it from this build",
-                }
-                .into(),
-            ));
+            let (level, text) = match c {
+                EaxCaution::BuiltIn => (Check::Warn, "already works without the fix"),
+                EaxCaution::RemovedByPatch => (Check::Warn, "a patch removed it from this build"),
+                EaxCaution::NotRolledBack => (Check::Fail, "update removed it: roll the game back"),
+            };
+            out.push(line(level, "EAX", text.into()));
         }
 
         out.push(match (f.linux_build, f.arch) {
@@ -587,6 +587,10 @@ impl Panel {
             Gate::NoPrefix => vec![format!(
                 "{name} doesn't have a Wine prefix yet. Please launch the game at least once, close it, and check again."
             )],
+            Gate::NotRolledBack => {
+                let g = self.game.as_ref()?;
+                crate::cli::not_rolled_back_lines(&self.facts, g, name, "check again")?
+            }
             Gate::LinuxBuild => vec![
                 format!("{name} is installed as its Linux version, and the EAX fix only works on the Windows version."),
                 self.windows_steps(),
@@ -642,6 +646,14 @@ impl Panel {
             crate::cli::tools_problem(f, name, "check again").filter(|_| self.installed.is_none())
         {
             Some(why)
+        } else if let Some(lines) = self
+            .game
+            .as_ref()
+            .and_then(|g| crate::cli::not_rolled_back_lines(f, g, name, "check again"))
+            .filter(|_| self.installed.is_none())
+        {
+            self.gate = Some(Gate::NotRolledBack);
+            Some(lines.join(" "))
         } else if f.prefix.is_none() && self.installed.is_none() {
             self.gate = Some(Gate::NoPrefix);
             Some(format!("{name} doesn't have a Wine prefix yet. If you just installed {name}, its launcher creates it the first time it runs. Please launch the game at least once, close it, and check again."))
@@ -2889,7 +2901,7 @@ mod tests {
     }
 
     #[test]
-    fn a_patched_out_game_on_its_eax_beta_branch_installs_without_asking() {
+    fn a_patched_out_game_waits_for_its_eax_beta_branch() {
         let tmp = tempfile::tempdir().unwrap();
         let home = tmp.path().join("home");
         let game = steam_game(&home);
@@ -2900,8 +2912,19 @@ mod tests {
         .unwrap()
         .games
         .remove(0);
+        // On Steam's default branch there's nothing to install until the
+        // player switches: a pop-up with the steps instead of the page.
         let p = Panel::open("Test Game", &game, Some(g.clone()), &home);
-        assert_eq!(p.facts.eax_caution(&g), Some(EaxCaution::RemovedByPatch));
+        assert_eq!(p.facts.eax_caution(&g), Some(EaxCaution::NotRolledBack));
+        assert_eq!(p.gate, Some(Gate::NotRolledBack));
+        assert_eq!(
+            p.gate_lines().unwrap(),
+            [
+                "The current build of Test Game has no EAX, because an update removed it.",
+                "Roll back.",
+                "Then check again.",
+            ]
+        );
         let acf = home.join(".local/share/Steam/steamapps/appmanifest_424242.acf");
         let text = std::fs::read_to_string(&acf).unwrap();
         let text = text.replace(
@@ -2912,6 +2935,7 @@ mod tests {
         let p = Panel::open("Test Game", &game, Some(g.clone()), &home);
         assert_eq!(p.facts.beta_branch, "legacypc");
         assert_eq!(p.facts.eax_caution(&g), None);
+        assert_eq!(p.gate, None);
     }
 
     #[test]

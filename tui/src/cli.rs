@@ -207,7 +207,7 @@ const PROTONTRICKS_FLATPAK: &str = "com.github.Matoking.protontricks";
 pub fn eax_caution_text(facts: &Facts, game: &Game, name: &str) -> Option<String> {
     Some(match facts.eax_caution(game)? {
         prepare::EaxCaution::BuiltIn => format!("{name} already has working EAX reverb through its own OpenAL Soft, so installing is optional: it swaps in a newer OpenAL Soft and adds speaker and headphone settings."),
-        prepare::EaxCaution::RemovedByPatch => {
+        prepare::EaxCaution::RemovedByPatch | prepare::EaxCaution::NotRolledBack => {
             let fix = match game.fix(facts.store.map(Store::key)) {
                 "" => String::new(),
                 f => format!(" {f}"),
@@ -215,6 +215,29 @@ pub fn eax_caution_text(facts: &Facts, game: &Game, name: &str) -> Option<String
             format!("An update removed EAX from the current build of {name}, but you can get it back.{fix}")
         }
     })
+}
+
+/// Why the install waits for a rollback, a paragraph per line: the store says
+/// the game is on a build an update took EAX out of. `again` ends it: "check
+/// again" on the page, "try again" here.
+pub fn not_rolled_back_lines(
+    facts: &Facts,
+    game: &Game,
+    name: &str,
+    again: &str,
+) -> Option<Vec<String>> {
+    if facts.eax_caution(game)? != prepare::EaxCaution::NotRolledBack {
+        return None;
+    }
+    let mut lines = vec![format!(
+        "The current build of {name} has no EAX, because an update removed it."
+    )];
+    let steps = game.fix(facts.store.map(Store::key));
+    if !steps.is_empty() {
+        lines.push(steps.to_string());
+    }
+    lines.push(format!("Then {again}."));
+    Some(lines)
 }
 
 /// Why a game with nothing to restore gets no install, a paragraph per line,
@@ -970,6 +993,9 @@ fn install(
     }
     if let Some(why) = game.and_then(|g| no_eax_text(g, facts.store.map(Store::key))) {
         bail!("{why}");
+    }
+    if let Some(lines) = game.and_then(|g| not_rolled_back_lines(facts, g, &name, "try again")) {
+        bail!("{}", lines.join(" "));
     }
     if let Some(why) = unwritable_problem(facts, home, "try again") {
         bail!("{why}");

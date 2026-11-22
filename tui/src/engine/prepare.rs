@@ -78,8 +78,36 @@ pub enum EaxCaution {
     /// EAX already works without the fix.
     BuiltIn,
     /// A patch took EAX out of the current build, and the fix is another
-    /// build of the same install (a beta branch) the game isn't on.
+    /// build of the same install (a beta branch) the game may not be on:
+    /// its store doesn't say which build it has.
     RemovedByPatch,
+    /// As `RemovedByPatch`, and the store says the game is on another build,
+    /// so there's nothing to install until it's rolled back.
+    NotRolledBack,
+}
+
+/// Whether an install is on the build its store's rollback leads to:
+/// Steam's `beta_branch` against the appmanifest's branch, GOG's
+/// `rollback_builds` against `goggame-<id>.info`'s build. `None` when the
+/// store can't tell: no branch or builds in the database, or no build
+/// recorded (some offline installers).
+pub fn on_rollback_build(
+    game: &Game,
+    store: Option<Store>,
+    beta_branch: &str,
+    gog_build: &str,
+) -> Option<bool> {
+    match store? {
+        Store::Steam => {
+            let s = game.stores.steam.as_ref()?;
+            (!s.beta_branch.is_empty()).then(|| beta_branch == s.beta_branch)
+        }
+        Store::Gog => {
+            let s = game.stores.gog.as_ref()?;
+            (!s.rollback_builds.is_empty() && !gog_build.is_empty())
+                .then(|| s.rollback_builds.iter().any(|b| b == gog_build))
+        }
+    }
 }
 
 /// The Wine to use for a game Heroic doesn't name one for: `wine` on PATH,
@@ -328,18 +356,11 @@ impl Facts {
         match game.eax.status.as_str() {
             "built_in" => Some(EaxCaution::BuiltIn),
             "removed_by_patch" if game.eax.fix_in_place => {
-                // Already rolled back: Steam's beta branch, or a GOG build
-                // the database lists.
-                let on_it = match self.store {
-                    Some(Store::Steam) => game.stores.steam.as_ref().is_some_and(|s| {
-                        !s.beta_branch.is_empty() && self.beta_branch == s.beta_branch
-                    }),
-                    Some(Store::Gog) => game.stores.gog.as_ref().is_some_and(|s| {
-                        !self.gog_build.is_empty() && s.rollback_builds.contains(&self.gog_build)
-                    }),
-                    None => false,
-                };
-                (!on_it).then_some(EaxCaution::RemovedByPatch)
+                match on_rollback_build(game, self.store, &self.beta_branch, &self.gog_build) {
+                    Some(true) => None,
+                    Some(false) => Some(EaxCaution::NotRolledBack),
+                    None => Some(EaxCaution::RemovedByPatch),
+                }
             }
             _ => None,
         }
@@ -562,7 +583,7 @@ mod tests {
         assert_eq!(caution(Some("222")), ("222".into(), None));
         assert_eq!(
             caution(Some("999")),
-            ("999".into(), Some(EaxCaution::RemovedByPatch))
+            ("999".into(), Some(EaxCaution::NotRolledBack))
         );
         assert_eq!(
             caution(None),
