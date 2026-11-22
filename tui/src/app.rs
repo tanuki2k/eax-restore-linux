@@ -1,6 +1,5 @@
 //! Screen state and key handling. No drawing here, so it can be tested.
 
-use crate::actions::{self, Action};
 use crate::filters::Filters;
 use crate::games::{Entry, Status};
 use crate::picker::{self, Picker};
@@ -82,28 +81,10 @@ pub enum Pane {
     Settings,
 }
 
-/// The popup of actions for the selected game.
-pub struct Menu {
-    pub actions: Vec<Action>,
-    pub selected: usize,
-}
-
-/// What `main` runs outside the TUI: the environment for the Bash installer.
-pub struct Launch {
-    /// For the script.
-    pub env: Vec<(&'static str, String)>,
-    /// For the Rust engine's headless command, when the action has one.
-    pub args: Option<Vec<String>>,
-}
-
 pub struct App {
     pub games: Vec<Entry>,
-    pub menu: Option<Menu>,
     /// The open game's page, drawn over the list.
     pub panel: Option<crate::panel::Panel>,
-    /// Enter opens the panel rather than the action menu (off in tests, and
-    /// with EAX_RESTORE_ENGINE=bash).
-    pub use_panel: bool,
     /// The panel changed something on disk, so the list needs a fresh scan.
     pub rescan: bool,
     /// The right pane takes the whole screen (Ctrl-F).
@@ -126,7 +107,6 @@ pub struct App {
     /// The F2 settings screen, while it is open.
     pub prefs: Option<crate::prefs_screen::PrefsScreen>,
     pub(crate) home: PathBuf,
-    pub launch: Option<Launch>,
     /// Shown on the key bar's row until the next key.
     pub message: String,
     pub filter: Filter,
@@ -162,9 +142,7 @@ impl App {
         games.sort_by_key(|g| g.name.to_lowercase());
         let mut app = App {
             games,
-            menu: None,
             panel: None,
-            use_panel: false,
             rescan: false,
             zoom: false,
             notice: None,
@@ -177,7 +155,6 @@ impl App {
             picker: None,
             prefs: None,
             home: PathBuf::from("/"),
-            launch: None,
             message: String::new(),
             filter: Filter::All,
             filters: Filters::default(),
@@ -327,30 +304,6 @@ impl App {
         self.selected = (self.selected as isize + delta).clamp(0, last) as usize;
     }
 
-    fn handle_menu_key(&mut self, key: KeyEvent) {
-        let Some(menu) = self.menu.as_mut() else {
-            return;
-        };
-        let last = menu.actions.len().saturating_sub(1);
-        match key.code {
-            KeyCode::Esc => self.menu = None,
-            KeyCode::Up => menu.selected = menu.selected.saturating_sub(1),
-            KeyCode::Down => menu.selected = (menu.selected + 1).min(last),
-            KeyCode::Enter => {
-                let action = menu.actions[menu.selected];
-                self.menu = None;
-                if let Some(&game) = self.visible.get(self.selected) {
-                    let e = &self.games[game];
-                    self.launch = Some(Launch {
-                        env: actions::script_env(e, action),
-                        args: actions::engine_args(e, action),
-                    });
-                }
-            }
-            _ => {}
-        }
-    }
-
     fn handle_picker_key(&mut self, key: KeyEvent) {
         let Some(p) = self.picker.as_mut() else {
             return;
@@ -365,7 +318,7 @@ impl App {
             KeyCode::Left | KeyCode::Backspace => p.up(),
             KeyCode::Char('.') => p.toggle_hidden(),
             KeyCode::Char('~') => p.go_home(),
-            KeyCode::Char(' ') if self.use_panel => {
+            KeyCode::Char(' ') => {
                 // The game's page for that folder, with the game's profile when
                 // the picker was opened for one.
                 let dir = p.dir.clone();
@@ -376,16 +329,6 @@ impl App {
                     .unwrap_or_default();
                 self.picker = None;
                 self.open_folder(&name, &dir, game);
-            }
-            KeyCode::Char(' ') => {
-                let env = vec![
-                    ("EAX_RESTORE_ACTION", "install".to_string()),
-                    ("EAX_RESTORE_GAME_DIR", p.dir.display().to_string()),
-                ];
-                let args = (!std::env::var("EAX_RESTORE_ENGINE").is_ok_and(|v| v == "bash"))
-                    .then(|| vec!["install".to_string(), p.dir.display().to_string()]);
-                self.picker = None;
-                self.launch = Some(Launch { env, args });
             }
             _ => {}
         }
@@ -440,10 +383,7 @@ impl App {
     /// its folder first, so the folder picker asks for it, unless its profile
     /// says it has no EAX, whose page needs no folder. A game with no EAX or
     /// no prefix yet gets a pop-up instead of the page.
-    fn open_menu(&mut self) {
-        if !self.use_panel {
-            return self.open_action_menu();
-        }
+    fn open_game(&mut self) {
         let Some(e) = self.current() else { return };
         let (name, game, path) = (e.name.clone(), e.game.clone(), e.path.clone());
         let store = e.store.map(crate::library::StoreKind::key);
@@ -488,7 +428,6 @@ impl App {
         }
         let free = self.notice.is_none()
             && self.panel.is_none()
-            && self.menu.is_none()
             && self.picker.is_none()
             && self.prefs.is_none()
             && !self.help;
@@ -618,15 +557,6 @@ impl App {
         crate::panel::Panel::open(name, dir, game, &self.home)
     }
 
-    fn open_action_menu(&mut self) {
-        if let Some(e) = self.current() {
-            self.menu = Some(Menu {
-                actions: actions::available(e),
-                selected: 0,
-            });
-        }
-    }
-
     /// The settings screen, on what's saved. Tests never read or write the
     /// player's own file.
     fn open_prefs(&mut self) {
@@ -683,7 +613,7 @@ impl App {
             KeyCode::End => self.pane_scroll = self.pane_max.get(),
             KeyCode::Left => self.show_pane(Pane::Profile),
             KeyCode::Right => self.show_pane(Pane::Settings),
-            KeyCode::Enter => self.open_menu(),
+            KeyCode::Enter => self.open_game(),
             _ => {}
         }
     }
@@ -720,9 +650,6 @@ impl App {
                 self.prefs = None;
             }
             return;
-        }
-        if self.menu.is_some() {
-            return self.handle_menu_key(key);
         }
         if self.help {
             return self.handle_help_key(key);
@@ -762,7 +689,7 @@ impl App {
                 let start = picker::start_dir(&self.home);
                 self.picker = Some(Picker::new(start, self.home.clone()));
             }
-            KeyCode::Enter => self.open_menu(),
+            KeyCode::Enter => self.open_game(),
             KeyCode::F(1) => self.open_help(),
             KeyCode::F(2) => self.open_prefs(),
             KeyCode::Char('l') if ctrl => self.swap_layout(),
@@ -943,32 +870,17 @@ mod tests {
     }
 
     #[test]
-    fn enter_opens_the_menu_and_choosing_an_action_queues_it() {
+    fn enter_on_a_game_not_on_this_pc_asks_for_its_folder_and_esc_does_not_quit() {
         let mut a = app();
         a.handle_key(key(KeyCode::Enter));
-        assert_eq!(a.menu.as_ref().unwrap().actions, [Action::Install]);
-        a.handle_key(key(KeyCode::Enter));
-        assert!(a.menu.is_none());
-        let l = a.launch.take().unwrap();
-        assert!(l
-            .env
-            .contains(&("EAX_RESTORE_ACTION", "install".to_string())));
-    }
-
-    #[test]
-    fn escape_closes_the_menu_and_does_not_quit() {
-        let mut a = app();
-        a.handle_key(key(KeyCode::Enter));
-        a.handle_key(key(KeyCode::Esc));
-        assert!(a.menu.is_none() && !a.quit && a.launch.is_none());
-    }
-
-    #[test]
-    fn typing_while_the_menu_is_open_does_not_change_the_filter() {
-        let mut a = app();
-        a.handle_key(key(KeyCode::Enter));
+        assert!(a.picker.is_some());
         a.handle_key(key(KeyCode::Char('z')));
-        assert!(a.query.is_empty());
+        assert!(
+            a.query.is_empty(),
+            "typing in the picker stays out of the filter"
+        );
+        a.handle_key(key(KeyCode::Esc));
+        assert!(a.picker.is_none() && !a.quit);
     }
 
     #[test]
@@ -976,7 +888,7 @@ mod tests {
         let mut a = app();
         type_str(&mut a, "zzzz");
         a.handle_key(key(KeyCode::Enter));
-        assert!(a.menu.is_none());
+        assert!(a.picker.is_none() && a.panel.is_none() && a.notice.is_none());
     }
 
     #[test]
@@ -1080,26 +992,11 @@ mod tests {
     }
 
     #[test]
-    fn space_in_the_picker_starts_an_install_of_that_folder() {
-        let (h, mut a) = app_with_folders();
-        a.handle_key(ctrl('a'));
-        a.handle_key(key(KeyCode::Enter)); // into "My Game"
-        a.handle_key(key(KeyCode::Char(' ')));
-        assert!(a.picker.is_none());
-        let l = a.launch.take().unwrap();
-        let dir = h.path().join("Games/Heroic/My Game").display().to_string();
-        assert!(l
-            .env
-            .contains(&("EAX_RESTORE_ACTION", "install".to_string())));
-        assert!(l.env.contains(&("EAX_RESTORE_GAME_DIR", dir)));
-    }
-
-    #[test]
     fn escape_cancels_the_picker_without_quitting_or_launching() {
         let (_h, mut a) = app_with_folders();
         a.handle_key(ctrl('a'));
         a.handle_key(key(KeyCode::Esc));
-        assert!(a.picker.is_none() && !a.quit && a.launch.is_none());
+        assert!(a.picker.is_none() && !a.quit && a.panel.is_none());
     }
 
     #[test]
@@ -1246,15 +1143,15 @@ mod tests {
     }
 
     #[test]
-    fn full_screen_still_switches_panes_opens_actions_and_help() {
+    fn full_screen_still_switches_panes_opens_games_and_help() {
         let mut a = app();
         a.handle_key(ctrl('f'));
         a.handle_key(key(KeyCode::Right));
         assert_eq!(a.pane, Pane::Settings);
         a.handle_key(key(KeyCode::Enter));
-        assert!(a.menu.is_some());
+        assert!(a.picker.is_some());
         a.handle_key(key(KeyCode::Esc));
-        assert!(a.zoom, "Esc closed only the menu");
+        assert!(a.zoom, "Esc closed only the picker");
         a.handle_key(key(KeyCode::F(1)));
         assert!(a.help);
     }

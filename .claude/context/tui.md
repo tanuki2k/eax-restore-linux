@@ -3,10 +3,8 @@
 Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says when to read it.
 
 - **Rust TUI (`tui/`):** a full-screen front end that lists database, library and
-  manually installed games and hands install, uninstall and the Tools to this
-  script through `EAX_RESTORE_ACTION`, `EAX_RESTORE_GAME_DIR` and
-  `EAX_RESTORE_GAME`; the script stays the engine until the Rust port replaces
-  it. Checks, as `.github/workflows/tui.yml` runs them: `cd tui && cargo fmt --check
+  manually installed games and does everything to them with its own Rust engine; it
+  never runs the Bash script (the oracle tests do, to compare the two). Checks, as `.github/workflows/tui.yml` runs them: `cd tui && cargo fmt --check
   && cargo clippy --locked --all-targets -- -D warnings && cargo test --locked`.
   Run it with `cargo run -- ../game-database.json` after `./build.sh`. Its look copies the old fzf browser's (boxed Search,
   Filters and Games beside a full-height pane; the colours are in `tui/src/theme.rs`,
@@ -19,15 +17,11 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
   print the game list, one game's settings view or its profile without the TUI, which is
   how the Rust views are compared with the Bash browser's `print_game_settings_details`
   and `print_game_profile_stores` (word for word, for every game). The Games list keeps its window between redraws (`App::list_offset`) and moves it only
-  when the highlight is within 3 rows of an edge, like fzf's `--scroll-off`. It finds the
-  script via `EAX_RESTORE_SCRIPT`, beside itself, its cache (`~/.local/share/
-  eax-restore-linux/tui/<channel>/`) or `dist/`, skipping any that lacks
-  `EAX_RESTORE_ACTION`; if none, it downloads its channel's release script and
-  checks it against the `.sha256` (`EAX_RESTORE_CHANNEL=dev` at build time picks
-  the dev channel). The engine is moving into Rust a stage at a time under
+  when the highlight is within 3 rows of an edge, like fzf's `--scroll-off`. `EAX_RESTORE_CHANNEL=dev` at build
+  time makes a dev build (`fetch::CHANNEL`: the update check, `tui-logs/dev/`). The engine is moving into Rust a stage at a time under
   `tui/src/engine/` (no TUI types in there; the crate is a library, `src/lib.rs`, plus
-  a thin `main.rs`). Stages 1 to 8 are done, and no screen calls them yet apart from
-  the list's "is this game installed" check. Stage 1: `engine/config/` is
+  a thin `main.rs`). Stages 1 to 8 are done, and the game page and the headless
+  commands run on them. Stage 1: `engine/config/` is
   `config_get_key` / `config_set_key`, `config_values_equal`, `config_row_is_safe` and
   `resolve_config_file` for the eleven formats. Stage 2: `engine/files.rs` is the
   name, scope and content checks, the backups and `swap_in` from `src/common.sh`;
@@ -194,18 +188,15 @@ folder on this PC opens the folder picker for it (`Picker::game`), and Space the
 page for the folder chosen (Ctrl-A's picker too). A game whose profile has no EAX to restore
 (`Eax::none_to_restore`: `not_implemented`, or `removed_by_patch` without `fix_in_place`, the
 script's `block_if_eax_not_implemented`) opens no page: a pop-up over the list (`App::notice`,
-`ui::draw_notice`) says why, with the profile's own problem and fix text. The old action menu
-is only for `EAX_RESTORE_ENGINE=bash`. Engine code stays prompt-free: read state, take
+`ui::draw_notice`) says why, with the profile's own problem and fix text. Engine code stays prompt-free: read state, take
 choices, plan, apply.
 
 Headless mode (`tui/src/cli.rs`): `eax-restore status|install|uninstall|speakers|settings|sound-log|vcrun|eax-unified
 GAME_FOLDER [options]` (`eax-restore --help` lists them) runs the Rust engine with no TUI and
 no Bash script: the script's defaults, flags to change them, and one "(Y/n)" before any change
 (`--yes` skips it; with no terminal and no `--yes` nothing changes). A running Steam or Heroic is
-only closed with `--close-launcher`. The TUI's Enter menu runs these commands
-(`actions::engine_args`, `runner::run_engine`) for every action, so from the TUI those use the
-Rust engine; only an install with no known folder still runs the script, and
-`EAX_RESTORE_ENGINE=bash` sends every action to the script. Started from a terminal with no choice given, `speakers` and
+only closed with `--close-launcher`. The game page does the same work in-process
+(`panel/run.rs`, sharing `engine/ops.rs`). Started from a terminal with no choice given, `speakers` and
 `settings` ask for it and `sound-log` switches the log the other way. `EAX_RESTORE_PROC_ROOT` (tests only) points the
 launcher and game checks at an empty folder instead of `/proc`, so a test never sees or closes a
 real launcher. `tui/tests/headless.rs` runs the program in the fake world: its install matches

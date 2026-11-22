@@ -6,7 +6,7 @@ EAX_RESTORE_VCRUN_ONLY="${EAX_RESTORE_VCRUN_ONLY:-}"
 # Guarded here (the earliest point it's read) so cache.sh and config-flow.sh
 # downstream can test it freely.
 EAX_RESTORE_DSOAL_PIN="${EAX_RESTORE_DSOAL_PIN:-}"
-# Set by a program that has its own menu (the TUI): it picks what to run and,
+# Set by a program that has its own menu: it picks what to run and,
 # optionally, the game, so none of the script's menus or "where is the game"
 # prompts come up. EAX_RESTORE_GAME_DIR and EAX_RESTORE_GAME are read where the
 # game is located (detection.sh, game-database.sh).

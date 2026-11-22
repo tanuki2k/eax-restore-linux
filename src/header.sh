@@ -121,7 +121,7 @@
 #
 # * EAX_RESTORE_ACTION=install|uninstall|game-settings|speakers|vcrun|dsoal-log|eax-unified
 #   Runs that one action without showing the main menu, for a program with its
-#   own menu (the TUI). The script ends where it would have gone back to a menu.
+#   own menu. The script ends where it would have gone back to a menu.
 #   EAX_RESTORE_GAME_DIR=/path/to/game/exe/folder answers the "where is the game"
 #   step, and for an install EAX_RESTORE_GAME=steam:ID or gog:ID picks that game
 #   from the library scan.

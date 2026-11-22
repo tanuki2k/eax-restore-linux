@@ -1,7 +1,6 @@
 //! The EAX Restore TUI as a library, so `tests/` can reach the engine. The
 //! binary in `main.rs` is the only other user.
 
-pub mod actions;
 pub mod app;
 pub mod build_choice;
 pub mod build_info;
@@ -19,7 +18,6 @@ pub mod prefs;
 pub mod prefs_screen;
 pub mod profile;
 pub mod runlog;
-pub mod runner;
 pub mod settings;
 pub mod theme;
 pub mod ui;

@@ -39,9 +39,6 @@ pub fn draw(f: &mut Frame, app: &App) {
         return;
     }
     // Popups sit over the body and leave the key bar showing.
-    if let (Some(menu), Some(e)) = (&app.menu, app.current()) {
-        draw_menu(f, menu, &e.name, body);
-    }
     if let Some(p) = &app.picker {
         draw_picker(f, p, body);
     }
@@ -216,7 +213,7 @@ fn draw_search(f: &mut Frame, app: &App, area: Rect) {
         Span::styled(count, Style::new().fg(theme::COUNT)),
     ]);
     f.render_widget(Paragraph::new(line).block(block), area);
-    if app.menu.is_none() && app.picker.is_none() && !app.help && app.prefs.is_none() {
+    if app.picker.is_none() && !app.help && app.prefs.is_none() {
         f.set_cursor_position((inner.x + u16::try_from(used).unwrap_or(0), inner.y));
     }
 }
@@ -669,13 +666,11 @@ fn bar_items(app: &App) -> Vec<(&'static str, &'static str)> {
             ("~", "home"),
             ("Esc", "cancel"),
         ]
-    } else if app.menu.is_some() {
-        vec![("↑/↓", "choose"), ("Enter", "run"), ("Esc", "back")]
     } else if app.zoom {
         vec![
             ("↑/↓", "scroll"),
             ("←/→", "Profile/Settings"),
-            ("Enter", "actions"),
+            ("Enter", "open"),
             ("F1", "help"),
             ("Esc", "back"),
         ]
@@ -684,14 +679,14 @@ fn bar_items(app: &App) -> Vec<(&'static str, &'static str)> {
             ("Shift-↑/↓", "scroll"),
             ("Ctrl-F", "full screen"),
             ("←/→", "Profile/Settings"),
-            ("Enter", "actions"),
+            ("Enter", "open"),
             ("F1", "help"),
             ("Esc", "quit"),
         ]
     } else {
         vec![
             ("Type", "to filter"),
-            ("Enter", "actions"),
+            ("Enter", "open"),
             ("←/→", "Profile/Settings"),
             ("Ctrl-A", "add game"),
             ("F1", "help"),
@@ -837,41 +832,6 @@ fn draw_picker(f: &mut Frame, p: &crate::picker::Picker, area: Rect) {
         &mut ListState::default()
             .with_offset(offset)
             .with_selected(selected),
-    );
-}
-
-fn draw_menu(f: &mut Frame, menu: &crate::app::Menu, title: &str, area: Rect) {
-    let widest = menu
-        .actions
-        .iter()
-        .map(|a| a.label().chars().count())
-        .max()
-        .unwrap_or(0);
-    let w = ((widest + 8).max(title.chars().count() + 6) as u16).min(area.width);
-    let h = (menu.actions.len() as u16 + 2).min(area.height);
-    let popup = Rect::new(
-        area.x + (area.width - w) / 2,
-        area.y + (area.height - h) / 2,
-        w,
-        h,
-    );
-    let items: Vec<ListItem> = menu
-        .actions
-        .iter()
-        .enumerate()
-        .map(|(i, a)| {
-            ListItem::new(Line::from(vec![
-                gutter(i == menu.selected),
-                Span::raw(a.label()),
-            ]))
-        })
-        .collect();
-    let list = selection(List::new(items).block(boxed(title)));
-    f.render_widget(Clear, popup);
-    f.render_stateful_widget(
-        list,
-        popup,
-        &mut ListState::default().with_selected(Some(menu.selected)),
     );
 }
 
@@ -1032,7 +992,6 @@ mod tests {
         games[0].path = Some(dir);
         let mut app = App::new(games);
         app.set_home(home.path().to_path_buf());
-        app.use_panel = true;
         app.resize(width);
         press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
         assert!(app.panel.is_some());
@@ -1063,9 +1022,7 @@ mod tests {
         let dir = steam_folder(home.path(), "Quake 4", 2210);
         let mut app = App::new(entries(WITH_SETTINGS));
         app.set_home(home.path().to_path_buf());
-        app.use_panel = true;
         press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
-        assert!(app.menu.is_none(), "not the old menu");
         assert!(app.panel.is_none());
         assert!(screen(&app, 120, 40).contains("Choose the folder with Quake 4's .exe"));
 
@@ -1084,7 +1041,6 @@ mod tests {
         let dir = steam_folder(home.path(), "Obscure", 1234);
         let mut app = App::new(entries(WITH_SETTINGS));
         app.set_home(home.path().to_path_buf());
-        app.use_panel = true;
         ctrl_key(&mut app, 'a');
         assert!(screen(&app, 120, 40).contains("Choose the folder with the game's .exe"));
         app.picker.as_mut().unwrap().dir = dir;
@@ -1092,7 +1048,6 @@ mod tests {
         let p = app.panel.as_ref().expect("the page");
         assert_eq!(p.name, "Obscure");
         assert!(p.game.is_none());
-        assert!(app.launch.is_none(), "nothing runs outside the TUI");
     }
 
     #[test]
@@ -1104,9 +1059,8 @@ mod tests {
         );
         let mut app = App::new(games.clone());
         app.set_home(home.path().to_path_buf());
-        app.use_panel = true;
         press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
-        assert!(app.panel.is_none() && app.picker.is_none() && app.menu.is_none());
+        assert!(app.panel.is_none() && app.picker.is_none());
         let s = screen(&app, 120, 40);
         assert!(s.contains(" Baldur's Gate: Enhanced Edition "), "{s}");
         assert!(s.contains("Baldur's Gate: Enhanced Edition has no EAX, so there's"));
@@ -1128,7 +1082,6 @@ mod tests {
         games[0].path = Some(dir);
         let mut app = App::new(games);
         app.set_home(home.path().to_path_buf());
-        app.use_panel = true;
         press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
         assert!(app.panel.is_none());
         assert!(app.notice.is_some());
@@ -1152,7 +1105,6 @@ mod tests {
         games[0].path = Some(dir.clone());
         let mut app = App::new(games);
         app.set_home(home.path().to_path_buf());
-        app.use_panel = true;
         press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
         assert!(app.panel.is_none());
         let s = screen(&app, 120, 40);
@@ -1186,7 +1138,6 @@ mod tests {
         games[0].path = Some(dir);
         let mut app = App::new(games);
         app.set_home(home.path().to_path_buf());
-        app.use_panel = true;
         press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
         assert!(app.panel.is_none());
         let s = screen(&app, 120, 40);
@@ -1302,26 +1253,10 @@ mod tests {
     }
 
     #[test]
-    fn the_action_menu_lists_what_applies_to_the_game() {
-        let mut games = entries(r#"{"games":[{"id":"a","name":"Alpha"}]}"#);
-        games[0].status = Status::Installed;
-        games[0].path = Some(PathBuf::from("/g/Alpha"));
-        let mut app = App::new(games);
-        app.handle_key(ratatui::crossterm::event::KeyEvent::from(
-            ratatui::crossterm::event::KeyCode::Enter,
-        ));
-        let s = screen(&app, 100, 20);
-        println!("{s}");
-        assert!(s.contains("Install again"));
-        assert!(s.contains("Uninstall the EAX fix"));
-        assert!(s.contains("Esc back"));
-    }
-
-    #[test]
     fn a_message_replaces_the_key_bar() {
         let mut app = App::new(entries(r#"{"games":[{"id":"a","name":"Alpha"}]}"#));
-        app.message = "Can't find the installer script.".into();
-        assert!(screen(&app, 80, 10).contains("Can't find the installer script."));
+        app.message = "Couldn't read the game database.".into();
+        assert!(screen(&app, 80, 10).contains("Couldn't read the game database."));
     }
 
     #[test]
@@ -1560,7 +1495,7 @@ mod tests {
     fn a_long_message_wraps_too() {
         let mut app = App::new(entries(WITH_SETTINGS));
         app.message =
-            "Couldn't download the installer script. Check your internet connection and try again."
+            "Couldn't download the game database. Check your internet connection and try again."
                 .into();
         assert!(screen(&app, 50, 14).contains("try again."));
     }
