@@ -69,3 +69,29 @@ plain() { sed 's/\x1b\[[0-9;]*m//g' <<< "$1"; }
     grep "First line of the notes." <<< "$browser" | grep -vqF $'\033[1;37m'
     grep "First line of the notes." <<< "$install" | grep -qF $'\033[1;37m'
 }
+
+# KOTOR II: Steam's beta branch and GOG's older version are different ways
+# back, so each store gets a Restore section, straight under Status. A retail
+# copy gets one shared section; a community patch stays under Additional steps.
+@test "profile: a patched-out game says up front how to restore it" {
+    GAME_DATABASE_FILE="$BATS_TEST_TMPDIR/stores.json"
+    echo '{"games":[{"id":"p","name":"Patched","stores":{"steam":{"id":1,"rollback_steps":"Pick the old branch.","store_details":"Steam text."},"gog":{"id":2,"rollback_steps":"Pick the old version."}},
+                    "eax":{"api":"directsound3d","versions":["3.0"],"status":"removed_by_patch","fix_in_place":true,"problem":"An update took it out."}},
+                    {"id":"r","name":"Retail","stores":{"steam":{"id":3},"gog":{"id":4,"rollback_steps":""}},
+                    "eax":{"api":"directsound3d","status":"removed_by_patch","fix":"Use the retail copy."}},
+                    {"id":"m","name":"Modded","stores":{"steam":{"id":5}},
+                    "eax":{"api":"directsound3d","fix":"A community patch adds more."}}]}' > "$GAME_DATABASE_FILE"
+    out="$(plain "$(print_game_profile_stores "" steam:1 gog:2)")"
+    [[ "$out" == *"3.0 (restorable)"* ]]
+    [[ "$out" == *"Status:"*"An update took it out."*"Restore on Steam:"*"Pick the old branch."*"Restore on GOG:"*"Pick the old version."*"Steam details:"* ]]
+    [[ "$out" != *"Removed by"* ]]
+    [[ "$out" != *"Additional steps"* ]]
+    out="$(plain "$(print_game_profile_stores "" steam:3 gog:4)")"
+    [[ "$out" == *"(originally supported)"* ]]
+    [[ "$out" == *"Status:"*"An update removed EAX from Retail."*"Restore EAX:"*"Use the retail copy."* ]]
+    [[ "$out" != *"Restore on"* ]]
+    [ "$(grep -c "Use the retail copy." <<< "$out")" -eq 1 ]
+    out="$(plain "$(print_game_profile_stores "" steam:5)")"
+    [[ "$out" == *"Additional steps:"*"A community patch adds more."* ]]
+    [[ "$out" != *"Restore EAX"* ]]
+}

@@ -1869,7 +1869,7 @@ _env_verify_wine_prefix() {
                 [ -z "$GAME_NAME" ] && GAME_NAME="GOG ID $HEROIC_APP_NAME"
             fi
             show_profile_if_unseen "$HEROIC_APP_NAME" "gog"
-            confirm_continue_if_eax_impossible "$HEROIC_APP_NAME" "gog"
+            confirm_continue_if_eax_impossible "$HEROIC_APP_NAME" "gog" "$(game_install_root)"
             # User chose to go back and pick a different game — unwind to
             # the config flow's Step 1-2 loop.
             [ -n "$RESTART_REQUESTED" ] && return 1

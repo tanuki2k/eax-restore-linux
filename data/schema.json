@@ -203,6 +203,17 @@
           "description": "Steam only: the beta branch name that brings EAX back.",
           "type": "string"
         },
+        "rollback_builds": {
+          "description": "GOG only: the build IDs (the buildId in the game folder's goggame-<id>.info) that keep EAX, the builds rollback_steps lead to. An install on one of them skips the warning that the current build has no EAX.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[0-9]+$" },
+          "default": []
+        },
+        "rollback_steps": {
+          "description": "This store's own steps to roll back to a build with EAX, shown in place of eax.fix for this store. Set it when a store's way back differs.",
+          "type": "string"
+        },
         "extra_exe_folders": {
           "description": "Other folders that have an exe of their own, started from the same title (for example GOG's F.E.A.R. Platinum expansions in FEARXP and FEARXP2). They get the same files as the main exe folder.\nA folder is inside the game's exe folder, or inside the install folder when it starts with game_root: (for example game_root:bin_Crossplay, next to bin). List every exe folder when the builds sit side by side, since either can be the main one.",
           "type": "array",
