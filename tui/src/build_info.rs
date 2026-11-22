@@ -39,8 +39,27 @@ mod tests {
     }
 
     #[test]
-    fn this_build_has_a_number() {
-        // The tests run from a git checkout.
-        assert!(number().is_some_and(|n| n > 1));
+    fn this_build_is_stamped_with_the_commit_count() {
+        // The tests run from a git checkout; a shallow one (the TUI
+        // workflow's) counts only what it has, so compare with git itself.
+        let count = std::process::Command::new("git")
+            .args([
+                "-C",
+                env!("CARGO_MANIFEST_DIR"),
+                "rev-list",
+                "--count",
+                "HEAD",
+            ])
+            .output()
+            .ok()
+            .and_then(|o| {
+                String::from_utf8_lossy(&o.stdout)
+                    .trim()
+                    .parse::<u32>()
+                    .ok()
+            });
+        if std::env::var("EAX_RESTORE_BUILD").is_err() {
+            assert_eq!(number(), count);
+        }
     }
 }
