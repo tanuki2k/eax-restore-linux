@@ -83,7 +83,7 @@ plain() { sed 's/\x1b\[[0-9;]*m//g' <<< "$1"; }
                     "eax":{"api":"directsound3d","fix":"A community patch adds more."}}]}' > "$GAME_DATABASE_FILE"
     out="$(plain "$(print_game_profile_stores "" steam:1 gog:2)")"
     [[ "$out" == *"3.0 (restorable)"* ]]
-    [[ "$out" == *"Status:"*"An update took it out."*"Restore on Steam:"*"Pick the old branch."*"Restore on GOG:"*"Pick the old version."*"Steam details:"* ]]
+    [[ "$out" == *"Status:"*"An update took it out."*"Steam details:"*"Restore on Steam:"*"Pick the old branch."*"Restore on GOG:"*"Pick the old version."* ]]
     [[ "$out" != *"Removed by"* ]]
     [[ "$out" != *"Additional steps"* ]]
     out="$(plain "$(print_game_profile_stores "" steam:3 gog:4)")"
