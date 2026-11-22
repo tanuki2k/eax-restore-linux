@@ -197,6 +197,10 @@ pub enum Job {
         /// step at the end.
         audio_done: bool,
     },
+    /// The VC++ runtime on its own, on a game that has the fix.
+    Vcrun(Box<Plan>),
+    /// EAX Unified on its own, on a game that has the fix.
+    EaxUnified(Box<Plan>),
     Speakers(Speakers),
     Settings {
         revert: Vec<RevertGroup>,
@@ -513,6 +517,13 @@ impl Panel {
                 None => line(Check::Fail, "Wine", "none found".into()),
             });
         }
+        if !f.missing_tools.is_empty() {
+            out.push(line(
+                Check::Fail,
+                "Tools",
+                format!("{} missing", f.missing_tools.join(", ")),
+            ));
+        }
 
         // The script leaves a companion app with no prefix as it is.
         for c in f.companions.iter().filter(|c| c.prefix.is_none()) {
@@ -625,6 +636,10 @@ impl Panel {
             Some(format!("{name} is installed as its Linux version, which the EAX fix can't work with. Switch it to the Windows version in its launcher, then check again."))
         } else if let Some(why) = crate::cli::unwritable_problem(f, &self.home, "check again")
             .filter(|_| self.installed.is_none())
+        {
+            Some(why)
+        } else if let Some(why) =
+            crate::cli::tools_problem(f, name, "check again").filter(|_| self.installed.is_none())
         {
             Some(why)
         } else if f.prefix.is_none() && self.installed.is_none() {
@@ -882,7 +897,8 @@ impl Panel {
                         ),
                         ("Skip", "Leaves it out, so the game may play without EAX."),
                     ],
-                    0,
+                    // An installed game opens on what it has.
+                    usize::from(installed && !st.as_ref().is_some_and(|s| s.eax_unified)),
                 )
                 .detected(true),
             );
@@ -1530,18 +1546,24 @@ impl Panel {
             RowKind::Arch,
             RowKind::Com,
             RowKind::Limits,
-            RowKind::EaxUnified,
             RowKind::CpuLimit,
-            RowKind::Vcrun,
         ];
         let mut reinstall = false;
+        // Adding VC++ or EAX Unified goes into the prefix as it is, as the
+        // script's Tools do; taking either out needs the reinstall.
+        let (mut add_vcrun, mut add_eax) = (false, false);
         for r in self.rows() {
             if r.changed() {
                 lines.push((
                     r.title.to_string(),
                     format!("{} → {}", r.options[r.original].label, r.value()),
                 ));
-                reinstall |= reinstall_rows.contains(&r.kind);
+                match r.kind {
+                    RowKind::Vcrun if r.value() == "Install it" => add_vcrun = true,
+                    RowKind::EaxUnified if r.chosen == 0 => add_eax = true,
+                    RowKind::Vcrun | RowKind::EaxUnified => reinstall = true,
+                    k => reinstall |= reinstall_rows.contains(&k),
+                }
             }
         }
         let turn_on: Vec<&Fix> = self
@@ -1582,6 +1604,12 @@ impl Panel {
                 audio_done: self.audio_done(),
             });
         } else {
+            if add_vcrun {
+                jobs.push(Job::Vcrun(Box::new(self.plan())));
+            }
+            if add_eax {
+                jobs.push(Job::EaxUnified(Box::new(self.plan())));
+            }
             if speakers_changed {
                 jobs.push(Job::Speakers(self.speakers()));
             }
@@ -1867,6 +1895,14 @@ mod tests {
         assert_eq!(lines.len(), 1);
         assert!(matches!(jobs[..], [Job::Speakers(_)]));
 
+        // Adding VC++ goes into the prefix as it is, with no reinstall.
+        assert_eq!(p.row(RowKind::Vcrun).unwrap().value(), "Skip");
+        pick(&mut p, RowKind::Vcrun, 1);
+        let (lines, jobs) = p.changes();
+        assert_eq!(lines.len(), 2);
+        assert!(matches!(jobs[..], [Job::Vcrun(_), Job::Speakers(_)]));
+        pick(&mut p, RowKind::Vcrun, 0);
+
         // Each build is its own choice: Latest DSOAL (after Keep) leaves
         // OpenAL Soft as it is, which with no version recorded is the newest
         // numbered one.
@@ -1877,6 +1913,47 @@ mod tests {
             [Job::Install { plan, .. }]
                 if plan.dsoal_build == Build::Numbered && plan.openal_build == Build::Numbered
         ));
+    }
+
+    #[test]
+    fn eax_unified_on_an_installed_game_starts_on_what_it_has_and_adds_in_place() {
+        let tmp = tempfile::tempdir().unwrap();
+        let home = tmp.path().join("home");
+        let game = steam_game(&home);
+        touch(&game.join("dsound.dll"), "x");
+        let manifest = game.join(crate::engine::manifest::FILE_NAME);
+        touch(
+            &manifest,
+            &format!(
+                "{}\n{}/dsound.dll\n",
+                crate::engine::manifest::HEADER,
+                game.display()
+            ),
+        );
+        let mut p = Panel::open("Test Game", &game, None, &home);
+        p.facts.wants_eax_unified = true;
+        p.build();
+        assert_eq!(p.row(RowKind::EaxUnified).unwrap().value(), "Skip");
+        pick(&mut p, RowKind::EaxUnified, 0);
+        let (_, jobs) = p.changes();
+        assert!(matches!(jobs[..], [Job::EaxUnified(_)]));
+
+        // Recorded: it starts on Install, and taking it out reinstalls.
+        touch(
+            &manifest,
+            &format!(
+                "{}\n{}/dsound.dll\nEAXUNIFIED\n",
+                crate::engine::manifest::HEADER,
+                game.display()
+            ),
+        );
+        let mut p = Panel::open("Test Game", &game, None, &home);
+        p.facts.wants_eax_unified = true;
+        p.build();
+        assert_eq!(p.row(RowKind::EaxUnified).unwrap().value(), "Install it");
+        pick(&mut p, RowKind::EaxUnified, 1);
+        let (_, jobs) = p.changes();
+        assert!(matches!(jobs[..], [Job::Install { .. }]));
     }
 
     fn screen(p: &Panel, w: u16, h: u16) -> Vec<String> {
@@ -2448,6 +2525,7 @@ mod tests {
                 next: Vec::new(),
                 settings: Vec::new(),
                 lines: Vec::new(),
+                log: None,
             },
         ));
         let rows = screen(&p, 160, 50);
@@ -2705,6 +2783,28 @@ mod tests {
         assert_eq!(p.facts.unwritable, std::slice::from_ref(&game));
         let why = p.problem.as_deref().unwrap();
         assert!(why.contains("can't be written to"), "{why}");
+        assert_eq!(p.buttons(), [Button::CheckAgain]);
+    }
+
+    #[test]
+    fn a_missing_tool_stops_the_install() {
+        let tmp = tempfile::tempdir().unwrap();
+        let home = tmp.path().join("home");
+        let game = steam_game(&home);
+        let mut p = Panel::open("Test Game", &game, None, &home);
+        p.facts.missing_tools = vec!["curl", "unzip"];
+        p.build();
+        let tools = p
+            .status_lines()
+            .into_iter()
+            .find(|l| l.label == "Tools")
+            .unwrap();
+        assert_eq!(tools.level, Check::Fail);
+        assert_eq!(tools.value, "curl, unzip missing");
+        assert_eq!(
+            p.problem.as_deref(),
+            Some("curl and unzip aren't installed, and the EAX fix needs them to download and unpack its files. Install them with your distro's package manager, then check again.")
+        );
         assert_eq!(p.buttons(), [Button::CheckAgain]);
     }
 

@@ -967,6 +967,23 @@ fn run_lines(r: &super::run::RunView, width: usize) -> Vec<Line<'static>> {
             }
         }
     }
+    if let Some(log) = &fin.log {
+        heading(&mut text, "Log saved".into(), theme::note());
+        for part in wrap(log, width.saturating_sub(2)) {
+            text.push(Line::from(format!("  {part}")));
+        }
+        if !fin.ok {
+            text.push(Line::from(""));
+            text.push(Line::from(Span::styled(
+                "  Something wrong? Attach this log to a bug report:",
+                theme::white(),
+            )));
+            text.push(Line::from(Span::styled(
+                format!("  {}", crate::runlog::BUG_REPORT_PAGE),
+                theme::key(),
+            )));
+        }
+    }
     text
 }
 
@@ -1363,6 +1380,7 @@ mod tests {
                     "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.".into(),
                 )],
                 lines: Vec::new(),
+                log: None,
             },
         );
         let t = text(&run_lines(&r, 60)).join("\n");

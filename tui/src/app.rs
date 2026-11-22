@@ -45,11 +45,15 @@ impl Filter {
 
 /// A pop-up in place of a game's page: its name, what to say, and for a
 /// game with no prefix yet, a Check again button that tries the page again.
+/// The update offer uses it too, with Update and restart in Check again's place.
 pub struct Notice {
     pub title: String,
     pub lines: Vec<String>,
     pub retry: Option<Retry>,
-    /// Check again is the highlighted button, rather than OK.
+    /// The newer build Update and restart installs.
+    pub update: Option<u32>,
+    /// Check again (or Update and restart) is the highlighted button, rather
+    /// than OK (or Later).
     pub on_retry: bool,
 }
 
@@ -104,8 +108,14 @@ pub struct App {
     pub rescan: bool,
     /// The right pane takes the whole screen (Ctrl-F).
     pub zoom: bool,
-    /// The pop-up for a game with no EAX or no prefix yet.
+    /// The pop-up for a game with no EAX or no prefix yet, or the update offer.
     pub notice: Option<Notice>,
+    /// The update check's answer, while it's on its way.
+    pub update_rx: Option<std::sync::mpsc::Receiver<Option<u32>>>,
+    /// A newer build, waiting for the screen to be free to offer it.
+    pub update_waiting: Option<u32>,
+    /// The player chose Update and restart: `main` does it outside the TUI.
+    pub update_now: Option<u32>,
     /// The F1 key list is open.
     pub help: bool,
     pub help_scroll: u16,
@@ -158,6 +168,9 @@ impl App {
             rescan: false,
             zoom: false,
             notice: None,
+            update_rx: None,
+            update_waiting: None,
+            update_now: None,
             help: false,
             help_scroll: 0,
             help_max: std::cell::Cell::new(0),
@@ -455,6 +468,71 @@ impl App {
             title: title.to_string(),
             lines,
             retry: None,
+            update: None,
+            on_retry: false,
+        });
+    }
+
+    /// Takes the update check's answer, and offers a newer build once
+    /// nothing else is open, so it never lands on top of a game's page.
+    pub fn poll_update(&mut self) {
+        if let Some(rx) = &self.update_rx {
+            match rx.try_recv() {
+                Ok(found) => {
+                    self.update_rx = None;
+                    self.update_waiting = found;
+                }
+                Err(std::sync::mpsc::TryRecvError::Disconnected) => self.update_rx = None,
+                Err(std::sync::mpsc::TryRecvError::Empty) => {}
+            }
+        }
+        let free = self.notice.is_none()
+            && self.panel.is_none()
+            && self.menu.is_none()
+            && self.picker.is_none()
+            && self.prefs.is_none()
+            && !self.help;
+        if free {
+            if let Some(n) = self.update_waiting.take() {
+                self.offer_update(n);
+            }
+        }
+    }
+
+    fn offer_update(&mut self, build: u32) {
+        let mine = crate::build_info::number().unwrap_or_default();
+        self.notice = Some(Notice {
+            title: "New build".into(),
+            lines: vec![
+                format!("Dev build {build} is out. You're running build {mine}."),
+                "Download it and restart with it now?".into(),
+            ],
+            retry: None,
+            update: Some(build),
+            on_retry: true,
+        });
+    }
+
+    /// The update didn't happen: say why and where to get it by hand.
+    pub fn update_failed(&mut self, build: u32, why: &crate::update::Failed) {
+        let mine = crate::build_info::number().unwrap_or_default();
+        let first = match why {
+            crate::update::Failed::ReadOnly => {
+                "This copy of eax-restore is in a folder it can't write to, so it can't update itself.".to_string()
+            }
+            crate::update::Failed::Download => format!(
+                "The update didn't download, so you're staying on build {mine} for now."
+            ),
+        };
+        self.notice = Some(Notice {
+            title: "Not updated".into(),
+            lines: vec![
+                first,
+                format!("You can download build {build} here:"),
+                crate::update::RELEASES_PAGE.to_string(),
+            ],
+            retry: None,
+            update: None,
             on_retry: false,
         });
     }
@@ -492,6 +570,7 @@ impl App {
                     dir: panel.facts.game_dir.clone(),
                     game: panel.game.clone(),
                 }),
+                update: None,
                 title: panel.name,
                 on_retry: true,
             });
@@ -510,9 +589,13 @@ impl App {
         match key.code {
             KeyCode::Esc => self.notice = None,
             KeyCode::Left | KeyCode::Right | KeyCode::Tab | KeyCode::BackTab
-                if n.retry.is_some() =>
+                if n.retry.is_some() || n.update.is_some() =>
             {
                 n.on_retry = !n.on_retry;
+            }
+            KeyCode::Enter if n.update.is_some() => {
+                self.update_now = n.update.filter(|_| n.on_retry);
+                self.notice = None;
             }
             KeyCode::Enter => match n.retry.take().filter(|_| n.on_retry) {
                 Some(r) => {
@@ -910,6 +993,44 @@ mod tests {
 
     fn ctrl(c: char) -> KeyEvent {
         KeyEvent::new(KeyCode::Char(c), KeyModifiers::CONTROL)
+    }
+
+    #[test]
+    fn a_newer_build_is_offered_once_the_screen_is_free() {
+        let mut a = app();
+        let (tx, rx) = std::sync::mpsc::channel();
+        a.update_rx = Some(rx);
+        a.help = true;
+        tx.send(Some(9999)).unwrap();
+        a.poll_update();
+        // F1's list is open, so the offer waits.
+        assert!(a.notice.is_none() && a.update_rx.is_none());
+        assert_eq!(a.update_waiting, Some(9999));
+        a.help = false;
+        a.poll_update();
+        let n = a.notice.as_ref().unwrap();
+        assert_eq!(n.update, Some(9999));
+        assert!(n.lines[0].starts_with("Dev build 9999 is out."));
+
+        // Later closes it and does nothing.
+        a.handle_key(key(KeyCode::Right));
+        a.handle_key(key(KeyCode::Enter));
+        assert!(a.notice.is_none() && a.update_now.is_none());
+
+        a.update_waiting = Some(9999);
+        a.poll_update();
+        a.handle_key(key(KeyCode::Enter));
+        assert_eq!(a.update_now, Some(9999));
+    }
+
+    #[test]
+    fn no_answer_means_no_offer() {
+        let mut a = app();
+        let (tx, rx) = std::sync::mpsc::channel();
+        a.update_rx = Some(rx);
+        tx.send(None).unwrap();
+        a.poll_update();
+        assert!(a.notice.is_none() && a.update_waiting.is_none() && a.update_rx.is_none());
     }
 
     fn app_with_folders() -> (tempfile::TempDir, App) {

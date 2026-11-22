@@ -89,7 +89,10 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/dev'
     steps:
+      # The build number is the commit count, which a shallow clone gets wrong.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install Rust
         run: |
@@ -127,15 +130,22 @@ jobs:
           fi
           # With no libraries or installs on this machine the list is empty.
           HOME="$(mktemp -d)" "$bin" game-database.json --list
+          # The number the update check compares; 1 would mean a shallow clone.
+          build="$(git rev-list --count HEAD)"
+          [ "$build" -gt 1 ] || { echo "::error::Build number $build: is the checkout shallow?"; exit 1; }
+          "$bin" --build | grep -qx "$build" || { echo "::error::The binary isn't stamped with build $build"; exit 1; }
 
       - name: Name and checksum
         run: |
           mkdir -p dist
           cp tui/target/x86_64-unknown-linux-musl/release/eax-restore dist/eax-restore-linux-tui-x86_64
           (cd dist && sha256sum eax-restore-linux-tui-x86_64 > eax-restore-linux-tui-x86_64.sha256)
+          # Uploaded with the binary, so a failed build leaves the old number up
+          # and no TUI is offered an update that isn't there.
+          git rev-list --count HEAD > dist/eax-restore-linux-tui-x86_64.build
 
       - name: Add to the dev prerelease
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release upload nightly dist/eax-restore-linux-tui-x86_64 dist/eax-restore-linux-tui-x86_64.sha256 --clobber
+          gh release upload nightly dist/eax-restore-linux-tui-x86_64 dist/eax-restore-linux-tui-x86_64.sha256 dist/eax-restore-linux-tui-x86_64.build --clobber

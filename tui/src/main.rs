@@ -62,6 +62,17 @@ fn config_command(args: &[String]) -> Result<()> {
 
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
+    // `--build` prints the bare build number, for CI and the update check's
+    // tests; `--version` the label the bottom bar shows.
+    if args.first().is_some_and(|a| a == "--build") {
+        let n = eax_restore::build_info::number().context("This build has no build number.")?;
+        println!("{n}");
+        return Ok(());
+    }
+    if args.first().is_some_and(|a| a == "--version") {
+        println!("eax-restore {}", eax_restore::build_info::label());
+        return Ok(());
+    }
     if args.first().is_some_and(|a| a == "config") {
         return config_command(&args[1..]);
     }
@@ -129,6 +140,13 @@ fn main() -> Result<()> {
 
     let mut app = app::App::new(entries);
     app.set_home(home.clone());
+    if eax_restore::update::wanted() {
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let _ = tx.send(eax_restore::update::check());
+        });
+        app.update_rx = Some(rx);
+    }
     app.apply_list_prefs(&prefs::Prefs::load());
     app.use_panel = std::env::var("EAX_RESTORE_ENGINE").map_or(true, |v| v != "bash");
     if let Ok((width, _)) = ratatui::crossterm::terminal::size() {
@@ -149,6 +167,27 @@ fn main() -> Result<()> {
     result
 }
 
+/// Update and restart: on the normal screen, download the new build, swap it
+/// in and start it in this one's place. On any failure the TUI comes back
+/// with a pop-up saying why.
+fn update_and_restart(terminal: &mut ratatui::DefaultTerminal, app: &mut app::App, build: u32) {
+    use eax_restore::update;
+    let Some(exe) = update::current_exe() else {
+        app.update_failed(build, &update::Failed::ReadOnly);
+        return;
+    };
+    ratatui::restore();
+    println!("Downloading build {build}...");
+    let result = update::install("curl", &exe);
+    if result.is_ok() {
+        println!("Updated to build {build}. Restarting...");
+        // Only comes back if the new binary didn't start.
+        let _ = update::restart(&exe);
+    }
+    *terminal = ratatui::init();
+    app.update_failed(build, &result.err().unwrap_or(update::Failed::Download));
+}
+
 fn run(
     terminal: &mut ratatui::DefaultTerminal,
     app: &mut app::App,
@@ -165,7 +204,9 @@ fn run(
             .panel
             .as_ref()
             .and_then(|p| p.animating().then_some(150))
-            .or_else(|| app.prefs.as_ref().filter(|s| s.waiting()).map(|_| 150));
+            .or_else(|| app.prefs.as_ref().filter(|s| s.waiting()).map(|_| 150))
+            // The update check's answer, or a page closing with one waiting.
+            .or_else(|| (app.update_rx.is_some() || app.update_waiting.is_some()).then_some(250));
         let key_waiting = match wait {
             None => true,
             Some(ms) => event::poll(std::time::Duration::from_millis(ms))?,
@@ -182,6 +223,10 @@ fn run(
         }
         if let Some(s) = app.prefs.as_mut() {
             s.tick();
+        }
+        app.poll_update();
+        if let Some(build) = app.update_now.take() {
+            update_and_restart(terminal, app, build);
         }
         if app.rescan && app.panel.is_none() {
             app.rescan = false;

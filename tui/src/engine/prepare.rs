@@ -60,6 +60,10 @@ pub struct Facts {
     /// Folders the install writes to that can't be written: the game's,
     /// its extra exe folders, the prefixes' system32.
     pub unwritable: Vec<PathBuf>,
+    /// Programs the install runs that aren't on PATH, as the script's
+    /// preflight checks them: curl and unzip always, winetricks for a game
+    /// that runs on plain Wine (protontricks has its own check).
+    pub missing_tools: Vec<&'static str>,
     /// The drive the game folder is on.
     pub game_mount: Option<files::Mount>,
     /// The Steam beta branch the game is on; empty for the default build.
@@ -151,6 +155,7 @@ pub fn gather(game_dir: &Path, game: Option<&Game>, home: &Path, protontricks: &
         wants_eax_unified: false,
         wants_cpu_limit: false,
         unwritable: Vec::new(),
+        missing_tools: Vec::new(),
         game_mount: files::mount_of(game_dir),
         beta_branch: String::new(),
         gog_build: String::new(),
@@ -289,7 +294,31 @@ pub fn gather(game_dir: &Path, game: Option<&Game>, home: &Path, protontricks: &
             .map(system32),
     );
     f.unwritable = dirs.into_iter().filter(|d| !files::writable(d)).collect();
+    f.missing_tools = needed_tools(f.runner.as_ref())
+        .into_iter()
+        .filter(|t| !on_path(t))
+        .collect();
     f
+}
+
+/// The programs an install or uninstall runs for this game.
+pub fn needed_tools(runner: Option<&Runner>) -> Vec<&'static str> {
+    let mut t = vec!["curl", "unzip"];
+    if matches!(runner, Some(Runner::Wine { .. })) {
+        t.push("winetricks");
+    }
+    t
+}
+
+/// An executable of that name is in a folder on PATH.
+pub fn on_path(prog: &str) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    std::env::var_os("PATH").is_some_and(|path| {
+        std::env::split_paths(&path).any(|d| {
+            std::fs::metadata(d.join(prog))
+                .is_ok_and(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
+        })
+    })
 }
 
 impl Facts {

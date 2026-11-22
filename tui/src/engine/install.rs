@@ -390,6 +390,17 @@ fn sound_log_on(t: &Target, plan: &Plan) -> bool {
 
 /// Runs the install. `eax_unified` names the installer and its checksums.
 impl Plan {
+    /// Points the plan's prefixes at the run log, so what Wine, winetricks
+    /// and protontricks print goes in it.
+    pub fn log_to(&mut self, log: Option<&Path>) {
+        if let Some(p) = self.prefix.as_mut() {
+            p.log = log.map(Path::to_path_buf);
+        }
+        for c in &mut self.companions {
+            c.prefix.log = log.map(Path::to_path_buf);
+        }
+    }
+
     /// What the install is about to do, one (label, value) row each, for the
     /// page's confirm screen and `eax-restore install`. A row with an empty
     /// label carries on the one above.

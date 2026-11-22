@@ -11,11 +11,11 @@ EAX_RESTORE_SKIP_PREFLIGHT=1 EAX_RESTORE_SKIP_UPDATE_CHECK=1 ./eax-restore-linux
 | Variable | What it does |
 | --- | --- |
 | `EAX_RESTORE_SKIP_PREFLIGHT=1` | Skips the check for required tools and trusts that `curl`, `unzip`, `file`, `grep`, `awk`, `jq`, `protontricks`, `winetricks` and `wine` are all installed. |
-| `EAX_RESTORE_SKIP_UPDATE_CHECK=1` | Skips the check for a newer version of the script. Normally a stable build looks at the latest release and a `-dev` build at the `dev` one, then offers to download the newer script and restart with it, after checking it against the release's `.sha256`. The check is also skipped when there's no terminal or `EAX_RESTORE_ANSWERS_FILE` is set. |
+| `EAX_RESTORE_SKIP_UPDATE_CHECK=1` | Skips the check for a newer version of the script. Normally a stable build looks at the latest release and a `-dev` build at the `dev` one, then offers to download the newer script and restart with it, after checking it against the release's `.sha256`. The check is also skipped when there's no terminal or `EAX_RESTORE_ANSWERS_FILE` is set. The TUI's dev build checks the nightly for a newer TUI build, and this skips that check too. |
 | `EAX_RESTORE_SKIP_CACHE_CHECK=1` | Doesn't contact GitHub for DSOAL or OpenAL Soft. The build choice then offers only what's already in the local cache. |
 | `EAX_RESTORE_DSOAL_PIN=1` | Uses the stable `kcat/dsoal` build without asking (the revision pinned in the script, from kcat's `archive` release), so you only choose an OpenAL Soft build. It also picks the DSOAL engine and goes straight to the install, except for a game known to use OpenAL, which still gets OpenAL Soft. |
 | `EAX_RESTORE_VCRUN_ONLY=1` | Skips the install and uninstall and only installs the VC++ 2022 runtime into a game's prefix. **Tools → [V]C++ install** in the main menu does the same. |
-| `EAX_RESTORE_NO_LOG=1` | Turns off the log file each run normally writes. See [Troubleshooting](troubleshooting.md#logs-and-bug-reports). |
+| `EAX_RESTORE_NO_LOG=1` | Turns off the log file each run normally writes. See [Troubleshooting](troubleshooting.md#logs-and-bug-reports). It turns off the TUI's logs too, which go in their own folder, `~/.local/state/eax-restore-linux/tui-logs/`. |
 
 ## For game profiles
 

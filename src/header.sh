@@ -95,7 +95,7 @@
 #
 # * EAX_RESTORE_SKIP_UPDATE_CHECK=1  Skips the start-up check for a newer
 #   version of the script. The check is also skipped without a terminal or with an
-#   answers file.
+#   answers file. The TUI's dev build skips its own update check with it too.
 #
 # * EAX_RESTORE_DSOAL_PIN=1  Uses the stable kcat/dsoal build (the revision
 #   pinned in the script, taken from kcat's "archive" release) without
@@ -128,7 +128,9 @@
 #
 # * EAX_RESTORE_NO_LOG=1  Turns off the per-run log file. Normally every run
 #   is logged to ~/.local/state/eax-restore-linux/logs/ (newest 10 kept,
-#   latest.log points at the most recent) for attaching to bug reports.
+#   latest.log points at the most recent) for attaching to bug reports. The
+#   TUI keeps its own logs in ~/.local/state/eax-restore-linux/tui-logs/,
+#   and this turns those off too.
 #
 # * EAX_RESTORE_DSOAL_LOG=1  Turns DSOAL's own log on at its fullest level (4,
 #   every EAX call) as part of an install, the way Tools → DSOAL logging does

@@ -93,8 +93,8 @@ pub fn engine_args(e: &Entry, a: Action) -> Option<Vec<String>> {
         Action::Speakers => "speakers",
         Action::GameSettings => "settings",
         Action::DsoalLog => "sound-log",
-        // No Rust command yet.
-        Action::Vcrun | Action::EaxUnified => return None,
+        Action::Vcrun => "vcrun",
+        Action::EaxUnified => "eax-unified",
     };
     let path = e.path.as_ref()?;
     Some(vec![command.to_string(), path.display().to_string()])
@@ -148,8 +148,11 @@ mod tests {
             Some(vec!["uninstall".to_string(), "/lib/Alpha".to_string()])
         );
         assert_eq!(engine_args(&e, Action::Reinstall).unwrap()[0], "install");
-        assert_eq!(engine_args(&e, Action::Vcrun), None);
-        assert_eq!(engine_args(&e, Action::EaxUnified), None);
+        assert_eq!(engine_args(&e, Action::Vcrun).unwrap()[0], "vcrun");
+        assert_eq!(
+            engine_args(&e, Action::EaxUnified).unwrap()[0],
+            "eax-unified"
+        );
         // A game with no known folder is left to the script, which asks.
         let nowhere = entry(Status::NotOnThisPc, None, None);
         assert_eq!(engine_args(&nowhere, Action::Install), None);

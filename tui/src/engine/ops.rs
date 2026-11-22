@@ -192,3 +192,121 @@ pub fn change_settings(
     }
     Ok(r)
 }
+
+/// What adding VC++ or EAX Unified on its own did.
+#[derive(Debug, Default, PartialEq, Eq)]
+pub struct Added {
+    /// The game's own prefix has it now.
+    pub ok: bool,
+    /// Companion apps whose prefix didn't take it.
+    pub companions_failed: Vec<String>,
+}
+
+/// The manifest to add a record to: the game's, started afresh when there's
+/// none or it says the fix was uninstalled (a later uninstall would stop at
+/// that marker and never read the new line).
+fn manifest_for_record(game_dir: &Path) -> PathBuf {
+    let m = super::manifest::path_in(game_dir);
+    let empty = std::fs::metadata(&m).map_or(true, |md| md.len() == 0);
+    if empty || super::manifest::is_uninstalled(&m) {
+        let _ = super::manifest::start(&m, false);
+    }
+    m
+}
+
+/// The MS VC++ 2022 runtime on its own, as `src/vcrun-only-flow.sh` does it:
+/// into the game's prefix, then each companion app's own prefix, each
+/// recorded in the manifest so the uninstall can take it out again.
+pub fn add_vcrun(
+    plan: &Plan,
+    game_dir: &Path,
+    cache: &super::builds::Cache,
+    host: &mut dyn super::install::InstallHost,
+) -> Added {
+    let mut out = Added::default();
+    let Some(p) = &plan.prefix else {
+        return out;
+    };
+    host.step("Installing the MS VC++ 2022 Redistributable");
+    let rep = super::vcrun::install(
+        p,
+        game_dir,
+        plan.arch,
+        &cache.root.join("vcrun2022"),
+        host.net(),
+    );
+    if !rep.ok() {
+        host.warning("The MS VC++ 2022 Redistributable didn't install.");
+        return out;
+    }
+    host.detail("Installed");
+    out.ok = true;
+    let m = manifest_for_record(game_dir);
+    let _ = super::manifest::append(&m, b"VCRUN");
+    for c in &plan.companions {
+        host.step(&format!(
+            "Installing the MS VC++ 2022 Redistributable into {}'s prefix",
+            c.name
+        ));
+        let rep = super::vcrun::install(
+            &c.prefix,
+            game_dir,
+            plan.arch,
+            &cache.root.join("vcrun2022"),
+            host.net(),
+        );
+        if rep.ok() {
+            host.detail("Installed");
+            let _ = super::manifest::append(&m, format!("VCRUN\t{}", c.app_id).as_bytes());
+        } else {
+            host.warning(&format!(
+                "The MS VC++ 2022 Redistributable didn't install into {}'s prefix.",
+                c.name
+            ));
+            out.companions_failed.push(c.name.clone());
+        }
+    }
+    out
+}
+
+/// Creative's EAX Unified on its own, as `src/eax-unified-flow.sh` does it,
+/// recorded in the manifest once it's in.
+pub fn add_eax_unified(
+    plan: &Plan,
+    game_dir: &Path,
+    cache: &super::builds::Cache,
+    installer: &super::eax_unified::Installer,
+    host: &mut dyn super::install::InstallHost,
+) -> Added {
+    use super::eax_unified::Outcome;
+    let mut out = Added::default();
+    let Some(p) = &plan.prefix else {
+        return out;
+    };
+    host.step("Installing Creative's EAX Unified into the prefix");
+    let o = super::eax_unified::install(
+        p,
+        &cache.root.join("eax-unified"),
+        installer,
+        host.net(),
+        std::time::Duration::from_secs(1),
+    );
+    match o {
+        Outcome::Installed => host.detail("Installed"),
+        Outcome::AlreadyThere => host.detail("Already in the prefix"),
+        Outcome::NoInstaller => {
+            host.warning("Creative's EAX Unified couldn't be downloaded, so it wasn't installed.")
+        }
+        Outcome::Failed => host.warning("Creative's EAX Unified didn't install."),
+    }
+    out.ok = matches!(o, Outcome::Installed | Outcome::AlreadyThere);
+    if o == Outcome::Installed {
+        let m = manifest_for_record(game_dir);
+        let recorded =
+            std::fs::read_to_string(&m).is_ok_and(|t| t.lines().any(|l| l == "EAXUNIFIED"));
+        if !recorded {
+            let _ = super::manifest::append(&m, b"EAXUNIFIED");
+        }
+    }
+    out
+}

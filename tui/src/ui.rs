@@ -1,7 +1,7 @@
 //! Drawing. Reads `App`, never changes it. The look is the old fzf browser's:
 //! boxed Search, Filters and Games sections beside a full-height pane, its colours
 //! (see `theme`), a counter in the pane's corner, a centred key bar with the
-//! version at its right.
+//! build number at its right.
 
 use crate::app::{App, Filter, Layout as PaneLayout, Pane};
 use crate::filters::Filters;
@@ -87,7 +87,13 @@ fn draw_notice(f: &mut Frame, n: &crate::app::Notice, area: Rect) {
         };
         Span::styled(format!("[ {label} ]"), style)
     };
-    let buttons = if n.retry.is_some() {
+    let buttons = if n.update.is_some() {
+        vec![
+            button("Update and restart", n.on_retry),
+            Span::raw("  "),
+            button("Later", !n.on_retry),
+        ]
+    } else if n.retry.is_some() {
         vec![
             button("Check again", n.on_retry),
             Span::raw("  "),
@@ -718,12 +724,7 @@ fn bar_rows(app: &App, width: u16) -> u16 {
 }
 
 fn version() -> String {
-    let dev = if crate::fetch::CHANNEL == "dev" {
-        "-dev"
-    } else {
-        ""
-    };
-    format!("v{}{dev}", env!("CARGO_PKG_VERSION"))
+    crate::build_info::label()
 }
 
 fn draw_bar(f: &mut Frame, app: &App, area: Rect) {
@@ -751,7 +752,7 @@ fn draw_bar(f: &mut Frame, app: &App, area: Rect) {
             .wrap(Wrap { trim: true }),
         area,
     );
-    // The version at the right edge, if the centred keys leave room for it.
+    // The build number at the right edge, if the centred keys leave room for it.
     let v = version();
     let room = usize::from(area.width).saturating_sub(bar_len(app)) / 2;
     if area.height == 1 && room > v.chars().count() + 1 {

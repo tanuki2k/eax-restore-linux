@@ -150,3 +150,33 @@ fn nothing_changes_without_yes() {
     );
     assert!(out.contains("rc=1") && out.contains("SAME"), "{out}");
 }
+
+#[test]
+fn a_command_that_changes_things_leaves_a_run_log() {
+    let tmp = tempfile::tempdir().unwrap();
+    let out = world(
+        tmp.path(),
+        "make_profile_world",
+        "unset EAX_RESTORE_NO_LOG\n\
+         \"$BIN\" install \"$GAME\" --yes --vcrun skip\n\
+         \"$BIN\" status \"$GAME\" > /dev/null\n\
+         logs=\"$HOME/.local/state/eax-restore-linux/tui-logs\"\n\
+         echo \"COUNT=$(find \"$logs\" -name 'eax-restore-tui-*.log' | wc -l)\"\n\
+         cat \"$(find \"$logs\" -name latest.log | head -n 1)\"\n\
+         [ -d \"$HOME/.local/state/eax-restore-linux/logs\" ] || echo NO_SCRIPT_LOGS",
+    );
+    for want in [
+        "The log is saved at ~/.local/state/eax-restore-linux/tui-logs/",
+        // status only reads, so it writes no log.
+        "COUNT=1",
+        "Program:         eax-restore TUI ",
+        "Run:             install Test Game",
+        "The EAX fix is installed.",
+        "=== Run summary ===",
+        "Result:          finished",
+        "Install manifest (",
+        "NO_SCRIPT_LOGS",
+    ] {
+        assert!(out.contains(want), "missing {want:?} in:\n{out}");
+    }
+}

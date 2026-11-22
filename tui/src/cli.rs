@@ -22,20 +22,24 @@ use crate::engine::prepare::{self, Facts};
 use crate::engine::speakers::{Layout, Listening, Speakers};
 use crate::engine::uninstall::{self, Choices, Location, Surveyed};
 use crate::engine::wine::{self, Prefix};
+use crate::runlog::{self, RunLog};
 use crate::{fetch, library};
 use anyhow::{bail, Context, Result};
 use std::collections::{HashMap, HashSet};
 use std::io::{BufRead, IsTerminal, Write};
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 use std::time::Duration;
 
-pub const COMMANDS: [&str; 6] = [
+pub const COMMANDS: [&str; 8] = [
     "status",
     "install",
     "uninstall",
     "speakers",
     "settings",
     "sound-log",
+    "vcrun",
+    "eax-unified",
 ];
 
 const HELP: &str = "\
@@ -51,6 +55,8 @@ Commands:
               settings GAME_FOLDER --on TITLE --off TITLE
               (with neither, lists them)
   sound-log   Turn the sound log on or off:  sound-log GAME_FOLDER full|basic|off
+  vcrun       Install the MS VC++ 2022 runtime into the game's prefix
+  eax-unified Install Creative's EAX Unified into the game's prefix
 
 Options for every command:
   --yes                Don't ask before making the changes
@@ -146,8 +152,29 @@ impl Args {
     }
 }
 
+/// This command's run log: everything `say` prints and every answer goes
+/// into it too. A command that only reads (`status`) has none.
+static LOG: Mutex<Option<RunLog>> = Mutex::new(None);
+/// The last step started, for the log's summary: where a failed run stopped.
+static LAST_STEP: Mutex<Option<String>> = Mutex::new(None);
+
+fn with_log(f: impl FnOnce(&RunLog)) {
+    if let Ok(l) = LOG.lock() {
+        if let Some(log) = l.as_ref() {
+            f(log);
+        }
+    }
+}
+
+fn log_path() -> Option<PathBuf> {
+    LOG.lock()
+        .ok()
+        .and_then(|l| l.as_ref().map(|l| l.path().to_path_buf()))
+}
+
 fn say(s: impl AsRef<str>) {
     println!("{}", s.as_ref());
+    with_log(|l| l.line(s.as_ref()));
 }
 
 fn home() -> Result<PathBuf> {
@@ -235,6 +262,43 @@ pub fn unwritable_problem(facts: &Facts, home: &Path, again: &str) -> Option<Str
     Some(format!(
         "{} can't be written to, so the EAX fix can't be installed. {why}",
         library::tilde(dir, home)
+    ))
+}
+
+/// The programs the EAX fix needs that aren't installed, and what for, as
+/// the script's preflight says it. `again` ends the advice, as for
+/// `unwritable_problem`.
+pub fn tools_problem(facts: &Facts, name: &str, again: &str) -> Option<String> {
+    let missing = &facts.missing_tools;
+    if missing.is_empty() {
+        return None;
+    }
+    let has = |t: &str| missing.contains(&t);
+    let join = |items: &[String]| match items {
+        [one] => one.clone(),
+        [rest @ .., last] => format!("{} and {last}", rest.join(", ")),
+        [] => String::new(),
+    };
+    let mut uses = Vec::new();
+    match (has("curl"), has("unzip")) {
+        (true, true) => uses.push("download and unpack its files".to_string()),
+        (true, false) => uses.push("download its files".to_string()),
+        (false, true) => uses.push("unpack its files".to_string()),
+        (false, false) => {}
+    }
+    if has("winetricks") {
+        uses.push(format!("make changes in {name}'s Wine prefix"));
+    }
+    let names: Vec<String> = missing.iter().map(|t| t.to_string()).collect();
+    let (verb, it) = if missing.len() == 1 {
+        ("isn't", "it")
+    } else {
+        ("aren't", "them")
+    };
+    Some(format!(
+        "{} {verb} installed, and the EAX fix needs {it} to {}. Install {it} with your distro's package manager, then {again}.",
+        join(&names),
+        join(&uses)
     ))
 }
 
@@ -382,6 +446,7 @@ fn ask(question: &str) -> Result<Option<String>> {
     std::io::stdout().flush()?;
     let mut line = String::new();
     std::io::stdin().lock().read_line(&mut line)?;
+    with_log(|l| l.line(&format!("{question}\n> {}", line.trim())));
     Ok(Some(line.trim().to_string()))
 }
 
@@ -392,6 +457,7 @@ fn confirm(question: &str, args: &Args) -> Result<bool> {
 /// A (Y/n) question, or (y/N) when `yes` is false and Enter means no.
 fn yes_no(question: &str, args: &Args, yes: bool) -> Result<bool> {
     if args.on("--yes") {
+        with_log(|l| l.line(&format!("{question} Yes (--yes)")));
         return Ok(true);
     }
     if !std::io::stdin().is_terminal() {
@@ -401,10 +467,12 @@ fn yes_no(question: &str, args: &Args, yes: bool) -> Result<bool> {
     std::io::stdout().flush()?;
     let mut line = String::new();
     std::io::stdin().lock().read_line(&mut line)?;
-    Ok(match line.trim().to_lowercase().as_str() {
+    let answer = match line.trim().to_lowercase().as_str() {
         "" => yes,
         a => matches!(a, "y" | "yes"),
-    })
+    };
+    with_log(|l| l.question("", question, answer));
+    Ok(answer)
 }
 
 /// Closes a running launcher before its settings file is changed, when
@@ -599,7 +667,12 @@ fn status_word(f: &Fix, name: &str) -> String {
 
 fn print_step(e: Event, what: &str) {
     match e {
-        Event::Step => say(format!("{what}...")),
+        Event::Step => {
+            if let Ok(mut l) = LAST_STEP.lock() {
+                *l = Some(what.to_string());
+            }
+            say(format!("{what}..."));
+        }
         Event::Detail => say(format!("    {what}")),
         Event::Warning => say(format!("    Warning: {what}")),
     }
@@ -617,7 +690,7 @@ fn host<'a>(
         prefix: Prefix {
             path: facts.prefix.clone().unwrap_or_default(),
             runner: facts.runner.clone(),
-            log: None,
+            log: log_path(),
         },
         game_dir: facts.game_dir.clone(),
         game_exe: game.map(|g| g.exe.clone()).unwrap_or_default(),
@@ -661,6 +734,11 @@ pub fn run(raw: &[String]) -> Result<()> {
         reopen: Vec::new(),
     };
     launchers.game = game_name(&facts, game.as_ref());
+    if cmd != "status" {
+        if let Ok(mut l) = LOG.lock() {
+            *l = RunLog::start(&home, &format!("{cmd} {}", launchers.game));
+        }
+    }
     let result = match cmd {
         "status" => status(&facts, game.as_ref(), &args, &home),
         "install" => install(&facts, game.as_ref(), &args, &home, &mut launchers),
@@ -668,10 +746,156 @@ pub fn run(raw: &[String]) -> Result<()> {
         "speakers" => speakers(&facts, game.as_ref(), &args, &home),
         "settings" => settings(&facts, game.as_ref(), &args, &home),
         "sound-log" => sound_log(&facts, game.as_ref(), &args, &mut launchers),
+        "vcrun" => vcrun(&facts, game.as_ref(), &args, &home),
+        "eax-unified" => eax_unified(&facts, game.as_ref(), &args, &home),
         _ => unreachable!("only the commands in COMMANDS get here"),
     };
     launchers.reopen();
+    finish_log(&result, &facts, &launchers.game, &home);
     result
+}
+
+/// Closes the run log with its summary and says where it is, with the bug
+/// report page when the command failed.
+fn finish_log(result: &Result<()>, facts: &Facts, game: &str, home: &Path) {
+    let Some(log) = LOG.lock().ok().and_then(|mut l| l.take()) else {
+        return;
+    };
+    let closing: Vec<String> = match result {
+        Ok(()) => Vec::new(),
+        Err(e) => format!("{e:#}").lines().map(String::from).collect(),
+    };
+    log.summary(
+        &runlog::Summary {
+            ok: result.is_ok(),
+            title: if result.is_ok() { "Finished" } else { "Failed" },
+            game,
+            facts: Some(facts),
+            last_step: LAST_STEP.lock().ok().and_then(|l| l.clone()).as_deref(),
+        },
+        &closing,
+    );
+    let path = runlog::tilde_text(&log.path().display().to_string(), home);
+    println!("\nThe log is saved at {path}");
+    if result.is_err() {
+        println!(
+            "Something wrong? Attach this log to a bug report: {}",
+            runlog::BUG_REPORT_PAGE
+        );
+    }
+}
+
+/// What `vcrun` and `eax-unified` check first: the game is Windows and has
+/// a prefix, and what they run is there.
+fn prefix_job_problem(facts: &Facts, name: &str) -> Result<()> {
+    if facts.linux_build {
+        bail!("{name} is the Linux version, which the EAX fix can't work with. Switch the game to its Windows version in its launcher first.");
+    }
+    if facts.prefix.is_none() {
+        bail!("{name}'s Wine prefix wasn't found. If you just installed {name}, its launcher creates it the first time it runs: launch the game once, close it, and try again.");
+    }
+    if let Some(why) = tools_problem(facts, name, "try again") {
+        bail!("{why}");
+    }
+    if let Some(why) = protontricks_problem(facts, name) {
+        bail!("{why}");
+    }
+    Ok(())
+}
+
+/// The MS VC++ 2022 runtime on its own, as the script's Tools → VC++ install.
+fn vcrun(facts: &Facts, game: Option<&Game>, args: &Args, home: &Path) -> Result<()> {
+    let name = game_name(facts, game);
+    prefix_job_problem(facts, &name)?;
+    if facts.vcrun_present {
+        say(format!("The MS VC++ 2022 Redistributable is already in {name}'s prefix, so there's nothing to install."));
+        return Ok(());
+    }
+    let mut plan = facts.default_plan();
+    plan.log_to(log_path().as_deref());
+    if let Some(p) = &plan.prefix {
+        say(format!(
+            "{name}'s prefix is {}",
+            library::tilde(&p.path, home)
+        ));
+    }
+    for c in &plan.companions {
+        say(format!(
+            "{}'s prefix is {}",
+            c.name,
+            library::tilde(&c.prefix.path, home)
+        ));
+    }
+    if !confirm(
+        &format!("Install the MS VC++ 2022 Redistributable into {name}'s prefix?"),
+        args,
+    )? {
+        say("Nothing was changed.");
+        return Ok(());
+    }
+    let cache = Cache::new(home);
+    let mut net = Curl::default();
+    let mut never = |_: &Target| true;
+    let mut steps = print_step;
+    let mut h = host(facts, game, &mut net, &mut never, &mut steps, home);
+    let added = ops::add_vcrun(&plan, &facts.game_dir, &cache, &mut h);
+    if !added.ok {
+        bail!("The MS VC++ 2022 Redistributable isn't installed in {name}'s prefix.");
+    }
+    if !added.companions_failed.is_empty() {
+        bail!(
+            "The MS VC++ 2022 Redistributable is installed in {name}'s prefix, but not in {}'s.",
+            added.companions_failed.join(" or ")
+        );
+    }
+    say(format!(
+        "The MS VC++ 2022 Redistributable is installed in {name}'s prefix."
+    ));
+    Ok(())
+}
+
+/// Creative's EAX Unified on its own, as the script's Tools → EAX Unified.
+fn eax_unified(facts: &Facts, game: Option<&Game>, args: &Args, home: &Path) -> Result<()> {
+    let name = game_name(facts, game);
+    prefix_job_problem(facts, &name)?;
+    let prefix = facts.prefix.clone().unwrap_or_default();
+    if crate::engine::eax_unified::installed_dll(&prefix).is_some() {
+        say(format!(
+            "EAX Unified is already in {name}'s prefix, so there's nothing to install."
+        ));
+        return Ok(());
+    }
+    if crate::engine::eax_unified::game_ships_eax_dll(&facts.game_dir) {
+        say(format!(
+            "{name} has its own eax.dll in its game folder, so it may not need EAX Unified."
+        ));
+    }
+    say(format!(
+        "{name}'s prefix is {}",
+        library::tilde(&prefix, home)
+    ));
+    if !confirm(
+        &format!("Install Creative's EAX Unified into {name}'s prefix?"),
+        args,
+    )? {
+        say("Nothing was changed.");
+        return Ok(());
+    }
+    let mut plan = facts.default_plan();
+    plan.log_to(log_path().as_deref());
+    let cache = Cache::new(home);
+    let mut net = Curl::default();
+    let mut never = |_: &Target| true;
+    let mut steps = print_step;
+    let mut h = host(facts, game, &mut net, &mut never, &mut steps, home);
+    let added = ops::add_eax_unified(&plan, &facts.game_dir, &cache, &eax_installer(), &mut h);
+    if !added.ok {
+        bail!("Creative's EAX Unified isn't installed in {name}'s prefix.");
+    }
+    say(format!(
+        "Creative's EAX Unified is installed in {name}'s prefix."
+    ));
+    Ok(())
 }
 
 fn status(facts: &Facts, game: Option<&Game>, args: &Args, home: &Path) -> Result<()> {
@@ -748,6 +972,9 @@ fn install(
         bail!("{why}");
     }
     if let Some(why) = unwritable_problem(facts, home, "try again") {
+        bail!("{why}");
+    }
+    if let Some(why) = tools_problem(facts, &name, "try again") {
         bail!("{why}");
     }
     if facts.prefix.is_none() {
@@ -915,6 +1142,7 @@ fn install(
     plan.dsoal_version = builds::dsoal_version(&plan.dsoal_build, &versions, &pins);
     plan.openal_version = builds::openal_version(&plan.openal_build, &versions);
 
+    plan.log_to(log_path().as_deref());
     let mut close = |t: &Target| launchers.closed(t);
     let mut steps = print_step;
     let mut h = host(facts, game, &mut net, &mut close, &mut steps, home);
@@ -1433,6 +1661,39 @@ fn sound_log(
 mod tests {
     use super::*;
     use std::os::unix::fs::PermissionsExt;
+
+    #[test]
+    fn missing_tools_say_what_each_is_for() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut f = prepare::gather(tmp.path(), None, tmp.path(), &[]);
+        f.missing_tools = Vec::new();
+        assert_eq!(tools_problem(&f, "Thief", "try again"), None);
+        f.missing_tools = vec!["unzip"];
+        assert_eq!(
+            tools_problem(&f, "Thief", "try again").unwrap(),
+            "unzip isn't installed, and the EAX fix needs it to unpack its files. Install it with your distro's package manager, then try again."
+        );
+        f.missing_tools = vec!["curl", "unzip", "winetricks"];
+        assert_eq!(
+            tools_problem(&f, "Thief", "try again").unwrap(),
+            "curl, unzip and winetricks aren't installed, and the EAX fix needs them to download and unpack its files and make changes in Thief's Wine prefix. Install them with your distro's package manager, then try again."
+        );
+    }
+
+    #[test]
+    fn tools_are_looked_for_on_path() {
+        assert!(prepare::on_path("sh"));
+        assert!(!prepare::on_path("no-such-program-eax-restore"));
+        let wine = wine::Runner::Wine {
+            wine: "/usr/bin/wine".into(),
+            wineserver: None,
+        };
+        assert_eq!(prepare::needed_tools(None), ["curl", "unzip"]);
+        assert_eq!(
+            prepare::needed_tools(Some(&wine)),
+            ["curl", "unzip", "winetricks"]
+        );
+    }
 
     fn script(path: &Path, body: &str) {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();

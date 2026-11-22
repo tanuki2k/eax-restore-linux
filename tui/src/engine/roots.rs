@@ -9,11 +9,19 @@ use std::path::{Path, PathBuf};
 /// only count for the real home: a fake one in a test gets the defaults, as
 /// the script does there, since its `$HOME` is the fake one too.
 pub fn xdg_home(home: &Path, data: bool) -> PathBuf {
-    let (var, default) = if data {
-        ("XDG_DATA_HOME", ".local/share")
+    if data {
+        xdg_dir(home, "XDG_DATA_HOME", ".local/share")
     } else {
-        ("XDG_CONFIG_HOME", ".config")
-    };
+        xdg_dir(home, "XDG_CONFIG_HOME", ".config")
+    }
+}
+
+/// `$XDG_STATE_HOME`, else `~/.local/state`, on the same terms as `xdg_home`.
+pub fn xdg_state(home: &Path) -> PathBuf {
+    xdg_dir(home, "XDG_STATE_HOME", ".local/state")
+}
+
+fn xdg_dir(home: &Path, var: &str, default: &str) -> PathBuf {
     let real_home = std::env::var_os("HOME").map(PathBuf::from);
     if real_home.as_deref() == Some(home) {
         if let Some(v) = std::env::var_os(var)

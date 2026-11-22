@@ -16,8 +16,10 @@ use crate::engine::ops;
 use crate::engine::prepare::Facts;
 use crate::engine::uninstall;
 use crate::engine::wine::Prefix;
+use crate::runlog::{self, RunLog};
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 pub enum Msg {
@@ -41,13 +43,57 @@ pub struct Finish {
     /// (title, follow-up), the follow-up empty when there's none.
     pub settings: Vec<(String, String)>,
     pub lines: Vec<String>,
+    /// The run log, when there is one, with `~` for the home folder.
+    pub log: Option<String>,
+}
+
+/// The page's channel. Everything sent down it also goes into the run log.
+#[derive(Clone)]
+struct Out {
+    tx: Sender<Msg>,
+    log: Option<RunLog>,
+    last_step: Arc<Mutex<Option<String>>>,
+}
+
+impl Out {
+    fn send(&self, m: Msg) {
+        if let Msg::Step(s) = &m {
+            if let Ok(mut l) = self.last_step.lock() {
+                *l = Some(s.clone());
+            }
+        }
+        if let Some(log) = &self.log {
+            match &m {
+                Msg::Step(s) => log.step(s),
+                Msg::Detail(s) => log.detail(s),
+                Msg::Note(s) => log.warning(s),
+                // A question goes in with its answer; the finish with the summary.
+                Msg::Question(..) | Msg::Done(_) => {}
+            }
+        }
+        let _ = self.tx.send(m);
+    }
+
+    fn answered(&self, text: &str, ask: &str, yes: bool) {
+        if let Some(log) = &self.log {
+            log.question(text, ask, yes);
+        }
+    }
+
+    fn log_path(&self) -> Option<PathBuf> {
+        self.log.as_ref().map(|l| l.path().to_path_buf())
+    }
+
+    fn last_step(&self) -> Option<String> {
+        self.last_step.lock().ok().and_then(|l| l.clone())
+    }
 }
 
 /// Sends the engine's steps, details and warnings to the page.
-fn sender(tx: Sender<Msg>) -> impl FnMut(Event, &str) {
+fn sender(out: Out) -> impl FnMut(Event, &str) {
     move |e, s| {
         let s = s.to_string();
-        let _ = tx.send(match e {
+        out.send(match e {
             Event::Step => Msg::Step(s),
             Event::Detail => Msg::Detail(s),
             Event::Warning => Msg::Note(s),
@@ -122,9 +168,18 @@ pub fn start(
     let (tx, rx) = mpsc::channel();
     let (answers, answer_rx) = mpsc::channel();
     let titles = titles(&jobs);
+    let name = game
+        .as_ref()
+        .map_or_else(|| facts.game_dir.display().to_string(), |g| g.name.clone());
+    let what = format!("{} {name}", run_label(&jobs));
     std::thread::spawn(move || {
+        let out = Out {
+            tx,
+            log: RunLog::start(&home, &what),
+            last_step: Arc::default(),
+        };
         let mut w = Worker {
-            tx: tx.clone(),
+            out: out.clone(),
             answers: answer_rx,
             home,
             reopen: Vec::new(),
@@ -145,12 +200,29 @@ pub fn start(
             }
         }
         w.reopen_launchers();
-        let _ = tx.send(Msg::Done(Finish {
+        let title = if ok { titles.0 } else { titles.1 };
+        if let Some(log) = &out.log {
+            let last = out.last_step();
+            log.summary(
+                &runlog::Summary {
+                    ok,
+                    title,
+                    game: &name,
+                    facts: Some(&facts),
+                    last_step: last.as_deref(),
+                },
+                &lines,
+            );
+        }
+        out.send(Msg::Done(Finish {
             ok,
-            title: if ok { titles.0 } else { titles.1 }.to_string(),
+            title: title.to_string(),
             next: w.next,
             settings: w.settings,
             lines,
+            log: out
+                .log_path()
+                .map(|p| runlog::tilde_text(&p.display().to_string(), &w.home)),
         }));
     });
     RunView {
@@ -162,10 +234,30 @@ pub fn start(
     }
 }
 
+/// What the run is, for the log's header: "Install BioShock".
+fn run_label(jobs: &[Job]) -> &'static str {
+    match jobs.first() {
+        Some(Job::Install { .. }) => "Install",
+        Some(Job::Uninstall { .. }) => "Uninstall",
+        Some(Job::SoundLog(_)) => "Sound log",
+        Some(Job::Speakers(_)) => "Speakers",
+        Some(Job::Vcrun(_)) => "VC++ runtime",
+        Some(Job::EaxUnified(_)) => "EAX Unified",
+        Some(Job::Settings { .. }) => "Game settings",
+        None => "Nothing for",
+    }
+}
+
 /// The finish box's title when it all worked, and when it didn't, from the
 /// first job (an Apply that reinstalls starts with the install).
 fn titles(jobs: &[Job]) -> (&'static str, &'static str) {
     match jobs.first() {
+        Some(Job::Vcrun(_)) if jobs.len() == 1 => {
+            ("VC++ runtime installed", "VC++ runtime not installed")
+        }
+        Some(Job::EaxUnified(_)) if jobs.len() == 1 => {
+            ("EAX Unified installed", "EAX Unified not installed")
+        }
         Some(Job::Install { .. }) => ("Installed", "Not fully installed"),
         Some(Job::Uninstall { .. }) => ("Uninstalled", "Not fully uninstalled"),
         Some(Job::SoundLog(Some(_))) => ("Sound log on", "Sound log not changed"),
@@ -175,7 +267,7 @@ fn titles(jobs: &[Job]) -> (&'static str, &'static str) {
 }
 
 struct Worker {
-    tx: Sender<Msg>,
+    out: Out,
     answers: Receiver<bool>,
     home: PathBuf,
     reopen: Vec<(String, Vec<String>)>,
@@ -186,17 +278,19 @@ struct Worker {
 
 impl Worker {
     fn step(&self, s: &str) {
-        let _ = self.tx.send(Msg::Step(s.to_string()));
+        self.out.send(Msg::Step(s.to_string()));
     }
     fn detail(&self, s: &str) {
-        let _ = self.tx.send(Msg::Detail(s.to_string()));
+        self.out.send(Msg::Detail(s.to_string()));
     }
     fn note(&self, s: String) {
-        let _ = self.tx.send(Msg::Note(s));
+        self.out.send(Msg::Note(s));
     }
     fn ask(&self, text: String, ask: String) -> bool {
-        let _ = self.tx.send(Msg::Question(text, ask));
-        self.answers.recv().unwrap_or(false)
+        self.out.send(Msg::Question(text.clone(), ask.clone()));
+        let yes = self.answers.recv().unwrap_or(false);
+        self.out.answered(&text, &ask, yes);
+        yes
     }
 
     /// Closes a running launcher before its settings change, when the
@@ -271,6 +365,9 @@ impl Worker {
                 revert,
                 audio_done,
             } => {
+                if let Some(why) = crate::cli::tools_problem(facts, &name, "try again") {
+                    return Err(why);
+                }
                 if let Some(why) = crate::cli::protontricks_problem(facts, &name) {
                     return Err(why);
                 }
@@ -278,18 +375,20 @@ impl Worker {
                 let pins = Pins::default();
                 let github = builds::Net::reachable(&mut net);
                 let mut v = builds::lookup(&cache, &mut net, github, &pins);
-                let tx = self.tx.clone();
+                let out = self.out.clone();
                 let answers = &self.answers;
                 let mut confirm = |label: &str| {
-                    let _ = tx.send(Msg::Question(
-                        format!(
-                            "GitHub publishes no checksum for {label}, so the download can't be checked."
-                        ),
-                        "Install it anyway?".into(),
-                    ));
-                    answers.recv().unwrap_or(false)
+                    let text = format!(
+                        "GitHub publishes no checksum for {label}, so the download can't be checked."
+                    );
+                    let ask = "Install it anyway?";
+                    out.send(Msg::Question(text.clone(), ask.into()));
+                    let yes = answers.recv().unwrap_or(false);
+                    out.answered(&text, ask, yes);
+                    yes
                 };
                 let mut plan = plan;
+                plan.log_to(self.out.log_path().as_deref());
                 plan.dsoal_build =
                     builds::resolve_dsoal(plan.dsoal_build.clone(), &cache, &mut net, &v);
                 plan.openal_build = builds::resolve_openal(plan.openal_build.clone());
@@ -325,7 +424,8 @@ impl Worker {
                 plan.dsoal_version = builds::dsoal_version(&plan.dsoal_build, &v, &pins);
                 plan.openal_version = builds::openal_version(&plan.openal_build, &v);
                 let r = {
-                    let mut on_step = sender(self.tx.clone());
+                    let log = self.out.log_path();
+                    let mut on_step = sender(self.out.clone());
                     let me = std::cell::RefCell::new(&mut *self);
                     let mut close = |t: &Target| {
                         me.borrow_mut().launcher_closed(
@@ -335,7 +435,7 @@ impl Worker {
                             "add the override",
                         )
                     };
-                    let mut h = host(facts, game, &mut net, &mut close, &mut on_step, &cache);
+                    let mut h = host(facts, game, &mut net, &mut close, &mut on_step, &cache, log);
                     install::execute(&plan, &cache, &crate::cli::eax_installer(), &mut h)
                 };
                 if r.no_sources {
@@ -365,6 +465,56 @@ impl Worker {
                         "The EAX fix isn't fully installed, so {name} may run without it or fail to start. Fix what's listed under Warnings, then install again, or uninstall to remove what was put in."
                     ));
                 }
+            }
+            Job::Vcrun(mut plan) => {
+                if let Some(why) = crate::cli::tools_problem(facts, &name, "try again") {
+                    return Err(why);
+                }
+                if let Some(why) = crate::cli::protontricks_problem(facts, &name) {
+                    return Err(why);
+                }
+                plan.log_to(self.out.log_path().as_deref());
+                let added = self.with_host(facts, game, &cache, |h| {
+                    ops::add_vcrun(&plan, &facts.game_dir, &cache, h)
+                });
+                if !added.ok {
+                    return Err(format!("The MS VC++ 2022 Redistributable isn't installed in {name}'s prefix. See Warnings."));
+                }
+                if !added.companions_failed.is_empty() {
+                    return Err(format!(
+                        "The MS VC++ 2022 Redistributable is installed in {name}'s prefix, but not in {}'s. See Warnings.",
+                        added.companions_failed.join(" or ")
+                    ));
+                }
+                lines.push(format!(
+                    "The MS VC++ 2022 Redistributable is installed in {name}'s prefix."
+                ));
+            }
+            Job::EaxUnified(mut plan) => {
+                if let Some(why) = crate::cli::tools_problem(facts, &name, "try again") {
+                    return Err(why);
+                }
+                if let Some(why) = crate::cli::protontricks_problem(facts, &name) {
+                    return Err(why);
+                }
+                plan.log_to(self.out.log_path().as_deref());
+                let added = self.with_host(facts, game, &cache, |h| {
+                    ops::add_eax_unified(
+                        &plan,
+                        &facts.game_dir,
+                        &cache,
+                        &crate::cli::eax_installer(),
+                        h,
+                    )
+                });
+                if !added.ok {
+                    return Err(format!(
+                        "Creative's EAX Unified isn't installed in {name}'s prefix. See Warnings."
+                    ));
+                }
+                lines.push(format!(
+                    "Creative's EAX Unified is installed in {name}'s prefix."
+                ));
             }
             Job::Speakers(new) => {
                 let Some(inst) = inst else {
@@ -450,7 +600,8 @@ impl Worker {
                     .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
                     .unwrap_or_default();
                 let r = {
-                    let mut on_step = sender(self.tx.clone());
+                    let log = self.out.log_path();
+                    let mut on_step = sender(self.out.clone());
                     let me = std::cell::RefCell::new(&mut *self);
                     let mut close = |t: &Target| {
                         me.borrow_mut().launcher_closed(
@@ -460,7 +611,7 @@ impl Worker {
                             "remove it",
                         )
                     };
-                    let mut h = host(facts, game, &mut net, &mut close, &mut on_step, &cache);
+                    let mut h = host(facts, game, &mut net, &mut close, &mut on_step, &cache, log);
                     uninstall::execute(&survey, &choices, &mut h, &when)
                 };
                 if r.fully_uninstalled {
@@ -481,9 +632,10 @@ impl Worker {
         f: impl FnOnce(&mut SystemHost) -> T,
     ) -> T {
         let mut net = Curl::default();
-        let mut on_step = sender(self.tx.clone());
+        let mut on_step = sender(self.out.clone());
         let mut never = |_: &Target| true;
-        let mut h = host(facts, game, &mut net, &mut never, &mut on_step, cache);
+        let log = self.out.log_path();
+        let mut h = host(facts, game, &mut net, &mut never, &mut on_step, cache, log);
         f(&mut h)
     }
 }
@@ -521,12 +673,14 @@ fn host<'a>(
     close: &'a mut dyn FnMut(&Target) -> bool,
     on_step: &'a mut dyn FnMut(Event, &str),
     cache: &Cache,
+    // The run log, where the Wine side's own output goes.
+    log: Option<PathBuf>,
 ) -> SystemHost<'a> {
     SystemHost {
         prefix: Prefix {
             path: facts.prefix.clone().unwrap_or_default(),
             runner: facts.runner.clone(),
-            log: None,
+            log,
         },
         game_dir: facts.game_dir.clone(),
         game_exe: game.map(|g| g.exe.clone()).unwrap_or_default(),

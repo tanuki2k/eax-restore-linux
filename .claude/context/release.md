@@ -41,4 +41,5 @@ with `dist/eax-restore-linux.sh` and its `.sha256` attached, but only after `bas
 `jq empty game-database.json` pass. It's marked `--prerelease` so
 `releases/latest` keeps resolving to the stable `vX.Y`, and the workflow fails if that
 ever stops holding. The `dev` prerelease never carries the `.desktop` launcher (the
-launcher hardcodes `releases/latest`).
+launcher hardcodes `releases/latest`). Its `dev-tui` job adds the TUI binary, its `.sha256` and
+`eax-restore-linux-tui-x86_64.build` (the commit count the TUI's update check compares).

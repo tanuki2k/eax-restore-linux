@@ -442,3 +442,89 @@ fn eax_unified_matches() {
     }
     let _ = Installed::Failed;
 }
+
+/// Just enough host for `ops::add_vcrun` / `add_eax_unified`.
+struct QuietHost<'a> {
+    net: &'a mut Curl,
+    steps: Vec<String>,
+}
+
+impl eax_restore::engine::apply::Host for QuietHost<'_> {
+    fn game_running(&mut self) -> bool {
+        false
+    }
+    fn registry_quiet(&mut self) -> bool {
+        true
+    }
+    fn step(&mut self, what: &str) {
+        self.steps.push(what.to_string());
+    }
+}
+
+impl eax_restore::engine::install::InstallHost for QuietHost<'_> {
+    fn launcher_closed(&mut self, _: &eax_restore::engine::launcher::target::Target) -> bool {
+        true
+    }
+    fn net(&mut self) -> &mut dyn eax_restore::engine::builds::Net {
+        self.net
+    }
+}
+
+#[test]
+fn adding_either_on_its_own_records_it_in_the_manifest() {
+    use eax_restore::engine::{builds::Cache, manifest, ops, prepare};
+    let tmp = tempfile::tempdir().unwrap();
+    let (r, rb) = (tmp.path().join("r"), tmp.path().join("bin-r"));
+    let w = World {
+        wow: true,
+        verb_works: true,
+        ..World::default()
+    };
+    fakes(&rb);
+    make_side(&r, w);
+    let game = r.join("game");
+    let home = r.join("home");
+    let m = manifest::path_in(&game);
+    // An uninstall left its marker: the record starts a new manifest.
+    std::fs::write(&m, manifest::uninstalled_marker("2026-01-01T00:00:00Z")).unwrap();
+    assert!(manifest::is_uninstalled(&m));
+
+    let mut inst = Installer::for_branch("main");
+    inst.exe_sha256 = format!(
+        "{:x}",
+        <sha2::Sha256 as sha2::Digest>::digest(b"MZ EAX Unified installer")
+    );
+    let eax_cache = home.join(".local/share/eax-restore-linux/eax-unified");
+    std::fs::create_dir_all(&eax_cache).unwrap();
+    std::fs::write(eax_cache.join(&inst.exe), "MZ EAX Unified installer").unwrap();
+
+    let (vc, eax, again, steps) = rust(&r, &rb, w, |p, net| {
+        let mut plan = prepare::gather(&game, None, &home, &[]).default_plan();
+        plan.prefix = Some(p.clone());
+        plan.arch = 32;
+        plan.companions.clear();
+        let cache = Cache::new(&home);
+        let mut h = QuietHost {
+            net,
+            steps: Vec::new(),
+        };
+        let vc = ops::add_vcrun(&plan, &game, &cache, &mut h);
+        let eax = ops::add_eax_unified(&plan, &game, &cache, &inst, &mut h);
+        let again = ops::add_eax_unified(&plan, &game, &cache, &inst, &mut h);
+        (vc, eax, again, h.steps)
+    });
+    assert!(vc.ok && vc.companions_failed.is_empty(), "{vc:?}");
+    assert!(eax.ok && again.ok);
+    assert_eq!(
+        steps,
+        [
+            "Installing the MS VC++ 2022 Redistributable",
+            "Installing Creative's EAX Unified into the prefix",
+            "Installing Creative's EAX Unified into the prefix",
+        ]
+    );
+    let text = std::fs::read_to_string(&m).unwrap();
+    assert!(!manifest::is_uninstalled(&m), "{text}");
+    let records: Vec<&str> = text.lines().filter(|l| !l.starts_with('#')).collect();
+    assert_eq!(records, ["VCRUN", "EAXUNIFIED"], "{text}");
+}

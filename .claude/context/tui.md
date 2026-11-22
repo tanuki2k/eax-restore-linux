@@ -183,8 +183,12 @@ a second channel. The run ends with a `Finish`: a title, numbered next steps
 (`install::next_steps`, shared with the CLI), the settings changed with their follow-ups, and
 every warning recapped. Install shows `Plan::summary` (shared with `eax-restore install`) on
 the confirm screen before it starts. On an installed game Apply lists the changes first and only
-reinstalls for engine, builds, override, VC++, architecture, COM routing, limits or EAX Unified;
-speakers and settings change in place (`engine/ops.rs`, shared with the headless commands).
+reinstalls for engine, builds, override, architecture, COM routing or limits, or for taking VC++
+or EAX Unified out; speakers and settings change in place (`engine/ops.rs`, shared with the
+headless commands), and so does adding VC++ or EAX Unified (`Job::Vcrun` / `Job::EaxUnified`,
+`ops::add_vcrun` / `ops::add_eax_unified`, which record `VCRUN` / `VCRUN\t<appid>` /
+`EAXUNIFIED` as the script's Tools do, starting a new manifest over an "uninstalled" one). An
+installed game's EAX Unified row starts on what its manifest records.
 `engine/installed.rs`'s `InstalledState` is what the rows start at. Enter on a game with no
 folder on this PC opens the folder picker for it (`Picker::game`), and Space there opens the
 page for the folder chosen (Ctrl-A's picker too). A game whose profile has no EAX to restore
@@ -194,17 +198,43 @@ script's `block_if_eax_not_implemented`) opens no page: a pop-up over the list (
 is only for `EAX_RESTORE_ENGINE=bash`. Engine code stays prompt-free: read state, take
 choices, plan, apply.
 
-Headless mode (`tui/src/cli.rs`): `eax-restore status|install|uninstall|speakers|settings|sound-log
+Headless mode (`tui/src/cli.rs`): `eax-restore status|install|uninstall|speakers|settings|sound-log|vcrun|eax-unified
 GAME_FOLDER [options]` (`eax-restore --help` lists them) runs the Rust engine with no TUI and
 no Bash script: the script's defaults, flags to change them, and one "(Y/n)" before any change
 (`--yes` skips it; with no terminal and no `--yes` nothing changes). A running Steam or Heroic is
 only closed with `--close-launcher`. The TUI's Enter menu runs these commands
-(`actions::engine_args`, `runner::run_engine`) for install, reinstall, uninstall, speakers, game
-settings and sound logging, so from the TUI those use the Rust engine; VC++ and EAX Unified,
-and an install with no known folder, still run the script, and `EAX_RESTORE_ENGINE=bash` sends
-every action to the script. Started from a terminal with no choice given, `speakers` and
+(`actions::engine_args`, `runner::run_engine`) for every action, so from the TUI those use the
+Rust engine; only an install with no known folder still runs the script, and
+`EAX_RESTORE_ENGINE=bash` sends every action to the script. Started from a terminal with no choice given, `speakers` and
 `settings` ask for it and `sound-log` switches the log the other way. `EAX_RESTORE_PROC_ROOT` (tests only) points the
 launcher and game checks at an empty folder instead of `/proc`, so a test never sees or closes a
 real launcher. `tui/tests/headless.rs` runs the program in the fake world: its install matches
 the script's default install, and every command then the uninstall leaves the world as it was.
 
+Build number (`build.rs`, `src/build_info.rs`): the TUI has no version, only the commit count
+on its branch (`git rev-list --count HEAD`, or `EAX_RESTORE_BUILD` handed in), marked
+"(modified)" from a tree with uncommitted changes and "local build" with no git. The bottom bar,
+`--version` (the label) and `--build` (the bare number) show it; `Cargo.toml`'s version is shown
+nowhere. `dev-tui` checks out with `fetch-depth: 0` (a shallow clone counts 1) and uploads
+`eax-restore-linux-tui-x86_64.build` with the binary.
+
+Run log (`src/runlog.rs`): every panel run and every headless command that changes something
+writes `eax-restore-tui-<stamp>.log` in `~/.local/state/eax-restore-linux/tui-logs/` (`dev/`
+for a dev build), kept apart from the script's `logs/` so neither rotates the other's out: its
+own `latest.log`, its own newest 10. The header has the bug report template's system details,
+the body every step, detail, warning and answer (`panel/run.rs`'s `Out`, `cli.rs`'s `say`), the
+prefixes' `log` points at it so Wine, winetricks and protontricks output lands there
+(`Plan::log_to`), and the summary ends it (store, prefix, runner, arch, the manifest). The finish
+view and the CLI say where it is, with the bug report page when the run failed.
+`EAX_RESTORE_NO_LOG` turns it off; the integration world sets it.
+
+Tool check: `Facts::missing_tools` (`prepare::needed_tools`: curl and unzip, winetricks for a
+plain-Wine runner) gives a `Tools` FAIL line and `cli::tools_problem`'s sentence, which stops a
+fresh install on the page, the install/VC++/EAX Unified jobs and the headless commands.
+
+Update check (`src/update.rs`): a clean dev build with a number reads the nightly's `.build` file
+on a thread at startup (`EAX_RESTORE_SKIP_UPDATE_CHECK` skips it); a higher number is offered
+in a pop-up (`App::poll_update`, waiting until no page, menu, picker, F2 or F1 is open). Update
+and restart downloads the binary and its `.sha256`, swaps it in beside the running one and
+`exec`s it with the same arguments; a folder it can't write, or a failed download, gives a
+pop-up with the releases page.
