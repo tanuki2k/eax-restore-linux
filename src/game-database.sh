@@ -628,6 +628,10 @@ _scan_open_pick() {
     # User chose "pick a different game" at the EAX-impossible prompt — bail
     # back to get_game_directory's menu instead of asking to continue with it.
     [ -n "$RESTART_REQUESTED" ] && return 1
+    # On the update with a way back: wait here for the rollback, rather than
+    # at the prefix step.
+    block_if_not_rolled_back "${ids[$idx]}" "${stores[$idx]}" "${paths[$idx]}"
+    [ -n "$RESTART_REQUESTED" ] && return 1
 
     if [ "$(game_eax_status "${ids[$idx]}" "${stores[$idx]}")" == "built_in" ]; then
         confirm_built_in_install "${meta_names[$idx]}" || return 1
@@ -669,6 +673,7 @@ scan_game_libraries() {
     SCANNED_APPID=""
     SCANNED_NOTES_SHOWN=""
     BUILT_IN_CONFIRMED=""
+    ROLLBACK_CONFIRMED=""
     OPENAL_NATIVE_MODE=""
     EAX_UNIFIED=""
     RECOMMENDED_AUDIO_LIMITS=""
@@ -1659,44 +1664,99 @@ _eax_block() {
     prompt_restart_or_quit 1
 }
 
-# Usage: _eax_on_beta_branch <store> <beta_branch> <acf_file>
-# True when the player says this install is already on the Steam beta branch
-# that keeps EAX, so the EAX-removed warning doesn't apply.
-# A known beta branch restores EAX in place — offer to check whether the
-# user is already on it before showing a warning that wouldn't apply to
-# them. Opt-in and reported before acting on it, same as every other
-# auto-detect in this script (Proton prefix, AppID search): ask first,
-# detect, report the raw result, then a separate confirm before it's
-# allowed to skip the warning.
-# The GOG twin: a build the database lists under rollback_builds is one the
-# player has already rolled back to. Same ask, detect, report, confirm.
-_eax_on_rollback_build() {
-    local id="$1" builds="$2" install_root="$3" detected b
-    [ -n "$builds" ] && [ -n "$install_root" ] || return 1
-    confirm "Check if you've already rolled back to a GOG build that keeps EAX intact?" || return 1
-    detected=$(detect_gog_build_id "$install_root" "$id")
-    if [ -z "$detected" ]; then
-        print_status "GOG didn't record which build is installed." ""
-        return 1
+# Usage: _print_eax_warning <sentence> [steps]
+# A warning that fits the terminal: the sentence wrapped to fit after
+# "Warning: ", one line per print_warning argument, then the database's steps
+# as their own paragraph, wrapped as the profile wraps database prose.
+_print_eax_warning() {
+    local -a lines
+    mapfile -t lines < <(wrap_text $(( ${WRAP_COLUMNS:-76} - 9 )) "" "$1")
+    print_warning "${lines[@]}"
+    if [ -n "${2:-}" ]; then
+        echo ""
+        print_wrapped "$2"
     fi
-    print_status "You're on GOG build $detected." ""
-    for b in $builds; do
-        [ "$b" == "$detected" ] || continue
-        confirm "This build keeps EAX intact, so skip the warning that an update removed it?"
-        return
-    done
-    return 1
 }
 
-_eax_on_beta_branch() {
-    local store="$1" beta_branch="$2" acf_file="$3"
-    [ "$store" == "steam" ] && [ -n "$beta_branch" ] && [ -n "$acf_file" ] || return 1
-    confirm "Check if you're already on Steam's '$beta_branch' beta branch, which keeps EAX intact?" || return 1
-    local detected
-    detected=$(detect_steam_beta_branch "$acf_file")
-    print_status "Detected beta branch: ${detected:-none}" ""
-    [ "$detected" == "$beta_branch" ] || return 1
-    confirm "This build keeps EAX intact, so skip the warning that an update removed it?"
+# Usage: _eax_rollback_steps <id> <steam|gog>
+# This store's own rollback steps, else the game's eax.fix. jq's // keeps an
+# empty string, so the fallback tests for one.
+_eax_rollback_steps() {
+    gdb_jq "$1" "$2" \
+        'entry0 | (.stores[$store].rollback_steps // "") as $f | if $f != "" then $f else (.eax.fix // empty) end'
+}
+
+# Usage: _eax_wait_for_rollback <id> <store> <beta_branch> <rollback_builds> <acf_file|install_root> <name> <steps>
+# While the store says the install is on another build than its rollback
+# leads to, says so with the steps and asks "Check again?", as the prefix step
+# waits for a prefix. Returns 0 once it's on the rolled-back build, 1 when the
+# player stops (prompt_restart_or_quit has run), 2 when the store can't tell.
+_eax_wait_for_rollback() {
+    local state
+    state=$(_eax_build_state "$1" "$2" "$3" "$4" "$5")
+    while [ "$state" == "off" ]; do
+        _print_eax_warning "The current build of ${6:-this game} has no EAX, because an update removed it." "$7"
+        if ! confirm "Check again?"; then
+            prompt_restart_or_quit 1
+            return 1
+        fi
+        state=$(_eax_build_state "$1" "$2" "$3" "$4" "$5")
+    done
+    [ "$state" == "on" ] && return 0
+    return 2
+}
+
+# Usage: block_if_not_rolled_back <id> <steam|gog> <install_folder>
+# The scan's twin of confirm_continue_if_eax_impossible's rollback wait, run
+# as soon as the game is picked (as block_if_eax_not_implemented is), so a
+# copy on the update stops here instead of at the prefix step. A copy already
+# rolled back sets ROLLBACK_CONFIRMED so that step doesn't look again; one
+# whose store can't tell is left for that step's warning.
+block_if_not_rolled_back() {
+    [ "$SCRIPT_ACTION" == "i" ] || return
+    [ -n "$1" ] && [ -n "${3:-}" ] || return
+    ensure_game_database || return
+    local store="steam"
+    [ "$2" == "gog" ] && store="gog"
+    local status workaround beta_branch rollback_builds where
+    IFS=$'\x1f' read -r status workaround beta_branch rollback_builds < <(gdb_fields "$1" "$store" \
+        '.eax.status // ""' \
+        '.eax.fix_in_place // false' \
+        '.stores[$store].beta_branch // ""' '.stores[$store].rollback_builds // [] | join(" ")')
+    [ "$status" == "removed_by_patch" ] && [ "$workaround" == "true" ] || return
+    if [ "$store" == "gog" ]; then
+        where="$3"
+    elif [[ "$3" == */steamapps/common/* ]]; then
+        where="${3%%/steamapps/common/*}/steamapps/appmanifest_$1.acf"
+    else
+        return
+    fi
+    _eax_wait_for_rollback "$1" "$store" "$beta_branch" "$rollback_builds" "$where" \
+        "$(gdb_field "$1" "$store" .name)" "$(_eax_rollback_steps "$1" "$store")"
+    [ $? -eq 0 ] && ROLLBACK_CONFIRMED=1
+    return 0
+}
+
+# Usage: _eax_build_state <id> <steam|gog> <beta_branch> <rollback_builds> <acf_file|install_root>
+# Echoes "on" when the install is on the build its store's rollback leads to
+# (Steam's beta branch in the appmanifest, a GOG build the database lists in
+# goggame-<id>.info), "off" when the store says it's on another, "unknown"
+# when it can't tell: no branch or builds in the database, or no build
+# recorded (some offline installers). The engine's on_rollback_build.
+_eax_build_state() {
+    local id="$1" store="$2" beta_branch="$3" builds="$4" where="$5" detected b
+    if [ "$store" == "gog" ]; then
+        [ -n "$builds" ] && [ -n "$where" ] || { echo unknown; return; }
+        detected=$(detect_gog_build_id "$where" "$id")
+        [ -n "$detected" ] || { echo unknown; return; }
+        for b in $builds; do
+            [ "$b" == "$detected" ] && { echo on; return; }
+        done
+        echo off
+    else
+        [ -n "$beta_branch" ] && [ -n "$where" ] || { echo unknown; return; }
+        [ "$(detect_steam_beta_branch "$where")" == "$beta_branch" ] && echo on || echo off
+    fi
 }
 
 confirm_continue_if_eax_impossible() {
@@ -1769,18 +1829,23 @@ confirm_continue_if_eax_impossible() {
         return
     fi
 
-    if [ "$store" == "gog" ]; then
-        _eax_on_rollback_build "$1" "$rollback_builds" "$acf_file" && return
-    else
-        _eax_on_beta_branch "$store" "$beta_branch" "$acf_file" && return
+    # Picked from the scan and already found on the rolled-back build.
+    if [ -n "${ROLLBACK_CONFIRMED:-}" ]; then
+        print_status "$(gdb_field "$1" "$store" .name) is on the build that keeps EAX." ""
+        return
     fi
-
     # The way back for this store, as the profile's Restore section gives it.
     local name fix
     name=$(gdb_field "$1" "$store" .name)
-    fix=$(gdb_jq "$1" "$store" \
-        'entry0 | (.stores[$store].rollback_steps // "") as $f | if $f != "" then $f else (.eax.fix // empty) end')
-    print_warning "An update removed EAX from the current build of ${name:-this game}, but you can get it back.${fix:+ $fix}"
+    fix=$(_eax_rollback_steps "$1" "$store")
+    _eax_wait_for_rollback "$1" "$store" "$beta_branch" "$rollback_builds" "$acf_file" "$name" "$fix"
+    case $? in
+        0) print_status "${name:-This game} is on the build that keeps EAX." ""; return ;;
+        1) return ;;
+    esac
+
+    # The store can't tell which build this is.
+    _print_eax_warning "An update removed EAX from the current build of ${name:-this game}, but you can get it back." "$fix"
 
     if ! confirm "Continue installing anyway?" N; then
         prompt_restart_or_quit 0

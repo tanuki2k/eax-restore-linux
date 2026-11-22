@@ -242,6 +242,7 @@ get_game_directory() {
     SCANNED_APPID=""
     SCANNED_NOTES_SHOWN=""
     BUILT_IN_CONFIRMED=""
+    ROLLBACK_CONFIRMED=""
     OPENAL_NATIVE_MODE=""
 
     # A game given up front (EAX_RESTORE_GAME_DIR) skips the installed-games list.
