@@ -1,0 +1,15 @@
+{
+  "$schema": "../schema.json",
+  "name": "Medal of Honor: Allied Assault",
+  "description": "Medal of Honor: Allied Assault is a singleplayer and multiplayer first-person shooter game and the third in the Medal of Honor series.",
+  "released": "2002-01-22",
+  "exe": "MOHAA.exe",
+  "stores": {
+    "gog": {
+      "id": 1207659126,
+      "store_details": "Sold as the 'War Chest' edition — the base game plus the Spearhead and Breakthrough expansions."
+    }
+  },
+  "eax": { "api": "directsound3d", "sound_system": "miles", "versions": ["1.0", "2.0"] },
+  "notes": "Medal of Honor: Allied Assault GOG release ships only the software Miles provider, so EAX can't be turned on without adding the missing provider files."
+}

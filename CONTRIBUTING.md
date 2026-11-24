@@ -29,9 +29,9 @@ Open an issue and describe what you were trying to do. If it only matters for on
 
 Game profiles are the JSON files under `data/games/` and `data/drafts/`. [Contributing a game](docs/database/contributing.md) covers the workflow, and the [game file reference](docs/database/game-file-reference.md) describes every field. You can also use the profile editor, `tools/profiler/eax-profiler`. It runs in your browser, and its Capture tab can find the config keys for you (see [its README](tools/profiler/README.md)).
 
-A new entry starts in `data/games/untested/`. Before moving one to `tested/`, check each store ID against the store's own page. The editor marks IDs it found on your install as `local_install_verified`, but that only means they were seen locally.
+A new entry starts with no `compatibility`, which means Unknown. Before rating one, check each store ID against the store's own page. The editor marks IDs it found on your install as `local_install_verified`, but that only means they were seen locally.
 
-The easiest way to send a profile is the editor's **Submit...** button. If the GitHub CLI (`gh`) is installed and you're logged in, it forks the repo if needed and opens a pull request against `dev` with just that game's profile and its entry in `game-database.json`. Without `gh`, it opens GitHub's new-file page with the profile filled in, and a maintainer rebuilds `game-database.json` when merging. Either way, the profile stays in `untested/` until someone has checked it on a real install.
+The easiest way to send a profile is the editor's **Submit...** button. If the GitHub CLI (`gh`) is installed and you're logged in, it forks the repo if needed and opens a pull request against `dev` with just that game's profile and its entry in `game-database.json`. Without `gh`, it opens GitHub's new-file page with the profile filled in, and a maintainer rebuilds `game-database.json` when merging. Either way, a new game stays Unknown until someone has checked it on a real install.
 
 ## Style
 

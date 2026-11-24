@@ -21,7 +21,7 @@ def world(tmp, before, after):
 
 class Capture(unittest.TestCase):
     def test_set_commands_matches_quake4_database_entry(self):
-        q4 = dbio.load("tested", "quake-4")
+        q4 = dbio.load("games", "quake-4")
         want = q4["game_config"]["audio_settings"][0]["changes"]["Quake4Config.cfg"]
         before = 'seta s_useOpenAL "0"\nseta s_useEAXReverb "0"\nseta s_useEAXOcclusion "0"\nseta s_volume_dB "0"\n'
         after = 'seta s_useOpenAL "1"\nseta s_useEAXReverb "1"\nseta s_useEAXOcclusion "1"\nseta s_volume_dB "0"\n'
@@ -72,19 +72,19 @@ class Capture(unittest.TestCase):
 class NewStub(unittest.TestCase):
     def test_stub_with_store_validates_and_slug_collides(self):
         gid = "zz-profiler-test"
-        path = dbio._path("untested", gid)
+        path = dbio._path("games", gid)
         try:
             r = dbio.new_stub(gid, "ZZ Test", "steam", 999999)
             self.assertEqual(r["errors"], [])
-            self.assertEqual(dbio.load("untested", gid)["stores"], {"steam": {"id": 999999, "id_source": "local_install_verified"}})
+            self.assertEqual(dbio.load("games", gid)["stores"], {"steam": {"id": 999999, "id_source": "local_install_verified"}})
             r2 = dbio.new_stub(gid, "ZZ Test", "gog", 5)
             self.assertEqual(r2["id"], gid + "-5")
             with self.assertRaises(ValueError):
                 dbio.new_stub(gid, "ZZ Test")
         finally:
             for g in (gid, gid + "-5"):
-                if os.path.exists(dbio._path("untested", g)):
-                    os.remove(dbio._path("untested", g))
+                if os.path.exists(dbio._path("games", g)):
+                    os.remove(dbio._path("games", g))
 
 
 class ConfigTxt(unittest.TestCase):
@@ -164,14 +164,14 @@ class Noise(unittest.TestCase):
 
 class Preview(unittest.TestCase):
     def test_preview_empty_for_unchanged_and_one_line_for_a_rename(self):
-        g = dbio.load("tested", "quake-4")
-        self.assertTrue(dbio.preview("tested", "quake-4", g)["same"])
+        g = dbio.load("games", "quake-4")
+        self.assertTrue(dbio.preview("games", "quake-4", g)["same"])
         g["name"] = "Quake IV"
-        d = dbio.preview("tested", "quake-4", g)
+        d = dbio.preview("games", "quake-4", g)
         self.assertFalse(d["same"])
         self.assertEqual([l for l in d["diff"].splitlines() if l[:1] in "+-" and l[:3] not in ("+++", "---")],
                          ['-  "name": "Quake 4",', '+  "name": "Quake IV",'])
-        self.assertTrue(dbio.preview("untested", "zz-not-there", {"name": "x", "stores": {}, "eax": {"api": "openal"}})["new_file"])
+        self.assertTrue(dbio.preview("games", "zz-not-there", {"name": "x", "stores": {}, "eax": {"api": "openal"}})["new_file"])
 
 
 class Existing(unittest.TestCase):

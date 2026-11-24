@@ -94,28 +94,24 @@ def _exists_upstream(path):
     if r.returncode == 0:
         return r.stdout.strip()
     # Only a 404 means "not there"; a rate limit or a dropped connection must not
-    # send an existing tested profile to untested/ as a second copy.
+    # send an existing profile in again as if it were new.
     if "404" in (r.stderr or "") or "Not Found" in (r.stderr or ""):
         return None
     raise SubmitError("Couldn't check GitHub for an existing profile. Try again in a moment.")
 
 
 def target_folder(gid):
-    """Where the profile belongs upstream: the folder it's already in (a fix to a game that's
-    there), else untested/ — a maintainer promotes it after checking it."""
-    for folder in ("tested", "untested"):
-        if _exists_upstream(f"{dbio.FOLDERS[folder]}/{gid}.json"):
-            return folder
-    return "untested"
+    """Where the profile goes upstream: always data/games/. A new game has no compatibility
+    (unknown) until a maintainer has checked it."""
+    return "games"
 
 
 # ---------------------------------------------------------------- what gets sent
 
-def database_entry(gid, text, folder):
+def database_entry(gid, text, folder="games"):
     """The built game-database.json entry for this file, by the build tool's own jq."""
     r = subprocess.run(["jq", "-c", "-L", os.path.join(dbio.ROOT, "tools"), "--arg", "id", gid,
-                        "--argjson", "untested", "true" if folder == "untested" else "false",
-                        'include "game-database"; built_entry($id; $untested)'],
+                        'include "game-database"; built_entry($id)'],
                        input=text, capture_output=True, text=True)
     if r.returncode:
         raise SubmitError("jq failed: " + r.stderr[:300])
@@ -142,8 +138,8 @@ def pr_body(game, gid, store_ids, note, checked_install, checked_ids, replaced):
         lines += [note.strip(), ""]
     lines += [f"- [{'x' if checked_install else ' '}] Checked on my own install",
               f"- [{'x' if checked_ids else ' '}] Store IDs checked on the store's page", "",
-              "It goes in `data/games/untested/`, unverified, until someone has tried it on a real install."
-              if not replaced else "It keeps the folder it's already in."]
+              "It goes in `data/games/` with no compatibility rating (unknown) until someone has tried it on a real install."
+              if not replaced else "It keeps the compatibility rating it already has, unless the change sets a new one."]
     return "\n".join(lines) + "\n"
 
 
@@ -163,7 +159,7 @@ def prepare(folder, gid, game):
     login = gh_login()
     return {"errors": errors, "findings": privacy_findings(game), "gh_user": login,
             "upstream": UPSTREAM, "base": BASE,
-            "path": f"{dbio.FOLDERS['untested']}/{gid}.json", "name": game.get("name", gid)}
+            "path": f"{dbio.FOLDERS['games']}/{gid}.json", "name": game.get("name", gid)}
 
 
 def _commit_file(fork, branch, path, content, message):
@@ -184,7 +180,7 @@ def submit_with_gh(gid, game, note, checked_install, checked_ids):
     folder = target_folder(gid)
     text = dbio.canonical(folder, game)
     path = f"{dbio.FOLDERS[folder]}/{gid}.json"
-    replaced = folder == "tested" or _exists_upstream(path) is not None
+    replaced = _exists_upstream(path) is not None
 
     name = UPSTREAM.split("/")[1]
     _gh(["repo", "fork", UPSTREAM, "--clone=false"], check=False)  # fine when the fork already exists
@@ -216,8 +212,8 @@ def submit_with_gh(gid, game, note, checked_install, checked_ids):
 def submit_with_browser(gid, game):
     """GitHub's new-file page with the profile filled in. A maintainer rebuilds game-database.json
     when merging, since a page in the browser can only add the one file."""
-    text = dbio.canonical("untested", game)
-    path = f"{dbio.FOLDERS['untested']}/{gid}.json"
+    text = dbio.canonical("games", game)
+    path = f"{dbio.FOLDERS['games']}/{gid}.json"
     plain = f"https://github.com/{UPSTREAM}/new/{BASE}?filename={quote(path)}"
     url = f"{plain}&value={quote(text)}"
     if len(url) <= URL_LIMIT:

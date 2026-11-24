@@ -3,8 +3,7 @@ import json, os, subprocess, shutil, re
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 FOLDERS = {
-    "tested": "data/games/tested",
-    "untested": "data/games/untested",
+    "games": "data/games",
     "drafts": "data/drafts",
 }
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*\Z")  # \Z, not $: "abc\n" is not an id
@@ -30,17 +29,30 @@ def built_entries():
         return {}
 
 
-def build_state(folder, gid, game, built):
-    """How a game file stands against game-database.json, mirroring what
-    tools/build-game-database.sh puts there ({id} + the file minus $schema,
-    plus tested: false for a game in untested/):
-    current, changed (with the top-level fields that differ), new (not built yet),
-    or draft (drafts are never built)."""
+def built_forms(games):
+    """id -> the entry tools/build-game-database.sh would build from each game file,
+    by the build's own jq (built_entry), in one run for the whole list."""
+    if not games:
+        return {}
+    r = subprocess.run(["jq", "-c", "-L", os.path.join(ROOT, "tools"),
+                        'include "game-database"; with_entries(.key as $id | .value |= built_entry($id))'],
+                       input=json.dumps(games), capture_output=True, text=True, cwd=ROOT)
+    if r.returncode:
+        return {}
+    return json.loads(r.stdout)
+
+
+def build_state(folder, gid, game, built, want=None):
+    """How a game file stands against game-database.json: current, changed (with the
+    top-level fields that differ), new (not built yet), or draft (drafts are never
+    built). want is the entry the build makes from the file (built_forms), worked out
+    here when the caller hasn't already."""
     if folder == "drafts":
         return {"state": "draft", "fields": []}
-    want = {"id": gid, **{k: v for k, v in game.items() if k != "$schema"}}
-    if folder == "untested":
-        want["tested"] = False  # the build marks these; the browser filters on it
+    if want is None:
+        want = built_forms({gid: game}).get(gid)
+    if want is None:
+        return {"state": "changed", "fields": []}
     have = built.get(gid)
     if have is None:
         return {"state": "new", "fields": []}
@@ -55,12 +67,12 @@ def setting_counts(g):
     gc, inst = g.get("game_config") or {}, g.get("install") or {}
     settings = gc.get("audio_settings", []) + gc.get("optional_settings", [])
     return {"settings": len(settings),
-            "unverified": sum(not s.get("tested") for s in settings)
-                          + bool(inst.get("alsoft_ini") and not inst.get("alsoft_tested"))}
+            "unverified": sum(not s.get("verified") for s in settings)
+                          + bool(inst.get("alsoft_ini") and not inst.get("alsoft_verified"))}
 
 
 def list_games():
-    out, built, seen = [], built_entries(), set()
+    out, built, files = [], built_entries(), []
     for folder, rel in FOLDERS.items():
         d = os.path.join(ROOT, rel)
         for fn in sorted(os.listdir(d)) if os.path.isdir(d) else []:
@@ -70,26 +82,27 @@ def list_games():
                         g = json.load(f)
                 except ValueError:
                     g = {}
-                stores = g.get("stores", {})
-                if folder != "drafts":
-                    seen.add(fn[:-5])
-                out.append({
-                    "id": fn[:-5], "folder": folder, "name": g.get("name", fn[:-5]),
-                    "steam": stores.get("steam", {}).get("id"),
-                    "gog": stores.get("gog", {}).get("id"),
-                    "has_config": bool(g.get("game_config")),
-                    **setting_counts(g),
-                    "build": build_state(folder, fn[:-5], g, built),
-                })
+                files.append((folder, fn[:-5], g if isinstance(g, dict) else {}))
+    wants = built_forms({gid: g for folder, gid, g in files if folder == "games" and g.get("stores")})
+    for folder, gid, g in files:
+        stores = g.get("stores", {})
+        out.append({
+            "id": gid, "folder": folder, "name": g.get("name", gid),
+            "compatibility": g.get("compatibility", "unknown"),
+            "steam": stores.get("steam", {}).get("id"),
+            "gog": stores.get("gog", {}).get("id"),
+            "has_config": bool(g.get("game_config")),
+            **setting_counts(g),
+            "build": build_state(folder, gid, g, built, wants.get(gid)),
+        })
     return out
 
 
 def stale_entries():
     """Built entries whose source file is gone (or moved to drafts): the next build drops them."""
     have = set()
-    for folder in ("tested", "untested"):
-        d = os.path.join(ROOT, FOLDERS[folder])
-        have |= {fn[:-5] for fn in os.listdir(d) if fn.endswith(".json")} if os.path.isdir(d) else set()
+    d = os.path.join(ROOT, FOLDERS["games"])
+    have |= {fn[:-5] for fn in os.listdir(d) if fn.endswith(".json")} if os.path.isdir(d) else set()
     return sorted(i for i in built_entries() if i not in have)
 
 
@@ -145,7 +158,7 @@ def save(folder, gid, game):
 
 def canonical(folder, game):
     """The game in the formatter's canonical form, without writing anything."""
-    schema_ref = "../schema.json" if folder == "drafts" else "../../schema.json"
+    schema_ref = "../schema.json"
     g = dict(game); g.pop("id", None); g["$schema"] = schema_ref
     r = subprocess.run(["jq", "-r", "-L", os.path.join(ROOT, "tools"), "--arg", "schema", schema_ref,
                         'include "game-database"; .["$schema"] = $schema | normalize_game | render_game'],
@@ -188,7 +201,7 @@ def promote(gid, src, dst):
 
 
 def new_stub(gid, name, store=None, store_id=None):
-    """An empty untested entry. With a store and ID (seen on a local install) the
+    """An empty entry in data/games/ with no compatibility (unknown). With a store and ID (seen on a local install) the
     entry gets that store, marked local_install_verified until a human checks it."""
     if any(os.path.exists(_path(f, gid)) for f in FOLDERS):
         if not store_id:
@@ -199,6 +212,6 @@ def new_stub(gid, name, store=None, store_id=None):
     stores = {}
     if store in ("steam", "gog") and store_id:
         stores[store] = {"id": int(store_id), "id_source": "local_install_verified"}
-    r = save("untested", gid, {"name": name, "stores": stores, "eax": {"api": "directsound3d"}})
+    r = save("games", gid, {"name": name, "stores": stores, "eax": {"api": "directsound3d"}})
     r["id"] = gid
     return r

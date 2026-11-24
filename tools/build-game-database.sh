@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 # Builds the single game-database.json the script downloads from the per-game
-# files in data/games/tested/ and data/games/untested/. data/drafts/ is never
-# built. Never hand-edit game-database.json — edit the game's <id>.json and
+# files in data/games/. data/drafts/ is never built, and data/owned.json (the
+# maintainer's list of games they own) never ships. Never hand-edit game-database.json — edit the game's <id>.json and
 # re-run this.
 #
 # Each game gets an "id" (its file name without .json); the "$schema" editor
 # hint is dropped. Also checks what data/schema.json can't express: every file
 # a fix changes must be defined in that game's game_config.files, and only
 # key_value files take true/false (the script writes them as flags), and the
-# changes are nested the way the file's format reads them.
+# changes are nested the way the file's format reads them; a playable or
+# unsupported game says what's wrong; no file uses a field the compatibility
+# field replaced.
 #
 # Usage: tools/build-game-database.sh           # write game-database.json
 #        tools/build-game-database.sh --check   # exit 1 if the committed file is out of date
@@ -19,13 +21,24 @@ check=0
 [ "${1:-}" == "--check" ] && check=1
 
 shopt -s nullglob
-game_files=(data/games/tested/*.json data/games/untested/*.json)
+game_files=(data/games/*.json)
 all_files=("${game_files[@]}" data/drafts/*.json)
+
+# The tested/ and untested/ folders were replaced by the compatibility field.
+# A file still in one (an older branch, or a profile sent by an older editor)
+# would otherwise be left out of the database without a word.
+old_layout=(data/games/tested/*.json data/games/untested/*.json)
+if [ ${#old_layout[@]} -gt 0 ]; then
+    echo "These games are in data/games/tested or data/games/untested, which aren't used any more:" >&2
+    printf '  %s\n' "${old_layout[@]}" >&2
+    echo "Move each to data/games/. One from tested/ gets \"compatibility\": \"verified\"; one from untested/ gets none (unknown)." >&2
+    exit 1
+fi
 
 # A game lives in exactly one folder; its file name is its id.
 dupes="$(for f in "${all_files[@]}"; do basename "$f"; done | sort | uniq -d)"
 if [ -n "$dupes" ]; then
-    echo "These games are in more than one of data/games/tested, data/games/untested and data/drafts — keep one copy:" >&2
+    echo "These games are in both data/games and data/drafts — keep one copy:" >&2
     printf '  %s\n' $dupes >&2
     exit 1
 fi
@@ -36,7 +49,7 @@ fi
 errors=""
 for f in "${all_files[@]}"; do
     file_errors="$(jq -r --arg f "$f" '
-        (.game_config.files // {}) as $files
+        ((.game_config.files // {}) as $files
         | ($files | keys) as $defined
         | (.game_config.audio_settings // []) + (.game_config.optional_settings // [])
         | .[] | .title as $title | (.changes // {}) | to_entries[]
@@ -49,7 +62,17 @@ for f in "${all_files[@]}"; do
           then "\($f): \"\($title)\" changes \($file) without a section: \($files[$file].format) needs file, section, key, value"
           elif ($files[$file].format | IN("ini", "ini_braces", "xml_attributes", "registry") | not) and ([$v[] | select(type == "object")] | length) > 0
           then "\($f): \"\($title)\" changes \($file) with a section: \($files[$file].format) takes file, key, value"
-          else empty end' "$f")" \
+          else empty end),
+        (if .eax.status != null or .eax.fix_in_place != null then "\($f): eax.status and eax.fix_in_place are replaced by compatibility, eax.built_in and the stores'\'' rollback fields" else empty end),
+        (if .install.alsoft_tested != null then "\($f): install.alsoft_tested is now install.alsoft_verified" else empty end),
+        (if .tested != null then "\($f): tested is replaced by compatibility" else empty end),
+        ([(.game_config.audio_settings // []) + (.game_config.optional_settings // []) | .[] | select(has("tested")) | .title]
+            | if length > 0 then "\($f): settings use tested, which is now verified: \(join(", "))" else empty end),
+        (. as $g | (.stores // {}) | to_entries[]
+            | (.value.compatibility // $g.compatibility) as $c
+            | select(($c == "playable" or $c == "unsupported") and ((.value.problem // $g.eax.problem // "") == ""))
+            | "\($f): \(.key) is \($c), so it needs eax.problem (or the store'\''s own problem) saying what'\''s wrong")
+        ' "$f")" \
         || { echo "$f: not valid JSON, or not shaped like a game file" >&2; exit 1; }
     [ -n "$file_errors" ] && errors+="${errors:+$'\n'}$file_errors"
 done
@@ -58,20 +81,26 @@ if [ -n "$errors" ]; then
     exit 1
 fi
 
-# A game from data/games/untested/ is marked "tested": false (the browser filters on it);
-# a tested one carries nothing, and a missing field means tested.
+# The maintainer's owned list only warns: a renamed or removed game shouldn't
+# stop a build.
+if [ -f data/owned.json ]; then
+    stale="$(jq -r '.[]' data/owned.json | while read -r id; do [ -f "data/games/$id.json" ] || [ -f "data/drafts/$id.json" ] || echo "$id"; done)"
+    if [ -n "$stale" ]; then
+        echo "Warning: data/owned.json lists games with no file (renamed or removed?):" >&2
+        printf '  %s\n' $stale >&2
+    fi
+fi
+
 entries=""
 for f in "${game_files[@]}"; do
-    untested=false
-    [[ "$f" == data/games/untested/* ]] && untested=true
-    entry="$(jq -c -L tools --arg id "$(basename "$f" .json)" --argjson untested "$untested" \
-        'include "game-database"; built_entry($id; $untested)' "$f")" \
+    entry="$(jq -c -L tools --arg id "$(basename "$f" .json)" \
+        'include "game-database"; built_entry($id)' "$f")" \
         || { echo "$f: couldn't be built" >&2; exit 1; }
     entries+="$entry"$'\n'
 done
 built="$(printf '%s' "$entries" | jq -s '{
     schema_version: 3,
-    _readme: "Generated from data/games/tested/*.json and data/games/untested/*.json by tools/build-game-database.sh; do not edit by hand. Games from untested/ carry \"tested\": false. Field reference: data/schema.json and docs/database/game-file-reference.md.",
+    _readme: "Generated from data/games/*.json by tools/build-game-database.sh; do not edit by hand. Each store carries its worked-out compatibility (verified, playable, unsupported or unknown). tested, eax.status, eax.fix_in_place and the settings'"'"' tested are kept for older scripts. Field reference: data/schema.json and docs/database/game-file-reference.md.",
     games: sort_by(.name | ascii_downcase)
 }')"
 

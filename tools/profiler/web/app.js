@@ -15,12 +15,12 @@ const BASE_HELP = {
 };
 const LABELS = {
   id: "Store ID", id_source: "Where the ID came from", api: "Audio API", exe: "Executable", store_details: "Store details",
-  extra_exe_folders: "Extra exe folders", companion_apps: "Companion apps", beta_branch: "Beta branch", fix_in_place: "Fix works in place",
+  extra_exe_folders: "Extra exe folders", companion_apps: "Companion apps", beta_branch: "Beta branch", built_in: "EAX already built in", compatibility: "Compatibility",
   alsoft_ini: "alsoft.ini settings", only_if: "Only offer when…", follow_up: "Follow-up for the player", eax: "EAX",
   default_reverb: "Default reverb", "default-reverb": "Default reverb", versions: "EAX versions", tweaks: "Compatibility tweaks",
 };
 const SECTIONS = [
-  ["overview", "Overview", ["name", "description", "released", "exe", "eax", "sources", "notes"]],
+  ["overview", "Overview", ["name", "description", "released", "exe", "compatibility", "eax", "sources", "notes"]],
   ["stores", "Stores", ["stores"]],
   ["audio", "DSOAL settings", ["install"]],
   ["settings", "Game settings", ["game_config"]],
@@ -388,20 +388,20 @@ function settingSummaryCount(o) { return Object.values(o.changes || {}).reduce((
 function cards(parent, key, itemSchema, path, onVerify = () => {}) {
   const box = el("div");
   const arr = () => (parent[key] = parent[key] || []);
-  const hasTested = !!itemSchema.properties.tested;
+  const hasTested = !!itemSchema.properties.verified;
   const draw = () => {
     const list = arr(); onVerify();
     box.replaceChildren(...(list.length ? list.map((o, i) => {
       const stitle = el("span", { class: "stitle" }), badge = el("span", { class: "pill" }), cond = el("span", { class: "pill" });
       let d;
-      const chip = hasTested ? verifiedChip(o, "tested", () => { refresh(); onVerify(); }) : null;
+      const chip = hasTested ? verifiedChip(o, "verified", () => { refresh(); onVerify(); }) : null;
       const refresh = () => {
         if (chip) chip.update();
         stitle.textContent = o.title || "Untitled setting"; stitle.classList.toggle("untitled", !o.title);
         const n = settingSummaryCount(o); badge.textContent = `${n} change${n === 1 ? "" : "s"}`;
         const c = o.only_if ? [].concat(o.only_if.stores || [], o.only_if.speakers || []).join(", ") : ""; cond.textContent = c ? "only if " + c : ""; cond.hidden = !c;
       };
-      const fields = Object.entries(itemSchema.properties).filter(([k]) => !(hasTested && k === "tested")).map(([k, sub]) => {
+      const fields = Object.entries(itemSchema.properties).filter(([k]) => !(hasTested && k === "verified")).map(([k, sub]) => {
         const n = node(sub, o, k, `${path}[${i}].${k}`);
         if (k === "title") { n.classList.add("wide"); n.querySelector("input").addEventListener("input", refresh); n.querySelector(".grow").after(...[aiButton("setting", () => ({ game: GAME.name, changes: o.changes, kind: key }), (r) => { o.title = (r.title || "").slice(0, 60); o.reason = r.reason; draw(); })].filter(Boolean)); }
         return n;
@@ -420,7 +420,7 @@ function cards(parent, key, itemSchema, path, onVerify = () => {}) {
       d.addEventListener("toggle", () => SET_OPEN.set(o, d.open));
       d.dataset.path = `${path}[${i}]`;
       const edited = (e) => {
-        if (hasTested && e.target.closest('[data-path$=".changes"], [data-path$=".only_if"]') && dropVerified(o, "tested")) { changed(); onVerify(); }
+        if (hasTested && e.target.closest('[data-path$=".changes"], [data-path$=".only_if"]') && dropVerified(o, "verified")) { changed(); onVerify(); }
         refresh();
       };
       d.addEventListener("input", edited); d.addEventListener("change", edited); refresh();
@@ -546,10 +546,10 @@ function paneAudio() {
   alsoft.classList.add("solo"); // the card already names it
   const ac = card("alsoft.ini settings", ip.alsoft_ini.description, grid([alsoft]));
   const hasValues = () => !isEmpty(prune(GAME.install.alsoft_ini || {}));
-  const chip = verifiedChip(GAME.install, "alsoft_tested", () => show());
+  const chip = verifiedChip(GAME.install, "alsoft_verified", () => show());
   const show = () => { chip.update(); chip.hidden = !hasValues(); };
   ac.querySelector("header").append(el("span", { class: "sp" }), chip); show();
-  const edited = () => { if (dropVerified(GAME.install, "alsoft_tested")) changed(); show(); };
+  const edited = () => { if (dropVerified(GAME.install, "alsoft_verified")) changed(); show(); };
   alsoft.addEventListener("input", edited); alsoft.addEventListener("change", edited);
   return [cols(card("Install options", P().install.description, grid([f("tweaks")])), ac)];
 }
@@ -563,7 +563,7 @@ function paneSettings() {
       const head = blockHead(k === "audio_settings" ? "Audio settings" : "Optional settings", gp[k].description, n(gc[k]));
       const pill = el("span", { class: "pill warn", title: "Settings the script hides from players until someone verifies them" });
       head.querySelector(".sp").before(pill);
-      const count = () => { const u = (gc[k] || []).filter((x) => !x.tested).length; pill.textContent = `${u} not verified`; pill.hidden = !u; };
+      const count = () => { const u = (gc[k] || []).filter((x) => !x.verified).length; pill.textContent = `${u} not verified`; pill.hidden = !u; };
       return [head, cards(gc, k, resolve(gp[k].items), `game_config.${k}`, count)];
     }),
   ];
@@ -595,17 +595,17 @@ let GACTIONS = null;
 function renderEdit() {
   if (SECTION === "capture" && !CAPTURE_ON) SECTION = "overview";
   $("#empty").hidden = true; $("#settings").hidden = true; $("#game").hidden = false;
-  const folderLabel = { tested: "Tested", untested: "Untested", drafts: "Draft" }[CUR.folder];
+  const rating = CUR.folder === "drafts" ? "drafts" : (GAME.compatibility || "unknown");
   $("#ghead").replaceChildren(el("div", { class: "gtop" },
     el("div", { class: "gtitle" }, el("h1", {}, GAME.name || CUR.id),
-      el("div", { class: "gmeta" }, el("span", { class: "badge " + CUR.folder, title: { tested: "Verified against a real install.", untested: "Included, but unverified.", drafts: "Incomplete or doubtful; never shipped." }[CUR.folder] }, folderLabel),
+      el("div", { class: "gmeta" }, el("span", { class: "badge " + rating, title: RATING_TIP[rating] }, RATING_LABEL[rating]),
         el("code", {}, `${CUR.folder}/${CUR.id}.json`), el("span", { id: "buildbadge", class: "badge" }), el("span", { id: "dirtybadge", class: "badge dirty", hidden: !DIRTY }, "● Unsaved changes"))),
     null));
   // The actions sit in the sticky section bar (drawNav), so they stay in view while scrolling.
   GACTIONS =
     el("div", { class: "gactions" },
       AI && AIF.research ? el("button", { type: "button", class: "btn", onclick: research, title: "Fill in release date, executable, description and EAX details from what the AI knows. Check them against a source." }, "✨ Research") : null,
-      el("select", { id: "promo", title: "Move this entry to another folder (tested, untested or draft)", onchange: promote }, [el("option", { value: "" }, "Move to…"), ...["drafts", "untested", "tested"].filter((x) => x !== CUR.folder).map((x) => el("option", {}, x))]),
+      el("button", { type: "button", class: "btn", id: "promo", title: CUR.folder === "drafts" ? "Move this draft into the database, so it ships" : "Move this game to the drafts, which never ship", onclick: promote }, CUR.folder === "drafts" ? "Move to database" : "Move to drafts"),
       el("button", { type: "button", class: "btn", id: "submitbtn", title: "Send this profile to the project as a pull request", onclick: submitClicked }, "Submit…"),
       el("button", { type: "button", class: "btn", id: "revertbtn", disabled: !DIRTY, title: "Throw away every unsaved change and go back to the saved file", onclick: revertAll }, "Revert"),
       el("button", { type: "button", class: "btn primary", id: "savebtn", title: "Save (Ctrl+S). It shows what will change in the file first.", onclick: saveClicked }, "Save"));
@@ -694,7 +694,7 @@ async function submitClicked() {
   const refresh = () => { go.disabled = info.errors.length > 0 || (info.findings.length > 0 && !okPrivate.checked); };
   okPrivate.onchange = refresh;
   const dlg = dialog(el("h3", {}, `Send ${info.name} to the project?`), via,
-    CUR.folder === "tested" ? null : el("p", { class: "muted" }, "It's added as untested, and stays that way until someone has tried it on a real install."),
+    GAME.compatibility ? null : el("p", { class: "muted" }, "It's added with no compatibility rating (unknown), and stays that way until someone has tried it on a real install."),
     info.errors.length ? el("div", {}, el("p", {}, el("strong", {}, "Fix these first:")), el("ul", {}, info.errors.map((x) => el("li", {}, x)))) : null,
     info.findings.length ? el("div", {}, el("p", {}, el("strong", {}, "These look like they came from your computer:")),
       el("ul", {}, info.findings.map((f) => el("li", {}, el("code", {}, f.where), ` “${f.value}” ${f.why}`))),
@@ -725,10 +725,10 @@ function submitDone(r) {
   const d = dialog(...kids, el("div", { class: "btns" }, el("span", { class: "sp" }), el("button", { type: "button", onclick: () => d.close() }, "Close"),
     el("a", { class: "btn primary", href: r.url, target: "_blank", rel: "noopener" }, "Open GitHub")));
 }
-async function promote(e) {
-  const to = e.target.value; if (!to) return;
+async function promote() {
+  const to = CUR.folder === "drafts" ? "games" : "drafts";
   if (DIRTY) await save();
-  await api("/api/promote", "POST", { id: CUR.id, from: CUR.folder, to }); CUR.folder = to; renderEdit(); loadList(); toast(`Moved to ${to}`);
+  await api("/api/promote", "POST", { id: CUR.id, from: CUR.folder, to }); CUR.folder = to; renderEdit(); loadList(); toast(to === "drafts" ? "Moved to the drafts" : "Moved to the database");
 }
 async function research() {
   const r = await api("/api/ai", "POST", { task: "research", context: { name: GAME.name } });
@@ -758,7 +758,18 @@ async function loadList() {
   drawShow(); drawList(); drawRebuild();
   if (GAME && CUR) drawBuildBadge();
 }
-const OPEN = { untested: true, tested: true, drafts: false };
+// The list's groups: games by compatibility, then the drafts.
+const RATINGS = ["unknown", "playable", "verified", "unsupported", "drafts"];
+const RATING_LABEL = { unknown: "Unknown", playable: "Playable", verified: "Verified", unsupported: "Unsupported", drafts: "Draft" };
+const RATING_TIP = {
+  unknown: "Nobody has checked this game on a real install yet. The script hides it unless the player asks for unknown games.",
+  playable: "Works with the script, with a known problem described in its EAX problem text.",
+  verified: "Checked on a real install: EAX works without problems.",
+  unsupported: "The script can't restore EAX here, so it blocks the install.",
+  drafts: "Incomplete or doubtful; never shipped.",
+};
+const ratingOf = (x) => x.folder === "drafts" ? "drafts" : (x.compatibility || "unknown");
+const OPEN = { unknown: true, playable: true, verified: true, unsupported: false, drafts: false };
 // The list filter, for finding games that still need work; per browser like the theme.
 const SHOW_KEY = "eax-profiler-show";
 const SHOWS = [
@@ -778,11 +789,11 @@ $("#show").onchange = (e) => {
 function drawList() {
   const q = $("#filter").value.toLowerCase(), box = $("#list"); box.replaceChildren();
   const shown = SHOWS.find(([k]) => k === SHOW)[2], narrowed = q || SHOW !== "all";
-  for (const folder of ["untested", "tested", "drafts"]) {
-    const g = GAMES.filter((x) => x.folder === folder && (x.name + x.id).toLowerCase().includes(q) && shown(x));
+  for (const rating of RATINGS) {
+    const g = GAMES.filter((x) => ratingOf(x) === rating && (x.name + x.id).toLowerCase().includes(q) && shown(x));
     if (!g.length) continue;
-    const d = el("details", { open: narrowed ? true : OPEN[folder], ontoggle: (e) => { if (!narrowed) OPEN[folder] = e.target.open; } },
-      el("summary", {}, el("span", { class: "dot " + folder }), folder, el("span", { class: "cnt" }, g.length)),
+    const d = el("details", { open: narrowed ? true : OPEN[rating], ontoggle: (e) => { if (!narrowed) OPEN[rating] = e.target.open; } },
+      el("summary", { title: RATING_TIP[rating] }, el("span", { class: "dot " + rating }), RATING_LABEL[rating], el("span", { class: "cnt" }, g.length)),
       ...g.map((x) => el("div", { class: "item" + (CUR && CUR.id === x.id ? " on" : ""), onclick: () => openGame(x.folder, x.id) }, el("span", { class: "nm" }, x.name), x.build && (x.build.state === "changed" || x.build.state === "new") ? el("span", { class: "tag warn", title: buildTip(x.build) }, x.build.state === "new" ? "not built" : "changed") : null,
         x.settings ? el("span", { class: "tag" + (x.unverified ? " warn" : ""), title: `${x.settings} game setting${x.settings === 1 ? "" : "s"}${x.unverified ? `, ${x.unverified} not verified yet` : ", all verified"}` }, "cfg") : null)));
     box.append(d);
@@ -803,7 +814,7 @@ async function openGame(folder, id) {
 async function addByName() {
   const name = await askText("Add a game by name", "", "Add"); if (!name) return;
   const id = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  try { await api("/api/new", "POST", { id, name }); await loadList(); openGame("untested", id); } catch (x) { toast(x.message, 6000); }
+  try { await api("/api/new", "POST", { id, name }); await loadList(); openGame("games", id); } catch (x) { toast(x.message, 6000); }
 }
 $("#filter").oninput = drawList;
 $("#addinstalled").onclick = addInstalled;
@@ -868,7 +879,7 @@ async function drawSettings() {
     if (st.login.running) SETTINGS_TIMER = setInterval(refresh, 2000);
     const keyInput = el("input", { type: "password", placeholder: st.saved_key ? "Paste a new key to replace it" : "sk-ant-…", autocomplete: "off", spellcheck: false });
     const card = (title, on, hint, ...kids) => el("section", { class: "aicard" + (on && !masterOff ? " on" : "") },
-      el("header", {}, el("h4", {}, title), on && !masterOff ? el("span", { class: "badge untested", style: "background:var(--ok-weak);color:var(--ok)" }, "In use") : null), el("p", { class: "muted" }, hint), ...kids);
+      el("header", {}, el("h4", {}, title), on && !masterOff ? el("span", { class: "badge verified" }, "In use") : null), el("p", { class: "muted" }, hint), ...kids);
     const theme = getTheme();
     const radio = (v, label) => el("label", { class: "chkrow" }, el("input", { type: "radio", name: "theme", checked: theme === v, onchange: () => setTheme(v) }), " " + label);
     root.replaceChildren(
@@ -1075,7 +1086,7 @@ async function addInstalled() {
       try {
         const slug = l.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || String(l.id);
         const r = await api("/api/new", "POST", { id: slug, name: l.name, store: l.store, store_id: l.id });
-        await loadList(); await openGame("untested", r.id); await captureCurrent();
+        await loadList(); await openGame("games", r.id); await captureCurrent();
       } catch (x) { toast(x.message, 6000); }
     } }, el("span", { class: "nm" }, l.name), el("span", { class: "tag" }, l.store))).concat(todo.length ? [] : [el("p", { class: "muted", style: "padding:12px" }, "Every installed game already has a profile.")])));
   q.oninput = draw; draw(); q.focus();

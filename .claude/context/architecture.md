@@ -14,10 +14,15 @@ install manifest for clean uninstall, and checksum-verified downloads with local
 caching. `game-database.json` is the companion community-maintained database that
 drives library scanning, install-time compatibility notes and the Game Settings step
 (changes to a game's own config files) for specific titles. It's **generated**: each
-game is edited as `<id>.json` in `data/games/tested/` (checked against a real install)
-or `data/games/untested/` (not yet) — both shipped — or `data/drafts/` (never shipped),
-defined by `data/schema.json`; `tools/build-game-database.sh` combines the two shipped
-folders. See `README.md` and `docs/` for the full feature list
+game is edited as `<id>.json` in `data/games/` (shipped) or `data/drafts/` (never
+shipped), defined by `data/schema.json`; `tools/build-game-database.sh` combines
+`data/games/`. A game's `compatibility` (verified / playable / unsupported, missing =
+unknown, per store if a store block overrides it) is resolved per store by the build
+(`stores.<s>.compatibility`, `stores.<s>.problem`); the build also writes the fields
+older released scripts read (`tested`, `eax.status`, `eax.fix_in_place`, settings'
+`tested`, `install.alsoft_tested`) via `legacy_fields` in `tools/game-database.jq`.
+`data/owned.json` is the maintainer's list of games they own (`tools/owned.sh`); it
+never ships. See `README.md` and `docs/` for the full feature list
 and user-facing docs, and `docs/database/contributing.md` (workflow) and
 `docs/database/game-file-reference.md` (the fields).
 

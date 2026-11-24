@@ -75,7 +75,7 @@ class IdAndValues(unittest.TestCase):
         g = {"name": "T", "stores": {"steam": {"id": 1}}, "eax": {"api": "directsound3d"},
              "game_config": {"files": {}, "audio_settings": [{"title": "TODO title", "reason": "TODO reason", "changes": {}}]}}
         with mock.patch.object(submit, "gh_login", lambda: "x"):
-            self.assertTrue(any("TODO" in e for e in submit.prepare("untested", "t", g)["errors"]))
+            self.assertTrue(any("TODO" in e for e in submit.prepare("games", "t", g)["errors"]))
 
 
 class Redaction(unittest.TestCase):

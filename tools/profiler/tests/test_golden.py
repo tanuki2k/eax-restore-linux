@@ -29,7 +29,7 @@ def bash(script):
 
 class Fear(unittest.TestCase):
     def test_gadb_flip_matches_the_fear_entry(self):
-        entry = dbio.load("tested", "fear")
+        entry = dbio.load("games", "fear")
         want = entry["game_config"]["audio_settings"][0]["changes"]["Profile000.gdb"]
         items = [("Music", 1), ("UseHWSound", 0), ("UseEAX", 0), ("UseEAX4", 0), ("Sfx", 0)]
         with tempfile.TemporaryDirectory() as t:
@@ -77,7 +77,7 @@ class Descent3(unittest.TestCase):
     KEY = "Software\\\\Wow6432Node\\\\Outrage\\\\Descent3"
 
     def test_registry_changes_match_the_entry(self):
-        entry = dbio.load("tested", "descent-3")
+        entry = dbio.load("games", "descent-3")
         want = entry["game_config"]["audio_settings"][0]["changes"]
         before = self.HDR + f'[{self.KEY}] 1\n"SoundMixer"=dword:00000001\n[Software\\\\Wine\\\\Drivers] 1\n"Audio"="alsa"\n'
         after = self.HDR + f'[{self.KEY}] 1\n"SoundMixer"=dword:00000006\n"SoundcardName"="Primary Sound Driver"\n[Software\\\\Wine\\\\Drivers] 1\n"Audio"="pulse"\n'
@@ -128,7 +128,7 @@ def draft_speakers(game, sd, layouts):
 
 class Speakers(unittest.TestCase):
     def test_bioshock_layouts_group_like_the_entry(self):
-        entry = dbio.load("tested", "bioshock")
+        entry = dbio.load("games", "bioshock")
         sec = "ShockGame.ShockUserSettings"
         rel = "~drive_c/users/steamuser/AppData/Roaming/Bioshock/Bioshock.ini"
         ini = lambda mode: f"[{sec}]\nbEAXEnabled=True\nSpeakerMode={mode}\nBrightness=0.5\n"
@@ -144,7 +144,7 @@ class Speakers(unittest.TestCase):
         self.assertEqual(gc["files"]["Bioshock.ini"]["locations"], ["prefix_appdata:Bioshock/Bioshock.ini"])
 
     def test_nwn_numeric_values_and_headphones(self):
-        entry = dbio.load("tested", "neverwinter-nights-diamond")
+        entry = dbio.load("games", "neverwinter-nights-diamond")
         ini = lambda n: f"[Sound Options]\nEnvironment Effects=1\nSpeaker Type={n}\n"
         values = {"headphones": 1, "matrix": 2, "quad": 3, "surround51": 4, "surround61": 4, "surround71": 5}
         states = {"audio": {"nwn.ini": ini(0)}}
@@ -158,7 +158,7 @@ class Speakers(unittest.TestCase):
         self.assertEqual(speaker_settings({"game_config": gc}), expected)
 
     def test_four_identical_surround_runs_become_surround(self):
-        entry = dbio.load("tested", "quake-4")
+        entry = dbio.load("games", "quake-4")
         cfg = lambda n: f'seta s_numberOfSpeakers "{n}"\nseta s_volume_dB "0"\n'
         layouts = ("quad", "surround51", "surround61", "surround71")
         states = {"audio": {"q4base/Quake4Config.cfg": cfg(2)}}

@@ -8,10 +8,10 @@ Only three things are required: `name`, `stores` (each store with an `id`) and `
 
 | Section | Fields | What it holds |
 | --- | --- | --- |
-| [Basics](#basics) | `name`, `description`, `released`, `exe` | Who the game is and how to find it |
-| [`stores`](#stores) | `id`, `delisted`, `api`, `rollback_steps`, `store_details`, `patches`, ... | What's specific to the Steam or GOG listing |
-| [`eax`](#eax) | `api`, `sound_system`, `versions`, `status`, `problem`, `fix` | How the game does 3D audio |
-| [`install`](#install) | `tweaks`, `alsoft_ini` | What the install does differently |
+| [Basics](#basics) | `name`, `description`, `released`, `exe`, `compatibility` | Who the game is, how to find it, and how well EAX works |
+| [`stores`](#stores) | `id`, `delisted`, `compatibility`, `problem`, `api`, `rollback_steps`, `store_details`, `patches`, ... | What's specific to the Steam or GOG listing |
+| [`eax`](#eax) | `api`, `sound_system`, `versions`, `built_in`, `problem`, `fix` | How the game does 3D audio |
+| [`install`](#install) | `tweaks`, `alsoft_ini`, `alsoft_verified` | What the install does differently |
 | [`game_config`](#game_config) | `files`, `audio_settings`, `optional_settings` | Edits to the game's own config files |
 | [`sources`](#sources) | | Pages that back up the entry's claims |
 | [`notes`](#notes) | | Caveats that fit nowhere else |
@@ -52,6 +52,18 @@ The main game executable, as a file name only, like `"DeusEx.exe"`, exactly as i
 
 The scanner uses it to pick the folder to work in. That handles layouts that name matching gets wrong, like Splinter Cell: Double Agent's separate single-player and multiplayer builds. If someone types a folder that doesn't contain the exe, they get a warning. Only add it after you've checked a real install.
 
+### `compatibility`
+
+How well EAX works with the script. Leave it out until someone has played the game with the fix; a game without it is Unknown.
+
+| Value | Meaning |
+| --- | --- |
+| `"verified"` | Checked on a real install, and EAX works without problems. |
+| `"playable"` | EAX works with the script, but something sounds wrong with it restored that sounds right without it. Say what in [`eax.problem`](#eaxproblem). |
+| `"unsupported"` | The script can't restore EAX on this build: a remaster that never had EAX, or an update removed it and no rollback brings it back. Say why in `eax.problem`. The install stops. |
+
+The [database overview](database-overview.md#compatibility) has the questions to ask when choosing. A game an update took EAX out of, but whose stores can roll back to a build with EAX ([`beta_branch`](#storesbeta_branch), [`rollback_builds`](#storesrollback_builds)), is not unsupported: rate it on how it plays after the rollback.
+
 ## `stores`
 
 An object with a `"steam"` key, a `"gog"` key or both. Every field below goes inside a store's block.
@@ -76,6 +88,14 @@ Leave it out if you checked the ID against the store's own page or API. That's t
 * `"local_install_verified"` means you also confirmed the ID against a real local install.
 * `"steamdb_historical"` means the store page is gone and the ID comes from SteamDB's history, not from a local check. This is the only value that adds a line to the game profile.
 
+### `stores.*.compatibility`
+
+This store's own [`compatibility`](#compatibility), when it differs from the game's. Use it when the stores' builds behave differently, or when only one store's copy was checked: a game with `"compatibility": "verified"` in its `gog` block and none at the top is Verified on GOG and Unknown on Steam. The profile shows each store's rating when they differ, and the install goes by the store it's installing from.
+
+### `stores.*.problem`
+
+This store's own problem text, shown in place of [`eax.problem`](#eaxproblem) for this store. Set it beside a store `compatibility` of `"playable"` or `"unsupported"` when the problem is specific to that store.
+
 ### `stores.*.api`
 
 `"directsound3d"` or `"openal"`, to override `eax.api` for this store's build only. Set it only where a store's current build really differs.
@@ -86,13 +106,13 @@ Thief Gold and Thief II are an example. Their `eax.api` is `"directsound3d"`, bu
 
 Steam only. The exact `BetaKey` name of a beta branch that restores EAX on this store's build (right-click the game, then Properties → Betas). Set it only when the store's rollback steps name such a branch.
 
-With it, the install can tell whether the player's Steam manifest already has the branch selected. Without it, the `removed_by_patch` warning would always show.
+It also tells the install that the current build has no EAX: the install waits until the game is on the branch, and the profile shows how to get there. With it, the install can tell whether the player's Steam manifest already has the branch selected.
 
 ### `stores.*.rollback_builds`
 
 GOG only. The build IDs that keep EAX, as the `buildId` in the game folder's `goggame-<id>.info`. GOG Galaxy and Heroic can roll a game back to one of them. List every such build GOG still offers. GOG's builds list for a game is at `https://content-system.gog.com/products/<id>/os/windows/builds?generation=2`.
 
-With it, the install can tell that the player has already rolled back, as `beta_branch` does on Steam. Without it, or when the install's `goggame-<id>.info` has no `buildId`, the `removed_by_patch` warning always shows.
+Like `beta_branch` on Steam, it tells the install that the current build has no EAX, and lets it see that the player has already rolled back. When the install's `goggame-<id>.info` has no `buildId`, the install can't tell, so it warns and asks.
 
 ### `stores.*.rollback_steps`
 
@@ -153,29 +173,25 @@ Optional: the audio middleware the game is built on. `"miles"` is the Miles Soun
 
 ### `eax.versions`
 
-The EAX versions the game supports, as strings. Only fill it in from a source you can point to: the game's manual or readme, its in-game audio menu, or a maintained compatibility database. Cite the source in `sources` or in your PR description. Leave it out for a `"not_implemented"` game.
+The EAX versions the game supports, as strings. Only fill it in from a source you can point to: the game's manual or readme, its in-game audio menu, or a maintained compatibility database. Cite the source in `sources` or in your PR description. Leave it out for a remaster that never had EAX. For a game an update took EAX out of, list the versions the original release had.
 
-### `eax.status`
+### `eax.built_in`
 
-Leave it out when EAX works. `"supported"` is the default.
-
-| Value | Meaning |
-| --- | --- |
-| `"removed_by_patch"` | An update stripped EAX or A3D from the current build. An older build or a branch may restore it. |
-| `"not_implemented"` | A remaster or rewrite that never had EAX. No build-level fix exists. |
-| `"built_in"` | EAX already works in this build without the script, for example because it ships its own OpenAL32.dll with EAX. The install says so and asks "Install anyway?", which defaults to No. |
+Set it to `true` when EAX already works in this build without the script, for example because the game ships its own OpenAL32.dll with EAX. The install says so and asks "Install anyway?", which defaults to No. It says nothing about compatibility: a built-in game can still be Verified, Playable or Unknown.
 
 ### `eax.problem`
 
-Why the current build is in that state. It appears in the profile's `Status:` block. A game with `supported` status can fill it in too, for a known limitation. Otherwise leave it empty. Every entry is a current store listing, so don't add "make sure you're patched to at least version X" advice.
+What's wrong, in plain words. It appears in the profile's `Status:` block.
+
+* For a `playable` game, what sounds wrong with EAX restored. Required.
+* For an `unsupported` game, why the script can't restore EAX. Required.
+* For a `verified` game, a known limitation that isn't the fix's fault, like maps with no environmental audio. Otherwise leave it empty.
+
+Every entry is a current store listing, so don't add "make sure you're patched to at least version X" advice. When the problem differs between stores, put it in each store's own [`problem`](#storesproblem).
 
 ### `eax.fix`
 
 How to get a build where EAX works, such as a retail or CD copy. It applies to the whole game. When the steps differ by store, put them in each store's own [`rollback_steps`](#storesrollback_steps) instead. Settings in the game's own config files belong in `game_config`, not here.
-
-### `eax.fix_in_place`
-
-Set it to `true` only when `fix` works on the same install the script is already looking at, like a Steam beta branch. The install then warns and still offers "Continue installing anyway?". Leave it out when the only fix is a separate install, such as a pre-patch retail copy. The install then stops, as it does for `"not_implemented"`.
 
 ## `install`
 
@@ -206,9 +222,9 @@ OpenAL Soft settings offered for this game in the Game Audio Settings step (phas
 
 For a game with quiet reverb that's `{ "reverb": { "boost": "6" } }`. Listen for the reverb popping before you settle on a value.
 
-### `install.alsoft_tested`
+### `install.alsoft_verified`
 
-Set it to `true` once the `alsoft_ini` values are verified on a real install. Without it they count as unverified and are treated like an untested setting: hidden unless `EAX_RESTORE_UNTESTED_SETTINGS=1`, and tagged "(untested)" when shown.
+Set it to `true` once the `alsoft_ini` values are checked on a real install. Without it they count as unverified and are treated like an unverified setting: hidden unless `EAX_RESTORE_UNVERIFIED_SETTINGS=1`, and tagged "(unverified)" when shown.
 
 ## `game_config`
 
@@ -334,9 +350,9 @@ If a setting depends on a file that only some builds have, use `if_missing: "ski
 
 Optional. Something the player should do after the install. It appears in the final summary's "Before you play" box and in the profile browser: `"Open Options -> Video and click Autodetect."`
 
-#### `tested`
+#### `verified`
 
-Optional. Set it to `true` once the setting is verified on a real install, and it shows "(tested)". A setting without it, or with `false`, is unverified. It stays hidden unless the player sets `EAX_RESTORE_UNTESTED_SETTINGS=1`, and shows "(untested)" when it appears.
+Optional. Set it to `true` once the setting is checked on a real install, and it shows "(verified)". A setting without it, or with `false`, is unverified. It stays hidden unless the player sets `EAX_RESTORE_UNVERIFIED_SETTINGS=1`, and shows "(unverified)" when it appears.
 
 ## `sources`
 

@@ -1,6 +1,6 @@
 {
   "schema_version": 3,
-  "_readme": "Generated from data/games/tested/*.json and data/games/untested/*.json by tools/build-game-database.sh; do not edit by hand. Games from untested/ carry \"tested\": false. Field reference: data/schema.json and docs/database/game-file-reference.md.",
+  "_readme": "Generated from data/games/*.json by tools/build-game-database.sh; do not edit by hand. Each store carries its worked-out compatibility (verified, playable, unsupported or unknown). tested, eax.status, eax.fix_in_place and the settings' tested are kept for older scripts. Field reference: data/schema.json and docs/database/game-file-reference.md.",
   "games": [
     {
       "id": "alpha-centauri",
@@ -8,14 +8,17 @@
       "description": "Alpha Centauri is a singleplayer and multiplayer turn-based 4X strategy game.",
       "released": "1999-02-09",
       "exe": "terran.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
           "id": 2204130,
-          "store_details": "Sold as the 'Planetary Pack', bundling the Alien Crossfire expansion."
+          "store_details": "Sold as the 'Planetary Pack', bundling the Alien Crossfire expansion.",
+          "compatibility": "verified"
         },
         "gog": {
           "id": 1207658936,
-          "store_details": "Sold as the 'Planetary Pack', bundling the Alien Crossfire expansion."
+          "store_details": "Sold as the 'Planetary Pack', bundling the Alien Crossfire expansion.",
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -45,6 +48,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -58,7 +62,8 @@
       "exe": "AlphaPrime.exe",
       "stores": {
         "steam": {
-          "id": 2590
+          "id": 2590,
+          "compatibility": "unknown"
         }
       },
       "eax": {
@@ -90,8 +95,7 @@
                 "EnableEAX": "1",
                 "EnableSoundOcclusion": "1"
               }
-            },
-            "tested": false
+            }
           },
           {
             "title": "Enable stereo sound",
@@ -103,8 +107,7 @@
               "settings.cfg": {
                 "Speakers": "2"
               }
-            },
-            "tested": false
+            }
           },
           {
             "title": "Enable headphones",
@@ -116,8 +119,7 @@
               "settings.cfg": {
                 "Speakers": "4"
               }
-            },
-            "tested": false
+            }
           },
           {
             "title": "Enable Pro Logic surround sound",
@@ -130,8 +132,7 @@
                 "Speakers": "5"
               }
             },
-            "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
-            "tested": false
+            "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic."
           },
           {
             "title": "Enable 4.0 surround sound",
@@ -143,8 +144,7 @@
               "settings.cfg": {
                 "Speakers": "3"
               }
-            },
-            "tested": false
+            }
           },
           {
             "title": "Enable 5.1 surround sound",
@@ -159,8 +159,7 @@
               "settings.cfg": {
                 "Speakers": "6"
               }
-            },
-            "tested": false
+            }
           },
           {
             "title": "Enable 7.1 surround sound",
@@ -172,8 +171,7 @@
               "settings.cfg": {
                 "Speakers": "7"
               }
-            },
-            "tested": false
+            }
           }
         ]
       },
@@ -188,10 +186,12 @@
       "exe": "anox.exe",
       "stores": {
         "steam": {
-          "id": 242940
+          "id": 242940,
+          "compatibility": "unknown"
         },
         "gog": {
-          "id": 1207659012
+          "id": 1207659012,
+          "compatibility": "unknown"
         }
       },
       "eax": {
@@ -209,7 +209,8 @@
       "released": "2001-10-12",
       "stores": {
         "steam": {
-          "id": 39630
+          "id": 39630,
+          "compatibility": "unknown"
         }
       },
       "eax": {
@@ -229,10 +230,12 @@
       "exe": "arx.exe",
       "stores": {
         "steam": {
-          "id": 1700
+          "id": 1700,
+          "compatibility": "unknown"
         },
         "gog": {
-          "id": 1207658680
+          "id": 1207658680,
+          "compatibility": "unknown"
         }
       },
       "eax": {
@@ -266,8 +269,7 @@
                   "EAX": "1"
                 }
               }
-            },
-            "tested": false
+            }
           }
         ]
       },
@@ -288,10 +290,12 @@
       "exe": "AssassinsCreed_Dx9.exe",
       "stores": {
         "steam": {
-          "id": 15100
+          "id": 15100,
+          "compatibility": "unknown"
         },
         "gog": {
-          "id": 1207659023
+          "id": 1207659023,
+          "compatibility": "unknown"
         }
       },
       "eax": {
@@ -318,7 +322,8 @@
       "released": "2007-11-14",
       "stores": {
         "gog": {
-          "id": 1731734113
+          "id": 1731734113,
+          "compatibility": "unknown"
         }
       },
       "eax": {
@@ -338,11 +343,13 @@
       "description": "Baldur's Gate 2 Complete is a singleplayer and multiplayer isometric role-playing game.",
       "released": "2000-09-21",
       "exe": "BGMain.exe",
+      "compatibility": "verified",
       "stores": {
         "gog": {
           "id": 1207658893,
           "delisted": true,
-          "store_details": "This is the original 2000 Baldur's Gate II: Shadows of Amn with its Throne of Bhaal expansion. GOG stopped selling it by November 2016 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
+          "store_details": "This is the original 2000 Baldur's Gate II: Shadows of Amn with its Throne of Bhaal expansion. GOG stopped selling it by November 2016 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound.",
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -372,6 +379,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -389,18 +397,23 @@
       "description": "Baldur's Gate II: Enhanced Edition is a singleplayer and multiplayer isometric role-playing game, an enhanced edition of 2000's Baldur's Gate II: Shadows of Amn.",
       "released": "2013-11-15",
       "exe": "BaldurII.exe",
+      "compatibility": "unsupported",
       "stores": {
         "steam": {
-          "id": 257350
+          "id": 257350,
+          "compatibility": "unsupported",
+          "problem": "This is the Enhanced Edition, not the classic Baldur's Gate II, and it has no EAX."
         },
         "gog": {
-          "id": 1207666373
+          "id": 1207666373,
+          "compatibility": "unsupported",
+          "problem": "This is the Enhanced Edition, not the classic Baldur's Gate II, and it has no EAX."
         }
       },
       "eax": {
         "api": "directsound3d",
-        "status": "not_implemented",
-        "problem": "This is the Enhanced Edition, not the classic Baldur's Gate II, and it has no EAX."
+        "problem": "This is the Enhanced Edition, not the classic Baldur's Gate II, and it has no EAX.",
+        "status": "not_implemented"
       },
       "notes": "Baldur's Gate 2 Complete, a separate purchase on GOG, is the original 2000 release that still supports EAX."
     },
@@ -410,18 +423,23 @@
       "description": "Baldur's Gate: Enhanced Edition is a singleplayer and multiplayer isometric role-playing game, an enhanced edition of 1998's Baldur's Gate.",
       "released": "2012-11-28",
       "exe": "Baldur.exe",
+      "compatibility": "unsupported",
       "stores": {
         "steam": {
-          "id": 228280
+          "id": 228280,
+          "compatibility": "unsupported",
+          "problem": "This is the Enhanced Edition, not the classic Baldur's Gate, and it has no EAX."
         },
         "gog": {
-          "id": 1207666353
+          "id": 1207666353,
+          "compatibility": "unsupported",
+          "problem": "This is the Enhanced Edition, not the classic Baldur's Gate, and it has no EAX."
         }
       },
       "eax": {
         "api": "directsound3d",
-        "status": "not_implemented",
-        "problem": "This is the Enhanced Edition, not the classic Baldur's Gate, and it has no EAX."
+        "problem": "This is the Enhanced Edition, not the classic Baldur's Gate, and it has no EAX.",
+        "status": "not_implemented"
       },
       "notes": "Baldur's Gate: The Original Saga, a separate purchase on GOG, is the original 1998 release that still supports EAX."
     },
@@ -431,11 +449,13 @@
       "description": "Baldur's Gate: The Original Saga is a singleplayer and multiplayer isometric role-playing game.",
       "released": "1998-12-21",
       "exe": "BGMain.exe",
+      "compatibility": "verified",
       "stores": {
         "gog": {
           "id": 1207658886,
           "delisted": true,
-          "store_details": "This is the original 1998 Baldur's Gate with its Tales of the Sword Coast expansion. GOG stopped selling it by November 2016 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
+          "store_details": "This is the original 1998 Baldur's Gate with its Tales of the Sword Coast expansion. GOG stopped selling it by November 2016 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound.",
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -464,6 +484,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -482,7 +503,8 @@
       "released": "2007-01-30",
       "stores": {
         "steam": {
-          "id": 6870
+          "id": 6870,
+          "compatibility": "unknown"
         }
       },
       "eax": {
@@ -500,10 +522,12 @@
       "description": "BioShock is a singleplayer first-person shooter and immersive sim game and the first in the BioShock series.",
       "released": "2007-08-21",
       "exe": "Bioshock.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
           "id": 7670,
-          "store_details": "This is the original 2007 BioShock, an ideal candidate for restoring EAX sound."
+          "store_details": "This is the original 2007 BioShock, an ideal candidate for restoring EAX sound.",
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -535,6 +559,7 @@
               }
             },
             "follow_up": "If BioShock starts with EAX turned off, make sure you quit the game from its main menu, otherwise it assumes the game crashed and resets Bioshock.ini to its previous state. If this happens, manually turn on 'Use Creative EAX Audio' in the game's audio settings.",
+            "verified": true,
             "tested": true
           },
           {
@@ -550,6 +575,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -568,6 +594,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -583,6 +610,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -599,6 +627,7 @@
               }
             },
             "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+            "verified": true,
             "tested": true
           }
         ],
@@ -616,6 +645,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -639,10 +669,12 @@
       "exe": "EiB.exe",
       "stores": {
         "steam": {
-          "id": 19800
+          "id": 19800,
+          "compatibility": "unknown"
         },
         "gog": {
-          "id": 1239584357
+          "id": 1239584357,
+          "compatibility": "unknown"
         }
       },
       "eax": {
@@ -674,8 +706,7 @@
                   "Use3DSound": "True"
                 }
               }
-            },
-            "tested": false
+            }
           }
         ]
       },
@@ -689,10 +720,12 @@
       "exe": "biahh.exe",
       "stores": {
         "steam": {
-          "id": 15390
+          "id": 15390,
+          "compatibility": "unknown"
         },
         "gog": {
-          "id": 1796017250
+          "id": 1796017250,
+          "compatibility": "unknown"
         }
       },
       "eax": {
@@ -712,10 +745,12 @@
       "exe": "bia.exe",
       "stores": {
         "steam": {
-          "id": 15190
+          "id": 15190,
+          "compatibility": "unknown"
         },
         "gog": {
-          "id": 1993805983
+          "id": 1993805983,
+          "compatibility": "unknown"
         }
       },
       "eax": {
@@ -762,8 +797,7 @@
                   "Use3DSound": "True"
                 }
               }
-            },
-            "tested": false
+            }
           }
         ],
         "optional_settings": [
@@ -800,7 +834,8 @@
       "exe": "CoJ.exe",
       "stores": {
         "steam": {
-          "id": 3020
+          "id": 3020,
+          "compatibility": "unknown"
         }
       },
       "eax": {
@@ -823,11 +858,13 @@
       "name": "Chrome",
       "description": "Chrome is a singleplayer and multiplayer first-person shooter game and the first in the Chrome series.",
       "released": "2003-06-13",
+      "compatibility": "verified",
       "stores": {
         "steam": {
           "id": 46420,
           "delisted": true,
-          "id_source": "steamdb_historical"
+          "id_source": "steamdb_historical",
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -849,11 +886,13 @@
       "name": "Chrome: SpecForce",
       "description": "Chrome: SpecForce is a singleplayer and multiplayer first-person shooter game and the second in the Chrome series.",
       "released": "2005-06-02",
+      "compatibility": "verified",
       "stores": {
         "steam": {
           "id": 46430,
           "delisted": true,
-          "id_source": "steamdb_historical"
+          "id_source": "steamdb_historical",
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -876,9 +915,11 @@
       "description": "Clive Barker's Undying is a singleplayer first-person shooter and survival horror game.",
       "released": "2001-02-22",
       "exe": "Undying.exe",
+      "compatibility": "verified",
       "stores": {
         "gog": {
-          "id": 1207659191
+          "id": 1207659191,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -908,6 +949,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -924,6 +966,7 @@
               }
             },
             "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+            "verified": true,
             "tested": true
           }
         ],
@@ -938,6 +981,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -950,6 +994,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -962,6 +1007,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -973,11 +1019,13 @@
       "description": "Condemned: Criminal Origins is a singleplayer first-person survival horror and action game and the first in the Condemned series.",
       "released": "2006-04-11",
       "exe": "Condemned.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
           "id": 4720,
           "delisted": true,
-          "store_details": "Delisted from Steam and the Microsoft Store at the end of October 2025, with no reason given."
+          "store_details": "Delisted from Steam and the Microsoft Store at the end of October 2025, with no reason given.",
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -1023,12 +1071,15 @@
       "description": "Descent 3 is a singleplayer and multiplayer first-person shooter game and the third in the Descent series.",
       "released": "1999-06-17",
       "exe": "MAIN.EXE",
+      "compatibility": "verified",
       "stores": {
         "steam": {
-          "id": 273590
+          "id": 273590,
+          "compatibility": "verified"
         },
         "gog": {
-          "id": 1207658657
+          "id": 1207658657,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -1058,6 +1109,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           }
         ],
@@ -1075,6 +1127,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -1086,12 +1139,15 @@
       "description": "Deus Ex is a singleplayer and multiplayer first-person action role-playing and immersive sim game and the first in the Deus Ex series.",
       "released": "2000-06-23",
       "exe": "DeusEx.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
-          "id": 6910
+          "id": 6910,
+          "compatibility": "verified"
         },
         "gog": {
-          "id": 1207658995
+          "id": 1207658995,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -1106,6 +1162,7 @@
             "boost": "6"
           }
         },
+        "alsoft_verified": true,
         "alsoft_tested": true
       },
       "game_config": {
@@ -1132,6 +1189,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -1148,6 +1206,7 @@
               }
             },
             "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+            "verified": true,
             "tested": true
           }
         ],
@@ -1162,6 +1221,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -1174,6 +1234,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -1186,6 +1247,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -1212,18 +1274,21 @@
       "description": "DOOM 3 is a singleplayer and multiplayer first-person shooter and survival horror game and the third main game in the Doom series.",
       "released": "2004-08-03",
       "exe": "Doom3.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
           "id": 9050,
           "companion_apps": [
             9070
           ],
-          "store_details": "DOOM 3 is sold as a bundle with Resurrection of Evil and DOOM 3: BFG Edition. Steam lists Resurrection of Evil as its own game."
+          "store_details": "DOOM 3 is sold as a bundle with Resurrection of Evil and DOOM 3: BFG Edition. Steam lists Resurrection of Evil as its own game.",
+          "compatibility": "verified"
         },
         "gog": {
           "id": 1492054092,
           "id_source": "local_install_verified",
-          "store_details": "DOOM 3 is sold as a bundle with Resurrection of Evil and DOOM 3: BFG Edition. Heroic shows the bundle as two library entries."
+          "store_details": "DOOM 3 is sold as a bundle with Resurrection of Evil and DOOM 3: BFG Edition. Heroic shows the bundle as two library entries.",
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -1258,6 +1323,7 @@
                 "s_useEAXReverb": "1"
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -1269,6 +1335,7 @@
                 "s_useEAXReverb": "1"
               }
             },
+            "verified": true,
             "tested": true
           }
         ],
@@ -1285,6 +1352,7 @@
                 "image_ignoreHighQuality": "0"
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -1298,6 +1366,7 @@
                 "image_downSizeSpecular": "0"
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -1319,18 +1388,23 @@
       "description": "DOOM 3: BFG Edition is a singleplayer and multiplayer first-person shooter and survival horror game, a remaster of 2004's DOOM 3.",
       "released": "2012-10",
       "exe": "Doom3BFG.exe",
+      "compatibility": "unsupported",
       "stores": {
         "steam": {
-          "id": 208200
+          "id": 208200,
+          "compatibility": "unsupported",
+          "problem": "This is the 2012 BFG Edition, not the classic DOOM 3, and it has no EAX."
         },
         "gog": {
-          "id": 1135892318
+          "id": 1135892318,
+          "compatibility": "unsupported",
+          "problem": "This is the 2012 BFG Edition, not the classic DOOM 3, and it has no EAX."
         }
       },
       "eax": {
         "api": "openal",
-        "status": "not_implemented",
-        "problem": "This is the 2012 BFG Edition, not the classic DOOM 3, and it has no EAX."
+        "problem": "This is the 2012 BFG Edition, not the classic DOOM 3, and it has no EAX.",
+        "status": "not_implemented"
       },
       "notes": "If you also own the classic DOOM 3, that one has EAX — it comes with the same purchase."
     },
@@ -1340,9 +1414,11 @@
       "description": "Dreamfall: The Longest Journey is a singleplayer third-person adventure game and the second in The Longest Journey series.",
       "released": "2006-04-17",
       "exe": "dreamfall.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
-          "id": 6300
+          "id": 6300,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -1382,10 +1458,12 @@
       "released": "1999-06-25",
       "stores": {
         "steam": {
-          "id": 2616460
+          "id": 2616460,
+          "compatibility": "unknown"
         },
         "gog": {
-          "id": 1207658959
+          "id": 1207658959,
+          "compatibility": "unknown"
         }
       },
       "eax": {
@@ -1402,13 +1480,16 @@
       "description": "Dungeon Siege is a singleplayer and multiplayer third-person action role-playing game and the first in the Dungeon Siege series.",
       "released": "2002-04-05",
       "exe": "DungeonSiege.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
-          "id": 39190
+          "id": 39190,
+          "compatibility": "verified"
         },
         "gog": {
           "id": 1185868626,
-          "store_details": "GOG sells this only in the 'Dungeon Siege Collection', together with Dungeon Siege II and Dungeon Siege III."
+          "store_details": "GOG sells this only in the 'Dungeon Siege Collection', together with Dungeon Siege II and Dungeon Siege III.",
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -1438,6 +1519,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -1449,13 +1531,16 @@
       "description": "Dungeon Siege II is a singleplayer and multiplayer third-person action role-playing game and the second in the Dungeon Siege series.",
       "released": "2005-08-16",
       "exe": "DungeonSiege2.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
-          "id": 39200
+          "id": 39200,
+          "compatibility": "verified"
         },
         "gog": {
           "id": 1837106902,
-          "store_details": "GOG sells this only in the 'Dungeon Siege Collection', together with Dungeon Siege and Dungeon Siege III."
+          "store_details": "GOG sells this only in the 'Dungeon Siege Collection', together with Dungeon Siege and Dungeon Siege III.",
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -1488,6 +1573,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -1499,9 +1585,11 @@
       "description": "Dungeons & Dragons: Dragonshard is a singleplayer and multiplayer real-time strategy and role-playing game.",
       "released": "2005-09-27",
       "exe": "Dragonshard.exe",
+      "compatibility": "verified",
       "stores": {
         "gog": {
-          "id": 1207658928
+          "id": 1207658928,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -1515,10 +1603,12 @@
       "description": "F.E.A.R. is a singleplayer and multiplayer first-person shooter and horror game and the first in the F.E.A.R. series.",
       "released": "2005-10-18",
       "exe": "FEAR.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
           "id": 21090,
-          "store_details": "Steam lists the Extraction Point and Perseus Mandate expansions as separate games in the library, so each one is set up on its own."
+          "store_details": "Steam lists the Extraction Point and Perseus Mandate expansions as separate games in the library, so each one is set up on its own.",
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -1555,6 +1645,7 @@
                 "UseEAX4": "1"
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -1572,10 +1663,12 @@
       "description": "F.E.A.R. Extraction Point is a singleplayer first-person shooter and horror expansion for F.E.A.R.",
       "released": "2006-10-24",
       "exe": "FEARXP.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
           "id": 21110,
-          "patches": "The English version loses some radio voices when hardware sound is on, and the unofficial 'F.E.A.R. Extraction Point EAX Fix' brings them back (per PCGamingWiki)."
+          "patches": "The English version loses some radio voices when hardware sound is on, and the unofficial 'F.E.A.R. Extraction Point EAX Fix' brings them back (per PCGamingWiki).",
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -1611,6 +1704,7 @@
                 "UseEAX4": "1"
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -1632,9 +1726,11 @@
       "description": "F.E.A.R. Perseus Mandate is a singleplayer and multiplayer first-person shooter and horror expansion for F.E.A.R.",
       "released": "2007-11-06",
       "exe": "FEARXP2.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
-          "id": 21120
+          "id": 21120,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -1670,6 +1766,7 @@
                 "UseEAX4": "1"
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -1687,6 +1784,7 @@
       "description": "F.E.A.R. Platinum is a singleplayer and multiplayer first-person shooter and horror game.",
       "released": "2005-10-18",
       "exe": "FEAR.exe",
+      "compatibility": "verified",
       "stores": {
         "gog": {
           "id": 1423058413,
@@ -1695,7 +1793,8 @@
             "FEARXP2"
           ],
           "store_details": "This bundles F.E.A.R. with its Extraction Point and Perseus Mandate expansions in one install, each with its own exe.",
-          "patches": "The English version of Extraction Point loses some radio voices when hardware sound is on, and the unofficial 'F.E.A.R. Extraction Point EAX Fix' brings them back (per PCGamingWiki)."
+          "patches": "The English version of Extraction Point loses some radio voices when hardware sound is on, and the unofficial 'F.E.A.R. Extraction Point EAX Fix' brings them back (per PCGamingWiki).",
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -1744,6 +1843,7 @@
                 "UseEAX4": "1"
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -1756,6 +1856,7 @@
                 "UseEAX4": "1"
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -1768,6 +1869,7 @@
                 "UseEAX4": "1"
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -1789,10 +1891,12 @@
       "description": "Fallout Tactics Classic is a singleplayer and multiplayer isometric tactical role-playing game and a spin-off in the Fallout series.",
       "released": "2001-03-15",
       "exe": "BOS.exe",
+      "compatibility": "verified",
       "stores": {
         "gog": {
           "id": 3,
-          "store_details": "This is the older 'Classic' GOG product some existing owners' libraries still show, from before GOG relisted the game. It's the same game, with the same EAX support."
+          "store_details": "This is the older 'Classic' GOG product some existing owners' libraries still show, from before GOG relisted the game. It's the same game, with the same EAX support.",
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -1821,6 +1925,7 @@
                 "sound.provider": "Creative Labs EAX 2 (TM)"
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -1832,12 +1937,15 @@
       "description": "Fallout Tactics: Brotherhood of Steel is a singleplayer and multiplayer isometric tactical role-playing game and a spin-off in the Fallout series.",
       "released": "2001-03-15",
       "exe": "BOS.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
-          "id": 38420
+          "id": 38420,
+          "compatibility": "verified"
         },
         "gog": {
-          "id": 1440152063
+          "id": 1440152063,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -1866,6 +1974,7 @@
                 "sound.provider": "Creative Labs EAX 2 (TM)"
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -1877,13 +1986,16 @@
       "description": "Far Cry 2 is a singleplayer and multiplayer open-world first-person shooter game and the second in the Far Cry series.",
       "released": "2008-10-21",
       "exe": "FarCry2.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
-          "id": 19900
+          "id": 19900,
+          "compatibility": "verified"
         },
         "gog": {
           "id": 1207659042,
-          "store_details": "GOG sells this as the 'Fortune's Edition' bundle, which throws in some bonus content."
+          "store_details": "GOG sells this as the 'Fortune's Edition' bundle, which throws in some bonus content.",
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -1907,12 +2019,15 @@
       "description": "Freedom Fighters is a singleplayer and multiplayer third-person squad shooter game.",
       "released": "2003-09-25",
       "exe": "Freedom.Exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
-          "id": 1347780
+          "id": 1347780,
+          "compatibility": "verified"
         },
         "gog": {
-          "id": 1756362098
+          "id": 1756362098,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -1935,12 +2050,15 @@
       "description": "Freedom Force is a singleplayer and multiplayer real-time tactics role-playing game and the first in the Freedom Force series.",
       "released": "2002-03-26",
       "exe": "fforce.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
-          "id": 8880
+          "id": 8880,
+          "compatibility": "verified"
         },
         "gog": {
-          "id": 1445250806
+          "id": 1445250806,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -1969,6 +2087,7 @@
                 "0000803f": "Creative Labs EAX 2 (TM)"
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -1982,6 +2101,7 @@
                 "0000803f+46": "0"
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -1995,6 +2115,7 @@
                 "0000803f+46": "1"
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -2009,6 +2130,7 @@
               }
             },
             "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+            "verified": true,
             "tested": true
           },
           {
@@ -2022,6 +2144,7 @@
                 "0000803f+46": "3"
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -2035,7 +2158,8 @@
       "exe": "ffvt3r.exe",
       "stores": {
         "steam": {
-          "id": 8890
+          "id": 8890,
+          "compatibility": "unknown"
         }
       },
       "eax": {
@@ -2053,10 +2177,13 @@
       "description": "Half-Life is a singleplayer and multiplayer first-person shooter game and the first in the Half-Life series.",
       "released": "1998-11-19",
       "exe": "hl.exe",
+      "compatibility": "unsupported",
       "stores": {
         "steam": {
           "id": 70,
-          "patches": "MetaAudio (github.com/LAGonauta/MetaAudio, needs MetaHookSv) adds EAX/A3D-style reverb and HRTF to the current Steam build."
+          "patches": "MetaAudio (github.com/LAGonauta/MetaAudio, needs MetaHookSv) adds EAX/A3D-style reverb and HRTF to the current Steam build.",
+          "compatibility": "unsupported",
+          "problem": "The original release used DirectSound3D, but a 2013 update replaced it with a newer audio engine that dropped EAX entirely."
         }
       },
       "eax": {
@@ -2064,9 +2191,9 @@
         "versions": [
           "1.0"
         ],
-        "status": "removed_by_patch",
         "problem": "The original release used DirectSound3D, but a 2013 update replaced it with a newer audio engine that dropped EAX entirely.",
-        "fix": "If you still have the pre-2013 retail release, point this script at that install instead — EAX still works there."
+        "fix": "If you still have the pre-2013 retail release, point this script at that install instead — EAX still works there.",
+        "status": "removed_by_patch"
       }
     },
     {
@@ -2074,9 +2201,12 @@
       "name": "Half-Life: Blue Shift",
       "description": "Half-Life: Blue Shift is a singleplayer first-person shooter expansion for Half-Life.",
       "released": "2001-06-12",
+      "compatibility": "unsupported",
       "stores": {
         "steam": {
-          "id": 130
+          "id": 130,
+          "compatibility": "unsupported",
+          "problem": "The original release used DirectSound3D, but a 2013 update replaced it with a newer audio engine that dropped EAX entirely."
         }
       },
       "eax": {
@@ -2084,9 +2214,9 @@
         "versions": [
           "1.0"
         ],
-        "status": "removed_by_patch",
         "problem": "The original release used DirectSound3D, but a 2013 update replaced it with a newer audio engine that dropped EAX entirely.",
-        "fix": "If you still have the original pre-2013 retail/CD release installed outside Steam, its EAX calls are intact and this script restores EAX normally there."
+        "fix": "If you still have the original pre-2013 retail/CD release installed outside Steam, its EAX calls are intact and this script restores EAX normally there.",
+        "status": "removed_by_patch"
       }
     },
     {
@@ -2094,9 +2224,12 @@
       "name": "Half-Life: Opposing Force",
       "description": "Half-Life: Opposing Force is a singleplayer and multiplayer first-person shooter expansion for Half-Life.",
       "released": "1999-11-19",
+      "compatibility": "unsupported",
       "stores": {
         "steam": {
-          "id": 50
+          "id": 50,
+          "compatibility": "unsupported",
+          "problem": "The original release used DirectSound3D, but a 2013 update replaced it with a newer audio engine that dropped EAX entirely."
         }
       },
       "eax": {
@@ -2104,9 +2237,9 @@
         "versions": [
           "1.0"
         ],
-        "status": "removed_by_patch",
         "problem": "The original release used DirectSound3D, but a 2013 update replaced it with a newer audio engine that dropped EAX entirely.",
-        "fix": "If you still have the original pre-2013 retail/CD release installed outside Steam, its EAX calls are intact and this script restores EAX normally there."
+        "fix": "If you still have the original pre-2013 retail/CD release installed outside Steam, its EAX calls are intact and this script restores EAX normally there.",
+        "status": "removed_by_patch"
       }
     },
     {
@@ -2115,12 +2248,15 @@
       "description": "Hidden & Dangerous 2 is a singleplayer and multiplayer first- and third-person tactical shooter game and the second in the Hidden & Dangerous series.",
       "released": "2003-10-23",
       "exe": "hd2.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
-          "id": 703320
+          "id": 703320,
+          "compatibility": "verified"
         },
         "gog": {
-          "id": 1576810170
+          "id": 1576810170,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -2136,12 +2272,15 @@
       "description": "Hitman 2: Silent Assassin is a singleplayer third-person stealth game and the second in the Hitman series.",
       "released": "2002-10-01",
       "exe": "hitman2.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
-          "id": 6850
+          "id": 6850,
+          "compatibility": "verified"
         },
         "gog": {
-          "id": 1207659002
+          "id": 1207659002,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -2175,6 +2314,7 @@
                 "UseEAX": "1"
               }
             },
+            "verified": true,
             "tested": true
           }
         ],
@@ -2211,12 +2351,15 @@
       "description": "Hitman: Blood Money is a singleplayer third-person stealth game and the fourth in the Hitman series.",
       "released": "2006-05-26",
       "exe": "HitmanBloodMoney.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
-          "id": 6860
+          "id": 6860,
+          "compatibility": "verified"
         },
         "gog": {
-          "id": 1942346586
+          "id": 1942346586,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -2245,6 +2388,7 @@
                 "UseEAX": "1"
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -2258,10 +2402,12 @@
       "exe": "Hitman.Exe",
       "stores": {
         "steam": {
-          "id": 6900
+          "id": 6900,
+          "compatibility": "unknown"
         },
         "gog": {
-          "id": 1207658996
+          "id": 1207658996,
+          "compatibility": "unknown"
         }
       },
       "eax": {
@@ -2296,6 +2442,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -2308,12 +2455,15 @@
       "description": "Hitman: Contracts is a singleplayer third-person stealth game and the third in the Hitman series.",
       "released": "2004-04-20",
       "exe": "HitmanContracts.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
-          "id": 247430
+          "id": 247430,
+          "compatibility": "verified"
         },
         "gog": {
-          "id": 1207660853
+          "id": 1207660853,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -2347,6 +2497,7 @@
                 "UseEAX": "1"
               }
             },
+            "verified": true,
             "tested": true
           }
         ],
@@ -2386,11 +2537,13 @@
       "description": "Icewind Dale Complete is a singleplayer and multiplayer isometric role-playing game.",
       "released": "2000-06-29",
       "exe": "IDMain.exe",
+      "compatibility": "verified",
       "stores": {
         "gog": {
           "id": 1207658888,
           "delisted": true,
-          "store_details": "This is the original 2000 Icewind Dale with its Heart of Winter and Trials of the Luremaster expansions. GOG had stopped selling it by November 2016 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
+          "store_details": "This is the original 2000 Icewind Dale with its Heart of Winter and Trials of the Luremaster expansions. GOG had stopped selling it by November 2016 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound.",
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -2419,6 +2572,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -2436,10 +2590,12 @@
       "description": "Icewind Dale II is a singleplayer and multiplayer isometric role-playing game and the second in the Icewind Dale series.",
       "released": "2002-08-27",
       "exe": "IWD2.exe",
+      "compatibility": "verified",
       "stores": {
         "gog": {
           "id": 1207658891,
-          "store_details": "Sold as 'Icewind Dale 2 Complete'."
+          "store_details": "Sold as 'Icewind Dale 2 Complete'.",
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -2468,6 +2624,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -2478,18 +2635,23 @@
       "name": "Icewind Dale: Enhanced Edition",
       "description": "Icewind Dale: Enhanced Edition is a singleplayer and multiplayer isometric role-playing game, an enhanced edition of 2000's Icewind Dale.",
       "released": "2014-10-30",
+      "compatibility": "unsupported",
       "stores": {
         "steam": {
-          "id": 321800
+          "id": 321800,
+          "compatibility": "unsupported",
+          "problem": "This is the Enhanced Edition, not the classic Icewind Dale, and it has no EAX."
         },
         "gog": {
-          "id": 1207666683
+          "id": 1207666683,
+          "compatibility": "unsupported",
+          "problem": "This is the Enhanced Edition, not the classic Icewind Dale, and it has no EAX."
         }
       },
       "eax": {
         "api": "directsound3d",
-        "status": "not_implemented",
-        "problem": "This is the Enhanced Edition, not the classic Icewind Dale, and it has no EAX."
+        "problem": "This is the Enhanced Edition, not the classic Icewind Dale, and it has no EAX.",
+        "status": "not_implemented"
       },
       "notes": "If you also own the classic Icewind Dale, it's a separate GOG purchase, 'Icewind Dale Complete', and that one has EAX."
     },
@@ -2501,10 +2663,12 @@
       "exe": "Game.exe",
       "stores": {
         "steam": {
-          "id": 40990
+          "id": 40990,
+          "compatibility": "unknown"
         },
         "gog": {
-          "id": 1595659240
+          "id": 1595659240,
+          "compatibility": "unknown"
         }
       },
       "eax": {
@@ -2527,18 +2691,23 @@
       "name": "Mafia: Definitive Edition",
       "description": "Mafia: Definitive Edition is a singleplayer third-person action-adventure game, a remake of 2002's Mafia.",
       "released": "2020-09-25",
+      "compatibility": "unsupported",
       "stores": {
         "steam": {
-          "id": 1030840
+          "id": 1030840,
+          "compatibility": "unsupported",
+          "problem": "This is the 2020 remake, not the original 2002 Mafia, and it has no EAX."
         },
         "gog": {
-          "id": 1993581340
+          "id": 1993581340,
+          "compatibility": "unsupported",
+          "problem": "This is the 2020 remake, not the original 2002 Mafia, and it has no EAX."
         }
       },
       "eax": {
         "api": "directsound3d",
-        "status": "not_implemented",
-        "problem": "This is the 2020 remake, not the original 2002 Mafia, and it has no EAX."
+        "problem": "This is the 2020 remake, not the original 2002 Mafia, and it has no EAX.",
+        "status": "not_implemented"
       },
       "notes": "The original 2002 Mafia, sold on GOG as 'Mafia Classic', supports EAX."
     },
@@ -2548,9 +2717,11 @@
       "description": "Max Payne 2: The Fall of Max Payne is a singleplayer third-person shooter game and the second in the Max Payne series.",
       "released": "2003-10-15",
       "exe": "maxpayne2.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
-          "id": 12150
+          "id": 12150,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -2576,7 +2747,8 @@
       "stores": {
         "gog": {
           "id": 1207659126,
-          "store_details": "Sold as the 'War Chest' edition — the base game plus the Spearhead and Breakthrough expansions."
+          "store_details": "Sold as the 'War Chest' edition — the base game plus the Spearhead and Breakthrough expansions.",
+          "compatibility": "unknown"
         }
       },
       "eax": {
@@ -2596,9 +2768,11 @@
       "description": "Messiah is a singleplayer third-person action-adventure game.",
       "released": "2000-03-29",
       "exe": "MessiahGlide3x.exe",
+      "compatibility": "verified",
       "stores": {
         "gog": {
-          "id": 7
+          "id": 7,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -2636,10 +2810,12 @@
       "description": "Neverwinter Nights 2 is a singleplayer and multiplayer third-person role-playing game and the second in the Neverwinter Nights series.",
       "released": "2006-10-31",
       "exe": "nwn2main.exe",
+      "compatibility": "verified",
       "stores": {
         "gog": {
           "id": 1207659162,
-          "store_details": "This is the original 2006 Neverwinter Nights 2 with its Mask of the Betrayer and Storm of Zehir expansions and the Mysteries of Westgate adventure pack. It's an ideal candidate for restoring EAX sound."
+          "store_details": "This is the original 2006 Neverwinter Nights 2 with its Mask of the Betrayer and Storm of Zehir expansions and the Mysteries of Westgate adventure pack. It's an ideal candidate for restoring EAX sound.",
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -2672,6 +2848,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -2687,6 +2864,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -2702,6 +2880,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -2720,6 +2899,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -2735,6 +2915,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -2751,6 +2932,7 @@
               }
             },
             "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+            "verified": true,
             "tested": true
           },
           {
@@ -2766,6 +2948,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -2776,18 +2959,23 @@
       "name": "Neverwinter Nights 2: Enhanced Edition",
       "description": "Neverwinter Nights 2: Enhanced Edition is a singleplayer and multiplayer third-person role-playing game, an enhanced edition of 2006's Neverwinter Nights 2.",
       "released": "2025-07-15",
+      "compatibility": "unsupported",
       "stores": {
         "steam": {
-          "id": 2738630
+          "id": 2738630,
+          "compatibility": "unsupported",
+          "problem": "This is the 2025 Enhanced Edition, not the classic Neverwinter Nights 2, and it has no EAX."
         },
         "gog": {
-          "id": 1993442013
+          "id": 1993442013,
+          "compatibility": "unsupported",
+          "problem": "This is the 2025 Enhanced Edition, not the classic Neverwinter Nights 2, and it has no EAX."
         }
       },
       "eax": {
         "api": "directsound3d",
-        "status": "not_implemented",
-        "problem": "This is the 2025 Enhanced Edition, not the classic Neverwinter Nights 2, and it has no EAX."
+        "problem": "This is the 2025 Enhanced Edition, not the classic Neverwinter Nights 2, and it has no EAX.",
+        "status": "not_implemented"
       },
       "notes": "GOG still sells the classic edition of Neverwinter Nights 2, which supports EAX, as Neverwinter Nights 2 Complete."
     },
@@ -2797,11 +2985,13 @@
       "description": "Neverwinter Nights Diamond is a singleplayer and multiplayer third-person role-playing game.",
       "released": "2002-06-18",
       "exe": "nwmain.exe",
+      "compatibility": "verified",
       "stores": {
         "gog": {
           "id": 1207658890,
           "delisted": true,
-          "store_details": "This is the original 2002 Neverwinter Nights with both expansions and the premium modules. GOG stopped selling it on its own in October 2018 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
+          "store_details": "This is the original 2002 Neverwinter Nights with both expansions and the premium modules. GOG stopped selling it on its own in October 2018 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound.",
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -2834,6 +3024,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -2849,6 +3040,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -2864,6 +3056,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -2882,6 +3075,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -2897,6 +3091,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -2913,6 +3108,7 @@
               }
             },
             "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+            "verified": true,
             "tested": true
           },
           {
@@ -2928,6 +3124,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -2944,18 +3141,23 @@
       "name": "Neverwinter Nights: Enhanced Edition",
       "description": "Neverwinter Nights: Enhanced Edition is a singleplayer and multiplayer third-person role-playing game, an enhanced edition of 2002's Neverwinter Nights.",
       "released": "2018-03-27",
+      "compatibility": "unsupported",
       "stores": {
         "steam": {
-          "id": 704450
+          "id": 704450,
+          "compatibility": "unsupported",
+          "problem": "This is the Enhanced Edition, not the classic Neverwinter Nights, and it has no EAX."
         },
         "gog": {
-          "id": 1097893768
+          "id": 1097893768,
+          "compatibility": "unsupported",
+          "problem": "This is the Enhanced Edition, not the classic Neverwinter Nights, and it has no EAX."
         }
       },
       "eax": {
         "api": "directsound3d",
-        "status": "not_implemented",
-        "problem": "This is the Enhanced Edition, not the classic Neverwinter Nights, and it has no EAX."
+        "problem": "This is the Enhanced Edition, not the classic Neverwinter Nights, and it has no EAX.",
+        "status": "not_implemented"
       },
       "notes": "If you also own the classic Neverwinter Nights, it's a separate GOG purchase, 'Neverwinter Nights Diamond', and that one has EAX."
     },
@@ -2964,18 +3166,23 @@
       "name": "Outcast - Second Contact",
       "description": "Outcast - Second Contact is a singleplayer third-person action-adventure game, a remake of 1999's Outcast.",
       "released": "2017-11-14",
+      "compatibility": "unsupported",
       "stores": {
         "steam": {
-          "id": 618970
+          "id": 618970,
+          "compatibility": "unsupported",
+          "problem": "This is the 2017 remake, not the original 1999 Outcast, and it has no EAX."
         },
         "gog": {
-          "id": 2109390794
+          "id": 2109390794,
+          "compatibility": "unsupported",
+          "problem": "This is the 2017 remake, not the original 1999 Outcast, and it has no EAX."
         }
       },
       "eax": {
         "api": "directsound3d",
-        "status": "not_implemented",
-        "problem": "This is the 2017 remake, not the original 1999 Outcast, and it has no EAX."
+        "problem": "This is the 2017 remake, not the original 1999 Outcast, and it has no EAX.",
+        "status": "not_implemented"
       },
       "notes": "The original 1999 Outcast supports EAX."
     },
@@ -2984,18 +3191,23 @@
       "name": "Outcast 1.1",
       "description": "Outcast 1.1 is a singleplayer third-person action-adventure game, an enhanced edition of 1999's Outcast, recompiled from the original source code and improved to run smoothly on today's computers.",
       "released": "2014-12-18",
+      "compatibility": "unsupported",
       "stores": {
         "steam": {
-          "id": 336610
+          "id": 336610,
+          "compatibility": "unsupported",
+          "problem": "This is the 2014 Outcast 1.1, not the original 1999 Outcast, and it has no EAX."
         },
         "gog": {
-          "id": 1207658853
+          "id": 1207658853,
+          "compatibility": "unsupported",
+          "problem": "This is the 2014 Outcast 1.1, not the original 1999 Outcast, and it has no EAX."
         }
       },
       "eax": {
         "api": "directsound3d",
-        "status": "not_implemented",
-        "problem": "This is the 2014 Outcast 1.1, not the original 1999 Outcast, and it has no EAX."
+        "problem": "This is the 2014 Outcast 1.1, not the original 1999 Outcast, and it has no EAX.",
+        "status": "not_implemented"
       },
       "notes": "The original 1999 Outcast supports EAX, and GOG includes it as a separate download among the extras."
     },
@@ -3005,11 +3217,13 @@
       "description": "Planescape: Torment is a singleplayer isometric role-playing game.",
       "released": "1999-12-10",
       "exe": "Torment.exe",
+      "compatibility": "verified",
       "stores": {
         "gog": {
           "id": 1207658887,
           "delisted": true,
-          "store_details": "This is the original 1999 Planescape: Torment. GOG stopped selling it on its own in April 2017 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound."
+          "store_details": "This is the original 1999 Planescape: Torment. GOG stopped selling it on its own in April 2017 (per GOG's forums), but it's still an ideal candidate for restoring EAX sound.",
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -3038,6 +3252,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -3054,18 +3269,23 @@
       "name": "Planescape: Torment: Enhanced Edition",
       "description": "Planescape: Torment: Enhanced Edition is a singleplayer isometric role-playing game, an enhanced edition of 1999's Planescape: Torment.",
       "released": "2017-04-11",
+      "compatibility": "unsupported",
       "stores": {
         "steam": {
-          "id": 466300
+          "id": 466300,
+          "compatibility": "unsupported",
+          "problem": "This is the Enhanced Edition, not the original Planescape: Torment, and it has no EAX."
         },
         "gog": {
-          "id": 1203613131
+          "id": 1203613131,
+          "compatibility": "unsupported",
+          "problem": "This is the Enhanced Edition, not the original Planescape: Torment, and it has no EAX."
         }
       },
       "eax": {
         "api": "directsound3d",
-        "status": "not_implemented",
-        "problem": "This is the Enhanced Edition, not the original Planescape: Torment, and it has no EAX."
+        "problem": "This is the Enhanced Edition, not the original Planescape: Torment, and it has no EAX.",
+        "status": "not_implemented"
       },
       "notes": "If you still own the original 1999 Planescape: Torment, which GOG stopped selling on its own in April 2017, that one still supports EAX."
     },
@@ -3075,9 +3295,11 @@
       "description": "Project Eden is a singleplayer and multiplayer third-person squad action-adventure game.",
       "released": "2001-10-12",
       "exe": "Eden.exe",
+      "compatibility": "verified",
       "stores": {
         "gog": {
-          "id": 1207659235
+          "id": 1207659235,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -3108,6 +3330,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           }
         ],
@@ -3133,7 +3356,8 @@
       "released": "2003-02-21",
       "stores": {
         "gog": {
-          "id": 1207658666
+          "id": 1207658666,
+          "compatibility": "unknown"
         }
       },
       "eax": {
@@ -3153,10 +3377,12 @@
       "released": "2005-04-19",
       "stores": {
         "steam": {
-          "id": 3830
+          "id": 3830,
+          "compatibility": "unknown"
         },
         "gog": {
-          "id": 1207658807
+          "id": 1207658807,
+          "compatibility": "unknown"
         }
       },
       "eax": {
@@ -3187,8 +3413,7 @@
                   "UseEAX": "true"
                 }
               }
-            },
-            "tested": false
+            }
           }
         ]
       },
@@ -3206,12 +3431,15 @@
       "description": "Quake 4 is a singleplayer and multiplayer first-person shooter game and the fourth in the Quake series.",
       "released": "2005-10-18",
       "exe": "Quake4.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
-          "id": 2210
+          "id": 2210,
+          "compatibility": "verified"
         },
         "gog": {
-          "id": 1836059896
+          "id": 1836059896,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -3248,6 +3476,7 @@
                 "s_useEAXOcclusion": "1"
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -3261,6 +3490,7 @@
                 "s_numberOfSpeakers": "6"
               }
             },
+            "verified": true,
             "tested": true
           }
         ],
@@ -3293,6 +3523,7 @@
                 "image_filter": "GL_LINEAR_MIPMAP_LINEAR"
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -3304,6 +3535,7 @@
                 "gui_mediumFontLimit": "0"
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -3324,11 +3556,15 @@
       "stores": {
         "steam": {
           "id": 20530,
-          "patches": "Dash Faction fixes many of Red Faction's bugs and adds widescreen support. It also positions sounds itself, so they move between left and right with EAX on (per a bug report on GitHub). Its installer swaps in the 1.20 North American RF.exe it needs."
+          "patches": "Dash Faction fixes many of Red Faction's bugs and adds widescreen support. It also positions sounds itself, so they move between left and right with EAX on (per a bug report on GitHub). Its installer swaps in the 1.20 North American RF.exe it needs.",
+          "compatibility": "unknown",
+          "problem": "With EAX on, every sound in Red Faction plays from straight ahead, so you hear the reverb but nothing moves between left and right. The game sets each sound's left/right balance itself, and the restored EAX sound ignores it for now (per a bug report on GitHub)."
         },
         "gog": {
           "id": 1207660623,
-          "patches": "Dash Faction fixes many of Red Faction's bugs and adds widescreen support. It also positions sounds itself, so they move between left and right with EAX on (per a bug report on GitHub). Its installer swaps in the 1.20 North American RF.exe it needs."
+          "patches": "Dash Faction fixes many of Red Faction's bugs and adds widescreen support. It also positions sounds itself, so they move between left and right with EAX on (per a bug report on GitHub). Its installer swaps in the 1.20 North American RF.exe it needs.",
+          "compatibility": "unknown",
+          "problem": "With EAX on, every sound in Red Faction plays from straight ahead, so you hear the reverb but nothing moves between left and right. The game sets each sound's left/right balance itself, and the restored EAX sound ignores it for now (per a bug report on GitHub)."
         }
       },
       "eax": {
@@ -3362,9 +3598,11 @@
       "description": "Requiem: Avenging Angel is a singleplayer and multiplayer first-person shooter game.",
       "released": "1999-03-31",
       "exe": "Requiem.exe",
+      "compatibility": "verified",
       "stores": {
         "gog": {
-          "id": 1449581489
+          "id": 1449581489,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -3392,6 +3630,7 @@
                 "0x17": "1"
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -3403,12 +3642,17 @@
       "description": "Rune Classic is a singleplayer and multiplayer third-person action-adventure game.",
       "released": "2000-10-27",
       "exe": "Rune.exe",
+      "compatibility": "unsupported",
       "stores": {
         "steam": {
-          "id": 210950
+          "id": 210950,
+          "compatibility": "unsupported",
+          "problem": "Rune Classic has a broken implementation of OpenAL and lacks environmental reverb (EFX), occlusion, and proper positional sound tracking. "
         },
         "gog": {
-          "id": 1207660013
+          "id": 1207660013,
+          "compatibility": "unsupported",
+          "problem": "Rune Classic has a broken implementation of OpenAL and lacks environmental reverb (EFX), occlusion, and proper positional sound tracking. "
         }
       },
       "eax": {
@@ -3416,17 +3660,16 @@
         "versions": [
           "2.0"
         ],
-        "status": "not_implemented",
         "problem": "Rune Classic has a broken implementation of OpenAL and lacks environmental reverb (EFX), occlusion, and proper positional sound tracking. ",
-        "fix": "Further investigation is required to see how community patches could fix this and how to incorporate them into the script."
+        "fix": "Further investigation is required to see how community patches could fix this and how to incorporate them into the script.",
+        "status": "removed_by_patch"
       },
       "sources": [
         {
           "title": "Rune Classic Remaster",
           "url": "https://www.nexusmods.com/runeclassic/mods/1"
         }
-      ],
-      "tested": false
+      ]
     },
     {
       "id": "stalker-call-of-pripyat",
@@ -3434,12 +3677,17 @@
       "description": "S.T.A.L.K.E.R.: Call of Pripyat is a singleplayer and multiplayer open-world first-person shooter and survival horror game and the third in the S.T.A.L.K.E.R. series.",
       "released": "2009-10-02",
       "exe": "xrEngine.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
-          "id": 41700
+          "id": 41700,
+          "compatibility": "verified",
+          "problem": "Stalker's X-Ray engine supports EAX via OpenAL. However the game's map data lacks environmental audio effects."
         },
         "gog": {
-          "id": 1207660583
+          "id": 1207660583,
+          "compatibility": "verified",
+          "problem": "Stalker's X-Ray engine supports EAX via OpenAL. However the game's map data lacks environmental audio effects."
         }
       },
       "eax": {
@@ -3473,6 +3721,7 @@
                 "snd_efx": "on"
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -3486,10 +3735,14 @@
       "exe": "xrEngine.exe",
       "stores": {
         "steam": {
-          "id": 2427430
+          "id": 2427430,
+          "compatibility": "unknown",
+          "problem": "Unlike the original Call of Pripyat, it comes with OpenAL Soft, which has EAX built in, so its reverb doesn't depend on a Creative sound card."
         },
         "gog": {
-          "id": 1525093053
+          "id": 1525093053,
+          "compatibility": "unknown",
+          "problem": "Unlike the original Call of Pripyat, it comes with OpenAL Soft, which has EAX built in, so its reverb doesn't depend on a Creative sound card."
         }
       },
       "eax": {
@@ -3497,8 +3750,9 @@
         "versions": [
           "2.0"
         ],
-        "status": "built_in",
-        "problem": "Unlike the original Call of Pripyat, it comes with OpenAL Soft, which has EAX built in, so its reverb doesn't depend on a Creative sound card."
+        "built_in": true,
+        "problem": "Unlike the original Call of Pripyat, it comes with OpenAL Soft, which has EAX built in, so its reverb doesn't depend on a Creative sound card.",
+        "status": "built_in"
       },
       "tested": false
     },
@@ -3508,12 +3762,17 @@
       "description": "S.T.A.L.K.E.R.: Clear Sky is a singleplayer and multiplayer open-world first-person shooter and survival horror game and the second in the S.T.A.L.K.E.R. series.",
       "released": "2008-08-22",
       "exe": "xrEngine.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
-          "id": 20510
+          "id": 20510,
+          "compatibility": "verified",
+          "problem": "Stalker's X-Ray engine supports EAX via OpenAL. However the game's map data lacks environmental audio effects."
         },
         "gog": {
-          "id": 1207660603
+          "id": 1207660603,
+          "compatibility": "verified",
+          "problem": "Stalker's X-Ray engine supports EAX via OpenAL. However the game's map data lacks environmental audio effects."
         }
       },
       "eax": {
@@ -3552,6 +3811,7 @@
                 "snd_device": "OpenAL Soft"
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -3565,10 +3825,14 @@
       "exe": "xrEngine.exe",
       "stores": {
         "steam": {
-          "id": 2427420
+          "id": 2427420,
+          "compatibility": "unknown",
+          "problem": "Unlike the original Clear Sky, it comes with OpenAL Soft, which has EAX built in, so its reverb doesn't depend on a Creative sound card."
         },
         "gog": {
-          "id": 1709591792
+          "id": 1709591792,
+          "compatibility": "unknown",
+          "problem": "Unlike the original Clear Sky, it comes with OpenAL Soft, which has EAX built in, so its reverb doesn't depend on a Creative sound card."
         }
       },
       "eax": {
@@ -3576,8 +3840,9 @@
         "versions": [
           "2.0"
         ],
-        "status": "built_in",
-        "problem": "Unlike the original Clear Sky, it comes with OpenAL Soft, which has EAX built in, so its reverb doesn't depend on a Creative sound card."
+        "built_in": true,
+        "problem": "Unlike the original Clear Sky, it comes with OpenAL Soft, which has EAX built in, so its reverb doesn't depend on a Creative sound card.",
+        "status": "built_in"
       },
       "tested": false
     },
@@ -3587,12 +3852,17 @@
       "description": "S.T.A.L.K.E.R.: Shadow of Chernobyl is a singleplayer and multiplayer open-world first-person shooter and survival horror game and the first in the S.T.A.L.K.E.R. series.",
       "released": "2007-03-20",
       "exe": "XR_3DA.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
-          "id": 4500
+          "id": 4500,
+          "compatibility": "verified",
+          "problem": "Stalker's X-Ray engine supports EAX via OpenAL. However the game's map data lacks environmental audio effects."
         },
         "gog": {
-          "id": 1207660573
+          "id": 1207660573,
+          "compatibility": "verified",
+          "problem": "Stalker's X-Ray engine supports EAX via OpenAL. However the game's map data lacks environmental audio effects."
         }
       },
       "eax": {
@@ -3624,6 +3894,7 @@
                 "cam_inert": "0"
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -3637,10 +3908,14 @@
       "exe": "xrEngine.exe",
       "stores": {
         "steam": {
-          "id": 2427410
+          "id": 2427410,
+          "compatibility": "unknown",
+          "problem": "Unlike the original Shadow of Chernobyl, it comes with OpenAL Soft, which has EAX built in, so its reverb doesn't depend on a Creative sound card."
         },
         "gog": {
-          "id": 1542429427
+          "id": 1542429427,
+          "compatibility": "unknown",
+          "problem": "Unlike the original Shadow of Chernobyl, it comes with OpenAL Soft, which has EAX built in, so its reverb doesn't depend on a Creative sound card."
         }
       },
       "eax": {
@@ -3648,8 +3923,9 @@
         "versions": [
           "2.0"
         ],
-        "status": "built_in",
-        "problem": "Unlike the original Shadow of Chernobyl, it comes with OpenAL Soft, which has EAX built in, so its reverb doesn't depend on a Creative sound card."
+        "built_in": true,
+        "problem": "Unlike the original Shadow of Chernobyl, it comes with OpenAL Soft, which has EAX built in, so its reverb doesn't depend on a Creative sound card.",
+        "status": "built_in"
       },
       "tested": false
     },
@@ -3659,9 +3935,11 @@
       "description": "Shogo: Mobile Armor Division is a singleplayer and multiplayer first-person shooter game.",
       "released": "1998-10-15",
       "exe": "Client.exe",
+      "compatibility": "verified",
       "stores": {
         "gog": {
-          "id": 1207658659
+          "id": 1207658659,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -3713,10 +3991,12 @@
       "description": "Soldier of Fortune II: Double Helix is a singleplayer and multiplayer first-person shooter game and the second in the Soldier of Fortune series.",
       "released": "2002-05-21",
       "exe": "SoF2.exe",
+      "compatibility": "verified",
       "stores": {
         "gog": {
           "id": 1228964594,
-          "store_details": "Sold as the 'Gold Edition'."
+          "store_details": "Sold as the 'Gold Edition'.",
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -3743,6 +4023,7 @@
                 "snd_dll": "al"
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -3755,9 +4036,11 @@
       "description": "Soldier of Fortune: Platinum Edition is a singleplayer and multiplayer first-person shooter, an edition of the first game in the Soldier of Fortune series.",
       "released": "2000-03-27",
       "exe": "SoF.exe",
+      "compatibility": "verified",
       "stores": {
         "gog": {
-          "id": 1828104558
+          "id": 1828104558,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -3790,6 +4073,7 @@
                 "snd_dll": "eaxsnd.dll"
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -3802,7 +4086,8 @@
       "released": "2002-02-28",
       "stores": {
         "gog": {
-          "id": 1478736295
+          "id": 1478736295,
+          "compatibility": "unknown"
         }
       },
       "eax": {
@@ -3821,9 +4106,11 @@
       "description": "Star Trek: Elite Force II is a singleplayer and multiplayer first-person shooter game and the second in the Star Trek: Elite Force series.",
       "released": "2003-06-20",
       "exe": "EF2.exe",
+      "compatibility": "verified",
       "stores": {
         "gog": {
-          "id": 2125201406
+          "id": 2125201406,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -3854,6 +4141,7 @@
                 "s_milesdriver": "eax3"
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -3867,6 +4155,7 @@
                 "s_speaker_type": "0"
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -3880,6 +4169,7 @@
                 "s_speaker_type": "1"
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -3940,12 +4230,15 @@
       "description": "Star Wars Jedi Knight II: Jedi Outcast is a singleplayer and multiplayer first- and third-person shooter and action game and the third in the Star Wars: Jedi Knight series.",
       "released": "2002-03-28",
       "exe": "jk2sp.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
-          "id": 6030
+          "id": 6030,
+          "compatibility": "verified"
         },
         "gog": {
-          "id": 1428935917
+          "id": 1428935917,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -3985,6 +4278,7 @@
               }
             },
             "follow_up": "If there's no music when Jedi Outcast starts, open the console with Shift + ~, type snd_restart and press Enter.",
+            "verified": true,
             "tested": true
           }
         ]
@@ -3996,12 +4290,15 @@
       "description": "Star Wars Jedi Knight: Jedi Academy is a singleplayer and multiplayer first- and third-person shooter and action game and the fourth in the Star Wars: Jedi Knight series.",
       "released": "2003-09-16",
       "exe": "jasp.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
-          "id": 6020
+          "id": 6020,
+          "compatibility": "verified"
         },
         "gog": {
-          "id": 1428935726
+          "id": 1428935726,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -4042,6 +4339,7 @@
               }
             },
             "follow_up": "If there's no music when Jedi Academy starts, open the console with Shift + ~, type snd_restart and press Enter. Please note: Jedi Academy has no music in its main menu.",
+            "verified": true,
             "tested": true
           }
         ]
@@ -4054,12 +4352,15 @@
       "description": "Star Wars: Knights of the Old Republic is a singleplayer third-person role-playing game and the first in the Star Wars: Knights of the Old Republic series.",
       "released": "2003-11-19",
       "exe": "swkotor.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
-          "id": 32370
+          "id": 32370,
+          "compatibility": "verified"
         },
         "gog": {
-          "id": 1207666283
+          "id": 1207666283,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -4091,6 +4392,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           }
         ],
@@ -4108,6 +4410,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -4119,12 +4422,15 @@
       "description": "Star Wars: Knights of the Old Republic II - The Sith Lords is a singleplayer third-person role-playing game and the second in the Star Wars: Knights of the Old Republic series.",
       "released": "2005-02-08",
       "exe": "swkotor2.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
           "id": 208580,
           "beta_branch": "legacypc",
           "rollback_steps": "Steam beta branch 'legacypc' reverts to the pre-patch build with EAX intact (right-click the game -> Properties -> Betas).",
-          "store_details": "Steam installs Aspyr's 2015 update by default, which has no EAX. The original is on the 'legacypc' beta branch."
+          "store_details": "Steam installs Aspyr's 2015 update by default, which has no EAX. The original is on the 'legacypc' beta branch.",
+          "compatibility": "verified",
+          "problem": "The original release used DirectSound3D. An update replaced it with a newer audio engine that has no EAX."
         },
         "gog": {
           "id": 1421404581,
@@ -4133,7 +4439,9 @@
             "50045579929191972"
           ],
           "rollback_steps": "In Heroic, open Modify Installation, then on the Game Version tab tick \"Keep the game at specific version\" and choose Version 1.0b (2019).",
-          "store_details": "GOG's default install is Aspyr's May 2022 update, which has no EAX. The original is the older Version 1.0b from 2019."
+          "store_details": "GOG's default install is Aspyr's May 2022 update, which has no EAX. The original is the older Version 1.0b from 2019.",
+          "compatibility": "verified",
+          "problem": "The original release used DirectSound3D. An update replaced it with a newer audio engine that has no EAX."
         }
       },
       "eax": {
@@ -4144,8 +4452,8 @@
           "2.0",
           "3.0"
         ],
-        "status": "removed_by_patch",
         "problem": "The original release used DirectSound3D. An update replaced it with a newer audio engine that has no EAX.",
+        "status": "removed_by_patch",
         "fix_in_place": true
       },
       "game_config": {
@@ -4168,6 +4476,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -4189,12 +4498,15 @@
       "description": "Star Wars: Republic Commando is a singleplayer and multiplayer first-person tactical shooter game in the Star Wars series.",
       "released": "2005-03-01",
       "exe": "SWRepublicCommando.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
-          "id": 6000
+          "id": 6000,
+          "compatibility": "verified"
         },
         "gog": {
-          "id": 1421405135
+          "id": 1421405135,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -4210,6 +4522,7 @@
             "boost": "6"
           }
         },
+        "alsoft_verified": true,
         "alsoft_tested": true
       },
       "game_config": {
@@ -4236,6 +4549,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           }
         ],
@@ -4268,13 +4582,15 @@
       "description": "SWAT 4 is a singleplayer and multiplayer first-person tactical shooter game and the fourth in the SWAT series.",
       "released": "2005-04-05",
       "exe": "Swat4.exe",
+      "compatibility": "verified",
       "stores": {
         "gog": {
           "id": 1409964317,
           "extra_exe_folders": [
             "game_root:ContentExpansion/System"
           ],
-          "store_details": "Sold as 'SWAT 4: Gold Edition'."
+          "store_details": "Sold as 'SWAT 4: Gold Edition'.",
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -4319,8 +4635,7 @@
                   "Use3DSound": "True"
                 }
               }
-            },
-            "tested": false
+            }
           }
         ]
       },
@@ -4338,18 +4653,21 @@
       "description": "System Shock 2 is a singleplayer and multiplayer first-person action role-playing, survival horror and immersive sim game and the second in the System Shock series.",
       "released": "1999-08-11",
       "exe": "SS2.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
           "id": 238210,
           "delisted": true,
           "store_details": "The classic 1999 build was delisted in October 2025. It comes with the NewDark engine pre-installed.",
-          "patches": "The System Shock 2 Community Patch (SCP) fixes bugs and polishes the game, and is worth installing alongside EAX."
+          "patches": "The System Shock 2 Community Patch (SCP) fixes bugs and polishes the game, and is worth installing alongside EAX.",
+          "compatibility": "verified"
         },
         "gog": {
           "id": 1207659172,
           "delisted": true,
           "store_details": "The classic 1999 build was delisted in October 2025. It comes with the NewDark engine pre-installed.",
-          "patches": "The System Shock 2 Community Patch (SCP) fixes bugs and polishes the game, and is worth installing alongside EAX."
+          "patches": "The System Shock 2 Community Patch (SCP) fixes bugs and polishes the game, and is worth installing alongside EAX.",
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -4376,8 +4694,7 @@
               "cam_ext.cfg": {
                 "force_underwater_reverb": true
               }
-            },
-            "tested": false
+            }
           }
         ],
         "optional_settings": [
@@ -4388,8 +4705,7 @@
               "cam_ext.cfg": {
                 "use_raw_mouse_input": true
               }
-            },
-            "tested": false
+            }
           }
         ]
       },
@@ -4407,18 +4723,23 @@
       "description": "System Shock 2: 25th Anniversary Remaster is a singleplayer and multiplayer first-person action role-playing, survival horror and immersive sim game, a remaster of 1999's System Shock 2.",
       "released": "2025-06-26",
       "exe": "SystemShock2Remastered.exe",
+      "compatibility": "unsupported",
       "stores": {
         "steam": {
-          "id": 866570
+          "id": 866570,
+          "compatibility": "unsupported",
+          "problem": "This is the 25th Anniversary Remaster, not the classic System Shock 2, and it has no EAX."
         },
         "gog": {
-          "id": 1448370350
+          "id": 1448370350,
+          "compatibility": "unsupported",
+          "problem": "This is the 25th Anniversary Remaster, not the classic System Shock 2, and it has no EAX."
         }
       },
       "eax": {
         "api": "directsound3d",
-        "status": "not_implemented",
-        "problem": "This is the 25th Anniversary Remaster, not the classic System Shock 2, and it has no EAX."
+        "problem": "This is the 25th Anniversary Remaster, not the classic System Shock 2, and it has no EAX.",
+        "status": "not_implemented"
       },
       "notes": "If you also own the classic 1999 System Shock 2, that one has EAX — it's no longer sold, but existing owners keep it."
     },
@@ -4428,16 +4749,20 @@
       "description": "The Wheel of Time is a singleplayer and multiplayer first-person shooter game.",
       "released": "1999-11-09",
       "exe": "WoT.exe",
+      "compatibility": "playable",
       "stores": {
         "gog": {
-          "id": 1584652180
+          "id": 1584652180,
+          "compatibility": "playable",
+          "problem": "With EAX on, some sounds in The Wheel of Time start looping at full volume and don't stop, and it seems to happen at random. The fault is in the restored EAX sound, but the exact cause hasn't been tracked down yet."
         }
       },
       "eax": {
         "api": "directsound3d",
         "versions": [
           "1.0"
-        ]
+        ],
+        "problem": "With EAX on, some sounds in The Wheel of Time start looping at full volume and don't stop, and it seems to happen at random. The fault is in the restored EAX sound, but the exact cause hasn't been tracked down yet."
       },
       "game_config": {
         "files": {
@@ -4460,8 +4785,7 @@
                   "UseSpatial": "True"
                 }
               }
-            },
-            "tested": false
+            }
           }
         ],
         "optional_settings": [
@@ -4474,8 +4798,7 @@
                   "OutputRate": "48000Hz"
                 }
               }
-            },
-            "tested": false
+            }
           },
           {
             "title": "Raise texture filtering",
@@ -4486,8 +4809,7 @@
                   "UseTrilinear": "True"
                 }
               }
-            },
-            "tested": false
+            }
           },
           {
             "title": "Raise color depth",
@@ -4498,8 +4820,7 @@
                   "FullscreenColorBits": "32"
                 }
               }
-            },
-            "tested": false
+            }
           },
           {
             "title": "Enable detail textures",
@@ -4510,8 +4831,7 @@
                   "DetailTextures": "True"
                 }
               }
-            },
-            "tested": false
+            }
           }
         ]
       },
@@ -4520,9 +4840,7 @@
           "title": "PCGamingWiki: The Wheel of Time",
           "url": "https://www.pcgamingwiki.com/wiki/The_Wheel_of_Time"
         }
-      ],
-      "notes": "The Wheel of Time has a problem where certain sounds will loop continuously at a high volume. This will need further investigation.",
-      "tested": false
+      ]
     },
     {
       "id": "the-witcher",
@@ -4530,12 +4848,15 @@
       "description": "The Witcher is a singleplayer third-person action role-playing game and the first in The Witcher series.",
       "released": "2007-10-26",
       "exe": "witcher.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
-          "id": 20900
+          "id": 20900,
+          "compatibility": "verified"
         },
         "gog": {
-          "id": 1207658924
+          "id": 1207658924,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -4557,7 +4878,8 @@
         "steam": {
           "id": 211600,
           "store_details": "The original build, without the NewDark engine patch.",
-          "patches": "TFix bundles the NewDark engine patch along with a range of modern-system fixes, and is worth installing alongside EAX."
+          "patches": "TFix bundles the NewDark engine patch along with a range of modern-system fixes, and is worth installing alongside EAX.",
+          "compatibility": "unknown"
         },
         "gog": {
           "id": 1207658997,
@@ -4566,7 +4888,8 @@
             "game_root:Thief Gold",
             "game_root:Thief The Dark Project"
           ],
-          "store_details": "GOG sells Thief Gold with the original Thief: The Dark Project, and the game's launcher asks which one to start. Both come with the NewDark engine pre-installed."
+          "store_details": "GOG sells Thief Gold with the original Thief: The Dark Project, and the game's launcher asks which one to start. Both come with the NewDark engine pre-installed.",
+          "compatibility": "unknown"
         }
       },
       "eax": {
@@ -4616,8 +4939,7 @@
               "cam_ext.cfg": {
                 "force_underwater_reverb": true
               }
-            },
-            "tested": false
+            }
           }
         ],
         "optional_settings": [
@@ -4628,8 +4950,7 @@
               "cam_ext.cfg": {
                 "use_raw_mouse_input": true
               }
-            },
-            "tested": false
+            }
           }
         ]
       },
@@ -4651,12 +4972,14 @@
         "steam": {
           "id": 211740,
           "store_details": "The original build, without the NewDark engine patch.",
-          "patches": "T2Fix bundles the NewDark engine patch along with a range of modern-system fixes, and is worth installing alongside EAX."
+          "patches": "T2Fix bundles the NewDark engine patch along with a range of modern-system fixes, and is worth installing alongside EAX.",
+          "compatibility": "unknown"
         },
         "gog": {
           "id": 1207659001,
           "api": "openal",
-          "store_details": "It comes with the NewDark engine patch pre-installed."
+          "store_details": "It comes with the NewDark engine patch pre-installed.",
+          "compatibility": "unknown"
         }
       },
       "eax": {
@@ -4684,8 +5007,7 @@
               "cam_ext.cfg": {
                 "force_underwater_reverb": true
               }
-            },
-            "tested": false
+            }
           }
         ],
         "optional_settings": [
@@ -4696,8 +5018,7 @@
               "cam_ext.cfg": {
                 "use_raw_mouse_input": true
               }
-            },
-            "tested": false
+            }
           }
         ]
       },
@@ -4715,14 +5036,17 @@
       "description": "Thief: Deadly Shadows is a singleplayer first- and third-person stealth and immersive sim game and the third in the Thief series.",
       "released": "2004-05-25",
       "exe": "T3Main.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
           "id": 6980,
-          "patches": "The unofficial 'Sneaky Upgrade' patch  contains various bugfixes and game improvements such as widescreen support."
+          "patches": "The unofficial 'Sneaky Upgrade' patch  contains various bugfixes and game improvements such as widescreen support.",
+          "compatibility": "verified"
         },
         "gog": {
           "id": 1207659036,
-          "patches": "The unofficial 'Sneaky Upgrade' patch  contains various bugfixes and game improvements such as widescreen support."
+          "patches": "The unofficial 'Sneaky Upgrade' patch  contains various bugfixes and game improvements such as widescreen support.",
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -4758,6 +5082,7 @@
                 "EAXMultipleEnvironments": "1"
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -4781,7 +5106,8 @@
       "exe": "TimeShift.Exe",
       "stores": {
         "steam": {
-          "id": 10130
+          "id": 10130,
+          "compatibility": "unknown"
         }
       },
       "eax": {
@@ -4816,6 +5142,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -4832,7 +5159,8 @@
       "stores": {
         "steam": {
           "id": 4540,
-          "delisted": true
+          "delisted": true,
+          "compatibility": "unknown"
         }
       },
       "eax": {
@@ -4859,10 +5187,12 @@
       "exe": "TQ.exe",
       "stores": {
         "steam": {
-          "id": 475150
+          "id": 475150,
+          "compatibility": "unknown"
         },
         "gog": {
-          "id": 1196955511
+          "id": 1196955511,
+          "compatibility": "unknown"
         }
       },
       "eax": {
@@ -4888,7 +5218,8 @@
         "steam": {
           "id": 4550,
           "delisted": true,
-          "id_source": "steamdb_historical"
+          "id_source": "steamdb_historical",
+          "compatibility": "unknown"
         }
       },
       "eax": {
@@ -4913,7 +5244,8 @@
         "steam": {
           "id": 13510,
           "delisted": true,
-          "store_details": "Delisted from Steam around 2015."
+          "store_details": "Delisted from Steam around 2015.",
+          "compatibility": "unknown"
         }
       },
       "eax": {
@@ -4933,9 +5265,11 @@
       "description": "Tom Clancy's Rainbow Six: Vegas is a singleplayer and multiplayer first-person tactical shooter game and the first in the Tom Clancy's Rainbow Six: Vegas series.",
       "released": "2006-12-12",
       "exe": "R6Vegas_Game.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
-          "id": 13540
+          "id": 13540,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -4958,9 +5292,11 @@
       "description": "Tom Clancy's Rainbow Six: Vegas 2 is a singleplayer and multiplayer first-person tactical shooter game and the second in the Tom Clancy's Rainbow Six: Vegas series.",
       "released": "2008-04-15",
       "exe": "R6Vegas2_Game.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
-          "id": 15120
+          "id": 15120,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -4984,14 +5320,17 @@
       "description": "Tom Clancy's Splinter Cell is a singleplayer third-person stealth action game and the first in the Tom Clancy's Splinter Cell series.",
       "released": "2003-02-18",
       "exe": "splintercell.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
           "id": 13560,
-          "patches": "The community patched Enhanced Splinter Cell fixes bugs and provides additional game improvements."
+          "patches": "The community patched Enhanced Splinter Cell fixes bugs and provides additional game improvements.",
+          "compatibility": "verified"
         },
         "gog": {
           "id": 1207659034,
-          "patches": "The community patched Enhanced Splinter Cell fixes bugs and provides additional game improvements."
+          "patches": "The community patched Enhanced Splinter Cell fixes bugs and provides additional game improvements.",
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -5035,6 +5374,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           }
         ],
@@ -5106,9 +5446,11 @@
       "description": "Tom Clancy's Splinter Cell: Chaos Theory is a singleplayer and multiplayer third-person stealth action game and the third in the Tom Clancy's Splinter Cell series.",
       "released": "2005-03-29",
       "exe": "splintercell3.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
-          "id": 13570
+          "id": 13570,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -5137,7 +5479,8 @@
           "id": 13580,
           "extra_exe_folders": [
             "game_root:SCDA-Online/System"
-          ]
+          ],
+          "compatibility": "unknown"
         }
       },
       "eax": {
@@ -5163,12 +5506,15 @@
       "description": "Tomb Raider: The Angel of Darkness is a singleplayer third-person action-adventure game and the sixth in the Tomb Raider series.",
       "released": "2003-07-01",
       "exe": "TRAOD.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
-          "id": 225020
+          "id": 225020,
+          "compatibility": "verified"
         },
         "gog": {
-          "id": 1207659089
+          "id": 1207659089,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -5178,8 +5524,7 @@
           "2.0",
           "3.0",
           "4.0"
-        ],
-        "problem": "Tomb Raider: The Angel of Darkness needs Creative's EAX Unified to play EAX sound."
+        ]
       },
       "install": {
         "tweaks": [
@@ -5199,12 +5544,15 @@
       "description": "TRON 2.0 is a singleplayer and multiplayer first-person shooter game in the Tron series.",
       "released": "2003-08-26",
       "exe": "Lithtech.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
-          "id": 327740
+          "id": 327740,
+          "compatibility": "verified"
         },
         "gog": {
-          "id": 1655444396
+          "id": 1655444396,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -5233,8 +5581,7 @@
                   "eaxenabled": "1"
                 }
               }
-            },
-            "tested": false
+            }
           }
         ]
       }
@@ -5245,18 +5592,21 @@
       "description": "Unreal Gold is a singleplayer and multiplayer first-person shooter game, bundling Unreal, the first game in the Unreal series, with its Return to Na Pali expansion.",
       "released": "1998-05-22",
       "exe": "Unreal.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
           "id": 13250,
           "delisted": true,
           "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.",
-          "patches": "OldUnreal's v227 patch adds a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
+          "patches": "OldUnreal's v227 patch adds a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other.",
+          "compatibility": "verified"
         },
         "gog": {
           "id": 1207658679,
           "delisted": true,
           "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.",
-          "patches": "OldUnreal's v227 patch adds a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
+          "patches": "OldUnreal's v227 patch adds a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other.",
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -5293,6 +5643,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -5309,6 +5660,7 @@
               }
             },
             "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+            "verified": true,
             "tested": true
           }
         ],
@@ -5323,6 +5675,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -5335,6 +5688,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -5347,6 +5701,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -5369,6 +5724,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -5390,16 +5746,19 @@
       "description": "Unreal II: The Awakening is a singleplayer first-person shooter game and the second in the Unreal series.",
       "released": "2003-02-04",
       "exe": "Unreal2.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
           "id": 13200,
           "delisted": true,
-          "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale."
+          "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.",
+          "compatibility": "verified"
         },
         "gog": {
           "id": 1207658677,
           "delisted": true,
-          "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale."
+          "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.",
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -5432,6 +5791,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           }
         ]
@@ -5454,13 +5814,15 @@
           "id": 13230,
           "delisted": true,
           "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.",
-          "patches": "OldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
+          "patches": "OldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other.",
+          "compatibility": "unknown"
         },
         "gog": {
           "id": 1207658691,
           "delisted": true,
           "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.",
-          "patches": "OldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
+          "patches": "OldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other.",
+          "compatibility": "unknown"
         }
       },
       "eax": {
@@ -5491,8 +5853,7 @@
                   "Use3DSound": "True"
                 }
               }
-            },
-            "tested": false
+            }
           }
         ]
       },
@@ -5510,11 +5871,13 @@
       "description": "Unreal Tournament 3 is a singleplayer and multiplayer first-person arena shooter game and the fourth in the Unreal Tournament series.",
       "released": "2007-11-19",
       "exe": "UT3.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
           "id": 13210,
           "delisted": true,
-          "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale."
+          "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.",
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -5544,6 +5907,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -5560,6 +5924,7 @@
               }
             },
             "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+            "verified": true,
             "tested": true
           }
         ]
@@ -5576,13 +5941,15 @@
           "id": 13240,
           "delisted": true,
           "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.",
-          "patches": "Creative's official 'EAX Library Patch' (uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip) adds full EAX 2.0 reverb and muffling of sounds through walls to the original Deathmatch and Capture the Flag maps — historically mirrored at patches-scrolls.com.\n\nOldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
+          "patches": "Creative's official 'EAX Library Patch' (uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip) adds full EAX 2.0 reverb and muffling of sounds through walls to the original Deathmatch and Capture the Flag maps — historically mirrored at patches-scrolls.com.\n\nOldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other.",
+          "compatibility": "unknown"
         },
         "gog": {
           "id": 1207658692,
           "delisted": true,
           "store_details": "Delisted in December 2022, when Epic pulled the entire classic Unreal series from sale.",
-          "patches": "Creative's official 'EAX Library Patch' (uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip) adds full EAX 2.0 reverb and muffling of sounds through walls to the original Deathmatch and Capture the Flag maps — historically mirrored at patches-scrolls.com.\n\nOldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other."
+          "patches": "Creative's official 'EAX Library Patch' (uteaxsys.zip, then uteaxdm.zip and uteaxctf.zip) adds full EAX 2.0 reverb and muffling of sounds through walls to the original Deathmatch and Capture the Flag maps — historically mirrored at patches-scrolls.com.\n\nOldUnreal's patches add a modern 'ALAudio' sound renderer, a strong alternative worth trying. It replaces the game's original EAX sound, so use one or the other.",
+          "compatibility": "unknown"
         }
       },
       "eax": {
@@ -5621,8 +5988,7 @@
                   "UseReverb": "True"
                 }
               }
-            },
-            "tested": false
+            }
           },
           {
             "title": "Enable Pro Logic surround sound",
@@ -5637,8 +6003,7 @@
                 }
               }
             },
-            "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
-            "tested": false
+            "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic."
           }
         ],
         "optional_settings": [
@@ -5651,8 +6016,7 @@
                   "OutputRate": "48000Hz"
                 }
               }
-            },
-            "tested": false
+            }
           },
           {
             "title": "Raise texture filtering",
@@ -5663,8 +6027,7 @@
                   "UseTrilinear": "True"
                 }
               }
-            },
-            "tested": false
+            }
           },
           {
             "title": "Raise color depth",
@@ -5675,8 +6038,7 @@
                   "FullscreenColorBits": "32"
                 }
               }
-            },
-            "tested": false
+            }
           },
           {
             "title": "Enable WASD controls",
@@ -5696,8 +6058,7 @@
                   "MouseWheelDown": "NextWeapon"
                 }
               }
-            },
-            "tested": false
+            }
           }
         ]
       },
@@ -5719,12 +6080,15 @@
       "description": "X-COM: Enforcer is a singleplayer and multiplayer third-person shooter game and a spin-off in the X-COM series.",
       "released": "2001-04-17",
       "exe": "XCom.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
-          "id": 7770
+          "id": 7770,
+          "compatibility": "verified"
         },
         "gog": {
-          "id": 1445249599
+          "id": 1445249599,
+          "compatibility": "verified"
         }
       },
       "eax": {
@@ -5754,6 +6118,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -5770,6 +6135,7 @@
               }
             },
             "follow_up": "Don't forget to set your AV receiver or Soundbar to Dolby Pro Logic.",
+            "verified": true,
             "tested": true
           }
         ],
@@ -5784,6 +6150,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -5796,6 +6163,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           },
           {
@@ -5808,6 +6176,7 @@
                 }
               }
             },
+            "verified": true,
             "tested": true
           }
         ]

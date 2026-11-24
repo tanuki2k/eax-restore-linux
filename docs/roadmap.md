@@ -4,7 +4,7 @@ This is where the project is heading. Nothing here has a date, and the order can
 
 ## Keep adding games to the database
 
-The database covers only some of the games that used EAX. The plan is to keep adding games, and to move entries from `untested/` to `tested/` as people check them on real installs. A game that's in the database shows up in the library scan, and the install can set it up without guessing.
+The database covers only some of the games that used EAX. The plan is to keep adding games, and to rate the Unknown ones as people check them on real installs. A game that's in the database shows up in the library scan, and the install can set it up without guessing.
 
 ## Turn EAX on automatically for more games
 

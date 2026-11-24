@@ -28,7 +28,7 @@ The plain command still works: `python3 tools/profiler/profiler.py [--port 8765]
 
 ## Editing
 
-The **Edit** tab builds its forms from `data/schema.json`, with dropdowns, checkboxes and a table for a setting's changes. It validates as you type. When you save, it first shows the exact change to the file, then writes it, runs `tools/format-game-database.sh` and lists anything still invalid. "Move to..." does the `git mv` between drafts, untested and tested. **Rebuild database** runs `tools/build-game-database.sh`.
+The **Edit** tab builds its forms from `data/schema.json`, with dropdowns, checkboxes and a table for a setting's changes. It validates as you type. When you save, it first shows the exact change to the file, then writes it, runs `tools/format-game-database.sh` and lists anything still invalid. **Move to drafts** and **Move to database** do the `git mv` between `data/games/` and `data/drafts/`. A game's compatibility is a field on the Overview tab, and the list in the sidebar groups the games by it. **Rebuild database** runs `tools/build-game-database.sh`.
 
 The preview before anything is written looks like this:
 
@@ -114,7 +114,7 @@ If the GitHub CLI (`gh`) is installed and you're logged in, it then forks the re
 
 Without `gh`, or if you pick *Use the browser instead*, it opens GitHub's new-file page with the profile filled in. A profile too long for the address comes with a Copy button. A maintainer rebuilds `game-database.json` when merging.
 
-A new game goes in `data/games/untested/`, and one that already exists upstream keeps its folder. Only the game file is sent. Your captured snapshots stay in the sessions folder described below. `EAX_PROFILER_UPSTREAM=owner/repo` and `EAX_PROFILER_BASE=branch` point it at a test repo.
+A game goes in `data/games/`. A new one has no compatibility (Unknown) until a maintainer has checked it. Only the game file is sent. Your captured snapshots stay in the sessions folder described below. `EAX_PROFILER_UPSTREAM=owner/repo` and `EAX_PROFILER_BASE=branch` point it at a test repo.
 
 ## Manage installs
 

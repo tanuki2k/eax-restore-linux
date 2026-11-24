@@ -4,9 +4,9 @@ Pull requests that add or correct a game are welcome. Each game is one file name
 
 ## Where a game file lives
 
-Which folder a file is in says how far along it is. The [database overview](database-overview.md#where-a-game-file-lives) lists the three folders. A new game starts in `data/games/untested/`.
+A game goes in `data/games/`, or in `data/drafts/` while it's incomplete or doubtful. A new game has no `compatibility`, which means Unknown.
 
-To promote a game, `git mv` its file to the next folder and run `tools/format-game-database.sh`. That also updates the file's `"$schema"` line for the new location. Move a game to `tested/` only after you've checked it on a real install.
+Set `compatibility` only after you've played the game with the fix on a real install. The [database overview](database-overview.md#compatibility) explains how to choose between `verified` and `playable`. A `playable` game needs an `eax.problem` saying what sounds wrong, and the build stops without one.
 
 ## Adding a game
 
@@ -41,19 +41,20 @@ To see how your entry reads to a player, rebuild and run `tools/browse-game-data
 
 > [!IMPORTANT]
 > * Only add a store `id` you've checked against the store's own page or API. A wrong ID points the script at somebody else's prefix.
-> * Leave a field out when it's empty or at its default. These files have no `null`s. The formatter drops empty fields and each field's default, though `tested: false` is accepted and kept as written.
+> * Leave a field out when it's empty or at its default. These files have no `null`s. The formatter drops empty fields and each field's default, though a setting's `verified: false` is accepted and kept as written.
 
 ## A game file
 
-Here is a trimmed example. `data/games/tested/` has plenty more, and the [game file reference](game-file-reference.md) explains every field.
+Here is a trimmed example. `data/games/` has plenty more, and the [game file reference](game-file-reference.md) explains every field.
 
 ```json
 {
-  "$schema": "../../schema.json",
+  "$schema": "../schema.json",
   "name": "Quake 4",
   "description": "Quake 4 is a singleplayer and multiplayer first-person shooter game and the fourth in the Quake series.",
   "released": "2005-10-18",
   "exe": "Quake4.exe",
+  "compatibility": "verified",
   "stores": {
     "steam": { "id": 2210 },
     "gog": { "id": 1836059896 }

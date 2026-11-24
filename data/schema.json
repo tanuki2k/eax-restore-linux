@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/tanuki2k/eax-restore-linux/blob/main/data/schema.json",
   "title": "Game profile",
-  "description": "One game's profile in the game database (data/games/tested/<id>.json, data/games/untested/<id>.json or data/drafts/<id>.json). The id is the file name. Optional fields are omitted when empty or at their default. See docs/database/game-file-reference.md.",
+  "description": "One game's profile in the game database (data/games/<id>.json, or data/drafts/<id>.json for one that isn't shipped yet). The id is the file name. Optional fields are omitted when empty or at their default. See docs/database/game-file-reference.md.",
   "type": "object",
   "required": ["name", "stores", "eax"],
   "additionalProperties": false,
@@ -28,6 +28,7 @@
       "type": "string",
       "pattern": "^[^/\\\\]+\\.[eE][xX][eE](?!\\n)$"
     },
+    "compatibility": { "$ref": "#/$defs/compatibility" },
     "stores": {
       "description": "Where the game is sold. Leave a store out if the game isn't sold there.",
       "type": "object",
@@ -56,23 +57,18 @@
           "items": { "enum": ["1.0", "2.0", "3.0", "4.0", "5.0"] },
           "default": []
         },
-        "status": {
-          "description": "Where EAX stands today:\nsupported: EAX works in the current build.\nremoved_by_patch: an update took EAX out of the current build.\nnot_implemented: a remaster or rewrite that never had EAX.\nbuilt_in: EAX already works in this build without the script, for example because the game ships its own OpenAL32.dll with EAX.",
-          "enum": ["supported", "removed_by_patch", "not_implemented", "built_in"],
-          "default": "supported"
+        "built_in": {
+          "description": "EAX already works in this build without the script, for example because the game ships its own OpenAL32.dll with EAX. The install is still offered, but the script asks first.",
+          "type": "boolean",
+          "default": false
         },
         "problem": {
-          "description": "Why the current build isn't simply supported, in plain words, matching the status above. Shown in the game profile whatever the status, so a supported game can use it for a known limitation, for example maps with no environmental audio.",
+          "description": "In plain words, what's wrong: for a playable game, what sounds wrong with EAX restored; for an unsupported one, why the script can't restore EAX. A verified game can use it for a known limitation that isn't the fix's fault, for example maps with no environmental audio. Shown in the game profile.",
           "type": "string"
         },
         "fix": {
-          "description": "How to get a build where EAX works.",
+          "description": "How to get a build where EAX works, when it isn't the one the stores sell (for example an older retail release).",
           "type": "string"
-        },
-        "fix_in_place": {
-          "description": "Tick this when the fix works on the install the script is already pointed at (for example a Steam beta branch), so the script warns and offers to continue instead of stopping.",
-          "type": "boolean",
-          "default": false
         }
       }
     },
@@ -114,8 +110,8 @@
             }
           }
         },
-        "alsoft_tested": {
-          "description": "True once these alsoft.ini values are verified on a real install. Without it, or while false, they're unverified: they're left out unless the player sets EAX_RESTORE_UNTESTED_SETTINGS=1, and tagged \"(untested)\" when shown.",
+        "alsoft_verified": {
+          "description": "True once these alsoft.ini values are checked on a real install. Without it, or while false, they're unverified: they're left out unless the player asks for unverified settings, and tagged \"(unverified)\" when shown.",
           "type": "boolean",
           "default": false
         }
@@ -170,6 +166,10 @@
     }
   },
   "$defs": {
+    "compatibility": {
+      "description": "How well EAX works with this script. Leave it out until someone has checked the game (unknown).\nverified: checked on a real install; EAX works without problems.\nplayable: works with the script, but something sounds wrong with EAX restored that sounds right without it. Say what in eax.problem.\nunsupported: the script can't restore EAX on this build (a remaster that never had EAX, or an update removed it with no way back). Say why in eax.problem; the install is blocked.\nA bug the game has without the script, or a step the script does for the player, doesn't make a game playable.",
+      "enum": ["verified", "playable", "unsupported"]
+    },
     "speaker_choice": {
       "enum": ["stereo", "headphones", "surround", "matrix", "quad", "surround51", "surround61", "surround71"]
     },
@@ -228,6 +228,8 @@
           "items": { "type": "integer" },
           "default": []
         },
+        "compatibility": { "$ref": "#/$defs/compatibility", "description": "Set only when this store's copy rates differently from the game's compatibility, for example when only one store's copy was checked." },
+        "problem": { "type": "string", "description": "This store's own problem text, shown in place of eax.problem for this store. Set it with a store compatibility of playable or unsupported when the problem differs." },
         "store_details": { "type": "string", "description": "What's different about this store's listing.\nDon't mention an Enhanced Edition, remaster or remake of a game that isn't one, unless the store sells them together. Then name every game in it." },
         "patches": { "type": "string" }
       }
@@ -363,8 +365,8 @@
           "description": "Something the player should do after installing. It's shown in the final summary.",
           "type": "string"
         },
-        "tested": {
-          "description": "True once this setting is verified on a real install. Without it, or while false, it's unverified: it's hidden unless the player sets EAX_RESTORE_UNTESTED_SETTINGS=1, and tagged \"(untested)\" when shown.",
+        "verified": {
+          "description": "True once this setting is checked on a real install. Without it, or while false, it's unverified: it's hidden unless the player asks for unverified settings, and tagged \"(unverified)\" when shown.",
           "type": "boolean",
           "default": false
         }

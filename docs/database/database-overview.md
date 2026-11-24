@@ -8,19 +8,29 @@ Each game is one JSON file named after the game, like `quake-4.json`, under `dat
 
 ## Where a game file lives
 
-The folder a file is in says how far along it is.
-
-| Folder | What it means | Shipped to players? |
+| Folder | What it holds | Shipped to players? |
 | --- | --- | --- |
-| `data/games/tested/` | Checked against a real install: its store IDs match, its `exe` exists if it has one, and every config file and setting is where the file says. | Yes |
-| `data/games/untested/` | Not checked on a real install yet. New games start here. | Yes, but hidden unless the player sets `EAX_RESTORE_UNTESTED=1`. The profile browser can show them with Ctrl-T. |
+| `data/games/` | Every game in the database, whatever its compatibility. | Yes |
 | `data/drafts/` | Incomplete or doubtful entries. They are validated against the schema and formatted, nothing more. | No |
 
-## Tested and untested games
+## Compatibility
 
-A game in `tested/` has had its entry checked by someone with the game installed. A game in `untested/` is in the database but nobody has done that yet, so the script ignores it unless the player asks for it.
+Each game says how well EAX works with the script, in its `compatibility` field. It works like the ratings on Steam's store pages.
 
-Single settings can be unverified too, even in a tested game. Each setting carries its own verified flag, and the script hides the unverified ones unless the player sets `EAX_RESTORE_UNTESTED_SETTINGS=1`. See [Environment variables](../script/environment-variables.md).
+| Compatibility | What it means |
+| --- | --- |
+| Verified | Someone checked it on a real install, and EAX works without problems. |
+| Playable | EAX works with the script, but something sounds wrong with it restored that sounds right without it. The game's `eax.problem` says what. |
+| Unsupported | The script can't restore EAX on this build: a remaster that never had EAX, or an update removed it with no way back. The install stops and says why. |
+| Unknown | Nobody has checked it yet. This is a game with no `compatibility`. |
+
+To choose one, ask in order: does the script refuse to install it (Unsupported)? Has anyone played it with the fix (if not, Unknown)? Does anything sound wrong with the fix that sounds right without it (Playable), or not (Verified)? A bug the game has anyway doesn't count, and nor does a step the script does for the player, like a setting it changes or EAX Unified. How bad a problem is doesn't change the rating. The problem text says that.
+
+A store's copy can rate differently from the game, for example when only the GOG copy was checked. See [`stores.*.compatibility`](game-file-reference.md#storescompatibility).
+
+The script hides Unknown games unless the player sets `EAX_RESTORE_UNKNOWN_GAMES=1`. The profile browser can show them with Ctrl-T.
+
+Single settings carry their own `verified` flag, whatever the game's compatibility. The script hides unverified ones unless the player sets `EAX_RESTORE_UNVERIFIED_SETTINGS=1`. See [Environment variables](../script/environment-variables.md).
 
 ## How the script gets it
 

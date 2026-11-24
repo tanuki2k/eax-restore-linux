@@ -395,7 +395,7 @@ class H(BaseHTTPRequestHandler):
                 return self.reply(dbio.schema())
             if method == "GET" and p == "/api/games":
                 return self.reply({"games": dbio.list_games(), "stale": dbio.stale_entries(), "ai": ai.available(), "ai_features": ai.settings()["features"]})
-            m = re.match(r"^/api/game/(tested|untested|drafts)/([a-z0-9-]+)$", p)
+            m = re.match(r"^/api/game/(games|drafts)/([a-z0-9-]+)$", p)
             if m and method == "GET":
                 g = dbio.load(*m.groups())
                 return self.reply({"game": g, "errors": dbio.validate(g)})
@@ -422,7 +422,7 @@ class H(BaseHTTPRequestHandler):
                     return self.reply({"ok": True})
                 except cleanup.Blocked as x:
                     return self.reply({"blocked": str(x)})
-            m2 = re.match(r"^/api/preview/(tested|untested|drafts)/([a-z0-9-]+)$", p)
+            m2 = re.match(r"^/api/preview/(games|drafts)/([a-z0-9-]+)$", p)
             if m2 and method == "POST":
                 return self.reply(dbio.preview(*m2.groups(), self.body()))
             if method == "POST" and p == "/api/merge-config":
@@ -438,7 +438,7 @@ class H(BaseHTTPRequestHandler):
                 b = self.body()
                 dbio.promote(b["id"], b["from"], b["to"])
                 return self.reply({"ok": True})
-            ms2 = re.match(r"^/api/submit(/prepare)?/(tested|untested|drafts)/([a-z0-9-]+)$", p)
+            ms2 = re.match(r"^/api/submit(/prepare)?/(games|drafts)/([a-z0-9-]+)$", p)
             if ms2 and method == "POST":
                 prepare, folder, gid = ms2.groups()
                 b = self.body()

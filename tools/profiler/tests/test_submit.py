@@ -41,22 +41,25 @@ class Splice(unittest.TestCase):
     def test_splicing_a_game_back_gives_the_committed_database_byte_for_byte(self):
         with open(os.path.join(dbio.ROOT, "game-database.json")) as f:
             full = f.read()
-        for folder in ("untested", "tested"):
-            gid = sorted(fn[:-5] for fn in os.listdir(os.path.join(dbio.ROOT, dbio.FOLDERS[folder])))[3]
+        folder = os.path.join(dbio.ROOT, dbio.FOLDERS["games"])
+        files = sorted(fn[:-5] for fn in os.listdir(folder) if fn.endswith(".json"))
+        rated = lambda gid: "compatibility" in json.load(open(os.path.join(folder, gid + ".json")))
+        # One game with a compatibility and one without (unknown), which the build marks differently.
+        for gid in (next(g for g in files if rated(g)), next(g for g in files if not rated(g))):
             without = json.loads(full)
             without["games"] = [g for g in without["games"] if g["id"] != gid]
-            with open(os.path.join(dbio.ROOT, dbio.FOLDERS[folder], gid + ".json")) as f:
+            with open(os.path.join(folder, gid + ".json")) as f:
                 text = f.read()
-            entry = submit.database_entry(gid, text, folder)
+            entry = submit.database_entry(gid, text)
             got = submit.splice_database(json.dumps(without, indent=2, ensure_ascii=False), entry)
-            self.assertEqual(got, full, folder)
+            self.assertEqual(got, full, gid)
 
     def test_replacing_an_existing_entry_does_not_duplicate_it(self):
         with open(os.path.join(dbio.ROOT, "game-database.json")) as f:
             full = f.read()
-        gid = sorted(fn[:-5] for fn in os.listdir(os.path.join(dbio.ROOT, dbio.FOLDERS["untested"])))[0]
-        with open(os.path.join(dbio.ROOT, dbio.FOLDERS["untested"], gid + ".json")) as f:
-            entry = submit.database_entry(gid, f.read(), "untested")
+        gid = sorted(fn[:-5] for fn in os.listdir(os.path.join(dbio.ROOT, dbio.FOLDERS["games"])))[0]
+        with open(os.path.join(dbio.ROOT, dbio.FOLDERS["games"], gid + ".json")) as f:
+            entry = submit.database_entry(gid, f.read())
         self.assertEqual(submit.splice_database(full, entry), full)
 
 
@@ -66,7 +69,7 @@ class Routes(unittest.TestCase):
     def test_browser_route_fills_the_page_in_when_it_is_short(self):
         r = submit.submit_with_browser("test-game", self.GAME)
         self.assertEqual(r["mode"], "browser")
-        self.assertIn("new/dev?filename=data/games/untested/test-game.json&value=", r["url"])
+        self.assertIn("new/dev?filename=data/games/test-game.json&value=", r["url"])
         self.assertNotIn("json", r)
 
     def test_browser_route_hands_over_the_json_when_it_is_too_long(self):
@@ -105,7 +108,7 @@ class Routes(unittest.TestCase):
             puts = [c for c in calls if "PUT" in c["args"]]
             self.assertEqual(len(puts), 2)
             paths = [c["args"][-3] for c in puts]
-            self.assertEqual(paths, [f"repos/tester/{submit.UPSTREAM.split('/')[1]}/contents/data/games/untested/test-game.json",
+            self.assertEqual(paths, [f"repos/tester/{submit.UPSTREAM.split('/')[1]}/contents/data/games/test-game.json",
                                      f"repos/tester/{submit.UPSTREAM.split('/')[1]}/contents/game-database.json"])
             self.assertTrue(all(json.loads(c["stdin"])["branch"].startswith("profile/test-game-") for c in puts))
             pr = next(c for c in calls if c["args"][:2] == ["pr", "create"])

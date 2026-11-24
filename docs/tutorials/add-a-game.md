@@ -47,11 +47,11 @@ Press **Save**. The editor shows the exact change to the file, and you press **W
 
 ## 6. Test it with the script
 
-Build the script and run it against your rebuilt database. `EAX_RESTORE_UNTESTED` makes it include an entry that's still in `untested/`, and `EAX_RESTORE_UNTESTED_SETTINGS` makes it offer settings you haven't marked verified yet, which is all of them for now.
+Build the script and run it against your rebuilt database. `EAX_RESTORE_UNKNOWN_GAMES` makes it include a game with no compatibility yet, and `EAX_RESTORE_UNVERIFIED_SETTINGS` makes it offer settings you haven't marked verified yet, which is all of them for now.
 
 ```bash
 ./build.sh
-EAX_RESTORE_GAME_DATABASE_FILE="$PWD/game-database.json" EAX_RESTORE_UNTESTED=1 EAX_RESTORE_UNTESTED_SETTINGS=1 ./dist/eax-restore-linux.sh
+EAX_RESTORE_GAME_DATABASE_FILE="$PWD/game-database.json" EAX_RESTORE_UNKNOWN_GAMES=1 EAX_RESTORE_UNVERIFIED_SETTINGS=1 ./dist/eax-restore-linux.sh
 ```
 
 If you used Capture, the fix is already installed in the game. Run the script's uninstall for that game first, so you test a clean install.
@@ -62,7 +62,7 @@ To look at the profile on its own, run `tools/browse-game-database.sh game-datab
 
 ## 7. Mark what you verified
 
-Back in the editor, click **Not verified** on each setting you confirmed in the game, so it shows as verified. Leave a new game in `untested/`. Submitting puts a new game there whatever folder it's in here, and a maintainer promotes it after checking every store ID and setting on a real install. If you're correcting a game that's already in `tested/`, it keeps its folder.
+Back in the editor, click **Not verified** on each setting you confirmed in the game, so it shows as verified. Leave a new game's compatibility empty (Unknown). A maintainer rates it after checking every store ID and setting on a real install. If you're correcting a game that already has a rating, leave it as it is unless your change affects how EAX sounds.
 
 ## 8. Send it in
 

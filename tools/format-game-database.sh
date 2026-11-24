@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
-# Rewrites every game file (data/games/tested, data/games/untested, data/drafts)
+# Rewrites every game file (data/games, data/drafts)
 # into canonical form: fixed key order, empty fields and the listed defaults dropped,
 # short objects/arrays kept on one line. Also points each file's "$schema" at
-# data/schema.json from wherever the file sits, so moving a game between
-# folders only needs a re-run of this.
+# data/schema.json, one folder up from both.
 #
 # Usage: tools/format-game-database.sh           # rewrite files in place
 #        tools/format-game-database.sh --check   # exit 1 (listing files) if any would change
@@ -15,11 +14,8 @@ check=0
 
 shopt -s nullglob
 unformatted=()
-for f in data/games/tested/*.json data/games/untested/*.json data/drafts/*.json; do
-    case "$f" in
-        data/games/*) schema="../../schema.json" ;;
-        *) schema="../schema.json" ;;
-    esac
+for f in data/games/*.json data/drafts/*.json; do
+    schema="../schema.json"
     formatted="$(jq -r -L tools --arg schema "$schema" 'include "game-database"; .["$schema"] = $schema | normalize_game | render_game' "$f")"
     if [ "$formatted" != "$(cat "$f")" ]; then
         if [ "$check" -eq 1 ]; then
