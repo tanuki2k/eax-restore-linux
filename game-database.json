@@ -3320,12 +3320,15 @@
       "name": "Red Faction",
       "description": "Red Faction is a singleplayer and multiplayer first-person shooter game and the first in the Red Faction series.",
       "released": "2001-09-18",
+      "exe": "RF.exe",
       "stores": {
         "steam": {
-          "id": 20530
+          "id": 20530,
+          "patches": "Dash Faction fixes many of Red Faction's bugs and adds widescreen support. It also positions sounds itself, so they move between left and right with EAX on (per a bug report on GitHub). Its installer swaps in the 1.20 North American RF.exe it needs."
         },
         "gog": {
-          "id": 1207660623
+          "id": 1207660623,
+          "patches": "Dash Faction fixes many of Red Faction's bugs and adds widescreen support. It also positions sounds itself, so they move between left and right with EAX on (per a bug report on GitHub). Its installer swaps in the 1.20 North American RF.exe it needs."
         }
       },
       "eax": {
@@ -3333,14 +3336,24 @@
         "versions": [
           "1.0",
           "2.0"
-        ]
+        ],
+        "problem": "With EAX on, every sound in Red Faction plays from straight ahead, so you hear the reverb but nothing moves between left and right. The game sets each sound's left/right balance itself, and the restored EAX sound ignores it for now (per a bug report on GitHub)."
       },
       "install": {
         "tweaks": [
           "eax_unified"
         ]
       },
-      "tested": false
+      "sources": [
+        {
+          "title": "DSOAL issue #18",
+          "url": "https://github.com/kcat/dsoal/issues/18"
+        },
+        {
+          "title": "Dash Faction",
+          "url": "https://github.com/rafalh/dashfaction"
+        }
+      ]
     },
     {
       "id": "requiem-avenging-angel",
@@ -4167,8 +4180,7 @@
           "title": "GOG forum: Patch 1.0b just landed",
           "url": "https://www.gog.com/forum/star_wars_knights_of_the_old_republic_series/patch_10b_just_landed"
         }
-      ],
-      "tested": false
+      ]
     },
     {
       "id": "star-wars-republic-commando",
