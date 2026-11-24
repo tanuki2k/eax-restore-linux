@@ -839,17 +839,17 @@ count_game_settings() {
 # One "audio|optional<TAB>title<TAB>flag" line per setting count_game_settings
 # counts, audio settings first, for the game profile screen; flag is "1" for a
 # setting unverified. Then one "openal<TAB>key =
-# value<TAB>flag" line per alsoft.ini value, flagged when install.alsoft_tested
+# value<TAB>flag" line per alsoft.ini value, flagged when install.alsoft_verified
 # is false.
 game_setting_titles() {
     gdb_jq "$1" "$2" '
         entry0 | . as $e | .game_config // {}
         | def offered: [.[]? | select((.only_if.stores // [$store]) | index($store))];
-          def flag: if .tested != true then "1" else "" end;
+          def flag: if .verified != true then "1" else "" end;
           (.audio_settings | offered | .[] | "audio\t\(.title)\t\(flag)"),
           (.optional_settings | offered | .[] | "optional\t\(.title)\t\(flag)"),
           ($e.install.alsoft_ini // {} | to_entries[] | .key as $sec | .value | to_entries[]
-           | "openal\t\($sec) \(.key) = \(.value)\t\(if $e.install.alsoft_tested != true then "1" else "" end)")'
+           | "openal\t\($sec) \(.key) = \(.value)\t\(if $e.install.alsoft_verified != true then "1" else "" end)")'
 }
 
 # Usage: game_setting_follow_ups <id> <steam|gog>
@@ -890,15 +890,15 @@ speakers_match() {
 # category, fix number, title, reason, only_if stores (comma list),
 # only_if speakers (comma list), follow_up, file, format, if_missing, locations
 # (|-joined), section ("" for cfg formats), key, value (with the markers
-# above), "1" for a setting not marked "tested": true, then "1" when the file's
+# above), "1" for a setting not marked "verified": true, then "1" when the file's
 # all_locations is set. A line break in the reason or follow_up comes out as
-# \x1e (see wrap_text), so each row stays one line. Untested ones are left out unless
-# EAX_RESTORE_UNTESTED_SETTINGS is set, or the caller passes "all" (the
+# \x1e (see wrap_text), so each row stays one line. Unverified ones are left out unless
+# EAX_RESTORE_UNVERIFIED_SETTINGS is set, or the caller passes "all" (the
 # database browser, which shows everything). \x1f rather than tabs so empty
 # fields survive `read`.
 load_game_config_rows() {
-    local with_untested=false
-    { is_truthy "${EAX_RESTORE_UNTESTED_SETTINGS:-}" || [ "${3:-}" == "all" ]; } && with_untested=true
+    local with_unverified=false
+    { is_truthy "${EAX_RESTORE_UNVERIFIED_SETTINGS:-}" || [ "${3:-}" == "all" ]; } && with_unverified=true
     gdb_jq "$1" "$2" '
         def br: gsub("\n"; "\u001e");
         def enc: if type == "boolean" then (if . then "__TRUE__" else "__FALSE__" end)
@@ -907,7 +907,7 @@ load_game_config_rows() {
         | (.files // {}) as $files
         | ((.audio_settings // []) | to_entries[] | {cat: "audio", i: .key, f: .value}),
           ((.optional_settings // []) | to_entries[] | {cat: "optional", i: .key, f: .value})
-        | select('"$with_untested"' or .f.tested == true)
+        | select('"$with_unverified"' or .f.verified == true)
         | .cat as $cat | .i as $i | .f as $f
         | $f.changes | to_entries[] | .key as $file | ($files[$file] // {}) as $def
         | (if $def.format == "ini" or $def.format == "ini_braces" or $def.format == "xml_attributes" or $def.format == "registry"
@@ -919,7 +919,7 @@ load_game_config_rows() {
         | [$cat, ($i | tostring), $f.title, ($f.reason | br), (($f.only_if.stores // []) | join(",")),
            ([$f.only_if.speakers // empty] | flatten | join(",")), ($f.follow_up // "" | br), $file, ($def.format // ""),
            ($def.if_missing // ""), (($def.locations // []) | join("|")), $kv[0], $kv[1], ($kv[2] | enc),
-           (if $f.tested != true then "1" else "" end),
+           (if $f.verified != true then "1" else "" end),
            (if $def.all_locations then "1" else "" end)]
         | join("\u001f")'
 }
@@ -1024,7 +1024,7 @@ print_alsoft_details() {
         | to_entries[] | .key as $sec | .value | to_entries[] | [$sec, .key, (.value | tostring)] | join("\u001f")')
     [ ${#lines[@]} -gt 0 ] && [ -n "${lines[0]}" ] || return 0
     local flag
-    flag="$(gdb_jq "$3" "$2" 'entry0 | if .install.alsoft_tested != true then "1" else "" end')"
+    flag="$(gdb_jq "$3" "$2" 'entry0 | if .install.alsoft_verified != true then "1" else "" end')"
     echo -e "\n${WHITE}OpenAL settings for ${1}:${NC}"
     for line in "${lines[@]}"; do
         IFS=$'\x1f' read -r sec key value <<< "$line"
@@ -1070,13 +1070,13 @@ print_game_settings_details() {
         [surround]="Surround (any layout)" [quad]="Quad (4.0)" [surround51]="Surround 5.1"
         [surround61]="Surround 6.1" [surround71]="Surround 7.1")
     local width=$(( ${WRAP_COLUMNS:-76} - 2 ))
-    local id prev_id="" prev_cat="" display_rows="" stores speakers follow untested file_label loc s joiner
+    local id prev_id="" prev_cat="" display_rows="" stores speakers follow unverified file_label loc s joiner
     local -a locs labels
     # One setting's rows are printed together, after its last row is read.
     _flush_setting() {
         [ -n "$prev_id" ] || return 0
         print_config_rows "$display_rows"
-        [ -n "$untested" ] && echo -e "    ${DIM}Unverified.${NC}"
+        [ -n "$unverified" ] && echo -e "    ${DIM}Unverified.${NC}"
         if [ -n "$stores" ]; then
             labels=()
             for s in ${stores//,/ }; do [ "$s" == "gog" ] && labels+=("GOG") || labels+=("Steam"); done
@@ -1105,7 +1105,7 @@ print_game_settings_details() {
             echo -e "\n  ${BOLD}${f[2]}${NC} $(verified_tag "${f[14]:-}")"
             wrap_text "$width" "    " "${f[3]}"
             echo ""
-            display_rows="" stores="${f[4]}" speakers="${f[5]}" follow="${f[6]}" untested="${f[14]:-}"
+            display_rows="" stores="${f[4]}" speakers="${f[5]}" follow="${f[6]}" unverified="${f[14]:-}"
             prev_id="$id"
         fi
         # The file as the rows group it, then where the game keeps it.
@@ -1311,12 +1311,12 @@ offer_alsoft_settings() {
     current_profile || return
     local sec key value asked="" entry tag
     # Unverified values are held back like
-    # untested game settings.
-    if ! is_truthy "${EAX_RESTORE_UNTESTED_SETTINGS:-}" \
-        && [ "$(gdb_jq "$KG_ID" "$KG_STORE" 'entry0 | (.install.alsoft_tested == true)')" == "false" ]; then
+    # unverified game settings.
+    if ! is_truthy "${EAX_RESTORE_UNVERIFIED_SETTINGS:-}" \
+        && [ "$(gdb_jq "$KG_ID" "$KG_STORE" 'entry0 | (.install.alsoft_verified == true)')" == "false" ]; then
         return
     fi
-    tag="$(verified_tag "$(gdb_jq "$KG_ID" "$KG_STORE" 'entry0 | if .install.alsoft_tested != true then "1" else "" end')")"
+    tag="$(verified_tag "$(gdb_jq "$KG_ID" "$KG_STORE" 'entry0 | if .install.alsoft_verified != true then "1" else "" end')")"
     # Read first, then ask: a confirm inside a loop fed by the query would
     # read its answer from the query's output, not from the player.
     local -a entries=()
@@ -1387,12 +1387,12 @@ _gs_heading() {
     GAME_SETTINGS_STEP_SHOWN=1
 }
 
-# "(tested)" or "(untested)" after a setting's title; untested ones only
-# show when EAX_RESTORE_UNTESTED_SETTINGS lets them through.
-_gs_untested_suffix() { printf ' %s' "$(verified_tag "${fix_untested[$1]:-}")"; return 0; }
+# "(verified)" or "(unverified)" after a setting's title; unverified ones only
+# show when EAX_RESTORE_UNVERIFIED_SETTINGS lets them through.
+_gs_verified_suffix() { printf ' %s' "$(verified_tag "${fix_unverified[$1]:-}")"; return 0; }
 # Prints one fix: title, reason, and each row's current → new value.
 _gs_print_fix() {
-    echo -e "\n  ${BOLD}${fix_title[$1]}${NC}$(_gs_untested_suffix "$1")"
+    echo -e "\n  ${BOLD}${fix_title[$1]}${NC}$(_gs_verified_suffix "$1")"
     _gs_fix_body "$1"
 }
 # A fix's reason and rows, under its title (or its box in a tick list).
@@ -1460,7 +1460,7 @@ _gs_build_plan() {
         follow="${f[6]}"; file="${f[7]}"; fmt="${f[8]}"; ifmissing="${f[9]}"; locs="${f[10]}"
         sec="${f[11]}"; key="${f[12]}"; value="${f[13]}"; all_locs="${f[15]:-}"
         id="$cat:$idx"
-        [ -n "${f[14]:-}" ] && fix_untested[$id]=1
+        [ -n "${f[14]:-}" ] && fix_unverified[$id]=1
 
         if [ -z "${fix_status[$id]+x}" ]; then
             fix_order+=("$id"); fix_title[$id]="$title"; fix_reason[$id]="$reason"; fix_follow[$id]="$follow"
@@ -1668,7 +1668,7 @@ _gs_optional_flow() {
         local -a offered=() offered_titles=() initial=() bodies=() unoffered=()
         for id in "${optional[@]}"; do
             if [ "${fix_status[$id]}" == "offer" ]; then
-                offered+=("$id"); offered_titles+=("${fix_title[$id]} $(verified_tag plain "${fix_untested[$id]:-}")"); initial+=(0)
+                offered+=("$id"); offered_titles+=("${fix_title[$id]} $(verified_tag plain "${fix_unverified[$id]:-}")"); initial+=(0)
                 bodies+=("$(_gs_fix_body "$id")")
             elif [ "${fix_status[$id]}" == "applied" ]; then
                 offered+=("$id"); offered_titles+=("${fix_title[$id]} (Active)"); initial+=(1)
@@ -1760,7 +1760,7 @@ game_settings_step() {
 
     # Per-fix state, keyed "category:number" in database order.
     local -a fix_order=()
-    local -A fix_title=() fix_reason=() fix_follow=() fix_status=() fix_rows=() fix_missing_file=() fix_untested=() fix_view=()
+    local -A fix_title=() fix_reason=() fix_follow=() fix_status=() fix_rows=() fix_missing_file=() fix_unverified=() fix_view=()
     # Per fix: |-joined files it changes that this build doesn't have, whether
     # any of its files was found, and the files its offered rows change.
     local -A fix_absent_files=() fix_has_file=() fix_files=()

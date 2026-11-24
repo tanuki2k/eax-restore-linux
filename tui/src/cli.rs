@@ -62,7 +62,7 @@ Options for every command:
   --yes                Don't ask before making the changes
   --close-launcher     Close Steam or Heroic when they're running, and reopen them after
   --database FILE      Use this game database instead of downloading it
-  --untested           Include settings nobody has checked on a real install yet
+  --unverified         Include settings nobody has checked on a real install yet
 
 Install options (the defaults are the script's):
   --engine dsoal|openal-soft   --arch 32|64
@@ -95,9 +95,10 @@ const VALUED: [&str; 13] = [
     "--on",
     "--off",
 ];
-const SWITCHES: [&str; 12] = [
+const SWITCHES: [&str; 13] = [
     "--yes",
     "--close-launcher",
+    "--unverified",
     "--untested",
     "--com",
     "--advanced-limits",
@@ -244,7 +245,7 @@ pub fn not_rolled_back_lines(
 /// as the TUI's pop-up says it: the database's own problem text and this
 /// store's fix.
 pub fn no_eax_lines(game: &Game, store: Option<&str>) -> Option<Vec<String>> {
-    if !game.eax.none_to_restore() {
+    if !game.none_to_restore(store) {
         return None;
     }
     let mut lines = vec![format!(
@@ -252,7 +253,7 @@ pub fn no_eax_lines(game: &Game, store: Option<&str>) -> Option<Vec<String>> {
         game.name
     )];
     lines.extend(
-        [game.eax.problem.as_str(), game.fix(store)]
+        [game.problem(store), game.fix(store)]
             .into_iter()
             .filter(|t| !t.is_empty())
             .map(str::to_string),
@@ -649,7 +650,8 @@ fn build_from(v: &str, openal: bool) -> Result<Build> {
 }
 
 fn include_untested(args: &Args) -> bool {
-    args.on("--untested") || ops::untested_from_env()
+    // --untested is the name --unverified had before.
+    args.on("--unverified") || args.on("--untested") || ops::untested_from_env()
 }
 
 fn survey(

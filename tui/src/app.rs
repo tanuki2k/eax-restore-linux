@@ -213,19 +213,19 @@ impl App {
         self.both_stores = both;
     }
 
-    /// The Show and Tested filters the player saved on the settings screen.
+    /// The Show and Compatibility filters the player saved on the settings screen.
     pub fn apply_list_prefs(&mut self, p: &crate::prefs::Prefs) {
-        use crate::filters::TestedFilter;
-        use crate::prefs::{ShowPref, TestedPref};
+        use crate::filters::CompatFilter;
+        use crate::prefs::{CompatPref, ShowPref};
         self.filter = match p.show {
             ShowPref::All => Filter::All,
             ShowPref::OnThisPc => Filter::OnThisPc,
             ShowPref::Installed => Filter::Installed,
         };
-        self.filters.tested = match p.tested {
-            TestedPref::Any => TestedFilter::All,
-            TestedPref::Tested => TestedFilter::Tested,
-            TestedPref::Untested => TestedFilter::Untested,
+        self.filters.compat = match p.compat {
+            CompatPref::Any => CompatFilter::All,
+            CompatPref::Rated => CompatFilter::Rated,
+            CompatPref::Unknown => CompatFilter::Only(crate::db::Compat::Unknown),
         };
         self.selected = 0;
         self.refilter();
@@ -639,11 +639,11 @@ impl App {
             return self.handle_picker_key(key);
         }
         if let Some(s) = self.prefs.as_mut() {
-            let before = (s.prefs.show, s.prefs.tested);
+            let before = (s.prefs.show, s.prefs.compat);
             s.handle_key(key);
             // A changed Show or Tested shows at once; a filter picked with
             // Tab or Ctrl-T stays when only something else changed.
-            if (s.prefs.show, s.prefs.tested) != before {
+            if (s.prefs.show, s.prefs.compat) != before {
                 let p = s.prefs.clone();
                 self.apply_list_prefs(&p);
             }
@@ -683,7 +683,7 @@ impl App {
                 self.refilter();
             }
             KeyCode::Char('t') if ctrl => {
-                self.filters.next_tested();
+                self.filters.next_compat();
                 self.refilter();
             }
             KeyCode::Char('a') if ctrl => {
@@ -746,15 +746,16 @@ mod tests {
     }
 
     #[test]
-    fn the_saved_show_and_tested_filters_narrow_the_list() {
-        use crate::prefs::{Prefs, ShowPref, TestedPref};
+    fn the_saved_show_and_compatibility_filters_narrow_the_list() {
+        use crate::prefs::{CompatPref, Prefs, ShowPref};
         let mut a = app();
         a.games[0].status = Status::Installed; // Alpha Centauri
         a.games[1].status = Status::Installed; // Alpha Protocol
-        a.games[0].game.as_mut().unwrap().tested = false;
+        let g = a.games[0].game.as_mut().unwrap();
+        g.compatibility = Some("unknown".into()); // it has no store entry
         a.apply_list_prefs(&Prefs {
             show: ShowPref::Installed,
-            tested: TestedPref::Tested,
+            compat: CompatPref::Rated,
             ..Prefs::default()
         });
         assert!(a.filter == Filter::Installed);
@@ -1020,9 +1021,11 @@ mod tests {
         a.handle_key(ctrl('s')); // Steam
         assert_eq!(a.visible.len(), 1);
         a.handle_key(ctrl('s')); // GOG
-        a.handle_key(ctrl('t')); // Tested
+        a.handle_key(ctrl('t')); // Rated
         assert!(a.visible.is_empty());
-        a.handle_key(ctrl('t')); // Not yet tested
+        for _ in 0..4 {
+            a.handle_key(ctrl('t')); // Verified, Playable, Unsupported, Unknown
+        }
         assert_eq!(a.current().unwrap().name, "Beta");
         a.handle_key(ctrl('e')); // DirectSound3D
         assert_eq!(a.visible.len(), 1);

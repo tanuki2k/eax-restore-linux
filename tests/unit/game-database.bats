@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# Database lookups: the alsoft_tested flag, Steam's library folders, the
+# Database lookups: the alsoft_verified flag, Steam's library folders, the
 # installs sharing a prefix, and the scan spinner.
 
 load ../helpers
@@ -10,13 +10,13 @@ setup() {
     use_temp_home
 }
 
-@test "alsoft_tested: only true counts as verified, an absent flag does not" {
+@test "alsoft_verified: only true counts as verified, an absent flag does not" {
     GAME_DATABASE_FILE="$BATS_TEST_TMPDIR/db.json"
-    echo '{"games":[{"id":"g","stores":{"steam":{"id":1}},"install":{"alsoft_ini":{"reverb":{"boost":"6"}},"alsoft_tested":false}},
+    echo '{"games":[{"id":"g","stores":{"steam":{"id":1}},"install":{"alsoft_ini":{"reverb":{"boost":"6"}},"alsoft_verified":false}},
                       {"id":"h","stores":{"steam":{"id":2}},"install":{"alsoft_ini":{"reverb":{"boost":"6"}}}}]}' > "$GAME_DATABASE_FILE"
-    run gdb_jq 1 steam 'entry0 | (.install.alsoft_tested == true)'
+    run gdb_jq 1 steam 'entry0 | (.install.alsoft_verified == true)'
     [ "$output" == "false" ]
-    run gdb_jq 2 steam 'entry0 | (.install.alsoft_tested == true)'
+    run gdb_jq 2 steam 'entry0 | (.install.alsoft_verified == true)'
     [ "$output" == "false" ]
 }
 
@@ -61,9 +61,9 @@ setup() {
 _rollback_db() {
     GAME_DATABASE_FILE="$BATS_TEST_TMPDIR/db.json"
     echo '{"games":[{"id":"k","name":"Patched Game",
-        "stores":{"steam":{"id":1,"beta_branch":"legacypc","rollback_steps":"Pick the old branch."},
-                  "gog":{"id":100,"rollback_builds":["111","222"],"rollback_steps":"Pick the old version."}},
-        "eax":{"status":"removed_by_patch","fix_in_place":true}}]}' > "$GAME_DATABASE_FILE"
+        "stores":{"steam":{"id":1,"compatibility":"verified","beta_branch":"legacypc","rollback_steps":"Pick the old branch."},
+                  "gog":{"id":100,"compatibility":"verified","rollback_builds":["111","222"],"rollback_steps":"Pick the old version."}},
+        "eax":{"api":"directsound3d"}}]}' > "$GAME_DATABASE_FILE"
     ensure_game_database() { return 0; }
     prompt_restart_or_quit() { echo "BLOCKED"; }
     SCRIPT_ACTION=i
@@ -168,4 +168,26 @@ _rollback_db() {
     longest=$(awk '{ if (length > m) m = length } END { print m }' <<< "$plain")
     [ "$longest" -le 80 ]
     [[ "$plain" == *"removed it."$'\n\n'"  In Heroic, open Modify Installation"* ]]
+}
+
+# An unsupported copy stops the install. Without the profile on screen just
+# before, the error says why with the store's own problem text, and a copy
+# the game's other store sells still installs.
+@test "an unsupported store copy is blocked with its problem text; the other store's isn't" {
+    GAME_DATABASE_FILE="$BATS_TEST_TMPDIR/db.json"
+    echo '{"games":[{"id":"x","name":"Split Game",
+        "stores":{"steam":{"id":1,"compatibility":"unsupported","problem":"The Steam build has no EAX."},
+                  "gog":{"id":2,"compatibility":"verified"}},
+        "eax":{"api":"directsound3d"}}]}' > "$GAME_DATABASE_FILE"
+    ensure_game_database() { return 0; }
+    prompt_restart_or_quit() { echo "BLOCKED"; }
+    SCRIPT_ACTION=i SCANNED_NOTES_SHOWN=""
+    run confirm_continue_if_eax_impossible 1 steam
+    [[ "$output" == *"There's nothing for this script to restore in Split Game."*"The Steam build has no EAX."*BLOCKED* ]]
+    run confirm_continue_if_eax_impossible 2 gog
+    [ -z "$output" ]
+    SCANNED_NOTES_SHOWN=1
+    run block_if_eax_not_implemented 1 steam "Split Game"
+    [[ "$output" == *"There's nothing for this script to restore in Split Game."*BLOCKED* ]]
+    [[ "$output" != *"The Steam build has no EAX."* ]]
 }

@@ -33,9 +33,9 @@ prompts is done via environment variables:
   EAX_RESTORE_SKIP_UPDATE_CHECK=1     Don't check for a newer version of the script
   EAX_RESTORE_SKIP_CACHE_CHECK=1      Only use builds already downloaded
   EAX_RESTORE_GAME_DATABASE_FILE=PATH   Use a local game database file
-  EAX_RESTORE_UNTESTED=1              Include unverified game profiles (left out
-                                      otherwise)
-  EAX_RESTORE_UNTESTED_SETTINGS=1     Offer unverified game and alsoft.ini settings
+  EAX_RESTORE_UNKNOWN_GAMES=1         Include game profiles nobody has checked yet
+                                      (left out otherwise)
+  EAX_RESTORE_UNVERIFIED_SETTINGS=1   Offer unverified game and alsoft.ini settings
                                       (left out otherwise)
   EAX_RESTORE_ANSWERS_FILE=PATH       Read the answers to every prompt from a file
   EAX_RESTORE_ACTION=NAME             Run one action without the main menu: install,
@@ -63,6 +63,10 @@ EOF
         exit 0
         ;;
 esac
+
+# The names these had before the game database rated compatibility still work.
+: "${EAX_RESTORE_UNKNOWN_GAMES:=${EAX_RESTORE_UNTESTED:-}}"
+: "${EAX_RESTORE_UNVERIFIED_SETTINGS:=${EAX_RESTORE_UNTESTED_SETTINGS:-}}"
 
 # Unattended runs (the profiler tool): a file of answers, one line per prompt,
 # replaces the terminal. Everything already reads piped stdin, so no prompt

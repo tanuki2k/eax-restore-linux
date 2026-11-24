@@ -2239,7 +2239,7 @@ mod tests {
         // Each title with its tag at the right; an unfocused big setting says
         // how many keys, a small one lists them.
         let big = row_of(&rows, "Fix low image quality");
-        assert!(rows[big].contains("(tested)"));
+        assert!(rows[big].contains("(verified)"));
         assert!(
             rows[big + 1].contains("4 changes in autoexec.cfg"),
             "{}",

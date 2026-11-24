@@ -143,14 +143,16 @@
 #   edits to the database before they've been pushed to the branch it's
 #   normally fetched from.
 #
-# * EAX_RESTORE_UNTESTED=1  Includes the unverified game profiles. Without it
-#   they're left out, so those games are treated as having no profile. The Tools menu's profile browser always has them,
-#   behind its own tested / untested filter.
+# * EAX_RESTORE_UNKNOWN_GAMES=1  Includes the game profiles nobody has checked
+#   yet (compatibility Unknown). Without it they're left out, so those games are
+#   treated as having no profile. The Tools menu's profile browser always has
+#   them, behind its own compatibility filter. EAX_RESTORE_UNTESTED=1 still works.
 #
-# * EAX_RESTORE_UNTESTED_SETTINGS=1  Offers the game settings (audio and
+# * EAX_RESTORE_UNVERIFIED_SETTINGS=1  Offers the game settings (audio and
 #   optional) and alsoft.ini values that aren't marked verified. Without it they're
-#   left out; with it they're tagged "(untested)" (verified
-#   ones show "(tested)"). The profile browser always shows them.
+#   left out; with it they're tagged "(unverified)" (verified ones show
+#   "(verified)"). The profile browser always shows them.
+#   EAX_RESTORE_UNTESTED_SETTINGS=1 still works.
 #
 # --- License ---
 # MIT License

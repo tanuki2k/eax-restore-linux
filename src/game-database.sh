@@ -1,3 +1,36 @@
+# Works out the compatibility fields for a database built before them, from
+# the ones it had: an unsupported store for a game with no EAX to restore,
+# unknown for one marked "tested": false, verified otherwise; eax.built_in
+# from eax.status; verified from each setting's tested.
+GDB_UPGRADE_JQ='
+    def verify: if .tested == true then .verified = true else . end;
+    .games |= map(
+        (.eax.status // "supported") as $st
+        | (if $st == "not_implemented" or ($st == "removed_by_patch" and .eax.fix_in_place != true) then "unsupported"
+           elif .tested == false then "unknown" else "verified" end) as $c
+        | .eax.problem as $p
+        | .stores |= map_values(.compatibility = $c | if $p then .problem = $p else . end)
+        | (if $st == "built_in" then .eax.built_in = true else . end)
+        | (if .install.alsoft_tested == true then .install.alsoft_verified = true else . end)
+        | (if .game_config.audio_settings then .game_config.audio_settings |= map(verify) else . end)
+        | (if .game_config.optional_settings then .game_config.optional_settings |= map(verify) else . end))'
+
+# Usage: _gdb_use_derived_file <name> <jq filter>
+# Runs GAME_DATABASE_FILE through the filter and points GAME_DATABASE_FILE at
+# the result: next to the cache, which is writable and overwritten each run
+# so it needs no cleanup, or a temp file when it isn't. Fails, leaving
+# GAME_DATABASE_FILE alone, when neither works.
+_gdb_use_derived_file() {
+    local out="${GAME_DATABASE_CACHE}.$1"
+    mkdir -p "$(dirname "$out")" 2>/dev/null
+    if ! { jq "$2" "$GAME_DATABASE_FILE" > "$out" 2>/dev/null && [ -s "$out" ]; }; then
+        out="$(mktemp 2>/dev/null)" || return 1
+        TEMP_FILES_AT_EXIT+=("$out")
+        { jq "$2" "$GAME_DATABASE_FILE" > "$out" 2>/dev/null && [ -s "$out" ]; } || return 1
+    fi
+    GAME_DATABASE_FILE="$out"
+}
+
 ensure_game_database() {
     # Usage: ensure_game_database
     # Fetches game-database.json fresh into a temp file, validates it's
@@ -90,28 +123,27 @@ ensure_game_database() {
         fi
     fi
 
-    # Unverified profiles (built with "tested":
-    # false) are left out unless EAX_RESTORE_UNTESTED is set: their config edits
-    # and engine choice could be wrong for a player's copy. The full file
-    # stays in GAME_DATABASE_FULL_FILE for the profile browser, which has its
-    # own tested / untested filter. The visible copy goes next to the cache,
-    # which is writable and overwritten each run, so it needs no cleanup.
+    # A database built before the compatibility field (an offline cache, or
+    # one served from a branch that hasn't caught up) gets it worked out from
+    # the fields it had, so everything below reads one shape.
+    if ! jq -e 'any(.games[].stores[]; has("compatibility"))' "$GAME_DATABASE_FILE" >/dev/null 2>&1 \
+        && jq -e '.games | length > 0' "$GAME_DATABASE_FILE" >/dev/null 2>&1; then
+        _gdb_use_derived_file upgraded "$GDB_UPGRADE_JQ"
+    fi
+
+    # Store entries nobody has rated (compatibility unknown) are left out
+    # unless EAX_RESTORE_UNKNOWN_GAMES is set: their config edits and engine
+    # choice could be wrong for a player's copy. A game only its GOG copy was
+    # checked for keeps that one. The full file stays in
+    # GAME_DATABASE_FULL_FILE for the profile browser, which has its own
+    # compatibility filter.
     GAME_DATABASE_FULL_FILE="$GAME_DATABASE_FILE"
-    if is_truthy "${EAX_RESTORE_UNTESTED:-}"; then
-        print_note "Unverified game profiles are included, so their settings may be wrong." >&2
-    elif jq -e 'any(.games[]; .tested == false)' "$GAME_DATABASE_FILE" >/dev/null 2>&1; then
-        local visible="${GAME_DATABASE_CACHE}.visible"
-        mkdir -p "$(dirname "$visible")" 2>/dev/null
-        if ! { jq '.games |= map(select(.tested != false))' "$GAME_DATABASE_FILE" > "$visible" 2>/dev/null && [ -s "$visible" ]; }; then
-            # The cache folder isn't writable: filter into a temp file instead.
-            visible="$(mktemp 2>/dev/null)"
-            [ -n "$visible" ] && TEMP_FILES_AT_EXIT+=("$visible")
-            { [ -n "$visible" ] && jq '.games |= map(select(.tested != false))' "$GAME_DATABASE_FILE" > "$visible" 2>/dev/null && [ -s "$visible" ]; } || visible=""
-        fi
-        if [ -n "$visible" ]; then
-            GAME_DATABASE_FILE="$visible"
-        else
-            print_warning "Couldn't hide the unverified game profiles, so they may show up with their settings unchecked." >&2
+    if is_truthy "${EAX_RESTORE_UNKNOWN_GAMES:-}"; then
+        print_note "Game profiles nobody has checked yet are included, so their settings may be wrong." >&2
+    elif jq -e 'any(.games[].stores[]; .compatibility == "unknown")' "$GAME_DATABASE_FILE" >/dev/null 2>&1; then
+        if ! _gdb_use_derived_file visible \
+            '.games |= map(.stores |= with_entries(select(.value.compatibility != "unknown")) | select(.stores != {}))'; then
+            print_warning "Couldn't hide the game profiles nobody has checked yet, so they may show up with their settings unchecked." >&2
         fi
     fi
 
@@ -388,16 +420,22 @@ gdb_fields() {
     gdb_jq "$id" "$store" "entry | [$list] | map(tostring | gsub(\"\\n\"; \"\\u001e\")) | join(\"\\u001f\")"
 }
 
-game_eax_status() {
-    # Usage: game_eax_status <id> <steam|gog>
-    # The entry's eax.status ("supported" when it has none), or nothing when
-    # the game isn't in the database.
-    gdb_field "$1" "$2" '.eax.status // "supported"'
+game_eax_gate() {
+    # Usage: game_eax_gate <id> <steam|gog>
+    # What the install has to settle about EAX for this store's copy first:
+    # "unsupported" (the script can't restore it, so it stops), "rollback"
+    # (EAX is only on the build the store's beta branch or listed GOG builds
+    # lead to), "built_in" (EAX already works, so it asks first), or nothing.
+    gdb_field "$1" "$2" '
+        if .stores[$store].compatibility == "unsupported" then "unsupported"
+        elif (.stores[$store].beta_branch // "") != "" or ((.stores[$store].rollback_builds // []) | length) > 0 then "rollback"
+        elif .eax.built_in == true then "built_in"
+        else "" end'
 }
 
 confirm_built_in_install() {
     # Usage: confirm_built_in_install <game_name>
-    # For an eax.status "built_in" game (EAX already works without this
+    # For an eax.built_in game (EAX already works without this
     # script, e.g. an edition that ships its own OpenAL32.dll with EAX).
     # Installing still swaps in a newer OpenAL32.dll and adds alsoft.ini, so
     # it's offered, but defaults to No. Asked once per game: a Yes sets
@@ -415,54 +453,33 @@ confirm_built_in_install() {
 
 block_if_eax_not_implemented() {
     # Usage: block_if_eax_not_implemented <id> <steam|gog> <game_name>
-    # Early twin of confirm_continue_if_eax_impossible's hard-block branches
-    # (not_implemented, and removed_by_patch without eax.fix_in_place)
-    # — called right after the scan pick so a known dead end is caught before
-    # wasting the user's time on AppID/prefix detection. On a match it hands
-    # off to prompt_restart_or_quit, which either exits or sets
-    # RESTART_REQUESTED for scan_game_libraries to unwind on.
+    # Early twin of confirm_continue_if_eax_impossible's hard block for an
+    # unsupported copy — called right after the scan pick so a known dead end
+    # is caught before wasting the user's time on AppID/prefix detection. On
+    # a match it hands off to prompt_restart_or_quit, which either exits or
+    # sets RESTART_REQUESTED for scan_game_libraries to unwind on.
     [ "$SCRIPT_ACTION" == "i" ] || return
     [ -z "$1" ] && return
     ensure_game_database || return
 
     local store="steam"
     [ "$2" == "gog" ] && store="gog"
-    local status workaround
-    IFS=$'\x1f' read -r status workaround < <(gdb_fields "$1" "$store" '.eax.status // ""' '.eax.fix_in_place // false')
-    [ -n "$status" ] || return
-
-    if [ "$status" == "not_implemented" ]; then
-        if [ -n "$SCANNED_NOTES_SHOWN" ]; then
-            print_eax_block_error "$1" "$store"
-        else
-            print_error "$3 never implemented EAX/environmental audio in the first place, so" \
-                "there would be nothing here for this script to restore."
-        fi
-        prompt_restart_or_quit 1
-        return
-    fi
-
-    if [ "$status" == "removed_by_patch" ] && [ "$workaround" != "true" ]; then
-        if [ -n "$SCANNED_NOTES_SHOWN" ]; then
-            print_eax_block_error "$1" "$store"
-        else
-            print_error "EAX/A3D support was removed from $3's current build by a software update," \
-                "and there's no known in-place fix — restoring it would need a separate install this" \
-                "script isn't pointed at."
-        fi
-        prompt_restart_or_quit 1
-        return
-    fi
+    [ "$(game_eax_gate "$1" "$store")" == "unsupported" ] || return
+    _eax_block "$1" "$store"
 }
 
-# Usage: print_eax_block_error <id> <steam|gog>
-# The hard block's error when the GAME PROFILE was just shown: its Status
-# already says why, so this only names the game (as the profile does) and
-# the outcome.
+# Usage: print_eax_block_error <id> <steam|gog> [name]
+# The hard block's error: the game and the outcome. When the GAME PROFILE
+# was just shown its Status already said why; otherwise the entry's problem
+# text follows. The name is for a game the database couldn't be read for.
 print_eax_block_error() {
-    local name
+    local name problem=""
     name=$(gdb_field "$1" "$2" .name)
-    print_error "There's nothing for this script to restore in ${name:-this game}."
+    print_error "There's nothing for this script to restore in ${name:-${3:-this game}}."
+    [ -n "$SCANNED_NOTES_SHOWN" ] && return
+    problem=$(gdb_jq "$1" "$2" 'entry0 | .stores[$store].problem // .eax.problem // empty')
+    [ -n "$problem" ] && print_wrapped "$problem"
+    return 0
 }
 
 detect_gog_build_id() {
@@ -682,7 +699,7 @@ _scan_open_pick() {
     block_if_not_rolled_back "${ids[$idx]}" "${stores[$idx]}" "${paths[$idx]}"
     [ -n "$RESTART_REQUESTED" ] && return 1
 
-    if [ "$(game_eax_status "${ids[$idx]}" "${stores[$idx]}")" == "built_in" ]; then
+    if [ "$(game_eax_gate "${ids[$idx]}" "${stores[$idx]}")" == "built_in" ]; then
         confirm_built_in_install "${meta_names[$idx]}" || return 1
     else
         confirm "Continue with this game?" || return 1
@@ -925,7 +942,18 @@ _gp_same_for_all() {
 _gp_api_name() { [ "$1" == "openal" ] && echo "OpenAL" || echo "DirectSound3D"; }
 _gp_solution() { [ "$1" == "openal" ] && echo "OpenAL Soft" || echo "DSOAL + OpenAL Soft"; }
 
-# A setting's title with its tested tag, and which stores offer it when only some do.
+# Usage: compat_label <verified|playable|unsupported|unknown>
+# A store's compatibility as the player reads it, in its colour.
+compat_label() {
+    case "$1" in
+        verified) echo "${GREEN}Verified${NC}" ;;
+        playable) echo "${YELLOW}Playable${NC}" ;;
+        unsupported) echo "${YELLOW}Unsupported${NC}" ;;
+        *) echo "${NOTE}Unknown${NC}" ;;
+    esac
+}
+
+# A setting's title with its verified tag, and which stores offer it when only some do.
 _gp_setting_title() {
     local only="${title_stores[$1$'\t'$2]}"
     local tag
@@ -948,10 +976,15 @@ _gp_detail_rows() {
     local value sep
     detail_heading "Game details"
     detail_row "Name" "${BOLD}${name}${NC}"
-    if [ -n "$untested" ]; then
-        detail_row "Profile" "${NOTE}Untested${NC}"
+    # One rating when the stores agree, else one line per store.
+    if _gp_same_for_all compats; then
+        detail_row "Compatibility" "$(compat_label "${compats[0]}")"
     else
-        detail_row "Profile" "${GREEN}Tested${NC}"
+        value="" sep=""
+        for i in "${!stores[@]}"; do
+            value+="${sep}$(compat_label "${compats[i]}") on ${labels[i]}"; sep=$'\n'
+        done
+        detail_row "Compatibility" "$value"
     fi
     [ -n "$released" ] && detail_row "Released" "${WHITE}$(format_release_date "$released")${NC}"
     # The browser names each store's ID; the install shows its one store
@@ -973,18 +1006,18 @@ _gp_detail_rows() {
         fi
     done
     # eax_versions sits in the same slot for every game — the qualifier for a
-    # patch-removed build comes after the list, not in place of it.
+    # build without EAX comes after the list, not in place of it.
     local ver_display="${eax_versions:-Unknown}"
-    if [ "$eax_status" == "supported" ]; then
-        detail_row "EAX Support" "${GREEN}${BOLD}${ver_display}${NC}"
-    elif [ "$eax_status" == "removed_by_patch" ] && [ "$eax_restorable" == "true" ]; then
-        detail_row "EAX Support" "${YELLOW}${BOLD}${ver_display}${NC} ${DIM}(restorable)${NC}"
-    elif [ "$eax_status" == "removed_by_patch" ]; then
-        detail_row "EAX Support" "${YELLOW}${BOLD}${ver_display}${NC} ${DIM}(originally supported)${NC}"
-    elif [ "$eax_status" == "built_in" ]; then
-        detail_row "EAX Support" "${GREEN}${BOLD}${ver_display}${NC} ${DIM}(already built in)${NC}"
-    else
+    if [ -n "$all_unsupported" ] && [ -n "$eax_versions" ]; then
+        detail_row "EAX Support" "${YELLOW}${BOLD}${ver_display}${NC} ${DIM}(not in this build)${NC}"
+    elif [ -n "$all_unsupported" ]; then
         detail_row "EAX Support" "${YELLOW}${BOLD}None${NC}"
+    elif [ "$built_in" == "true" ]; then
+        detail_row "EAX Support" "${GREEN}${BOLD}${ver_display}${NC} ${DIM}(already built in)${NC}"
+    elif [ -n "$any_rollback" ]; then
+        detail_row "EAX Support" "${YELLOW}${BOLD}${ver_display}${NC} ${DIM}(restorable)${NC}"
+    else
+        detail_row "EAX Support" "${GREEN}${BOLD}${ver_display}${NC}"
     fi
     if _gp_same_for_all apis; then
         detail_row "Audio API" "${WHITE}$(_gp_api_name "${apis[0]}")${NC}"
@@ -1028,21 +1061,28 @@ _gp_detail_rows() {
 # Status, and the stores' own details texts.
 _gp_status_sections() {
     # --- Blocks: status -> problem -> solution ---
-    # A supported game shows it too when its entry has a problem text: a
-    # known limitation worth knowing before installing.
-    if [ "$eax_status" != "supported" ] || [ -n "$eax_status_details" ]; then
-        # The entry's own problem text says why; the generic lead-in is only
-        # for an entry without one.
-        local state_line="" after_line=""
-        [ -z "$eax_status_details" ] && state_line="Never implemented in this edition."
-        [ "$eax_status" == "removed_by_patch" ] && [ -z "$eax_status_details" ] && state_line="An update removed EAX from ${name}."
-        if [ "$eax_status" == "built_in" ]; then
-            state_line=""
-            after_line=" Installing is optional: it swaps in a newer OpenAL Soft and adds speaker and headphone settings."
+    # The problem text says what's wrong: for a playable game what sounds
+    # wrong, for an unsupported one why, for a verified one a known
+    # limitation. The generic line is only for an entry without one.
+    local after_line="" text
+    [ "$built_in" == "true" ] && after_line=" Installing is optional: it swaps in a newer OpenAL Soft and adds speaker and headphone settings."
+    if _gp_same_for_all problems; then
+        text="${problems[0]}"
+        if [ -z "$text" ]; then
+            [ -n "$all_unsupported" ] && text="There's no EAX in this build of ${name}."
+            [ -n "$any_rollback" ] && text="An update removed EAX from ${name}."
         fi
-        print_subheading "Status"
-        local status_text="${state_line}${eax_status_details:+ $eax_status_details}${after_line}"
-        WRAP_COLOUR="$prose_colour" print_wrapped "${status_text# }"
+        text="${text}${after_line}"
+        if [ -n "$text" ]; then
+            print_subheading "Status"
+            WRAP_COLOUR="$prose_colour" print_wrapped "${text# }"
+        fi
+    else
+        for i in "${!stores[@]}"; do
+            [ -n "${problems[i]}" ] || continue
+            print_subheading "Status on ${labels[i]}"
+            WRAP_COLOUR="$prose_colour" print_wrapped "${problems[i]}${after_line}"
+        done
     fi
     # Store texts the stores share are shown once, under both their names.
     if [ "$n" -gt 1 ] && [ -n "${details[0]}" ] && _gp_same_for_all details; then
@@ -1055,16 +1095,16 @@ _gp_status_sections() {
             WRAP_COLOUR="$prose_colour" print_wrapped "${details[i]}"
         done
     fi
-    # A patch took EAX out: after what happened and what each store ships,
-    # the way back, before the settings.
-    if [ "$eax_status" == "removed_by_patch" ]; then
+    # No EAX in the build the stores sell: after what happened and what each
+    # store ships, the way back, before the settings.
+    if [ -n "$any_rollback" ] || [ -n "$all_unsupported" ]; then
         _gp_fix_sections "Restore EAX" "Restore on"
     fi
 }
 
 # "Restoring EAX with" and the settings' titles, in database order.
 _gp_settings_sections() {
-    if [ "$eax_status" == "supported" ]; then
+    if [ -z "$all_unsupported" ] && [ -z "$any_rollback" ] && [ "$built_in" != "true" ]; then
         print_subheading "Restoring EAX with"
         if _gp_same_for_all apis; then
             print_wrapped "$(_gp_solution "${apis[0]}")"
@@ -1154,7 +1194,7 @@ _gp_fix_sections() {
 # Additional steps, notes and suggested community patches. Steps and patches
 # that differ by store get a section each.
 _gp_closing_sections() {
-    [ "$eax_status" == "removed_by_patch" ] || _gp_fix_sections "Additional steps" "Additional steps for"
+    [ -n "$any_rollback" ] || [ -n "$all_unsupported" ] || _gp_fix_sections "Additional steps" "Additional steps for"
     if [ -n "$notes" ]; then
         print_subheading "Notes"
         WRAP_COLOUR="$prose_colour" print_wrapped "$notes"
@@ -1206,6 +1246,7 @@ print_game_profile_stores() {
     # settings lists gives each setting's follow-up.
     local location="$1"; shift
     local -a stores=() ids=() labels=() apis=() listings=() id_sources=() details=() patches=() fixes=() counts=()
+    local -a compats=() problems=() rollbacks=()
     local entry
     for entry in "$@"; do
         stores+=("${entry%%:*}"); ids+=("${entry#*:}")
@@ -1215,21 +1256,26 @@ print_game_profile_stores() {
 
     # Game-level fields: the same for every store entry, so read from the
     # first.
-    local name eax_versions eax_status eax_status_details eax_restorable eax_unified notes
-    local released description untested sound_system
-    IFS=$'\x1f' read -r name released description eax_versions eax_status eax_status_details \
-        eax_restorable eax_unified notes untested sound_system < <(gdb_fields "$id" "$store" \
+    local name eax_versions built_in eax_unified notes
+    local released description sound_system
+    IFS=$'\x1f' read -r name released description eax_versions built_in eax_unified notes sound_system \
+        < <(gdb_fields "$id" "$store" \
         '.name // ""' '.released // ""' '.description // ""' '.eax.versions // [] | join(", ")' \
-        '.eax.status // "supported"' '.eax.problem // ""' '.eax.fix_in_place == true' \
-        '.install.tweaks // [] | index("eax_unified") != null' '.notes // ""' \
-        '(if .tested == false then "1" else "" end)' '.eax.sound_system // ""')
-    [ -z "$eax_status" ] && eax_status="supported"
+        '.eax.built_in == true' '.install.tweaks // [] | index("eax_unified") != null' '.notes // ""' \
+        '.eax.sound_system // ""')
 
-    # Store-level fields, one per entry.
+    # Store-level fields, one per entry. The build works out each store's
+    # compatibility and problem text, falling back to the game's.
+    local all_unsupported=1 any_rollback=""
     for i in "${!stores[@]}"; do
-        IFS=$'\x1f' read -r apis[i] listings[i] id_sources[i] details[i] < <(gdb_fields "${ids[i]}" "${stores[i]}" \
+        IFS=$'\x1f' read -r apis[i] listings[i] id_sources[i] details[i] compats[i] problems[i] rollbacks[i] \
+            < <(gdb_fields "${ids[i]}" "${stores[i]}" \
             '.stores[$store].api // .eax.api // "directsound3d"' '(if .stores[$store].delisted then "delisted" else "" end)' \
-            '.stores[$store].id_source // ""' '.stores[$store].store_details // ""')
+            '.stores[$store].id_source // ""' '.stores[$store].store_details // ""' \
+            '.stores[$store].compatibility // "unknown"' '.stores[$store].problem // .eax.problem // ""' \
+            '(if (.stores[$store].beta_branch // "") != "" or ((.stores[$store].rollback_builds // []) | length) > 0 then "1" else "" end)')
+        [ "${compats[i]}" == "unsupported" ] || all_unsupported=""
+        [ -n "${rollbacks[i]}" ] && any_rollback=1
         # The first match's whole text, not its first line: patches can hold
         # a line break between suggestions.
         patches[i]=$(gdb_jq "${ids[i]}" "${stores[i]}" 'entry0 | .stores[$store].patches // empty')
@@ -1271,8 +1317,8 @@ fzf_at_least() {
 # left, fuzzy-searched by fzf, and on the right the selected game's profile
 # for each of its stores, Steam's first, or with Tab its game settings in
 # full. Ctrl-A, Ctrl-S and Ctrl-T narrow the list, and the profiles shown, by
-# audio, by store (delisted ones included) and by tested or untested, which
-# opens on tested (see browse_game_stores);
+# audio, by store (delisted ones included) and by compatibility, which
+# opens on every rated game (see browse_game_stores);
 # Ctrl-R swaps the order between best match and A–Z; Ctrl-L puts the right pane beside or
 # under the list; F1 shows every key (browse_help); Ctrl-F opens the right
 # pane full screen (browse_zoom). View only: Enter does nothing, so only
@@ -1286,8 +1332,8 @@ fzf_at_least() {
 # filters as four lines and the key bar on a border line.
 browse_game_database() {
     local dir defs state
-    # The browser filters tested and untested itself, so it starts from the
-    # database before ensure_game_database left the untested games out.
+    # The browser filters by compatibility itself, so it starts from the
+    # database before ensure_game_database left the unknown ones out.
     local GAME_DATABASE_FILE="${GAME_DATABASE_FULL_FILE:-$GAME_DATABASE_FILE}"
     # A run killed while browsing (its terminal closed) leaves its folder
     # behind, so each start clears out any a day old.
@@ -1325,7 +1371,7 @@ browse_game_database() {
     { declare -p GREEN YELLOW CYAN WHITE BOLD DIM NOTE NC GAME_DATABASE_FILE SCRIPT_VERSION \
         BROWSE_SIDE_PERCENT BROWSE_STACK_COLUMNS BROWSE_HEADER_LINES \
         CONFIG_FORMATS_RE CONFIG_TEXT_FORMATS_RE; declare -f; } > "$defs"
-    echo "all all profile 0 match $layout $layout tested" > "$state"
+    echo "all all profile 0 match $layout $layout rated" > "$state"
     # The key bar's own small script: it's redrawn on every move through
     # the list, too often to load all of the above each time.
     local bar="$dir/bar.sh"
@@ -1376,7 +1422,7 @@ browse_game_database() {
             --bind "tab:execute-silent($next view)+refresh-preview$label" \
             --bind "ctrl-s:execute-silent($next store)+reload($rows)$header" \
             --bind "ctrl-a:execute-silent($next audio)+reload($rows)$header" \
-            --bind "ctrl-t:execute-silent($next tested)+reload($rows)$header" \
+            --bind "ctrl-t:execute-silent($next compat)+reload($rows)$header" \
             --bind "ctrl-r:execute-silent($next order)+toggle-sort+reload($rows)$header" \
             --bind "ctrl-l:$swap$header" \
             > /dev/null || true
@@ -1442,26 +1488,28 @@ browse_key_bar() {
 # One "<game id>\t<name>\t<store>\t<store id>" line per store entry that
 # passes the browser's filters, games sorted by name and Steam before GOG.
 # The state file holds "<store> <audio> <view> <help> <order> <layout> <fit>
-# <tested>":
+# <compat>":
 # store all, steam, gog, or delisted / steam-delisted / gog-delisted (the
 # entries with the store's own delisted flag, from any store or that one);
 # audio all, directsound3d, openal, miles (games whose eax.sound_system is
 # miles) or eax1.0 to eax5.0 (games whose eax.versions lists it); then what the right pane shows, the list's order,
 # where the right pane is and where the terminal's width last put it;
-# tested is tested (games checked on a real install), all, or untested (the
-# ones marked "tested": false in the database).
+# compat is rated (every store entry with a compatibility, so not unknown),
+# all, or one compatibility: verified, playable, unsupported or unknown.
 # The API is the store's own, else the game's. With a game id, just that
 # game's.
 browse_game_stores() {
-    local store audio tested
-    read -r store audio _ _ _ _ _ tested < "$1"
-    jq -r --arg store "$store" --arg audio "$audio" --arg tested "${tested:-tested}" --arg game "${2:-}" '
+    local store audio compat
+    read -r store audio _ _ _ _ _ compat < "$1"
+    jq -r --arg store "$store" --arg audio "$audio" --arg compat "${compat:-rated}" --arg game "${2:-}" '
         ($store | sub("-?delisted$"; "")) as $only
         | ($store | endswith("delisted")) as $delisted
         | .games | sort_by(.name | ascii_downcase) | .[]
         | select($game == "" or .id == $game)
-        | select($tested == "all" or ((.tested != false) == ($tested == "tested"))) | . as $g
+        | . as $g
         | ("steam", "gog") as $key | .stores[$key] // empty
+        | (.compatibility // "unknown") as $c
+        | select($compat == "all" or $compat == $c or ($compat == "rated" and $c != "unknown"))
         | select(($only == "all" or $only == "" or $key == $only)
             and (($delisted | not) or (.delisted // false))
             and ($audio == "all"
@@ -1493,14 +1541,15 @@ browse_game_rows() {
 # the terminal when the right pane is under it, and BROWSE_SIDE_PERCENT
 # narrower when it's beside it.
 browse_filter_header() {
-    local store audio order layout tested cols width
-    read -r store audio _ _ order layout _ tested < "$1"
+    local store audio order layout compat cols width
+    read -r store audio _ _ order layout _ compat < "$1"
     local -A label=([steam]="Steam" [gog]="GOG" [delisted]="Delisted"
         [steam-delisted]="Steam delisted" [gog-delisted]="GOG delisted"
-        [directsound3d]="DirectSound3D" [openal]="OpenAL" [miles]="Miles" [match]="Best match" [az]="A–Z" [tested]="Tested" [untested]="Untested")
+        [directsound3d]="DirectSound3D" [openal]="OpenAL" [miles]="Miles" [match]="Best match" [az]="A–Z"
+        [rated]="Rated" [verified]="Verified" [playable]="Playable" [unsupported]="Unsupported" [unknown]="Unknown")
     local -a keys=("Ctrl-S" "Ctrl-A" "Ctrl-R" "Ctrl-T") alls=("All stores" "All APIs" "" "All games") values=()
     local v i=0 cell=0
-    for v in "$store" "$audio" "$order" "${tested:-tested}"; do
+    for v in "$store" "$audio" "$order" "${compat:-rated}"; do
         if [ "$v" == "all" ]; then values+=("${alls[i]}"); else values+=("${label[$v]:-EAX ${v#eax}}"); fi
         i=$(( i + 1 ))
     done
@@ -1587,7 +1636,7 @@ browse_help() {
         "" "Filters"
         "Ctrl-A" "Audio: All APIs → DirectSound3D → OpenAL → Miles → EAX 1.0 … 5.0."
         "Ctrl-S" "Store: All stores → Steam → GOG → Delisted → Steam delisted → GOG delisted. Delisted games are no longer sold on that store."
-        "Ctrl-T" "Verified: Tested → All games → Untested. It opens on Tested."
+        "Ctrl-T" "Compatibility: Rated → All games → Verified → Playable → Unsupported → Unknown. It opens on Rated, which is every game someone has rated."
         "Ctrl-R" "Order: best match first, or A–Z."
         "" "View"
         "Ctrl-F" "Open the right pane full screen; q comes back."
@@ -1621,15 +1670,15 @@ browse_help() {
     done
 }
 
-# Usage: browse_state_next <state file> <store|audio|tested|view|help|order|layout>
+# Usage: browse_state_next <state file> <store|audio|compat|view|help|order|layout>
 # The browser's keys: Ctrl-S / Ctrl-A move that filter on to its
-# next value (back to All after the last), Ctrl-T cycles Tested, All,
-# Untested (it opens on Tested), Tab switches the right pane
+# next value (back to All after the last), Ctrl-T cycles Rated, All and
+# each compatibility (it opens on Rated), Tab switches the right pane
 # between the profile and the settings (and closes the help), F1 shows or
 # hides the help, Ctrl-R swaps the order, Ctrl-L the layout.
 browse_state_next() {
-    local store audio view help order layout fit tested
-    read -r store audio view help order layout fit tested < "$1"
+    local store audio view help order layout fit compat
+    read -r store audio view help order layout fit compat < "$1"
     case "$2" in
         store)
             case "$store" in
@@ -1642,16 +1691,17 @@ browse_state_next() {
                 eax1.0) audio=eax2.0 ;; eax2.0) audio=eax3.0 ;; eax3.0) audio=eax4.0 ;; eax4.0) audio=eax5.0 ;;
                 *) audio=all ;;
             esac ;;
-        tested)
-            case "$tested" in
-                tested) tested=all ;; all) tested=untested ;; *) tested=tested ;;
+        compat)
+            case "$compat" in
+                rated) compat=all ;; all) compat=verified ;; verified) compat=playable ;;
+                playable) compat=unsupported ;; unsupported) compat=unknown ;; *) compat=rated ;;
             esac ;;
         view) [ "$view" == "settings" ] && view=profile || view=settings; help=0 ;;
         help) [ "$help" == "1" ] && help=0 || help=1 ;;
         order) [ "$order" == "az" ] && order=match || order=az ;;
         layout) [ "$layout" == "stack" ] && layout=side || layout=stack ;;
     esac
-    echo "$store $audio $view $help $order $layout $fit $tested" > "$1"
+    echo "$store $audio $view $help $order $layout $fit $compat" > "$1"
 }
 
 # Usage: browse_layout <state file> <side window> <stack window>
@@ -1659,8 +1709,8 @@ browse_state_next() {
 # pane in the other layout, or back in the one the terminal's width gives it
 # (under the list below BROWSE_STACK_COLUMNS, which fzf applies on its own).
 browse_layout() {
-    local store audio view help order layout fit tested cols natural=side
-    read -r store audio view help order layout fit tested < "$1"
+    local store audio view help order layout fit compat cols natural=side
+    read -r store audio view help order layout fit compat < "$1"
     # fzf passes its width (the terminal's, with the bottom margin only taking rows).
     cols="${FZF_COLUMNS:-}"
     [ -n "$cols" ] || read -r _ cols < <({ stty size < /dev/tty; } 2>/dev/null)
@@ -1670,7 +1720,7 @@ browse_layout() {
     else
         layout="$natural"
     fi
-    echo "$store $audio $view $help $order $layout $fit $tested" > "$1"
+    echo "$store $audio $view $help $order $layout $fit $compat" > "$1"
     if [ "$layout" == "stack" ]; then echo "change-preview-window[$3]"; else echo "change-preview-window[$2]"; fi
 }
 
@@ -1705,18 +1755,11 @@ print_community_patches_summary() {
     print_wrapped "$PROFILE_PATCHES"
 }
 
-# Hard stop for a game with nothing to restore: the profile's Status already
-# said why when it was just shown, otherwise the message given as the
-# arguments does. Then the player can pick another game, or quit with status 1.
-# Usage: _eax_block <id> <steam|gog> <message line> ...
+# Hard stop for a game with nothing to restore (print_eax_block_error says
+# why). Then the player can pick another game, or quit with status 1.
+# Usage: _eax_block <id> <steam|gog> [name]
 _eax_block() {
-    local id="$1" store="$2"
-    shift 2
-    if [ -n "$SCANNED_NOTES_SHOWN" ]; then
-        print_eax_block_error "$id" "$store"
-    else
-        print_error "$@"
-    fi
+    print_eax_block_error "$1" "$2" "${3:-}"
     prompt_restart_or_quit 1
 }
 
@@ -1774,12 +1817,10 @@ block_if_not_rolled_back() {
     ensure_game_database || return
     local store="steam"
     [ "$2" == "gog" ] && store="gog"
-    local status workaround beta_branch rollback_builds where
-    IFS=$'\x1f' read -r status workaround beta_branch rollback_builds < <(gdb_fields "$1" "$store" \
-        '.eax.status // ""' \
-        '.eax.fix_in_place // false' \
+    local beta_branch rollback_builds where
+    [ "$(game_eax_gate "$1" "$store")" == "rollback" ] || return
+    IFS=$'\x1f' read -r beta_branch rollback_builds < <(gdb_fields "$1" "$store" \
         '.stores[$store].beta_branch // ""' '.stores[$store].rollback_builds // [] | join(" ")')
-    [ "$status" == "removed_by_patch" ] && [ "$workaround" == "true" ] || return
     if [ "$store" == "gog" ]; then
         where="$3"
     elif [[ "$3" == */steamapps/common/* ]]; then
@@ -1819,22 +1860,13 @@ confirm_continue_if_eax_impossible() {
     # Usage: confirm_continue_if_eax_impossible <id> <steam|gog> [acf_file|install_root]
     # The third argument is Steam's appmanifest or the GOG install's folder,
     # where each store records the branch or build installed.
-    # "built_in" (EAX already works without this script) only asks whether
-    # to install anyway. Otherwise eax.status distinguishes two reasons this
-    # script has nothing to restore on a build: "removed_by_patch" (a software update stripped EAX/A3D
-    # calls from an otherwise-DirectSound3D game) vs. "not_implemented" (a
-    # remaster/rewrite that never had EAX in the first place — no
-    # build-level fix exists). "not_implemented" is an unconditional no-op,
-    # so it skips straight to prompt_restart_or_quit. "removed_by_patch" is
-    # only a confirmable warning ("install anyway" stays offered) when
-    # eax.fix_in_place is true — meaning eax.fix documents
-    # an in-place fix within this same store install (e.g. a Steam beta
-    # branch) the user might already be on or willing to switch to;
-    # otherwise (the field is absent) the only fix is a separate install this
-    # run isn't pointed at, so it hard-blocks exactly like "not_implemented".
-    # Either way the dead end offers "pick a different game" rather than just
-    # ending the script — see prompt_restart_or_quit / the Steps 1-2 loop in
-    # config-flow.sh.
+    # What happens depends on game_eax_gate: an unsupported copy stops (the
+    # dead end offers "pick a different game" rather than just ending the
+    # script — see prompt_restart_or_quit / the Steps 1-2 loop in
+    # config-flow.sh); a built-in one only asks whether to install anyway;
+    # one with a rollback waits until it's on the build that keeps EAX, and
+    # warns but still offers to go on when the store can't tell which build
+    # it is.
     [ "$SCRIPT_ACTION" == "i" ] || return
     [ -z "$1" ] && return
 
@@ -1842,25 +1874,22 @@ confirm_continue_if_eax_impossible() {
     [ "$2" == "gog" ] && store="gog"
     local acf_file="$3"
 
-    local status="" workaround="false" beta_branch="" rollback_builds=""
+    local gate="" beta_branch="" rollback_builds=""
     if ensure_game_database; then
-        IFS=$'\x1f' read -r status workaround beta_branch rollback_builds < <(gdb_fields "$1" "$store" \
-            '.eax.status // ""' '.eax.fix_in_place // false' '.stores[$store].beta_branch // ""' \
-            '.stores[$store].rollback_builds // [] | join(" ")')
-        [ -n "$workaround" ] || workaround="false"
+        gate=$(game_eax_gate "$1" "$store")
+        IFS=$'\x1f' read -r beta_branch rollback_builds < <(gdb_fields "$1" "$store" \
+            '.stores[$store].beta_branch // ""' '.stores[$store].rollback_builds // [] | join(" ")')
     elif [ "$store" != "gog" ] && [ -n "${EAX_IMPOSSIBLE_FALLBACK_STEAM[$1]:-}" ]; then
-        # Only ever seeds Half-Life (AppID 70), which has no in-place
-        # workaround — workaround stays "false".
-        status="removed_by_patch"
+        # Only ever seeds Half-Life (AppID 70), whose EAX an update removed
+        # with no rollback.
+        gate="unsupported"
     fi
-    if [ -z "$status" ] || [ "$status" == "supported" ]; then
-        return
-    fi
+    [ -n "$gate" ] || return
 
     # EAX already works without anything installed. Already asked when the
     # game was picked from the library scan; asked here for a game found
     # any other way.
-    if [ "$status" == "built_in" ]; then
+    if [ "$gate" == "built_in" ]; then
         [ -n "$BUILT_IN_CONFIRMED" ] && return
         local name
         name=$(gdb_field "$1" "$store" .name)
@@ -1868,20 +1897,8 @@ confirm_continue_if_eax_impossible() {
         return
     fi
 
-    # Right after the GAME PROFILE (always the case unless the database is
-    # missing and the hardcoded fallback matched), its Status has said why.
-    if [ "$status" == "not_implemented" ]; then
-        _eax_block "$1" "$store" \
-            "This edition never implemented EAX/environmental audio in the first place, so" \
-            "there would be nothing here for this script to restore."
-        return
-    fi
-
-    if [ "$workaround" != "true" ]; then
-        _eax_block "$1" "$store" \
-            "EAX/A3D support was removed from this build by a software update, and there's" \
-            "no known in-place fix — restoring it would need a separate install this script" \
-            "isn't pointed at."
+    if [ "$gate" == "unsupported" ]; then
+        _eax_block "$1" "$store" "${GAME_NAME:-}"
         return
     fi
 

@@ -278,9 +278,9 @@ fn filter_cells(app: &App) -> [Cell; 4] {
         },
         Cell {
             key: "Ctrl-T",
-            name: "Tested",
-            value: app.filters.tested.label().to_string(),
-            lit: app.filters.tested != d.tested,
+            name: "Compatibility",
+            value: app.filters.compat.label().to_string(),
+            lit: app.filters.compat != d.compat,
         },
     ]
 }
@@ -1345,7 +1345,7 @@ mod tests {
     fn the_filters_wrap_on_a_narrow_terminal_without_losing_the_list() {
         let app = App::new(entries(r#"{"games":[{"id":"a","name":"Alpha"}]}"#));
         let s = screen(&app, 70, 14);
-        assert!(s.contains("Ctrl-T Tested: Any"));
+        assert!(s.contains("Ctrl-T Compatibility: Any"));
         assert!(s.contains("Alpha"));
     }
 
@@ -1369,7 +1369,7 @@ mod tests {
         let s = screen(&app, 100, 20);
         println!("{s}");
         assert!(s.contains("Audio settings for Quake 4:"));
-        assert!(s.contains("Enable EAX effects (tested)"));
+        assert!(s.contains("Enable EAX effects (verified)"));
         assert!(s.contains("s_useOpenAL  → 1"));
         assert!(s.contains("Shift-↑/↓ scroll"));
     }

@@ -331,15 +331,15 @@ print_note() {
     for line in "$@"; do body+="\n${line}"; done
     echo -e "$(tilde_path "$body")${NC}"
 }
-# Usage: verified_tag [plain] <untested flag>
-# "(tested)" beside a game or setting verified on a real install,
-# "(untested)" (in the Note colour) when the flag is non-empty; "plain" leaves
-# the colours off, for a tick list's title. One place so every screen says it
-# the same way.
+# Usage: verified_tag [plain] <unverified flag>
+# "(verified)" beside a setting checked on a real install, "(unverified)"
+# (in the Note colour) when the flag is non-empty; "plain" leaves the colours
+# off, for a tick list's title. One place so every screen says it the same
+# way.
 verified_tag() {
-    local plain="" word=tested colour="$GREEN"
+    local plain="" word=verified colour="$GREEN"
     if [ "${1:-}" == "plain" ]; then plain=1; shift; fi
-    [ -n "${1:-}" ] && { word=untested; colour="$NOTE"; }
+    [ -n "${1:-}" ] && { word=unverified; colour="$NOTE"; }
     if [ -n "$plain" ]; then printf '(%s)' "$word"; else printf '%b(%s)%b' "$colour" "$word" "$NC"; fi
 }
 print_note_arrow() {

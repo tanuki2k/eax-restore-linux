@@ -27,7 +27,7 @@ const ROWS: &[(&str, &str)] = &[
         "Store: All stores → Steam → GOG → Delisted → Delisted on Steam → Delisted on GOG. Delisted games are no longer sold on that store. A game on this PC is listed under the store you got it from; one that isn't on this PC, under every store that sells it.",
     ),
     ("Ctrl-E", "Audio: Any audio → DirectSound3D → OpenAL → Miles → EAX 1.0 … 5.0."),
-    ("Ctrl-T", "Tested: Any → Yes → Not yet. Yes means checked on a real install."),
+    ("Ctrl-T", "Compatibility: Any → Rated → Verified → Playable → Unsupported → Unknown. Rated is every game someone has rated."),
     ("", "On a game's page"),
     ("↑/↓", "Move between the choices, the game's settings and the buttons."),
     ("Tab", "Jump to the next section."),

@@ -520,7 +520,7 @@ config_find_text_end() {  # <file> -> byte position just past the anchored text
     cat > "$GAME_DATABASE_FILE" <<'JSON'
 {"games":[{"id":"g","name":"G","stores":{"steam":{"id":1}},"game_config":{
   "files":{"g.cfg":{"format":"xml_attributes","locations":["game_exe:g.cfg"]}},
-  "audio_settings":[{"title":"Enable EAX","reason":"r","tested":true,
+  "audio_settings":[{"title":"Enable EAX","reason":"r","verified":true,
     "changes":{"g.cfg":{"Sound":{"UseEAX":"1"}}}}]}}]}
 JSON
     local row; local -a g

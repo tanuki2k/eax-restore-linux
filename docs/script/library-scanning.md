@@ -28,11 +28,14 @@ If the game is in the database, the install can do a lot more than copy files:
 
 That last one needs an explanation. Plenty of games ship with EAX turned off in their config files, or load their own copy of an audio library instead of the one the script installs. The entry lists those settings. For each one the script shows the file, the value it has now and the value it would set, and applies the ones you accept. Audio settings go in together, once you agree. Optional ones, like a fix for Quake 4's low-resolution textures, are offered one at a time, and only if you want to look through them.
 
-## Untested games
+## Compatibility
 
-Entries nobody has checked on a real install yet are left out of the scan and the install, so those games are treated as having no entry. Set `EAX_RESTORE_UNTESTED=1` to include them. The profile browser in the Tools menu can show them too: press Ctrl-T to switch the filter. The [database overview](../database/database-overview.md#tested-and-untested-games) explains what tested means.
+Every game in the database has a compatibility rating: Verified, Playable, Unsupported or Unknown. The game's profile shows it, one per store when the stores differ. The [database overview](../database/database-overview.md#compatibility) explains each one.
 
-Single settings can be unverified too, even in a tested game. Those stay hidden unless you set `EAX_RESTORE_UNTESTED_SETTINGS=1`, and then they're marked "(untested)". See [Environment variables](environment-variables.md).
+* **Unknown** games, the ones nobody has checked on a real install yet, are left out of the scan and the install, so they're treated as having no entry. Set `EAX_RESTORE_UNKNOWN_GAMES=1` to include them. The profile browser in the Tools menu can show them too: press Ctrl-T to switch the filter.
+* **Unsupported** games show up in the scan, but the install stops and says why, because there's no EAX for the script to restore in that build.
+
+Single settings can be unverified too, even in a verified game. Those stay hidden unless you set `EAX_RESTORE_UNVERIFIED_SETTINGS=1`, and then they're marked "(unverified)". See [Environment variables](environment-variables.md).
 
 ## When your game isn't in the database
 

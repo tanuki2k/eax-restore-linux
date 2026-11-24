@@ -211,7 +211,7 @@ survey() {
     done
     local step=1 audio_heading_shown=1 optional_heading_shown=1 audio_seen=0
     local -a fix_order=()
-    local -A fix_title=() fix_reason=() fix_follow=() fix_status=() fix_rows=() fix_missing_file=() fix_untested=() fix_view=()
+    local -A fix_title=() fix_reason=() fix_follow=() fix_status=() fix_rows=() fix_missing_file=() fix_unverified=() fix_view=()
     local -A fix_absent_files=() fix_has_file=() fix_files=()
     local -A file_path=() file_state=()
     [ ${#rows[@]} -gt 0 ] && _gs_build_plan > /dev/null
@@ -273,7 +273,7 @@ fn survey_both(cases: &[Case], db_file: &Path, dir: &Path) {
             .collect();
         script.push_str(&format!(
             "(KG_ID={} KG_STORE={} GAME_DIR={} GAME_INSTALL_ROOT={} PREFIX_PATH={} {}\n\
-             GAME_SETTINGS_SPEAKERS_ONLY={} GAME_SETTINGS_EDIT={} EAX_RESTORE_UNTESTED_SETTINGS={}\n\
+             GAME_SETTINGS_SPEAKERS_ONLY={} GAME_SETTINGS_EDIT={} EAX_RESTORE_UNVERIFIED_SETTINGS={}\n\
              declare -A GAME_SETTINGS_RECORDED=(); {recorded}\n\
              survey); echo '--end--'\n",
             c.id,
@@ -426,23 +426,23 @@ const TEST_DB: &str = r#"{"games":[{"id":"t","name":"Test Game","exe":"game.exe"
     "bad.ini":{"format":"ini","locations":["game_exe:../bad.ini"]}
   },
   "audio_settings":[
-    {"title":"Enable EAX","reason":"r","tested":true,"changes":{"a.ini":{"Audio":{"UseEAX":"1","Rate":"44100","Gone":null}},"new.cfg":{"eax":true}}},
-    {"title":"Enable Steam sound","reason":"r","tested":true,"only_if":{"stores":["steam"]},"changes":{"a.ini":{"Audio":{"Steam":"1"}}}},
-    {"title":"Set surround","reason":"r","tested":true,"only_if":{"speakers":["surround"]},"changes":{"a.ini":{"Audio":{"Channels":"6"}}}},
-    {"title":"Set headphones","reason":"r","tested":true,"only_if":{"speakers":"headphones"},"changes":{"a.ini":{"Audio":{"Channels":"2"}}}},
-    {"title":"Set stereo","reason":"r","tested":true,"only_if":{"speakers":["stereo"]},"changes":{"a.ini":{"Audio":{"Channels":"2s"}}}},
-    {"title":"Fix the DLC","reason":"r","tested":true,"changes":{"dlc.ini":{"S":{"k":"1"}}}},
-    {"title":"Fix late","reason":"r","tested":true,"changes":{"late.cfg":{"s_eax":"1"},"a.ini":{"Audio":{"Late":"1"}}}},
-    {"title":"Fix both","reason":"r","tested":true,"changes":{"both.ini":{"S":{"k":"2"}}}},
-    {"title":"Set the registry","reason":"r","tested":true,"changes":{"user.reg":{"Software\\Test":{"EAX":"1","Name":"Creative"}}}},
-    {"title":"Switch on","reason":"r","tested":true,"changes":{"p.gdb":{"UseEAX":"1","Missing":"1"}}},
-    {"title":"Bad entry","reason":"r","tested":true,"changes":{"bad.ini":{"S":{"k":"1"}}}},
+    {"title":"Enable EAX","reason":"r","verified":true,"changes":{"a.ini":{"Audio":{"UseEAX":"1","Rate":"44100","Gone":null}},"new.cfg":{"eax":true}}},
+    {"title":"Enable Steam sound","reason":"r","verified":true,"only_if":{"stores":["steam"]},"changes":{"a.ini":{"Audio":{"Steam":"1"}}}},
+    {"title":"Set surround","reason":"r","verified":true,"only_if":{"speakers":["surround"]},"changes":{"a.ini":{"Audio":{"Channels":"6"}}}},
+    {"title":"Set headphones","reason":"r","verified":true,"only_if":{"speakers":"headphones"},"changes":{"a.ini":{"Audio":{"Channels":"2"}}}},
+    {"title":"Set stereo","reason":"r","verified":true,"only_if":{"speakers":["stereo"]},"changes":{"a.ini":{"Audio":{"Channels":"2s"}}}},
+    {"title":"Fix the DLC","reason":"r","verified":true,"changes":{"dlc.ini":{"S":{"k":"1"}}}},
+    {"title":"Fix late","reason":"r","verified":true,"changes":{"late.cfg":{"s_eax":"1"},"a.ini":{"Audio":{"Late":"1"}}}},
+    {"title":"Fix both","reason":"r","verified":true,"changes":{"both.ini":{"S":{"k":"2"}}}},
+    {"title":"Set the registry","reason":"r","verified":true,"changes":{"user.reg":{"Software\\Test":{"EAX":"1","Name":"Creative"}}}},
+    {"title":"Switch on","reason":"r","verified":true,"changes":{"p.gdb":{"UseEAX":"1","Missing":"1"}}},
+    {"title":"Bad entry","reason":"r","verified":true,"changes":{"bad.ini":{"S":{"k":"1"}}}},
     {"title":"Untested one","reason":"r","changes":{"a.ini":{"Audio":{"Maybe":"1"}}}}
   ],
   "optional_settings":[
-    {"title":"Already done","reason":"r","tested":true,"changes":{"a.ini":{"Video":{"Fps":"60"}}}},
-    {"title":"Turn off flag","reason":"r","tested":true,"changes":{"new.cfg":{"flag":false,"gone":null}}},
-    {"title":"Only the DLC","reason":"r","tested":true,"changes":{"dlc.ini":{"S":{"k":"2"}}}}
+    {"title":"Already done","reason":"r","verified":true,"changes":{"a.ini":{"Video":{"Fps":"60"}}}},
+    {"title":"Turn off flag","reason":"r","verified":true,"changes":{"new.cfg":{"flag":false,"gone":null}}},
+    {"title":"Only the DLC","reason":"r","verified":true,"changes":{"dlc.ini":{"S":{"k":"2"}}}}
   ]}}]}"#;
 
 /// GADB bytes with on/off records for `names`, all off.

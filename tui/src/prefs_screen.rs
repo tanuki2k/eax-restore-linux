@@ -3,7 +3,7 @@
 
 use crate::build_choice::{BuildInfo, Comp};
 use crate::panel::Opt;
-use crate::prefs::{BuildPref, OverridePref, Prefs, ShowPref, SpeakerPref, TestedPref, VcPref};
+use crate::prefs::{BuildPref, CompatPref, OverridePref, Prefs, ShowPref, SpeakerPref, VcPref};
 use crate::theme;
 use crate::ui::{boxed, gutter, MARGIN};
 use ratatui::crossterm::event::{KeyCode, KeyEvent};
@@ -18,7 +18,7 @@ use std::path::PathBuf;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Field {
     Show,
-    Tested,
+    Compat,
     DsoalBuild,
     OpenalBuild,
     Override,
@@ -28,7 +28,7 @@ pub enum Field {
 
 pub const FIELDS: [Field; 7] = [
     Field::Show,
-    Field::Tested,
+    Field::Compat,
     Field::DsoalBuild,
     Field::OpenalBuild,
     Field::Override,
@@ -70,7 +70,7 @@ impl Field {
     pub fn title(self) -> &'static str {
         match self {
             Field::Show => "Show",
-            Field::Tested => "Tested",
+            Field::Compat => "Compatibility",
             Field::DsoalBuild => "DSOAL build",
             Field::OpenalBuild => "OpenAL Soft build",
             Field::Override => "DLL override",
@@ -92,15 +92,15 @@ impl Field {
                     "The game list starts with the games that have the EAX fix.",
                 ),
             ]),
-            Field::Tested => opts(&[
-                ("Any", "The game list starts with tested and untested games."),
+            Field::Compat => opts(&[
+                ("Any", "The game list starts with every game, rated or not."),
                 (
-                    "Yes",
-                    "The game list starts with the games checked on a real install.",
+                    "Rated",
+                    "The game list starts with the games someone has rated: Verified, Playable or Unsupported.",
                 ),
                 (
-                    "Not yet",
-                    "The game list starts with the games not checked on a real install yet.",
+                    "Unknown",
+                    "The game list starts with the games nobody has checked on a real install yet.",
                 ),
             ]),
             Field::DsoalBuild => build_opts(Comp::Dsoal, &p.dsoal_build, info),
@@ -150,10 +150,10 @@ impl Field {
                 ShowPref::OnThisPc => 1,
                 ShowPref::Installed => 2,
             },
-            Field::Tested => match p.tested {
-                TestedPref::Any => 0,
-                TestedPref::Tested => 1,
-                TestedPref::Untested => 2,
+            Field::Compat => match p.compat {
+                CompatPref::Any => 0,
+                CompatPref::Rated => 1,
+                CompatPref::Unknown => 2,
             },
             Field::DsoalBuild => at(Comp::Dsoal, &p.dsoal_build),
             Field::OpenalBuild => at(Comp::Openal, &p.openal_build),
@@ -181,8 +181,8 @@ impl Field {
             Field::Show => {
                 p.show = [ShowPref::All, ShowPref::OnThisPc, ShowPref::Installed][i.min(2)];
             }
-            Field::Tested => {
-                p.tested = [TestedPref::Any, TestedPref::Tested, TestedPref::Untested][i.min(2)];
+            Field::Compat => {
+                p.compat = [CompatPref::Any, CompatPref::Rated, CompatPref::Unknown][i.min(2)];
             }
             Field::DsoalBuild => p.dsoal_build = key(Comp::Dsoal, &p.dsoal_build),
             Field::OpenalBuild => p.openal_build = key(Comp::Openal, &p.openal_build),
@@ -352,7 +352,7 @@ impl PrefsScreen {
         // Inside the border and the margin of a pop-up as wide as the help.
         let width = usize::from(crate::ui::POPUP_W.min(area.width).saturating_sub(6)).max(1);
         let mut lines: Vec<Line> = crate::settings::wrap(
-            "Show and Tested set how the game list starts. The rest are your defaults for new installs, and a game that already has the fix keeps what it has.",
+            "Show and Compatibility set how the game list starts. The rest are your defaults for new installs, and a game that already has the fix keeps what it has.",
             width,
             "",
         )
@@ -551,7 +551,7 @@ mod tests {
             assert!(text.contains(f.title()), "{text}");
         }
         assert!(text.contains("[ Reset to defaults ]"));
-        assert!(text.contains("Show and Tested set how the game list starts."));
+        assert!(text.contains("Show and Compatibility set how the game list starts."));
 
         // The list from GitHub adds every build under Latest.
         s.build_info = Some(crate::build_choice::BuildInfo {

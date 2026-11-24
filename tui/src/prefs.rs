@@ -102,21 +102,25 @@ pub enum ShowPref {
     Installed,
 }
 
-/// Tested or untested games when the TUI starts (Ctrl-T's filter).
+/// Which games the list starts with by rating (Ctrl-T's filter). The names
+/// an older file saved, "tested" and "untested", read as Rated and Unknown.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub enum TestedPref {
+pub enum CompatPref {
     #[default]
     Any,
-    Tested,
-    Untested,
+    #[serde(alias = "tested")]
+    Rated,
+    #[serde(alias = "untested")]
+    Unknown,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Prefs {
     pub show: ShowPref,
-    pub tested: TestedPref,
+    #[serde(alias = "tested")]
+    pub compat: CompatPref,
     pub dsoal_build: BuildPref,
     pub openal_build: BuildPref,
     pub over: OverridePref,
@@ -182,7 +186,7 @@ mod tests {
 
         let p = Prefs {
             show: ShowPref::OnThisPc,
-            tested: TestedPref::Untested,
+            compat: CompatPref::Unknown,
             dsoal_build: BuildPref("r690".into()),
             openal_build: BuildPref("numbered".into()),
             over: OverridePref::Manual,
@@ -212,14 +216,14 @@ mod tests {
         assert_eq!(old.speakers, SpeakerPref::Quad);
         assert_eq!(old.over, OverridePref::LaunchOptions);
         assert_eq!(old.show, ShowPref::All);
-        assert_eq!(old.tested, TestedPref::Any);
+        assert_eq!(old.compat, CompatPref::Any);
 
+        // A file from before the ratings: "tested" is Rated, "untested" Unknown.
         std::fs::write(&file, r#"{"show":"installed","tested":"tested"}"#).unwrap();
         let p = Prefs::load_from(&file);
-        assert_eq!(
-            (p.show, p.tested),
-            (ShowPref::Installed, TestedPref::Tested)
-        );
+        assert_eq!((p.show, p.compat), (ShowPref::Installed, CompatPref::Rated));
+        std::fs::write(&file, r#"{"tested":"untested"}"#).unwrap();
+        assert_eq!(Prefs::load_from(&file).compat, CompatPref::Unknown);
     }
 
     #[test]

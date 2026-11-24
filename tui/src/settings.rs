@@ -133,11 +133,11 @@ fn speaker_name(s: &str) -> &str {
     }
 }
 
-fn tag(tested: bool) -> Span<'static> {
-    if tested {
-        Span::styled("(tested)", theme::green())
+fn tag(verified: bool) -> Span<'static> {
+    if verified {
+        Span::styled("(verified)", theme::green())
     } else {
-        Span::styled("(untested)", theme::note())
+        Span::styled("(unverified)", theme::note())
     }
 }
 
@@ -195,7 +195,7 @@ fn push_setting(out: &mut Vec<Line<'static>>, s: &Setting, game: &Game, width: u
         Span::raw("  "),
         Span::raw(s.title.clone()).bold(),
         Span::raw(" "),
-        tag(s.tested),
+        tag(s.verified),
     ]));
     out.extend(wrap(&s.reason, width, "    ").into_iter().map(Line::from));
     out.push(Line::raw(""));
@@ -229,7 +229,7 @@ fn push_setting(out: &mut Vec<Line<'static>>, s: &Setting, game: &Game, width: u
         prev_section = Some(&r.section);
     }
 
-    if !s.tested {
+    if !s.verified {
         out.push(dim("    Unverified."));
     }
     if let Some(only) = &s.only_if {
@@ -306,7 +306,7 @@ pub fn lines(game: &Game, width: usize) -> Vec<Line<'static>> {
             out.push(Line::raw(""));
         }
         out.push(heading(format!("OpenAL settings for {}:", game.name)));
-        let tested = game.install.alsoft_tested == Some(true);
+        let tested = game.install.alsoft_verified == Some(true);
         for (section, keys) in ini {
             let Value::Object(keys) = keys else { continue };
             for (key, value) in keys {
@@ -373,7 +373,7 @@ mod tests {
         println!("{t}");
         assert!(t.contains("Audio settings for Quake 4:"));
         assert!(t.contains("Optional settings for Quake 4:"));
-        assert!(t.contains("  Enable EAX effects (tested)"));
+        assert!(t.contains("  Enable EAX effects (verified)"));
         assert!(t.contains(
             "    Quake4Config.cfg (folder with the game's .exe: q4base/Quake4Config.cfg)"
         ));
@@ -400,7 +400,7 @@ mod tests {
     #[test]
     fn untested_settings_say_so_and_scoped_ones_name_their_store_and_speakers() {
         let t = text(&lines(&game(QUAKE), 60));
-        assert!(t.contains("Enable 5.1 surround sound (untested)"));
+        assert!(t.contains("Enable 5.1 surround sound (unverified)"));
         assert!(t.contains("    Unverified."));
         assert!(t.contains("    Only on Steam"));
         assert!(t.contains("    Only with Surround (any layout) or Surround 5.1"));
@@ -419,7 +419,7 @@ mod tests {
         let t = text(&lines(&game(QUAKE), 60));
         let at = t.find("OpenAL settings for Quake 4:").unwrap();
         assert!(at > t.find("Optional settings").unwrap());
-        assert!(t[at..].contains("boost = 6 (tested)"));
+        assert!(t[at..].contains("boost = 6 (verified)"));
         assert!(t[at..].contains("Makes all reverb louder by this many decibels."));
         assert!(t[at..].contains("In alsoft.ini, section [reverb]"));
     }

@@ -21,8 +21,8 @@ EAX_RESTORE_SKIP_PREFLIGHT=1 EAX_RESTORE_SKIP_UPDATE_CHECK=1 ./eax-restore-linux
 
 | Variable | What it does |
 | --- | --- |
-| `EAX_RESTORE_UNTESTED=1` | Includes game profiles nobody has checked on a real install (the ones built from `data/games/untested/`). Without it, those games are treated as having no profile. The profile browser can show them with Ctrl-T. |
-| `EAX_RESTORE_UNTESTED_SETTINGS=1` | Offers game settings marked `"tested": false`, and `alsoft_ini` values when `install.alsoft_tested` is `false`. Without it they're left out. With it they're marked "(untested)", and the checked ones "(tested)". The profile browser always shows them. |
+| `EAX_RESTORE_UNKNOWN_GAMES=1` | Includes game profiles nobody has checked on a real install yet, the ones whose compatibility is Unknown. Without it, those games are treated as having no profile. A game with only one store's copy checked keeps that store. The profile browser can show them with Ctrl-T. The old name, `EAX_RESTORE_UNTESTED=1`, still works. |
+| `EAX_RESTORE_UNVERIFIED_SETTINGS=1` | Offers game settings not marked `"verified": true`, and `alsoft_ini` values when `install.alsoft_verified` isn't `true`. Without it they're left out. With it they're marked "(unverified)", and the checked ones "(verified)". The profile browser always shows them. The old name, `EAX_RESTORE_UNTESTED_SETTINGS=1`, still works. |
 | `EAX_RESTORE_GAME_DATABASE_FILE=/path/to/game-database.json` | Uses a local file instead of fetching `game-database.json`, for example one you built with `tools/build-game-database.sh`. It's for testing database edits before they're pushed. |
 
 ## For debugging

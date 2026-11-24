@@ -43,3 +43,16 @@ with `dist/eax-restore-linux.sh` and its `.sha256` attached, but only after `bas
 ever stops holding. The `dev` prerelease never carries the `.desktop` launcher (the
 launcher hardcodes `releases/latest`). Its `dev-tui` job adds the TUI binary, its `.sha256` and
 `eax-restore-linux-tui-x86_64.build` (the commit count the TUI's update check compares).
+
+**Compatibility ratings and the old fields (from 0.30).** Game files rate
+compatibility (`compatibility`, per store if overridden) instead of the
+`tested/`/`untested/` folders, `eax.status` and `eax.fix_in_place`, and settings say
+`verified` instead of `tested`. Released scripts up to 0.29.x read only the old
+fields, so the build still writes them (`legacy_fields` in `tools/game-database.jq`):
+`tested: false` for a game with no rated store, `eax.status`/`eax.fix_in_place`
+worked out from the rating, `built_in` and the rollback fields, and settings'
+`tested` / `install.alsoft_tested`. 0.30's script and the TUI read only the new
+fields, upgrading an older database themselves. Drop `legacy_fields` once no
+supported release older than 0.30 is left in use (a release or two after 0.30).
+0.30's release notes should say games now show a compatibility rating and settings
+are tagged "(verified)"/"(unverified)" (a feature, not game data).

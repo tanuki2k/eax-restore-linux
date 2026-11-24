@@ -763,7 +763,7 @@ const RATINGS = ["unknown", "playable", "verified", "unsupported", "drafts"];
 const RATING_LABEL = { unknown: "Unknown", playable: "Playable", verified: "Verified", unsupported: "Unsupported", drafts: "Draft" };
 const RATING_TIP = {
   unknown: "Nobody has checked this game on a real install yet. The script hides it unless the player asks for unknown games.",
-  playable: "Works with the script, with a known problem described in its EAX problem text.",
+  playable: "EAX works with the script, but something sounds wrong. The problem is described in the game's EAX problem text.",
   verified: "Checked on a real install: EAX works without problems.",
   unsupported: "The script can't restore EAX here, so it blocks the install.",
   drafts: "Incomplete or doubtful; never shipped.",

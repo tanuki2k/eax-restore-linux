@@ -1,6 +1,7 @@
 //! The browser's store, audio and tested filters. They work the way the Bash
 //! browser's did: per store entry, with the store's own `delisted` flag and API.
 
+use crate::db::Compat;
 use crate::games::Entry;
 use crate::library::StoreKind;
 
@@ -96,28 +97,40 @@ impl AudioFilter {
     }
 }
 
+/// Ctrl-T: every game, the rated ones (any rating but unknown), or one rating.
 #[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
-pub enum TestedFilter {
+pub enum CompatFilter {
     #[default]
     All,
-    Tested,
-    Untested,
+    Rated,
+    Only(Compat),
 }
 
-impl TestedFilter {
+impl CompatFilter {
     pub fn label(self) -> &'static str {
         match self {
-            TestedFilter::All => "Any",
-            TestedFilter::Tested => "Yes",
-            TestedFilter::Untested => "Not yet",
+            CompatFilter::All => "Any",
+            CompatFilter::Rated => "Rated",
+            CompatFilter::Only(c) => c.label(),
         }
     }
 
     fn next(self) -> Self {
         match self {
-            TestedFilter::All => TestedFilter::Tested,
-            TestedFilter::Tested => TestedFilter::Untested,
-            TestedFilter::Untested => TestedFilter::All,
+            CompatFilter::All => CompatFilter::Rated,
+            CompatFilter::Rated => CompatFilter::Only(Compat::Verified),
+            CompatFilter::Only(Compat::Verified) => CompatFilter::Only(Compat::Playable),
+            CompatFilter::Only(Compat::Playable) => CompatFilter::Only(Compat::Unsupported),
+            CompatFilter::Only(Compat::Unsupported) => CompatFilter::Only(Compat::Unknown),
+            CompatFilter::Only(Compat::Unknown) => CompatFilter::All,
+        }
+    }
+
+    fn passes(self, c: Compat) -> bool {
+        match self {
+            CompatFilter::All => true,
+            CompatFilter::Rated => c != Compat::Unknown,
+            CompatFilter::Only(want) => c == want,
         }
     }
 }
@@ -126,7 +139,7 @@ impl TestedFilter {
 pub struct Filters {
     pub store: StoreFilter,
     pub audio: AudioFilter,
-    pub tested: TestedFilter,
+    pub compat: CompatFilter,
 }
 
 impl Filters {
@@ -138,20 +151,32 @@ impl Filters {
         self.audio = self.audio.next();
     }
 
-    pub fn next_tested(&mut self) {
-        self.tested = self.tested.next();
+    pub fn next_compat(&mut self) {
+        self.compat = self.compat.next();
     }
 
     pub fn passes(&self, e: &Entry) -> bool {
-        // A game the database doesn't list has no store, API or tested flag.
+        // A game the database doesn't list has no store, API or rating.
         let Some(g) = &e.game else {
             return *self == Filters::default();
         };
-        match self.tested {
-            TestedFilter::All => {}
-            TestedFilter::Tested if !g.tested => return false,
-            TestedFilter::Untested if g.tested => return false,
-            _ => {}
+        // This entry's own store's rating; an entry with no store (a retail
+        // copy) passes when any of the game's stores would.
+        let key = e.store.map(|k| match k {
+            StoreKind::Steam => "steam",
+            StoreKind::Gog => "gog",
+        });
+        let compat_ok = match key {
+            Some(_) => self.compat.passes(g.compat(key)),
+            None => {
+                g.store_list()
+                    .iter()
+                    .any(|(k, _)| self.compat.passes(g.compat(Some(k))))
+                    || (g.store_list().is_empty() && self.compat.passes(g.compat(None)))
+            }
+        };
+        if !compat_ok {
+            return false;
         }
         let game_api = if g.eax.api.is_empty() {
             "directsound3d"
@@ -210,12 +235,45 @@ mod tests {
     }
 
     #[test]
-    fn a_missing_tested_field_counts_as_tested() {
-        let e = entry(r#"{"id":"a","name":"A"}"#);
-        assert!(with(|f| f.tested = TestedFilter::Tested).passes(&e));
-        assert!(!with(|f| f.tested = TestedFilter::Untested).passes(&e));
-        let u = entry(BOTH);
-        assert!(with(|f| f.tested = TestedFilter::Untested).passes(&u));
+    fn each_store_entry_is_filtered_on_its_own_rating() {
+        let mut e = entry(
+            r#"{"id":"a","name":"A","stores":{"steam":{"id":1,"compatibility":"unknown"},
+            "gog":{"id":2,"compatibility":"playable"}}}"#,
+        );
+        // No store of its own (only in the database): any store's rating will do.
+        assert!(with(|f| f.compat = CompatFilter::Rated).passes(&e));
+        assert!(with(|f| f.compat = CompatFilter::Only(Compat::Unknown)).passes(&e));
+        assert!(!with(|f| f.compat = CompatFilter::Only(Compat::Verified)).passes(&e));
+        e.store = Some(StoreKind::Steam);
+        assert!(!with(|f| f.compat = CompatFilter::Rated).passes(&e));
+        e.store = Some(StoreKind::Gog);
+        assert!(with(|f| f.compat = CompatFilter::Only(Compat::Playable)).passes(&e));
+        // An older database's games count as verified unless marked "tested": false.
+        assert!(with(|f| f.compat = CompatFilter::Rated).passes(&entry(
+            r#"{"id":"a","name":"A","stores":{"steam":{"id":1}}}"#
+        )));
+        assert!(!with(|f| f.compat = CompatFilter::Rated).passes(&entry(BOTH)));
+    }
+
+    #[test]
+    fn ctrl_t_cycles_every_rating_and_back() {
+        let mut f = Filters::default();
+        let mut seen = Vec::new();
+        for _ in 0..6 {
+            f.next_compat();
+            seen.push(f.compat.label());
+        }
+        assert_eq!(
+            seen,
+            [
+                "Rated",
+                "Verified",
+                "Playable",
+                "Unsupported",
+                "Unknown",
+                "Any"
+            ]
+        );
     }
 
     #[test]
@@ -264,7 +322,7 @@ mod tests {
         e.game = None;
         assert!(Filters::default().passes(&e));
         assert!(!with(|f| f.store = StoreFilter::Steam).passes(&e));
-        assert!(!with(|f| f.tested = TestedFilter::Tested).passes(&e));
+        assert!(!with(|f| f.compat = CompatFilter::Rated).passes(&e));
     }
 
     #[test]
@@ -276,8 +334,8 @@ mod tests {
         for _ in 0..9 {
             f.next_audio();
         }
-        for _ in 0..3 {
-            f.next_tested();
+        for _ in 0..6 {
+            f.next_compat();
         }
         assert_eq!(f, Filters::default());
         assert_eq!(AudioFilter::Eax(5).next(), AudioFilter::All);

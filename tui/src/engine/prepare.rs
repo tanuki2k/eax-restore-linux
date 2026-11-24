@@ -353,17 +353,15 @@ impl Facts {
     /// What `confirm_continue_if_eax_impossible` asks about for this game.
     /// (`none_to_restore` games don't get this far.)
     pub fn eax_caution(&self, game: &Game) -> Option<EaxCaution> {
-        match game.eax.status.as_str() {
-            "built_in" => Some(EaxCaution::BuiltIn),
-            "removed_by_patch" if game.eax.fix_in_place => {
-                match on_rollback_build(game, self.store, &self.beta_branch, &self.gog_build) {
-                    Some(true) => None,
-                    Some(false) => Some(EaxCaution::NotRolledBack),
-                    None => Some(EaxCaution::RemovedByPatch),
-                }
-            }
-            _ => None,
+        // As the script's game_eax_gate: a way back first, then built in.
+        if game.has_rollback(self.store.map(Store::key)) {
+            return match on_rollback_build(game, self.store, &self.beta_branch, &self.gog_build) {
+                Some(true) => None,
+                Some(false) => Some(EaxCaution::NotRolledBack),
+                None => Some(EaxCaution::RemovedByPatch),
+            };
         }
+        game.eax.built_in.then_some(EaxCaution::BuiltIn)
     }
 
     /// The engine the audio API calls for: OpenAL Soft alone for an OpenAL

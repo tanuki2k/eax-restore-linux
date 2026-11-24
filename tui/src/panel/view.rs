@@ -369,9 +369,9 @@ fn setting_lines(
             Style::new().add_modifier(Modifier::BOLD)
         };
         let (tag, tag_style) = if fix.untested {
-            ("(untested)", theme::note())
+            ("(unverified)", theme::note())
         } else {
-            ("(tested)", theme::green())
+            ("(verified)", theme::green())
         };
         // Gutter, mark and a space before the title; the tag at the right.
         let title_room = width.saturating_sub(2 + 4 + tag.len() + 2);

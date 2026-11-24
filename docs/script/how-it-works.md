@@ -64,7 +64,7 @@ The main menu has a Tools submenu for after the install.
 | --- | --- |
 | Ctrl-A | Narrow by audio: DirectSound3D, OpenAL, Miles Sound System or an EAX version |
 | Ctrl-S | Narrow by store: Steam, GOG, or games delisted from either or one of them |
-| Ctrl-T | Switch between games checked on a real install (the default), all games, and the ones nobody has checked yet |
+| Ctrl-T | Narrow by compatibility: every rated game (the default), all games, or only Verified, Playable, Unsupported or Unknown ones |
 | Ctrl-R | Switch between best match first and A to Z |
 | Ctrl-L | Put the profile beside or under the list (it moves under by itself in a narrow window) |
 | Tab | Show the game's settings in full: why each is offered, the file and where it lives, and the exact values |

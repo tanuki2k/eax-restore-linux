@@ -17,10 +17,14 @@ use anyhow::Result;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
-/// EAX_RESTORE_UNTESTED_SETTINGS, as the script reads it.
+/// EAX_RESTORE_UNVERIFIED_SETTINGS, as the script reads it, or the name it
+/// had before, EAX_RESTORE_UNTESTED_SETTINGS.
 pub fn untested_from_env() -> bool {
-    std::env::var("EAX_RESTORE_UNTESTED_SETTINGS")
-        .is_ok_and(|v| matches!(v.to_lowercase().as_str(), "1" | "true" | "yes" | "y"))
+    let on = |name| {
+        std::env::var(name)
+            .is_ok_and(|v| matches!(v.to_lowercase().as_str(), "1" | "true" | "yes" | "y"))
+    };
+    on("EAX_RESTORE_UNVERIFIED_SETTINGS") || on("EAX_RESTORE_UNTESTED_SETTINGS")
 }
 
 /// The game's settings as they stand in its files now.
@@ -64,7 +68,7 @@ pub fn crash_markers(game: Option<&Game>) -> HashMap<String, String> {
 /// The profile's alsoft.ini values, when they're verified (or untested ones
 /// are wanted): (section, key, value).
 pub fn alsoft_values(game: &Game, include_untested: bool) -> Vec<(String, String, String)> {
-    if game.install.alsoft_tested != Some(true) && !include_untested {
+    if game.install.alsoft_verified != Some(true) && !include_untested {
         return Vec::new();
     }
     let mut out = Vec::new();

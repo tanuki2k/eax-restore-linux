@@ -6,7 +6,7 @@
       "name": "Test Game",
       "released": "2001-01-01",
       "exe": "game.exe",
-      "stores": { "steam": { "id": 424242 } },
+      "stores": { "steam": { "id": 424242, "compatibility": "verified" } },
       "eax": { "api": "directsound3d", "versions": ["2.0"] },
       "game_config": {
         "files": {
@@ -16,7 +16,7 @@
           {
             "title": "Enable EAX effects",
             "reason": "Test Game ships with EAX off.",
-            "tested": true,
+            "verified": true,
             "changes": { "settings.ini": { "Audio": { "UseEAX": "1", "Provider": "DSOUND" } } }
           }
         ],
@@ -24,7 +24,7 @@
           {
             "title": "Skip intro movies",
             "reason": "Test Game plays its intro movies on every start.",
-            "tested": true,
+            "verified": true,
             "changes": { "settings.ini": { "Video": { "SkipIntro": "1" } } }
           }
         ]

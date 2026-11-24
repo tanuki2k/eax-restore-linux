@@ -34,11 +34,22 @@ in_fresh_shell() {
     [ "$output" == "$here" ]
 }
 
-@test "the profile says Profile: Tested for a tested game" {
+@test "the profile shows the store's compatibility and each setting's verified tag" {
     run in_fresh_shell print_game_profile_stores "" steam:424242
     plain="$(sed 's/\x1b\[[0-9;]*m//g' <<< "$output")"
-    grep -Eq "Profile: +Tested" <<< "$plain"
-    grep -q "Enable EAX effects (tested)" <<< "$plain"
+    grep -Eq "Compatibility: +Verified" <<< "$plain"
+    grep -q "Enable EAX effects (verified)" <<< "$plain"
+}
+
+@test "stores that rate differently get a compatibility line each" {
+    GAME_DATABASE_FILE="$BATS_TEST_TMPDIR/db.json"
+    jq '.games[0].stores.gog = {id: 7, compatibility: "playable"}' \
+        "$REPO_ROOT/tests/fixtures/game-database.json" > "$GAME_DATABASE_FILE"
+    { declare -p GREEN YELLOW CYAN WHITE BOLD DIM NOTE NC GAME_DATABASE_FILE SCRIPT_VERSION; declare -f; } > "$DUMP"
+    run in_fresh_shell print_game_profile_stores "" steam:424242 gog:7
+    plain="$(sed 's/\x1b\[[0-9;]*m//g' <<< "$output")"
+    grep -Eq "Compatibility: +Verified on Steam" <<< "$plain"
+    grep -Eq "^ +Playable on GOG" <<< "$plain"
 }
 
 @test "a supported game shows its eax.problem under Status, and without one has no Status" {
@@ -55,7 +66,7 @@ in_fresh_shell() {
 }
 
 @test "the browser's right pane has text at every window width" {
-    echo "all all profile 0 match side side tested" > "$BATS_TEST_TMPDIR/state"
+    echo "all all profile 0 match side side rated" > "$BATS_TEST_TMPDIR/state"
     for cols in 1 3 5 8 12 16 19 24 40 80 120; do
         wrap="$(browse_wrap_columns "$cols")"
         [ "$wrap" -ge 24 ]

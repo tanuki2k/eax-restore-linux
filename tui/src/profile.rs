@@ -4,7 +4,7 @@
 //! This TUI adds a "System details" block, the install screen's own heading, for
 //! what it knows about this PC.
 
-use crate::db::{Game, OnlyIf, Setting, Source, Store};
+use crate::db::{Compat, Game, OnlyIf, Setting, Source, Store};
 use crate::engine::install::Engine;
 use crate::games::Entry;
 use crate::library::StoreKind;
@@ -19,6 +19,16 @@ fn label_of(k: StoreKind) -> &'static str {
         StoreKind::Steam => "Steam",
         StoreKind::Gog => "GOG",
     }
+}
+
+/// A compatibility rating in its colour, as the script's `compat_label`.
+fn compat_span(c: Compat) -> Span<'static> {
+    let style = match c {
+        Compat::Verified => theme::green(),
+        Compat::Playable | Compat::Unsupported => theme::label(),
+        Compat::Unknown => theme::note(),
+    };
+    Span::styled(c.label(), style)
 }
 
 fn key_of(k: StoreKind) -> &'static str {
@@ -244,7 +254,11 @@ fn strong(out: &mut Vec<Line<'static>>, text: &str, width: usize) {
 
 /// A setting's title in bold white with its (tested) or (untested) after it.
 fn titled(out: &mut Vec<Line<'static>>, title: &str, untested: bool, width: usize) {
-    let tag = if untested { "(untested)" } else { "(tested)" };
+    let tag = if untested {
+        "(unverified)"
+    } else {
+        "(verified)"
+    };
     let tag_style = if untested {
         theme::note()
     } else {
@@ -301,7 +315,7 @@ fn collect_titles(g: &Game, stores: &[(StoreKind, &Store)]) -> Titles {
             .iter()
             .filter(|s| offered(s, *k))
         {
-            note_title(&mut t.audio, s.title.clone(), !s.tested, *k);
+            note_title(&mut t.audio, s.title.clone(), !s.verified, *k);
         }
         for s in g
             .game_config
@@ -309,9 +323,9 @@ fn collect_titles(g: &Game, stores: &[(StoreKind, &Store)]) -> Titles {
             .iter()
             .filter(|s| offered(s, *k))
         {
-            note_title(&mut t.optional, s.title.clone(), !s.tested, *k);
+            note_title(&mut t.optional, s.title.clone(), !s.verified, *k);
         }
-        let untested = g.install.alsoft_tested != Some(true);
+        let untested = g.install.alsoft_verified != Some(true);
         for (section, keys) in g.install.alsoft_ini.iter().flatten() {
             if let serde_json::Value::Object(keys) = keys {
                 for (key, value) in keys {
@@ -399,11 +413,13 @@ fn game_lines_on(
     } else {
         stores.iter().map(|(_, s)| api_of(g, s)).collect()
     };
-    let status = if g.eax.status.is_empty() {
-        "supported"
-    } else {
-        g.eax.status.as_str()
-    };
+    // Each shown store's compatibility, problem text and way back.
+    let keys: Vec<Option<&str>> = stores.iter().map(|(k, _)| Some(key_of(*k))).collect();
+    let keys = if keys.is_empty() { vec![None] } else { keys };
+    let compats: Vec<Compat> = keys.iter().map(|k| g.compat(*k)).collect();
+    let problems: Vec<&str> = keys.iter().map(|k| g.problem(*k)).collect();
+    let all_unsupported = compats.iter().all(|c| *c == Compat::Unsupported);
+    let any_rollback = keys.iter().any(|k| g.has_rollback(*k));
 
     let mut items = vec![Item::Heading("Game details")];
     items.push(row(
@@ -413,14 +429,21 @@ fn game_lines_on(
             Style::new().add_modifier(Modifier::BOLD),
         )],
     ));
-    items.push(row(
-        "Profile",
-        vec![if g.tested {
-            Span::styled("Tested", theme::green())
-        } else {
-            Span::styled("Untested", theme::note())
-        }],
-    ));
+    // One rating when the stores agree, else one line per store.
+    items.push(if all_same(&compats) {
+        row("Compatibility", vec![compat_span(compats[0])])
+    } else {
+        lined(
+            "Compatibility",
+            stores
+                .iter()
+                .zip(&compats)
+                .map(|((k, _), c)| {
+                    vec![compat_span(*c), Span::raw(format!(" on {}", label_of(*k)))]
+                })
+                .collect(),
+        )
+    });
     if !g.released.is_empty() {
         items.push(row("Released", vec![white(release_date(&g.released))]));
     }
@@ -466,21 +489,22 @@ fn game_lines_on(
     let (strong_green, strong_yellow) = (theme::strong_green(), theme::label());
     items.push(row(
         "EAX Support",
-        match status {
-            "supported" => vec![Span::styled(versions, strong_green)],
-            "removed_by_patch" => vec![
+        if all_unsupported && !g.eax.versions.is_empty() {
+            vec![
                 Span::styled(versions, strong_yellow),
-                dim(if g.eax.fix_in_place {
-                    " (restorable)"
-                } else {
-                    " (originally supported)"
-                }),
-            ],
-            "built_in" => vec![
+                dim(" (not in this build)"),
+            ]
+        } else if all_unsupported {
+            vec![Span::styled("None", strong_yellow)]
+        } else if g.eax.built_in {
+            vec![
                 Span::styled(versions, strong_green),
                 dim(" (already built in)"),
-            ],
-            _ => vec![Span::styled("None", strong_yellow)],
+            ]
+        } else if any_rollback {
+            vec![Span::styled(versions, strong_yellow), dim(" (restorable)")]
+        } else {
+            vec![Span::styled(versions, strong_green)]
         },
     ));
     items.push(if all_same(&apis) {
@@ -546,27 +570,40 @@ fn game_lines_on(
         subheading(&mut out, "Description");
         prose(&mut out, &g.description, width);
     }
-    if status != "supported" || !g.eax.problem.is_empty() {
-        // The entry's own problem text says why; the lead-in is only for an entry without one.
-        let (mut state, mut after) = (String::new(), String::new());
-        if g.eax.problem.is_empty() {
-            state = "Never implemented in this edition.".into();
+    // The problem text says what's wrong: for a playable game what sounds
+    // wrong, for an unsupported one why, for a verified one a known
+    // limitation. The generic line is only for an entry without one.
+    let after = if g.eax.built_in {
+        " Installing is optional: it swaps in a newer OpenAL Soft and adds speaker and headphone settings."
+    } else {
+        ""
+    };
+    let mut status_texts: Vec<(String, String)> = Vec::new();
+    if all_same(&problems) {
+        let mut text = problems[0].to_string();
+        if text.is_empty() && all_unsupported {
+            text = format!("There's no EAX in this build of {}.", g.name);
         }
-        if status == "removed_by_patch" && g.eax.problem.is_empty() {
-            state = format!("An update removed EAX from {}.", g.name);
+        if text.is_empty() && any_rollback {
+            text = format!("An update removed EAX from {}.", g.name);
         }
-        if status == "built_in" {
-            state.clear();
-            after = " Installing is optional: it swaps in a newer OpenAL Soft and adds speaker and headphone settings.".into();
+        let text = format!("{text}{after}");
+        if !text.is_empty() {
+            status_texts.push(("Status".into(), text.trim_start().to_string()));
         }
-        let problem = if g.eax.problem.is_empty() {
-            String::new()
-        } else {
-            format!(" {}", g.eax.problem)
-        };
-        let text = format!("{state}{problem}{after}");
-        subheading(&mut out, "Status");
-        prose(&mut out, text.strip_prefix(' ').unwrap_or(&text), width);
+    } else {
+        for ((k, _), p) in stores.iter().zip(&problems) {
+            if !p.is_empty() {
+                status_texts.push((format!("Status on {}", label_of(*k)), format!("{p}{after}")));
+            }
+        }
+    }
+    let has_status = !status_texts.is_empty();
+    for (heading, text) in status_texts {
+        subheading(&mut out, &heading);
+        prose(&mut out, &text, width);
+    }
+    if has_status || rolled_back.is_some() {
         match rolled_back {
             Some(false) => {
                 out.push(Line::raw(""));
@@ -600,12 +637,13 @@ fn game_lines_on(
             }
         }
     }
-    // A patch took EAX out: after what happened and what each store ships,
-    // the way back, before the settings.
-    if status == "removed_by_patch" {
+    // No EAX in the build the stores sell: after what happened and what each
+    // store ships, the way back, before the settings.
+    let restore = any_rollback || all_unsupported;
+    if restore {
         fix_sections(&mut out, g, &stores, "Restore EAX", "Restore on", width);
     }
-    if status == "supported" {
+    if !restore && !g.eax.built_in {
         let solution = |api: &str| {
             if api == "openal" {
                 "OpenAL Soft"
@@ -657,7 +695,7 @@ fn game_lines_on(
             prose(&mut out, follow, width);
         }
     }
-    if status != "removed_by_patch" {
+    if !restore {
         fix_sections(
             &mut out,
             g,
@@ -803,7 +841,8 @@ pub fn find_exe(dir: &Path, e: &Entry) -> Option<FoundExe> {
 /// only for a game an update took EAX out of with a way back in place.
 fn rolled_back(e: &Entry, g: &Game) -> Option<bool> {
     use crate::engine::{detect, identify, prepare};
-    if g.eax.status != "removed_by_patch" || !g.eax.fix_in_place {
+    let key = e.store.map(key_of);
+    if key.is_none() || !g.has_rollback(key) {
         return None;
     }
     let path = e.path.as_deref()?;
@@ -865,10 +904,10 @@ mod tests {
     #[test]
     fn a_patched_out_game_says_up_front_how_to_restore_it() {
         let g = game(
-            r#"{"name":"Patched","stores":{"steam":{"id":1,"rollback_steps":"Pick the old branch.","store_details":"Steam's own text."},
-                "gog":{"id":2,"rollback_steps":"Pick the old version."}},
-              "eax":{"api":"directsound3d","versions":["3.0"],"status":"removed_by_patch","fix_in_place":true,
-                     "problem":"An update took it out."}}"#,
+            r#"{"name":"Patched","compatibility":"verified",
+                "stores":{"steam":{"id":1,"compatibility":"verified","beta_branch":"old","rollback_steps":"Pick the old branch.","store_details":"Steam's own text."},
+                "gog":{"id":2,"compatibility":"verified","rollback_builds":["9"],"rollback_steps":"Pick the old version."}},
+              "eax":{"api":"directsound3d","versions":["3.0"],"problem":"An update took it out."}}"#,
         );
         let t = text(&database_lines(&g, 100));
         assert!(t.contains("3.0 (restorable)"), "{t}");
@@ -883,13 +922,15 @@ mod tests {
         assert!(status < details && details < steam && steam < gog, "{t}");
         assert!(!t.contains("Additional steps"), "{t}");
 
-        // A separate retail copy: one shared section, still up front.
+        // Unsupported, with a separate retail copy as the way to EAX: one
+        // shared section, still up front.
         let g = game(
-            r#"{"name":"Retail","stores":{"steam":{"id":1},"gog":{"id":2}},
-              "eax":{"api":"directsound3d","status":"removed_by_patch","fix":"Use the retail copy."}}"#,
+            r#"{"name":"Retail","stores":{"steam":{"id":1,"compatibility":"unsupported"},"gog":{"id":2,"compatibility":"unsupported"}},
+              "eax":{"api":"directsound3d","versions":["1.0"],"fix":"Use the retail copy."}}"#,
         );
         let t = text(&database_lines(&g, 100));
-        assert!(t.contains("(originally supported)"), "{t}");
+        assert!(t.contains("1.0 (not in this build)"), "{t}");
+        assert!(t.contains("Compatibility:     Unsupported"), "{t}");
         assert!(t.contains("Restore EAX:\n  Use the retail copy."), "{t}");
         assert!(!t.contains("Restore on"), "{t}");
         assert_eq!(t.matches("Use the retail copy.").count(), 1, "{t}");
@@ -973,7 +1014,7 @@ mod tests {
         let t = text(&game_lines(&game(QUAKE), None, Vec::new(), 70));
         println!("{t}");
         assert!(t.starts_with("\nGame details:\n -> Name:              Quake 4\n"));
-        assert!(t.contains(" -> Profile:           Tested\n"));
+        assert!(t.contains(" -> Compatibility:     Verified\n"));
         assert!(t.contains(" -> Released:          18 October 2005\n"));
         assert!(t.contains(" -> Steam ID:          2210\n"));
         assert!(t.contains(" -> GOG ID:            1836059896\n"));
@@ -1018,8 +1059,8 @@ mod tests {
             assert!(at(pair[0]) < at(pair[1]), "{} before {}", pair[0], pair[1]);
         }
         assert!(t.contains("  OpenAL Soft\n"));
-        assert!(t.contains("  Steam only thing (Steam only) (untested)\n"));
-        assert!(t.contains("  Fix blurry text (tested)\n"));
+        assert!(t.contains("  Steam only thing (Steam only) (unverified)\n"));
+        assert!(t.contains("  Fix blurry text (verified)\n"));
         assert!(t.contains("  Fix blurry text\n  Restart once.\n"));
         assert!(t.contains("  PCGamingWiki: Quake 4\n    https://example.org/q4\n"));
         assert!(t.ends_with('\n'));
@@ -1038,23 +1079,28 @@ mod tests {
 
     #[test]
     fn built_in_and_removed_games_get_their_own_status_text() {
-        let built = game(r#"{"name":"B","eax":{"status":"built_in","versions":["2.0"]}}"#);
+        let built = game(r#"{"name":"B","eax":{"built_in":true,"versions":["2.0"]}}"#);
         let t = text(&game_lines(&built, None, Vec::new(), 100));
         assert!(t.contains("2.0 (already built in)"));
         assert!(t.contains("Installing is optional: it swaps in a newer OpenAL Soft"));
         let removed = game(
-            r#"{"name":"R","eax":{"status":"removed_by_patch","problem":"Patch 1.2 took it out."}}"#,
+            r#"{"name":"R","compatibility":"unsupported","eax":{"versions":["1.0"],"problem":"Patch 1.2 took it out."}}"#,
         );
         let t = text(&game_lines(&removed, None, Vec::new(), 100));
-        assert!(t.contains("(originally supported)"));
+        assert!(t.contains("1.0 (not in this build)"));
         // The entry's own text says what happened, so no lead-in repeats it.
         assert!(t.contains("  Status:\n  Patch 1.2 took it out.\n"), "{t}");
-        let bare = game(r#"{"name":"Half-Life","eax":{"status":"removed_by_patch"}}"#);
+        let bare = game(r#"{"name":"Half-Life","compatibility":"unsupported"}"#);
         let t = text(&game_lines(&bare, None, Vec::new(), 100));
         assert!(
-            t.contains("  Status:\n  An update removed EAX from Half-Life.\n"),
+            t.contains("  Status:\n  There's no EAX in this build of Half-Life.\n"),
             "{t}"
         );
+        // An older database's removed_by_patch with no way back reads as unsupported.
+        let old = game(
+            r#"{"name":"Old","stores":{"steam":{"id":70}},"eax":{"status":"removed_by_patch"}}"#,
+        );
+        assert!(text(&game_lines(&old, None, Vec::new(), 100)).contains("Unsupported"));
     }
 
     #[test]

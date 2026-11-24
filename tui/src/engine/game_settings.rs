@@ -86,7 +86,7 @@ pub fn rows(game: &Game, include_untested: bool) -> Vec<Row> {
     let mut out = Vec::new();
     for (category, settings) in lists {
         for (index, s) in settings.iter().enumerate() {
-            if !include_untested && !s.tested {
+            if !include_untested && !s.verified {
                 continue;
             }
             let only_if = s.only_if.clone().unwrap_or_default();
@@ -122,7 +122,7 @@ pub fn rows(game: &Game, include_untested: bool) -> Vec<Row> {
                         section,
                         key,
                         value,
-                        untested: !s.tested,
+                        untested: !s.verified,
                     });
                 }
             }
