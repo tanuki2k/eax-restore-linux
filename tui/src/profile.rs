@@ -637,11 +637,20 @@ fn game_lines_on(
             }
         }
     }
-    // No EAX in the build the stores sell: after what happened and what each
-    // store ships, the way back, before the settings.
+    // The fix follows the problem, before the settings: the way back for a
+    // build the stores sell without EAX, else any steps to take.
     let restore = any_rollback || all_unsupported;
     if restore {
         fix_sections(&mut out, g, &stores, "Restore EAX", "Restore on", width);
+    } else {
+        fix_sections(
+            &mut out,
+            g,
+            &stores,
+            "Additional steps",
+            "Additional steps for",
+            width,
+        );
     }
     if !restore && !g.eax.built_in {
         let solution = |api: &str| {
@@ -694,16 +703,6 @@ fn game_lines_on(
             out.push(Line::from(vec![Span::raw("  "), white(s.title.clone())]));
             prose(&mut out, follow, width);
         }
-    }
-    if !restore {
-        fix_sections(
-            &mut out,
-            g,
-            &stores,
-            "Additional steps",
-            "Additional steps for",
-            width,
-        );
     }
     if !g.notes.is_empty() {
         subheading(&mut out, "Notes");
@@ -935,17 +934,21 @@ mod tests {
         assert!(!t.contains("Restore on"), "{t}");
         assert_eq!(t.matches("Use the retail copy.").count(), 1, "{t}");
 
-        // A community patch for a game that still has EAX stays where it was.
+        // A game that still has EAX: its steps come straight after the
+        // problem they fix, before "Restoring EAX with".
         let g = game(
             r#"{"name":"Modded","stores":{"steam":{"id":1}},
-              "eax":{"api":"directsound3d","fix":"A community patch adds more."}}"#,
+              "eax":{"api":"directsound3d","problem":"Every sound plays in mono.","fix":"A community patch adds more."}}"#,
         );
         let t = text(&database_lines(&g, 100));
         assert!(
             t.contains("Additional steps:\n  A community patch adds more."),
             "{t}"
         );
-        assert!(!t.contains("Restore"), "{t}");
+        let at = |s: &str| t.find(s).unwrap_or_else(|| panic!("missing {s}: {t}"));
+        assert!(at("Status:") < at("Additional steps:"));
+        assert!(at("Additional steps:") < at("Restoring EAX with:"));
+        assert!(!t.contains("Restore EAX"), "{t}");
     }
 
     /// A copy on this PC says under Status whether it's on the build the

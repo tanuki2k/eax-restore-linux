@@ -1095,10 +1095,12 @@ _gp_status_sections() {
             WRAP_COLOUR="$prose_colour" print_wrapped "${details[i]}"
         done
     fi
-    # No EAX in the build the stores sell: after what happened and what each
-    # store ships, the way back, before the settings.
+    # The fix follows the problem, before the settings: the way back for a
+    # build the stores sell without EAX, else any steps to take.
     if [ -n "$any_rollback" ] || [ -n "$all_unsupported" ]; then
         _gp_fix_sections "Restore EAX" "Restore on"
+    else
+        _gp_fix_sections "Additional steps" "Additional steps for"
     fi
 }
 
@@ -1191,10 +1193,9 @@ _gp_fix_sections() {
     fi
 }
 
-# Additional steps, notes and suggested community patches. Steps and patches
-# that differ by store get a section each.
+# Notes and suggested community patches. Patches that differ by store get a
+# section each.
 _gp_closing_sections() {
-    [ -n "$any_rollback" ] || [ -n "$all_unsupported" ] || _gp_fix_sections "Additional steps" "Additional steps for"
     if [ -n "$notes" ]; then
         print_subheading "Notes"
         WRAP_COLOUR="$prose_colour" print_wrapped "$notes"

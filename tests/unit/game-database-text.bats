@@ -73,7 +73,7 @@ plain() { sed 's/\x1b\[[0-9;]*m//g' <<< "$1"; }
 # KOTOR II: Steam's beta branch and GOG's older version are different ways
 # back, so each store gets a Restore section, straight under Status. An
 # unsupported game's way to EAX (a retail copy) gets one shared section; a
-# community patch stays under Additional steps.
+# community patch goes under Additional steps, also straight under Status.
 @test "profile: a patched-out game says up front how to restore it" {
     GAME_DATABASE_FILE="$BATS_TEST_TMPDIR/stores.json"
     echo '{"games":[{"id":"p","name":"Patched","stores":{"steam":{"id":1,"compatibility":"verified","beta_branch":"old","rollback_steps":"Pick the old branch.","store_details":"Steam text."},"gog":{"id":2,"compatibility":"verified","rollback_builds":["9"],"rollback_steps":"Pick the old version."}},
@@ -81,7 +81,7 @@ plain() { sed 's/\x1b\[[0-9;]*m//g' <<< "$1"; }
                     {"id":"r","name":"Retail","stores":{"steam":{"id":3,"compatibility":"unsupported"},"gog":{"id":4,"compatibility":"unsupported","rollback_steps":""}},
                     "eax":{"api":"directsound3d","versions":["1.0"],"fix":"Use the retail copy."}},
                     {"id":"m","name":"Modded","stores":{"steam":{"id":5,"compatibility":"verified"}},
-                    "eax":{"api":"directsound3d","fix":"A community patch adds more."}}]}' > "$GAME_DATABASE_FILE"
+                    "eax":{"api":"directsound3d","problem":"Every sound plays in mono.","fix":"A community patch adds more."}}]}' > "$GAME_DATABASE_FILE"
     out="$(plain "$(print_game_profile_stores "" steam:1 gog:2)")"
     [[ "$out" == *"3.0 (restorable)"* ]]
     [[ "$out" == *"Status:"*"An update took it out."*"Steam details:"*"Restore on Steam:"*"Pick the old branch."*"Restore on GOG:"*"Pick the old version."* ]]
@@ -94,6 +94,6 @@ plain() { sed 's/\x1b\[[0-9;]*m//g' <<< "$1"; }
     [[ "$out" != *"Restore on"* ]]
     [ "$(grep -c "Use the retail copy." <<< "$out")" -eq 1 ]
     out="$(plain "$(print_game_profile_stores "" steam:5)")"
-    [[ "$out" == *"Additional steps:"*"A community patch adds more."* ]]
+    [[ "$out" == *"Status:"*"Every sound plays in mono."*"Additional steps:"*"A community patch adds more."*"Restoring EAX with:"* ]]
     [[ "$out" != *"Restore EAX"* ]]
 }
