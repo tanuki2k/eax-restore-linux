@@ -3553,18 +3553,19 @@
       "description": "Red Faction is a singleplayer and multiplayer first-person shooter game and the first in the Red Faction series.",
       "released": "2001-09-18",
       "exe": "RF.exe",
+      "compatibility": "verified",
       "stores": {
         "steam": {
           "id": 20530,
           "patches": "Dash Faction fixes many of Red Faction's bugs and adds widescreen support. It also positions sounds itself, so they move between left and right with EAX on (per a bug report on GitHub). Its installer swaps in the 1.20 North American RF.exe it needs.",
-          "compatibility": "unknown",
-          "problem": "With EAX on, every sound in Red Faction plays from straight ahead, so you hear the reverb but nothing moves between left and right. The game sets each sound's left/right balance itself, and the restored EAX sound ignores it for now (per a bug report on GitHub)."
+          "compatibility": "verified",
+          "problem": "With EAX on, every sound plays in mono (per a bug report on GitHub)."
         },
         "gog": {
           "id": 1207660623,
           "patches": "Dash Faction fixes many of Red Faction's bugs and adds widescreen support. It also positions sounds itself, so they move between left and right with EAX on (per a bug report on GitHub). Its installer swaps in the 1.20 North American RF.exe it needs.",
-          "compatibility": "unknown",
-          "problem": "With EAX on, every sound in Red Faction plays from straight ahead, so you hear the reverb but nothing moves between left and right. The game sets each sound's left/right balance itself, and the restored EAX sound ignores it for now (per a bug report on GitHub)."
+          "compatibility": "verified",
+          "problem": "With EAX on, every sound plays in mono (per a bug report on GitHub)."
         }
       },
       "eax": {
@@ -3573,7 +3574,8 @@
           "1.0",
           "2.0"
         ],
-        "problem": "With EAX on, every sound in Red Faction plays from straight ahead, so you hear the reverb but nothing moves between left and right. The game sets each sound's left/right balance itself, and the restored EAX sound ignores it for now (per a bug report on GitHub)."
+        "problem": "With EAX on, every sound plays in mono (per a bug report on GitHub).",
+        "fix": "Use DSOAL r699 or newer with an OpenAL Soft pre-release from October 2026 or later."
       },
       "install": {
         "tweaks": [
@@ -3589,8 +3591,7 @@
           "title": "Dash Faction",
           "url": "https://github.com/rafalh/dashfaction"
         }
-      ],
-      "tested": false
+      ]
     },
     {
       "id": "requiem-avenging-angel",

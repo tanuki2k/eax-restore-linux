@@ -4,6 +4,7 @@
   "description": "Red Faction is a singleplayer and multiplayer first-person shooter game and the first in the Red Faction series.",
   "released": "2001-09-18",
   "exe": "RF.exe",
+  "compatibility": "verified",
   "stores": {
     "steam": {
       "id": 20530,
@@ -17,7 +18,8 @@
   "eax": {
     "api": "directsound3d",
     "versions": ["1.0", "2.0"],
-    "problem": "With EAX on, every sound in Red Faction plays from straight ahead, so you hear the reverb but nothing moves between left and right. The game sets each sound's left/right balance itself, and the restored EAX sound ignores it for now (per a bug report on GitHub)."
+    "problem": "With EAX on, every sound plays in mono (per a bug report on GitHub).",
+    "fix": "Use DSOAL r699 or newer with an OpenAL Soft pre-release from October 2026 or later."
   },
   "install": {
     "tweaks": ["eax_unified"]
