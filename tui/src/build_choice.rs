@@ -29,6 +29,14 @@ pub const KEEP: &str = "keep";
 #[serde(default)]
 pub struct BuildInfo {
     pub catalog: Catalog,
+    /// OpenAL Soft's current pre-release: what its "Latest" installs.
+    pub oal_latest: Option<builds::Release>,
+    /// [`FORMAT`] when saved; an older lookup (0) is looked up again.
+    pub format: u32,
+    /// Older pre-releases kept on this PC, newest first. Read from the cache
+    /// each time, not saved: they're this PC's, not GitHub's.
+    #[serde(skip)]
+    pub kept_pre: Vec<builds::Release>,
     /// When it was read from GitHub, in seconds since 1970.
     pub fetched_at: u64,
     /// GitHub couldn't be read and nothing was saved: the lists hold only
@@ -36,6 +44,9 @@ pub struct BuildInfo {
     #[serde(skip)]
     pub offline: bool,
 }
+
+/// The saved lookup's layout: 1 added `oal_latest`.
+pub const FORMAT: u32 = 1;
 
 /// How long a saved lookup is used before GitHub is asked again. GitHub
 /// answers 60 API requests an hour from a machine that isn't logged in, and
@@ -76,13 +87,22 @@ fn save(home: &std::path::Path, info: &BuildInfo) {
 /// old, else only the builds already downloaded.
 pub fn load(home: &std::path::Path, net: &mut dyn Net, at: u64) -> BuildInfo {
     let saved = load_saved(home);
+    let cache = Cache::new(home);
+    let kept = |mut i: BuildInfo| {
+        let current = i.oal_latest.as_ref().map(|r| r.tag.clone());
+        i.kept_pre = builds::kept_prereleases(&cache)
+            .into_iter()
+            .filter(|r| Some(&r.tag) != current.as_ref())
+            .collect();
+        i
+    };
+    // A lookup saved before the pre-release was recorded is looked up again.
     if let Some(s) = saved
         .as_ref()
-        .filter(|s| at.saturating_sub(s.fetched_at) < FRESH_SECS)
+        .filter(|s| at.saturating_sub(s.fetched_at) < FRESH_SECS && s.format == FORMAT)
     {
-        return s.clone();
+        return kept(s.clone());
     }
-    let cache = Cache::new(home);
     if net.reachable() {
         let dsoal: Vec<builds::Release> = builds::dsoal_archive(net)
             .into_iter()
@@ -92,26 +112,32 @@ pub fn load(home: &std::path::Path, net: &mut dyn Net, at: u64) -> BuildInfo {
             })
             .collect();
         let openal = builds::openal_releases(net);
+        let pre_json = net.get(builds::OPENAL_PRERELEASE_API_URL);
+        let oal_latest = builds::current_prerelease(&cache, Some(&pre_json));
         // Both lists back means GitHub answered; a refusal (its hourly limit)
         // or no network gives empty ones, which aren't worth saving.
         if !dsoal.is_empty() && !openal.is_empty() {
             let info = BuildInfo {
                 catalog: Catalog { dsoal, openal },
+                oal_latest,
+                format: FORMAT,
                 fetched_at: at,
                 offline: false,
+                kept_pre: Vec::new(),
             };
             save(home, &info);
-            return info;
+            return kept(info);
         }
     }
     if let Some(s) = saved {
-        return s;
+        return kept(s);
     }
-    BuildInfo {
+    kept(BuildInfo {
         catalog: builds::catalog(&cache, net, false),
+        oal_latest: builds::current_prerelease(&cache, None),
         offline: true,
         ..BuildInfo::default()
-    }
+    })
 }
 
 /// Looks it all up on a thread of its own, without downloading any build.
@@ -143,9 +169,21 @@ pub fn options(comp: Comp, info: Option<&BuildInfo>, also: Option<&str>) -> Vec<
     };
     let empty = BuildInfo::default();
     let i = info.unwrap_or(&empty);
+    // "Latest" names the build it would install today, as the script's
+    // [L]atest does: the newest DSOAL revision, OpenAL Soft's pre-release.
+    let latest = match comp {
+        Comp::Dsoal => i.catalog.dsoal.first().map(|r| r.tag.clone()),
+        Comp::Openal => i.oal_latest.as_ref().map(|r| {
+            if r.date.is_empty() {
+                r.tag.clone()
+            } else {
+                format!("{} ({})", r.tag, r.date)
+            }
+        }),
+    };
     let mut out = vec![opt(
         NUMBERED,
-        "Latest".into(),
+        latest.map_or_else(|| "Latest".into(), |v| format!("Latest {v}")),
         match comp {
             Comp::Dsoal => "The newest DSOAL build at the time you install.",
             Comp::Openal => "The newest OpenAL Soft build at the time you install.",
@@ -171,6 +209,24 @@ pub fn options(comp: Comp, info: Option<&BuildInfo>, also: Option<&str>) -> Vec<
             format!("Released on {date}.")
         }
     };
+    // OpenAL Soft's pre-releases come before its releases: the current one,
+    // then the older ones kept on this PC (kcat keeps only the current one).
+    if comp == Comp::Openal {
+        if let Some(r) = &i.oal_latest {
+            out.push(opt(
+                &r.tag,
+                format!("{name} {}", r.tag),
+                prerelease_help(&r.date, false),
+            ));
+        }
+        for r in &i.kept_pre {
+            out.push(opt(
+                &r.tag,
+                format!("{name} {}", r.tag),
+                prerelease_help(&r.date, true),
+            ));
+        }
+    }
     let listed = match comp {
         Comp::Dsoal => &i.catalog.dsoal,
         Comp::Openal => &i.catalog.openal,
@@ -184,6 +240,21 @@ pub fn options(comp: Comp, info: Option<&BuildInfo>, also: Option<&str>) -> Vec<
         }
     }
     out
+}
+
+/// The help under a pre-release: when it was built, and for an older one,
+/// that only this PC still has it.
+fn prerelease_help(date: &str, kept: bool) -> String {
+    let when = if date.is_empty() {
+        "A pre-release build.".to_string()
+    } else {
+        format!("Pre-released on {date}.")
+    };
+    if kept {
+        format!("{when} OpenAL Soft's developer has since replaced it online, so this copy is only on this PC.")
+    } else {
+        when
+    }
 }
 
 /// The "Keep the installed one" option for a game that has the fix, naming
@@ -211,7 +282,17 @@ pub fn to_build(comp: Comp, key: &str, installed: Option<&str>) -> Build {
         (_, ROLLING | NUMBERED) => Build::Numbered,
         (Comp::Dsoal, TESTED) => Build::Stable,
         (Comp::Openal, TESTED) => Build::Exact(Pins::default().openal_tag),
-        (_, KEEP) => match installed.filter(|v| builds::safe_name(v)) {
+        // A pre-release is recorded with its date, "1.25.2-650d5b81
+        // (2026-11-26)"; the version is what's kept.
+        (_, KEEP) => match installed
+            .map(|v| match v.split_once(" (") {
+                // An older pre-release label had no commit, "1.25.2 (…)":
+                // that isn't the 1.25.2 release, so it stays unmatched.
+                Some((ver, _)) if builds::is_prerelease_version(ver) => ver,
+                _ => v,
+            })
+            .filter(|v| builds::safe_name(v))
+        {
             Some(v) => Build::Exact(v.to_string()),
             None => Build::Numbered,
         },
@@ -252,7 +333,10 @@ mod tests {
                 .map(|o| o.label)
                 .collect()
         };
-        assert_eq!(labels(Comp::Dsoal), ["Latest", "DSOAL r697", "DSOAL r696"]);
+        assert_eq!(
+            labels(Comp::Dsoal),
+            ["Latest r697", "DSOAL r697", "DSOAL r696"]
+        );
         assert_eq!(labels(Comp::Openal), ["Latest", "OpenAL Soft 1.25.2"]);
         // Under each: when it came out, or nothing when that isn't known.
         let helps: Vec<String> = options(Comp::Dsoal, Some(&info), None)
@@ -272,6 +356,40 @@ mod tests {
             .map(|o| o.key)
             .collect();
         assert_eq!(keys, [NUMBERED, "r650"]);
+
+        // With OpenAL Soft's pre-release known: Latest names it, then it and
+        // the older ones kept on this PC come before the releases.
+        let mut with_pre = info.clone();
+        with_pre.oal_latest = Some(Release {
+            tag: "1.25.2-650d5b81".into(),
+            date: "2026-11-26".into(),
+        });
+        with_pre.kept_pre = vec![Release {
+            tag: "1.25.2-2a6c1a6a".into(),
+            date: "2026-11-20".into(),
+        }];
+        let opts = options(Comp::Openal, Some(&with_pre), None);
+        let labels: Vec<&str> = opts.iter().map(|o| o.label.as_str()).collect();
+        assert_eq!(
+            labels,
+            [
+                "Latest 1.25.2-650d5b81 (2026-11-26)",
+                "OpenAL Soft 1.25.2-650d5b81",
+                "OpenAL Soft 1.25.2-2a6c1a6a",
+                "OpenAL Soft 1.25.2",
+            ]
+        );
+        assert_eq!(opts[1].help, "Pre-released on 2026-11-26.");
+        assert!(opts[2].help.ends_with("so this copy is only on this PC."));
+        assert_eq!(
+            to_build(Comp::Openal, &opts[2].key, None),
+            Build::Exact("1.25.2-2a6c1a6a".into())
+        );
+        // Keeping an install of Latest keeps that pre-release, not Latest.
+        assert_eq!(
+            to_build(Comp::Openal, KEEP, Some("1.25.2-650d5b81 (2026-11-26)")),
+            Build::Exact("1.25.2-650d5b81".into())
+        );
     }
 
     /// A network that answers from canned pages, counts the requests, and

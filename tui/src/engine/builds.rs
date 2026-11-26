@@ -101,6 +101,99 @@ impl Cache {
     pub fn openal_build(&self, tag: &str) -> PathBuf {
         self.openal().join("builds").join(tag)
     }
+    /// A copy of one OpenAL Soft pre-release, kept after the rolling one moved
+    /// on: `openal-soft/prereleases/1.25.2-650d5b81`. kcat replaces his
+    /// pre-release in place, so this copy is the only way back to it.
+    pub fn openal_prerelease_build(&self, version: &str) -> PathBuf {
+        self.openal().join("prereleases").join(version)
+    }
+}
+
+/// An OpenAL Soft pre-release's version, `1.25.2-650d5b81`: a release number
+/// and the commit it was built from. Releases have no commit.
+pub fn is_prerelease_version(v: &str) -> bool {
+    v.rsplit_once('-').is_some_and(|(num, commit)| {
+        !num.is_empty()
+            && num.bytes().all(|b| b.is_ascii_digit() || b == b'.')
+            && commit.len() >= 7
+            && commit.bytes().all(|b| b.is_ascii_hexdigit())
+    })
+}
+
+/// A pre-release label, "1.25.2-650d5b81 (2026-11-26)", as a version and date.
+fn prerelease_from_label(label: &str) -> Option<Release> {
+    let (tag, rest) = label.split_once(" (").unwrap_or((label, ""));
+    let date = rest.trim_end_matches(')').to_string();
+    (is_prerelease_version(tag) && safe_name(tag)).then(|| Release {
+        tag: tag.to_string(),
+        date,
+    })
+}
+
+/// A cached pre-release's version and date, from its `.version` marker
+/// (the label on its second line).
+fn cached_prerelease(dir: &Path) -> Option<Release> {
+    prerelease_from_label(read_marker(&dir.join(".version")).lines().nth(1)?)
+}
+
+/// kcat's current pre-release, from its release page; offline, the one in
+/// the cache.
+pub fn current_prerelease(cache: &Cache, json: Option<&str>) -> Option<Release> {
+    match json {
+        Some(j) => prerelease_from_label(&prerelease_label(j)),
+        None => cached_prerelease(&cache.openal_prerelease()),
+    }
+}
+
+fn copy_tree(from: &Path, to: &Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(to)?;
+    for e in std::fs::read_dir(from)? {
+        let e = e?;
+        let dest = to.join(e.file_name());
+        if e.file_type()?.is_dir() {
+            copy_tree(&e.path(), &dest)?;
+        } else {
+            std::fs::copy(e.path(), dest)?;
+        }
+    }
+    Ok(())
+}
+
+/// Keeps a copy of the cached rolling pre-release under its version, unless
+/// there is one already, so it can still be picked once kcat replaces it.
+fn keep_prerelease(cache: &Cache) {
+    let pre = cache.openal_prerelease();
+    let Some(r) = cached(&pre).then(|| cached_prerelease(&pre)).flatten() else {
+        return;
+    };
+    let dest = cache.openal_prerelease_build(&r.tag);
+    if cached(&dest) {
+        return;
+    }
+    // Not with_extension: the version's dots would be taken for one.
+    let tmp = cache
+        .openal()
+        .join("prereleases")
+        .join(format!("{}.part", r.tag));
+    let _ = std::fs::remove_dir_all(&tmp);
+    if copy_tree(&pre, &tmp).is_ok() {
+        let _ = std::fs::rename(&tmp, &dest);
+    } else {
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+}
+
+/// The kept pre-releases, newest first.
+pub fn kept_prereleases(cache: &Cache) -> Vec<Release> {
+    let mut out: Vec<Release> = std::fs::read_dir(cache.openal().join("prereleases"))
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter(|e| cached(&e.path()))
+        .filter_map(|e| cached_prerelease(&e.path()))
+        .collect();
+    out.sort_by(|a, b| b.date.cmp(&a.date).then_with(|| b.tag.cmp(&a.tag)));
+    out
 }
 
 /// A build name that is safe as a folder name: letters, digits, `.`, `-`,
@@ -696,8 +789,12 @@ pub fn lookup(cache: &Cache, net: &mut dyn Net, github: bool, pins: &Pins) -> Ve
 pub enum Build {
     Stable,
     Latest,
-    /// The newest numbered build when it installs: DSOAL's newest archived
-    /// revision; for OpenAL Soft, the same as `Stable`.
+    /// What the TUI's "Latest" installs: DSOAL's newest archived revision;
+    /// for OpenAL Soft, the rolling pre-release (`Latest`). OpenAL Soft's
+    /// releases trail its master, and DSOAL's builds come from master, so the
+    /// newest release can disagree with DSOAL; 1.25.2 still names the panning
+    /// extension `AL_SOFTX_source_panning`, which DSOAL r697 and later don't
+    /// accept, and nothing pans.
     Numbered,
     /// One numbered build: `r690`, or `1.24.3`.
     Exact(String),
@@ -705,7 +802,7 @@ pub enum Build {
 
 /// `Numbered` turned into the build it means right now, so the install knows
 /// which folder to copy from. DSOAL's is its newest archived revision (the
-/// newest cached one offline); OpenAL Soft's is `Stable`.
+/// newest cached one offline); OpenAL Soft's is the pre-release (`Latest`).
 pub fn resolve_dsoal(build: Build, cache: &Cache, net: &mut dyn Net, v: &Versions) -> Build {
     if build != Build::Numbered {
         return build;
@@ -726,7 +823,7 @@ pub fn resolve_dsoal(build: Build, cache: &Cache, net: &mut dyn Net, v: &Version
 
 pub fn resolve_openal(build: Build) -> Build {
     if build == Build::Numbered {
-        Build::Stable
+        Build::Latest
     } else {
         build
     }
@@ -745,8 +842,8 @@ pub fn dsoal_version(build: &Build, v: &Versions, pins: &Pins) -> String {
 
 pub fn openal_version(build: &Build, v: &Versions) -> String {
     match build {
-        Build::Stable | Build::Numbered => v.oal_stable.clone(),
-        Build::Latest => v.oal_latest.clone(),
+        Build::Stable => v.oal_stable.clone(),
+        Build::Latest | Build::Numbered => v.oal_latest.clone(),
         Build::Exact(tag) => tag.clone(),
     }
 }
@@ -965,6 +1062,33 @@ fn ensure_openal_exact(
     if !safe_name(tag) {
         return Got::Failed(Why::NotPublished);
     }
+    if is_prerelease_version(tag) {
+        // Only the current pre-release can be downloaded; an older one only
+        // exists as a copy kept here.
+        let dir = cache.openal_prerelease_build(tag);
+        if cached(&dir) {
+            return Got::UpToDate;
+        }
+        let current = v.oal_latest.split(" (").next().unwrap_or("");
+        if current != tag {
+            return Got::Failed(if v.github {
+                Why::NotPublished
+            } else {
+                Why::Offline
+            });
+        }
+        return match ensure_openal(cache, net, v, Build::Latest, confirm) {
+            Got::Failed(why) => Got::Failed(why),
+            got => {
+                keep_prerelease(cache);
+                if cached(&dir) {
+                    got
+                } else {
+                    Got::Failed(Why::Unpack)
+                }
+            }
+        };
+    }
     let dir = cache.openal_build(tag);
     if cached(&dir) {
         return Got::UpToDate;
@@ -1124,6 +1248,8 @@ pub fn ensure_openal(
     if a.updated == local && cached(&pre) {
         return Got::UpToDate;
     }
+    // The one being replaced stays pickable under its own version.
+    keep_prerelease(cache);
     let zip = share.join("prerelease.zip");
     let label = format!("kcat OpenAL Soft pre-release [{}]", a.version);
     let digest = a.digest.clone();
@@ -1131,6 +1257,7 @@ pub fn ensure_openal(
         Ok(()) if extract_zip_into(&zip, &pre) => {
             let _ = std::fs::write(&version_file, format!("{}\n{}\n", a.updated, v.oal_latest));
             let _ = std::fs::remove_file(&zip);
+            keep_prerelease(cache);
             return Got::Downloaded;
         }
         Ok(()) => Why::Unpack,
@@ -1197,8 +1324,16 @@ pub fn dsoal_source_dir(cache: &Cache, build: &Build, arch: &str) -> Option<Path
 /// The OpenAL Soft DLL to deploy for an architecture.
 pub fn openal_source_dll(cache: &Cache, build: &Build, arch: &str) -> PathBuf {
     let release = match build {
-        Build::Latest => return cache.openal_prerelease().join(arch).join("OpenAL32.dll"),
-        Build::Stable | Build::Numbered => cache.openal_official(),
+        Build::Latest | Build::Numbered => {
+            return cache.openal_prerelease().join(arch).join("OpenAL32.dll")
+        }
+        Build::Stable => cache.openal_official(),
+        Build::Exact(tag) if safe_name(tag) && is_prerelease_version(tag) => {
+            return cache
+                .openal_prerelease_build(tag)
+                .join(arch)
+                .join("OpenAL32.dll")
+        }
         Build::Exact(tag) if safe_name(tag) => cache.openal_build(tag),
         Build::Exact(_) => return PathBuf::from("/soft_oal.dll"),
     };
@@ -1310,6 +1445,61 @@ mod tests {
     }
 
     #[test]
+    fn a_pre_release_is_kept_under_its_version_and_can_be_installed_later() {
+        assert!(is_prerelease_version("1.25.2-650d5b81"));
+        assert!(!is_prerelease_version("1.25.2"));
+        assert!(!is_prerelease_version("r697"));
+        assert!(!is_prerelease_version("1.25.2-beta"));
+
+        let tmp = tempfile::tempdir().unwrap();
+        let cache = Cache::new(tmp.path());
+        // The rolling pre-release in the cache, as an install left it.
+        let pre = cache.openal_prerelease();
+        std::fs::create_dir_all(pre.join("Win32")).unwrap();
+        std::fs::write(pre.join("Win32/OpenAL32.dll"), "old").unwrap();
+        std::fs::write(
+            pre.join(".version"),
+            "2026-11-20T14:09:53Z\n1.25.2-2a6c1a6a (2026-11-20)\n",
+        )
+        .unwrap();
+        assert!(kept_prereleases(&cache).is_empty());
+
+        // Before a newer one replaces it, it's copied under its version.
+        keep_prerelease(&cache);
+        assert_eq!(
+            kept_prereleases(&cache),
+            vec![Release {
+                tag: "1.25.2-2a6c1a6a".into(),
+                date: "2026-11-20".into(),
+            }]
+        );
+        let exact = Build::Exact("1.25.2-2a6c1a6a".into());
+        let dll = openal_source_dll(&cache, &exact, "Win32");
+        assert_eq!(std::fs::read_to_string(&dll).unwrap(), "old");
+
+        // Picking it later installs that copy, even offline.
+        let offline = Versions::default();
+        let mut net = Pages(vec![]);
+        let mut yes = |_: &str| true;
+        assert_eq!(
+            ensure_openal(&cache, &mut net, &offline, exact, &mut yes),
+            Got::UpToDate
+        );
+        // One that was never downloaded can't be had: kcat keeps only the
+        // current pre-release.
+        assert_eq!(
+            ensure_openal(
+                &cache,
+                &mut net,
+                &offline,
+                Build::Exact("1.25.2-1234567".into()),
+                &mut yes
+            ),
+            Got::Failed(Why::Offline)
+        );
+    }
+
+    #[test]
     fn numbered_means_the_newest_now_and_an_exact_build_uses_its_own_folder() {
         let tmp = tempfile::tempdir().unwrap();
         let cache = Cache::new(tmp.path());
@@ -1322,7 +1512,9 @@ mod tests {
             resolve_dsoal(Build::Numbered, &cache, &mut net, &online),
             Build::Exact("r697".into())
         );
-        assert_eq!(resolve_openal(Build::Numbered), Build::Stable);
+        // OpenAL Soft's newest build is its pre-release, which matches DSOAL's
+        // master builds; its newest release can lag behind them.
+        assert_eq!(resolve_openal(Build::Numbered), Build::Latest);
         assert_eq!(
             resolve_dsoal(Build::Latest, &cache, &mut net, &online),
             Build::Latest

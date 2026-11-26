@@ -2570,7 +2570,7 @@ mod tests {
             .iter()
             .map(|o| o.label.clone())
             .collect();
-        assert_eq!(labels, ["Latest", "DSOAL r697", "DSOAL r690"]);
+        assert_eq!(labels, ["Latest r697", "DSOAL r697", "DSOAL r690"]);
         // An exact build goes to the install as that version.
         assert_eq!(p.plan().dsoal_build, Build::Exact("r690".into()));
         // A newer list keeps r690 chosen, still a change from the default.
