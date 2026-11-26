@@ -269,6 +269,10 @@ pub struct Panel {
     pub facts: Facts,
     pub game: Option<Game>,
     pub installed: Option<Installed>,
+    /// An uninstall took the EAX fix out but the player kept part of it (the
+    /// DLL override, or game settings): shown as not installed, with
+    /// Uninstall still there to take the rest out.
+    pub kept: Option<Installed>,
     /// A Linux build or a missing prefix: there's nothing to choose yet.
     pub problem: Option<String>,
     /// The page has nothing to choose yet, so the list shows a short pop-up
@@ -349,7 +353,10 @@ impl Panel {
             launcher_exe.as_deref(),
         );
         let facts = prepare::gather(&dir, game.as_ref(), home, &pt);
-        let installed = Installed::read(&facts.game_dir, home);
+        let (installed, kept) = match Installed::read(&facts.game_dir, home) {
+            Some(i) if i.only_kept => (None, Some(i)),
+            other => (other, None),
+        };
         let name = game
             .as_ref()
             .map_or_else(|| name.to_string(), |g| g.name.clone());
@@ -358,6 +365,7 @@ impl Panel {
             facts,
             game,
             installed,
+            kept,
             problem: None,
             gate: None,
             sections: Vec::new(),
@@ -775,7 +783,12 @@ impl Panel {
             "Shows the line to add yourself.".into(),
         ));
         let has_launcher = f.launcher.is_some();
-        let over_at = match st.as_ref().map(|s| s.over) {
+        // Where an override is set right now, whatever the manifest says: it
+        // may be one an uninstall kept, or one set by hand.
+        let found =
+            crate::engine::installed::override_in_place(f.launcher.as_ref(), f.prefix.as_deref())
+                .filter(|k| *k != OverrideKind::Launcher || has_launcher);
+        let over_at = match found.or(st.as_ref().map(|s| s.over)) {
             Some(OverrideKind::Launcher) if has_launcher => 0,
             Some(OverrideKind::Registry) => usize::from(has_launcher),
             Some(OverrideKind::Manual) => usize::from(has_launcher) + 1,
@@ -792,9 +805,10 @@ impl Panel {
                 crate::prefs::OverridePref::Manual => usize::from(has_launcher) + 1,
             },
         };
-        // Where the override goes is the page's choice, not something read
-        // from the game, so it's never shown as detected.
-        let mut orow = Row::new(RowKind::Override, "DLL override", Vec::new(), over_at);
+        // Detected when an override is really there, as other rows are when
+        // something is found on the PC.
+        let mut orow = Row::new(RowKind::Override, "DLL override", Vec::new(), over_at)
+            .detected(found.is_some());
         orow.options = over
             .into_iter()
             .map(|(label, help)| Opt { label, help })
@@ -867,12 +881,15 @@ impl Panel {
         setup.push(
             Row::new(
                 RowKind::Limits,
-                "More sounds at once",
+                "Max sources",
                 vec![
-                    ("Off", "The usual number of sounds."),
                     (
-                        "On",
-                        "Lets the game play up to 256 sounds at once, at 48 kHz.",
+                        "Default",
+                        "Leaves sources and frequency out of alsoft.ini, so OpenAL Soft uses its own defaults.",
+                    ),
+                    (
+                        "256",
+                        "Sets sources = 256 and frequency = 48000 in alsoft.ini, so the game can play up to 256 sounds at once.",
                     ),
                 ],
                 usize::from(st.as_ref().is_some_and(|s| s.advanced_limits)),
@@ -1150,6 +1167,7 @@ impl Panel {
                 }
                 b
             }
+            Screen::Main if self.kept.is_some() => vec![Button::Install, Button::Uninstall],
             Screen::Main => vec![Button::Install],
         }
     }
@@ -1985,6 +2003,70 @@ mod tests {
         p.facts.prefix = Some(home.join(".local/share/Steam/steamapps/compatdata/424242/pfx"));
         p.build();
         p
+    }
+
+    #[test]
+    fn a_game_with_only_its_kept_override_left_is_partly_uninstalled() {
+        let tmp = tempfile::tempdir().unwrap();
+        let home = tmp.path().join("home");
+        let game = steam_game(&home);
+        let vdf = home.join("localconfig.vdf");
+        touch(&vdf, "x");
+        touch(
+            &game.join(crate::engine::manifest::FILE_NAME),
+            &format!(
+                "{}\nLAUNCHER:steam\t{}\t424242\t__ABSENT__\tWINEDLLOVERRIDES=\"dsound=n,b\" %command%\n",
+                crate::engine::manifest::HEADER,
+                vdf.display()
+            ),
+        );
+        let mut p = Panel::open("Test Game", &game, None, &home);
+        p.facts.prefix = Some(home.join(".local/share/Steam/steamapps/compatdata/424242/pfx"));
+        p.build();
+        // DSOAL and OpenAL Soft are gone, so it isn't shown as installed...
+        assert!(p.installed.is_none());
+        assert!(p.kept.is_some());
+        // ...but Uninstall is still there to take the override out.
+        assert_eq!(p.buttons(), vec![Button::Install, Button::Uninstall]);
+        let banner: String = view::banner_lines(&p)
+            .iter()
+            .map(|l| l.to_string())
+            .collect();
+        assert!(
+            banner.contains(
+                "Partly uninstalled, as the DLL override in Steam's launch options is still there"
+            ),
+            "{banner}"
+        );
+    }
+
+    #[test]
+    fn every_choice_shows_in_full_at_the_pop_ups_fixed_width() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut p = ready(&tmp.path().join("home"));
+        p.facts.wants_cpu_limit = true;
+        p.build();
+        let inner = usize::from(view::LEFT_W - 2);
+        let (_, field_w) = view::field_geometry(&p, inner);
+        for r in p.rows() {
+            for o in &r.options {
+                assert!(
+                    o.label.chars().count() <= field_w,
+                    "\"{}\" in {} is cut at {field_w} columns",
+                    o.label,
+                    r.title
+                );
+            }
+        }
+        // The widest title column any game can have ("Profile's sound
+        // values", shown only with a profile) still leaves room for them.
+        let longest = p
+            .rows()
+            .flat_map(|r| r.options.iter().map(|o| o.label.chars().count()))
+            .max()
+            .unwrap();
+        let widest_title = "Profile's sound values".chars().count() + 2;
+        assert!(inner >= 2 + 2 + widest_title + 6 + 11 + longest);
     }
 
     #[test]

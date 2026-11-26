@@ -33,6 +33,64 @@ pub struct Installed {
     pub settings: Vec<RevertGroup>,
     /// What the last install chose, as far as its manifest and files say.
     pub state: InstalledState,
+    /// An uninstall took the EAX fix out but the player kept some of it: the
+    /// manifest lists only a launcher's DLL override or game settings, no
+    /// files and no prefix changes.
+    pub only_kept: bool,
+}
+
+/// Where a DSOAL or OpenAL Soft DLL override is set right now, read from the
+/// launcher and the prefix themselves rather than a manifest: it may have been
+/// kept by an uninstall, or set by hand. The launcher wins when both have one.
+pub fn override_in_place(
+    launcher: Option<&super::launcher::target::Target>,
+    prefix: Option<&Path>,
+) -> Option<OverrideKind> {
+    let names_ours = |v: &str| {
+        let v = v.to_ascii_lowercase();
+        v.contains("dsound") || v.contains("openal32")
+    };
+    if let Some(t) = launcher {
+        if let super::launcher::target::Held::Set(v) = t.get() {
+            // Heroic holds the variable's value; Steam the whole launch options.
+            let has = match t.launcher {
+                super::launcher::target::Launcher::Steam => {
+                    v.contains("WINEDLLOVERRIDES") && names_ours(&v)
+                }
+                super::launcher::target::Launcher::Heroic => names_ours(&v),
+            };
+            if has {
+                return Some(OverrideKind::Launcher);
+            }
+        }
+    }
+    let store = prefix?.join("user.reg");
+    ["dsound", "openal32"]
+        .iter()
+        .any(|dll| {
+            super::prefix::registry_has_value(
+                &store,
+                "Software\\\\Wine\\\\DllOverrides",
+                &format!("\"{dll}\"=\"native,builtin\""),
+            )
+        })
+        .then_some(OverrideKind::Registry)
+}
+
+/// The manifest lists only what an uninstall left because the player kept
+/// it (`LAUNCHER:`, `LAUNCHERENV:` and `CONFIG:` lines): DSOAL and OpenAL Soft
+/// are gone.
+pub fn only_kept(lines: &[&[u8]]) -> bool {
+    let mut records = lines
+        .iter()
+        .filter(|l| !l.is_empty() && !l.starts_with(b"#"))
+        .peekable();
+    records.peek().is_some()
+        && records.all(|l| {
+            l.starts_with(b"LAUNCHER:")
+                || l.starts_with(b"LAUNCHERENV:")
+                || l.starts_with(b"CONFIG:")
+        })
 }
 
 /// Where an install put the DLL override.
@@ -94,7 +152,7 @@ pub fn engine_in(game_dir: &Path) -> Option<Engine> {
     }
     let data = std::fs::read(&manifest_path).ok()?;
     let lines: Vec<&[u8]> = data.split(|&b| b == b'\n').collect();
-    Some(engine_from(&lines, game_dir))
+    (!only_kept(&lines)).then(|| engine_from(&lines, game_dir))
 }
 
 fn state_from(lines: &[&[u8]], game_dir: &Path, alsoft: Option<&PathBuf>) -> InstalledState {
@@ -220,6 +278,7 @@ impl Installed {
                 (st.dsoal_version, st.openal_version) = versions;
                 st
             },
+            only_kept: only_kept(&lines),
             alsoft_files,
         })
     }
@@ -264,6 +323,53 @@ mod tests {
     use super::*;
     use crate::db::Database;
     use crate::engine::speakers::{Layout, Listening};
+
+    #[test]
+    fn an_override_is_found_where_it_really_is() {
+        use crate::engine::launcher::target::{Launcher, Target};
+        use crate::engine::launcher::vdf;
+        let tmp = tempfile::tempdir().unwrap();
+        let vdf_path = tmp.path().join("localconfig.vdf");
+        let empty = "\"UserLocalConfigStore\"\n{\n\t\"Software\"\n\t{\n\t\t\"Valve\"\n\t\t{\n\t\t\t\"Steam\"\n\t\t\t{\n\t\t\t\t\"apps\"\n\t\t\t\t{\n\t\t\t\t\t\"20530\"\n\t\t\t\t\t{\n\t\t\t\t\t\t\"LastPlayed\"\t\t\"1\"\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t}\n}\n";
+        std::fs::write(&vdf_path, empty).unwrap();
+        let steam = Target {
+            launcher: Launcher::Steam,
+            file: vdf_path.clone(),
+            id: "20530".into(),
+        };
+        let pfx = tmp.path().join("pfx");
+        std::fs::create_dir_all(&pfx).unwrap();
+        assert_eq!(override_in_place(Some(&steam), Some(&pfx)), None);
+
+        // Kept by an uninstall, or set by hand: either way it's there.
+        let with = vdf::set(
+            empty.as_bytes(),
+            "20530",
+            Some("WINEDLLOVERRIDES=\"dsound=n,b\" %command%"),
+        );
+        std::fs::write(&vdf_path, with).unwrap();
+        assert_eq!(
+            override_in_place(Some(&steam), Some(&pfx)),
+            Some(OverrideKind::Launcher)
+        );
+
+        // Other launch options aren't an override.
+        let other = vdf::set(empty.as_bytes(), "20530", Some("PROTON_LOG=1 %command%"));
+        std::fs::write(&vdf_path, other).unwrap();
+        assert_eq!(override_in_place(Some(&steam), Some(&pfx)), None);
+
+        // In the prefix's registry.
+        std::fs::write(
+            pfx.join("user.reg"),
+            "WINE REGISTRY Version 2\n\n[Software\\\\Wine\\\\DllOverrides] 1795428006\n#time=1\n\"dsound\"=\"native,builtin\"\n",
+        )
+        .unwrap();
+        assert_eq!(
+            override_in_place(Some(&steam), Some(&pfx)),
+            Some(OverrideKind::Registry)
+        );
+        assert_eq!(override_in_place(None, None), None);
+    }
 
     fn touch(path: &Path, text: &str) {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();

@@ -288,6 +288,13 @@ pub struct Report {
     pub settings_not_restored: Vec<(String, String, Reverted)>,
     /// The manifest now reads as uninstalled.
     pub fully_uninstalled: bool,
+    /// Not fully uninstalled, but only because of what the player chose to
+    /// keep: everything else came out. A partial uninstall, not a failure.
+    pub partly_uninstalled: bool,
+    /// The `LAUNCHER:` lines whose override the player chose to keep.
+    pub launcher_kept: Vec<String>,
+    /// The titles of the settings the player chose not to put back.
+    pub settings_kept: Vec<String>,
 }
 
 /// Every timestamped backup of `target`, removed once its original is back:
@@ -386,6 +393,7 @@ pub fn execute(s: &Survey, c: &Choices, host: &mut dyn UninstallHost, when: &str
         let where_ = crate::engine::install::override_where(launcher);
         if c.keep_launcher.contains(&line) {
             host.detail(&format!("Kept the DLL override in {where_}"));
+            r.launcher_kept.push(line.clone());
             r.launcher_left.push(line);
             continue;
         }
@@ -486,8 +494,12 @@ pub fn execute(s: &Survey, c: &Choices, host: &mut dyn UninstallHost, when: &str
             .any(|x| x.category == g.category && x.title == g.title)
         {
             settings_kept.extend(g.lines.iter().cloned());
+            r.settings_kept.push(g.title.clone());
         }
     }
+    // What stays because the player asked for it, not because it failed.
+    let mut by_choice: HashSet<Vec<u8>> = settings_kept.iter().cloned().collect();
+    by_choice.extend(r.launcher_kept.iter().map(|l| l.as_bytes().to_vec()));
     let mut registry_quiet: Option<bool> = None;
     if !c.revert.is_empty() {
         host.step("Putting the game's settings back");
@@ -534,8 +546,44 @@ pub fn execute(s: &Survey, c: &Choices, host: &mut dyn UninstallHost, when: &str
             eax_unified_removed,
             when,
         );
+        r.partly_uninstalled = !r.fully_uninstalled && only_these_left(&s.manifest, &by_choice);
     }
     r
+}
+
+/// What the player kept, as the finish and the Status card name it: "the
+/// DLL override in Steam's launch options", "the game settings (Enable
+/// EAX)".
+pub fn kept_parts(launcher_lines: &[String], settings: &[String]) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    for line in launcher_lines {
+        if let Some(rec) = LauncherRecord::parse(line) {
+            let launcher = Launcher::from_key(&rec.launcher).unwrap_or(Launcher::Heroic);
+            let part = format!(
+                "the DLL override in {}",
+                crate::engine::install::override_where(launcher)
+            );
+            if !out.contains(&part) {
+                out.push(part);
+            }
+        }
+    }
+    if !settings.is_empty() {
+        out.push(format!("the game settings ({})", settings.join(", ")));
+    }
+    out
+}
+
+/// The manifest lists nothing but `kept`: every other record is gone.
+fn only_these_left(manifest: &Path, kept: &HashSet<Vec<u8>>) -> bool {
+    let Ok(data) = std::fs::read(manifest) else {
+        return false;
+    };
+    let mut records = data
+        .split(|&b| b == b'\n')
+        .filter(|l| !l.is_empty() && !l.starts_with(b"#"))
+        .peekable();
+    records.peek().is_some() && records.all(|l| kept.contains(l))
 }
 
 /// What's left to undo stays in the manifest: files, and registry keys that
@@ -774,5 +822,114 @@ mod tests {
             std::fs::read_to_string(manifest::path_in(&game)).unwrap(),
             text
         );
+    }
+
+    /// A host for an uninstall that only removes files and maybe touches a
+    /// launcher: `closed` is whether the launcher could be closed.
+    struct Quiet {
+        closed: bool,
+    }
+    impl Host for Quiet {
+        fn game_running(&mut self) -> bool {
+            false
+        }
+        fn registry_quiet(&mut self) -> bool {
+            true
+        }
+    }
+    impl UninstallHost for Quiet {
+        fn launcher_closed(&mut self, _: &Target) -> bool {
+            self.closed
+        }
+        fn remove_registry(&mut self, _: &RegistryWork) -> bool {
+            unreachable!()
+        }
+        fn remove_vcrun(&mut self) {
+            unreachable!()
+        }
+        fn remove_eax_unified(&mut self) -> bool {
+            unreachable!()
+        }
+        fn clean_companion(&mut self, _: &Companion, _: bool) {
+            unreachable!()
+        }
+    }
+
+    /// A game with DSOAL's dsound.dll and Steam's DLL override recorded.
+    fn steam_install(root: &Path) -> (PathBuf, String) {
+        let game = root.join("G");
+        let vdf = root.join("localconfig.vdf");
+        touch(&game.join("dsound.dll"), "x");
+        touch(&vdf, "\"UserLocalConfigStore\"\n{\n}\n");
+        let launcher = format!(
+            "LAUNCHER:steam\t{}\t20530\t__ABSENT__\tWINEDLLOVERRIDES=\"dsound=n,b\" %command%",
+            vdf.display()
+        );
+        touch(
+            &manifest::path_in(&game),
+            &format!(
+                "{}\n{}/dsound.dll\n{launcher}\n",
+                manifest::HEADER,
+                game.display()
+            ),
+        );
+        (game, launcher)
+    }
+
+    fn at(game: &Path) -> Location<'_> {
+        Location {
+            game_dir: game,
+            install_root: game,
+            prefix: None,
+            extra_dirs: &[],
+            installed_dirs: &[],
+            has_app_id: false,
+        }
+    }
+
+    #[test]
+    fn keeping_the_dll_override_is_a_partial_uninstall_not_a_failure() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (game, launcher) = steam_install(tmp.path());
+        let s = found(survey(&at(&game)));
+        assert_eq!(s.launcher_lines(), vec![launcher.clone()]);
+        let choices = Choices {
+            remove: s.files.iter().map(|f| f.path.clone()).collect(),
+            keep_launcher: s.launcher_lines(),
+            ..Choices::default()
+        };
+        let r = execute(&s, &choices, &mut Quiet { closed: true }, "now");
+        assert!(!game.join("dsound.dll").exists());
+        assert!(!r.fully_uninstalled);
+        assert!(r.partly_uninstalled);
+        assert_eq!(r.launcher_kept, vec![launcher.clone()]);
+        assert_eq!(
+            kept_parts(&r.launcher_kept, &r.settings_kept),
+            vec!["the DLL override in Steam's launch options".to_string()]
+        );
+        // The override stays recorded, so a later uninstall can remove it,
+        // and the install reads as only what was kept: DSOAL is gone.
+        let text = std::fs::read_to_string(manifest::path_in(&game)).unwrap();
+        assert!(text.contains(&launcher));
+        assert!(!text.contains("dsound.dll\n"));
+        let lines: Vec<&[u8]> = text.as_bytes().split(|&b| b == b'\n').collect();
+        assert!(crate::engine::installed::only_kept(&lines));
+        assert_eq!(crate::engine::installed::engine_in(&game), None);
+    }
+
+    #[test]
+    fn an_override_that_couldnt_be_removed_is_still_a_failure() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (game, _) = steam_install(tmp.path());
+        let s = found(survey(&at(&game)));
+        let choices = Choices {
+            remove: s.files.iter().map(|f| f.path.clone()).collect(),
+            ..Choices::default()
+        };
+        // Steam stayed open, so the override couldn't come out.
+        let r = execute(&s, &choices, &mut Quiet { closed: false }, "now");
+        assert!(!r.fully_uninstalled);
+        assert!(!r.partly_uninstalled);
+        assert!(r.launcher_kept.is_empty());
     }
 }

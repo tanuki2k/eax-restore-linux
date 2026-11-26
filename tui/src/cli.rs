@@ -1349,6 +1349,12 @@ fn uninstall(
     }
     if r.fully_uninstalled {
         say(format!("The EAX fix is removed from {name}."));
+    } else if r.partly_uninstalled {
+        let kept = uninstall::kept_parts(&r.launcher_kept, &r.settings_kept);
+        say(format!(
+            "The EAX fix is removed from {name}, apart from {}, which you chose to keep.",
+            kept.join(" and ")
+        ));
     } else {
         say(format!("Some of the EAX fix is still in {name}, listed above. Uninstall again to try those once more."));
     }

@@ -19,8 +19,10 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Clear, Paragraph, Widget, Wrap};
 use ratatui::Frame;
 
-/// The page's width, border included.
-pub const LEFT_W: u16 = 64;
+/// The page's width, border included: fixed, and wide enough that the
+/// longest row title and option label show in full beside " (detected)"
+/// (checked by a test), the same as the other pop-ups' `POPUP_W`.
+pub const LEFT_W: u16 = 90;
 /// The Status box's tallest, border included, so the choices keep room.
 const STATUS_MAX_H: u16 = 8;
 /// A check's line: the badge, then the label column.
@@ -172,7 +174,7 @@ struct PageBox {
 /// The row names' column, and the dropdown field's text width: as wide as the
 /// longest option on the page, so picking a value never moves anything, but no
 /// wider than the column leaves room for.
-fn field_geometry(p: &Panel, width: usize) -> (usize, usize) {
+pub(crate) fn field_geometry(p: &Panel, width: usize) -> (usize, usize) {
     let title_w = p.rows().map(|r| r.title.chars().count()).max().unwrap_or(0) + 2;
     let longest = p
         .rows()
@@ -716,7 +718,29 @@ pub fn banner_lines(p: &Panel) -> Vec<Line<'static>> {
             yellow,
             format!("Can't install yet, because {} has no Wine prefix", p.name),
         ),
-        (None, None) => dot(dim, "Not installed".into()),
+        (None, None) => match &p.kept {
+            Some(k) => {
+                let launcher: Vec<String> = std::fs::read(&k.manifest)
+                    .map(|d| {
+                        d.split(|&b| b == b'\n')
+                            .filter(|l| l.starts_with(b"LAUNCHER:"))
+                            .map(|l| String::from_utf8_lossy(l).into_owned())
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                let settings: Vec<String> = k.settings.iter().map(|g| g.title.clone()).collect();
+                let kept = crate::engine::uninstall::kept_parts(&launcher, &settings);
+                dot(
+                    yellow,
+                    format!(
+                        "Partly uninstalled, as {} {} still there",
+                        kept.join(" and "),
+                        if kept.len() > 1 { "are" } else { "is" }
+                    ),
+                )
+            }
+            None => dot(dim, "Not installed".into()),
+        },
     };
     vec![install]
 }

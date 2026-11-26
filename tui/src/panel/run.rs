@@ -185,6 +185,7 @@ pub fn start(
             reopen: Vec::new(),
             next: Vec::new(),
             settings: Vec::new(),
+            title: None,
         };
         let mut lines = Vec::new();
         let mut ok = true;
@@ -200,7 +201,11 @@ pub fn start(
             }
         }
         w.reopen_launchers();
-        let title = if ok { titles.0 } else { titles.1 };
+        let title = match w.title {
+            Some(t) if ok => t,
+            _ if ok => titles.0,
+            _ => titles.1,
+        };
         if let Some(log) = &out.log {
             let last = out.last_step();
             log.summary(
@@ -274,6 +279,9 @@ struct Worker {
     /// The finish box's numbered steps and changed settings.
     next: Vec<String>,
     settings: Vec<(String, String)>,
+    /// The finish title, when a job ended in a state of its own ("Partly
+    /// uninstalled") rather than plain success or failure.
+    title: Option<&'static str>,
 }
 
 impl Worker {
@@ -616,6 +624,13 @@ impl Worker {
                 };
                 if r.fully_uninstalled {
                     lines.push(format!("The EAX fix is removed from {name}."));
+                } else if r.partly_uninstalled {
+                    self.title = Some("Partly uninstalled");
+                    let kept = uninstall::kept_parts(&r.launcher_kept, &r.settings_kept);
+                    lines.push(format!(
+                        "The EAX fix is removed from {name}, apart from {}, which you chose to keep.",
+                        kept.join(" and ")
+                    ));
                 } else {
                     return Err(format!("Some of the EAX fix is still in {name}, listed under Warnings. Uninstall again to try those once more."));
                 }
