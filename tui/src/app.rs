@@ -22,6 +22,35 @@ pub enum Focus {
     Card,
 }
 
+/// The game details screen (Enter on a game): its profile on the left, its
+/// settings on the right, each scrolling on its own. Installing goes on from
+/// here.
+pub struct Details {
+    pub entry: Entry,
+    /// The settings box on the right has focus, rather than the profile.
+    pub right: bool,
+    pub scroll: [u16; 2],
+    /// How far each box can scroll; known only once it's drawn.
+    pub max: [std::cell::Cell<u16>; 2],
+}
+
+impl Details {
+    fn new(entry: Entry) -> Self {
+        Details {
+            entry,
+            right: false,
+            scroll: [0, 0],
+            max: Default::default(),
+        }
+    }
+
+    fn scroll_by(&mut self, delta: i32) {
+        let i = usize::from(self.right);
+        let max = i32::from(self.max[i].get());
+        self.scroll[i] = (i32::from(self.scroll[i]) + delta).clamp(0, max) as u16;
+    }
+}
+
 /// One row of the Filters pop-up.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum MenuRow {
@@ -120,6 +149,8 @@ pub struct App {
     pub prefs: Option<crate::prefs_screen::PrefsScreen>,
     /// The Filters pop-up (F3), while it is open.
     pub filter_menu: Option<FilterMenu>,
+    /// The game details screen, while it is open.
+    pub details: Option<Details>,
     /// Which box on the main screen the keys go to.
     pub focus: Focus,
     /// The games list as a table with a column per detail (F8), rather than a
@@ -177,6 +208,7 @@ impl App {
             picker: None,
             prefs: None,
             filter_menu: None,
+            details: None,
             focus: Focus::Games,
             table: false,
             favorites: Default::default(),
@@ -263,7 +295,13 @@ impl App {
     /// F4: stars the highlighted game, or unstars it, and saves the list.
     /// Tests never write the player's own file.
     fn toggle_favorite(&mut self) {
-        let Some(key) = self.current().and_then(Self::favorite_key) else {
+        if let Some(e) = self.current().cloned() {
+            self.toggle_favorite_of(&e);
+        }
+    }
+
+    fn toggle_favorite_of(&mut self, e: &Entry) {
+        let Some(key) = Self::favorite_key(e) else {
             return;
         };
         if !self.favorites.remove(&key) {
@@ -300,6 +338,19 @@ impl App {
             let same = |e: &Entry| e.name == name && e.path == path;
             if let Some(pos) = self.visible.iter().position(|&i| same(&self.games[i])) {
                 self.selected = pos;
+            }
+        }
+        // The open details screen shows the game as the scan now finds it (an
+        // install just done, say).
+        if let Some(d) = self.details.as_mut() {
+            let (name, store) = (d.entry.name.clone(), d.entry.store);
+            let path = d.entry.path.clone();
+            if let Some(e) = self
+                .games
+                .iter()
+                .find(|e| e.name == name && e.store == store && (path.is_none() || e.path == path))
+            {
+                d.entry = e.clone();
             }
         }
     }
@@ -521,8 +572,46 @@ impl App {
     /// its folder first, so the folder picker asks for it, unless its profile
     /// says it has no EAX, whose page needs no folder. A game with no EAX or
     /// no prefix yet gets a pop-up instead of the page.
-    fn open_game(&mut self) {
-        let Some(e) = self.current() else { return };
+    fn open_details(&mut self) {
+        if let Some(e) = self.current() {
+            self.details = Some(Details::new(e.clone()));
+        }
+    }
+
+    /// Keys on the game details screen. Enter goes on to install, change or
+    /// uninstall the fix, as the list's Enter used to.
+    fn handle_details_key(&mut self, key: KeyEvent) {
+        let Some(d) = self.details.as_mut() else {
+            return;
+        };
+        let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+        match key.code {
+            KeyCode::Esc => self.details = None,
+            KeyCode::Char('c') if ctrl => self.quit = true,
+            KeyCode::F(1) => self.open_help(),
+            KeyCode::F(4) => {
+                let e = d.entry.clone();
+                self.toggle_favorite_of(&e);
+            }
+            KeyCode::Tab | KeyCode::BackTab | KeyCode::Left | KeyCode::Right => d.right = !d.right,
+            KeyCode::Up => d.scroll_by(-1),
+            KeyCode::Down => d.scroll_by(1),
+            KeyCode::PageUp => d.scroll_by(-10),
+            KeyCode::PageDown => d.scroll_by(10),
+            KeyCode::Home => d.scroll[usize::from(d.right)] = 0,
+            KeyCode::End => {
+                let i = usize::from(d.right);
+                d.scroll[i] = d.max[i].get();
+            }
+            KeyCode::Enter => {
+                let e = d.entry.clone();
+                self.install_game(e);
+            }
+            _ => {}
+        }
+    }
+
+    fn install_game(&mut self, e: Entry) {
         let (name, game, path) = (e.name.clone(), e.game.clone(), e.path.clone());
         let store = e.store.map(crate::library::StoreKind::key);
         if let Some(lines) = game
@@ -752,7 +841,10 @@ impl App {
             KeyCode::End => self.pane_scroll = self.pane_max.get(),
             KeyCode::Left => self.show_pane(Pane::Profile),
             KeyCode::Right => self.show_pane(Pane::Settings),
-            KeyCode::Enter => self.open_game(),
+            KeyCode::Enter => {
+                self.zoom = false;
+                self.open_details();
+            }
             _ => {}
         }
     }
@@ -806,6 +898,9 @@ impl App {
                 return self.open_help();
             }
             return self.handle_panel_key(key);
+        }
+        if self.details.is_some() {
+            return self.handle_details_key(key);
         }
         if self.zoom {
             return self.handle_zoom_key(key);
@@ -875,7 +970,7 @@ impl App {
             (Focus::Card, KeyCode::End) => self.pane_scroll = self.pane_max.get(),
             (Focus::Games | Focus::Card, KeyCode::Right) => self.show_pane(Pane::Settings),
             (Focus::Games | Focus::Card, KeyCode::Left) => self.show_pane(Pane::Profile),
-            (_, KeyCode::Enter) => self.open_game(),
+            (_, KeyCode::Enter) => self.open_details(),
             (_, KeyCode::Up) => self.move_by(-1),
             (_, KeyCode::Down) => self.move_by(1),
             (_, KeyCode::PageUp) => self.move_by(-10),
@@ -1090,6 +1185,8 @@ mod tests {
     #[test]
     fn enter_on_a_game_not_on_this_pc_asks_for_its_folder_and_esc_does_not_quit() {
         let mut a = app();
+        // Enter opens the game's details; Enter there goes on to install.
+        a.handle_key(key(KeyCode::Enter));
         a.handle_key(key(KeyCode::Enter));
         assert!(a.picker.is_some());
         a.handle_key(key(KeyCode::Char('z')));
@@ -1403,10 +1500,13 @@ mod tests {
         a.handle_key(ctrl('f'));
         a.handle_key(key(KeyCode::Right));
         assert_eq!(a.pane, Pane::Settings);
+        // Enter opens the game's details, and Enter there asks for its folder.
+        a.handle_key(key(KeyCode::Enter));
+        assert!(a.details.is_some() && !a.zoom);
         a.handle_key(key(KeyCode::Enter));
         assert!(a.picker.is_some());
         a.handle_key(key(KeyCode::Esc));
-        assert!(a.zoom, "Esc closed only the picker");
+        assert!(a.details.is_some(), "Esc closed only the picker");
         a.handle_key(key(KeyCode::F(1)));
         assert!(a.help);
     }

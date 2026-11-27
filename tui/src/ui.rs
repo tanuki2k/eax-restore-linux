@@ -44,6 +44,14 @@ pub fn draw(f: &mut Frame, app: &App) {
         }
         return;
     }
+    if let Some(d) = &app.details {
+        // The game details screen: the whole screen, then the key line.
+        let [body, hint] =
+            Layout::vertical([Constraint::Min(3), Constraint::Length(hint_height)]).areas(screen);
+        draw_bar(f, app, hint);
+        draw_details(f, app, d, body);
+        return draw_overlays(f, app, body);
+    }
     let compact = screen.height < COMPACT_BELOW;
     let (title_h, box_h) = if compact { (0, 1) } else { (1, 3) };
     let [title, views, search, filters, body, hint, fbar] = Layout::vertical([
@@ -69,7 +77,12 @@ pub fn draw(f: &mut Frame, app: &App) {
     draw_body(f, app, body);
     // Pop-ups sit over everything above the key line, as they always have.
     let body = Rect::new(screen.x, screen.y, screen.width, hint.y - screen.y);
-    // A game's page is a pop-up: the list stays in sight round it.
+    draw_overlays(f, app, body);
+}
+
+/// The pop-ups, over whatever screen is showing.
+fn draw_overlays(f: &mut Frame, app: &App, body: Rect) {
+    // A game's page is a pop-up: what's behind stays in sight round it.
     if let Some(p) = &app.panel {
         crate::panel::view::draw(f, p, body);
         if app.help {
@@ -97,7 +110,8 @@ pub fn draw(f: &mut Frame, app: &App) {
 
 /// Nothing is open over the main screen, so the F-keys apply.
 fn main_screen(app: &App) -> bool {
-    app.panel.is_none()
+    app.details.is_none()
+        && app.panel.is_none()
         && app.picker.is_none()
         && app.prefs.is_none()
         && app.notice.is_none()
@@ -251,6 +265,58 @@ fn draw_body(f: &mut Frame, app: &App, body: Rect) {
     let (left, pane) = split(app, body);
     draw_games(f, app, left);
     draw_pane(f, app, pane, false);
+}
+
+/// The game details screen: a top line with the way back, the game's name and
+/// its rating, then its profile and its settings side by side (one above the
+/// other on a narrow window), each scrolling on its own.
+fn draw_details(f: &mut Frame, app: &App, d: &crate::app::Details, area: Rect) {
+    let [top, boxes] = Layout::vertical([Constraint::Length(2), Constraint::Min(3)]).areas(area);
+    let top = Rect::new(top.x, top.y, top.width, 1);
+    f.render_widget(
+        Paragraph::new(Line::from(vec![
+            Span::raw(" "),
+            Span::styled("Esc", theme::key()),
+            Span::styled(" Back to the list", Style::new().fg(theme::LABEL)),
+        ])),
+        top,
+    );
+    f.render_widget(
+        Paragraph::new(Span::styled(d.entry.name.clone(), theme::white()))
+            .alignment(Alignment::Center),
+        top,
+    );
+    if d.entry.game.is_some() {
+        f.render_widget(
+            Paragraph::new(Line::from(vec![compat_span(&d.entry), Span::raw(" ")]))
+                .alignment(Alignment::Right),
+            top,
+        );
+    }
+    let [left, right] = if boxes.width < crate::app::STACK_BELOW {
+        Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)]).areas(boxes)
+    } else {
+        Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)]).areas(boxes)
+    };
+    let left_block =
+        focus_box(box_title("Game details".into(), !d.right), !d.right).padding(MARGIN);
+    let width = usize::from(left_block.inner(left).width);
+    let lines = profile::lines(&d.entry, width, &app.home, app.exe_of(&d.entry).as_ref());
+    scrolling(f, left, left_block, lines, d.scroll[0], &d.max[0]);
+    let right_block = focus_box(box_title("Settings".into(), d.right), d.right).padding(MARGIN);
+    let width = usize::from(right_block.inner(right).width);
+    let lines = match &d.entry.game {
+        Some(g) => settings::lines(g, width),
+        None => wrap(
+            &format!("The game database has no profile for {}.", d.entry.name),
+            width,
+            "",
+        )
+        .into_iter()
+        .map(Line::from)
+        .collect(),
+    };
+    scrolling(f, right, right_block, lines, d.scroll[1], &d.max[1]);
 }
 
 /// The program's name on the left and the build on the right.
@@ -1010,6 +1076,14 @@ fn bar_items(app: &App) -> Vec<(&'static str, &'static str)> {
             ("~", "home"),
             ("Esc", "cancel"),
         ]
+    } else if app.details.is_some() {
+        vec![
+            ("Enter", "install or change the EAX fix"),
+            ("Tab", "other box"),
+            ("↑/↓", "scroll"),
+            ("F4", "star"),
+            ("Esc", "back to the list"),
+        ]
     } else if app.zoom {
         vec![
             ("↑/↓", "scroll"),
@@ -1395,6 +1469,8 @@ mod tests {
         let mut app = App::new(games);
         app.set_home(home.path().to_path_buf());
         app.resize(width);
+        // Enter opens the game's details; Enter there goes on to install.
+        press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
         press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
         assert!(app.panel.is_some());
         (home, app)
@@ -1424,6 +1500,8 @@ mod tests {
         let dir = steam_folder(home.path(), "Quake 4", 2210);
         let mut app = App::new(entries(WITH_SETTINGS));
         app.set_home(home.path().to_path_buf());
+        // Enter opens the game's details; Enter there goes on to install.
+        press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
         press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
         assert!(app.panel.is_none());
         assert!(screen(&app, 120, 40).contains("Choose the folder with Quake 4's .exe"));
@@ -1461,6 +1539,8 @@ mod tests {
         );
         let mut app = App::new(games.clone());
         app.set_home(home.path().to_path_buf());
+        // Enter opens the game's details; Enter there goes on to install.
+        press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
         press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
         assert!(app.panel.is_none() && app.picker.is_none());
         let s = screen(&app, 120, 40);
@@ -1469,7 +1549,10 @@ mod tests {
         assert!(s.contains("nothing to install."));
         assert!(s.contains("It has no EAX."));
         assert!(s.contains("[ OK ]"));
-        assert!(s.contains("Search"), "the list stays under it");
+        assert!(
+            s.contains("Back to the list"),
+            "the game's details stay under it"
+        );
         // Other keys do nothing; Esc closes it.
         press(&mut app, ratatui::crossterm::event::KeyCode::Down);
         assert!(app.notice.is_some());
@@ -1484,6 +1567,7 @@ mod tests {
         games[0].path = Some(dir);
         let mut app = App::new(games);
         app.set_home(home.path().to_path_buf());
+        press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
         press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
         assert!(app.panel.is_none());
         assert!(app.notice.is_some());
@@ -1507,6 +1591,8 @@ mod tests {
         games[0].path = Some(dir.clone());
         let mut app = App::new(games);
         app.set_home(home.path().to_path_buf());
+        // Enter opens the game's details; Enter there goes on to install.
+        press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
         press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
         assert!(app.panel.is_none());
         let s = screen(&app, 120, 40);
@@ -1548,6 +1634,8 @@ mod tests {
         games[0].path = Some(dir);
         let mut app = App::new(games);
         app.set_home(home.path().to_path_buf());
+        // Enter opens the game's details; Enter there goes on to install.
+        press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
         press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
         assert!(app.panel.is_none());
         let s = screen(&app, 120, 40);
@@ -1588,6 +1676,8 @@ mod tests {
         games[0].path = Some(dir);
         let mut app = App::new(games);
         app.set_home(home.path().to_path_buf());
+        // Enter opens the game's details; Enter there goes on to install.
+        press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
         press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
         assert!(app.panel.is_none());
         let s = screen(&app, 120, 40);
@@ -1626,10 +1716,13 @@ mod tests {
     }
 
     #[test]
-    fn a_games_page_is_a_pop_up_over_the_list_and_esc_goes_back() {
+    fn a_games_page_is_a_pop_up_over_the_details_and_esc_goes_back() {
         let (_home, mut app) = app_with_a_page_open(120);
         let s = screen(&app, 120, 40);
-        assert!(s.contains("Search:"), "the list shows round it: {s}");
+        assert!(
+            s.contains("Back to the list"),
+            "the details show round it: {s}"
+        );
         let spot = page_spot(&app, 120, 40);
         assert_eq!(page_corner(&app, 120, 40), spot);
         assert_eq!(spot.1, usize::from((120 - crate::panel::view::LEFT_W) / 2));
@@ -1640,9 +1733,35 @@ mod tests {
         assert!(app.panel.is_some());
         assert_eq!(page_corner(&app, 120, 40), spot);
 
+        // Esc goes back to the game's details, and Esc again to the list.
         press(&mut app, ratatui::crossterm::event::KeyCode::Esc);
         assert!(app.panel.is_none());
+        let s = screen(&app, 120, 40);
+        assert!(
+            s.contains(" Game details ") && s.contains(" Settings "),
+            "{s}"
+        );
+        press(&mut app, ratatui::crossterm::event::KeyCode::Esc);
         assert!(screen(&app, 120, 40).contains("Search:"));
+    }
+
+    #[test]
+    fn enter_opens_the_games_details_with_its_profile_and_settings_side_by_side() {
+        let mut app = App::new(entries(WITH_SETTINGS));
+        app.resize(120);
+        press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
+        let s = screen(&app, 120, 30);
+        assert!(s.contains("Esc Back to the list"), "{s}");
+        assert!(row_of(&s, " Game details ") == row_of(&s, " Settings "));
+        assert!(col_of(&s, " Game details ") < col_of(&s, " Settings "));
+        assert!(s.contains("Enable EAX effects (verified)"));
+        assert!(s.contains("Enter install or change the EAX fix"));
+        assert!(!s.contains("1Help"), "no F-key bar here");
+        // Tab moves to the settings; ↑/↓ scroll the box with focus only.
+        press(&mut app, ratatui::crossterm::event::KeyCode::Tab);
+        assert!(app.details.as_ref().unwrap().right);
+        press(&mut app, ratatui::crossterm::event::KeyCode::Esc);
+        assert!(app.details.is_none());
     }
 
     #[test]

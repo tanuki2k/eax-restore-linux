@@ -128,8 +128,11 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
   `Found::via`, and such a copy goes to the script by folder. Checked by
   `detect_oracle.rs`'s `wine_launchers_match`.
 
-The game panel (`tui/src/panel/`, the user's Optiscaler-Client-style design): Enter on a game
-with a folder opens its page, one column `view::LEFT_W` wide in a pop-up over the games list
+Enter on a game opens its details screen (`App::details`, `ui::draw_details`): the profile and
+the settings views side by side (`profile::lines`, `settings::lines`, unchanged), each scrolling,
+Tab between them, F4 stars, Esc back to the list; a rescan refreshes the entry it shows.
+The game panel (`tui/src/panel/`, the user's Optiscaler-Client-style design): Enter on the details
+of a game with a folder opens its page, one column `view::LEFT_W` wide in a pop-up over the games list
 (`view::draw`, `view::page_area`: as tall as its content, never shrinking going from the
 choices to a run, so the list shows round it), on the folder holding
 the profile's exe (`detect::exe_folder`, as the script moves `GAME_DIR` after a library scan
