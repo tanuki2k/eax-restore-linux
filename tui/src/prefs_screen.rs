@@ -277,7 +277,13 @@ impl PrefsScreen {
             if let Some(reset) = crate::panel::view::question_key(key.code, &mut self.yes) {
                 self.asking = false;
                 if reset {
-                    self.prefs = Prefs::default();
+                    // The starred games aren't a setting on this screen, so
+                    // a reset keeps them.
+                    let favorites = std::mem::take(&mut self.prefs.favorites);
+                    self.prefs = Prefs {
+                        favorites,
+                        ..Prefs::default()
+                    };
                     self.save();
                 }
             }
@@ -581,10 +587,17 @@ mod tests {
         s.handle_key(key(KeyCode::Enter));
         assert!(!s.asking);
         assert_eq!(s.prefs.dsoal_build, r696);
+        // Yes puts every setting back but keeps the starred games, which
+        // aren't on this screen.
+        s.prefs.favorites.insert("deus-ex".into());
         s.handle_key(key(KeyCode::Enter));
         s.handle_key(key(KeyCode::Char('y')));
-        assert_eq!(s.prefs, Prefs::default());
-        assert_eq!(Prefs::load_from(&file), Prefs::default());
+        let kept = Prefs {
+            favorites: ["deus-ex".to_string()].into(),
+            ..Prefs::default()
+        };
+        assert_eq!(s.prefs, kept);
+        assert_eq!(Prefs::load_from(&file), kept);
 
         s.handle_key(key(KeyCode::Esc));
         assert!(s.closed);

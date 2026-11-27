@@ -929,7 +929,10 @@ impl App {
                 }
                 return;
             }
-            KeyCode::F(9) => return self.zoom = self.current().is_some() && !self.table,
+            // The table has no pane to enlarge, so its full-screen view of the
+            // game is the details screen.
+            KeyCode::F(9) if self.table => return self.open_details(),
+            KeyCode::F(9) => return self.zoom = self.current().is_some(),
             KeyCode::Tab => return self.move_focus(true),
             KeyCode::BackTab => return self.move_focus(false),
             // The keys the old browser used, kept for whoever knows them.
@@ -1162,6 +1165,12 @@ mod tests {
         a.handle_key(key(KeyCode::Tab)); // Card
         a.handle_key(key(KeyCode::F(8))); // table: no card to stay on
         assert!(a.table && a.focus == Focus::Games);
+        a.handle_key(key(KeyCode::F(9)));
+        assert!(
+            a.details.is_some() && !a.zoom,
+            "F9 in the table opens the details"
+        );
+        a.handle_key(key(KeyCode::Esc));
         a.handle_key(key(KeyCode::Tab));
         assert_eq!(a.focus, Focus::Views);
         // Letters still search, whichever box has focus.

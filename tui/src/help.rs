@@ -25,7 +25,7 @@ const ROWS: &[(&str, &str)] = &[
     ("F6", "Show the next view: All games → My library → Patched → Favorites. My library is the games found in your Steam, Heroic, Lutris, Bottles or Faugus libraries, plus any you added yourself; Patched is the ones with the EAX fix."),
     ("F7", "Add a game that isn't in the list: choose its folder (Ctrl-A too)."),
     ("F8", "Show the games as a table, with a column for each detail, or as a list beside the game's details."),
-    ("F9", "Show the game's details full screen, where ↑/↓ scroll them. Esc comes back (Ctrl-F too)."),
+    ("F9", "Show the game's details full screen, where ↑/↓ scroll them. Esc comes back (Ctrl-F too). In the table, it opens the game's details."),
     ("F10", "Close the program."),
     ("", "The filters"),
     ("Space", "Tick or untick a box. Ticking two boxes in one group shows games that match either; boxes in different groups must all match. Nothing ticked shows every game."),
