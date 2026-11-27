@@ -16,14 +16,18 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
   columns that drop from the right when narrow, or that table above the pane; F8 cycles
   `app::Layout` Table → Side → Stacked, and a window under 104 columns stacks Side by itself), a centred hint line for the
   focused box and a centred F-key bar (1Help … 10Quit). Below 24 rows the title goes and the View
-  bar and Filters box lose their borders. Tab/Shift-Tab move focus (`app::Focus`: Views → Filters
-  → Games → Card; the focused rounded box's border and title are in `theme::key()`); letters
-  always go to the global search. ←/→ pick a view on the View bar, or switch the pane between
-  Profile and Settings beside the list; Shift-↑/↓ scrolls the pane from anywhere. F3 opens the
+  bar and Filters box lose their borders. Tab/Shift-Tab move focus (`app::Focus`: Views → Search → Filters
+  → Games → Card; the focused rounded box's border and title are in `theme::key()`). There is no
+  global search: `/` jumps to the Search box, where letters type (Enter/Esc go back to the games);
+  elsewhere a column's first letter sorts by it (`filters::Column::for_key`: N C S A E Y; the same
+  letter again reverses, `filters::Sort::press`; the table heading shows ▲/▼; a search only narrows,
+  the sort order stays). ↑/↓ and the page keys move the games list from any box; Enter on the View
+  bar or the list opens the game's details. ←/→ pick a view on the View bar, or switch the pane
+  between Profile and Settings beside the list; Shift-↑/↓ scrolls the pane from anywhere. F3 opens the
   Filters pop-up (`App::filter_menu`): tick boxes (`filters::Item`) for Compatibility, Store, Audio
   and EAX version, OR within a group and AND across groups, each store entry judged on its own
-  store's rating/API/delisted flag, nothing ticked = everything; Sort is A to Z / Best match (the
-  default) / Rating; Space ticks, Enter ticks and closes, Esc puts the filters back. F4 stars a game
+  store's rating/API/delisted flag, nothing ticked = everything; one column under group headings,
+  scrolling when short; Space ticks, Enter ticks and closes, Esc puts the filters back. F4 stars a game
   (`Prefs::favorites`, by database id, else folder), F5 rescans, F6 next view, F7 add a game (also
   Ctrl-A), F9 full screen (also Ctrl-F; in the table it opens the details), F10 quits; `--list`, `--settings NAME` and `--profile NAME`
   print the game list, one game's settings view or its profile without the TUI, which is
@@ -132,12 +136,10 @@ Enter on a game opens its details screen (`App::details`, `ui::draw_details`): t
 the settings views side by side (`profile::lines`, `settings::lines`, unchanged), each scrolling,
 and an Install (or Change or uninstall) button under them; Tab goes round the three, F4 stars, Esc back to the list; a rescan refreshes the entry it shows.
 The game panel (`tui/src/panel/`, the user's Optiscaler-Client-style design): Enter on the details
-of a game with a folder opens its page: from `view::TWO_COLUMNS` (110) wide it fills the screen, the
-install choices' boxes on the left (60%) and the game's settings on the right (40%, or for a game with no
-settings "What the install does", the `Plan::summary` the confirm screen shows), each scrolled to keep the
-focus in view (`view::draw_boxes`); narrower, it's one column `view::LEFT_W` wide in a pop-up over the games list
-(`view::draw`, `view::page_area`: as tall as its content, never shrinking going from the
-choices to a run, so the list shows round it), on the folder holding
+of a game with a folder opens its page, one column `view::LEFT_W` wide in a pop-up over the details screen,
+always `view::page_height` tall (the body less a row top and bottom), so its buttons sit on the row of the
+details screen's Install button; the install choices' boxes, then Audio and Optional settings
+(`view::draw`, `view::page_area`), on the folder holding
 the profile's exe (`detect::exe_folder`, as the script moves `GAME_DIR` after a library scan
 and as the headless CLI does: a library gives the install's top folder, and BioShock's exe is
 in Builds/Release). The Status card (whether the fix is installed, `view::banner_lines`,

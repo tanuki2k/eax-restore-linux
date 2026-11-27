@@ -2825,25 +2825,23 @@ mod tests {
     }
 
     #[test]
-    fn a_wide_window_puts_the_install_choices_left_and_the_game_settings_right() {
+    fn the_page_is_a_pop_up_even_on_a_wide_window_with_its_settings_after_the_choices() {
         let tmp = tempfile::tempdir().unwrap();
         let p = ready(&tmp.path().join("home"));
         let rows = screen(&p, 160, 50);
-        // The page fills the window.
-        assert!(rows[0].starts_with('╭'), "{}", rows.join("\n"));
-        let engine = row_of(&rows, "1. Audio engine");
-        // This game has no settings to change, so the right side says what
-        // installing will set up instead.
-        let settings = row_of(&rows, "6. What the install does");
-        assert_eq!(engine, settings, "side by side: {}", rows.join("\n"));
-        let col = |r: &str, s: &str| r.find(s).unwrap();
-        assert!(
-            col(&rows[engine], "1. Audio engine") < col(&rows[settings], "6. What the install")
+        let title = row_of(&rows, "Test Game ─ Steam");
+        let left = (160 - usize::from(view::LEFT_W)) / 2;
+        assert_eq!(
+            rows[title].chars().nth(left),
+            Some('╭'),
+            "{}",
+            rows.join("\n")
         );
+        // One column: the game settings box comes after the DLL override.
+        assert!(row_of(&rows, "5. DLL override") < row_of(&rows, "6. Game settings"));
         assert!(rows
             .iter()
-            .any(|r| r.contains("Audio engine") && r.contains("DSOAL with OpenAL Soft")));
-        assert!(rows.iter().any(|r| r.contains("[ Install ]")));
+            .any(|r| r.contains("There's no profile for this game")));
     }
 
     #[test]

@@ -287,8 +287,18 @@ fn draw_details(f: &mut Frame, app: &App, d: &crate::app::Details, area: Rect) {
             top,
         );
     }
-    let [boxes, button] =
-        Layout::vertical([Constraint::Min(3), Constraint::Length(1)]).areas(boxes);
+    // The button sits where the install page's buttons will be, so the page
+    // opens with them right where it was: the page's last row inside its
+    // border, with the page a row short of the screen at the bottom.
+    let below = area.y + area.height - (area.height - crate::panel::view::page_height(area)) / 2;
+    let button_y = below.saturating_sub(2).max(boxes.y + 3);
+    let button = Rect::new(boxes.x, button_y, boxes.width, 1);
+    let boxes = Rect::new(
+        boxes.x,
+        boxes.y,
+        boxes.width,
+        button_y.saturating_sub(boxes.y + 1),
+    );
     draw_install_button(f, d, button);
     let [left, right] = if boxes.width < crate::app::STACK_BELOW {
         Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)]).areas(boxes)
@@ -394,20 +404,32 @@ fn draw_views(f: &mut Frame, app: &App, area: Rect, compact: bool) {
 fn draw_search(f: &mut Frame, app: &App, area: Rect) {
     let width = usize::from(area.width);
     let count = format!("{}/{}", app.visible.len(), app.games.len());
-    let lead = "  Search: ";
+    let focused = app.focus == Focus::Search;
+    let lead = if focused {
+        "▶ Search: "
+    } else {
+        "  Search: "
+    };
     let room = width.saturating_sub(count.chars().count() + lead.len() + 2);
     let chars: Vec<char> = app.query.chars().collect();
     let shown: String = chars[chars.len().saturating_sub(room)..].iter().collect();
-    let used = lead.len() + shown.chars().count();
+    let used = lead.chars().count() + shown.chars().count();
     let pad = width.saturating_sub(used + count.chars().count() + 2);
     let line = Line::from(vec![
-        Span::styled(lead, Style::new().fg(theme::PROMPT)),
+        Span::styled(
+            lead,
+            if focused {
+                theme::key()
+            } else {
+                Style::new().fg(theme::PROMPT)
+            },
+        ),
         Span::styled(shown, Style::new().add_modifier(Modifier::BOLD)),
         Span::raw(" ".repeat(pad)),
         Span::styled(count, Style::new().fg(theme::COUNT)),
     ]);
     f.render_widget(Paragraph::new(line), area);
-    if main_screen(app) {
+    if main_screen(app) && focused {
         f.set_cursor_position((area.x + u16::try_from(used).unwrap_or(0), area.y));
     }
 }
@@ -435,7 +457,7 @@ fn draw_filters(f: &mut Frame, app: &App, area: Rect, compact: bool) {
         Span::raw(" "),
         Span::styled(summary.clone(), theme::white()),
     ];
-    let used = 2 + 6 + app.filters.sort.label().len() + 4 + 9 + summary.chars().count();
+    let used = 2 + 6 + app.filters.sort.label().chars().count() + 4 + 9 + summary.chars().count();
     if !hint.is_empty() && width > used + hint.len() + 4 {
         spans.push(Span::raw(" ".repeat(width - used - hint.len() - 2)));
         spans.push(Span::styled(hint, theme::dim()));
@@ -494,18 +516,10 @@ fn draw_filter_menu(f: &mut Frame, app: &App, m: &crate::app::FilterMenu, area: 
         ]));
         i += 1;
     };
-    lines.push(Line::from(Span::styled("Sort", theme::label())));
-    for opt in crate::filters::Sort::ALL {
-        let on = app.filters.sort == opt;
-        row(
-            &mut lines,
-            if on { "(•) " } else { "( ) " },
-            opt.label().into(),
-            on,
-        );
-    }
-    for (name, items) in crate::filters::groups() {
-        lines.push(Line::from(""));
+    for (n, (name, items)) in crate::filters::groups().into_iter().enumerate() {
+        if n > 0 {
+            lines.push(Line::from(""));
+        }
         lines.push(Line::from(Span::styled(name, theme::label())));
         for item in items {
             let on = app.filters.is_ticked(item);
@@ -569,60 +583,12 @@ fn compat_span(e: &Entry) -> Span<'static> {
 /// The table's columns after the name: heading and width. They're dropped from
 /// the right when the window is too narrow for them.
 const COLUMNS: [(&str, usize); 5] = [
-    ("Compatibility", 13),
+    ("Compatibility", 15),
     ("Store", 10),
     ("Audio", 13),
     ("EAX", 13),
-    ("Year", 4),
+    ("Year", 6),
 ];
-
-/// This copy's stores, its audio API and its EAX versions, as the table shows them.
-fn table_cells(e: &Entry) -> [String; 4] {
-    let Some(g) = &e.game else {
-        return [String::new(), String::new(), String::new(), String::new()];
-    };
-    let game_api = if g.eax.api.is_empty() {
-        "directsound3d"
-    } else {
-        g.eax.api.as_str()
-    };
-    let api_name = |a: &str| {
-        if a == "openal" {
-            "OpenAL"
-        } else {
-            "DirectSound3D"
-        }
-    };
-    let stores: Vec<(&str, &crate::db::Store)> = g
-        .store_list()
-        .into_iter()
-        .filter(|(k, _)| e.store.is_none_or(|s| s.key() == *k))
-        .collect();
-    let names: Vec<&str> = stores
-        .iter()
-        .map(|(k, _)| if *k == "gog" { "GOG" } else { "Steam" })
-        .collect();
-    let mut apis: Vec<&str> = stores
-        .iter()
-        .map(|(_, s)| api_name(s.api.as_deref().unwrap_or(game_api)))
-        .collect();
-    apis.dedup();
-    if apis.is_empty() {
-        apis.push(api_name(game_api));
-    }
-    let eax = if g.eax.versions.is_empty() {
-        "—".to_string()
-    } else {
-        g.eax
-            .versions
-            .iter()
-            .map(|v| v.trim_end_matches(".0"))
-            .collect::<Vec<_>>()
-            .join(", ")
-    };
-    let year: String = g.released.chars().take(4).collect();
-    [names.join(", "), apis.join(", "), eax, year]
-}
 
 fn fit(text: &str, width: usize) -> String {
     if text.chars().count() <= width {
@@ -657,13 +623,26 @@ fn draw_table(f: &mut Frame, app: &App, area: Rect) {
         }
         cols -= 1;
     };
+    // The sorted column's heading carries ▲ or ▼.
+    let sort = app.filters.sort;
+    let heading = |c: crate::filters::Column| {
+        if sort.column == c {
+            format!("{} {}", c.label(), if sort.descending { "▼" } else { "▲" })
+        } else {
+            c.label().to_string()
+        }
+    };
     let mut head = vec![
         Span::raw(" ".repeat(lead)),
-        Span::styled(fit("Name", name_w), theme::white()),
+        Span::styled(
+            fit(&heading(crate::filters::Column::Name), name_w),
+            theme::white(),
+        ),
     ];
-    for (title, w) in &COLUMNS[..cols] {
+    for (n, (_, w)) in COLUMNS[..cols].iter().enumerate() {
         head.push(Span::raw("  "));
-        head.push(Span::styled(fit(title, *w), theme::white()));
+        let col = crate::filters::Column::ALL[n + 1];
+        head.push(Span::styled(fit(&heading(col), *w), theme::white()));
     }
     f.render_widget(
         Paragraph::new(Line::from(head)),
@@ -692,7 +671,7 @@ fn draw_table(f: &mut Frame, app: &App, area: Rect) {
                 fit(&e.name, name_w),
                 name_style(here, selected),
             ));
-            let cells = table_cells(e);
+            let cells = crate::filters::cells(e);
             let detail = Style::new().fg(if here || selected {
                 theme::LABEL
             } else {
@@ -1119,29 +1098,32 @@ fn bar_items(app: &App) -> Vec<(&'static str, &'static str)> {
         match app.focus {
             Focus::Views => vec![
                 ("←/→", "pick a view"),
+                ("Enter", "open the game"),
                 ("Tab", "next box"),
-                ("Shift-Tab", "back"),
+                ("/", "search"),
+            ],
+            Focus::Search => vec![
                 ("Type", "to search"),
+                ("Enter or Esc", "back to the games"),
+                ("Tab", "next box"),
             ],
             Focus::Filters => vec![
                 ("Enter", "change the filters"),
                 ("Tab", "next box"),
-                ("Shift-Tab", "back"),
-                ("Type", "to search"),
+                ("/", "search"),
             ],
             Focus::Games => vec![
                 ("↑/↓", "move"),
                 ("Enter", "open the game"),
-                ("←/→", "profile/settings"),
+                ("N C S A E Y", "sort"),
                 ("Tab", "next box"),
-                ("Type", "to search"),
+                ("/", "search"),
             ],
             Focus::Card => vec![
-                ("↑/↓", "scroll"),
-                ("←/→", "profile/settings"),
+                ("←/→", "switch profile/settings"),
+                ("Shift-↑/↓", "scroll"),
                 ("Tab", "next box"),
-                ("Shift-Tab", "back"),
-                ("Type", "to search"),
+                ("/", "search"),
             ],
         }
     }
@@ -1736,17 +1718,16 @@ mod tests {
     }
 
     #[test]
-    fn a_games_page_fills_a_wide_screen_and_esc_goes_back_to_the_details() {
+    fn a_games_page_is_a_pop_up_over_the_details_and_esc_goes_back() {
         let (_home, mut app) = app_with_a_page_open(120);
         let s = screen(&app, 120, 40);
         assert!(
-            !s.contains("Back to the list"),
-            "the page covers the details: {s}"
+            s.contains("Back to the list"),
+            "the details show round it: {s}"
         );
         let spot = page_spot(&app, 120, 40);
         assert_eq!(page_corner(&app, 120, 40), spot);
-        // 120 columns is wide enough for the page's two columns: it fills the screen.
-        assert_eq!(spot.1, 0);
+        assert_eq!(spot.1, usize::from((120 - crate::panel::view::LEFT_W) / 2));
         assert!(s.contains(" Status "));
         // Ctrl-L and Ctrl-F are the list's; the page ignores them.
         ctrl_key(&mut app, 'l');
@@ -1808,7 +1789,7 @@ mod tests {
         assert!(s.contains("Search:"));
         assert!(s.contains("1/1"));
         assert!(s.contains("[All games (1)]"));
-        assert!(s.contains("Sort: Best match    Filters: none"));
+        assert!(s.contains("Sort: Name ▲    Filters: none"));
         assert!(s.contains("✓  Alpha Centauri"));
         assert!(s.contains("F1 Help  F2 Settings  F3 Filters"));
         assert!(s.contains("System details:"));
@@ -1886,7 +1867,7 @@ mod tests {
         ));
         // F3, down to Steam, Enter ticks it and closes the pop-up.
         press(&mut app, ratatui::crossterm::event::KeyCode::F(3));
-        for _ in 0..7 {
+        for _ in 0..4 {
             press(&mut app, ratatui::crossterm::event::KeyCode::Down);
         }
         press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
@@ -1926,7 +1907,7 @@ mod tests {
         assert!(s.contains("Audio settings for Quake 4:"));
         assert!(s.contains("Enable EAX effects (verified)"));
         assert!(s.contains("s_useOpenAL  → 1"));
-        assert!(s.contains("←/→ profile/settings"));
+        assert!(s.contains("N C S A E Y sort"));
     }
 
     #[test]
@@ -2074,13 +2055,10 @@ mod tests {
         let s = screen(&app, 120, 30);
         assert!(row_of(&s, " Games (") < row_of(&s, "Game profile"), "{s}");
         // The top is the table, with its column headings.
-        assert!(s.contains("Compatibility  Store"), "{s}");
+        assert!(s.contains("Year"), "{s}");
         press(&mut app, ratatui::crossterm::event::KeyCode::F(8));
         let s = screen(&app, 120, 30);
-        assert!(
-            s.contains("Compatibility  Store") && !s.contains("Game profile"),
-            "{s}"
-        );
+        assert!(s.contains("Year") && !s.contains("Game profile"), "{s}");
     }
 
     #[test]
@@ -2094,16 +2072,13 @@ mod tests {
     fn the_key_bar_wraps_instead_of_being_cut_off_on_a_narrow_window() {
         let app = App::new(entries(WITH_SETTINGS));
         let narrow = screen(&app, 60, 20);
-        assert!(
-            narrow.contains("Type to search"),
-            "the end of the bar is lost"
-        );
+        assert!(narrow.contains("/ search"), "the end of the bar is lost");
         assert!(narrow.contains("F10 Quit"), "the end of the F-keys is lost");
         // On a wide window each needs only one row.
         let wide = screen(&app, 130, 20);
         let rows: Vec<&str> = wide.lines().collect();
         assert!(rows[rows.len() - 1].contains("F10 Quit"));
-        assert!(rows[rows.len() - 2].contains("Type to search"));
+        assert!(rows[rows.len() - 2].contains("/ search"));
     }
 
     #[test]

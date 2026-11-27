@@ -53,55 +53,20 @@ fn wrap(text: &str, width: usize) -> Vec<String> {
         .collect()
 }
 
-/// The page: the whole body on a window wide enough for its two columns
-/// (`TWO_COLUMNS`), else a pop-up `LEFT_W` wide, centred, as tall as its
-/// content but a row short of the body at top and bottom.
-pub fn page_area(p: &Panel, area: Rect) -> Rect {
-    if area.width >= TWO_COLUMNS {
-        return area;
-    }
-    let most = if area.height > 12 {
+/// The page's pop-up: `LEFT_W` wide, centred, a row short of the body at top
+/// and bottom. Always that tall, so its buttons sit on the same row as the
+/// details screen's Install button under it.
+pub fn page_area(_p: &Panel, area: Rect) -> Rect {
+    popup(area, LEFT_W, page_height(area))
+}
+
+/// How tall the page is in `area`: all of it but a row top and bottom.
+pub fn page_height(area: Rect) -> u16 {
+    if area.height > 12 {
         area.height - 2
     } else {
         area.height
-    };
-    popup(area, LEFT_W, page_rows(p).min(most))
-}
-
-/// From this width the page fills the screen: the install choices on the
-/// left, the game's settings on the right.
-pub const TWO_COLUMNS: u16 = 110;
-
-/// The rows the page wants. It never shrinks below what the choices take,
-/// so it keeps its size going from the choices to a run and back.
-fn page_rows(p: &Panel) -> u16 {
-    let inner = LEFT_W.saturating_sub(2);
-    let status = u16::try_from(status_card_lines(p, usize::from(inner.saturating_sub(2))).len())
-        .unwrap_or(u16::MAX)
-        .saturating_add(2)
-        .min(STATUS_MAX_H);
-    let choices: u16 = match &p.problem {
-        Some(problem) => rows_of(&[Line::from(problem.as_str())], inner.saturating_sub(4)) + 4,
-        None => choice_boxes(p, usize::from(inner))
-            .iter()
-            .map(|b| b.lines.len() as u16 + 2)
-            .sum(),
-    };
-    let text_rows = |lines: &[Line]| rows_of(lines, inner.saturating_sub(2)) + 2;
-    let body = match &p.screen {
-        Screen::Main => choices,
-        Screen::Run(r) => choices.max(text_rows(&run_lines(r, usize::from(inner) - 2))),
-        Screen::Confirm {
-            heading,
-            lines,
-            jobs,
-            ..
-        } => choices.max(text_rows(&confirm_lines(heading, lines, jobs.is_empty()))),
-        Screen::Uninstall(u) => choices.max(text_rows(&uninstall_lines(p, u))),
-    };
-    // Borders, the Status box, the body, room for the longest help (three
-    // lines in a box) so moving the focus doesn't resize it, the buttons.
-    2 + status + body + 5 + 1
+    }
 }
 
 /// Draws the page as a pop-up over `area`, the whole body.
@@ -500,63 +465,8 @@ fn draw_choices(f: &mut Frame, p: &Panel, area: Rect) {
     if area.width == 0 || area.height == 0 {
         return;
     }
-    if area.width + 2 < TWO_COLUMNS {
-        let boxes = choice_boxes(p, usize::from(area.width));
-        return draw_boxes(f, p, &boxes, area);
-    }
-    // Two columns: the install's own choices on the left, the game's settings
-    // on the right, each keeping the focus in view on its own.
-    // The choices' drop-downs need more room than the settings' text.
-    let [left, right] =
-        Layout::horizontal([Constraint::Percentage(60), Constraint::Percentage(40)]).areas(area);
-    let mut boxes = choice_boxes(p, usize::from(left.width));
-    boxes.truncate(p.sections.len());
-    let mut settings = choice_boxes(p, usize::from(right.width));
-    settings.drain(..p.sections.len().min(settings.len()));
-    // A game with no settings to change: what installing will set up, in the
-    // words the confirm screen uses, in their place.
-    if p.fixes.is_empty() {
-        settings = vec![PageBox {
-            title: format!("{}. What the install does", p.sections.len() + 1),
-            lines: plan_lines(p, usize::from(right.width)),
-            focus: None,
-        }];
-    }
-    draw_boxes(f, p, &boxes, left);
-    draw_boxes(f, p, &settings, right);
-}
-
-/// The plan's summary, as the confirm screen shows it, after a line saying
-/// there are no game settings.
-fn plan_lines(p: &Panel, width: usize) -> Vec<Line<'static>> {
-    let text = if p.game.is_some() {
-        "This game has no settings to change."
-    } else {
-        "There's no profile for this game, so there are no settings to change."
-    };
-    let mut lines: Vec<Line<'static>> = wrap(text, width.saturating_sub(4).max(1))
-        .into_iter()
-        .map(|l| Line::from(Span::styled(format!(" {l}"), theme::dim())))
-        .collect();
-    lines.push(Line::from(""));
-    let summary = p.plan().summary(&p.home);
-    let label_w = summary
-        .iter()
-        .map(|(k, _)| k.chars().count())
-        .max()
-        .unwrap_or(0)
-        + 2;
-    for (k, v) in summary {
-        lines.push(Line::from(vec![
-            Span::raw(" "),
-            Span::styled(
-                format!("{k:label_w$}"),
-                Style::new().fg(theme::FILTER_LABEL),
-            ),
-            Span::raw(v),
-        ]));
-    }
-    lines
+    let boxes = choice_boxes(p, usize::from(area.width));
+    draw_boxes(f, p, &boxes, area);
 }
 
 /// Numbered boxes, one under another, scrolled to keep the focus in view.

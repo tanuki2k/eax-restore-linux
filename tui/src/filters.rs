@@ -1,5 +1,5 @@
 //! What narrows and orders the games list: the view (the bar along the top),
-//! the Filters pop-up's tick boxes, and its sort order. The tick boxes work
+//! the Filters pop-up's tick boxes, and the sort order (a column's letter). The tick boxes work
 //! per store entry, as the Bash browser's filters did, with each store's own
 //! rating, `delisted` flag and API: within a group a game needs any ticked box,
 //! across groups every group, and a group with nothing ticked lets all through.
@@ -54,27 +54,142 @@ impl View {
     }
 }
 
-/// The list's order. Best match puts the search's closest names first; with
-/// nothing typed it's the same as A to Z.
+/// A column of the games table, which the list can be sorted by: its first
+/// letter sorts by it.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
-pub enum Sort {
-    AToZ,
+pub enum Column {
     #[default]
-    BestMatch,
-    /// Verified, Playable, Unsupported, then Unknown, by name within each.
-    Rating,
+    Name,
+    Compatibility,
+    Store,
+    Audio,
+    Eax,
+    Year,
 }
 
-impl Sort {
-    pub const ALL: [Sort; 3] = [Sort::AToZ, Sort::BestMatch, Sort::Rating];
+impl Column {
+    pub const ALL: [Column; 6] = [
+        Column::Name,
+        Column::Compatibility,
+        Column::Store,
+        Column::Audio,
+        Column::Eax,
+        Column::Year,
+    ];
 
     pub fn label(self) -> &'static str {
         match self {
-            Sort::AToZ => "A to Z",
-            Sort::BestMatch => "Best match",
-            Sort::Rating => "Rating",
+            Column::Name => "Name",
+            Column::Compatibility => "Compatibility",
+            Column::Store => "Store",
+            Column::Audio => "Audio",
+            Column::Eax => "EAX",
+            Column::Year => "Year",
         }
     }
+
+    /// The column a key sorts by: its heading's first letter.
+    pub fn for_key(c: char) -> Option<Column> {
+        let c = c.to_ascii_lowercase();
+        Column::ALL
+            .into_iter()
+            .find(|col| col.label().to_ascii_lowercase().starts_with(c))
+    }
+}
+
+/// The list's order: a column, up or down. A search only narrows the list;
+/// the matches keep this order.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub struct Sort {
+    pub column: Column,
+    pub descending: bool,
+}
+
+impl Sort {
+    /// A column's letter: that column, or the other way round if it's
+    /// already the one sorted by.
+    pub fn press(&mut self, column: Column) {
+        if self.column == column {
+            self.descending = !self.descending;
+        } else {
+            *self = Sort {
+                column,
+                descending: false,
+            };
+        }
+    }
+
+    /// "Name ▲": the column and its direction.
+    pub fn label(self) -> String {
+        format!(
+            "{} {}",
+            self.column.label(),
+            if self.descending { "▼" } else { "▲" }
+        )
+    }
+}
+
+/// This copy's stores, its audio API, its EAX versions and its year, as the
+/// table shows them and sorts by them.
+pub fn cells(e: &Entry) -> [String; 4] {
+    let Some(g) = &e.game else {
+        return Default::default();
+    };
+    let game_api = if g.eax.api.is_empty() {
+        "directsound3d"
+    } else {
+        g.eax.api.as_str()
+    };
+    let api_name = |a: &str| {
+        if a == "openal" {
+            "OpenAL"
+        } else {
+            "DirectSound3D"
+        }
+    };
+    let stores: Vec<(&str, &crate::db::Store)> = g
+        .store_list()
+        .into_iter()
+        .filter(|(k, _)| e.store.is_none_or(|s| s.key() == *k))
+        .collect();
+    let names: Vec<&str> = stores
+        .iter()
+        .map(|(k, _)| if *k == "gog" { "GOG" } else { "Steam" })
+        .collect();
+    let mut apis: Vec<&str> = stores
+        .iter()
+        .map(|(_, s)| api_name(s.api.as_deref().unwrap_or(game_api)))
+        .collect();
+    apis.dedup();
+    if apis.is_empty() {
+        apis.push(api_name(game_api));
+    }
+    let eax = if g.eax.versions.is_empty() {
+        "—".to_string()
+    } else {
+        g.eax
+            .versions
+            .iter()
+            .map(|v| v.trim_end_matches(".0"))
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    let year: String = g.released.chars().take(4).collect();
+    [names.join(", "), apis.join(", "), eax, year]
+}
+
+/// What an entry sorts by in a column, then its name.
+pub fn sort_key(e: &Entry, column: Column) -> (String, String) {
+    let name = e.name.to_lowercase();
+    let by = match column {
+        Column::Name => String::new(),
+        Column::Compatibility => rating_rank(entry_compat(e)).to_string(),
+        Column::Store => cells(e)[0].clone(),
+        Column::Audio => cells(e)[1].clone(),
+        Column::Eax => cells(e)[2].clone(),
+        Column::Year => cells(e)[3].clone(),
+    };
+    (by, name)
 }
 
 /// One tick box in the Filters pop-up.

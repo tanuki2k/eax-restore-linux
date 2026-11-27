@@ -1,6 +1,6 @@
 //! Screen state and key handling. No drawing here, so it can be tested.
 
-use crate::filters::{Filters, Item, Sort, View};
+use crate::filters::{Column, Filters, Item, View};
 use crate::games::{Entry, Status};
 use crate::picker::{self, Picker};
 use nucleo_matcher::pattern::{CaseMatching, Normalization, Pattern};
@@ -8,17 +8,20 @@ use nucleo_matcher::{Matcher, Utf32Str};
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use std::path::PathBuf;
 
-/// The boxes Tab and Shift-Tab move between on the main screen. Letters
-/// always go to the search, whichever has focus.
+/// The boxes Tab and Shift-Tab move between on the main screen. ↑/↓ always
+/// move the games list, whichever has focus; letters type into the search
+/// only when it has focus, and elsewhere sort by a column.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Focus {
     /// The view bar: ←/→ pick a view.
     Views,
+    /// The search: letters type into it (`/` jumps here).
+    Search,
     /// The Filters line: Enter opens the pop-up.
     Filters,
     /// The games list: ↑/↓ move, Enter opens the game.
     Games,
-    /// The right pane (list + card layout only): ↑/↓ scroll it.
+    /// The right pane (list + card layouts only): ←/→ pick profile or settings.
     Card,
 }
 
@@ -60,7 +63,6 @@ impl Details {
 /// One row of the Filters pop-up.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum MenuRow {
-    Sort(Sort),
     Item(Item),
     ClearAll,
     Done,
@@ -76,7 +78,7 @@ pub struct FilterMenu {
 
 impl FilterMenu {
     fn new(filters: &Filters) -> Self {
-        let mut rows: Vec<MenuRow> = Sort::ALL.into_iter().map(MenuRow::Sort).collect();
+        let mut rows: Vec<MenuRow> = Vec::new();
         for (_, items) in crate::filters::groups() {
             rows.extend(items.into_iter().map(MenuRow::Item));
         }
@@ -401,37 +403,30 @@ impl App {
                 self.view.allows(e, self.is_favorite(e)) && self.filters.passes(e)
             })
             .collect();
-        let name = |i: usize| self.games[i].name.to_lowercase();
-        let rank =
-            |i: usize| crate::filters::rating_rank(crate::filters::entry_compat(&self.games[i]));
-        if self.query.trim().is_empty() {
-            let mut v = allowed;
-            if self.filters.sort == Sort::Rating {
-                v.sort_by_key(|&i| (rank(i), name(i)));
-            }
-            self.visible = v;
+        let mut v: Vec<usize> = if self.query.trim().is_empty() {
+            allowed
         } else {
+            // The search only narrows the list; the sort order stays.
             let pattern = Pattern::parse(&self.query, CaseMatching::Smart, Normalization::Smart);
             let mut buf = Vec::new();
-            let mut scored: Vec<(usize, u32)> = allowed
+            allowed
                 .into_iter()
-                .filter_map(|i| {
+                .filter(|&i| {
                     pattern
                         .score(
                             Utf32Str::new(&self.games[i].name, &mut buf),
                             &mut self.matcher,
                         )
-                        .map(|s| (i, s))
+                        .is_some()
                 })
-                .collect();
-            match self.filters.sort {
-                // Equal scores keep the list's name order.
-                Sort::BestMatch => scored.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0))),
-                Sort::AToZ => scored.sort_by_key(|&(i, _)| i),
-                Sort::Rating => scored.sort_by_key(|&(i, _)| (rank(i), name(i))),
-            }
-            self.visible = scored.into_iter().map(|(i, _)| i).collect();
+                .collect()
+        };
+        let sort = self.filters.sort;
+        v.sort_by_cached_key(|&i| crate::filters::sort_key(&self.games[i], sort.column));
+        if sort.descending {
+            v.reverse();
         }
+        self.visible = v;
         self.selected = keep
             .and_then(|k| self.visible.iter().position(|&i| i == k))
             .unwrap_or(0);
@@ -439,7 +434,7 @@ impl App {
 
     /// The boxes Tab moves between, in order; the card only beside the list.
     fn focus_ring(&self) -> Vec<Focus> {
-        let mut ring = vec![Focus::Views, Focus::Filters, Focus::Games];
+        let mut ring = vec![Focus::Views, Focus::Search, Focus::Filters, Focus::Games];
         if self.layout != Layout::Table {
             ring.push(Focus::Card);
         }
@@ -448,7 +443,7 @@ impl App {
 
     fn move_focus(&mut self, forward: bool) {
         let ring = self.focus_ring();
-        let i = ring.iter().position(|f| *f == self.focus).unwrap_or(2);
+        let i = ring.iter().position(|f| *f == self.focus).unwrap_or(3);
         let n = ring.len();
         self.focus = ring[if forward {
             (i + 1) % n
@@ -486,7 +481,6 @@ impl App {
             KeyCode::Char(' ') | KeyCode::Enter => {
                 let row = m.rows[m.at];
                 match row {
-                    MenuRow::Sort(sort) => self.filters.sort = sort,
                     MenuRow::Item(item) => self.filters.toggle(item),
                     MenuRow::ClearAll => self.filters.ticked.clear(),
                     MenuRow::Done => {}
@@ -921,6 +915,22 @@ impl App {
         }
         let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
         let shift = key.modifiers.contains(KeyModifiers::SHIFT);
+        // In the search, letters, Backspace and Esc are the search's.
+        if self.focus == Focus::Search && !ctrl {
+            match key.code {
+                KeyCode::Char(c) => {
+                    self.query.push(c);
+                    return self.refilter();
+                }
+                KeyCode::Backspace => {
+                    self.query.pop();
+                    return self.refilter();
+                }
+                // Done typing: on to the games found.
+                KeyCode::Esc | KeyCode::Enter => return self.focus = Focus::Games,
+                _ => {}
+            }
+        }
         // Keys that do the same whichever box has focus.
         match key.code {
             KeyCode::Esc | KeyCode::F(10) => return self.quit = true,
@@ -943,6 +953,7 @@ impl App {
             KeyCode::F(9) => return self.zoom = self.current().is_some(),
             KeyCode::Tab => return self.move_focus(true),
             KeyCode::BackTab => return self.move_focus(false),
+            KeyCode::Char('/') => return self.focus = Focus::Search,
             // The keys the old browser used, kept for whoever knows them.
             KeyCode::Char('a') if ctrl => return self.open_add_picker(),
             KeyCode::Char('f') if ctrl => {
@@ -952,41 +963,36 @@ impl App {
             KeyCode::Down if shift => return self.scroll_pane(1),
             KeyCode::PageUp if shift => return self.scroll_pane(-10),
             KeyCode::PageDown if shift => return self.scroll_pane(10),
-            KeyCode::Backspace => {
-                self.query.pop();
-                return self.refilter();
-            }
             KeyCode::Char('u') if ctrl => {
                 self.query.clear();
                 return self.refilter();
             }
+            // A column's first letter sorts by it; again, the other way round.
             KeyCode::Char(c) if !ctrl => {
-                self.query.push(c);
-                return self.refilter();
+                if let Some(col) = Column::for_key(c) {
+                    let keep = self.visible.get(self.selected).copied();
+                    self.filters.sort.press(col);
+                    self.refilter_keep(keep);
+                }
+                return;
             }
+            // ↑/↓ and the page keys move the games list from any box.
+            KeyCode::Up => return self.move_by(-1),
+            KeyCode::Down => return self.move_by(1),
+            KeyCode::PageUp => return self.move_by(-10),
+            KeyCode::PageDown => return self.move_by(10),
+            KeyCode::Home => return self.selected = 0,
+            KeyCode::End => return self.move_by(isize::MAX / 2),
             _ => {}
         }
         // Keys for the box with focus.
         match (self.focus, key.code) {
             (Focus::Views, KeyCode::Left) => self.set_view(self.view.prev()),
             (Focus::Views, KeyCode::Right) => self.set_view(self.view.next()),
-            (Focus::Views, KeyCode::Enter) => self.focus = Focus::Games,
             (Focus::Filters, KeyCode::Enter) => self.open_filters(),
-            (Focus::Card, KeyCode::Up) => self.scroll_pane(-1),
-            (Focus::Card, KeyCode::Down) => self.scroll_pane(1),
-            (Focus::Card, KeyCode::PageUp) => self.scroll_pane(-10),
-            (Focus::Card, KeyCode::PageDown) => self.scroll_pane(10),
-            (Focus::Card, KeyCode::Home) => self.pane_scroll = 0,
-            (Focus::Card, KeyCode::End) => self.pane_scroll = self.pane_max.get(),
             (Focus::Games | Focus::Card, KeyCode::Right) => self.show_pane(Pane::Settings),
             (Focus::Games | Focus::Card, KeyCode::Left) => self.show_pane(Pane::Profile),
             (_, KeyCode::Enter) => self.open_details(),
-            (_, KeyCode::Up) => self.move_by(-1),
-            (_, KeyCode::Down) => self.move_by(1),
-            (_, KeyCode::PageUp) => self.move_by(-10),
-            (_, KeyCode::PageDown) => self.move_by(10),
-            (_, KeyCode::Home) => self.selected = 0,
-            (_, KeyCode::End) => self.move_by(isize::MAX / 2),
             _ => {}
         }
     }
@@ -1076,6 +1082,12 @@ mod tests {
         KeyEvent::new(c, KeyModifiers::NONE)
     }
 
+    /// `/` to the search, then the text.
+    fn search(app: &mut App, s: &str) {
+        app.handle_key(key(KeyCode::Char('/')));
+        type_str(app, s);
+    }
+
     fn type_str(app: &mut App, s: &str) {
         for c in s.chars() {
             app.handle_key(key(KeyCode::Char(c)));
@@ -1096,7 +1108,7 @@ mod tests {
     #[test]
     fn typing_filters_and_backspace_restores() {
         let mut a = app();
-        type_str(&mut a, "beta");
+        search(&mut a, "beta");
         assert_eq!(a.current().unwrap().name, "Beta Quest");
         for _ in 0..4 {
             a.handle_key(key(KeyCode::Backspace));
@@ -1118,7 +1130,7 @@ mod tests {
     #[test]
     fn no_match_leaves_nothing_selected() {
         let mut a = app();
-        type_str(&mut a, "zzzz");
+        search(&mut a, "zzzz");
         assert!(a.current().is_none());
         a.handle_key(key(KeyCode::Down));
         assert_eq!(a.selected, 0);
@@ -1144,10 +1156,11 @@ mod tests {
         assert!(a.visible.is_empty());
         a.handle_key(key(KeyCode::F(6))); // All games
         assert_eq!(a.visible.len(), 3);
-        // From the list, Shift-Tab twice reaches the view bar, where ← and →
-        // pick the view.
-        a.handle_key(key(KeyCode::BackTab));
-        a.handle_key(key(KeyCode::BackTab));
+        // From the list, Shift-Tab three times reaches the view bar, where ←
+        // and → pick the view.
+        for _ in 0..3 {
+            a.handle_key(key(KeyCode::BackTab));
+        }
         assert_eq!(a.focus, Focus::Views);
         a.handle_key(key(KeyCode::Right));
         assert!(a.view == View::MyLibrary);
@@ -1161,13 +1174,19 @@ mod tests {
         let mut a = app();
         assert_eq!(a.focus, Focus::Games);
         let mut seen = Vec::new();
-        for _ in 0..4 {
+        for _ in 0..5 {
             a.handle_key(key(KeyCode::Tab));
             seen.push(a.focus);
         }
         assert_eq!(
             seen,
-            [Focus::Card, Focus::Views, Focus::Filters, Focus::Games]
+            [
+                Focus::Card,
+                Focus::Views,
+                Focus::Search,
+                Focus::Filters,
+                Focus::Games
+            ]
         );
         a.handle_key(key(KeyCode::Tab)); // Card
         a.handle_key(key(KeyCode::F(8))); // the list over the card
@@ -1181,9 +1200,9 @@ mod tests {
         a.handle_key(key(KeyCode::Esc));
         a.handle_key(key(KeyCode::Tab));
         assert_eq!(a.focus, Focus::Views);
-        // Letters still search, whichever box has focus.
+        // Letters sort there; only the search box takes them as text.
         a.handle_key(key(KeyCode::Char('p')));
-        assert_eq!(a.query, "p");
+        assert!(a.query.is_empty());
     }
 
     #[test]
@@ -1218,7 +1237,7 @@ mod tests {
     #[test]
     fn enter_with_nothing_listed_opens_nothing() {
         let mut a = app();
-        type_str(&mut a, "zzzz");
+        search(&mut a, "zzzz");
         a.handle_key(key(KeyCode::Enter));
         assert!(a.picker.is_none() && a.panel.is_none() && a.notice.is_none());
     }
@@ -1226,7 +1245,7 @@ mod tests {
     #[test]
     fn a_fresh_scan_keeps_the_query_and_the_selected_game() {
         let mut a = app();
-        type_str(&mut a, "alpha");
+        search(&mut a, "alpha");
         a.handle_key(key(KeyCode::Down));
         let mut fresh: Vec<Entry> = a.games.clone();
         fresh[0].status = Status::Installed;
@@ -1385,17 +1404,76 @@ mod tests {
         a.handle_key(key(KeyCode::Enter));
         assert!(a.filter_menu.is_none());
         assert_eq!(a.current().unwrap().name, "Alpha");
-        // The Filters box opens it with Enter too, and Rating sorts Verified first.
+        // The Filters box opens it with Enter too.
         a.handle_key(key(KeyCode::BackTab));
         assert_eq!(a.focus, Focus::Filters);
         a.handle_key(key(KeyCode::Enter));
         go(&mut a, MenuRow::ClearAll);
         a.handle_key(key(KeyCode::Enter));
         assert!(a.filter_menu.is_some() && a.filters.is_clear());
-        go(&mut a, MenuRow::Sort(Sort::Rating));
+        a.handle_key(key(KeyCode::Esc));
+    }
+
+    #[test]
+    fn a_columns_letter_sorts_by_it_and_again_the_other_way() {
+        let db = Database::parse(
+            r#"{"games":[
+            {"id":"a","name":"Alpha","released":"2005","stores":{"steam":{"id":1,"compatibility":"unknown"}}},
+            {"id":"b","name":"Beta","released":"1999","stores":{"steam":{"id":2,"compatibility":"verified"}}}]}"#,
+        )
+        .unwrap();
+        let mut a = App::new(db.games.into_iter().map(Entry::database_only).collect());
+        let names = |a: &App| {
+            a.visible
+                .iter()
+                .map(|&i| a.games[i].name.clone())
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(names(&a), ["Alpha", "Beta"], "Name ▲ to start");
+        type_str(&mut a, "c"); // Compatibility: Verified first
+        assert_eq!(names(&a), ["Beta", "Alpha"]);
+        type_str(&mut a, "c"); // again: the other way round
+        assert_eq!(names(&a), ["Alpha", "Beta"]);
+        assert!(a.filters.sort.descending);
+        type_str(&mut a, "y"); // Year, oldest first
+        assert_eq!(names(&a), ["Beta", "Alpha"]);
+        assert!(a.query.is_empty(), "letters sort; they don't search");
+        // A letter that's no column's does nothing.
+        type_str(&mut a, "q");
+        assert_eq!(names(&a), ["Beta", "Alpha"]);
+    }
+
+    #[test]
+    fn slash_jumps_to_the_search_where_letters_type_and_enter_goes_back_to_the_games() {
+        let mut a = app();
+        type_str(&mut a, "/");
+        assert_eq!(a.focus, Focus::Search);
+        type_str(&mut a, "proto");
+        assert_eq!(a.query, "proto");
+        assert_eq!(a.current().unwrap().name, "Alpha Protocol");
         a.handle_key(key(KeyCode::Enter));
-        assert_eq!(a.current().unwrap().name, "Alpha");
-        assert_eq!(a.filters.sort, Sort::Rating);
+        assert_eq!(a.focus, Focus::Games);
+        // Esc in the search goes back to the games too, rather than quitting.
+        type_str(&mut a, "/");
+        a.handle_key(key(KeyCode::Esc));
+        assert!(!a.quit && a.focus == Focus::Games);
+        // The search is a Tab stop, after the views.
+        a.handle_key(key(KeyCode::BackTab));
+        a.handle_key(key(KeyCode::BackTab));
+        assert_eq!(a.focus, Focus::Search);
+    }
+
+    #[test]
+    fn enter_on_the_view_bar_opens_the_game_and_the_arrows_always_move_the_list() {
+        let mut a = app();
+        a.handle_key(key(KeyCode::BackTab)); // Filters
+        a.handle_key(key(KeyCode::BackTab)); // Search
+        a.handle_key(key(KeyCode::BackTab)); // Views
+        assert_eq!(a.focus, Focus::Views);
+        a.handle_key(key(KeyCode::Down));
+        assert_eq!(a.selected, 1, "↓ moves the list from the view bar");
+        a.handle_key(key(KeyCode::Enter));
+        assert!(a.details.is_some());
     }
 
     fn shift(code: KeyCode) -> KeyEvent {
@@ -1531,7 +1609,7 @@ mod tests {
     #[test]
     fn there_is_nothing_to_show_full_screen_when_nothing_is_listed() {
         let mut a = app();
-        type_str(&mut a, "zzzz");
+        search(&mut a, "zzzz");
         a.handle_key(ctrl('f'));
         assert!(!a.zoom);
     }
