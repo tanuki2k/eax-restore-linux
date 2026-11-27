@@ -240,31 +240,25 @@ pub(crate) fn gutter(selected: bool) -> Span<'static> {
     }
 }
 
-/// The list's area and the right pane's: side by side, or the pane under the
-/// list when the window is narrow.
-fn split(app: &App, body: Rect) -> (Rect, Rect) {
+/// The games, as F8 lays them out: the table alone, the list beside the
+/// game's card, or the table over the card.
+fn draw_body(f: &mut Frame, app: &App, body: Rect) {
     match app.layout {
+        PaneLayout::Table => draw_table(f, app, body),
         PaneLayout::Side => {
             let [l, r] =
                 Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)])
                     .areas(body);
-            (l, r)
+            draw_games(f, app, l);
+            draw_pane(f, app, r, false);
         }
         PaneLayout::Stacked => {
             let [t, p] = Layout::vertical([Constraint::Percentage(45), Constraint::Percentage(55)])
                 .areas(body);
-            (t, p)
+            draw_table(f, app, t);
+            draw_pane(f, app, p, false);
         }
     }
-}
-
-fn draw_body(f: &mut Frame, app: &App, body: Rect) {
-    if app.table {
-        return draw_table(f, app, body);
-    }
-    let (left, pane) = split(app, body);
-    draw_games(f, app, left);
-    draw_pane(f, app, pane, false);
 }
 
 /// The game details screen: a top line with the way back, the game's name and
@@ -293,17 +287,20 @@ fn draw_details(f: &mut Frame, app: &App, d: &crate::app::Details, area: Rect) {
             top,
         );
     }
+    let [boxes, button] =
+        Layout::vertical([Constraint::Min(3), Constraint::Length(1)]).areas(boxes);
+    draw_install_button(f, d, button);
     let [left, right] = if boxes.width < crate::app::STACK_BELOW {
         Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)]).areas(boxes)
     } else {
         Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)]).areas(boxes)
     };
     let left_block =
-        focus_box(box_title("Game details".into(), !d.right), !d.right).padding(MARGIN);
+        focus_box(box_title("Game details".into(), d.at == 0), d.at == 0).padding(MARGIN);
     let width = usize::from(left_block.inner(left).width);
     let lines = profile::lines(&d.entry, width, &app.home, app.exe_of(&d.entry).as_ref());
     scrolling(f, left, left_block, lines, d.scroll[0], &d.max[0]);
-    let right_block = focus_box(box_title("Settings".into(), d.right), d.right).padding(MARGIN);
+    let right_block = focus_box(box_title("Settings".into(), d.at == 1), d.at == 1).padding(MARGIN);
     let width = usize::from(right_block.inner(right).width);
     let lines = match &d.entry.game {
         Some(g) => settings::lines(g, width),
@@ -317,6 +314,28 @@ fn draw_details(f: &mut Frame, app: &App, d: &crate::app::Details, area: Rect) {
         .collect(),
     };
     scrolling(f, right, right_block, lines, d.scroll[1], &d.max[1]);
+}
+
+/// The details screen's button, under the boxes: Install for a game without
+/// the fix, else Change or uninstall. Lit when it has focus.
+fn draw_install_button(f: &mut Frame, d: &crate::app::Details, area: Rect) {
+    let label = if matches!(d.entry.status, Status::Installed | Status::Manual) {
+        "Change or uninstall the EAX fix"
+    } else {
+        "Install the EAX fix"
+    };
+    let style = if d.at == 2 {
+        Style::new()
+            .fg(theme::SELECT_TEXT)
+            .bg(theme::SELECT_BAR)
+            .add_modifier(Modifier::BOLD)
+    } else {
+        theme::white()
+    };
+    f.render_widget(
+        Paragraph::new(Span::styled(format!("[ {label} ]"), style)).alignment(Alignment::Center),
+        area,
+    );
 }
 
 /// The program's name on the left and the build on the right.
@@ -404,7 +423,8 @@ fn draw_filters(f: &mut Frame, app: &App, area: Rect, compact: bool) {
         usize::from(block.inner(area).width)
     };
     let summary = app.filters.summary();
-    let hint = "Enter or F3 to change";
+    // Only the box with focus says Enter changes it.
+    let hint = if focused { "Enter to change" } else { "" };
     let mut spans = vec![
         Span::raw("  "),
         Span::styled("Sort:", theme::label()),
@@ -416,7 +436,7 @@ fn draw_filters(f: &mut Frame, app: &App, area: Rect, compact: bool) {
         Span::styled(summary.clone(), theme::white()),
     ];
     let used = 2 + 6 + app.filters.sort.label().len() + 4 + 9 + summary.chars().count();
-    if width > used + hint.len() + 4 {
+    if !hint.is_empty() && width > used + hint.len() + 4 {
         spans.push(Span::raw(" ".repeat(width - used - hint.len() - 2)));
         spans.push(Span::styled(hint, theme::dim()));
     }
@@ -457,57 +477,45 @@ fn draw_filter_menu(f: &mut Frame, app: &App, m: &crate::app::FilterMenu, area: 
             s
         }
     };
+    // One column: each group's name, then its boxes one under another.
     let mut lines: Vec<Line> = Vec::new();
     let mut i = 0;
-    // The sort order, as radio buttons on one line.
-    let mut sort = vec![Span::styled(format!("{:<15}", "Sort"), theme::label())];
+    // The line the highlighted row is on, to scroll to.
+    let mut lit_line = 0;
+    let mut row = |lines: &mut Vec<Line<'static>>, mark: &'static str, label: String, on: bool| {
+        let here = hl(i);
+        if here {
+            lit_line = lines.len();
+        }
+        lines.push(Line::from(vec![
+            Span::raw("  "),
+            Span::styled(mark, row_style(on, here)),
+            Span::styled(label, text_style(on, here)),
+        ]));
+        i += 1;
+    };
+    lines.push(Line::from(Span::styled("Sort", theme::label())));
     for opt in crate::filters::Sort::ALL {
         let on = app.filters.sort == opt;
-        let here = hl(i);
-        sort.push(Span::styled(
+        row(
+            &mut lines,
             if on { "(•) " } else { "( ) " },
-            row_style(on, here),
-        ));
-        sort.push(Span::styled(opt.label(), text_style(on, here)));
-        sort.push(Span::raw("   "));
-        i += 1;
+            opt.label().into(),
+            on,
+        );
     }
-    lines.push(Line::from(sort));
-    let w = area.width.min(78);
-    // Inside the border and the margin, less the group's name.
-    let room = usize::from(w.saturating_sub(6)).saturating_sub(15);
     for (name, items) in crate::filters::groups() {
         lines.push(Line::from(""));
-        // Every box in a group as wide as its longest label, as many a line as fit.
-        let cell = items
-            .iter()
-            .map(|i| i.label().chars().count())
-            .max()
-            .unwrap_or(0)
-            + 6;
-        // Wrapped boxes are shared out evenly: four as two and two, not three and one.
-        let fit = (room / cell).max(1);
-        let lines_needed = items.len().div_ceil(fit);
-        let per_line = items.len().div_ceil(lines_needed);
-        let mut row = vec![Span::styled(format!("{name:<15}"), theme::label())];
-        for (n, item) in items.into_iter().enumerate() {
-            if n > 0 && n % per_line == 0 {
-                lines.push(Line::from(std::mem::take(&mut row)));
-                row.push(Span::raw(" ".repeat(15)));
-            }
+        lines.push(Line::from(Span::styled(name, theme::label())));
+        for item in items {
             let on = app.filters.is_ticked(item);
-            let here = hl(i);
-            row.push(Span::styled(
+            row(
+                &mut lines,
                 if on { "[x] " } else { "[ ] " },
-                row_style(on, here),
-            ));
-            row.push(Span::styled(
-                format!("{:<width$}", item.label(), width = cell - 4),
-                text_style(on, here),
-            ));
-            i += 1;
+                item.label(),
+                on,
+            );
         }
-        lines.push(Line::from(row));
     }
     lines.push(Line::from(""));
     let button = |label: &str, here: bool| {
@@ -522,6 +530,9 @@ fn draw_filter_menu(f: &mut Frame, app: &App, m: &crate::app::FilterMenu, area: 
         Span::styled(format!("[ {label} ]"), style)
     };
     debug_assert!(matches!(m.rows[i], MenuRow::ClearAll));
+    if hl(i) || hl(i + 1) {
+        lit_line = lines.len();
+    }
     lines.push(
         Line::from(vec![
             button("Clear all", hl(i)),
@@ -530,6 +541,7 @@ fn draw_filter_menu(f: &mut Frame, app: &App, m: &crate::app::FilterMenu, area: 
         ])
         .centered(),
     );
+    let w = area.width.min(44);
     let h = (u16::try_from(lines.len()).unwrap_or(u16::MAX) + 4).min(area.height);
     let popup = Rect::new(
         area.x + (area.width - w) / 2,
@@ -537,9 +549,13 @@ fn draw_filter_menu(f: &mut Frame, app: &App, m: &crate::app::FilterMenu, area: 
         w,
         h,
     );
+    // Taller than the screen: scrolled to keep the highlighted row in view.
+    let room = usize::from(h.saturating_sub(4)).max(1);
+    let top = u16::try_from(lit_line.saturating_sub(room - 1)).unwrap_or(0);
     f.render_widget(Clear, popup);
     f.render_widget(
         Paragraph::new(lines)
+            .scroll((top, 0))
             .block(focus_box(box_title("Filters".into(), true), true).padding(MARGIN)),
         popup,
     );
@@ -1079,7 +1095,7 @@ fn bar_items(app: &App) -> Vec<(&'static str, &'static str)> {
     } else if app.details.is_some() {
         vec![
             ("Enter", "install or change the EAX fix"),
-            ("Tab", "Game details / Settings"),
+            ("Tab", "Game details / Settings / Install"),
             ("↑/↓", "scroll"),
             ("F4", "star"),
             ("Esc", "back to the list"),
@@ -1133,21 +1149,25 @@ fn bar_items(app: &App) -> Vec<(&'static str, &'static str)> {
 
 /// The F-keys along the bottom of the main screen.
 const FKEYS: [(&str, &str); 10] = [
-    ("1", "Help"),
-    ("2", "Settings"),
-    ("3", "Filters"),
-    ("4", "Star"),
-    ("5", "Rescan"),
-    ("6", "View"),
-    ("7", "Add"),
-    ("8", "Layout"),
-    ("9", "Full"),
-    ("10", "Quit"),
+    ("F1", "Help"),
+    ("F2", "Settings"),
+    ("F3", "Filters"),
+    ("F4", "Star"),
+    ("F5", "Rescan"),
+    ("F6", "View"),
+    ("F7", "Add"),
+    ("F8", "Layout"),
+    ("F9", "Full"),
+    ("F10", "Quit"),
 ];
 
 /// How wide the F-key bar is on one line.
 fn fkey_len() -> usize {
-    FKEYS.iter().map(|(n, w)| n.len() + w.len()).sum::<usize>() + 2 * (FKEYS.len() - 1)
+    FKEYS
+        .iter()
+        .map(|(n, w)| n.len() + 1 + w.len())
+        .sum::<usize>()
+        + 2 * (FKEYS.len() - 1)
 }
 
 /// Rows the F-key bar needs: one, or two on a narrow window.
@@ -1167,7 +1187,7 @@ fn draw_fkeys(f: &mut Frame, area: Rect) {
             spans.push(Span::raw("  "));
         }
         spans.push(Span::styled(n, theme::key()));
-        spans.push(Span::raw(what));
+        spans.push(Span::raw(format!(" {what}")));
     }
     f.render_widget(
         Paragraph::new(Line::from(spans))
@@ -1760,7 +1780,17 @@ mod tests {
         assert!(!s.contains("1Help"), "no F-key bar here");
         // Tab moves to the settings; ↑/↓ scroll the box with focus only.
         press(&mut app, ratatui::crossterm::event::KeyCode::Tab);
-        assert!(app.details.as_ref().unwrap().right);
+        assert_eq!(app.details.as_ref().unwrap().at, 1);
+        let s = screen(&app, 120, 30);
+        assert!(s.contains("[ Install the EAX fix ]"), "{s}");
+        press(&mut app, ratatui::crossterm::event::KeyCode::Tab);
+        assert_eq!(
+            app.details.as_ref().unwrap().at,
+            2,
+            "then the install button"
+        );
+        press(&mut app, ratatui::crossterm::event::KeyCode::Tab);
+        assert_eq!(app.details.as_ref().unwrap().at, 0, "and round again");
         press(&mut app, ratatui::crossterm::event::KeyCode::Esc);
         assert!(app.details.is_none());
     }
@@ -1780,7 +1810,7 @@ mod tests {
         assert!(s.contains("[All games (1)]"));
         assert!(s.contains("Sort: Best match    Filters: none"));
         assert!(s.contains("✓  Alpha Centauri"));
-        assert!(s.contains("1Help  2Settings  3Filters"));
+        assert!(s.contains("F1 Help  F2 Settings  F3 Filters"));
         assert!(s.contains("System details:"));
         assert!(s.contains("Status:") && s.contains("DSOAL installed"));
         assert!(s.contains("Platform:") && s.contains("Steam"));
@@ -2037,12 +2067,20 @@ mod tests {
     }
 
     #[test]
-    fn ctrl_l_moves_the_pane_under_the_list_on_a_wide_window() {
+    fn f8_puts_the_table_over_the_card_then_the_table_alone() {
         let mut app = App::new(entries(WITH_SETTINGS));
         app.resize(120);
-        ctrl_key(&mut app, 'l');
-        let s = screen(&app, 120, 24);
-        assert!(row_of(&s, " Games (") < row_of(&s, "Game profile"));
+        press(&mut app, ratatui::crossterm::event::KeyCode::F(8));
+        let s = screen(&app, 120, 30);
+        assert!(row_of(&s, " Games (") < row_of(&s, "Game profile"), "{s}");
+        // The top is the table, with its column headings.
+        assert!(s.contains("Compatibility  Store"), "{s}");
+        press(&mut app, ratatui::crossterm::event::KeyCode::F(8));
+        let s = screen(&app, 120, 30);
+        assert!(
+            s.contains("Compatibility  Store") && !s.contains("Game profile"),
+            "{s}"
+        );
     }
 
     #[test]
@@ -2060,11 +2098,11 @@ mod tests {
             narrow.contains("Type to search"),
             "the end of the bar is lost"
         );
-        assert!(narrow.contains("10Quit"), "the end of the F-keys is lost");
+        assert!(narrow.contains("F10 Quit"), "the end of the F-keys is lost");
         // On a wide window each needs only one row.
         let wide = screen(&app, 130, 20);
         let rows: Vec<&str> = wide.lines().collect();
-        assert!(rows[rows.len() - 1].contains("10Quit"));
+        assert!(rows[rows.len() - 1].contains("F10 Quit"));
         assert!(rows[rows.len() - 2].contains("Type to search"));
     }
 
@@ -2172,7 +2210,7 @@ mod tests {
         let mut app = App::new(entries(WITH_SETTINGS));
         press(&mut app, ratatui::crossterm::event::KeyCode::F(1));
         // Far taller than the text needs.
-        let s = screen(&app, 120, 110);
+        let s = screen(&app, 120, 130);
         let rows: Vec<&str> = s.lines().collect();
         let top = row_of(&s, " Help ");
         // 90 wide, less the border and the 2-column margins.
@@ -2184,7 +2222,7 @@ mod tests {
             rows[top + 1 + text]
         );
         assert!(rows[top + text + 3].contains('╰'));
-        assert!(top + text + 3 < 100, "popup reaches row {}", top + text + 3);
+        assert!(top + text + 3 < 120, "popup reaches row {}", top + text + 3);
         // It is centred in the space above the key bar.
         assert!(top > 1);
         assert_eq!(app.help_max.get(), 0, "nothing left to scroll");

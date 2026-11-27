@@ -12,8 +12,9 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
   entry, where a terminal draws `\033[1;33m` bright). The main screen (`ui::draw`), top to bottom:
   a title row, the View bar (`filters::View`: All games / My library / Patched / Favorites, with
   counts), a search line, the Filters box (sort + `Filters::summary`), the games (a list beside the
-  Profile/Settings pane, or a full-width table with Compatibility, Store, Audio, EAX and Year
-  columns that drop from the right when narrow, `App::table`, F8), a centred hint line for the
+  Profile/Settings pane, a full-width table with Compatibility, Store, Audio, EAX and Year
+  columns that drop from the right when narrow, or that table above the pane; F8 cycles
+  `app::Layout` Table → Side → Stacked, and a window under 104 columns stacks Side by itself), a centred hint line for the
   focused box and a centred F-key bar (1Help … 10Quit). Below 24 rows the title goes and the View
   bar and Filters box lose their borders. Tab/Shift-Tab move focus (`app::Focus`: Views → Filters
   → Games → Card; the focused rounded box's border and title are in `theme::key()`); letters
@@ -24,8 +25,7 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
   store's rating/API/delisted flag, nothing ticked = everything; Sort is A to Z / Best match (the
   default) / Rating; Space ticks, Enter ticks and closes, Esc puts the filters back. F4 stars a game
   (`Prefs::favorites`, by database id, else folder), F5 rescans, F6 next view, F7 add a game (also
-  Ctrl-A), F9 full screen (also Ctrl-F), F10 quits; Ctrl-L still puts the pane under the list instead of
-  beside it (it does that by itself below 104 columns); `--list`, `--settings NAME` and `--profile NAME`
+  Ctrl-A), F9 full screen (also Ctrl-F; in the table it opens the details), F10 quits; `--list`, `--settings NAME` and `--profile NAME`
   print the game list, one game's settings view or its profile without the TUI, which is
   how the Rust views are compared with the Bash browser's `print_game_settings_details`
   and `print_game_profile_stores` (word for word, for every game). The Games list keeps its window between redraws (`App::list_offset`) and moves it only
@@ -130,7 +130,7 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
 
 Enter on a game opens its details screen (`App::details`, `ui::draw_details`): the profile and
 the settings views side by side (`profile::lines`, `settings::lines`, unchanged), each scrolling,
-Tab between them, F4 stars, Esc back to the list; a rescan refreshes the entry it shows.
+and an Install (or Change or uninstall) button under them; Tab goes round the three, F4 stars, Esc back to the list; a rescan refreshes the entry it shows.
 The game panel (`tui/src/panel/`, the user's Optiscaler-Client-style design): Enter on the details
 of a game with a folder opens its page: from `view::TWO_COLUMNS` (110) wide it fills the screen, the
 install choices' boxes on the left (60%) and the game's settings on the right (40%, or for a game with no

@@ -27,8 +27,9 @@ pub enum Focus {
 /// here.
 pub struct Details {
     pub entry: Entry,
-    /// The settings box on the right has focus, rather than the profile.
-    pub right: bool,
+    /// Which part has focus: the game details (0), the settings (1) or the
+    /// install button (2).
+    pub at: u8,
     pub scroll: [u16; 2],
     /// How far each box can scroll; known only once it's drawn.
     pub max: [std::cell::Cell<u16>; 2],
@@ -38,14 +39,19 @@ impl Details {
     fn new(entry: Entry) -> Self {
         Details {
             entry,
-            right: false,
+            at: 0,
             scroll: [0, 0],
             max: Default::default(),
         }
     }
 
+    /// The box ↑/↓ scroll: the one with focus, or the settings from the button.
+    pub fn scrolled(&self) -> usize {
+        usize::from(self.at.min(1))
+    }
+
     fn scroll_by(&mut self, delta: i32) {
-        let i = usize::from(self.right);
+        let i = self.scrolled();
         let max = i32::from(self.max[i].get());
         self.scroll[i] = (i32::from(self.scroll[i]) + delta).clamp(0, max) as u16;
     }
@@ -103,13 +109,25 @@ pub struct Retry {
     pub game: Option<crate::db::Game>,
 }
 
-/// Where the right-hand pane sits.
+/// How the games are laid out (F8 goes round them in this order).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Layout {
-    /// Beside the list.
+    /// One table across the screen, a column per detail, no card.
+    Table,
+    /// The list, with the game's card beside it.
     Side,
-    /// Under the list, for a narrow window.
+    /// The table on top, the game's card under it.
     Stacked,
+}
+
+impl Layout {
+    fn next(self) -> Self {
+        match self {
+            Layout::Table => Layout::Side,
+            Layout::Side => Layout::Stacked,
+            Layout::Stacked => Layout::Table,
+        }
+    }
 }
 
 /// Narrower than this and a pane beside the list leaves both too cramped.
@@ -153,9 +171,6 @@ pub struct App {
     pub details: Option<Details>,
     /// Which box on the main screen the keys go to.
     pub focus: Focus,
-    /// The games list as a table with a column per detail (F8), rather than a
-    /// list beside the game's card.
-    pub table: bool,
     /// The starred games (F4): database ids, or a folder for a game the
     /// database doesn't list.
     pub favorites: std::collections::BTreeSet<String>,
@@ -176,8 +191,9 @@ pub struct App {
     /// window only moves when the highlight gets near its edge. Set by `draw`.
     pub list_offset: std::cell::Cell<usize>,
     pub layout: Layout,
-    /// The layout this window width calls for; Ctrl-L swaps away from it.
-    natural: Layout,
+    /// The window got too narrow for the card beside the list, so it went
+    /// under the table; a wide window puts it back beside.
+    auto_stacked: bool,
     /// Lines the settings view is scrolled down.
     pub pane_scroll: u16,
     /// How far it can scroll; known only once it is drawn, so `draw` sets it.
@@ -210,7 +226,6 @@ impl App {
             filter_menu: None,
             details: None,
             focus: Focus::Games,
-            table: false,
             favorites: Default::default(),
             home: PathBuf::from("/"),
             message: String::new(),
@@ -221,7 +236,7 @@ impl App {
             pane: Pane::Profile,
             list_offset: std::cell::Cell::new(0),
             layout: Layout::Side,
-            natural: Layout::Side,
+            auto_stacked: false,
             pane_scroll: 0,
             pane_max: std::cell::Cell::new(0),
             query: String::new(),
@@ -425,7 +440,7 @@ impl App {
     /// The boxes Tab moves between, in order; the card only beside the list.
     fn focus_ring(&self) -> Vec<Focus> {
         let mut ring = vec![Focus::Views, Focus::Filters, Focus::Games];
-        if !self.table {
+        if self.layout != Layout::Table {
             ring.push(Focus::Card);
         }
         ring
@@ -526,27 +541,25 @@ impl App {
     /// The window is now `width` columns wide. Crossing the narrow/wide line
     /// switches the layout by itself, even over a Ctrl-L; otherwise a choice stays.
     pub fn resize(&mut self, width: u16) {
-        let natural = if width < STACK_BELOW {
-            Layout::Stacked
-        } else {
-            Layout::Side
-        };
-        if natural != self.natural {
-            self.natural = natural;
-            self.layout = natural;
+        let narrow = width < STACK_BELOW;
+        if narrow && self.layout == Layout::Side {
+            self.layout = Layout::Stacked;
+            self.auto_stacked = true;
+        } else if !narrow && self.auto_stacked {
+            self.auto_stacked = false;
+            if self.layout == Layout::Stacked {
+                self.layout = Layout::Side;
+            }
         }
     }
 
-    /// Ctrl-L: away from the layout the window calls for, or back to it.
-    fn swap_layout(&mut self) {
-        self.layout = if self.layout == self.natural {
-            match self.natural {
-                Layout::Side => Layout::Stacked,
-                Layout::Stacked => Layout::Side,
-            }
-        } else {
-            self.natural
-        };
+    /// F8: the table, the list beside the card, the table over the card.
+    fn next_layout(&mut self) {
+        self.layout = self.layout.next();
+        self.auto_stacked = false;
+        if self.layout == Layout::Table && self.focus == Focus::Card {
+            self.focus = Focus::Games;
+        }
     }
 
     fn scroll_pane(&mut self, delta: i32) {
@@ -593,14 +606,15 @@ impl App {
                 let e = d.entry.clone();
                 self.toggle_favorite_of(&e);
             }
-            KeyCode::Tab | KeyCode::BackTab | KeyCode::Left | KeyCode::Right => d.right = !d.right,
+            KeyCode::Tab | KeyCode::Right => d.at = (d.at + 1) % 3,
+            KeyCode::BackTab | KeyCode::Left => d.at = (d.at + 2) % 3,
             KeyCode::Up => d.scroll_by(-1),
             KeyCode::Down => d.scroll_by(1),
             KeyCode::PageUp => d.scroll_by(-10),
             KeyCode::PageDown => d.scroll_by(10),
-            KeyCode::Home => d.scroll[usize::from(d.right)] = 0,
+            KeyCode::Home => d.scroll[d.scrolled()] = 0,
             KeyCode::End => {
-                let i = usize::from(d.right);
+                let i = d.scrolled();
                 d.scroll[i] = d.max[i].get();
             }
             KeyCode::Enter => {
@@ -922,24 +936,17 @@ impl App {
             }
             KeyCode::F(6) => return self.set_view(self.view.next()),
             KeyCode::F(7) => return self.open_add_picker(),
-            KeyCode::F(8) => {
-                self.table = !self.table;
-                if self.table && self.focus == Focus::Card {
-                    self.focus = Focus::Games;
-                }
-                return;
-            }
+            KeyCode::F(8) => return self.next_layout(),
             // The table has no pane to enlarge, so its full-screen view of the
             // game is the details screen.
-            KeyCode::F(9) if self.table => return self.open_details(),
+            KeyCode::F(9) if self.layout == Layout::Table => return self.open_details(),
             KeyCode::F(9) => return self.zoom = self.current().is_some(),
             KeyCode::Tab => return self.move_focus(true),
             KeyCode::BackTab => return self.move_focus(false),
             // The keys the old browser used, kept for whoever knows them.
             KeyCode::Char('a') if ctrl => return self.open_add_picker(),
-            KeyCode::Char('l') if ctrl => return self.swap_layout(),
             KeyCode::Char('f') if ctrl => {
-                return self.zoom = self.current().is_some() && !self.table
+                return self.zoom = self.current().is_some() && self.layout != Layout::Table
             }
             KeyCode::Up if shift => return self.scroll_pane(-1),
             KeyCode::Down if shift => return self.scroll_pane(1),
@@ -1163,8 +1170,9 @@ mod tests {
             [Focus::Card, Focus::Views, Focus::Filters, Focus::Games]
         );
         a.handle_key(key(KeyCode::Tab)); // Card
-        a.handle_key(key(KeyCode::F(8))); // table: no card to stay on
-        assert!(a.table && a.focus == Focus::Games);
+        a.handle_key(key(KeyCode::F(8))); // the list over the card
+        a.handle_key(key(KeyCode::F(8))); // the table: no card to stay on
+        assert!(a.layout == Layout::Table && a.focus == Focus::Games);
         a.handle_key(key(KeyCode::F(9)));
         assert!(
             a.details.is_some() && !a.zoom,
@@ -1529,7 +1537,7 @@ mod tests {
     }
 
     #[test]
-    fn a_narrow_window_stacks_the_pane_under_the_list_and_a_wide_one_puts_it_beside() {
+    fn a_narrow_window_stacks_the_card_under_the_table_and_a_wide_one_puts_it_beside() {
         let mut a = app();
         assert_eq!(a.layout, Layout::Side);
         a.resize(103);
@@ -1539,55 +1547,26 @@ mod tests {
     }
 
     #[test]
-    fn ctrl_l_swaps_away_from_the_natural_layout_and_back() {
+    fn f8_goes_round_the_table_the_two_columns_and_top_and_bottom() {
         let mut a = app();
         a.resize(120);
-        a.handle_key(ctrl('l'));
+        a.handle_key(key(KeyCode::F(8)));
         assert_eq!(a.layout, Layout::Stacked);
-        a.handle_key(ctrl('l'));
+        a.handle_key(key(KeyCode::F(8)));
+        assert_eq!(a.layout, Layout::Table);
+        a.handle_key(key(KeyCode::F(8)));
         assert_eq!(a.layout, Layout::Side);
-        a.resize(80);
-        a.handle_key(ctrl('l'));
-        assert_eq!(
-            a.layout,
-            Layout::Side,
-            "a narrow window can still be put beside"
-        );
-        a.handle_key(ctrl('l'));
-        assert_eq!(a.layout, Layout::Stacked);
-    }
-
-    #[test]
-    fn a_choice_stays_through_resizes_on_the_same_side_of_the_line() {
-        let mut a = app();
-        a.resize(120);
-        a.handle_key(ctrl('l'));
+        // A layout picked with F8 stays through resizes; only the one the
+        // window forced goes back.
+        a.handle_key(key(KeyCode::F(8))); // top and bottom, chosen
         a.resize(150);
-        a.resize(110);
         assert_eq!(a.layout, Layout::Stacked);
-    }
-
-    #[test]
-    fn crossing_the_line_overrides_a_choice() {
-        let mut a = app();
-        a.resize(120);
-        a.handle_key(ctrl('l')); // stacked, though wide
-        a.resize(90); // narrow: stacked is now what the window calls for
-        assert_eq!(a.layout, Layout::Stacked);
-        a.handle_key(ctrl('l')); // beside, though narrow
-        a.resize(130); // wide again
+        a.handle_key(key(KeyCode::F(8)));
+        a.handle_key(key(KeyCode::F(8))); // beside, chosen
+        a.resize(90); // too narrow: it goes under
+        a.resize(130); // wide again: back beside
         assert_eq!(a.layout, Layout::Side);
-    }
-
-    #[test]
-    fn ctrl_l_is_ignored_in_full_screen_and_help() {
-        let mut a = app();
-        a.resize(120);
-        a.handle_key(ctrl('f'));
-        a.handle_key(ctrl('l'));
-        assert_eq!(a.layout, Layout::Side);
-        a.handle_key(key(KeyCode::Esc));
-        a.handle_key(key(KeyCode::F(1)));
+        // Ctrl-L does nothing any more.
         a.handle_key(ctrl('l'));
         assert_eq!(a.layout, Layout::Side);
     }
