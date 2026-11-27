@@ -10,7 +10,7 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
   taken from fzf's palette and the script's `GREEN`/`YELLOW`/`WHITE`; the script's bold
   colours use ratatui's `Light*` names because crossterm writes the plain ones as the dark palette
   entry, where a terminal draws `\033[1;33m` bright). The main screen (`ui::draw`), top to bottom:
-  a title row, the View bar (`filters::View`: All games / My library / Patched / Favorites, with
+  a title row, the View bar (`filters::View`: All games / My library / Patched / Favourites, with
   counts), a search line, the Filters box (sort + `Filters::summary`), the games (a list beside the
   Profile/Settings pane, a full-width table with Compatibility, Store, Audio, EAX and Year
   columns that drop from the right when narrow, or that table above the pane; F8 cycles

@@ -328,7 +328,7 @@ impl App {
             let mut p = crate::prefs::Prefs::load();
             p.favorites = self.favorites.clone();
             if let Err(e) = p.save() {
-                self.message = format!("Couldn't save your favorites: {e}");
+                self.message = format!("Couldn't save your favourites: {e}");
             }
         }
         // Unstarring a game in Favorites takes it off the list.

@@ -89,7 +89,7 @@ impl Field {
                     "The game list starts with the games that have the EAX fix.",
                 ),
                 (
-                    "Favorites",
+                    "Favourites",
                     "The game list starts with the games you starred with F4.",
                 ),
             ]),

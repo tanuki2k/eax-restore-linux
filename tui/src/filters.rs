@@ -30,7 +30,7 @@ impl View {
             View::All => "All games",
             View::MyLibrary => "My library",
             View::Patched => "Patched",
-            View::Favorites => "Favorites",
+            View::Favorites => "Favourites",
         }
     }
 
