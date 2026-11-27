@@ -94,6 +94,9 @@ fn draw_overlays(f: &mut Frame, app: &App, body: Rect) {
     if let Some(m) = &app.filter_menu {
         draw_filter_menu(f, app, m, body);
     }
+    if let Some(m) = &app.sort_menu {
+        draw_sort_menu(f, app, m, body);
+    }
     if let Some(p) = &app.picker {
         draw_picker(f, p, body);
     }
@@ -116,6 +119,7 @@ fn main_screen(app: &App) -> bool {
         && app.prefs.is_none()
         && app.notice.is_none()
         && app.filter_menu.is_none()
+        && app.sort_menu.is_none()
         && !app.help
         && !app.zoom
 }
@@ -176,7 +180,7 @@ fn draw_notice(f: &mut Frame, n: &crate::app::Notice, area: Rect) {
     );
     f.render_widget(Clear, popup);
     f.render_widget(
-        Paragraph::new(lines).block(boxed(title).padding(MARGIN)),
+        Paragraph::new(lines).block(popup_box(title).padding(MARGIN)),
         popup,
     );
 }
@@ -199,6 +203,11 @@ fn box_title(text: String, focused: bool) -> Line<'static> {
         Style::new().fg(theme::LABEL)
     };
     Line::from(Span::styled(format!(" {text} "), style))
+}
+
+/// A pop-up's box: it has the keys, so its border and title are in the key colour.
+pub(crate) fn popup_box(title: &str) -> Block<'static> {
+    focus_box(box_title(title.into(), true), true)
 }
 
 /// A rounded box in the old browser's colours, its title centred in the top edge.
@@ -434,41 +443,97 @@ fn draw_search(f: &mut Frame, app: &App, area: Rect) {
     }
 }
 
-/// The Filters box: the sort order and what's ticked, and how to change them.
-/// `compact` leaves the box off.
+/// The Sort and Filters boxes, side by side: the order and what's ticked.
+/// Each says Enter changes it only while it has focus. `compact` leaves the
+/// boxes off and puts both on one line.
 fn draw_filters(f: &mut Frame, app: &App, area: Rect, compact: bool) {
-    let focused = app.focus == Focus::Filters;
-    let block = focus_box(box_title("Filters".into(), focused), focused);
-    let width = if compact {
-        usize::from(area.width)
-    } else {
-        usize::from(block.inner(area).width)
-    };
+    let sort = app.filters.sort.label();
     let summary = app.filters.summary();
-    // Only the box with focus says Enter changes it.
-    let hint = if focused { "Enter to change" } else { "" };
-    let mut spans = vec![
-        Span::raw("  "),
-        Span::styled("Sort:", theme::label()),
-        Span::raw(" "),
-        Span::styled(app.filters.sort.label(), theme::white()),
-        Span::raw("    "),
-        Span::styled("Filters:", theme::label()),
-        Span::raw(" "),
-        Span::styled(summary.clone(), theme::white()),
-    ];
-    let used = 2 + 6 + app.filters.sort.label().chars().count() + 4 + 9 + summary.chars().count();
-    if !hint.is_empty() && width > used + hint.len() + 4 {
-        spans.push(Span::raw(" ".repeat(width - used - hint.len() - 2)));
-        spans.push(Span::styled(hint, theme::dim()));
-    }
+    let part = |label: &'static str, value: String, focused: bool| {
+        let mut spans = vec![
+            Span::styled(if focused { "▶ " } else { "  " }, theme::key()),
+            Span::styled(format!("{label}:"), theme::label()),
+            Span::raw(" "),
+            Span::styled(value, theme::white()),
+        ];
+        if focused {
+            spans.push(Span::styled("   Enter to change", theme::dim()));
+        }
+        spans
+    };
+    let on_sort = app.focus == Focus::Sort;
+    let on_filters = app.focus == Focus::Filters;
     if compact {
-        let marker = if focused { "▶" } else { " " };
-        spans[0] = Span::styled(format!("{marker} "), theme::key());
-        f.render_widget(Paragraph::new(Line::from(spans)), area);
-    } else {
-        f.render_widget(Paragraph::new(Line::from(spans)).block(block), area);
+        let mut spans = part("Sort", sort, on_sort);
+        spans.push(Span::raw("   "));
+        spans.extend(part("Filters", summary, on_filters));
+        return f.render_widget(Paragraph::new(Line::from(spans)), area);
     }
+    let [left, right] =
+        Layout::horizontal([Constraint::Length(36), Constraint::Min(10)]).areas(area);
+    // In a box, its title names it, so the line is just the value.
+    let boxed_part = |value: String, focused: bool| {
+        let mut spans = vec![Span::raw(" "), Span::styled(value, theme::white())];
+        if focused {
+            spans.push(Span::styled("   Enter to change", theme::dim()));
+        }
+        spans
+    };
+    let spans = boxed_part(sort, on_sort);
+    f.render_widget(
+        Paragraph::new(Line::from(spans))
+            .block(focus_box(box_title("Sort".into(), on_sort), on_sort)),
+        left,
+    );
+    let spans = boxed_part(summary, on_filters);
+    f.render_widget(
+        Paragraph::new(Line::from(spans)).block(focus_box(
+            box_title("Filters".into(), on_filters),
+            on_filters,
+        )),
+        right,
+    );
+}
+
+/// The Sort menu: each column as a radio button, then up or down.
+fn draw_sort_menu(f: &mut Frame, app: &App, m: &crate::app::SortMenu, area: Rect) {
+    let sort = app.filters.sort;
+    let mut lines: Vec<Line> = vec![Line::from(Span::styled("Sort by", theme::label()))];
+    let row = |label: &str, on: bool, here: bool| {
+        let mark = Style::new().fg(if on { theme::SELECT_TEXT } else { theme::LABEL });
+        let text = if on {
+            theme::white()
+        } else {
+            Style::new().fg(theme::ON_PC)
+        };
+        let bg = |s: Style| if here { s.bg(theme::SELECT_BG) } else { s };
+        Line::from(vec![
+            Span::raw("  "),
+            Span::styled(if on { "(•) " } else { "( ) " }, bg(mark)),
+            Span::styled(label.to_string(), bg(text)),
+        ])
+    };
+    for (i, c) in crate::filters::Column::ALL.into_iter().enumerate() {
+        lines.push(row(c.label(), sort.column == c, m.at == i));
+    }
+    let cols = crate::filters::Column::ALL.len();
+    lines.push(Line::from(""));
+    lines.push(Line::from(Span::styled("Order", theme::label())));
+    lines.push(row("Up ▲", !sort.descending, m.at == cols));
+    lines.push(row("Down ▼", sort.descending, m.at == cols + 1));
+    let w = area.width.min(36);
+    let h = (u16::try_from(lines.len()).unwrap_or(u16::MAX) + 4).min(area.height);
+    let popup = Rect::new(
+        area.x + (area.width - w) / 2,
+        area.y + (area.height - h) / 2,
+        w,
+        h,
+    );
+    f.render_widget(Clear, popup);
+    f.render_widget(
+        Paragraph::new(lines).block(popup_box("Sort").padding(MARGIN)),
+        popup,
+    );
 }
 
 /// The Filters pop-up: the sort order, then each group's tick boxes, then
@@ -632,17 +697,21 @@ fn draw_table(f: &mut Frame, app: &App, area: Rect) {
             c.label().to_string()
         }
     };
-    let mut head = vec![
-        Span::raw(" ".repeat(lead)),
-        Span::styled(
-            fit(&heading(crate::filters::Column::Name), name_w),
-            theme::white(),
-        ),
-    ];
+    // Each heading's first letter, the key that sorts by it, in the key colour.
+    let cell = |c: crate::filters::Column, w: usize| -> [Span<'static>; 2] {
+        let text = fit(&heading(c), w);
+        let mut chars = text.chars();
+        let first: String = chars.next().into_iter().collect();
+        [
+            Span::styled(first, theme::key()),
+            Span::styled(chars.collect::<String>(), theme::white()),
+        ]
+    };
+    let mut head = vec![Span::raw(" ".repeat(lead))];
+    head.extend(cell(crate::filters::Column::Name, name_w));
     for (n, (_, w)) in COLUMNS[..cols].iter().enumerate() {
         head.push(Span::raw("  "));
-        let col = crate::filters::Column::ALL[n + 1];
-        head.push(Span::styled(fit(&heading(col), *w), theme::white()));
+        head.extend(cell(crate::filters::Column::ALL[n + 1], *w));
     }
     f.render_widget(
         Paragraph::new(Line::from(head)),
@@ -1040,7 +1109,7 @@ fn draw_help(f: &mut Frame, app: &App, area: Rect) {
     scrolling(
         f,
         popup,
-        boxed("Help").padding(MARGIN),
+        popup_box("Help").padding(MARGIN),
         lines,
         app.help_scroll,
         &app.help_max,
@@ -1076,7 +1145,7 @@ fn bar_items(app: &App) -> Vec<(&'static str, &'static str)> {
             ("Enter", "install or change the EAX fix"),
             ("Tab", "Game details / Settings / Install"),
             ("↑/↓", "scroll"),
-            ("F4", "star"),
+            ("F", "favourite"),
             ("Esc", "back to the list"),
         ]
     } else if app.zoom {
@@ -1086,6 +1155,13 @@ fn bar_items(app: &App) -> Vec<(&'static str, &'static str)> {
             ("Enter", "open"),
             ("F1", "help"),
             ("Esc", "back"),
+        ]
+    } else if app.sort_menu.is_some() {
+        vec![
+            ("↑/↓", "move"),
+            ("Space", "pick"),
+            ("Enter", "done"),
+            ("Esc", "cancel"),
         ]
     } else if app.filter_menu.is_some() {
         vec![
@@ -1107,6 +1183,11 @@ fn bar_items(app: &App) -> Vec<(&'static str, &'static str)> {
                 ("Enter or Esc", "back to the games"),
                 ("Tab", "next box"),
             ],
+            Focus::Sort => vec![
+                ("Enter", "change the sort"),
+                ("Tab", "next box"),
+                ("/", "search"),
+            ],
             Focus::Filters => vec![
                 ("Enter", "change the filters"),
                 ("Tab", "next box"),
@@ -1115,13 +1196,13 @@ fn bar_items(app: &App) -> Vec<(&'static str, &'static str)> {
             Focus::Games => vec![
                 ("↑/↓", "move"),
                 ("Enter", "open the game"),
-                ("N C S A E Y", "sort"),
+                ("F", "favourite"),
                 ("Tab", "next box"),
                 ("/", "search"),
             ],
             Focus::Card => vec![
+                ("↑/↓", "scroll"),
                 ("←/→", "switch profile/settings"),
-                ("Shift-↑/↓", "scroll"),
                 ("Tab", "next box"),
                 ("/", "search"),
             ],
@@ -1133,13 +1214,13 @@ fn bar_items(app: &App) -> Vec<(&'static str, &'static str)> {
 const FKEYS: [(&str, &str); 10] = [
     ("F1", "Help"),
     ("F2", "Settings"),
-    ("F3", "Filters"),
-    ("F4", "Star"),
+    ("F3", "Sort"),
+    ("F4", "Filters"),
     ("F5", "Rescan"),
     ("F6", "View"),
     ("F7", "Add"),
     ("F8", "Layout"),
-    ("F9", "Full"),
+    ("F9", "Details"),
     ("F10", "Quit"),
 ];
 
@@ -1246,7 +1327,7 @@ fn draw_picker(f: &mut Frame, p: &crate::picker::Picker, area: Rect) {
         Some(g) => format!("Choose the folder with {}'s .exe", g.name),
         None => "Choose the folder with the game's .exe".to_string(),
     };
-    let block = boxed(&title);
+    let block = popup_box(&title);
     let inner = block.inner(popup);
     f.render_widget(block, popup);
     let parts = Layout::default()
@@ -1352,14 +1433,14 @@ mod tests {
         games[1].status = Status::OnThisPc;
         games[1].store = Some(StoreKind::Steam);
         games.push(gog.clone());
-        let s = screen(&App::new(games.clone()), 120, 30);
+        let s = screen(&App::new_side(games.clone()), 120, 30);
         assert!(s.contains("  Quake 4 [Steam]"), "{s}");
         assert!(s.contains("✓  Quake 4 [GOG]"), "{s}");
         assert!(!s.contains("Alpha ["), "one store, no label: {s}");
 
         // Only one copy on this PC: no label.
         games[2].status = Status::NotOnThisPc;
-        let s = screen(&App::new(games), 120, 30);
+        let s = screen(&App::new_side(games), 120, 30);
         assert!(!s.contains("Quake 4 ["), "{s}");
     }
 
@@ -1373,7 +1454,7 @@ mod tests {
         games[0].status = Status::Installed;
         games[1].status = Status::OnThisPc;
         games[2].status = Status::NotOnThisPc;
-        let app = App::new(games);
+        let app = App::new_side(games);
         let mut t = Terminal::new(TestBackend::new(100, 30)).unwrap();
         t.draw(|f| draw(f, &app)).unwrap();
         let buf = t.backend().buffer().clone();
@@ -1420,7 +1501,7 @@ mod tests {
                 .unwrap();
             (rows, top, left, right, bottom)
         };
-        let mut app = App::new(entries(WITH_SETTINGS));
+        let mut app = App::new_side(entries(WITH_SETTINGS));
         app.handle_key(KeyEvent::new(KeyCode::F(1), KeyModifiers::NONE));
         let (_, _, help_l, help_r, _) = edges(&app, "Help");
         app.handle_key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
@@ -1468,7 +1549,7 @@ mod tests {
         let mut games = entries(WITH_SETTINGS);
         games[0].status = Status::OnThisPc;
         games[0].path = Some(dir);
-        let mut app = App::new(games);
+        let mut app = App::new_side(games);
         app.set_home(home.path().to_path_buf());
         app.resize(width);
         // Enter opens the game's details; Enter there goes on to install.
@@ -1500,7 +1581,7 @@ mod tests {
     fn enter_on_a_game_that_wasnt_found_asks_for_its_folder_then_opens_its_page() {
         let home = tempfile::tempdir().unwrap();
         let dir = steam_folder(home.path(), "Quake 4", 2210);
-        let mut app = App::new(entries(WITH_SETTINGS));
+        let mut app = App::new_side(entries(WITH_SETTINGS));
         app.set_home(home.path().to_path_buf());
         // Enter opens the game's details; Enter there goes on to install.
         press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
@@ -1521,7 +1602,7 @@ mod tests {
     fn ctrl_a_then_space_opens_a_page_for_that_folder() {
         let home = tempfile::tempdir().unwrap();
         let dir = steam_folder(home.path(), "Obscure", 1234);
-        let mut app = App::new(entries(WITH_SETTINGS));
+        let mut app = App::new_side(entries(WITH_SETTINGS));
         app.set_home(home.path().to_path_buf());
         ctrl_key(&mut app, 'a');
         assert!(screen(&app, 120, 40).contains("Choose the folder with the game's .exe"));
@@ -1539,7 +1620,7 @@ mod tests {
             r#"{"games":[{"id":"bg","name":"Baldur's Gate: Enhanced Edition",
               "eax":{"status":"not_implemented","problem":"It has no EAX."}}]}"#,
         );
-        let mut app = App::new(games.clone());
+        let mut app = App::new_side(games.clone());
         app.set_home(home.path().to_path_buf());
         // Enter opens the game's details; Enter there goes on to install.
         press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
@@ -1567,7 +1648,7 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         games[0].status = Status::OnThisPc;
         games[0].path = Some(dir);
-        let mut app = App::new(games);
+        let mut app = App::new_side(games);
         app.set_home(home.path().to_path_buf());
         press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
         press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
@@ -1591,7 +1672,7 @@ mod tests {
         );
         games[0].status = Status::OnThisPc;
         games[0].path = Some(dir.clone());
-        let mut app = App::new(games);
+        let mut app = App::new_side(games);
         app.set_home(home.path().to_path_buf());
         // Enter opens the game's details; Enter there goes on to install.
         press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
@@ -1634,7 +1715,7 @@ mod tests {
         games[0].status = Status::OnThisPc;
         games[0].store = Some(crate::library::StoreKind::Steam);
         games[0].path = Some(dir);
-        let mut app = App::new(games);
+        let mut app = App::new_side(games);
         app.set_home(home.path().to_path_buf());
         // Enter opens the game's details; Enter there goes on to install.
         press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
@@ -1676,7 +1757,7 @@ mod tests {
         let mut games = entries(WITH_SETTINGS);
         games[0].status = Status::OnThisPc;
         games[0].path = Some(dir);
-        let mut app = App::new(games);
+        let mut app = App::new_side(games);
         app.set_home(home.path().to_path_buf());
         // Enter opens the game's details; Enter there goes on to install.
         press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
@@ -1749,7 +1830,7 @@ mod tests {
 
     #[test]
     fn enter_opens_the_games_details_with_its_profile_and_settings_side_by_side() {
-        let mut app = App::new(entries(WITH_SETTINGS));
+        let mut app = App::new_side(entries(WITH_SETTINGS));
         app.resize(120);
         press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
         let s = screen(&app, 120, 30);
@@ -1785,13 +1866,13 @@ mod tests {
         games[0].status = Status::Installed;
         games[0].store = Some(StoreKind::Steam);
         games[0].path = Some(PathBuf::from("/lib/Alpha"));
-        let s = screen(&App::new(games), 100, 30);
+        let s = screen(&App::new_side(games), 100, 30);
         assert!(s.contains("Search:"));
         assert!(s.contains("1/1"));
         assert!(s.contains("[All games (1)]"));
-        assert!(s.contains("Sort: Name ▲    Filters: none"));
+        assert!(s.contains(" Sort ") && s.contains("Name ▲") && s.contains("none"));
         assert!(s.contains("✓  Alpha Centauri"));
-        assert!(s.contains("F1 Help  F2 Settings  F3 Filters"));
+        assert!(s.contains("F1 Help  F2 Settings  F3 Sort  F4 Filters"));
         assert!(s.contains("System details:"));
         assert!(s.contains("Status:") && s.contains("DSOAL installed"));
         assert!(s.contains("Platform:") && s.contains("Steam"));
@@ -1811,14 +1892,14 @@ mod tests {
             path: Some(PathBuf::from("/g/Obscure")),
             engine: None,
         };
-        let s = screen(&App::new(vec![manual]), 120, 14);
+        let s = screen(&App::new_side(vec![manual]), 120, 14);
         assert!(s.contains("✓  Obscure"));
         assert!(s.contains("no profile for Obscure."));
     }
 
     #[test]
     fn an_empty_result_says_so_and_does_not_panic() {
-        let mut app = App::new(entries(r#"{"games":[{"id":"a","name":"Alpha"}]}"#));
+        let mut app = App::new_side(entries(r#"{"games":[{"id":"a","name":"Alpha"}]}"#));
         app.query = "zzz".into();
         app.visible.clear();
         assert!(screen(&app, 60, 16).contains("No game matches."));
@@ -1827,7 +1908,7 @@ mod tests {
     #[test]
     fn a_tiny_terminal_does_not_panic() {
         screen(
-            &App::new(entries(r#"{"games":[{"id":"a","name":"Alpha"}]}"#)),
+            &App::new_side(entries(r#"{"games":[{"id":"a","name":"Alpha"}]}"#)),
             10,
             3,
         );
@@ -1835,7 +1916,7 @@ mod tests {
 
     #[test]
     fn a_message_replaces_the_key_bar() {
-        let mut app = App::new(entries(r#"{"games":[{"id":"a","name":"Alpha"}]}"#));
+        let mut app = App::new_side(entries(r#"{"games":[{"id":"a","name":"Alpha"}]}"#));
         app.message = "Couldn't read the game database.".into();
         assert!(screen(&app, 80, 10).contains("Couldn't read the game database."));
     }
@@ -1845,7 +1926,7 @@ mod tests {
         let home = tempfile::tempdir().unwrap();
         std::fs::create_dir_all(home.path().join("Games/Heroic/Some Game")).unwrap();
         std::fs::write(home.path().join("Games/Heroic/launcher.exe"), "").unwrap();
-        let mut app = App::new(entries(r#"{"games":[{"id":"a","name":"Alpha"}]}"#));
+        let mut app = App::new_side(entries(r#"{"games":[{"id":"a","name":"Alpha"}]}"#));
         app.set_home(home.path().to_path_buf());
         app.handle_key(ratatui::crossterm::event::KeyEvent::new(
             ratatui::crossterm::event::KeyCode::Char('a'),
@@ -1862,11 +1943,11 @@ mod tests {
 
     #[test]
     fn a_filter_that_narrows_the_list_is_named_on_screen() {
-        let mut app = App::new(entries(
+        let mut app = App::new_side(entries(
             r#"{"games":[{"id":"a","name":"Alpha","stores":{"gog":{"id":1}}}]}"#,
         ));
-        // F3, down to Steam, Enter ticks it and closes the pop-up.
-        press(&mut app, ratatui::crossterm::event::KeyCode::F(3));
+        // F4, down to Steam, Enter ticks it and closes the pop-up.
+        press(&mut app, ratatui::crossterm::event::KeyCode::F(4));
         for _ in 0..4 {
             press(&mut app, ratatui::crossterm::event::KeyCode::Down);
         }
@@ -1878,7 +1959,7 @@ mod tests {
 
     #[test]
     fn the_filters_line_fits_a_narrow_short_terminal_without_losing_the_list() {
-        let app = App::new(entries(r#"{"games":[{"id":"a","name":"Alpha"}]}"#));
+        let app = App::new_side(entries(r#"{"games":[{"id":"a","name":"Alpha"}]}"#));
         let s = screen(&app, 70, 14);
         assert!(s.contains("Filters: none"), "{s}");
         assert!(s.contains("[All games (1)]"), "{s}");
@@ -1897,7 +1978,7 @@ mod tests {
 
     #[test]
     fn the_right_arrow_shows_the_settings_and_the_title_names_both_views() {
-        let mut app = App::new(entries(WITH_SETTINGS));
+        let mut app = App::new_side(entries(WITH_SETTINGS));
         let before = screen(&app, 100, 20);
         assert!(before.contains("Game profile"));
         assert!(!before.contains("Enable EAX effects"));
@@ -1907,7 +1988,7 @@ mod tests {
         assert!(s.contains("Audio settings for Quake 4:"));
         assert!(s.contains("Enable EAX effects (verified)"));
         assert!(s.contains("s_useOpenAL  → 1"));
-        assert!(s.contains("N C S A E Y sort"));
+        assert!(s.contains("F favourite"));
     }
 
     #[test]
@@ -1919,7 +2000,7 @@ mod tests {
         let json = format!(
             r#"{{"games":[{{"id":"q","name":"Quake 4","game_config":{{"files":{{"q.cfg":{{"format":"set_commands"}}}},"audio_settings":[{many}]}}}}]}}"#
         );
-        let mut app = App::new(entries(&json));
+        let mut app = App::new_side(entries(&json));
         press(&mut app, ratatui::crossterm::event::KeyCode::Right);
         assert!(screen(&app, 100, 20).contains("Setting 0"));
         assert!(app.pane_max.get() > 0);
@@ -1946,7 +2027,7 @@ mod tests {
             path: None,
             engine: None,
         };
-        let mut app = App::new(vec![manual]);
+        let mut app = App::new_side(vec![manual]);
         press(&mut app, ratatui::crossterm::event::KeyCode::Right);
         assert!(screen(&app, 120, 14).contains("The game database has no profile for Obscure."));
     }
@@ -1960,7 +2041,7 @@ mod tests {
 
     #[test]
     fn f1_shows_the_key_list_over_the_screen_and_the_bar_says_how_to_close_it() {
-        let mut app = App::new(entries(WITH_SETTINGS));
+        let mut app = App::new_side(entries(WITH_SETTINGS));
         press(&mut app, ratatui::crossterm::event::KeyCode::F(1));
         let s = screen(&app, 100, 100);
         println!("{s}");
@@ -1973,7 +2054,7 @@ mod tests {
 
     #[test]
     fn on_a_short_terminal_the_help_scrolls_to_its_last_line() {
-        let mut app = App::new(entries(WITH_SETTINGS));
+        let mut app = App::new_side(entries(WITH_SETTINGS));
         press(&mut app, ratatui::crossterm::event::KeyCode::F(1));
         assert!(!screen(&app, 100, 14).contains("The game isn't on this PC."));
         assert!(app.help_max.get() > 0);
@@ -1983,7 +2064,7 @@ mod tests {
 
     #[test]
     fn full_screen_hides_the_list_and_names_the_game_in_the_title() {
-        let mut app = App::new(entries(WITH_SETTINGS));
+        let mut app = App::new_side(entries(WITH_SETTINGS));
         let normal = screen(&app, 100, 20);
         assert!(normal.contains(" Games (1) "));
         assert!(normal.contains("Search:"));
@@ -1998,7 +2079,7 @@ mod tests {
 
     #[test]
     fn full_screen_settings_use_the_whole_width() {
-        let mut app = App::new(entries(WITH_SETTINGS));
+        let mut app = App::new_side(entries(WITH_SETTINGS));
         press(&mut app, ratatui::crossterm::event::KeyCode::Right);
         ctrl_key(&mut app, 'f');
         let wide = screen(&app, 120, 20);
@@ -2008,7 +2089,7 @@ mod tests {
 
     #[test]
     fn the_help_also_opens_from_full_screen_and_returns_there() {
-        let mut app = App::new(entries(WITH_SETTINGS));
+        let mut app = App::new_side(entries(WITH_SETTINGS));
         ctrl_key(&mut app, 'f');
         press(&mut app, ratatui::crossterm::event::KeyCode::F(1));
         assert!(screen(&app, 100, 30).contains(" Help "));
@@ -2032,7 +2113,7 @@ mod tests {
 
     #[test]
     fn the_pane_is_beside_the_list_on_a_wide_window_and_under_it_on_a_narrow_one() {
-        let mut app = App::new(entries(WITH_SETTINGS));
+        let mut app = App::new_side(entries(WITH_SETTINGS));
         app.resize(120);
         let wide = screen(&app, 120, 24);
         // Beside the list: the pane is to its right and starts at the top.
@@ -2049,7 +2130,7 @@ mod tests {
 
     #[test]
     fn f8_puts_the_table_over_the_card_then_the_table_alone() {
-        let mut app = App::new(entries(WITH_SETTINGS));
+        let mut app = App::new_side(entries(WITH_SETTINGS));
         app.resize(120);
         press(&mut app, ratatui::crossterm::event::KeyCode::F(8));
         let s = screen(&app, 120, 30);
@@ -2063,14 +2144,14 @@ mod tests {
 
     #[test]
     fn a_stacked_layout_on_a_tiny_terminal_does_not_panic() {
-        let mut app = App::new(entries(WITH_SETTINGS));
+        let mut app = App::new_side(entries(WITH_SETTINGS));
         app.resize(20);
         screen(&app, 20, 6);
     }
 
     #[test]
     fn the_key_bar_wraps_instead_of_being_cut_off_on_a_narrow_window() {
-        let app = App::new(entries(WITH_SETTINGS));
+        let app = App::new_side(entries(WITH_SETTINGS));
         let narrow = screen(&app, 60, 20);
         assert!(narrow.contains("/ search"), "the end of the bar is lost");
         assert!(narrow.contains("F10 Quit"), "the end of the F-keys is lost");
@@ -2083,7 +2164,7 @@ mod tests {
 
     #[test]
     fn a_long_message_wraps_too() {
-        let mut app = App::new(entries(WITH_SETTINGS));
+        let mut app = App::new_side(entries(WITH_SETTINGS));
         app.message =
             "Couldn't download the game database. Check your internet connection and try again."
                 .into();
@@ -2093,7 +2174,7 @@ mod tests {
     #[test]
     fn popups_leave_a_wrapped_key_bar_showing() {
         let home = tempfile::tempdir().unwrap();
-        let mut app = App::new(entries(WITH_SETTINGS));
+        let mut app = App::new_side(entries(WITH_SETTINGS));
         app.set_home(home.path().to_path_buf());
         ctrl_key(&mut app, 'a');
         // The picker's bar needs two rows at this width; the popup must not cover them.
@@ -2120,7 +2201,7 @@ mod tests {
 
     #[test]
     fn f1_is_a_popup_over_the_screen_not_a_replacement_for_the_pane() {
-        let mut app = App::new(entries(WITH_SETTINGS));
+        let mut app = App::new_side(entries(WITH_SETTINGS));
         press(&mut app, ratatui::crossterm::event::KeyCode::F(1));
         let s = screen(&app, 120, 40);
         println!("{s}");
@@ -2132,7 +2213,7 @@ mod tests {
 
     #[test]
     fn the_pane_title_names_both_views_and_lights_the_one_showing() {
-        let mut app = App::new(entries(WITH_SETTINGS));
+        let mut app = App::new_side(entries(WITH_SETTINGS));
         let lit = Some(Color::LightCyan);
         let plain = Some(Color::Indexed(145));
         assert!(screen(&app, 120, 24).contains("Game profile | Game settings"));
@@ -2147,7 +2228,7 @@ mod tests {
     #[test]
     fn there_is_one_blank_row_above_the_text_in_both_views() {
         // Full screen, so the pane is the whole width and its rows are easy to read.
-        let mut app = App::new(entries(WITH_SETTINGS));
+        let mut app = App::new_side(entries(WITH_SETTINGS));
         ctrl_key(&mut app, 'f');
         let profile = grid(&app, 100, 24);
         assert!(inside_is_blank(&profile[1]), "the margin row");
@@ -2164,7 +2245,7 @@ mod tests {
 
     #[test]
     fn bold_colours_are_the_bright_ones_as_the_old_script_gets_from_bold() {
-        let app = App::new(entries(WITH_SETTINGS));
+        let app = App::new_side(entries(WITH_SETTINGS));
         let bold = |fg: Color| (Some(fg), true);
         let seen = |needle: &str| {
             let st = style_of(&app, 100, 40, needle);
@@ -2182,7 +2263,7 @@ mod tests {
 
     #[test]
     fn the_help_popup_is_as_tall_as_its_text_not_the_screen() {
-        let mut app = App::new(entries(WITH_SETTINGS));
+        let mut app = App::new_side(entries(WITH_SETTINGS));
         press(&mut app, ratatui::crossterm::event::KeyCode::F(1));
         // Far taller than the text needs.
         let s = screen(&app, 120, 130);
@@ -2236,14 +2317,14 @@ mod tests {
         let json = format!(
             r#"{{"games":[{{"id":"q","name":"Quake 4","game_config":{{"files":{{"q.cfg":{{"format":"set_commands"}}}},"audio_settings":[{many}]}}}}]}}"#
         );
-        let mut app = App::new(entries(&json));
+        let mut app = App::new_side(entries(&json));
         press(&mut app, ratatui::crossterm::event::KeyCode::Right);
         app
     }
 
     #[test]
     fn the_pane_has_a_margin_on_every_side() {
-        let mut app = App::new(entries(WITH_SETTINGS));
+        let mut app = App::new_side(entries(WITH_SETTINGS));
         ctrl_key(&mut app, 'f');
         for view in 0..2 {
             let g = grid(&app, 100, 24);
@@ -2265,7 +2346,7 @@ mod tests {
     #[test]
     fn the_scroll_position_shows_only_when_the_text_scrolls() {
         // Fits: no position, the margin row is empty.
-        let mut app = App::new(entries(WITH_SETTINGS));
+        let mut app = App::new_side(entries(WITH_SETTINGS));
         ctrl_key(&mut app, 'f');
         assert!(inside_is_blank(&grid(&app, 100, 24)[1]));
         // Does not fit: the position is in the top margin row, and stays there
@@ -2335,11 +2416,11 @@ mod tests {
 
     #[test]
     fn text_that_fits_has_no_scroll_bar() {
-        let mut app = App::new(entries(WITH_SETTINGS));
+        let mut app = App::new_side(entries(WITH_SETTINGS));
         ctrl_key(&mut app, 'f');
         assert!(thumb_rows(&app, 100, 24, 98).is_empty());
         // The F1 popup is fitted to its text, so it has none either.
-        let mut app = App::new(entries(WITH_SETTINGS));
+        let mut app = App::new_side(entries(WITH_SETTINGS));
         press(&mut app, ratatui::crossterm::event::KeyCode::F(1));
         let g = grid(&app, 120, 110);
         let top = row_of(&screen(&app, 120, 110), " Help ");
@@ -2357,7 +2438,7 @@ mod tests {
             .map(|i| format!(r#"{{"id":"g{i}","name":"Game {i:02}"}}"#))
             .collect::<Vec<_>>()
             .join(",");
-        let mut app = App::new(entries(&format!(r#"{{"games":[{games}]}}"#)));
+        let mut app = App::new_side(entries(&format!(r#"{{"games":[{games}]}}"#)));
         // The Games box is the left half; its right border is column 49, the bar column 48.
         let first = thumb_rows(&app, 100, 24, 48);
         assert!(!first.is_empty(), "no scroll bar on the list");
@@ -2375,7 +2456,7 @@ mod tests {
             "the bottom of the list"
         );
         // A short list needs none.
-        let few = App::new(entries(WITH_SETTINGS));
+        let few = App::new_side(entries(WITH_SETTINGS));
         assert!(thumb_rows(&few, 100, 24, 48).is_empty());
     }
 
@@ -2386,7 +2467,7 @@ mod tests {
             .map(|i| format!(r#"{{"id":"g{i}","name":"G{i:02}"}}"#))
             .collect();
         games.push(format!(r#"{{"id":"long","name":"{name}"}}"#));
-        let app = App::new(entries(&format!(r#"{{"games":[{}]}}"#, games.join(","))));
+        let app = App::new_side(entries(&format!(r#"{{"games":[{}]}}"#, games.join(","))));
         let g = grid(&app, 100, 24);
         // Column 48 holds the bar or nothing, never a letter of a name.
         assert!(g.iter().all(|row| row[48] != 'A'));
@@ -2495,7 +2576,7 @@ mod tests {
             .map(|i| format!(r#"{{"id":"g{i}","name":"Game {i:02}"}}"#))
             .collect::<Vec<_>>()
             .join(",");
-        App::new(entries(&format!(r#"{{"games":[{games}]}}"#)))
+        App::new_side(entries(&format!(r#"{{"games":[{games}]}}"#)))
     }
 
     #[test]
@@ -2536,7 +2617,7 @@ mod tests {
         for i in 0..40 {
             std::fs::create_dir_all(home.path().join(format!("Games/Heroic/d{i:02}"))).unwrap();
         }
-        let mut app = App::new(entries(WITH_SETTINGS));
+        let mut app = App::new_side(entries(WITH_SETTINGS));
         app.set_home(home.path().to_path_buf());
         ctrl_key(&mut app, 'a');
         (home, app)

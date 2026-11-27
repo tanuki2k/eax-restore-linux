@@ -5,7 +5,7 @@ use crate::build_choice::{BuildInfo, Comp};
 use crate::panel::Opt;
 use crate::prefs::{BuildPref, OverridePref, Prefs, SpeakerPref, VcPref, ViewPref};
 use crate::theme;
-use crate::ui::{boxed, gutter, MARGIN};
+use crate::ui::{gutter, MARGIN};
 use ratatui::crossterm::event::{KeyCode, KeyEvent};
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
@@ -457,7 +457,7 @@ impl PrefsScreen {
         }
         let popup = crate::ui::centred_popup(area, lines.len());
         f.render_widget(Clear, popup);
-        let block = boxed("Settings").padding(MARGIN);
+        let block = crate::ui::popup_box("Settings").padding(MARGIN);
         let inner = block.inner(popup);
         f.render_widget(block, popup);
         f.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }), inner);

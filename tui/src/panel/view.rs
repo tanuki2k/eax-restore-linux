@@ -1184,7 +1184,7 @@ pub fn draw_dropdown(
     f.render_widget(
         Paragraph::new(lines)
             .scroll((u16::try_from(at).unwrap_or(u16::MAX), 0))
-            .block(boxed(title).padding(crate::ui::MARGIN)),
+            .block(crate::ui::popup_box(title).padding(crate::ui::MARGIN)),
         r,
     );
     crate::ui::scroll_bar(f, r, viewport, total, at);

@@ -17,13 +17,25 @@ pub enum Focus {
     Views,
     /// The search: letters type into it (`/` jumps here).
     Search,
-    /// The Filters line: Enter opens the pop-up.
+    /// The Sort box: Enter opens the Sort menu (F3).
+    Sort,
+    /// The Filters box: Enter opens the pop-up (F4).
     Filters,
     /// The games list: ↑/↓ move, Enter opens the game.
     Games,
     /// The right pane (list + card layouts only): ←/→ pick profile or settings.
     Card,
 }
+
+/// The Sort menu (F3) while it's open: the highlighted row (the six
+/// columns, then up and down) and the order as it was, for Esc.
+pub struct SortMenu {
+    pub at: usize,
+    pub before: crate::filters::Sort,
+}
+
+/// The Sort menu's rows: each column, then the two directions.
+pub const SORT_ROWS: usize = crate::filters::Column::ALL.len() + 2;
 
 /// The game details screen (Enter on a game): its profile on the left, its
 /// settings on the right, each scrolling on its own. Installing goes on from
@@ -167,8 +179,13 @@ pub struct App {
     pub picker: Option<Picker>,
     /// The F2 settings screen, while it is open.
     pub prefs: Option<crate::prefs_screen::PrefsScreen>,
-    /// The Filters pop-up (F3), while it is open.
+    /// The Filters pop-up (F4), while it is open.
     pub filter_menu: Option<FilterMenu>,
+    /// The Sort menu (F3), while it is open.
+    pub sort_menu: Option<SortMenu>,
+    /// F5 asked for a fresh look at the libraries; the message says what it
+    /// found once it's done.
+    rescanning: bool,
     /// The game details screen, while it is open.
     pub details: Option<Details>,
     /// Which box on the main screen the keys go to.
@@ -226,6 +243,8 @@ impl App {
             picker: None,
             prefs: None,
             filter_menu: None,
+            sort_menu: None,
+            rescanning: false,
             details: None,
             focus: Focus::Games,
             favorites: Default::default(),
@@ -237,7 +256,7 @@ impl App {
             exes: Default::default(),
             pane: Pane::Profile,
             list_offset: std::cell::Cell::new(0),
-            layout: Layout::Side,
+            layout: Layout::Table,
             auto_stacked: false,
             pane_scroll: 0,
             pane_max: std::cell::Cell::new(0),
@@ -249,6 +268,15 @@ impl App {
         };
         app.find_both_stores();
         app.refilter();
+        app
+    }
+
+    /// For tests about the list beside the pane: an App that starts in the
+    /// two-column layout rather than the table.
+    #[cfg(test)]
+    pub fn new_side(games: Vec<Entry>) -> Self {
+        let mut app = App::new(games);
+        app.layout = Layout::Side;
         app
     }
 
@@ -357,6 +385,19 @@ impl App {
                 self.selected = pos;
             }
         }
+        // F5's message says what the fresh look found, so it doesn't read as
+        // still looking.
+        if std::mem::take(&mut self.rescanning) {
+            let here = self
+                .games
+                .iter()
+                .filter(|e| e.status != Status::NotOnThisPc)
+                .count();
+            self.message = format!(
+                "Found {here} game{} on this PC.",
+                if here == 1 { "" } else { "s" }
+            );
+        }
         // The open details screen shows the game as the scan now finds it (an
         // install just done, say).
         if let Some(d) = self.details.as_mut() {
@@ -434,7 +475,13 @@ impl App {
 
     /// The boxes Tab moves between, in order; the card only beside the list.
     fn focus_ring(&self) -> Vec<Focus> {
-        let mut ring = vec![Focus::Views, Focus::Search, Focus::Filters, Focus::Games];
+        let mut ring = vec![
+            Focus::Views,
+            Focus::Search,
+            Focus::Sort,
+            Focus::Filters,
+            Focus::Games,
+        ];
         if self.layout != Layout::Table {
             ring.push(Focus::Card);
         }
@@ -443,7 +490,7 @@ impl App {
 
     fn move_focus(&mut self, forward: bool) {
         let ring = self.focus_ring();
-        let i = ring.iter().position(|f| *f == self.focus).unwrap_or(3);
+        let i = ring.iter().position(|f| *f == self.focus).unwrap_or(4);
         let n = ring.len();
         self.focus = ring[if forward {
             (i + 1) % n
@@ -455,6 +502,48 @@ impl App {
     fn set_view(&mut self, view: View) {
         self.view = view;
         self.refilter();
+    }
+
+    fn open_sort(&mut self) {
+        let sort = self.filters.sort;
+        let at = crate::filters::Column::ALL
+            .iter()
+            .position(|c| *c == sort.column)
+            .unwrap_or(0);
+        self.sort_menu = Some(SortMenu { at, before: sort });
+    }
+
+    /// Keys in the Sort menu. A pick applies at once, so the list behind
+    /// shows it; Esc puts the order back as it was.
+    fn handle_sort_menu_key(&mut self, key: KeyEvent) {
+        let Some(m) = self.sort_menu.as_mut() else {
+            return;
+        };
+        let cols = crate::filters::Column::ALL.len();
+        match key.code {
+            KeyCode::Esc => {
+                self.filters.sort = m.before;
+                self.sort_menu = None;
+            }
+            KeyCode::Up | KeyCode::Left | KeyCode::BackTab => m.at = m.at.saturating_sub(1),
+            KeyCode::Down | KeyCode::Right | KeyCode::Tab => m.at = (m.at + 1).min(SORT_ROWS - 1),
+            KeyCode::Home => m.at = 0,
+            KeyCode::End => m.at = SORT_ROWS - 1,
+            KeyCode::Char(' ') | KeyCode::Enter => {
+                let at = m.at;
+                if at < cols {
+                    self.filters.sort.column = crate::filters::Column::ALL[at];
+                } else {
+                    self.filters.sort.descending = at == cols + 1;
+                }
+                if key.code == KeyCode::Enter {
+                    self.sort_menu = None;
+                }
+            }
+            _ => return,
+        }
+        let keep = self.visible.get(self.selected).copied();
+        self.refilter_keep(keep);
     }
 
     fn open_filters(&mut self) {
@@ -596,7 +685,7 @@ impl App {
             KeyCode::Esc => self.details = None,
             KeyCode::Char('c') if ctrl => self.quit = true,
             KeyCode::F(1) => self.open_help(),
-            KeyCode::F(4) => {
+            KeyCode::Char('f') | KeyCode::Char('F') if !ctrl => {
                 let e = d.entry.clone();
                 self.toggle_favorite_of(&e);
             }
@@ -879,6 +968,9 @@ impl App {
         if self.filter_menu.is_some() {
             return self.handle_filter_menu_key(key);
         }
+        if self.sort_menu.is_some() {
+            return self.handle_sort_menu_key(key);
+        }
         if let Some(s) = self.prefs.as_mut() {
             let before = s.prefs.view;
             s.handle_key(key);
@@ -937,10 +1029,11 @@ impl App {
             KeyCode::Char('c') if ctrl => return self.quit = true,
             KeyCode::F(1) => return self.open_help(),
             KeyCode::F(2) => return self.open_prefs(),
-            KeyCode::F(3) => return self.open_filters(),
-            KeyCode::F(4) => return self.toggle_favorite(),
+            KeyCode::F(3) => return self.open_sort(),
+            KeyCode::F(4) => return self.open_filters(),
             KeyCode::F(5) => {
                 self.rescan = true;
+                self.rescanning = true;
                 self.message = "Looking for your games again…".into();
                 return;
             }
@@ -967,6 +1060,9 @@ impl App {
                 self.query.clear();
                 return self.refilter();
             }
+            // F (no column starts with it) adds the game to Favourites or
+            // takes it off.
+            KeyCode::Char('f') | KeyCode::Char('F') if !ctrl => return self.toggle_favorite(),
             // A column's first letter sorts by it; again, the other way round.
             KeyCode::Char(c) if !ctrl => {
                 if let Some(col) = Column::for_key(c) {
@@ -976,7 +1072,16 @@ impl App {
                 }
                 return;
             }
-            // ↑/↓ and the page keys move the games list from any box.
+            // The details pane with focus scrolls, as on the details screen.
+            KeyCode::Up if self.focus == Focus::Card => return self.scroll_pane(-1),
+            KeyCode::Down if self.focus == Focus::Card => return self.scroll_pane(1),
+            KeyCode::PageUp if self.focus == Focus::Card => return self.scroll_pane(-10),
+            KeyCode::PageDown if self.focus == Focus::Card => return self.scroll_pane(10),
+            KeyCode::Home if self.focus == Focus::Card => return self.pane_scroll = 0,
+            KeyCode::End if self.focus == Focus::Card => {
+                return self.pane_scroll = self.pane_max.get()
+            }
+            // ↑/↓ and the page keys move the games list from every other box.
             KeyCode::Up => return self.move_by(-1),
             KeyCode::Down => return self.move_by(1),
             KeyCode::PageUp => return self.move_by(-10),
@@ -989,6 +1094,7 @@ impl App {
         match (self.focus, key.code) {
             (Focus::Views, KeyCode::Left) => self.set_view(self.view.prev()),
             (Focus::Views, KeyCode::Right) => self.set_view(self.view.next()),
+            (Focus::Sort, KeyCode::Enter) => self.open_sort(),
             (Focus::Filters, KeyCode::Enter) => self.open_filters(),
             (Focus::Games | Focus::Card, KeyCode::Right) => self.show_pane(Pane::Settings),
             (Focus::Games | Focus::Card, KeyCode::Left) => self.show_pane(Pane::Profile),
@@ -1075,7 +1181,7 @@ mod tests {
             {"id":"c","name":"Alpha Protocol"}]}"#,
         )
         .unwrap();
-        App::new(db.games.into_iter().map(Entry::database_only).collect())
+        App::new_side(db.games.into_iter().map(Entry::database_only).collect())
     }
 
     fn key(c: KeyCode) -> KeyEvent {
@@ -1156,9 +1262,9 @@ mod tests {
         assert!(a.visible.is_empty());
         a.handle_key(key(KeyCode::F(6))); // All games
         assert_eq!(a.visible.len(), 3);
-        // From the list, Shift-Tab three times reaches the view bar, where ←
+        // From the list, Shift-Tab four times reaches the view bar, where ←
         // and → pick the view.
-        for _ in 0..3 {
+        for _ in 0..4 {
             a.handle_key(key(KeyCode::BackTab));
         }
         assert_eq!(a.focus, Focus::Views);
@@ -1174,7 +1280,7 @@ mod tests {
         let mut a = app();
         assert_eq!(a.focus, Focus::Games);
         let mut seen = Vec::new();
-        for _ in 0..5 {
+        for _ in 0..6 {
             a.handle_key(key(KeyCode::Tab));
             seen.push(a.focus);
         }
@@ -1184,6 +1290,7 @@ mod tests {
                 Focus::Card,
                 Focus::Views,
                 Focus::Search,
+                Focus::Sort,
                 Focus::Filters,
                 Focus::Games
             ]
@@ -1206,15 +1313,15 @@ mod tests {
     }
 
     #[test]
-    fn f4_stars_a_game_and_favorites_lists_it() {
+    fn f_adds_a_game_to_favourites_and_the_view_lists_it() {
         let mut a = app();
         a.handle_key(key(KeyCode::Down)); // Alpha Protocol
-        a.handle_key(key(KeyCode::F(4)));
+        a.handle_key(key(KeyCode::Char('f')));
         assert!(a.favorites.contains("c"));
         a.set_view(View::Favorites);
         assert_eq!(a.current().unwrap().name, "Alpha Protocol");
-        // Unstarring it in Favorites takes it off the list.
-        a.handle_key(key(KeyCode::F(4)));
+        // Taking it off in Favourites takes it off the list; in the search, f types.
+        a.handle_key(key(KeyCode::Char('f')));
         assert!(a.visible.is_empty() && a.favorites.is_empty());
     }
 
@@ -1311,7 +1418,7 @@ mod tests {
                {"id":"b","name":"Has It","stores":{"steam":{"id":22}}}]}"#,
         )
         .unwrap();
-        let mut a = App::new(db.games.into_iter().map(Entry::database_only).collect());
+        let mut a = App::new_side(db.games.into_iter().map(Entry::database_only).collect());
         let home = tempfile::tempdir().unwrap();
         a.set_home(home.path().to_path_buf());
         let steam = home.path().join("Steam/steamapps");
@@ -1366,7 +1473,7 @@ mod tests {
             {"id":"b","name":"Beta","tested":false,"stores":{"gog":{"id":2,"delisted":true}}}]}"#,
         )
         .unwrap();
-        let mut a = App::new(db.games.into_iter().map(Entry::database_only).collect());
+        let mut a = App::new_side(db.games.into_iter().map(Entry::database_only).collect());
         let row = |a: &App, r: MenuRow| {
             a.filter_menu
                 .as_ref()
@@ -1383,7 +1490,7 @@ mod tests {
                 a.handle_key(key(KeyCode::Down));
             }
         };
-        a.handle_key(key(KeyCode::F(3)));
+        a.handle_key(key(KeyCode::F(4)));
         go(&mut a, MenuRow::Item(Item::Gog));
         a.handle_key(key(KeyCode::Char(' ')));
         assert_eq!(a.current().unwrap().name, "Beta");
@@ -1399,7 +1506,7 @@ mod tests {
         assert!(a.filter_menu.is_none() && a.filters.is_clear());
         assert_eq!(a.visible.len(), 2);
         // Enter on a box ticks it and closes.
-        a.handle_key(key(KeyCode::F(3)));
+        a.handle_key(key(KeyCode::F(4)));
         go(&mut a, MenuRow::Item(Item::OpenAl));
         a.handle_key(key(KeyCode::Enter));
         assert!(a.filter_menu.is_none());
@@ -1422,7 +1529,7 @@ mod tests {
             {"id":"b","name":"Beta","released":"1999","stores":{"steam":{"id":2,"compatibility":"verified"}}}]}"#,
         )
         .unwrap();
-        let mut a = App::new(db.games.into_iter().map(Entry::database_only).collect());
+        let mut a = App::new_side(db.games.into_iter().map(Entry::database_only).collect());
         let names = |a: &App| {
             a.visible
                 .iter()
@@ -1458,15 +1565,19 @@ mod tests {
         a.handle_key(key(KeyCode::Esc));
         assert!(!a.quit && a.focus == Focus::Games);
         // The search is a Tab stop, after the views.
-        a.handle_key(key(KeyCode::BackTab));
-        a.handle_key(key(KeyCode::BackTab));
+        for _ in 0..3 {
+            a.handle_key(key(KeyCode::BackTab));
+        }
         assert_eq!(a.focus, Focus::Search);
+        type_str(&mut a, "f");
+        assert!(a.query.ends_with('f') && a.favorites.is_empty());
     }
 
     #[test]
     fn enter_on_the_view_bar_opens_the_game_and_the_arrows_always_move_the_list() {
         let mut a = app();
         a.handle_key(key(KeyCode::BackTab)); // Filters
+        a.handle_key(key(KeyCode::BackTab)); // Sort
         a.handle_key(key(KeyCode::BackTab)); // Search
         a.handle_key(key(KeyCode::BackTab)); // Views
         assert_eq!(a.focus, Focus::Views);
@@ -1647,5 +1758,69 @@ mod tests {
         // Ctrl-L does nothing any more.
         a.handle_key(ctrl('l'));
         assert_eq!(a.layout, Layout::Side);
+    }
+}
+
+#[cfg(test)]
+mod sort_tests {
+    use super::*;
+    use crate::db::Database;
+
+    #[test]
+    fn f3_opens_the_sort_menu_and_the_sort_box_opens_it_with_enter() {
+        let db = Database::parse(
+            r#"{"games":[{"id":"a","name":"Alpha","released":"2005"},{"id":"b","name":"Beta","released":"1999"}]}"#,
+        )
+        .unwrap();
+        let mut a = App::new(db.games.into_iter().map(Entry::database_only).collect());
+        assert_eq!(a.layout, Layout::Table, "the table is the default");
+        let key = |c| KeyEvent::from(c);
+        a.handle_key(key(KeyCode::F(3)));
+        assert!(a.sort_menu.is_some());
+        // Down to Year (the sixth column), Enter picks it and closes.
+        for _ in 0..5 {
+            a.handle_key(key(KeyCode::Down));
+        }
+        a.handle_key(key(KeyCode::Enter));
+        assert!(a.sort_menu.is_none());
+        assert_eq!(a.filters.sort.column, crate::filters::Column::Year);
+        assert_eq!(a.games[a.visible[0]].name, "Beta", "oldest first");
+        assert_eq!(
+            a.current().unwrap().name,
+            "Alpha",
+            "the highlight stays on its game"
+        );
+        // The Sort box: Enter opens it; Down to "Down ▼", Space picks, Esc puts it back.
+        a.focus = Focus::Sort;
+        a.handle_key(key(KeyCode::Enter));
+        a.handle_key(key(KeyCode::End));
+        a.handle_key(key(KeyCode::Char(' ')));
+        assert!(a.filters.sort.descending);
+        a.handle_key(key(KeyCode::Esc));
+        assert!(!a.filters.sort.descending && a.sort_menu.is_none());
+    }
+
+    #[test]
+    fn the_pane_with_focus_scrolls_with_the_arrows_and_f5_says_what_it_found() {
+        let db =
+            Database::parse(r#"{"games":[{"id":"a","name":"Alpha"},{"id":"b","name":"Beta"}]}"#)
+                .unwrap();
+        let games: Vec<Entry> = db.games.into_iter().map(Entry::database_only).collect();
+        let mut a = App::new_side(games.clone());
+        a.pane_max.set(5);
+        a.focus = Focus::Card;
+        a.handle_key(KeyEvent::from(KeyCode::Down));
+        assert_eq!(
+            (a.pane_scroll, a.selected),
+            (1, 0),
+            "the pane scrolls, the list stays"
+        );
+        a.focus = Focus::Games;
+        a.handle_key(KeyEvent::from(KeyCode::Down));
+        assert_eq!(a.selected, 1);
+        a.handle_key(KeyEvent::from(KeyCode::F(5)));
+        assert!(a.rescan && a.message.contains("Looking"));
+        a.replace_games(games);
+        assert_eq!(a.message, "Found 0 games on this PC.");
     }
 }

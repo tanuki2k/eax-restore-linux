@@ -11,24 +11,26 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
   colours use ratatui's `Light*` names because crossterm writes the plain ones as the dark palette
   entry, where a terminal draws `\033[1;33m` bright). The main screen (`ui::draw`), top to bottom:
   a title row, the View bar (`filters::View`: All games / My library / Patched / Favourites, with
-  counts), a search line, the Filters box (sort + `Filters::summary`), the games (a list beside the
+  counts), a search line, the Sort and Filters boxes side by side, the games (a list beside the
   Profile/Settings pane, a full-width table with Compatibility, Store, Audio, EAX and Year
-  columns that drop from the right when narrow, or that table above the pane; F8 cycles
+  columns that drop from the right when narrow, or that table above the pane; the table is the default, and F8 cycles
   `app::Layout` Table → Side → Stacked, and a window under 104 columns stacks Side by itself), a centred hint line for the
-  focused box and a centred F-key bar (1Help … 10Quit). Below 24 rows the title goes and the View
-  bar and Filters box lose their borders. Tab/Shift-Tab move focus (`app::Focus`: Views → Search → Filters
+  focused box and a centred F-key bar (F1 Help, F2 Settings, F3 Sort, F4 Filters, F5 Rescan, F6 View, F7 Add, F8 Layout, F9 Details, F10 Quit). Below 24 rows the title goes and the View
+  bar and Filters box lose their borders. Tab/Shift-Tab move focus (`app::Focus`: Views → Search → Sort → Filters
   → Games → Card; the focused rounded box's border and title are in `theme::key()`). There is no
   global search: `/` jumps to the Search box, where letters type (Enter/Esc go back to the games);
-  elsewhere a column's first letter sorts by it (`filters::Column::for_key`: N C S A E Y; the same
+  elsewhere a column's first letter sorts by it (`filters::Column::for_key`: N C S A E Y, each heading's first letter in `theme::key()`; the same
   letter again reverses, `filters::Sort::press`; the table heading shows ▲/▼; a search only narrows,
-  the sort order stays). ↑/↓ and the page keys move the games list from any box; Enter on the View
+  the sort order stays). ↑/↓ and the page keys move the games list from any box but the pane, which they scroll; Enter on the View
   bar or the list opens the game's details. ←/→ pick a view on the View bar, or switch the pane
-  between Profile and Settings beside the list; Shift-↑/↓ scrolls the pane from anywhere. F3 opens the
+  between Profile and Settings beside the list; Shift-↑/↓ scrolls the pane from anywhere. F3 opens the Sort menu (`App::sort_menu`: the six columns, then up/down;
+  Space picks, Enter picks and closes, Esc puts it back), F4 the
   Filters pop-up (`App::filter_menu`): tick boxes (`filters::Item`) for Compatibility, Store, Audio
   and EAX version, OR within a group and AND across groups, each store entry judged on its own
   store's rating/API/delisted flag, nothing ticked = everything; one column under group headings,
-  scrolling when short; Space ticks, Enter ticks and closes, Esc puts the filters back. F4 stars a game
-  (`Prefs::favorites`, by database id, else folder), F5 rescans, F6 next view, F7 add a game (also
+  scrolling when short; Space ticks, Enter ticks and closes, Esc puts the filters back. the letter F adds a game to
+  Favourites or takes it off (`Prefs::favorites`, by database id, else folder; no column starts
+  with F), F5 rescans (the message then says how many games it found on this PC), F6 next view, F7 add a game (also
   Ctrl-A), F9 full screen (also Ctrl-F; in the table it opens the details), F10 quits; `--list`, `--settings NAME` and `--profile NAME`
   print the game list, one game's settings view or its profile without the TUI, which is
   how the Rust views are compared with the Bash browser's `print_game_settings_details`
@@ -134,7 +136,8 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
 
 Enter on a game opens its details screen (`App::details`, `ui::draw_details`): the profile and
 the settings views side by side (`profile::lines`, `settings::lines`, unchanged), each scrolling,
-and an Install (or Change or uninstall) button under them; Tab goes round the three, F4 stars, Esc back to the list; a rescan refreshes the entry it shows.
+and an Install (or Change or uninstall) button under them; pop-ups (help, settings, picker, notices, menus) all have the focused border (`ui::popup_box`);
+Tab goes round the three, F favourites, F4 stars, Esc back to the list; a rescan refreshes the entry it shows.
 The game panel (`tui/src/panel/`, the user's Optiscaler-Client-style design): Enter on the details
 of a game with a folder opens its page, one column `view::LEFT_W` wide in a pop-up over the details screen,
 always `view::page_height` tall (the body less a row top and bottom), so its buttons sit on the row of the
