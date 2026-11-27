@@ -496,7 +496,7 @@ mod tests {
 
     #[test]
     fn the_store_filter_follows_the_copy_not_the_game() {
-        use crate::filters::{Filters, StoreFilter};
+        use crate::filters::{Filters, Item};
         let w = World::new();
         w.write(".local/share/Steam/steamapps/common/Both/both.exe", "");
         w.write(
@@ -511,18 +511,16 @@ mod tests {
             w.home.path(),
             &w.state_file(),
         );
-        let shown = |f: StoreFilter| -> Vec<String> {
-            let filters = Filters {
-                store: f,
-                ..Filters::default()
-            };
+        let shown = |f: Item| -> Vec<String> {
+            let mut filters = Filters::default();
+            filters.toggle(f);
             copies(&entries, "Both")
                 .into_iter()
                 .filter(|e| filters.passes(e))
                 .map(|e| e.path.as_ref().unwrap().display().to_string())
                 .collect()
         };
-        let (steam, gog) = (shown(StoreFilter::Steam), shown(StoreFilter::Gog));
+        let (steam, gog) = (shown(Item::Steam), shown(Item::Gog));
         assert_eq!((steam.len(), gog.len()), (1, 1));
         assert!(steam[0].contains("steamapps/common"));
         assert!(gog[0].contains("Heroic"));

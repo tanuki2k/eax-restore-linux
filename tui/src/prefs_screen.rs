@@ -3,7 +3,7 @@
 
 use crate::build_choice::{BuildInfo, Comp};
 use crate::panel::Opt;
-use crate::prefs::{BuildPref, CompatPref, OverridePref, Prefs, ShowPref, SpeakerPref, VcPref};
+use crate::prefs::{BuildPref, OverridePref, Prefs, SpeakerPref, VcPref, ViewPref};
 use crate::theme;
 use crate::ui::{boxed, gutter, MARGIN};
 use ratatui::crossterm::event::{KeyCode, KeyEvent};
@@ -17,8 +17,7 @@ use std::path::PathBuf;
 /// The rows, in the order they're shown.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Field {
-    Show,
-    Compat,
+    View,
     DsoalBuild,
     OpenalBuild,
     Override,
@@ -26,9 +25,8 @@ pub enum Field {
     Vcrun,
 }
 
-pub const FIELDS: [Field; 7] = [
-    Field::Show,
-    Field::Compat,
+pub const FIELDS: [Field; 6] = [
+    Field::View,
     Field::DsoalBuild,
     Field::OpenalBuild,
     Field::Override,
@@ -69,8 +67,7 @@ fn build_opts(comp: Comp, pref: &BuildPref, info: Info) -> Vec<Opt> {
 impl Field {
     pub fn title(self) -> &'static str {
         match self {
-            Field::Show => "Show",
-            Field::Compat => "Compatibility",
+            Field::View => "View",
             Field::DsoalBuild => "DSOAL build",
             Field::OpenalBuild => "OpenAL Soft build",
             Field::Override => "DLL override",
@@ -81,26 +78,19 @@ impl Field {
 
     pub fn options(self, p: &Prefs, info: Info) -> Vec<Opt> {
         match self {
-            Field::Show => opts(&[
+            Field::View => opts(&[
                 ("All games", "The game list starts with every game."),
                 (
-                    "Games on this PC",
+                    "My library",
                     "The game list starts with the games found in your Steam, Heroic, Lutris, Bottles or Faugus libraries, plus any you added yourself.",
                 ),
                 (
-                    "EAX fix installed",
+                    "Patched",
                     "The game list starts with the games that have the EAX fix.",
                 ),
-            ]),
-            Field::Compat => opts(&[
-                ("Any", "The game list starts with every game, rated or not."),
                 (
-                    "Rated",
-                    "The game list starts with the games someone has rated: Verified, Playable or Unsupported.",
-                ),
-                (
-                    "Unknown",
-                    "The game list starts with the games nobody has checked on a real install yet.",
+                    "Favorites",
+                    "The game list starts with the games you starred with F4.",
                 ),
             ]),
             Field::DsoalBuild => build_opts(Comp::Dsoal, &p.dsoal_build, info),
@@ -145,15 +135,11 @@ impl Field {
                 .unwrap_or(0)
         };
         match self {
-            Field::Show => match p.show {
-                ShowPref::All => 0,
-                ShowPref::OnThisPc => 1,
-                ShowPref::Installed => 2,
-            },
-            Field::Compat => match p.compat {
-                CompatPref::Any => 0,
-                CompatPref::Rated => 1,
-                CompatPref::Unknown => 2,
+            Field::View => match p.view {
+                ViewPref::All => 0,
+                ViewPref::MyLibrary => 1,
+                ViewPref::Patched => 2,
+                ViewPref::Favorites => 3,
             },
             Field::DsoalBuild => at(Comp::Dsoal, &p.dsoal_build),
             Field::OpenalBuild => at(Comp::Openal, &p.openal_build),
@@ -178,11 +164,13 @@ impl Field {
                 .map_or_else(BuildPref::default, |o| BuildPref(o.key.clone()))
         };
         match self {
-            Field::Show => {
-                p.show = [ShowPref::All, ShowPref::OnThisPc, ShowPref::Installed][i.min(2)];
-            }
-            Field::Compat => {
-                p.compat = [CompatPref::Any, CompatPref::Rated, CompatPref::Unknown][i.min(2)];
+            Field::View => {
+                p.view = [
+                    ViewPref::All,
+                    ViewPref::MyLibrary,
+                    ViewPref::Patched,
+                    ViewPref::Favorites,
+                ][i.min(3)];
             }
             Field::DsoalBuild => p.dsoal_build = key(Comp::Dsoal, &p.dsoal_build),
             Field::OpenalBuild => p.openal_build = key(Comp::Openal, &p.openal_build),
@@ -352,7 +340,7 @@ impl PrefsScreen {
         // Inside the border and the margin of a pop-up as wide as the help.
         let width = usize::from(crate::ui::POPUP_W.min(area.width).saturating_sub(6)).max(1);
         let mut lines: Vec<Line> = crate::settings::wrap(
-            "Show and Compatibility set how the game list starts. The rest are your defaults for new installs, and a game that already has the fix keeps what it has.",
+            "View sets which games the list starts with. The other choices here are your defaults for new installs, and a game that already has the fix keeps its own.",
             width,
             "",
         )
@@ -538,7 +526,7 @@ mod tests {
         // stereo that detects.
         let p = Prefs::default();
         let firsts: Vec<usize> = FIELDS.iter().map(|f| f.get(&p, None)).collect();
-        assert_eq!(firsts, [0, 0, 0, 0, 0, SpeakerPref::Auto.index(), 0]);
+        assert_eq!(firsts, [0, 0, 0, 0, SpeakerPref::Auto.index(), 0]);
     }
 
     #[test]
@@ -551,7 +539,7 @@ mod tests {
             assert!(text.contains(f.title()), "{text}");
         }
         assert!(text.contains("[ Reset to defaults ]"));
-        assert!(text.contains("Show and Compatibility set how the game list starts."));
+        assert!(text.contains("View sets which games the list starts with."));
 
         // The list from GitHub adds every build under Latest.
         s.build_info = Some(crate::build_choice::BuildInfo {
@@ -562,14 +550,13 @@ mod tests {
             ..Default::default()
         });
 
-        // Show: Games on this PC, saved at once.
+        // View: My library, saved at once.
         s.handle_key(key(KeyCode::Enter));
         s.handle_key(key(KeyCode::Down));
         s.handle_key(key(KeyCode::Enter));
-        assert_eq!(Prefs::load_from(&file).show, ShowPref::OnThisPc);
+        assert_eq!(Prefs::load_from(&file).view, ViewPref::MyLibrary);
 
         // DSOAL r696: picked from its dropdown and saved at once.
-        s.handle_key(key(KeyCode::Down));
         s.handle_key(key(KeyCode::Down));
         s.handle_key(key(KeyCode::Enter));
         assert!(screen(&s).contains("─ DSOAL build ─"), "{}", screen(&s));

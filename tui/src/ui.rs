@@ -1,10 +1,12 @@
-//! Drawing. Reads `App`, never changes it. The look is the old fzf browser's:
-//! boxed Search, Filters and Games sections beside a full-height pane, its colours
-//! (see `theme`), a counter in the pane's corner, a centred key bar with the
-//! build number at its right.
+//! Drawing. Reads `App`, never changes it. From the top: the title row, the
+//! view bar, the search line, the Filters box, then the games (a list beside
+//! the game's card, or a table, F8), and at the bottom a centred line of keys
+//! for whatever has focus and the F-key bar. The colours are the old fzf
+//! browser's (see `theme`); the box with focus has its border and title in
+//! the key colour.
 
-use crate::app::{App, Filter, Layout as PaneLayout, Pane};
-use crate::filters::Filters;
+use crate::app::{App, Focus, Layout as PaneLayout, MenuRow, Pane};
+use crate::filters::View;
 use crate::games::{Entry, Status};
 use crate::help;
 use crate::profile;
@@ -19,17 +21,54 @@ use ratatui::widgets::{
 use ratatui::Frame;
 use std::collections::HashSet;
 
+/// Below this many rows the title goes and the view bar and the Filters box
+/// lose their borders, so the list keeps room.
+const COMPACT_BELOW: u16 = 24;
+
 pub fn draw(f: &mut Frame, app: &App) {
     let screen = f.area();
-    let bar_height = bar_rows(app, screen.width);
-    let [body, bar] =
-        Layout::vertical([Constraint::Min(3), Constraint::Length(bar_height)]).areas(screen);
-    draw_bar(f, app, bar);
-    if app.zoom {
-        draw_pane(f, app, body, true);
+    let hint_height = bar_rows(app, screen.width);
+    let fkeys = if main_screen(app) {
+        fkey_rows(screen.width)
     } else {
-        draw_body(f, app, body);
+        0
+    };
+    if app.zoom {
+        // Full screen: the pane and the key line, nothing else.
+        let [body, hint] =
+            Layout::vertical([Constraint::Min(3), Constraint::Length(hint_height)]).areas(screen);
+        draw_bar(f, app, hint);
+        draw_pane(f, app, body, true);
+        if app.help {
+            draw_help(f, app, body);
+        }
+        return;
     }
+    let compact = screen.height < COMPACT_BELOW;
+    let (title_h, box_h) = if compact { (0, 1) } else { (1, 3) };
+    let [title, views, search, filters, body, hint, fbar] = Layout::vertical([
+        Constraint::Length(title_h),
+        Constraint::Length(box_h),
+        Constraint::Length(1),
+        Constraint::Length(box_h),
+        Constraint::Min(3),
+        Constraint::Length(hint_height),
+        Constraint::Length(fkeys),
+    ])
+    .areas(screen);
+    if !compact {
+        draw_title(f, title);
+    }
+    draw_views(f, app, views, compact);
+    draw_search(f, app, search);
+    draw_filters(f, app, filters, compact);
+    draw_bar(f, app, hint);
+    if fkeys > 0 {
+        draw_fkeys(f, fbar);
+    }
+    draw_body(f, app, body);
+    // Pop-ups sit over everything above the key line, as they always have.
+    let body = Rect::new(screen.x, screen.y, screen.width, hint.y - screen.y);
     // A game's page is a pop-up: the list stays in sight round it.
     if let Some(p) = &app.panel {
         crate::panel::view::draw(f, p, body);
@@ -38,7 +77,10 @@ pub fn draw(f: &mut Frame, app: &App) {
         }
         return;
     }
-    // Popups sit over the body and leave the key bar showing.
+    // Popups sit over the body and leave the key lines showing.
+    if let Some(m) = &app.filter_menu {
+        draw_filter_menu(f, app, m, body);
+    }
     if let Some(p) = &app.picker {
         draw_picker(f, p, body);
     }
@@ -51,6 +93,17 @@ pub fn draw(f: &mut Frame, app: &App) {
     if app.help {
         draw_help(f, app, body);
     }
+}
+
+/// Nothing is open over the main screen, so the F-keys apply.
+fn main_screen(app: &App) -> bool {
+    app.panel.is_none()
+        && app.picker.is_none()
+        && app.prefs.is_none()
+        && app.notice.is_none()
+        && app.filter_menu.is_none()
+        && !app.help
+        && !app.zoom
 }
 
 /// The pop-up for a game with no EAX or no prefix yet: the first paragraph
@@ -114,6 +167,26 @@ fn draw_notice(f: &mut Frame, n: &crate::app::Notice, area: Rect) {
     );
 }
 
+/// A rounded box, its border and title in the key colour when it has focus.
+fn focus_box(title: Line<'static>, focused: bool) -> Block<'static> {
+    let block = boxed_line(title);
+    if focused {
+        block.border_style(theme::key())
+    } else {
+        block
+    }
+}
+
+/// A box title in the label colour, or the key colour when the box has focus.
+fn box_title(text: String, focused: bool) -> Line<'static> {
+    let style = if focused {
+        theme::key()
+    } else {
+        Style::new().fg(theme::LABEL)
+    };
+    Line::from(Span::styled(format!(" {text} "), style))
+}
+
 /// A rounded box in the old browser's colours, its title centred in the top edge.
 pub(crate) fn boxed(title: &str) -> Block<'static> {
     boxed_line(Line::from(Span::styled(
@@ -172,174 +245,449 @@ fn split(app: &App, body: Rect) -> (Rect, Rect) {
 }
 
 fn draw_body(f: &mut Frame, app: &App, body: Rect) {
+    if app.table {
+        return draw_table(f, app, body);
+    }
     let (left, pane) = split(app, body);
-    draw_left(f, app, left);
+    draw_games(f, app, left);
     draw_pane(f, app, pane, false);
 }
 
-/// Search, Filters and Games, one above the other.
-fn draw_left(f: &mut Frame, app: &App, area: Rect) {
-    let rows = filter_rows(app, area.width.saturating_sub(2));
-    let [search, filters, games] = Layout::vertical([
-        Constraint::Length(3),
-        Constraint::Length(rows + 2),
-        Constraint::Min(3),
-    ])
-    .areas(area);
-    draw_search(f, app, search);
-    draw_filters(f, app, filters, rows);
-    draw_games(f, app, games);
+/// The program's name on the left and the build on the right.
+fn draw_title(f: &mut Frame, area: Rect) {
+    f.render_widget(
+        Paragraph::new(Span::styled(" EAX Restore", theme::white())),
+        area,
+    );
+    let v = version();
+    let w = u16::try_from(v.chars().count()).unwrap_or(0);
+    if area.width > w + 14 {
+        f.render_widget(
+            Paragraph::new(Span::styled(v, theme::dim())),
+            Rect::new(area.x + area.width - w - 1, area.y, w, 1),
+        );
+    }
 }
 
+/// How many games each view holds, before the search and the filters.
+fn view_count(app: &App, view: View) -> usize {
+    app.games
+        .iter()
+        .filter(|e| view.allows(e, app.is_favorite(e)))
+        .count()
+}
+
+/// The view bar: every view with its count, the one showing in brackets.
+/// `compact` leaves the box off.
+fn draw_views(f: &mut Frame, app: &App, area: Rect, compact: bool) {
+    let mut spans = Vec::new();
+    for (i, v) in View::ALL.into_iter().enumerate() {
+        if i > 0 {
+            spans.push(Span::raw("     "));
+        }
+        let text = format!("{} ({})", v.label(), view_count(app, v));
+        if v == app.view {
+            spans.push(Span::styled(format!("[{text}]"), theme::white()));
+        } else {
+            spans.push(Span::styled(text, Style::new().fg(theme::LABEL)));
+        }
+    }
+    let focused = app.focus == Focus::Views;
+    let line = Line::from(spans).centered();
+    if compact {
+        let style = if focused { theme::key() } else { Style::new() };
+        f.render_widget(Paragraph::new(line).style(style), area);
+    } else {
+        f.render_widget(
+            Paragraph::new(line).block(focus_box(box_title("View".into(), focused), focused)),
+            area,
+        );
+    }
+}
+
+/// The search line: what's typed, with the count of games listed at the right.
 fn draw_search(f: &mut Frame, app: &App, area: Rect) {
-    let block = boxed("Search");
-    let inner = block.inner(area);
-    let width = usize::from(inner.width);
+    let width = usize::from(area.width);
     let count = format!("{}/{}", app.visible.len(), app.games.len());
-    // " > " in front, the count behind; a long search shows its end.
-    let room = width.saturating_sub(count.chars().count() + 4);
+    let lead = "  Search: ";
+    let room = width.saturating_sub(count.chars().count() + lead.len() + 2);
     let chars: Vec<char> = app.query.chars().collect();
     let shown: String = chars[chars.len().saturating_sub(room)..].iter().collect();
-    let used = 3 + shown.chars().count();
-    let pad = width.saturating_sub(used + count.chars().count());
+    let used = lead.len() + shown.chars().count();
+    let pad = width.saturating_sub(used + count.chars().count() + 2);
     let line = Line::from(vec![
-        Span::raw(" "),
-        Span::styled(
-            "> ",
-            Style::new().fg(theme::PROMPT).add_modifier(Modifier::BOLD),
-        ),
+        Span::styled(lead, Style::new().fg(theme::PROMPT)),
         Span::styled(shown, Style::new().add_modifier(Modifier::BOLD)),
         Span::raw(" ".repeat(pad)),
         Span::styled(count, Style::new().fg(theme::COUNT)),
     ]);
-    f.render_widget(Paragraph::new(line).block(block), area);
-    if app.picker.is_none() && !app.help && app.prefs.is_none() {
-        f.set_cursor_position((inner.x + u16::try_from(used).unwrap_or(0), inner.y));
+    f.render_widget(Paragraph::new(line), area);
+    if main_screen(app) {
+        f.set_cursor_position((area.x + u16::try_from(used).unwrap_or(0), area.y));
     }
 }
 
-/// One filter: its key, its name and what it is set to.
-struct Cell {
-    key: &'static str,
-    name: &'static str,
-    value: String,
-    /// Narrowing the list.
-    lit: bool,
-}
-
-impl Cell {
-    fn width(&self) -> usize {
-        self.key.chars().count() + self.name.chars().count() + self.value.chars().count() + 3
-    }
-
-    fn spans(&self, pad_to: usize) -> Vec<Span<'static>> {
-        let value = Style::new().fg(Color::Green);
-        vec![
-            Span::styled(self.key, theme::key()),
-            Span::raw(" "),
-            Span::styled(
-                format!("{}:", self.name),
-                Style::new().fg(theme::FILTER_LABEL),
-            ),
-            Span::raw(" "),
-            Span::styled(
-                self.value.clone(),
-                if self.lit {
-                    value.add_modifier(Modifier::BOLD)
-                } else {
-                    value
-                },
-            ),
-            Span::raw(" ".repeat(pad_to.saturating_sub(self.width()))),
-        ]
-    }
-}
-
-fn filter_cells(app: &App) -> [Cell; 4] {
-    let d = Filters::default();
-    [
-        Cell {
-            key: "Tab",
-            name: "Show",
-            value: app.filter.label().to_string(),
-            lit: app.filter != Filter::All,
-        },
-        Cell {
-            key: "Ctrl-S",
-            name: "Store",
-            value: app.filters.store.label().to_string(),
-            lit: app.filters.store != d.store,
-        },
-        Cell {
-            key: "Ctrl-E",
-            name: "Audio",
-            value: app.filters.audio.label(),
-            lit: app.filters.audio != d.audio,
-        },
-        Cell {
-            key: "Ctrl-T",
-            name: "Compatibility",
-            value: app.filters.compat.label().to_string(),
-            lit: app.filters.compat != d.compat,
-        },
-    ]
-}
-
-/// Rows the four filters need: one line, two by two, or one under another.
-fn filter_rows(app: &App, inner_width: u16) -> u16 {
-    let cells = filter_cells(app);
-    let room = usize::from(inner_width);
-    let all: usize = cells.iter().map(Cell::width).sum::<usize>() + 3 * 3 + 2;
-    let two =
-        cells[0].width().max(cells[2].width()) + 3 + cells[1].width().max(cells[3].width()) + 2;
-    if all <= room {
-        1
-    } else if two <= room {
-        2
+/// The Filters box: the sort order and what's ticked, and how to change them.
+/// `compact` leaves the box off.
+fn draw_filters(f: &mut Frame, app: &App, area: Rect, compact: bool) {
+    let focused = app.focus == Focus::Filters;
+    let block = focus_box(box_title("Filters".into(), focused), focused);
+    let width = if compact {
+        usize::from(area.width)
     } else {
-        4
+        usize::from(block.inner(area).width)
+    };
+    let summary = app.filters.summary();
+    let hint = "Enter or F3 to change";
+    let mut spans = vec![
+        Span::raw("  "),
+        Span::styled("Sort:", theme::label()),
+        Span::raw(" "),
+        Span::styled(app.filters.sort.label(), theme::white()),
+        Span::raw("    "),
+        Span::styled("Filters:", theme::label()),
+        Span::raw(" "),
+        Span::styled(summary.clone(), theme::white()),
+    ];
+    let used = 2 + 6 + app.filters.sort.label().len() + 4 + 9 + summary.chars().count();
+    if width > used + hint.len() + 4 {
+        spans.push(Span::raw(" ".repeat(width - used - hint.len() - 2)));
+        spans.push(Span::styled(hint, theme::dim()));
+    }
+    if compact {
+        let marker = if focused { "▶" } else { " " };
+        spans[0] = Span::styled(format!("{marker} "), theme::key());
+        f.render_widget(Paragraph::new(Line::from(spans)), area);
+    } else {
+        f.render_widget(Paragraph::new(Line::from(spans)).block(block), area);
     }
 }
 
-fn draw_filters(f: &mut Frame, app: &App, area: Rect, rows: u16) {
-    let cells = filter_cells(app);
-    let lead = || Span::raw(" ");
-    let line = |cells: &[&Cell], first: usize| {
-        let mut spans = vec![lead()];
-        for (i, c) in cells.iter().enumerate() {
-            if i == 0 {
-                spans.extend(c.spans(first));
-            } else {
-                spans.push(Span::raw("   "));
-                spans.extend(c.spans(0));
+/// The Filters pop-up: the sort order, then each group's tick boxes, then
+/// Clear all and Done.
+fn draw_filter_menu(f: &mut Frame, app: &App, m: &crate::app::FilterMenu, area: Rect) {
+    let hl = |i: usize| m.at == i;
+    let row_style = |on: bool, here: bool| {
+        let s = if on {
+            theme::key()
+        } else {
+            Style::new().fg(theme::LABEL)
+        };
+        if here {
+            s.bg(theme::SELECT_BG)
+        } else {
+            s
+        }
+    };
+    let text_style = |on: bool, here: bool| {
+        let s = if on {
+            theme::white()
+        } else {
+            Style::new().fg(theme::ON_PC)
+        };
+        if here {
+            s.bg(theme::SELECT_BG)
+        } else {
+            s
+        }
+    };
+    let mut lines: Vec<Line> = Vec::new();
+    let mut i = 0;
+    // The sort order, as radio buttons on one line.
+    let mut sort = vec![Span::styled(format!("{:<15}", "Sort"), theme::label())];
+    for opt in crate::filters::Sort::ALL {
+        let on = app.filters.sort == opt;
+        let here = hl(i);
+        sort.push(Span::styled(
+            if on { "(•) " } else { "( ) " },
+            row_style(on, here),
+        ));
+        sort.push(Span::styled(opt.label(), text_style(on, here)));
+        sort.push(Span::raw("   "));
+        i += 1;
+    }
+    lines.push(Line::from(sort));
+    let w = area.width.min(78);
+    // Inside the border and the margin, less the group's name.
+    let room = usize::from(w.saturating_sub(6)).saturating_sub(15);
+    for (name, items) in crate::filters::groups() {
+        lines.push(Line::from(""));
+        // Every box in a group as wide as its longest label, as many a line as fit.
+        let cell = items
+            .iter()
+            .map(|i| i.label().chars().count())
+            .max()
+            .unwrap_or(0)
+            + 6;
+        // Wrapped boxes are shared out evenly: four as two and two, not three and one.
+        let fit = (room / cell).max(1);
+        let lines_needed = items.len().div_ceil(fit);
+        let per_line = items.len().div_ceil(lines_needed);
+        let mut row = vec![Span::styled(format!("{name:<15}"), theme::label())];
+        for (n, item) in items.into_iter().enumerate() {
+            if n > 0 && n % per_line == 0 {
+                lines.push(Line::from(std::mem::take(&mut row)));
+                row.push(Span::raw(" ".repeat(15)));
             }
+            let on = app.filters.is_ticked(item);
+            let here = hl(i);
+            row.push(Span::styled(
+                if on { "[x] " } else { "[ ] " },
+                row_style(on, here),
+            ));
+            row.push(Span::styled(
+                format!("{:<width$}", item.label(), width = cell - 4),
+                text_style(on, here),
+            ));
+            i += 1;
         }
-        Line::from(spans)
+        lines.push(Line::from(row));
+    }
+    lines.push(Line::from(""));
+    let button = |label: &str, here: bool| {
+        let style = if here {
+            Style::new()
+                .fg(theme::SELECT_TEXT)
+                .bg(theme::SELECT_BAR)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::new().fg(theme::LABEL)
+        };
+        Span::styled(format!("[ {label} ]"), style)
     };
-    let lines: Vec<Line> = match rows {
-        1 => vec![line(&cells.iter().collect::<Vec<_>>(), 0)],
-        // Two columns, lined up on the wider cell of the first.
-        2 => {
-            let first = cells[0].width().max(cells[2].width());
-            vec![
-                line(&[&cells[0], &cells[1]], first),
-                line(&[&cells[2], &cells[3]], first),
-            ]
-        }
-        _ => cells.iter().map(|c| line(&[c], 0)).collect(),
-    };
-    f.render_widget(Paragraph::new(lines).block(boxed("Filters")), area);
+    debug_assert!(matches!(m.rows[i], MenuRow::ClearAll));
+    lines.push(
+        Line::from(vec![
+            button("Clear all", hl(i)),
+            Span::raw("   "),
+            button("Done", hl(i + 1)),
+        ])
+        .centered(),
+    );
+    let h = (u16::try_from(lines.len()).unwrap_or(u16::MAX) + 4).min(area.height);
+    let popup = Rect::new(
+        area.x + (area.width - w) / 2,
+        area.y + (area.height - h) / 2,
+        w,
+        h,
+    );
+    f.render_widget(Clear, popup);
+    f.render_widget(
+        Paragraph::new(lines)
+            .block(focus_box(box_title("Filters".into(), true), true).padding(MARGIN)),
+        popup,
+    );
 }
 
-fn draw_games(f: &mut Frame, app: &App, area: Rect) {
+/// A rating in its colour: the profile's own.
+fn compat_span(e: &Entry) -> Span<'static> {
+    profile::compat_span(crate::filters::entry_compat(e))
+}
+
+/// The table's columns after the name: heading and width. They're dropped from
+/// the right when the window is too narrow for them.
+const COLUMNS: [(&str, usize); 5] = [
+    ("Compatibility", 13),
+    ("Store", 10),
+    ("Audio", 13),
+    ("EAX", 13),
+    ("Year", 4),
+];
+
+/// This copy's stores, its audio API and its EAX versions, as the table shows them.
+fn table_cells(e: &Entry) -> [String; 4] {
+    let Some(g) = &e.game else {
+        return [String::new(), String::new(), String::new(), String::new()];
+    };
+    let game_api = if g.eax.api.is_empty() {
+        "directsound3d"
+    } else {
+        g.eax.api.as_str()
+    };
+    let api_name = |a: &str| {
+        if a == "openal" {
+            "OpenAL"
+        } else {
+            "DirectSound3D"
+        }
+    };
+    let stores: Vec<(&str, &crate::db::Store)> = g
+        .store_list()
+        .into_iter()
+        .filter(|(k, _)| e.store.is_none_or(|s| s.key() == *k))
+        .collect();
+    let names: Vec<&str> = stores
+        .iter()
+        .map(|(k, _)| if *k == "gog" { "GOG" } else { "Steam" })
+        .collect();
+    let mut apis: Vec<&str> = stores
+        .iter()
+        .map(|(_, s)| api_name(s.api.as_deref().unwrap_or(game_api)))
+        .collect();
+    apis.dedup();
+    if apis.is_empty() {
+        apis.push(api_name(game_api));
+    }
+    let eax = if g.eax.versions.is_empty() {
+        "—".to_string()
+    } else {
+        g.eax
+            .versions
+            .iter()
+            .map(|v| v.trim_end_matches(".0"))
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    let year: String = g.released.chars().take(4).collect();
+    [names.join(", "), apis.join(", "), eax, year]
+}
+
+fn fit(text: &str, width: usize) -> String {
+    if text.chars().count() <= width {
+        format!("{text:<width$}")
+    } else {
+        let cut: String = text.chars().take(width.saturating_sub(1)).collect();
+        format!("{cut}…")
+    }
+}
+
+/// The games as a table, a column per detail, the whole width.
+fn draw_table(f: &mut Frame, app: &App, area: Rect) {
+    let focused = app.focus == Focus::Games;
+    let block = focus_box(
+        box_title(format!("Games ({})", app.visible.len()), focused),
+        focused,
+    )
+    .padding(Padding::new(0, 1, 0, 0));
+    let inner = block.inner(area);
+    f.render_widget(block, area);
+    if inner.height < 2 {
+        return;
+    }
+    // Gutter, ✓, ★, a space; the name gets what the columns leave.
+    let lead = 5;
+    let mut cols = COLUMNS.len();
+    let name_w = loop {
+        let used: usize = COLUMNS[..cols].iter().map(|(_, w)| w + 2).sum();
+        let left = usize::from(inner.width).saturating_sub(lead + used);
+        if left >= 24 || cols == 1 {
+            break left.max(8);
+        }
+        cols -= 1;
+    };
+    let mut head = vec![
+        Span::raw(" ".repeat(lead)),
+        Span::styled(fit("Name", name_w), theme::white()),
+    ];
+    for (title, w) in &COLUMNS[..cols] {
+        head.push(Span::raw("  "));
+        head.push(Span::styled(fit(title, *w), theme::white()));
+    }
+    f.render_widget(
+        Paragraph::new(Line::from(head)),
+        Rect::new(inner.x, inner.y, inner.width, 1),
+    );
+    let list_area = Rect::new(inner.x, inner.y + 1, inner.width, inner.height - 1);
+    let rows = usize::from(list_area.height);
+    let offset = window_offset(
+        app.selected,
+        app.list_offset.get(),
+        rows,
+        app.visible.len(),
+        SCROLL_OFF,
+    );
+    app.list_offset.set(offset);
     let items: Vec<ListItem> = app
         .visible
         .iter()
         .enumerate()
-        .map(|(row, &i)| ListItem::new(game_line(app, &app.games[i], row == app.selected)))
+        .map(|(row, &i)| {
+            let e = &app.games[i];
+            let selected = row == app.selected;
+            let here = e.status != Status::NotOnThisPc;
+            let mut spans = marks(app, e, selected);
+            spans.push(Span::styled(
+                fit(&e.name, name_w),
+                name_style(here, selected),
+            ));
+            let cells = table_cells(e);
+            let detail = Style::new().fg(if here || selected {
+                theme::LABEL
+            } else {
+                theme::NOT_ON_PC
+            });
+            for (n, (_, w)) in COLUMNS[..cols].iter().enumerate() {
+                spans.push(Span::raw("  "));
+                if n == 0 {
+                    let c = compat_span(e);
+                    let pad = w.saturating_sub(c.content.chars().count());
+                    spans.push(c);
+                    spans.push(Span::raw(" ".repeat(pad)));
+                } else {
+                    spans.push(Span::styled(fit(&cells[n - 1], *w), detail));
+                }
+            }
+            ListItem::new(Line::from(spans))
+        })
         .collect();
+    let list = selection(List::new(items));
+    let mut state = ListState::default()
+        .with_offset(offset)
+        .with_selected(app.current().map(|_| app.selected));
+    f.render_stateful_widget(list, list_area, &mut state);
+    let bar_area = Rect::new(
+        area.x,
+        area.y + 1,
+        area.width,
+        area.height.saturating_sub(1),
+    );
+    scroll_bar(f, bar_area, rows, app.visible.len(), offset);
+}
+
+/// A row's gutter and marks: the bar on the chosen row, ✓ for the fix
+/// installed (magenta when the database doesn't list the game), ★ for a
+/// favourite.
+fn marks(app: &App, e: &Entry, selected: bool) -> Vec<Span<'static>> {
+    let (mark, colour) = marker(e.status);
+    let star = if app.is_favorite(e) { "★" } else { " " };
+    vec![
+        gutter(selected),
+        Span::styled(mark, Style::new().fg(colour)),
+        Span::styled(star, theme::label()),
+        Span::raw(" "),
+    ]
+}
+
+/// A name bright when the game's on this PC, grey when it isn't.
+fn name_style(here: bool, selected: bool) -> Style {
+    if selected {
+        Style::new()
+            .fg(if here {
+                theme::SELECT_TEXT
+            } else {
+                theme::NOT_ON_PC_SELECTED
+            })
+            .add_modifier(Modifier::BOLD)
+    } else {
+        Style::new().fg(if here { theme::ON_PC } else { theme::NOT_ON_PC })
+    }
+}
+
+fn draw_games(f: &mut Frame, app: &App, area: Rect) {
+    let focused = app.focus == Focus::Games;
     // A column on the right keeps a long name from running under the scroll bar.
-    let block = boxed("Games").padding(Padding::new(0, 1, 0, 0));
+    let block = focus_box(
+        box_title(format!("Games ({})", app.visible.len()), focused),
+        focused,
+    )
+    .padding(Padding::new(0, 1, 0, 0));
+    let width = usize::from(block.inner(area).width);
+    let items: Vec<ListItem> = app
+        .visible
+        .iter()
+        .enumerate()
+        .map(|(row, &i)| ListItem::new(game_line(app, &app.games[i], row == app.selected, width)))
+        .collect();
     let rows = usize::from(block.inner(area).height);
     let offset = window_offset(
         app.selected,
@@ -390,35 +738,20 @@ fn window_offset(
     moved.min(furthest)
 }
 
-/// A row: its mark, then the name with the letters the search matched lit.
-fn game_line(app: &App, e: &Entry, selected: bool) -> Line<'static> {
-    let (mark, colour) = marker(e.status);
+/// A row: its marks, the name with the letters the search matched lit, and
+/// the rating at the right edge (`width` columns in all).
+fn game_line(app: &App, e: &Entry, selected: bool, width: usize) -> Line<'static> {
     let here = e.status != Status::NotOnThisPc;
-    let (base, hit) = if selected {
-        (
-            Style::new()
-                .fg(if here {
-                    theme::SELECT_TEXT
-                } else {
-                    theme::NOT_ON_PC_SELECTED
-                })
-                .add_modifier(Modifier::BOLD),
-            Style::new()
-                .fg(theme::SELECT_MATCH)
-                .add_modifier(Modifier::BOLD),
-        )
+    let base = name_style(here, selected);
+    let hit = if selected {
+        Style::new()
+            .fg(theme::SELECT_MATCH)
+            .add_modifier(Modifier::BOLD)
     } else {
-        (
-            Style::new().fg(if here { theme::ON_PC } else { theme::NOT_ON_PC }),
-            Style::new().fg(theme::MATCH),
-        )
+        Style::new().fg(theme::MATCH)
     };
     let matched: HashSet<u32> = app.match_indices(&e.name).into_iter().collect();
-    let mut spans = vec![
-        gutter(selected),
-        Span::styled(mark, Style::new().fg(colour)),
-        Span::raw(" "),
-    ];
+    let mut spans = marks(app, e, selected);
     let mut run = String::new();
     let mut run_hit = false;
     for (i, c) in e.name.chars().enumerate() {
@@ -448,6 +781,16 @@ fn game_line(app: &App, e: &Entry, selected: bool) -> Line<'static> {
         };
         spans.push(Span::styled(label, Style::new().fg(colour)));
     }
+    // The rating, right-aligned, when there's room for it beside the name.
+    if e.game.is_some() {
+        let rating = compat_span(e);
+        let used: usize = spans.iter().map(|s| s.content.chars().count()).sum();
+        let need = rating.content.chars().count() + 1;
+        if width > used + need {
+            spans.push(Span::raw(" ".repeat(width - used - need)));
+            spans.push(rating);
+        }
+    }
     Line::from(spans)
 }
 
@@ -460,7 +803,8 @@ fn draw_pane(f: &mut Frame, app: &App, area: Rect, zoomed: bool) {
         settings,
         current.filter(|_| zoomed).map(|e| e.name.as_str()),
     );
-    let block = boxed_line(title).padding(MARGIN);
+    let focused = app.focus == Focus::Card && !zoomed;
+    let block = focus_box(title, focused).padding(MARGIN);
     let width = usize::from(block.inner(area).width);
 
     let lines = if settings {
@@ -674,26 +1018,89 @@ fn bar_items(app: &App) -> Vec<(&'static str, &'static str)> {
             ("F1", "help"),
             ("Esc", "back"),
         ]
-    } else if app.pane == Pane::Settings {
+    } else if app.filter_menu.is_some() {
         vec![
-            ("Shift-↑/↓", "scroll"),
-            ("Ctrl-F", "full screen"),
-            ("←/→", "Profile/Settings"),
-            ("Enter", "open"),
-            ("F1", "help"),
-            ("Esc", "quit"),
+            ("↑/↓", "move"),
+            ("Space", "tick"),
+            ("Enter", "done"),
+            ("Esc", "cancel"),
         ]
     } else {
-        vec![
-            ("Type", "to filter"),
-            ("Enter", "open"),
-            ("←/→", "Profile/Settings"),
-            ("Ctrl-A", "add game"),
-            ("F1", "help"),
-            ("F2", "settings"),
-            ("Esc", "quit"),
-        ]
+        match app.focus {
+            Focus::Views => vec![
+                ("←/→", "pick a view"),
+                ("Tab", "next box"),
+                ("Shift-Tab", "back"),
+                ("Type", "to search"),
+            ],
+            Focus::Filters => vec![
+                ("Enter", "change the filters"),
+                ("Tab", "next box"),
+                ("Shift-Tab", "back"),
+                ("Type", "to search"),
+            ],
+            Focus::Games => vec![
+                ("↑/↓", "move"),
+                ("Enter", "open the game"),
+                ("←/→", "profile/settings"),
+                ("Tab", "next box"),
+                ("Type", "to search"),
+            ],
+            Focus::Card => vec![
+                ("↑/↓", "scroll"),
+                ("←/→", "profile/settings"),
+                ("Tab", "next box"),
+                ("Shift-Tab", "back"),
+                ("Type", "to search"),
+            ],
+        }
     }
+}
+
+/// The F-keys along the bottom of the main screen.
+const FKEYS: [(&str, &str); 10] = [
+    ("1", "Help"),
+    ("2", "Settings"),
+    ("3", "Filters"),
+    ("4", "Star"),
+    ("5", "Rescan"),
+    ("6", "View"),
+    ("7", "Add"),
+    ("8", "Layout"),
+    ("9", "Full"),
+    ("10", "Quit"),
+];
+
+/// How wide the F-key bar is on one line.
+fn fkey_len() -> usize {
+    FKEYS.iter().map(|(n, w)| n.len() + w.len()).sum::<usize>() + 2 * (FKEYS.len() - 1)
+}
+
+/// Rows the F-key bar needs: one, or two on a narrow window.
+fn fkey_rows(width: u16) -> u16 {
+    if fkey_len() > usize::from(width) {
+        2
+    } else {
+        1
+    }
+}
+
+/// The F-key bar, centred: each number in the key colour, what it does after it.
+fn draw_fkeys(f: &mut Frame, area: Rect) {
+    let mut spans = Vec::new();
+    for (i, (n, what)) in FKEYS.into_iter().enumerate() {
+        if i > 0 {
+            spans.push(Span::raw("  "));
+        }
+        spans.push(Span::styled(n, theme::key()));
+        spans.push(Span::raw(what));
+    }
+    f.render_widget(
+        Paragraph::new(Line::from(spans))
+            .alignment(Alignment::Center)
+            .wrap(Wrap { trim: true }),
+        area,
+    );
 }
 
 /// How wide the bar is on one line.
@@ -747,16 +1154,6 @@ fn draw_bar(f: &mut Frame, app: &App, area: Rect) {
             .wrap(Wrap { trim: true }),
         area,
     );
-    // The build number at the right edge, if the centred keys leave room for it.
-    let v = version();
-    let room = usize::from(area.width).saturating_sub(bar_len(app)) / 2;
-    if area.height == 1 && room > v.chars().count() + 1 {
-        let w = u16::try_from(v.chars().count()).unwrap_or(0);
-        f.render_widget(
-            Paragraph::new(Span::styled(v, theme::dim())),
-            Rect::new(area.x + area.width - w - 1, area.y, w, 1),
-        );
-    }
 }
 
 fn draw_picker(f: &mut Frame, p: &crate::picker::Picker, area: Rect) {
@@ -881,7 +1278,7 @@ mod tests {
         games.push(gog.clone());
         let s = screen(&App::new(games.clone()), 120, 30);
         assert!(s.contains("  Quake 4 [Steam]"), "{s}");
-        assert!(s.contains("✓ Quake 4 [GOG]"), "{s}");
+        assert!(s.contains("✓  Quake 4 [GOG]"), "{s}");
         assert!(!s.contains("Alpha ["), "one store, no label: {s}");
 
         // Only one copy on this PC: no label.
@@ -915,8 +1312,8 @@ mod tests {
                 .unwrap()
         };
         let (x, y, row) = find("Alpha");
-        assert!(row.contains("✓ Alpha"), "{row}");
-        assert_eq!(buf[(x - 2, y)].fg, Color::Green);
+        assert!(row.contains("✓  Alpha"), "{row}");
+        assert_eq!(buf[(x - 3, y)].fg, Color::Green);
         let (_, _, row) = find("Bravo");
         assert!(!row.contains('✓'), "{row}");
         // Alpha is selected; the other two show their own shade.
@@ -935,8 +1332,13 @@ mod tests {
                 .iter()
                 .position(|r| r.contains(&format!(" {title} ")))
                 .unwrap();
-            let left = rows[top].chars().position(|c| c == '╭').unwrap();
-            let right = rows[top].chars().position(|c| c == '╮').unwrap();
+            // The pop-up's own corners, round its title: a box under it can
+            // share the row.
+            let chars: Vec<char> = rows[top].chars().collect();
+            let at = rows[top].find(&format!(" {title} ")).unwrap();
+            let at = rows[top][..at].chars().count();
+            let left = chars[..at].iter().rposition(|c| *c == '╭').unwrap();
+            let right = at + chars[at..].iter().position(|c| *c == '╮').unwrap();
             let bottom = (top..rows.len())
                 .find(|&y| rows[y].chars().nth(left) == Some('╰'))
                 .unwrap();
@@ -1227,7 +1629,7 @@ mod tests {
     fn a_games_page_is_a_pop_up_over_the_list_and_esc_goes_back() {
         let (_home, mut app) = app_with_a_page_open(120);
         let s = screen(&app, 120, 40);
-        assert!(s.contains(" Search "), "the list shows round it: {s}");
+        assert!(s.contains("Search:"), "the list shows round it: {s}");
         let spot = page_spot(&app, 120, 40);
         assert_eq!(page_corner(&app, 120, 40), spot);
         assert_eq!(spot.1, usize::from((120 - crate::panel::view::LEFT_W) / 2));
@@ -1240,7 +1642,7 @@ mod tests {
 
         press(&mut app, ratatui::crossterm::event::KeyCode::Esc);
         assert!(app.panel.is_none());
-        assert!(screen(&app, 120, 40).contains(" Search "));
+        assert!(screen(&app, 120, 40).contains("Search:"));
     }
 
     #[test]
@@ -1253,12 +1655,12 @@ mod tests {
         games[0].store = Some(StoreKind::Steam);
         games[0].path = Some(PathBuf::from("/lib/Alpha"));
         let s = screen(&App::new(games), 100, 30);
-        println!("{s}");
-        assert!(s.contains(" Search "));
+        assert!(s.contains("Search:"));
         assert!(s.contains("1/1"));
-        assert!(s.contains("Show: All games"));
-        assert!(s.contains("Ctrl-E Audio: Any audio"));
-        assert!(s.contains("✓ Alpha Centauri"));
+        assert!(s.contains("[All games (1)]"));
+        assert!(s.contains("Sort: Best match    Filters: none"));
+        assert!(s.contains("✓  Alpha Centauri"));
+        assert!(s.contains("1Help  2Settings  3Filters"));
         assert!(s.contains("System details:"));
         assert!(s.contains("Status:") && s.contains("DSOAL installed"));
         assert!(s.contains("Platform:") && s.contains("Steam"));
@@ -1279,7 +1681,7 @@ mod tests {
             engine: None,
         };
         let s = screen(&App::new(vec![manual]), 120, 14);
-        assert!(s.contains("✓ Obscure"));
+        assert!(s.contains("✓  Obscure"));
         assert!(s.contains("no profile for Obscure."));
     }
 
@@ -1288,7 +1690,7 @@ mod tests {
         let mut app = App::new(entries(r#"{"games":[{"id":"a","name":"Alpha"}]}"#));
         app.query = "zzz".into();
         app.visible.clear();
-        assert!(screen(&app, 60, 10).contains("No game matches."));
+        assert!(screen(&app, 60, 16).contains("No game matches."));
     }
 
     #[test]
@@ -1332,20 +1734,23 @@ mod tests {
         let mut app = App::new(entries(
             r#"{"games":[{"id":"a","name":"Alpha","stores":{"gog":{"id":1}}}]}"#,
         ));
-        app.handle_key(ratatui::crossterm::event::KeyEvent::new(
-            ratatui::crossterm::event::KeyCode::Char('s'),
-            ratatui::crossterm::event::KeyModifiers::CONTROL,
-        ));
+        // F3, down to Steam, Enter ticks it and closes the pop-up.
+        press(&mut app, ratatui::crossterm::event::KeyCode::F(3));
+        for _ in 0..7 {
+            press(&mut app, ratatui::crossterm::event::KeyCode::Down);
+        }
+        press(&mut app, ratatui::crossterm::event::KeyCode::Enter);
         let s = screen(&app, 110, 12);
-        assert!(s.contains("Store: Steam"));
+        assert!(s.contains("Filters: Steam"), "{s}");
         assert!(s.contains("No game matches."));
     }
 
     #[test]
-    fn the_filters_wrap_on_a_narrow_terminal_without_losing_the_list() {
+    fn the_filters_line_fits_a_narrow_short_terminal_without_losing_the_list() {
         let app = App::new(entries(r#"{"games":[{"id":"a","name":"Alpha"}]}"#));
         let s = screen(&app, 70, 14);
-        assert!(s.contains("Ctrl-T Compatibility: Any"));
+        assert!(s.contains("Filters: none"), "{s}");
+        assert!(s.contains("[All games (1)]"), "{s}");
         assert!(s.contains("Alpha"));
     }
 
@@ -1371,7 +1776,7 @@ mod tests {
         assert!(s.contains("Audio settings for Quake 4:"));
         assert!(s.contains("Enable EAX effects (verified)"));
         assert!(s.contains("s_useOpenAL  → 1"));
-        assert!(s.contains("Shift-↑/↓ scroll"));
+        assert!(s.contains("←/→ profile/settings"));
     }
 
     #[test]
@@ -1426,7 +1831,7 @@ mod tests {
     fn f1_shows_the_key_list_over_the_screen_and_the_bar_says_how_to_close_it() {
         let mut app = App::new(entries(WITH_SETTINGS));
         press(&mut app, ratatui::crossterm::event::KeyCode::F(1));
-        let s = screen(&app, 100, 70);
+        let s = screen(&app, 100, 100);
         println!("{s}");
         assert!(s.contains(" Help "));
         assert!(s.contains("The basics:"));
@@ -1449,13 +1854,13 @@ mod tests {
     fn full_screen_hides_the_list_and_names_the_game_in_the_title() {
         let mut app = App::new(entries(WITH_SETTINGS));
         let normal = screen(&app, 100, 20);
-        assert!(normal.contains(" Games "));
-        assert!(normal.contains(" Search "));
-        ctrl_key(&mut app, 'f');
+        assert!(normal.contains(" Games (1) "));
+        assert!(normal.contains("Search:"));
+        press(&mut app, ratatui::crossterm::event::KeyCode::F(9));
         let s = screen(&app, 100, 20);
-        println!("{s}");
-        assert!(!s.contains(" Games "));
-        assert!(!s.contains(" Search "));
+        assert!(!s.contains(" Games ("));
+        assert!(!s.contains("Search:"));
+        assert!(!s.contains("All games"));
         assert!(s.contains("Quake 4: Game profile"));
         assert!(s.contains("Esc back"));
     }
@@ -1501,7 +1906,7 @@ mod tests {
         let wide = screen(&app, 120, 24);
         // Beside the list: the pane is to its right and starts at the top.
         assert!(col_of(&wide, "Game profile") > col_of(&wide, " Games "));
-        assert!(row_of(&wide, "Game profile") < row_of(&wide, " Games "));
+        assert_eq!(row_of(&wide, "Game profile"), row_of(&wide, " Games ("));
         app.resize(90);
         let narrow = screen(&app, 90, 24);
         println!("{narrow}");
@@ -1517,7 +1922,7 @@ mod tests {
         app.resize(120);
         ctrl_key(&mut app, 'l');
         let s = screen(&app, 120, 24);
-        assert!(row_of(&s, " Games ") < row_of(&s, "Game profile"));
+        assert!(row_of(&s, " Games (") < row_of(&s, "Game profile"));
     }
 
     #[test]
@@ -1531,12 +1936,16 @@ mod tests {
     fn the_key_bar_wraps_instead_of_being_cut_off_on_a_narrow_window() {
         let app = App::new(entries(WITH_SETTINGS));
         let narrow = screen(&app, 60, 20);
-        println!("{narrow}");
-        assert!(narrow.contains("Esc quit"), "the end of the bar is lost");
-        assert!(narrow.contains("Type to filter"));
-        // On a wide window it needs only the last row.
+        assert!(
+            narrow.contains("Type to search"),
+            "the end of the bar is lost"
+        );
+        assert!(narrow.contains("10Quit"), "the end of the F-keys is lost");
+        // On a wide window each needs only one row.
         let wide = screen(&app, 130, 20);
-        assert!(wide.lines().last().unwrap().contains("Esc quit"));
+        let rows: Vec<&str> = wide.lines().collect();
+        assert!(rows[rows.len() - 1].contains("10Quit"));
+        assert!(rows[rows.len() - 2].contains("Type to search"));
     }
 
     #[test]
@@ -1582,16 +1991,10 @@ mod tests {
         press(&mut app, ratatui::crossterm::event::KeyCode::F(1));
         let s = screen(&app, 120, 40);
         println!("{s}");
-        // The Search box is still the first row; the popup's own box starts below it.
-        assert!(row_of(&s, " Search ") == 0);
+        // The title row is still the first row; the popup's own box starts below it.
+        assert!(row_of(&s, "EAX Restore") == 0);
         assert!(row_of(&s, " Help ") > 0);
         assert!(s.contains("The basics:"));
-        // The pane's own title, on the top row above the popup, is untouched.
-        assert!(s
-            .lines()
-            .next()
-            .unwrap()
-            .contains("Game profile | Game settings"));
     }
 
     #[test]
@@ -1641,7 +2044,7 @@ mod tests {
         // The EAX versions were bold green.
         assert_eq!(seen("Unknown"), bold(Color::LightGreen));
         // A key in the bar was bold cyan.
-        assert_eq!(seen("Enter"), bold(Color::LightCyan));
+        assert_eq!(seen("Enter open the game"), bold(Color::LightCyan));
     }
 
     #[test]
@@ -1649,19 +2052,19 @@ mod tests {
         let mut app = App::new(entries(WITH_SETTINGS));
         press(&mut app, ratatui::crossterm::event::KeyCode::F(1));
         // Far taller than the text needs.
-        let s = screen(&app, 120, 80);
+        let s = screen(&app, 120, 110);
         let rows: Vec<&str> = s.lines().collect();
         let top = row_of(&s, " Help ");
         // 90 wide, less the border and the 2-column margins.
         let text = help::lines(84).iter().skip_while(|l| is_blank(l)).count();
         // Border, a margin row, the text, a margin row, border.
         assert!(
-            rows[top + 1 + text].contains("so each copy names its store."),
+            rows[top + 1 + text].contains("nobody has checked it yet."),
             "{:?}",
             rows[top + 1 + text]
         );
         assert!(rows[top + text + 3].contains('╰'));
-        assert!(top + text + 3 < 70, "popup reaches row {}", top + text + 3);
+        assert!(top + text + 3 < 100, "popup reaches row {}", top + text + 3);
         // It is centred in the space above the key bar.
         assert!(top > 1);
         assert_eq!(app.help_max.get(), 0, "nothing left to scroll");
@@ -1805,8 +2208,8 @@ mod tests {
         // The F1 popup is fitted to its text, so it has none either.
         let mut app = App::new(entries(WITH_SETTINGS));
         press(&mut app, ratatui::crossterm::event::KeyCode::F(1));
-        let g = grid(&app, 120, 80);
-        let top = row_of(&screen(&app, 120, 80), " Help ");
+        let g = grid(&app, 120, 110);
+        let top = row_of(&screen(&app, 120, 110), " Help ");
         // The popup is columns 15 to 104; its top margin row holds no scroll position.
         assert!(
             g[top + 1][16..104].iter().all(|c| *c == ' '),
@@ -1940,7 +2343,12 @@ mod tests {
             .find(|&y| g[y][0] == '╰')
             .unwrap();
         let inside = games_top + 1..bottom;
-        let first = row_text(&g[inside.start][3..48]).trim().to_string();
+        let first = row_text(&g[inside.start][3..48])
+            .trim()
+            .split("  ")
+            .next()
+            .unwrap_or("")
+            .to_string();
         let lit = inside
             .clone()
             .position(|y| buf[(10, u16::try_from(y).unwrap())].bg == Color::Indexed(236))

@@ -1,61 +1,90 @@
-//! The browser's store, audio and tested filters. They work the way the Bash
-//! browser's did: per store entry, with the store's own `delisted` flag and API.
+//! What narrows and orders the games list: the view (the bar along the top),
+//! the Filters pop-up's tick boxes, and its sort order. The tick boxes work
+//! per store entry, as the Bash browser's filters did, with each store's own
+//! rating, `delisted` flag and API: within a group a game needs any ticked box,
+//! across groups every group, and a group with nothing ticked lets all through.
 
 use crate::db::Compat;
-use crate::games::Entry;
+use crate::games::{Entry, Status};
 use crate::library::StoreKind;
+use std::collections::BTreeSet;
 
-#[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
-pub enum StoreFilter {
+/// The bar along the top: which games the list holds before any filter.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum View {
     #[default]
     All,
-    Steam,
-    Gog,
-    Delisted,
-    SteamDelisted,
-    GogDelisted,
+    /// Games found on this PC.
+    MyLibrary,
+    /// Games with the EAX fix installed.
+    Patched,
+    /// Games the player starred with F4.
+    Favorites,
 }
 
-impl StoreFilter {
+impl View {
+    pub const ALL: [View; 4] = [View::All, View::MyLibrary, View::Patched, View::Favorites];
+
     pub fn label(self) -> &'static str {
         match self {
-            StoreFilter::All => "All stores",
-            StoreFilter::Steam => "Steam",
-            StoreFilter::Gog => "GOG",
-            StoreFilter::Delisted => "Delisted",
-            StoreFilter::SteamDelisted => "Delisted on Steam",
-            StoreFilter::GogDelisted => "Delisted on GOG",
+            View::All => "All games",
+            View::MyLibrary => "My library",
+            View::Patched => "Patched",
+            View::Favorites => "Favorites",
         }
     }
 
-    fn next(self) -> Self {
-        match self {
-            StoreFilter::All => StoreFilter::Steam,
-            StoreFilter::Steam => StoreFilter::Gog,
-            StoreFilter::Gog => StoreFilter::Delisted,
-            StoreFilter::Delisted => StoreFilter::SteamDelisted,
-            StoreFilter::SteamDelisted => StoreFilter::GogDelisted,
-            StoreFilter::GogDelisted => StoreFilter::All,
-        }
+    pub fn next(self) -> Self {
+        let i = View::ALL.iter().position(|v| *v == self).unwrap_or(0);
+        View::ALL[(i + 1) % View::ALL.len()]
     }
 
-    /// `key` is None for a game with no store entry at all.
-    fn allows(self, key: Option<StoreKind>, delisted: bool) -> bool {
+    pub fn prev(self) -> Self {
+        let i = View::ALL.iter().position(|v| *v == self).unwrap_or(0);
+        View::ALL[(i + View::ALL.len() - 1) % View::ALL.len()]
+    }
+
+    pub fn allows(self, e: &Entry, favorite: bool) -> bool {
         match self {
-            StoreFilter::All => true,
-            StoreFilter::Steam => key == Some(StoreKind::Steam),
-            StoreFilter::Gog => key == Some(StoreKind::Gog),
-            StoreFilter::Delisted => key.is_some() && delisted,
-            StoreFilter::SteamDelisted => key == Some(StoreKind::Steam) && delisted,
-            StoreFilter::GogDelisted => key == Some(StoreKind::Gog) && delisted,
+            View::All => true,
+            View::MyLibrary => e.status != Status::NotOnThisPc,
+            View::Patched => matches!(e.status, Status::Installed | Status::Manual),
+            View::Favorites => favorite,
         }
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
-pub enum AudioFilter {
+/// The list's order. Best match puts the search's closest names first; with
+/// nothing typed it's the same as A to Z.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum Sort {
+    AToZ,
     #[default]
-    All,
+    BestMatch,
+    /// Verified, Playable, Unsupported, then Unknown, by name within each.
+    Rating,
+}
+
+impl Sort {
+    pub const ALL: [Sort; 3] = [Sort::AToZ, Sort::BestMatch, Sort::Rating];
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Sort::AToZ => "A to Z",
+            Sort::BestMatch => "Best match",
+            Sort::Rating => "Rating",
+        }
+    }
+}
+
+/// One tick box in the Filters pop-up.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum Item {
+    Compat(Compat),
+    Steam,
+    Gog,
+    /// A store entry that store no longer sells.
+    Delisted,
     DirectSound3d,
     OpenAl,
     /// A game built on the Miles Sound System.
@@ -64,120 +93,114 @@ pub enum AudioFilter {
     Eax(u8),
 }
 
-impl AudioFilter {
+impl Item {
     pub fn label(self) -> String {
         match self {
-            AudioFilter::All => "Any audio".into(),
-            AudioFilter::DirectSound3d => "DirectSound3D".into(),
-            AudioFilter::OpenAl => "OpenAL".into(),
-            AudioFilter::Miles => "Miles".into(),
-            AudioFilter::Eax(n) => format!("EAX {n}.0"),
-        }
-    }
-
-    fn next(self) -> Self {
-        match self {
-            AudioFilter::All => AudioFilter::DirectSound3d,
-            AudioFilter::DirectSound3d => AudioFilter::OpenAl,
-            AudioFilter::OpenAl => AudioFilter::Miles,
-            AudioFilter::Miles => AudioFilter::Eax(1),
-            AudioFilter::Eax(5) => AudioFilter::All,
-            AudioFilter::Eax(n) => AudioFilter::Eax(n + 1),
-        }
-    }
-
-    fn allows(self, api: &str, versions: &[String], sound_system: Option<&str>) -> bool {
-        match self {
-            AudioFilter::All => true,
-            AudioFilter::DirectSound3d => api == "directsound3d",
-            AudioFilter::OpenAl => api == "openal",
-            AudioFilter::Miles => sound_system == Some("miles"),
-            AudioFilter::Eax(n) => versions.iter().any(|v| *v == format!("{n}.0")),
+            Item::Compat(c) => c.label().into(),
+            Item::Steam => "Steam".into(),
+            Item::Gog => "GOG".into(),
+            Item::Delisted => "Delisted".into(),
+            Item::DirectSound3d => "DirectSound3D".into(),
+            Item::OpenAl => "OpenAL".into(),
+            Item::Miles => "Miles".into(),
+            Item::Eax(n) => format!("{n}.0"),
         }
     }
 }
 
-/// Ctrl-T: every game, the rated ones (any rating but unknown), or one rating.
-#[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
-pub enum CompatFilter {
-    #[default]
-    All,
-    Rated,
-    Only(Compat),
+/// The pop-up's groups in order, each with its boxes.
+pub fn groups() -> Vec<(&'static str, Vec<Item>)> {
+    vec![
+        (
+            "Compatibility",
+            [
+                Compat::Verified,
+                Compat::Playable,
+                Compat::Unsupported,
+                Compat::Unknown,
+            ]
+            .map(Item::Compat)
+            .to_vec(),
+        ),
+        ("Store", vec![Item::Steam, Item::Gog, Item::Delisted]),
+        (
+            "Audio",
+            vec![Item::DirectSound3d, Item::OpenAl, Item::Miles],
+        ),
+        ("EAX version", (1..=5).map(Item::Eax).collect()),
+    ]
 }
 
-impl CompatFilter {
-    pub fn label(self) -> &'static str {
-        match self {
-            CompatFilter::All => "Any",
-            CompatFilter::Rated => "Rated",
-            CompatFilter::Only(c) => c.label(),
-        }
-    }
-
-    fn next(self) -> Self {
-        match self {
-            CompatFilter::All => CompatFilter::Rated,
-            CompatFilter::Rated => CompatFilter::Only(Compat::Verified),
-            CompatFilter::Only(Compat::Verified) => CompatFilter::Only(Compat::Playable),
-            CompatFilter::Only(Compat::Playable) => CompatFilter::Only(Compat::Unsupported),
-            CompatFilter::Only(Compat::Unsupported) => CompatFilter::Only(Compat::Unknown),
-            CompatFilter::Only(Compat::Unknown) => CompatFilter::All,
-        }
-    }
-
-    fn passes(self, c: Compat) -> bool {
-        match self {
-            CompatFilter::All => true,
-            CompatFilter::Rated => c != Compat::Unknown,
-            CompatFilter::Only(want) => c == want,
-        }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
+#[derive(Clone, PartialEq, Eq, Default, Debug)]
 pub struct Filters {
-    pub store: StoreFilter,
-    pub audio: AudioFilter,
-    pub compat: CompatFilter,
+    pub ticked: BTreeSet<Item>,
+    pub sort: Sort,
+}
+
+/// One store entry's facts, as the boxes test them.
+struct Candidate<'a> {
+    store: Option<StoreKind>,
+    delisted: bool,
+    api: &'a str,
+    compat: Compat,
 }
 
 impl Filters {
-    pub fn next_store(&mut self) {
-        self.store = self.store.next();
+    pub fn toggle(&mut self, item: Item) {
+        if !self.ticked.remove(&item) {
+            self.ticked.insert(item);
+        }
     }
 
-    pub fn next_audio(&mut self) {
-        self.audio = self.audio.next();
+    pub fn is_ticked(&self, item: Item) -> bool {
+        self.ticked.contains(&item)
     }
 
-    pub fn next_compat(&mut self) {
-        self.compat = self.compat.next();
+    /// Nothing ticked: every game passes.
+    pub fn is_clear(&self) -> bool {
+        self.ticked.is_empty()
+    }
+
+    /// The Filters line: each group's ticked boxes, or "none".
+    pub fn summary(&self) -> String {
+        let parts: Vec<String> = groups()
+            .into_iter()
+            .filter_map(|(name, items)| {
+                let on: Vec<String> = items
+                    .into_iter()
+                    .filter(|i| self.is_ticked(*i))
+                    .map(Item::label)
+                    .collect();
+                match (on.is_empty(), name) {
+                    (true, _) => None,
+                    (false, "EAX version") => Some(format!("EAX {}", on.join(", "))),
+                    (false, _) => Some(on.join(", ")),
+                }
+            })
+            .collect();
+        if parts.is_empty() {
+            "none".into()
+        } else {
+            parts.join(";  ")
+        }
+    }
+
+    /// Within a group any ticked box; a group with none ticked lets all through.
+    fn group_ok(&self, items: &[Item], pass: impl Fn(Item) -> bool) -> bool {
+        let on: Vec<Item> = items
+            .iter()
+            .copied()
+            .filter(|i| self.is_ticked(*i))
+            .collect();
+        on.is_empty() || on.into_iter().any(pass)
     }
 
     pub fn passes(&self, e: &Entry) -> bool {
-        // A game the database doesn't list has no store, API or rating.
-        let Some(g) = &e.game else {
-            return *self == Filters::default();
-        };
-        // This entry's own store's rating; an entry with no store (a retail
-        // copy) passes when any of the game's stores would.
-        let key = e.store.map(|k| match k {
-            StoreKind::Steam => "steam",
-            StoreKind::Gog => "gog",
-        });
-        let compat_ok = match key {
-            Some(_) => self.compat.passes(g.compat(key)),
-            None => {
-                g.store_list()
-                    .iter()
-                    .any(|(k, _)| self.compat.passes(g.compat(Some(k))))
-                    || (g.store_list().is_empty() && self.compat.passes(g.compat(None)))
-            }
-        };
-        if !compat_ok {
-            return false;
+        if self.is_clear() {
+            return true;
         }
+        // A game the database doesn't list has no store, API or rating.
+        let Some(g) = &e.game else { return false };
         let game_api = if g.eax.api.is_empty() {
             "directsound3d"
         } else {
@@ -185,27 +208,70 @@ impl Filters {
         };
         // A copy whose store is known is that store's alone, even when the game is
         // sold on both; a game not on this PC is every store that sells it.
-        let mut candidates: Vec<(Option<StoreKind>, bool, &str)> = [
-            (StoreKind::Steam, &g.stores.steam),
-            (StoreKind::Gog, &g.stores.gog),
-        ]
-        .into_iter()
-        .filter(|(k, _)| e.store.is_none() || e.store == Some(*k))
-        .filter_map(|(k, s)| {
-            s.as_ref()
-                .map(|s| (Some(k), s.delisted, s.api.as_deref().unwrap_or(game_api)))
-        })
-        .collect();
+        let mut candidates: Vec<Candidate> = g
+            .store_list()
+            .into_iter()
+            .map(|(k, s)| {
+                let kind = if k == "gog" {
+                    StoreKind::Gog
+                } else {
+                    StoreKind::Steam
+                };
+                (kind, k, s)
+            })
+            .filter(|(kind, _, _)| e.store.is_none() || e.store == Some(*kind))
+            .map(|(kind, k, s)| Candidate {
+                store: Some(kind),
+                delisted: s.delisted,
+                api: s.api.as_deref().unwrap_or(game_api),
+                compat: g.compat(Some(k)),
+            })
+            .collect();
         if candidates.is_empty() {
-            candidates.push((e.store, false, game_api));
+            candidates.push(Candidate {
+                store: e.store,
+                delisted: false,
+                api: game_api,
+                compat: g.compat(None),
+            });
         }
-        candidates.iter().any(|&(k, delisted, api)| {
-            self.store.allows(k, delisted)
-                && self
-                    .audio
-                    .allows(api, &g.eax.versions, g.eax.sound_system.as_deref())
+        let miles = g.eax.sound_system.as_deref() == Some("miles");
+        let groups = groups();
+        candidates.iter().any(|c| {
+            self.group_ok(&groups[0].1, |i| i == Item::Compat(c.compat))
+                && self.group_ok(&[Item::Steam, Item::Gog], |i| match i {
+                    Item::Steam => c.store == Some(StoreKind::Steam),
+                    _ => c.store == Some(StoreKind::Gog),
+                })
+                && (!self.is_ticked(Item::Delisted) || (c.store.is_some() && c.delisted))
+                && self.group_ok(&groups[2].1, |i| match i {
+                    Item::DirectSound3d => c.api == "directsound3d",
+                    Item::OpenAl => c.api == "openal",
+                    _ => miles,
+                })
+                && self.group_ok(&groups[3].1, |i| match i {
+                    Item::Eax(n) => g.eax.versions.iter().any(|v| *v == format!("{n}.0")),
+                    _ => false,
+                })
         })
     }
+}
+
+/// Where a rating comes in the Rating order.
+pub fn rating_rank(c: Compat) -> u8 {
+    match c {
+        Compat::Verified => 0,
+        Compat::Playable => 1,
+        Compat::Unsupported => 2,
+        Compat::Unknown => 3,
+    }
+}
+
+/// An entry's own rating: its store's, else the game's; a game the database
+/// doesn't list is unknown.
+pub fn entry_compat(e: &Entry) -> Compat {
+    let key = e.store.map(StoreKind::key);
+    e.game.as_ref().map_or(Compat::Unknown, |g| g.compat(key))
 }
 
 #[cfg(test)]
@@ -218,9 +284,11 @@ mod tests {
         Entry::database_only(db.games[0].clone())
     }
 
-    fn with(f: impl FnOnce(&mut Filters)) -> Filters {
+    fn with(items: &[Item]) -> Filters {
         let mut x = Filters::default();
-        f(&mut x);
+        for i in items {
+            x.toggle(*i);
+        }
         x
     }
 
@@ -229,9 +297,10 @@ mod tests {
         "eax":{"api":"directsound3d","versions":["1.0","3.0"]}}"#;
 
     #[test]
-    fn the_defaults_let_everything_through() {
+    fn nothing_ticked_lets_everything_through() {
         assert!(Filters::default().passes(&entry(BOTH)));
         assert!(Filters::default().passes(&entry(r#"{"id":"a","name":"A"}"#)));
+        assert_eq!(Filters::default().summary(), "none");
     }
 
     #[test]
@@ -241,104 +310,77 @@ mod tests {
             "gog":{"id":2,"compatibility":"playable"}}}"#,
         );
         // No store of its own (only in the database): any store's rating will do.
-        assert!(with(|f| f.compat = CompatFilter::Rated).passes(&e));
-        assert!(with(|f| f.compat = CompatFilter::Only(Compat::Unknown)).passes(&e));
-        assert!(!with(|f| f.compat = CompatFilter::Only(Compat::Verified)).passes(&e));
+        assert!(with(&[Item::Compat(Compat::Playable)]).passes(&e));
+        assert!(with(&[Item::Compat(Compat::Unknown)]).passes(&e));
+        assert!(!with(&[Item::Compat(Compat::Verified)]).passes(&e));
         e.store = Some(StoreKind::Steam);
-        assert!(!with(|f| f.compat = CompatFilter::Rated).passes(&e));
+        assert!(!with(&[Item::Compat(Compat::Playable)]).passes(&e));
         e.store = Some(StoreKind::Gog);
-        assert!(with(|f| f.compat = CompatFilter::Only(Compat::Playable)).passes(&e));
-        // An older database's games count as verified unless marked "tested": false.
-        assert!(with(|f| f.compat = CompatFilter::Rated).passes(&entry(
-            r#"{"id":"a","name":"A","stores":{"steam":{"id":1}}}"#
-        )));
-        assert!(!with(|f| f.compat = CompatFilter::Rated).passes(&entry(BOTH)));
+        assert!(with(&[Item::Compat(Compat::Playable)]).passes(&e));
     }
 
     #[test]
-    fn ctrl_t_cycles_every_rating_and_back() {
-        let mut f = Filters::default();
-        let mut seen = Vec::new();
-        for _ in 0..6 {
-            f.next_compat();
-            seen.push(f.compat.label());
-        }
-        assert_eq!(
-            seen,
-            [
-                "Rated",
-                "Verified",
-                "Playable",
-                "Unsupported",
-                "Unknown",
-                "Any"
-            ]
-        );
+    fn boxes_in_one_group_widen_and_across_groups_narrow() {
+        let e = entry(BOTH); // unknown on both stores; GOG is OpenAL
+        let either = with(&[
+            Item::Compat(Compat::Verified),
+            Item::Compat(Compat::Unknown),
+        ]);
+        assert!(either.passes(&e));
+        let gog_openal = with(&[Item::Gog, Item::OpenAl]);
+        assert!(gog_openal.passes(&e));
+        // Steam is DirectSound3D, so Steam and OpenAL never meet on one store.
+        assert!(!with(&[Item::Steam, Item::OpenAl]).passes(&e));
     }
 
     #[test]
     fn delisted_is_the_stores_own_flag() {
         let e = entry(BOTH);
-        assert!(with(|f| f.store = StoreFilter::SteamDelisted).passes(&e));
-        assert!(!with(|f| f.store = StoreFilter::GogDelisted).passes(&e));
-        assert!(with(|f| f.store = StoreFilter::Delisted).passes(&e));
-        assert!(with(|f| f.store = StoreFilter::Gog).passes(&e));
+        assert!(with(&[Item::Delisted]).passes(&e));
+        assert!(with(&[Item::Steam, Item::Delisted]).passes(&e));
+        assert!(!with(&[Item::Gog, Item::Delisted]).passes(&e));
     }
 
     #[test]
-    fn a_store_can_override_the_games_api() {
+    fn eax_versions_and_miles_come_from_the_profile() {
         let e = entry(BOTH);
-        assert!(with(|f| f.audio = AudioFilter::OpenAl).passes(&e)); // via GOG
-        assert!(with(|f| f.audio = AudioFilter::DirectSound3d).passes(&e)); // via Steam
-                                                                            // Together they must hold for one store: Steam is not OpenAL.
-        let both = with(|f| {
-            f.store = StoreFilter::Steam;
-            f.audio = AudioFilter::OpenAl;
-        });
-        assert!(!both.passes(&e));
-    }
-
-    #[test]
-    fn eax_versions_come_from_the_profile() {
-        let e = entry(BOTH);
-        assert!(with(|f| f.audio = AudioFilter::Eax(3)).passes(&e));
-        assert!(!with(|f| f.audio = AudioFilter::Eax(2)).passes(&e));
-    }
-
-    #[test]
-    fn miles_comes_from_the_games_sound_system() {
-        let e = entry(BOTH);
-        assert!(!with(|f| f.audio = AudioFilter::Miles).passes(&e));
+        assert!(with(&[Item::Eax(3)]).passes(&e));
+        assert!(with(&[Item::Eax(2), Item::Eax(3)]).passes(&e));
+        assert!(!with(&[Item::Eax(2)]).passes(&e));
+        assert!(!with(&[Item::Miles]).passes(&e));
         let mut g = e.game.clone().unwrap();
         g.eax.sound_system = Some("miles".into());
         let mut miles = e.clone();
         miles.game = Some(g);
-        assert!(with(|f| f.audio = AudioFilter::Miles).passes(&miles));
+        assert!(with(&[Item::Miles]).passes(&miles));
     }
 
     #[test]
-    fn a_game_the_database_lacks_only_shows_with_no_filters_set() {
+    fn a_game_the_database_lacks_only_shows_with_nothing_ticked() {
         let mut e = entry(BOTH);
         e.game = None;
         assert!(Filters::default().passes(&e));
-        assert!(!with(|f| f.store = StoreFilter::Steam).passes(&e));
-        assert!(!with(|f| f.compat = CompatFilter::Rated).passes(&e));
+        assert!(!with(&[Item::Steam]).passes(&e));
     }
 
     #[test]
-    fn every_filter_cycles_back_to_where_it_started() {
-        let mut f = Filters::default();
-        for _ in 0..6 {
-            f.next_store();
-        }
-        for _ in 0..9 {
-            f.next_audio();
-        }
-        for _ in 0..6 {
-            f.next_compat();
-        }
-        assert_eq!(f, Filters::default());
-        assert_eq!(AudioFilter::Eax(5).next(), AudioFilter::All);
+    fn ticking_twice_unticks_and_the_summary_names_what_is_on() {
+        let mut f = with(&[
+            Item::Compat(Compat::Verified),
+            Item::Gog,
+            Item::Eax(1),
+            Item::Eax(2),
+        ]);
+        assert_eq!(f.summary(), "Verified;  GOG;  EAX 1.0, 2.0");
+        f.toggle(Item::Gog);
+        assert_eq!(f.summary(), "Verified;  EAX 1.0, 2.0");
+    }
+
+    #[test]
+    fn the_views_cycle_both_ways() {
+        assert_eq!(View::All.next(), View::MyLibrary);
+        assert_eq!(View::Favorites.next(), View::All);
+        assert_eq!(View::All.prev(), View::Favorites);
     }
 
     fn copy(store: Option<StoreKind>) -> Entry {
@@ -350,8 +392,8 @@ mod tests {
     #[test]
     fn an_installed_copy_belongs_to_the_store_it_came_from() {
         let (steam, gog) = (copy(Some(StoreKind::Steam)), copy(Some(StoreKind::Gog)));
-        let on_steam = with(|f| f.store = StoreFilter::Steam);
-        let on_gog = with(|f| f.store = StoreFilter::Gog);
+        let on_steam = with(&[Item::Steam]);
+        let on_gog = with(&[Item::Gog]);
         assert!(on_steam.passes(&steam) && !on_steam.passes(&gog));
         assert!(on_gog.passes(&gog) && !on_gog.passes(&steam));
     }
@@ -359,24 +401,17 @@ mod tests {
     #[test]
     fn a_copy_of_unknown_origin_and_a_game_not_here_match_every_store_that_sells_them() {
         let unknown = copy(None);
-        assert!(with(|f| f.store = StoreFilter::Steam).passes(&unknown));
-        assert!(with(|f| f.store = StoreFilter::Gog).passes(&unknown));
-    }
-
-    #[test]
-    fn every_copy_is_listed_when_no_store_is_chosen() {
-        for store in [None, Some(StoreKind::Steam), Some(StoreKind::Gog)] {
-            assert!(Filters::default().passes(&copy(store)));
-        }
+        assert!(with(&[Item::Steam]).passes(&unknown));
+        assert!(with(&[Item::Gog]).passes(&unknown));
     }
 
     #[test]
     fn a_copys_own_store_decides_delisted_and_the_audio_api() {
         // BOTH: Steam is delisted; GOG has its own OpenAL api.
         let (steam, gog) = (copy(Some(StoreKind::Steam)), copy(Some(StoreKind::Gog)));
-        let delisted = with(|f| f.store = StoreFilter::Delisted);
+        let delisted = with(&[Item::Delisted]);
         assert!(delisted.passes(&steam) && !delisted.passes(&gog));
-        let openal = with(|f| f.audio = AudioFilter::OpenAl);
+        let openal = with(&[Item::OpenAl]);
         assert!(openal.passes(&gog) && !openal.passes(&steam));
     }
 }

@@ -92,35 +92,44 @@ impl SpeakerPref {
     }
 }
 
-/// Which games the list shows when the TUI starts (Tab's filter).
+/// Which view the list opens on (the bar along the top). Older files saved
+/// "on-this-pc" and "installed" under "show", which read as My library and
+/// Patched.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub enum ShowPref {
+pub enum ViewPref {
     #[default]
     All,
-    OnThisPc,
-    Installed,
+    #[serde(alias = "on-this-pc")]
+    MyLibrary,
+    #[serde(alias = "installed")]
+    Patched,
+    Favorites,
 }
 
-/// Which games the list starts with by rating (Ctrl-T's filter). The names
-/// an older file saved, "tested" and "untested", read as Rated and Unknown.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum CompatPref {
-    #[default]
-    Any,
-    #[serde(alias = "tested")]
-    Rated,
-    #[serde(alias = "untested")]
-    Unknown,
+impl ViewPref {
+    pub fn view(self) -> crate::filters::View {
+        use crate::filters::View;
+        match self {
+            ViewPref::All => View::All,
+            ViewPref::MyLibrary => View::MyLibrary,
+            ViewPref::Patched => View::Patched,
+            ViewPref::Favorites => View::Favorites,
+        }
+    }
 }
 
+/// The settings an older file has but this version doesn't use (the list's
+/// starting compatibility filter, now the Filters pop-up's tick boxes) are
+/// skipped when it's read.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Prefs {
-    pub show: ShowPref,
-    #[serde(alias = "tested")]
-    pub compat: CompatPref,
+    #[serde(alias = "show")]
+    pub view: ViewPref,
+    /// The starred games (F4), by their database id, or the folder of a game
+    /// the database doesn't list.
+    pub favorites: std::collections::BTreeSet<String>,
     pub dsoal_build: BuildPref,
     pub openal_build: BuildPref,
     pub over: OverridePref,
@@ -185,8 +194,8 @@ mod tests {
         assert_eq!(Prefs::load_from(&file), Prefs::default());
 
         let p = Prefs {
-            show: ShowPref::OnThisPc,
-            compat: CompatPref::Unknown,
+            view: ViewPref::Favorites,
+            favorites: ["deus-ex".to_string()].into(),
             dsoal_build: BuildPref("r690".into()),
             openal_build: BuildPref("numbered".into()),
             over: OverridePref::Manual,
@@ -215,15 +224,15 @@ mod tests {
         let old = Prefs::load_from(&file);
         assert_eq!(old.speakers, SpeakerPref::Quad);
         assert_eq!(old.over, OverridePref::LaunchOptions);
-        assert_eq!(old.show, ShowPref::All);
-        assert_eq!(old.compat, CompatPref::Any);
+        assert_eq!(old.view, ViewPref::All);
+        assert!(old.favorites.is_empty());
 
-        // A file from before the ratings: "tested" is Rated, "untested" Unknown.
+        // A file from before the views: "show" reads as the view, and the old
+        // starting compatibility filter is skipped.
         std::fs::write(&file, r#"{"show":"installed","tested":"tested"}"#).unwrap();
-        let p = Prefs::load_from(&file);
-        assert_eq!((p.show, p.compat), (ShowPref::Installed, CompatPref::Rated));
-        std::fs::write(&file, r#"{"tested":"untested"}"#).unwrap();
-        assert_eq!(Prefs::load_from(&file).compat, CompatPref::Unknown);
+        assert_eq!(Prefs::load_from(&file).view, ViewPref::Patched);
+        std::fs::write(&file, r#"{"show":"on-this-pc","compat":"unknown"}"#).unwrap();
+        assert_eq!(Prefs::load_from(&file).view, ViewPref::MyLibrary);
     }
 
     #[test]

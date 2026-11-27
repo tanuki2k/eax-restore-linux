@@ -15,6 +15,9 @@ pub struct Database {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Game {
+    /// The game's file name in the database (`deus-ex`), which the build adds.
+    #[serde(default)]
+    pub id: String,
     pub name: String,
     #[serde(default)]
     pub description: String,
@@ -102,7 +105,7 @@ impl Store {
 
 /// How well EAX works with the fix: a game's rating, like a store's
 /// compatibility rating.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Compat {
     /// Checked on a real install; EAX works without problems.
     Verified,

@@ -6,13 +6,25 @@ Moved out of CLAUDE.md so it isn't loaded into every session; CLAUDE.md says whe
   manually installed games and does everything to them with its own Rust engine; it
   never runs the Bash script (the oracle tests do, to compare the two). Checks, as `.github/workflows/tui.yml` runs them: `cd tui && cargo fmt --check
   && cargo clippy --locked --all-targets -- -D warnings && cargo test --locked`.
-  Run it with `cargo run -- ../game-database.json` after `./build.sh`. Its look copies the old fzf browser's (boxed Search,
-  Filters and Games beside a full-height pane; the colours are in `tui/src/theme.rs`,
+  Run it with `cargo run -- ../game-database.json` after `./build.sh`. Its colours copy the old fzf browser's (the colours are in `tui/src/theme.rs`,
   taken from fzf's palette and the script's `GREEN`/`YELLOW`/`WHITE`; the script's bold
   colours use ratatui's `Light*` names because crossterm writes the plain ones as the dark palette
-  entry, where a terminal draws `\033[1;33m` bright). The right pane switches between
-  Profile and Settings with ←/→ (Shift-↑/↓ scrolls it); F1 lists every key (`tui/src/help.rs`: keep it in step
-  with `app.rs`), Ctrl-F gives the pane the whole screen, and Ctrl-L puts it under the list instead of
+  entry, where a terminal draws `\033[1;33m` bright). The main screen (`ui::draw`), top to bottom:
+  a title row, the View bar (`filters::View`: All games / My library / Patched / Favorites, with
+  counts), a search line, the Filters box (sort + `Filters::summary`), the games (a list beside the
+  Profile/Settings pane, or a full-width table with Compatibility, Store, Audio, EAX and Year
+  columns that drop from the right when narrow, `App::table`, F8), a centred hint line for the
+  focused box and a centred F-key bar (1Help … 10Quit). Below 24 rows the title goes and the View
+  bar and Filters box lose their borders. Tab/Shift-Tab move focus (`app::Focus`: Views → Filters
+  → Games → Card; the focused rounded box's border and title are in `theme::key()`); letters
+  always go to the global search. ←/→ pick a view on the View bar, or switch the pane between
+  Profile and Settings beside the list; Shift-↑/↓ scrolls the pane from anywhere. F3 opens the
+  Filters pop-up (`App::filter_menu`): tick boxes (`filters::Item`) for Compatibility, Store, Audio
+  and EAX version, OR within a group and AND across groups, each store entry judged on its own
+  store's rating/API/delisted flag, nothing ticked = everything; Sort is A to Z / Best match (the
+  default) / Rating; Space ticks, Enter ticks and closes, Esc puts the filters back. F4 stars a game
+  (`Prefs::favorites`, by database id, else folder), F5 rescans, F6 next view, F7 add a game (also
+  Ctrl-A), F9 full screen (also Ctrl-F), F10 quits; Ctrl-L still puts the pane under the list instead of
   beside it (it does that by itself below 104 columns); `--list`, `--settings NAME` and `--profile NAME`
   print the game list, one game's settings view or its profile without the TUI, which is
   how the Rust views are compared with the Bash browser's `print_game_settings_details`
@@ -157,13 +169,14 @@ instead of its page; the no-prefix one has Check again, which opens the page onc
 There's no Console any more: a run's steps and its finish take the choices' place
 (`view::draw_run`), following the end while it runs; PgUp/PgDn scroll it once the work is over. The game's database profile isn't on this
 page (it's in the games list's right pane); `Facts::summary` still serves `eax-restore status`.
-F2 opens the settings screen (`src/prefs_screen.rs`): the Show and Tested filters the list
-starts on (`App::apply_list_prefs`, at startup and when F2 changes them), then the player's
+F2 opens the settings screen (`src/prefs_screen.rs`): the View the list
+starts on (`ViewPref`, saved as `view`; an older file's `show` reads as it, and its starting
+compatibility filter is skipped; `App::apply_list_prefs`, at startup and when F2 changes it), then the player's
 defaults for a new install (DSOAL and OpenAL Soft builds, DLL override, speakers, VC++ runtime) saved on
 every change to `$XDG_CONFIG_HOME/eax-restore-linux/tui.json`; a pop-up sized like F1's help via `ui::centred_popup` (`src/prefs.rs`; a missing or bad
 file gives the shipped defaults, and "Reset to defaults" puts them back). `Panel` starts a game
 without the fix on them; an installed game opens on what it has. Tests never load the real file.
-The list marks a game with the fix with a green ✓ (magenta when it isn't in the database) and
+The list marks a game with the fix with a green ✓ (magenta when it isn't in the database), a starred one with ★, shows each entry's rating at the right (`filters::entry_compat`), and
 greys out the names of games not on this PC (`ui::marker`, `ui::game_line`). A name on this PC
 from both Steam and GOG gets a grey `[Steam]`/`[GOG]` after it (`App::both_stores`).
 Dropdowns are `view::LIST_W` wide

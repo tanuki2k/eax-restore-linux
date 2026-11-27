@@ -1,6 +1,6 @@
 //! Screen state and key handling. No drawing here, so it can be tested.
 
-use crate::filters::Filters;
+use crate::filters::{Filters, Item, Sort, View};
 use crate::games::{Entry, Status};
 use crate::picker::{self, Picker};
 use nucleo_matcher::pattern::{CaseMatching, Normalization, Pattern};
@@ -8,36 +8,48 @@ use nucleo_matcher::{Matcher, Utf32Str};
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use std::path::PathBuf;
 
-/// What the Tab key cycles the list through.
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum Filter {
-    All,
-    OnThisPc,
-    Installed,
+/// The boxes Tab and Shift-Tab move between on the main screen. Letters
+/// always go to the search, whichever has focus.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Focus {
+    /// The view bar: ←/→ pick a view.
+    Views,
+    /// The Filters line: Enter opens the pop-up.
+    Filters,
+    /// The games list: ↑/↓ move, Enter opens the game.
+    Games,
+    /// The right pane (list + card layout only): ↑/↓ scroll it.
+    Card,
 }
 
-impl Filter {
-    pub fn label(self) -> &'static str {
-        match self {
-            Filter::All => "All games",
-            Filter::OnThisPc => "Games on this PC",
-            Filter::Installed => "EAX fix installed",
-        }
-    }
+/// One row of the Filters pop-up.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum MenuRow {
+    Sort(Sort),
+    Item(Item),
+    ClearAll,
+    Done,
+}
 
-    fn next(self) -> Self {
-        match self {
-            Filter::All => Filter::OnThisPc,
-            Filter::OnThisPc => Filter::Installed,
-            Filter::Installed => Filter::All,
-        }
-    }
+/// The Filters pop-up while it's open: its rows, the highlighted one, and the
+/// filters as they were when it opened, for Esc.
+pub struct FilterMenu {
+    pub rows: Vec<MenuRow>,
+    pub at: usize,
+    pub before: Filters,
+}
 
-    fn allows(self, s: Status) -> bool {
-        match self {
-            Filter::All => true,
-            Filter::OnThisPc => s != Status::NotOnThisPc,
-            Filter::Installed => matches!(s, Status::Installed | Status::Manual),
+impl FilterMenu {
+    fn new(filters: &Filters) -> Self {
+        let mut rows: Vec<MenuRow> = Sort::ALL.into_iter().map(MenuRow::Sort).collect();
+        for (_, items) in crate::filters::groups() {
+            rows.extend(items.into_iter().map(MenuRow::Item));
+        }
+        rows.extend([MenuRow::ClearAll, MenuRow::Done]);
+        FilterMenu {
+            rows,
+            at: 0,
+            before: filters.clone(),
         }
     }
 }
@@ -106,10 +118,20 @@ pub struct App {
     pub picker: Option<Picker>,
     /// The F2 settings screen, while it is open.
     pub prefs: Option<crate::prefs_screen::PrefsScreen>,
+    /// The Filters pop-up (F3), while it is open.
+    pub filter_menu: Option<FilterMenu>,
+    /// Which box on the main screen the keys go to.
+    pub focus: Focus,
+    /// The games list as a table with a column per detail (F8), rather than a
+    /// list beside the game's card.
+    pub table: bool,
+    /// The starred games (F4): database ids, or a folder for a game the
+    /// database doesn't list.
+    pub favorites: std::collections::BTreeSet<String>,
     pub(crate) home: PathBuf,
     /// Shown on the key bar's row until the next key.
     pub message: String,
-    pub filter: Filter,
+    pub view: View,
     pub filters: Filters,
     /// Names on this PC from both Steam and GOG, whose rows say which store.
     /// From every game, not just the listed ones, so the label stays put
@@ -154,9 +176,13 @@ impl App {
             help_max: std::cell::Cell::new(0),
             picker: None,
             prefs: None,
+            filter_menu: None,
+            focus: Focus::Games,
+            table: false,
+            favorites: Default::default(),
             home: PathBuf::from("/"),
             message: String::new(),
-            filter: Filter::All,
+            view: View::All,
             filters: Filters::default(),
             both_stores: Default::default(),
             exes: Default::default(),
@@ -215,20 +241,46 @@ impl App {
 
     /// The Show and Compatibility filters the player saved on the settings screen.
     pub fn apply_list_prefs(&mut self, p: &crate::prefs::Prefs) {
-        use crate::filters::CompatFilter;
-        use crate::prefs::{CompatPref, ShowPref};
-        self.filter = match p.show {
-            ShowPref::All => Filter::All,
-            ShowPref::OnThisPc => Filter::OnThisPc,
-            ShowPref::Installed => Filter::Installed,
-        };
-        self.filters.compat = match p.compat {
-            CompatPref::Any => CompatFilter::All,
-            CompatPref::Rated => CompatFilter::Rated,
-            CompatPref::Unknown => CompatFilter::Only(crate::db::Compat::Unknown),
-        };
+        self.view = p.view.view();
+        self.favorites = p.favorites.clone();
         self.selected = 0;
         self.refilter();
+    }
+
+    /// What a game is starred under: its database id, else its folder.
+    pub fn favorite_key(e: &Entry) -> Option<String> {
+        match (&e.game, &e.path) {
+            (Some(g), _) if !g.id.is_empty() => Some(g.id.clone()),
+            (_, Some(p)) => Some(p.display().to_string()),
+            _ => None,
+        }
+    }
+
+    pub fn is_favorite(&self, e: &Entry) -> bool {
+        Self::favorite_key(e).is_some_and(|k| self.favorites.contains(&k))
+    }
+
+    /// F4: stars the highlighted game, or unstars it, and saves the list.
+    /// Tests never write the player's own file.
+    fn toggle_favorite(&mut self) {
+        let Some(key) = self.current().and_then(Self::favorite_key) else {
+            return;
+        };
+        if !self.favorites.remove(&key) {
+            self.favorites.insert(key);
+        }
+        if !cfg!(test) {
+            let mut p = crate::prefs::Prefs::load();
+            p.favorites = self.favorites.clone();
+            if let Err(e) = p.save() {
+                self.message = format!("Couldn't save your favorites: {e}");
+            }
+        }
+        // Unstarring a game in Favorites takes it off the list.
+        if self.view == View::Favorites {
+            let keep = self.visible.get(self.selected).copied();
+            self.refilter_keep(keep);
+        }
     }
 
     pub fn set_home(&mut self, home: PathBuf) {
@@ -271,13 +323,27 @@ impl App {
     }
 
     fn refilter(&mut self) {
+        self.refilter_keep(None);
+    }
+
+    /// Lists the games the view and filters let through, in the chosen order,
+    /// with the highlight on `keep` if it's still listed, else the top.
+    fn refilter_keep(&mut self, keep: Option<usize>) {
         let allowed: Vec<usize> = (0..self.games.len())
             .filter(|&i| {
-                self.filter.allows(self.games[i].status) && self.filters.passes(&self.games[i])
+                let e = &self.games[i];
+                self.view.allows(e, self.is_favorite(e)) && self.filters.passes(e)
             })
             .collect();
+        let name = |i: usize| self.games[i].name.to_lowercase();
+        let rank =
+            |i: usize| crate::filters::rating_rank(crate::filters::entry_compat(&self.games[i]));
         if self.query.trim().is_empty() {
-            self.visible = allowed;
+            let mut v = allowed;
+            if self.filters.sort == Sort::Rating {
+                v.sort_by_key(|&i| (rank(i), name(i)));
+            }
+            self.visible = v;
         } else {
             let pattern = Pattern::parse(&self.query, CaseMatching::Smart, Normalization::Smart);
             let mut buf = Vec::new();
@@ -292,11 +358,83 @@ impl App {
                         .map(|s| (i, s))
                 })
                 .collect();
-            // Equal scores keep the list's name order.
-            scored.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+            match self.filters.sort {
+                // Equal scores keep the list's name order.
+                Sort::BestMatch => scored.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0))),
+                Sort::AToZ => scored.sort_by_key(|&(i, _)| i),
+                Sort::Rating => scored.sort_by_key(|&(i, _)| (rank(i), name(i))),
+            }
             self.visible = scored.into_iter().map(|(i, _)| i).collect();
         }
-        self.selected = 0;
+        self.selected = keep
+            .and_then(|k| self.visible.iter().position(|&i| i == k))
+            .unwrap_or(0);
+    }
+
+    /// The boxes Tab moves between, in order; the card only beside the list.
+    fn focus_ring(&self) -> Vec<Focus> {
+        let mut ring = vec![Focus::Views, Focus::Filters, Focus::Games];
+        if !self.table {
+            ring.push(Focus::Card);
+        }
+        ring
+    }
+
+    fn move_focus(&mut self, forward: bool) {
+        let ring = self.focus_ring();
+        let i = ring.iter().position(|f| *f == self.focus).unwrap_or(2);
+        let n = ring.len();
+        self.focus = ring[if forward {
+            (i + 1) % n
+        } else {
+            (i + n - 1) % n
+        }];
+    }
+
+    fn set_view(&mut self, view: View) {
+        self.view = view;
+        self.refilter();
+    }
+
+    fn open_filters(&mut self) {
+        self.filter_menu = Some(FilterMenu::new(&self.filters));
+    }
+
+    /// Keys in the Filters pop-up. Ticks apply as they're made, so the list
+    /// behind shows what they do; Esc puts back what was there before.
+    fn handle_filter_menu_key(&mut self, key: KeyEvent) {
+        let Some(m) = self.filter_menu.as_mut() else {
+            return;
+        };
+        let last = m.rows.len() - 1;
+        match key.code {
+            KeyCode::Esc => {
+                self.filters = m.before.clone();
+                self.filter_menu = None;
+                self.refilter();
+            }
+            KeyCode::Up | KeyCode::Left | KeyCode::BackTab => m.at = m.at.saturating_sub(1),
+            KeyCode::Down | KeyCode::Right | KeyCode::Tab => m.at = (m.at + 1).min(last),
+            KeyCode::Home => m.at = 0,
+            KeyCode::End => m.at = last,
+            KeyCode::Char(' ') | KeyCode::Enter => {
+                let row = m.rows[m.at];
+                match row {
+                    MenuRow::Sort(sort) => self.filters.sort = sort,
+                    MenuRow::Item(item) => self.filters.toggle(item),
+                    MenuRow::ClearAll => self.filters.ticked.clear(),
+                    MenuRow::Done => {}
+                }
+                // Enter closes, as Done does, except on Clear all; Space only
+                // ticks, so several boxes can be ticked in one go.
+                if row == MenuRow::Done || (key.code == KeyCode::Enter && row != MenuRow::ClearAll)
+                {
+                    self.filter_menu = None;
+                }
+                self.refilter();
+            }
+            _ => {}
+        }
     }
 
     fn move_by(&mut self, delta: isize) {
@@ -638,14 +776,17 @@ impl App {
         if self.picker.is_some() {
             return self.handle_picker_key(key);
         }
+        if self.filter_menu.is_some() {
+            return self.handle_filter_menu_key(key);
+        }
         if let Some(s) = self.prefs.as_mut() {
-            let before = (s.prefs.show, s.prefs.compat);
+            let before = s.prefs.view;
             s.handle_key(key);
-            // A changed Show or Tested shows at once; a filter picked with
-            // Tab or Ctrl-T stays when only something else changed.
-            if (s.prefs.show, s.prefs.compat) != before {
-                let p = s.prefs.clone();
-                self.apply_list_prefs(&p);
+            // A changed View shows at once; a view picked on the bar stays when
+            // only something else changed.
+            let after = s.prefs.view;
+            if after != before {
+                self.set_view(after.view());
             }
             if self.prefs.as_ref().is_some_and(|s| s.closed) {
                 self.prefs = None;
@@ -671,60 +812,84 @@ impl App {
         }
         let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
         let shift = key.modifiers.contains(KeyModifiers::SHIFT);
+        // Keys that do the same whichever box has focus.
         match key.code {
-            KeyCode::Esc => self.quit = true,
-            KeyCode::Char('c') if ctrl => self.quit = true,
-            KeyCode::Char('s') if ctrl => {
-                self.filters.next_store();
-                self.refilter();
+            KeyCode::Esc | KeyCode::F(10) => return self.quit = true,
+            KeyCode::Char('c') if ctrl => return self.quit = true,
+            KeyCode::F(1) => return self.open_help(),
+            KeyCode::F(2) => return self.open_prefs(),
+            KeyCode::F(3) => return self.open_filters(),
+            KeyCode::F(4) => return self.toggle_favorite(),
+            KeyCode::F(5) => {
+                self.rescan = true;
+                self.message = "Looking for your games again…".into();
+                return;
             }
-            KeyCode::Char('e') if ctrl => {
-                self.filters.next_audio();
-                self.refilter();
+            KeyCode::F(6) => return self.set_view(self.view.next()),
+            KeyCode::F(7) => return self.open_add_picker(),
+            KeyCode::F(8) => {
+                self.table = !self.table;
+                if self.table && self.focus == Focus::Card {
+                    self.focus = Focus::Games;
+                }
+                return;
             }
-            KeyCode::Char('t') if ctrl => {
-                self.filters.next_compat();
-                self.refilter();
+            KeyCode::F(9) => return self.zoom = self.current().is_some() && !self.table,
+            KeyCode::Tab => return self.move_focus(true),
+            KeyCode::BackTab => return self.move_focus(false),
+            // The keys the old browser used, kept for whoever knows them.
+            KeyCode::Char('a') if ctrl => return self.open_add_picker(),
+            KeyCode::Char('l') if ctrl => return self.swap_layout(),
+            KeyCode::Char('f') if ctrl => {
+                return self.zoom = self.current().is_some() && !self.table
             }
-            KeyCode::Char('a') if ctrl => {
-                let start = picker::start_dir(&self.home);
-                self.picker = Some(Picker::new(start, self.home.clone()));
-            }
-            KeyCode::Enter => self.open_game(),
-            KeyCode::F(1) => self.open_help(),
-            KeyCode::F(2) => self.open_prefs(),
-            KeyCode::Char('l') if ctrl => self.swap_layout(),
-            KeyCode::Char('f') if ctrl => self.zoom = self.current().is_some(),
-            KeyCode::Tab => {
-                self.filter = self.filter.next();
-                self.refilter();
-            }
-            KeyCode::Up if shift => self.scroll_pane(-1),
-            KeyCode::Down if shift => self.scroll_pane(1),
-            KeyCode::PageUp if shift => self.scroll_pane(-10),
-            KeyCode::PageDown if shift => self.scroll_pane(10),
-            KeyCode::Right => self.show_pane(Pane::Settings),
-            KeyCode::Left => self.show_pane(Pane::Profile),
-            KeyCode::Up => self.move_by(-1),
-            KeyCode::Down => self.move_by(1),
-            KeyCode::PageUp => self.move_by(-10),
-            KeyCode::PageDown => self.move_by(10),
-            KeyCode::Home => self.selected = 0,
-            KeyCode::End => self.move_by(isize::MAX / 2),
+            KeyCode::Up if shift => return self.scroll_pane(-1),
+            KeyCode::Down if shift => return self.scroll_pane(1),
+            KeyCode::PageUp if shift => return self.scroll_pane(-10),
+            KeyCode::PageDown if shift => return self.scroll_pane(10),
             KeyCode::Backspace => {
                 self.query.pop();
-                self.refilter();
+                return self.refilter();
             }
             KeyCode::Char('u') if ctrl => {
                 self.query.clear();
-                self.refilter();
+                return self.refilter();
             }
             KeyCode::Char(c) if !ctrl => {
                 self.query.push(c);
-                self.refilter();
+                return self.refilter();
             }
             _ => {}
         }
+        // Keys for the box with focus.
+        match (self.focus, key.code) {
+            (Focus::Views, KeyCode::Left) => self.set_view(self.view.prev()),
+            (Focus::Views, KeyCode::Right) => self.set_view(self.view.next()),
+            (Focus::Views, KeyCode::Enter) => self.focus = Focus::Games,
+            (Focus::Filters, KeyCode::Enter) => self.open_filters(),
+            (Focus::Card, KeyCode::Up) => self.scroll_pane(-1),
+            (Focus::Card, KeyCode::Down) => self.scroll_pane(1),
+            (Focus::Card, KeyCode::PageUp) => self.scroll_pane(-10),
+            (Focus::Card, KeyCode::PageDown) => self.scroll_pane(10),
+            (Focus::Card, KeyCode::Home) => self.pane_scroll = 0,
+            (Focus::Card, KeyCode::End) => self.pane_scroll = self.pane_max.get(),
+            (Focus::Games | Focus::Card, KeyCode::Right) => self.show_pane(Pane::Settings),
+            (Focus::Games | Focus::Card, KeyCode::Left) => self.show_pane(Pane::Profile),
+            (_, KeyCode::Enter) => self.open_game(),
+            (_, KeyCode::Up) => self.move_by(-1),
+            (_, KeyCode::Down) => self.move_by(1),
+            (_, KeyCode::PageUp) => self.move_by(-10),
+            (_, KeyCode::PageDown) => self.move_by(10),
+            (_, KeyCode::Home) => self.selected = 0,
+            (_, KeyCode::End) => self.move_by(isize::MAX / 2),
+            _ => {}
+        }
+    }
+
+    /// F7 (and Ctrl-A): the folder picker, for a game that isn't listed.
+    fn open_add_picker(&mut self) {
+        let start = picker::start_dir(&self.home);
+        self.picker = Some(Picker::new(start, self.home.clone()));
     }
 }
 
@@ -746,39 +911,42 @@ mod tests {
     }
 
     #[test]
-    fn the_saved_show_and_compatibility_filters_narrow_the_list() {
-        use crate::prefs::{CompatPref, Prefs, ShowPref};
+    fn the_saved_view_and_favorites_narrow_the_list() {
+        use crate::prefs::{Prefs, ViewPref};
         let mut a = app();
         a.games[0].status = Status::Installed; // Alpha Centauri
         a.games[1].status = Status::Installed; // Alpha Protocol
-        let g = a.games[0].game.as_mut().unwrap();
-        g.compatibility = Some("unknown".into()); // it has no store entry
         a.apply_list_prefs(&Prefs {
-            show: ShowPref::Installed,
-            compat: CompatPref::Rated,
+            view: ViewPref::Patched,
             ..Prefs::default()
         });
-        assert!(a.filter == Filter::Installed);
+        assert!(a.view == View::Patched);
+        assert_eq!(a.visible.len(), 2);
+        a.apply_list_prefs(&Prefs {
+            view: ViewPref::Favorites,
+            favorites: ["c".to_string()].into(),
+            ..Prefs::default()
+        });
         assert_eq!(a.current().unwrap().name, "Alpha Protocol");
         assert_eq!(a.visible.len(), 1);
     }
 
     #[test]
-    fn changing_show_in_f2_changes_the_list_but_other_settings_leave_it() {
+    fn changing_the_view_in_f2_changes_the_list_but_other_settings_leave_it() {
         let mut a = app();
-        // A filter picked with Tab stays while F2 changes the speakers.
-        a.handle_key(key(KeyCode::Tab));
-        assert!(a.filter == Filter::OnThisPc);
+        // A view picked with F6 stays while F2 changes the speakers.
+        a.handle_key(key(KeyCode::F(6)));
+        assert!(a.view == View::MyLibrary);
         a.handle_key(key(KeyCode::F(2)));
-        for _ in 0..5 {
+        for _ in 0..4 {
             a.handle_key(key(KeyCode::Down)); // to Speakers
         }
         a.handle_key(key(KeyCode::Enter));
         a.handle_key(key(KeyCode::Down));
         a.handle_key(key(KeyCode::Enter));
-        assert!(a.filter == Filter::OnThisPc);
+        assert!(a.view == View::MyLibrary);
 
-        // Show set to EAX fix installed shows at once.
+        // View set to Patched shows at once.
         a.handle_key(key(KeyCode::Home));
         a.handle_key(key(KeyCode::Enter));
         a.handle_key(key(KeyCode::Down));
@@ -786,7 +954,7 @@ mod tests {
         a.handle_key(key(KeyCode::Enter));
         a.handle_key(key(KeyCode::Esc));
         assert!(a.prefs.is_none());
-        assert!(a.filter == Filter::Installed);
+        assert!(a.view == View::Patched);
         assert!(a.visible.is_empty());
     }
 
@@ -859,16 +1027,64 @@ mod tests {
     }
 
     #[test]
-    fn tab_cycles_the_status_filter() {
+    fn f6_cycles_the_views_and_the_view_bar_takes_the_arrows() {
         let mut a = app();
         a.games[1].status = Status::OnThisPc;
         a.games[2].status = Status::Installed;
-        a.handle_key(key(KeyCode::Tab));
+        a.handle_key(key(KeyCode::F(6))); // My library
         assert_eq!(a.visible.len(), 2);
-        a.handle_key(key(KeyCode::Tab));
+        a.handle_key(key(KeyCode::F(6))); // Patched
         assert_eq!(a.visible, [2]);
-        a.handle_key(key(KeyCode::Tab));
+        a.handle_key(key(KeyCode::F(6))); // Favorites
+        assert!(a.visible.is_empty());
+        a.handle_key(key(KeyCode::F(6))); // All games
         assert_eq!(a.visible.len(), 3);
+        // From the list, Shift-Tab twice reaches the view bar, where ← and →
+        // pick the view.
+        a.handle_key(key(KeyCode::BackTab));
+        a.handle_key(key(KeyCode::BackTab));
+        assert_eq!(a.focus, Focus::Views);
+        a.handle_key(key(KeyCode::Right));
+        assert!(a.view == View::MyLibrary);
+        a.handle_key(key(KeyCode::Left));
+        a.handle_key(key(KeyCode::Left));
+        assert!(a.view == View::Favorites);
+    }
+
+    #[test]
+    fn tab_goes_round_the_boxes_and_skips_the_card_in_the_table() {
+        let mut a = app();
+        assert_eq!(a.focus, Focus::Games);
+        let mut seen = Vec::new();
+        for _ in 0..4 {
+            a.handle_key(key(KeyCode::Tab));
+            seen.push(a.focus);
+        }
+        assert_eq!(
+            seen,
+            [Focus::Card, Focus::Views, Focus::Filters, Focus::Games]
+        );
+        a.handle_key(key(KeyCode::Tab)); // Card
+        a.handle_key(key(KeyCode::F(8))); // table: no card to stay on
+        assert!(a.table && a.focus == Focus::Games);
+        a.handle_key(key(KeyCode::Tab));
+        assert_eq!(a.focus, Focus::Views);
+        // Letters still search, whichever box has focus.
+        a.handle_key(key(KeyCode::Char('p')));
+        assert_eq!(a.query, "p");
+    }
+
+    #[test]
+    fn f4_stars_a_game_and_favorites_lists_it() {
+        let mut a = app();
+        a.handle_key(key(KeyCode::Down)); // Alpha Protocol
+        a.handle_key(key(KeyCode::F(4)));
+        assert!(a.favorites.contains("c"));
+        a.set_view(View::Favorites);
+        assert_eq!(a.current().unwrap().name, "Alpha Protocol");
+        // Unstarring it in Favorites takes it off the list.
+        a.handle_key(key(KeyCode::F(4)));
+        assert!(a.visible.is_empty() && a.favorites.is_empty());
     }
 
     #[test]
@@ -1010,7 +1226,7 @@ mod tests {
     }
 
     #[test]
-    fn ctrl_s_ctrl_e_and_ctrl_t_narrow_the_list() {
+    fn the_filters_pop_up_ticks_boxes_and_esc_puts_them_back() {
         let db = Database::parse(
             r#"{"games":[
             {"id":"a","name":"Alpha","stores":{"steam":{"id":1}},"eax":{"api":"openal","versions":["2.0"]}},
@@ -1018,19 +1234,54 @@ mod tests {
         )
         .unwrap();
         let mut a = App::new(db.games.into_iter().map(Entry::database_only).collect());
-        a.handle_key(ctrl('s')); // Steam
-        assert_eq!(a.visible.len(), 1);
-        a.handle_key(ctrl('s')); // GOG
-        a.handle_key(ctrl('t')); // Rated
-        assert!(a.visible.is_empty());
-        for _ in 0..4 {
-            a.handle_key(ctrl('t')); // Verified, Playable, Unsupported, Unknown
-        }
+        let row = |a: &App, r: MenuRow| {
+            a.filter_menu
+                .as_ref()
+                .unwrap()
+                .rows
+                .iter()
+                .position(|x| *x == r)
+                .unwrap()
+        };
+        let go = |a: &mut App, r: MenuRow| {
+            let at = row(a, r);
+            a.handle_key(key(KeyCode::Home));
+            for _ in 0..at {
+                a.handle_key(key(KeyCode::Down));
+            }
+        };
+        a.handle_key(key(KeyCode::F(3)));
+        go(&mut a, MenuRow::Item(Item::Gog));
+        a.handle_key(key(KeyCode::Char(' ')));
         assert_eq!(a.current().unwrap().name, "Beta");
-        a.handle_key(ctrl('e')); // DirectSound3D
-        assert_eq!(a.visible.len(), 1);
-        a.handle_key(ctrl('e')); // OpenAL
+        // Space ticks without closing; a second box in another group narrows.
+        go(
+            &mut a,
+            MenuRow::Item(Item::Compat(crate::db::Compat::Verified)),
+        );
+        a.handle_key(key(KeyCode::Char(' ')));
         assert!(a.visible.is_empty());
+        // Esc puts the filters back as they were.
+        a.handle_key(key(KeyCode::Esc));
+        assert!(a.filter_menu.is_none() && a.filters.is_clear());
+        assert_eq!(a.visible.len(), 2);
+        // Enter on a box ticks it and closes.
+        a.handle_key(key(KeyCode::F(3)));
+        go(&mut a, MenuRow::Item(Item::OpenAl));
+        a.handle_key(key(KeyCode::Enter));
+        assert!(a.filter_menu.is_none());
+        assert_eq!(a.current().unwrap().name, "Alpha");
+        // The Filters box opens it with Enter too, and Rating sorts Verified first.
+        a.handle_key(key(KeyCode::BackTab));
+        assert_eq!(a.focus, Focus::Filters);
+        a.handle_key(key(KeyCode::Enter));
+        go(&mut a, MenuRow::ClearAll);
+        a.handle_key(key(KeyCode::Enter));
+        assert!(a.filter_menu.is_some() && a.filters.is_clear());
+        go(&mut a, MenuRow::Sort(Sort::Rating));
+        a.handle_key(key(KeyCode::Enter));
+        assert_eq!(a.current().unwrap().name, "Alpha");
+        assert_eq!(a.filters.sort, Sort::Rating);
     }
 
     fn shift(code: KeyCode) -> KeyEvent {

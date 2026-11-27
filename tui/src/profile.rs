@@ -22,7 +22,7 @@ fn label_of(k: StoreKind) -> &'static str {
 }
 
 /// A compatibility rating in its colour, as the script's `compat_label`.
-fn compat_span(c: Compat) -> Span<'static> {
+pub(crate) fn compat_span(c: Compat) -> Span<'static> {
     let style = match c {
         Compat::Verified => theme::green(),
         Compat::Playable | Compat::Unsupported => theme::label(),
