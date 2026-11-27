@@ -2104,7 +2104,8 @@ mod tests {
                 "DLL override"
             ]
         );
-        let rows = screen(&p, 160, 50);
+        // One column (a narrow window), so the boxes read top to bottom.
+        let rows = screen(&p, 100, 60);
         let order: Vec<usize> = [
             "1. Audio engine",
             "2. Runtimes",
@@ -2120,13 +2121,13 @@ mod tests {
     }
 
     #[test]
-    fn one_column_in_a_pop_up_with_only_the_checks_that_need_a_look() {
+    fn a_pop_up_on_a_narrow_window_with_only_the_checks_that_need_a_look() {
         let tmp = tempfile::tempdir().unwrap();
         let mut p = ready(&tmp.path().join("home"));
 
-        let rows = screen(&p, 160, 50);
+        let rows = screen(&p, 100, 50);
         let title = row_of(&rows, "Test Game ─ Steam");
-        let left = (160 - usize::from(view::LEFT_W)) / 2;
+        let left = (100 - usize::from(view::LEFT_W)) / 2;
         let corner: Vec<char> = rows[title].chars().collect();
         assert_eq!(corner[left], '╭', "{}", rows.join("\n"));
         assert_eq!(corner[left + usize::from(view::LEFT_W) - 1], '╮');
@@ -2821,6 +2822,28 @@ mod tests {
 
     fn row_of(rows: &[String], s: &str) -> usize {
         rows.iter().position(|r| r.contains(s)).unwrap()
+    }
+
+    #[test]
+    fn a_wide_window_puts_the_install_choices_left_and_the_game_settings_right() {
+        let tmp = tempfile::tempdir().unwrap();
+        let p = ready(&tmp.path().join("home"));
+        let rows = screen(&p, 160, 50);
+        // The page fills the window.
+        assert!(rows[0].starts_with('╭'), "{}", rows.join("\n"));
+        let engine = row_of(&rows, "1. Audio engine");
+        // This game has no settings to change, so the right side says what
+        // installing will set up instead.
+        let settings = row_of(&rows, "6. What the install does");
+        assert_eq!(engine, settings, "side by side: {}", rows.join("\n"));
+        let col = |r: &str, s: &str| r.find(s).unwrap();
+        assert!(
+            col(&rows[engine], "1. Audio engine") < col(&rows[settings], "6. What the install")
+        );
+        assert!(rows
+            .iter()
+            .any(|r| r.contains("Audio engine") && r.contains("DSOAL with OpenAL Soft")));
+        assert!(rows.iter().any(|r| r.contains("[ Install ]")));
     }
 
     #[test]

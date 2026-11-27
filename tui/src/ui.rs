@@ -1716,16 +1716,17 @@ mod tests {
     }
 
     #[test]
-    fn a_games_page_is_a_pop_up_over_the_details_and_esc_goes_back() {
+    fn a_games_page_fills_a_wide_screen_and_esc_goes_back_to_the_details() {
         let (_home, mut app) = app_with_a_page_open(120);
         let s = screen(&app, 120, 40);
         assert!(
-            s.contains("Back to the list"),
-            "the details show round it: {s}"
+            !s.contains("Back to the list"),
+            "the page covers the details: {s}"
         );
         let spot = page_spot(&app, 120, 40);
         assert_eq!(page_corner(&app, 120, 40), spot);
-        assert_eq!(spot.1, usize::from((120 - crate::panel::view::LEFT_W) / 2));
+        // 120 columns is wide enough for the page's two columns: it fills the screen.
+        assert_eq!(spot.1, 0);
         assert!(s.contains(" Status "));
         // Ctrl-L and Ctrl-F are the list's; the page ignores them.
         ctrl_key(&mut app, 'l');

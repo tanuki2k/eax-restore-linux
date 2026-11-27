@@ -132,7 +132,10 @@ Enter on a game opens its details screen (`App::details`, `ui::draw_details`): t
 the settings views side by side (`profile::lines`, `settings::lines`, unchanged), each scrolling,
 Tab between them, F4 stars, Esc back to the list; a rescan refreshes the entry it shows.
 The game panel (`tui/src/panel/`, the user's Optiscaler-Client-style design): Enter on the details
-of a game with a folder opens its page, one column `view::LEFT_W` wide in a pop-up over the games list
+of a game with a folder opens its page: from `view::TWO_COLUMNS` (110) wide it fills the screen, the
+install choices' boxes on the left (60%) and the game's settings on the right (40%, or for a game with no
+settings "What the install does", the `Plan::summary` the confirm screen shows), each scrolled to keep the
+focus in view (`view::draw_boxes`); narrower, it's one column `view::LEFT_W` wide in a pop-up over the games list
 (`view::draw`, `view::page_area`: as tall as its content, never shrinking going from the
 choices to a run, so the list shows round it), on the folder holding
 the profile's exe (`detect::exe_folder`, as the script moves `GAME_DIR` after a library scan
