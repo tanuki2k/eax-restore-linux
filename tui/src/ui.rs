@@ -1079,7 +1079,7 @@ fn bar_items(app: &App) -> Vec<(&'static str, &'static str)> {
     } else if app.details.is_some() {
         vec![
             ("Enter", "install or change the EAX fix"),
-            ("Tab", "other box"),
+            ("Tab", "Game details / Settings"),
             ("↑/↓", "scroll"),
             ("F4", "star"),
             ("Esc", "back to the list"),

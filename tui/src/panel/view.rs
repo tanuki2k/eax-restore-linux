@@ -279,7 +279,7 @@ fn choice_boxes(p: &Panel, width: usize) -> Vec<PageBox> {
         .collect();
     if p.fixes.is_empty() {
         let text = if p.game.is_some() {
-            "The game's profile has no settings to change."
+            "This game has no settings to change."
         } else {
             "There's no profile for this game, so there are no settings to change."
         };
@@ -530,7 +530,7 @@ fn draw_choices(f: &mut Frame, p: &Panel, area: Rect) {
 /// there are no game settings.
 fn plan_lines(p: &Panel, width: usize) -> Vec<Line<'static>> {
     let text = if p.game.is_some() {
-        "The game's profile has no settings to change."
+        "This game has no settings to change."
     } else {
         "There's no profile for this game, so there are no settings to change."
     };
